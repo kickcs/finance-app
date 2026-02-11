@@ -56,7 +56,7 @@ jobs:
             ${{ env.REGISTRY }}/${{ github.repository }}/frontend:${{ github.sha }}
             ${{ env.REGISTRY }}/${{ github.repository }}/frontend:latest
           build-args: |
-            VITE_API_URL=/api
+            VITE_API_URL=
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
