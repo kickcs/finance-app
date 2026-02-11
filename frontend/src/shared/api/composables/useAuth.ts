@@ -63,11 +63,23 @@ export async function initializeAuth(): Promise<User | null> {
     error.value = null
 
     const token = getAccessToken()
-    if (!token || isTokenExpired(token)) {
-      // No valid token, user is not authenticated
+    if (!token) {
+      // No token at all, user is not authenticated
       user.value = null
       isInitialized.value = true
       return null
+    }
+
+    // If token is expired, try refreshing via httpOnly cookie before giving up
+    if (isTokenExpired(token)) {
+      const { refreshTokens } = await import('../http')
+      const refreshed = await refreshTokens()
+      if (!refreshed) {
+        clearTokens()
+        user.value = null
+        isInitialized.value = true
+        return null
+      }
     }
 
     // Fetch current user profile

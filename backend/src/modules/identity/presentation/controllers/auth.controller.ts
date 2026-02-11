@@ -27,10 +27,11 @@ import type { AuthResponse, AuthTokens } from '../../application/services/token.
 
 // Cookie configuration
 const REFRESH_TOKEN_COOKIE = 'refresh_token';
+const COOKIE_SECURE = process.env.COOKIE_SECURE === 'true';
 const COOKIE_OPTIONS = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: 'strict' as const,
+  secure: COOKIE_SECURE,
+  sameSite: 'lax' as const,
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   path: '/api/auth',
 };

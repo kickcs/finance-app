@@ -31,7 +31,7 @@ export function clearTokens(): void {
 let isRefreshing = false
 let refreshPromise: Promise<boolean> | null = null
 
-async function refreshTokens(): Promise<boolean> {
+export async function refreshTokens(): Promise<boolean> {
   if (isRefreshing && refreshPromise) {
     return refreshPromise
   }
