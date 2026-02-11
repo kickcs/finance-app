@@ -50,6 +50,7 @@ services:
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-15m}
       JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
       CORS_ORIGIN: ${CORS_ORIGIN:-*}
+      DATABASE_SYNCHRONIZE: ${DATABASE_SYNCHRONIZE:-false}
     depends_on:
       postgres:
         condition: service_healthy

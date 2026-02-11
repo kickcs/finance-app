@@ -110,6 +110,7 @@ jobs:
             JWT_EXPIRES_IN=15m
             JWT_REFRESH_EXPIRES_IN=7d
             CORS_ORIGIN=$CORS_ORIGIN
+            DATABASE_SYNCHRONIZE=true
             EOF
 
             # Login to GitHub Container Registry
