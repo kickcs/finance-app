@@ -2,34 +2,32 @@
 <html lang="ru">
   <head>
     <meta charset="UTF-8">
-    <link rel="icon" type="image/svg+xml" href="/vite.svg">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Ouro Finance</title>
+    <meta name="description" content="Управляйте личными финансами: учёт доходов и расходов, мультивалютные счета, долги, цели и напоминания">
+    <title>Ouro Finance — Личные финансы</title>
 
     <!-- PWA Meta Tags -->
-    <meta name="theme-color" content="#3b82f6">
+    <meta name="theme-color" content="#f59e0b">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Ouro Finance">
     <link rel="manifest" href="/manifest.json">
-    <link rel="apple-touch-icon" href="/logo-192.png">
+    <link rel="apple-touch-icon" href="/logo-192.webp">
 
-    <!-- DNS Prefetch for external services -->
+    <!-- DNS Prefetch / Preconnect for external services -->
     <link rel="dns-prefetch" href="https://fonts.googleapis.com">
     <link rel="dns-prefetch" href="https://fonts.gstatic.com">
-
-    <!-- Preconnect to critical origins -->
+    <link rel="dns-prefetch" href="https://app.ouro-finance.top">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://app.ouro-finance.top" crossorigin>
 
-    <!-- Preload critical fonts with display=swap for better FCP -->
-    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"></noscript>
+    <!-- Inter font is now self-hosted via @fontsource-variable/inter -->
 
-    <!-- Preload Material Symbols for faster icon rendering -->
-    <!-- display=block prevents showing icon text while font loads -->
-    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL@24,400,0&display=block" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL@24,400,0&display=block"></noscript>
+    <!-- Material Symbols - only used icons, display=block prevents FOUT -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL@24,400,0&icon_names=account_balance,account_balance_wallet,add,arrow_back,arrow_downward,arrow_forward,arrow_upward,build,calendar_month,calendar_today,cardiology,category,celebration,check,check_circle,checkroom,chevron_right,child_care,cleaning_services,close,cottage,credit_card,credit_score,currency_exchange,dark_mode,delete,diamond,directions_car,drag_indicator,edit,electric_bolt,error,expand_more,family_restroom,favorite,fitness_center,flag,flight,group,history,home,info,light_mode,list,local_bar,local_cafe,local_gas_station,local_shipping,logout,mark_email_read,medical_services,monetization_on,more_horiz,movie,music_note,notifications,payments,person,pets,phone_android,pie_chart,play_circle,receipt_long,redeem,remove,reply,reply_all,restaurant,savings,school,sentiment_neutral,sentiment_satisfied,sentiment_very_dissatisfied,sentiment_very_satisfied,shopping_basket,shopping_cart,smoking_rooms,sports_esports,star,subscriptions,swap_horiz,timer,trending_down,trending_up,tune,tv,volunteer_activism,warning,water_drop,wifi,work&display=block" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL@24,400,0&icon_names=account_balance,account_balance_wallet,add,arrow_back,arrow_downward,arrow_forward,arrow_upward,build,calendar_month,calendar_today,cardiology,category,celebration,check,check_circle,checkroom,chevron_right,child_care,cleaning_services,close,cottage,credit_card,credit_score,currency_exchange,dark_mode,delete,diamond,directions_car,drag_indicator,edit,electric_bolt,error,expand_more,family_restroom,favorite,fitness_center,flag,flight,group,history,home,info,light_mode,list,local_bar,local_cafe,local_gas_station,local_shipping,logout,mark_email_read,medical_services,monetization_on,more_horiz,movie,music_note,notifications,payments,person,pets,phone_android,pie_chart,play_circle,receipt_long,redeem,remove,reply,reply_all,restaurant,savings,school,sentiment_neutral,sentiment_satisfied,sentiment_very_dissatisfied,sentiment_very_satisfied,shopping_basket,shopping_cart,smoking_rooms,sports_esports,star,subscriptions,swap_horiz,timer,trending_down,trending_up,tune,tv,volunteer_activism,warning,water_drop,wifi,work&display=block"></noscript>
 
     <!-- Prevent white flash on load + Initial loading skeleton -->
     <style>

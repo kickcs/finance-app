@@ -41,16 +41,8 @@ provide('getCategoryById', getCategoryById)
 
 <template>
   <ToastProvider>
-    <div class="min-h-screen bg-background-light dark:bg-background-dark text-text-primary-light dark:text-text-primary-dark antialiased relative overflow-x-hidden">
-      <!-- Loading state while auth initializes -->
-      <div
-        v-if="!isAppReady"
-        class="min-h-screen flex items-center justify-center"
-      >
-        <div class="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-      </div>
-
-      <template v-if="isAppReady">
+    <div v-if="isAppReady" class="min-h-screen bg-background-light dark:bg-background-dark text-text-primary-light dark:text-text-primary-dark antialiased relative overflow-x-hidden">
+      <template>
         <!-- Demo Banner - shown globally when in demo mode -->
         <DemoBanner v-if="isDemo" :formatted-remaining="formattedRemaining" />
 

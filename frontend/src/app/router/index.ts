@@ -207,8 +207,19 @@ async function getOrFetchProfile(userId: string): Promise<Profile | null> {
   }
 }
 
+// In-memory flag to skip repeated onboarding checks after first success
+let onboardingVerified = false
+
+// Reset onboarding flag on sign-out (called from guard when demo expires)
+export function resetOnboardingFlag() {
+  onboardingVerified = false
+}
+
 // Helper function to check onboarding status
 async function checkOnboardingStatus(userId: string): Promise<boolean> {
+  // Skip network/cache check if already verified this session
+  if (onboardingVerified) return true
+
   // First check localStorage for fast response
   const localOnboarding = localStorage.getItem('onboardingComplete') === 'true'
 
@@ -218,6 +229,7 @@ async function checkOnboardingStatus(userId: string): Promise<boolean> {
     // Sync localStorage with database
     if (profile.has_completed_onboarding) {
       localStorage.setItem('onboardingComplete', 'true')
+      onboardingVerified = true
     }
     if (profile.currency) {
       localStorage.setItem('selectedCurrency', profile.currency)
@@ -226,6 +238,9 @@ async function checkOnboardingStatus(userId: string): Promise<boolean> {
   }
 
   // Fallback to localStorage
+  if (localOnboarding) {
+    onboardingVerified = true
+  }
   return localOnboarding
 }
 
@@ -254,6 +269,7 @@ router.beforeEach(async (to, from, next) => {
       clearTokens()
       localStorage.removeItem('onboardingComplete')
       localStorage.removeItem('selectedCurrency')
+      onboardingVerified = false
       queryClient.clear()
       next({ name: 'login' })
       return

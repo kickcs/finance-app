@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, computed, inject, watch } from 'vue'
+import { ref, computed, inject, watch, defineAsyncComponent } from 'vue'
 import type { Ref } from 'vue'
 import type { User } from '@/shared/api/composables/useAuth'
-import draggable from 'vuedraggable'
+
+const draggable = defineAsyncComponent(() => import('vuedraggable'))
 import { UButton, UIcon, UCard, UTabs, UModal } from '@/shared/ui'
 import { useCategories } from '@/entities/category'
 import type { UserCategory } from '@/shared/api/database.types'
