@@ -6,7 +6,7 @@
  * only access token is stored in localStorage.
  */
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+const BASE_URL = import.meta.env.VITE_API_URL ?? ''
 const API_URL = `${BASE_URL}/api`
 
 // Token storage - only access token is in localStorage
