@@ -110,8 +110,10 @@ jobs:
             JWT_EXPIRES_IN=15m
             JWT_REFRESH_EXPIRES_IN=7d
             CORS_ORIGIN=$CORS_ORIGIN
-            DATABASE_SYNCHRONIZE=true
+            DATABASE_SYNCHRONIZE=false
             EOF
+
+            chmod 600 .env
 
             # Login to GitHub Container Registry
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
