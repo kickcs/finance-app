@@ -130,6 +130,8 @@ jobs:
 
             # Clean up old images
             docker image prune -f
+            docker images "ghcr.io/$GITHUB_REPOSITORY/backend" --format "{{.ID}} {{.Tag}}" | grep -v latest | tail -n +4 | awk '{print $1}' | xargs -r docker rmi -f || true
+            docker images "ghcr.io/$GITHUB_REPOSITORY/frontend" --format "{{.ID}} {{.Tag}}" | grep -v latest | tail -n +4 | awk '{print $1}' | xargs -r docker rmi -f || true
 
             # Wait for services to be healthy
             echo "Waiting for services to be healthy..."
