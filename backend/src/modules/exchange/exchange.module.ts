@@ -1,0 +1,33 @@
+import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { CqrsModule } from '@nestjs/cqrs';
+import { ScheduleModule } from '@nestjs/schedule';
+
+import { EXCHANGE_RATE_REPOSITORY } from './domain/repositories';
+import { CommandHandlers, RateSyncScheduler } from './application';
+import { QueryHandlers } from './application/queries';
+import { ExchangeRateOrmEntity } from './infrastructure/persistence/typeorm';
+import { ExchangeRateRepository } from './infrastructure/persistence/repositories';
+import {
+  EXCHANGE_RATE_PROVIDER,
+  ExchangeRateApiProvider,
+} from './infrastructure/external';
+import { ExchangeRatesController } from './presentation/controllers';
+
+@Module({
+  imports: [
+    CqrsModule,
+    ScheduleModule.forRoot(),
+    TypeOrmModule.forFeature([ExchangeRateOrmEntity]),
+  ],
+  controllers: [ExchangeRatesController],
+  providers: [
+    { provide: EXCHANGE_RATE_REPOSITORY, useClass: ExchangeRateRepository },
+    { provide: EXCHANGE_RATE_PROVIDER, useClass: ExchangeRateApiProvider },
+    ...CommandHandlers,
+    ...QueryHandlers,
+    RateSyncScheduler,
+  ],
+  exports: [EXCHANGE_RATE_REPOSITORY],
+})
+export class ExchangeModule {}

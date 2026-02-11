@@ -1,0 +1,172 @@
+<script setup lang="ts">
+import { computed, inject, ref } from 'vue'
+import type { Ref } from 'vue'
+import type { User } from '@/shared/api/composables/useAuth'
+import { useRouter } from 'vue-router'
+import { AppHeader } from '@/widgets/header'
+import { BottomNav } from '@/widgets/bottom-nav'
+import { UButton, UIcon, UCard, UModal } from '@/shared/ui'
+import { getCurrencyByCode } from '@/entities/currency'
+import { useAuth, useProfile } from '@/shared/api'
+import { EditProfileModal } from '@/features/edit-profile'
+
+const router = useRouter()
+const { signOut } = useAuth()
+
+// Get user from provide/inject
+const user = inject<Ref<User | null>>('user')
+
+// Profile data
+const { profile } = useProfile(computed(() => user?.value?.id ?? null))
+
+// User info - prefer profile name from DB, fallback to user name
+const userName = computed(() => profile.value?.name || user?.value?.name || 'Пользователь')
+const userEmail = computed(() => user?.value?.email || 'user@example.com')
+
+// Get user currency from localStorage
+const currencyCode = computed(() => localStorage.getItem('selectedCurrency') || 'UZS')
+const currency = computed(() => getCurrencyByCode(currencyCode.value))
+
+// Modal states
+const showLogoutModal = ref(false)
+const showEditProfileModal = ref(false)
+
+const menuItems = [
+  { id: 'currency', icon: 'currency_exchange', label: 'Валюта', value: () => currency.value?.code },
+  { id: 'categories', icon: 'category', label: 'Категории' },
+  { id: 'about', icon: 'info', label: 'О приложении' },
+]
+
+function handleMenuClick(itemId: string) {
+  switch (itemId) {
+    case 'currency':
+      router.push('/settings/currency')
+      break
+    case 'categories':
+      router.push('/settings/categories')
+      break
+    default:
+      console.log('Menu item clicked:', itemId)
+  }
+}
+
+function handleLogout() {
+  showLogoutModal.value = true
+}
+
+function closeLogoutModal() {
+  showLogoutModal.value = false
+}
+
+async function confirmLogout() {
+  try {
+    await signOut()
+    router.push({ name: 'login' })
+  } catch (err) {
+    console.error('Logout failed:', err)
+  }
+}
+
+function handleAddTransaction() {
+  router.push('/transactions/new')
+}
+</script>
+
+<template>
+  <div class="min-h-screen bg-background-light dark:bg-background-dark pb-28">
+    <!-- Header -->
+    <AppHeader title="Профиль" />
+
+    <!-- Content -->
+    <main class="px-5 pt-8 space-y-6">
+      <!-- User Card -->
+      <UCard class="p-5">
+        <div class="flex items-center gap-4">
+          <div class="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+            <UIcon name="person" size="lg" class="text-primary" />
+          </div>
+          <div class="flex-1">
+            <p class="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark">
+              {{ userName }}
+            </p>
+            <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
+              {{ userEmail }}
+            </p>
+          </div>
+          <UButton variant="ghost" icon-only @click="showEditProfileModal = true">
+            <UIcon name="edit" size="md" />
+          </UButton>
+        </div>
+      </UCard>
+
+      <!-- Menu Items -->
+      <UCard class="divide-y divide-gray-100 dark:divide-gray-800">
+        <button
+          v-for="item in menuItems"
+          :key="item.id"
+          class="w-full flex items-center gap-4 p-4 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/50"
+          @click="handleMenuClick(item.id)"
+        >
+          <div class="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+            <UIcon
+              :name="item.icon"
+              size="md"
+              class="text-text-secondary-light dark:text-text-secondary-dark"
+            />
+          </div>
+          <span class="flex-1 text-left font-medium text-text-primary-light dark:text-text-primary-dark">
+            {{ item.label }}
+          </span>
+          <span
+            v-if="item.value"
+            class="text-sm text-text-secondary-light dark:text-text-secondary-dark mr-2"
+          >
+            {{ item.value() }}
+          </span>
+          <UIcon name="chevron_right" size="sm" class="text-text-tertiary-light dark:text-text-tertiary-dark" />
+        </button>
+      </UCard>
+
+      <!-- Logout Button -->
+      <UButton
+        variant="ghost"
+        size="lg"
+        full-width
+        class="text-danger"
+        @click="handleLogout"
+      >
+        <UIcon name="logout" size="sm" class="mr-2" />
+        Выйти
+      </UButton>
+    </main>
+
+    <!-- Bottom Navigation -->
+    <BottomNav @add-click="handleAddTransaction" />
+
+    <!-- Logout Confirmation Modal -->
+    <UModal
+      v-model="showLogoutModal"
+      title="Выход из аккаунта"
+      @close="closeLogoutModal"
+    >
+      <p class="text-text-secondary-light dark:text-text-secondary-dark">
+        Вы уверены, что хотите выйти из аккаунта?
+      </p>
+
+      <template #actions>
+        <UButton variant="secondary" full-width @click="closeLogoutModal">
+          Отмена
+        </UButton>
+        <UButton variant="primary" full-width class="!bg-danger hover:!bg-danger/90" @click="confirmLogout">
+          Выйти
+        </UButton>
+      </template>
+    </UModal>
+
+    <!-- Edit Profile Modal -->
+    <EditProfileModal
+      v-model="showEditProfileModal"
+      :user-id="user?.id ?? null"
+    />
+  </div>
+</template>

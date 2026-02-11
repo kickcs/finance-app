@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(bun install)",
+      "Bash(ls:*)",
+      "Bash(bun add:*)",
+      "Bash(bun run lint:*)",
+      "Bash(bun run build:*)",
+      "Bash(timeout 30s bun run:*)",
+      "Bash(pkill:*)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill -9)",
+      "Bash(curl:*)",
+      "Bash(jq:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(grep:*)",
+      "Bash(VITE_API_URL=http://localhost/api bun run build:*)",
+      "Bash(docker compose:*)",
+      "Bash(docker logs:*)",
+      "Bash(docker ps:*)",
+      "Bash(xargs ls:*)",
+      "Bash(ssh:*)",
+      "Bash(git init:*)",
+      "Bash(git branch:*)",
+      "Bash(git rm:*)"
+    ]
+  }
+}

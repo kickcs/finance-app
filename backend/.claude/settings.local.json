@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm test:*)",
+      "Bash(timeout 15 npm run start:dev:*)",
+      "Bash(ls:*)",
+      "Bash(bun run lint:*)",
+      "Bash(bun run format:*)",
+      "Bash(bun run build:*)",
+      "Bash(tree:*)",
+      "Bash(wc:*)",
+      "Bash(bun run start:dev)",
+      "Bash(ipconfig getifaddr:*)",
+      "Bash(xargs ls:*)"
+    ]
+  }
+}

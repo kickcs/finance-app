@@ -1,0 +1,310 @@
+<script setup lang="ts">
+import { ref, watch, computed } from 'vue'
+import { UModal, UInput, UButton, UTabs, UIcon } from '@/shared/ui'
+import { CategoryCard, getCategoriesByType } from '@/entities/category'
+import { formatCurrency } from '@/shared/lib/format/currency'
+import type { Transaction } from '@/shared/api/database.types'
+
+const props = defineProps<{
+  modelValue: boolean
+  transaction: Transaction | null
+  currency: string
+  isUpdating?: boolean
+  error?: string | null
+  hasSplitDebts?: boolean
+}>()
+
+const emit = defineEmits<{
+  'update:modelValue': [value: boolean]
+  confirm: [updates: Partial<Transaction>]
+  cancel: []
+  delete: []
+}>()
+
+// Check if transaction is a transfer
+const isTransfer = computed(() => props.transaction?.type === 'transfer')
+
+// Check if transaction is debt-related (cannot be edited)
+const isDebtRelated = computed(() => props.transaction?.is_debt_related === true)
+
+// Check if transaction has split debts linked to it (cannot be edited)
+const hasSplitDebts = computed(() => props.hasSplitDebts === true)
+
+// Cannot edit if debt-related OR has split debts
+const isProtected = computed(() => isDebtRelated.value || hasSplitDebts.value)
+
+// Local form state (only for non-transfer)
+const type = ref<'expense' | 'income'>('expense')
+const amount = ref(0)
+const categoryId = ref('')
+const description = ref('')
+const date = ref('')
+
+// Sync form state with transaction prop
+watch(
+  () => props.transaction,
+  (t) => {
+    if (t && t.type !== 'transfer') {
+      type.value = t.type as 'expense' | 'income'
+      amount.value = t.amount
+      categoryId.value = t.category_id
+      description.value = t.description || ''
+      date.value = t.date ? t.date.split('T')[0] : ''
+    }
+  },
+  { immediate: true }
+)
+
+const tabItems = [
+  { id: 'expense', label: 'Расход' },
+  { id: 'income', label: 'Доход' },
+]
+
+const categories = computed(() => getCategoriesByType(type.value))
+
+function handleTypeChange(newType: string) {
+  type.value = newType as 'expense' | 'income'
+  // Reset category if switching types
+  const availableCategories = getCategoriesByType(newType as 'expense' | 'income')
+  if (!availableCategories.find(c => c.id === categoryId.value)) {
+    categoryId.value = ''
+  }
+}
+
+function close() {
+  emit('update:modelValue', false)
+  emit('cancel')
+}
+
+function confirm() {
+  emit('confirm', {
+    type: type.value,
+    amount: amount.value,
+    category_id: categoryId.value,
+    description: description.value || null,
+    date: date.value,
+  })
+}
+
+const isFormValid = computed(() => {
+  return categoryId.value && amount.value > 0
+})
+</script>
+
+<template>
+  <UModal
+    :model-value="modelValue"
+    :title="isTransfer ? 'Перевод' : 'Редактировать'"
+    @update:model-value="emit('update:modelValue', $event)"
+  >
+    <!-- Error Message -->
+    <div v-if="error" class="mb-4 p-3 rounded-lg bg-danger/10 border border-danger/20">
+      <div class="flex gap-2">
+        <UIcon name="error" size="sm" class="text-danger shrink-0" />
+        <p class="text-sm text-danger">{{ error }}</p>
+      </div>
+    </div>
+
+    <!-- Protected Mode (debt-related OR has split debts): View Only -->
+    <div v-if="isProtected && transaction" class="py-2">
+      <div class="text-center mb-4">
+        <div class="w-12 h-12 mx-auto mb-3 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+          <UIcon :name="hasSplitDebts ? 'group' : 'account_balance_wallet'" size="md" class="text-amber-600" />
+        </div>
+        <p class="text-sm text-text-primary-light dark:text-text-primary-dark font-medium mb-0.5">
+          {{ hasSplitDebts ? 'Транзакция с раздельным счётом' : 'Транзакция связана с долгом' }}
+        </p>
+        <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
+          Управляйте долгом в разделе "Долги"
+        </p>
+      </div>
+
+      <!-- Transaction Details -->
+      <div class="space-y-2 p-3 rounded-lg bg-surface-light dark:bg-surface-dark">
+        <div class="flex justify-between items-center">
+          <span class="text-xs text-text-secondary-light dark:text-text-secondary-dark">Сумма</span>
+          <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
+            {{ formatCurrency(transaction.amount, transaction.currency) }}
+          </span>
+        </div>
+        <div v-if="transaction.description" class="flex justify-between items-center">
+          <span class="text-xs text-text-secondary-light dark:text-text-secondary-dark">Описание</span>
+          <span class="text-xs text-text-primary-light dark:text-text-primary-dark">
+            {{ transaction.description }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Info -->
+      <div class="mt-3 p-2.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+        <div class="flex gap-1.5">
+          <UIcon name="info" size="xs" class="text-amber-600 shrink-0 mt-0.5" />
+          <p class="text-xs text-amber-700 dark:text-amber-400">
+            {{ hasSplitDebts
+              ? 'Эту транзакцию нельзя редактировать, пока есть связанные долги. Сначала закройте долги в разделе "Долги".'
+              : 'Эту транзакцию нельзя редактировать или удалять напрямую. Перейдите в раздел "Долги" для управления.'
+            }}
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Transfer Mode: Delete Only -->
+    <div v-else-if="isTransfer && transaction" class="py-2">
+      <div class="text-center mb-4">
+        <div class="w-12 h-12 mx-auto mb-3 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
+          <UIcon name="swap_horiz" size="md" class="text-indigo-500" />
+        </div>
+        <p class="text-sm text-text-primary-light dark:text-text-primary-dark font-medium mb-0.5">
+          Это перевод между счетами
+        </p>
+        <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
+          Переводы можно только удалить
+        </p>
+      </div>
+
+      <!-- Transfer Details -->
+      <div class="space-y-2 p-3 rounded-lg bg-surface-light dark:bg-surface-dark">
+        <div class="flex justify-between items-center">
+          <span class="text-xs text-text-secondary-light dark:text-text-secondary-dark">Списание</span>
+          <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
+            {{ formatCurrency(transaction.amount, transaction.currency) }}
+          </span>
+        </div>
+        <div v-if="transaction.to_amount && transaction.to_currency" class="flex justify-between items-center">
+          <span class="text-xs text-text-secondary-light dark:text-text-secondary-dark">Зачисление</span>
+          <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
+            {{ formatCurrency(transaction.to_amount, transaction.to_currency) }}
+          </span>
+        </div>
+        <div v-if="transaction.description" class="flex justify-between items-center">
+          <span class="text-xs text-text-secondary-light dark:text-text-secondary-dark">Комментарий</span>
+          <span class="text-xs text-text-primary-light dark:text-text-primary-dark">
+            {{ transaction.description }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Warning -->
+      <div class="mt-3 p-2.5 rounded-lg bg-danger/10 border border-danger/20">
+        <div class="flex gap-1.5">
+          <UIcon name="warning" size="xs" class="text-danger shrink-0 mt-0.5" />
+          <p class="text-xs text-danger">
+            При удалении балансы счетов будут восстановлены
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Regular Edit Mode (expense/income) -->
+    <div v-else-if="transaction" class="space-y-4">
+      <!-- Type Tabs -->
+      <UTabs
+        :model-value="type"
+        :items="tabItems"
+        @update:model-value="handleTypeChange"
+      />
+
+      <!-- Amount -->
+      <UInput
+        :model-value="String(amount)"
+        label="Сумма"
+        placeholder="0"
+        variant="currency"
+        type="number"
+        :suffix="currency"
+        @update:model-value="amount = Number($event) || 0"
+      />
+
+      <!-- Category Grid -->
+      <div class="space-y-2">
+        <label class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark">
+          Категория
+        </label>
+        <div
+          role="listbox"
+          aria-label="Выберите категорию"
+          class="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto"
+        >
+          <CategoryCard
+            v-for="category in categories"
+            :key="category.id"
+            :category="category"
+            :selected="categoryId === category.id"
+            size="medium"
+            role="option"
+            :aria-selected="categoryId === category.id"
+            @click="categoryId = category.id"
+          />
+        </div>
+      </div>
+
+      <!-- Description & Date Row -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <UInput
+          v-model="description"
+          label="Комментарий"
+          placeholder="Описание..."
+         
+        />
+        <UInput
+          v-model="date"
+          label="Дата"
+          type="date"
+         
+        />
+      </div>
+    </div>
+
+    <template #actions>
+      <!-- Protected (debt-related OR split debts) Actions: Close Only -->
+      <div v-if="isProtected" class="flex gap-2 w-full">
+        <UButton variant="secondary" size="sm" full-width @click="close">
+          Закрыть
+        </UButton>
+      </div>
+
+      <!-- Transfer Actions: Cancel + Delete -->
+      <div v-else-if="isTransfer" class="flex gap-2 w-full">
+        <UButton variant="secondary" size="sm" full-width @click="close">
+          Отмена
+        </UButton>
+        <UButton
+          variant="primary"
+          size="sm"
+          full-width
+          class="!bg-danger hover:!bg-danger/90"
+          @click="emit('delete')"
+        >
+          <UIcon name="delete" size="xs" class="mr-1" />
+          Удалить
+        </UButton>
+      </div>
+
+      <!-- Regular Actions: Delete + Cancel + Save -->
+      <div v-else class="flex gap-2 w-full">
+        <UButton
+          variant="ghost"
+          size="sm"
+          class="!text-danger shrink-0"
+          @click="emit('delete')"
+        >
+          <UIcon name="delete" size="sm" />
+        </UButton>
+        <UButton variant="secondary" size="sm" full-width @click="close">
+          Отмена
+        </UButton>
+        <UButton
+          variant="primary"
+          size="sm"
+          full-width
+          :loading="isUpdating"
+          :disabled="!isFormValid"
+          @click="confirm"
+        >
+          Сохранить
+        </UButton>
+      </div>
+    </template>
+  </UModal>
+</template>
