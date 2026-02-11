@@ -32,7 +32,8 @@ export class HealthService {
       result.status = 'error';
       result.database = {
         status: 'error',
-        message: error instanceof Error ? error.message : 'Database connection failed',
+        message:
+          error instanceof Error ? error.message : 'Database connection failed',
       };
     }
 

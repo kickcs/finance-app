@@ -28,8 +28,12 @@ export class TokenService {
   async generateTokens(payload: JwtPayload): Promise<AuthTokens> {
     const isDemo = payload.isDemo ?? false;
 
-    const accessExpiry = isDemo ? DEMO_ACCESS_TOKEN_EXPIRY : REGULAR_ACCESS_TOKEN_EXPIRY;
-    const refreshExpiry = isDemo ? DEMO_REFRESH_TOKEN_EXPIRY : REGULAR_REFRESH_TOKEN_EXPIRY;
+    const accessExpiry = isDemo
+      ? DEMO_ACCESS_TOKEN_EXPIRY
+      : REGULAR_ACCESS_TOKEN_EXPIRY;
+    const refreshExpiry = isDemo
+      ? DEMO_REFRESH_TOKEN_EXPIRY
+      : REGULAR_REFRESH_TOKEN_EXPIRY;
 
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, {

@@ -11,7 +11,7 @@ export class AnalyticsQueryDto {
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  @Transform(({ value }) => {
+  @Transform(({ value }: { value: unknown }) => {
     // Handle both comma-separated string and array
     if (typeof value === 'string') {
       return value.split(',').filter(Boolean);

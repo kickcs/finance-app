@@ -46,9 +46,16 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
     const newAmount = command.data.amount ?? oldAmount;
     const newCurrency = command.data.currency ?? oldCurrency;
     const newType = command.data.type ?? oldType;
-    const newToAccountId = command.data.toAccountId !== undefined ? command.data.toAccountId : oldToAccountId;
-    const newToAmount = command.data.toAmount !== undefined ? command.data.toAmount : oldToAmount;
-    const newToCurrency = command.data.toCurrency !== undefined ? command.data.toCurrency : oldToCurrency;
+    const newToAccountId =
+      command.data.toAccountId !== undefined
+        ? command.data.toAccountId
+        : oldToAccountId;
+    const newToAmount =
+      command.data.toAmount !== undefined ? command.data.toAmount : oldToAmount;
+    const newToCurrency =
+      command.data.toCurrency !== undefined
+        ? command.data.toCurrency
+        : oldToCurrency;
 
     // Check if any balance-affecting field changed
     const balanceChanged =
@@ -91,12 +98,36 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
         );
       } else if (oldType === 'transfer' && newType !== 'transfer') {
         // Converting from transfer to income/expense
-        await this.reverseTransfer(oldAccountId, oldAmount, oldCurrency, oldToAccountId!, oldToAmount!, oldToCurrency!);
-        await this.applyNonTransfer(newAccountId, newAmount, newCurrency, newType);
+        await this.reverseTransfer(
+          oldAccountId,
+          oldAmount,
+          oldCurrency,
+          oldToAccountId!,
+          oldToAmount!,
+          oldToCurrency!,
+        );
+        await this.applyNonTransfer(
+          newAccountId,
+          newAmount,
+          newCurrency,
+          newType,
+        );
       } else {
         // Converting from income/expense to transfer
-        await this.reverseNonTransfer(oldAccountId, oldAmount, oldCurrency, oldType);
-        await this.applyTransfer(newAccountId, newAmount, newCurrency, newToAccountId!, newToAmount!, newToCurrency!);
+        await this.reverseNonTransfer(
+          oldAccountId,
+          oldAmount,
+          oldCurrency,
+          oldType,
+        );
+        await this.applyTransfer(
+          newAccountId,
+          newAmount,
+          newCurrency,
+          newToAccountId!,
+          newToAmount!,
+          newToCurrency!,
+        );
       }
     }
 
@@ -139,7 +170,8 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
   ): Promise<void> {
     if (oldAccountId === newAccountId && oldCurrency === newCurrency) {
       // Same account and currency - just adjust the difference
-      const account = await this.accountRepository.findByIdWithBalances(oldAccountId);
+      const account =
+        await this.accountRepository.findByIdWithBalances(oldAccountId);
       if (!account) return;
 
       // Reverse old effect
@@ -160,8 +192,18 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
       await this.eventPublisher.publishEvents(account);
     } else {
       // Different accounts or currencies - reverse on old, apply on new
-      await this.reverseNonTransfer(oldAccountId, oldAmount, oldCurrency, oldType);
-      await this.applyNonTransfer(newAccountId, newAmount, newCurrency, newType);
+      await this.reverseNonTransfer(
+        oldAccountId,
+        oldAmount,
+        oldCurrency,
+        oldType,
+      );
+      await this.applyNonTransfer(
+        newAccountId,
+        newAmount,
+        newCurrency,
+        newType,
+      );
     }
   }
 
@@ -210,7 +252,8 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
     currency: string,
     type: string,
   ): Promise<void> {
-    const account = await this.accountRepository.findByIdWithBalances(accountId);
+    const account =
+      await this.accountRepository.findByIdWithBalances(accountId);
     if (!account) return;
 
     if (type === 'income') {
@@ -229,7 +272,8 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
     currency: string,
     type: string,
   ): Promise<void> {
-    const account = await this.accountRepository.findByIdWithBalances(accountId);
+    const account =
+      await this.accountRepository.findByIdWithBalances(accountId);
     if (!account) return;
 
     if (type === 'income') {
@@ -250,8 +294,10 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
     toAmount: number,
     toCurrency: string,
   ): Promise<void> {
-    const fromAccount = await this.accountRepository.findByIdWithBalances(fromAccountId);
-    const toAccount = await this.accountRepository.findByIdWithBalances(toAccountId);
+    const fromAccount =
+      await this.accountRepository.findByIdWithBalances(fromAccountId);
+    const toAccount =
+      await this.accountRepository.findByIdWithBalances(toAccountId);
 
     if (fromAccount) {
       // Reverse debit from source (credit it back)
@@ -276,8 +322,10 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
     toAmount: number,
     toCurrency: string,
   ): Promise<void> {
-    const fromAccount = await this.accountRepository.findByIdWithBalances(fromAccountId);
-    const toAccount = await this.accountRepository.findByIdWithBalances(toAccountId);
+    const fromAccount =
+      await this.accountRepository.findByIdWithBalances(fromAccountId);
+    const toAccount =
+      await this.accountRepository.findByIdWithBalances(toAccountId);
 
     if (fromAccount) {
       // Debit source account

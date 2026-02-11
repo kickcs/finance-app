@@ -31,7 +31,9 @@ export class RefreshHandler implements ICommandHandler<RefreshCommand> {
 
       // Check if demo account has expired
       if (profile.isDemo && profile.isExpired()) {
-        this.logger.debug(`Demo account ${profile.id} has expired, rejecting refresh`);
+        this.logger.debug(
+          `Demo account ${profile.id} has expired, rejecting refresh`,
+        );
         throw new UnauthorizedException('Demo account has expired');
       }
 

@@ -163,16 +163,12 @@ export class TransactionRepository implements ITransactionRepository {
     // For each expense transaction, find debts linked via source_transaction_id
     // and sum the amounts from their close_transaction_id (return transactions)
     const transactionIds = items.map((t) => t.id);
-    let returnedAmountsMap: Record<string, number> = {};
+    const returnedAmountsMap: Record<string, number> = {};
 
     if (transactionIds.length > 0) {
       const returnedAmountsResult = await this.ormRepository
         .createQueryBuilder('return_tx')
-        .innerJoin(
-          DebtOrmEntity,
-          'd',
-          'd.close_transaction_id = return_tx.id',
-        )
+        .innerJoin(DebtOrmEntity, 'd', 'd.close_transaction_id = return_tx.id')
         .where('d.source_transaction_id IN (:...transactionIds)', {
           transactionIds,
         })
@@ -195,7 +191,9 @@ export class TransactionRepository implements ITransactionRepository {
     const dataWithReturns: TransactionWithReturns[] = items.map((entity) => {
       const domain = TransactionMapper.toDomain(entity);
       const returnedAmount = returnedAmountsMap[entity.id] ?? 0;
-      return Object.assign(domain, { returnedAmount }) as TransactionWithReturns;
+      return Object.assign(domain, {
+        returnedAmount,
+      }) as TransactionWithReturns;
     });
 
     // If filtering by expense type, exclude transactions where netAmount <= 0
@@ -391,9 +389,15 @@ export class TransactionRepository implements ITransactionRepository {
     const debtReturnsFromMe = Number(debtReturnsFromMeResult?.total ?? 0);
 
     // Income = regular + debt_taken - returns_from_me
-    const netIncome = Math.max(0, regularIncome + debtTaken - debtReturnsFromMe);
+    const netIncome = Math.max(
+      0,
+      regularIncome + debtTaken - debtReturnsFromMe,
+    );
     // Expense = regular + debt_given - returns_to_me
-    const netExpense = Math.max(0, regularExpense + debtGiven - debtReturnsToMe);
+    const netExpense = Math.max(
+      0,
+      regularExpense + debtGiven - debtReturnsToMe,
+    );
 
     // By currency calculations
     // 5. Regular income by currency
@@ -499,9 +503,15 @@ export class TransactionRepository implements ITransactionRepository {
       const returnsFromMe = debtReturnsFromMeByCurrency[currency] ?? 0;
 
       // Income = regular + debt_taken - returns_from_me
-      const netIncomeForCurrency = Math.max(0, incomeVal + takenVal - returnsFromMe);
+      const netIncomeForCurrency = Math.max(
+        0,
+        incomeVal + takenVal - returnsFromMe,
+      );
       // Expense = regular + debt_given - returns_to_me
-      const netExpenseForCurrency = Math.max(0, expenseVal + givenVal - returnsToMe);
+      const netExpenseForCurrency = Math.max(
+        0,
+        expenseVal + givenVal - returnsToMe,
+      );
 
       if (netIncomeForCurrency > 0) {
         incomeByCurrency[currency] = netIncomeForCurrency;
@@ -589,9 +599,15 @@ export class TransactionRepository implements ITransactionRepository {
     const debtReturnsFromMe = Number(debtReturnsFromMeResult?.total ?? 0);
 
     // Income = regular + debt_taken - returns_from_me
-    const netIncome = Math.max(0, regularIncome + debtTaken - debtReturnsFromMe);
+    const netIncome = Math.max(
+      0,
+      regularIncome + debtTaken - debtReturnsFromMe,
+    );
     // Expense = regular + debt_given - returns_to_me
-    const netExpense = Math.max(0, regularExpense + debtGiven - debtReturnsToMe);
+    const netExpense = Math.max(
+      0,
+      regularExpense + debtGiven - debtReturnsToMe,
+    );
 
     // 7. Regular income by currency
     const regularIncomeByCurrencyResult = await createBaseQuery()
@@ -696,9 +712,15 @@ export class TransactionRepository implements ITransactionRepository {
       const returnsFromMe = debtReturnsFromMeByCurrency[currency] ?? 0;
 
       // Income = regular + debt_taken - returns_from_me
-      const netIncomeForCurrency = Math.max(0, incomeVal + takenVal - returnsFromMe);
+      const netIncomeForCurrency = Math.max(
+        0,
+        incomeVal + takenVal - returnsFromMe,
+      );
       // Expense = regular + debt_given - returns_to_me
-      const netExpenseForCurrency = Math.max(0, expenseVal + givenVal - returnsToMe);
+      const netExpenseForCurrency = Math.max(
+        0,
+        expenseVal + givenVal - returnsToMe,
+      );
 
       if (netIncomeForCurrency > 0) {
         incomeByCurrency[currency] = netIncomeForCurrency;
@@ -777,11 +799,7 @@ export class TransactionRepository implements ITransactionRepository {
     // When someone returns money to me, subtract from the original expense category
     let categoryOffsetsQuery = this.ormRepository
       .createQueryBuilder('return_tx')
-      .innerJoin(
-        DebtOrmEntity,
-        'd',
-        'd.close_transaction_id = return_tx.id',
-      )
+      .innerJoin(DebtOrmEntity, 'd', 'd.close_transaction_id = return_tx.id')
       .innerJoin(
         TransactionOrmEntity,
         'source_tx',

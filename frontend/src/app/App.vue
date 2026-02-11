@@ -41,20 +41,26 @@ provide('getCategoryById', getCategoryById)
 
 <template>
   <ToastProvider>
-    <div v-if="isAppReady" class="min-h-screen bg-background-light dark:bg-background-dark text-text-primary-light dark:text-text-primary-dark antialiased relative overflow-x-hidden">
-      <template>
-        <!-- Demo Banner - shown globally when in demo mode -->
-        <DemoBanner v-if="isDemo" :formatted-remaining="formattedRemaining" />
+    <div class="min-h-screen bg-background-light dark:bg-background-dark text-text-primary-light dark:text-text-primary-dark antialiased relative overflow-x-hidden">
+      <!-- Loading state while auth initializes -->
+      <div
+        v-if="!isAppReady"
+        class="min-h-screen flex items-center justify-center"
+      >
+        <div class="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
 
-        <!-- App content -->
-        <RouterView v-slot="{ Component, route }">
-          <!-- When transitionName is 'none' (browser gesture), skip Transition entirely -->
-          <component v-if="transitionName === 'none'" :is="Component" :key="route.path" />
-          <Transition v-else :name="transitionName">
-            <component :is="Component" :key="route.path" />
-          </Transition>
-        </RouterView>
-      </template>
+      <!-- Demo Banner - shown globally when in demo mode -->
+      <DemoBanner v-if="isDemo" :formatted-remaining="formattedRemaining" />
+
+      <!-- App content -->
+      <RouterView v-slot="{ Component, route }">
+        <!-- When transitionName is 'none' (browser gesture), skip Transition entirely -->
+        <component v-if="transitionName === 'none'" :is="Component" :key="route.path" />
+        <Transition v-else :name="transitionName">
+          <component :is="Component" :key="route.path" />
+        </Transition>
+      </RouterView>
     </div>
 
     <!-- Toast notifications -->

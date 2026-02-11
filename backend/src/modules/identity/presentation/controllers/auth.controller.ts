@@ -23,7 +23,10 @@ import {
   RefreshCommand,
 } from '../../application/commands';
 import { GetProfileQuery } from '../../application/queries';
-import type { AuthResponse, AuthTokens } from '../../application/services/token.service';
+import type {
+  AuthResponse,
+  AuthTokens,
+} from '../../application/services/token.service';
 
 // Cookie configuration
 const REFRESH_TOKEN_COOKIE = 'refresh_token';
@@ -134,22 +137,21 @@ export class AuthController {
     @Res({ passthrough: true }) response: Response,
   ) {
     // Read refresh token from httpOnly cookie
-    const refreshToken = request.cookies[REFRESH_TOKEN_COOKIE];
+    const refreshToken = (request.cookies as Record<string, string>)[
+      REFRESH_TOKEN_COOKIE
+    ];
 
     if (!refreshToken) {
       throw new UnauthorizedException('No refresh token');
     }
 
-    const tokens: AuthTokens = await this.commandBus.execute(
-      new RefreshCommand(refreshToken),
-    );
+    const tokens: AuthTokens = await this.commandBus.execute<
+      RefreshCommand,
+      AuthTokens
+    >(new RefreshCommand(refreshToken));
 
     // Set new refresh token in httpOnly cookie
-    response.cookie(
-      REFRESH_TOKEN_COOKIE,
-      tokens.refreshToken,
-      COOKIE_OPTIONS,
-    );
+    response.cookie(REFRESH_TOKEN_COOKIE, tokens.refreshToken, COOKIE_OPTIONS);
 
     // Return only access token (refresh token is in cookie)
     return {

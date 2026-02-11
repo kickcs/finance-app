@@ -1,5 +1,10 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { Inject, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Inject,
+  BadRequestException,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { CreateTransactionCommand } from './create-transaction.command';
 import { Transaction } from '../../../domain/aggregates/transaction';
 import { TransferDomainService } from '../../../domain/services';
@@ -63,7 +68,9 @@ export class CreateTransactionHandler implements ICommandHandler<CreateTransacti
         throw new NotFoundException('Destination account not found');
       }
       if (toAccount.userId !== userId) {
-        throw new ForbiddenException('Destination account does not belong to user');
+        throw new ForbiddenException(
+          'Destination account does not belong to user',
+        );
       }
 
       // Use domain service for transfer

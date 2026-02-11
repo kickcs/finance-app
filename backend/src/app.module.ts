@@ -63,7 +63,9 @@ import { ExchangeModule } from './modules/exchange';
           // Legacy (to be migrated)
           Settings,
         ],
-        synchronize: process.env.NODE_ENV !== 'production' && process.env.DATABASE_SYNCHRONIZE !== 'false',
+        synchronize:
+          process.env.NODE_ENV !== 'production' &&
+          process.env.DATABASE_SYNCHRONIZE !== 'false',
         logging: process.env.NODE_ENV === 'development',
       }),
       inject: [ConfigService],

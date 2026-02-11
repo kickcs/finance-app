@@ -13,7 +13,11 @@ import { PROFILE_REPOSITORY } from './domain/repositories/profile.repository.int
 // Application
 import { CommandHandlers } from './application/commands';
 import { QueryHandlers } from './application/queries';
-import { TokenService, DemoInitializationService, DemoCleanupService } from './application/services';
+import {
+  TokenService,
+  DemoInitializationService,
+  DemoCleanupService,
+} from './application/services';
 
 // Infrastructure
 import { ProfileOrmEntity } from './infrastructure/persistence/typeorm';

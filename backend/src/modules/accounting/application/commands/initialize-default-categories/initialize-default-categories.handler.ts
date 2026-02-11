@@ -12,9 +12,7 @@ import {
 } from '../../../domain/constants/default-categories';
 
 @CommandHandler(InitializeDefaultCategoriesCommand)
-export class InitializeDefaultCategoriesHandler
-  implements ICommandHandler<InitializeDefaultCategoriesCommand>
-{
+export class InitializeDefaultCategoriesHandler implements ICommandHandler<InitializeDefaultCategoriesCommand> {
   constructor(
     @Inject(CATEGORY_REPOSITORY)
     private readonly categoryRepository: ICategoryRepository,

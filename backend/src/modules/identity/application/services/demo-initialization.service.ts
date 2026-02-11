@@ -22,7 +22,10 @@ import {
 import { Account } from '../../../accounting/domain/aggregates/account';
 import { Transaction } from '../../../accounting/domain/aggregates/transaction';
 import { Debt } from '../../../debt/domain/aggregates/debt';
-import { Reminder, ReminderFrequency } from '../../../planning/domain/aggregates/reminder';
+import {
+  Reminder,
+  ReminderFrequency,
+} from '../../../planning/domain/aggregates/reminder';
 import { Profile } from '../../domain';
 import { DomainEventPublisher } from '../../../../shared';
 
@@ -52,7 +55,13 @@ const CATEGORY_AMOUNTS: Record<string, { min: number; max: number }> = {
 
 // Description templates for each category
 const CATEGORY_DESCRIPTIONS: Record<string, string[]> = {
-  groceries: ['Makro', 'Korzinka', 'Havas', 'Овощи на базаре', 'Продукты на неделю'],
+  groceries: [
+    'Makro',
+    'Korzinka',
+    'Havas',
+    'Овощи на базаре',
+    'Продукты на неделю',
+  ],
   transport: ['Yandex Go', 'Метро', 'Заправка', 'MyTaxi', 'Автобус'],
   health: ['Аптека', 'Анализы', 'Врач', 'Стоматолог', 'Витамины'],
   housing: ['Коммунальные', 'Интернет', 'Уборка', 'Ремонт', 'Мебель'],
@@ -157,16 +166,25 @@ export class DemoInitializationService {
       this.logger.log(`Demo data initialized for user ${userId}`);
       return walletId;
     } catch (error) {
-      this.logger.error(`Failed to initialize demo data for user ${userId}`, error);
+      this.logger.error(
+        `Failed to initialize demo data for user ${userId}`,
+        error,
+      );
       throw error;
     }
   }
 
   private async createAccounts(userId: string): Promise<Account[]> {
-    const walletBalance = this.roundToThousand(this.randomBetween(800000, 2000000));
-    const cardBalanceUZS = this.roundToThousand(this.randomBetween(3000000, 8000000));
+    const walletBalance = this.roundToThousand(
+      this.randomBetween(800000, 2000000),
+    );
+    const cardBalanceUZS = this.roundToThousand(
+      this.randomBetween(3000000, 8000000),
+    );
     const cardBalanceUSD = this.randomBetween(100, 500);
-    const savingsBalance = this.roundToThousand(this.randomBetween(5000000, 15000000));
+    const savingsBalance = this.roundToThousand(
+      this.randomBetween(5000000, 15000000),
+    );
 
     const accountsData = [
       {
@@ -216,7 +234,10 @@ export class DemoInitializationService {
     return savedAccounts;
   }
 
-  private async createTransactions(userId: string, accountIds: string[]): Promise<void> {
+  private async createTransactions(
+    userId: string,
+    accountIds: string[],
+  ): Promise<void> {
     const transactions = this.generateTransactionsData();
     const [walletId, cardId] = accountIds;
 
@@ -338,7 +359,9 @@ export class DemoInitializationService {
         if (isExpense) {
           const category = this.pickWeighted(EXPENSE_CATEGORIES);
           const amounts = CATEGORY_AMOUNTS[category.id];
-          const amount = this.roundToThousand(this.randomBetween(amounts.min, amounts.max));
+          const amount = this.roundToThousand(
+            this.randomBetween(amounts.min, amounts.max),
+          );
           const descriptions = CATEGORY_DESCRIPTIONS[category.id];
 
           transactions.push({
@@ -353,7 +376,9 @@ export class DemoInitializationService {
         } else {
           const category = this.pickWeighted(INCOME_CATEGORIES);
           const amounts = CATEGORY_AMOUNTS[category.id];
-          const amount = this.roundToThousand(this.randomBetween(amounts.min, amounts.max));
+          const amount = this.roundToThousand(
+            this.randomBetween(amounts.min, amounts.max),
+          );
           const descriptions = CATEGORY_DESCRIPTIONS[category.id];
 
           transactions.push({
@@ -370,7 +395,9 @@ export class DemoInitializationService {
     }
 
     // Add salary on 1st and 15th of current month
-    const salaryAmount = this.roundToThousand(this.randomBetween(8000000, 12000000));
+    const salaryAmount = this.roundToThousand(
+      this.randomBetween(8000000, 12000000),
+    );
 
     // Salary on 1st
     const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);

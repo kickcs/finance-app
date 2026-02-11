@@ -15,6 +15,7 @@ bun run start:dev        # Development with watch mode
 bun run start:debug      # Debug mode with watch
 bun run build            # Build (verify before committing)
 bun run test             # Run Jest tests
+bun run test -- --testPathPattern=<pattern>  # Run a single test file
 bun run test:e2e         # E2E tests
 bun run lint             # ESLint with auto-fix
 
@@ -22,6 +23,15 @@ bun run lint             # ESLint with auto-fix
 bun run dev              # Start Vite dev server
 bun run build            # Type-check + production build (verify before committing)
 bun run preview          # Preview production build
+
+# Database migrations (cd backend/)
+bun run migration:generate src/database/migrations/<MigrationName>  # Generate from entity changes
+bun run migration:run     # Apply pending migrations
+bun run migration:revert  # Revert last migration
+
+# Docker (local development)
+docker compose up -d postgres  # Start only PostgreSQL
+docker compose up -d           # Start all services (postgres, backend, frontend)
 ```
 
 ## Project Structure
@@ -104,6 +114,16 @@ shared/     # UI components, HTTP client, hooks
 ## Environment Variables
 
 ```bash
+# Backend (.env) - copy from backend/.env.example
+DATABASE_HOST=localhost
+DATABASE_PORT=5432
+DATABASE_NAME=my_finance
+DATABASE_USERNAME=postgres
+DATABASE_PASSWORD=your_password
+JWT_SECRET=your-super-secret-jwt-key
+JWT_EXPIRES_IN=7d
+PORT=3000
+
 # Frontend (.env)
 VITE_API_URL=http://localhost:3000
 ```
@@ -126,3 +146,5 @@ VITE_API_URL=http://localhost:3000
 - **Profile fields**: When adding new profile fields, update both `ProfileResponse` type and all handlers that return it (get-profile, update-profile, create-demo-user, etc.)
 - **Material Symbols**: Uses `display=block` to prevent icon text flash (FOUT) - do not change to `swap`
 - **Global state**: User auth provided via Vue `provide/inject` pattern from `App.vue`
+- **TypeORM synchronize**: Disabled (`synchronize: false`) - always use migrations for schema changes, never enable synchronize
+- **Deployment**: Production uses GHCR images via `docker-compose.prod.yml`, deployed with GitHub Actions

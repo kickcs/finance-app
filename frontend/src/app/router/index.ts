@@ -210,11 +210,6 @@ async function getOrFetchProfile(userId: string): Promise<Profile | null> {
 // In-memory flag to skip repeated onboarding checks after first success
 let onboardingVerified = false
 
-// Reset onboarding flag on sign-out (called from guard when demo expires)
-export function resetOnboardingFlag() {
-  onboardingVerified = false
-}
-
 // Helper function to check onboarding status
 async function checkOnboardingStatus(userId: string): Promise<boolean> {
   // Skip network/cache check if already verified this session

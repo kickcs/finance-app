@@ -2,9 +2,9 @@
 import { ref, computed, inject, watch, defineAsyncComponent } from 'vue'
 import type { Ref } from 'vue'
 import type { User } from '@/shared/api/composables/useAuth'
+import { UButton, UIcon, UCard, UTabs, UModal } from '@/shared/ui'
 
 const draggable = defineAsyncComponent(() => import('vuedraggable'))
-import { UButton, UIcon, UCard, UTabs, UModal } from '@/shared/ui'
 import { useCategories } from '@/entities/category'
 import type { UserCategory } from '@/shared/api/database.types'
 import { CategoryForm, useManageCategories } from '@/features/manage-categories'

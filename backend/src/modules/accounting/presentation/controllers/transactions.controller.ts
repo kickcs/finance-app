@@ -84,12 +84,7 @@ export class TransactionsController {
     endDate.setHours(23, 59, 59, 999);
 
     return this.queryBus.execute(
-      new GetAnalyticsStatsQuery(
-        userId,
-        startDate,
-        endDate,
-        query.accountIds,
-      ),
+      new GetAnalyticsStatsQuery(userId, startDate, endDate, query.accountIds),
     );
   }
 
@@ -183,10 +178,7 @@ export class TransactionsController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async remove(
-    @CurrentUser('sub') userId: string,
-    @Param('id') id: string,
-  ) {
+  async remove(@CurrentUser('sub') userId: string, @Param('id') id: string) {
     await this.commandBus.execute(new DeleteTransactionCommand(id, userId));
   }
 }
