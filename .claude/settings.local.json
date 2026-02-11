@@ -24,7 +24,16 @@
       "Bash(ssh:*)",
       "Bash(git init:*)",
       "Bash(git branch:*)",
-      "Bash(git rm:*)"
+      "Bash(git rm:*)",
+      "Bash(gh repo create:*)",
+      "Bash(openssl rand:*)",
+      "Bash(gh secret set:*)",
+      "Bash(gh secret list:*)",
+      "Bash(gh workflow run:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh run view:*)",
+      "Bash(gh run watch:*)",
+      "Bash(git push:*)"
     ]
   }
 }
