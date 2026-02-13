@@ -5,31 +5,25 @@ import { formatCurrency } from '@/shared/lib/format/currency'
 import { getCurrencyByCode } from '@/entities/currency'
 import type { AccountWithBalances } from '../model/types'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   account: AccountWithBalances
   showBalance?: boolean
   compact?: boolean
-}>()
+}>(), {
+  showBalance: true,
+})
 
 defineEmits<{
   click: []
 }>()
 
-// Format balances for display
-const formattedBalances = computed(() => {
-  if (!props.account.balances || props.account.balances.length === 0) {
-    return '0'
-  }
-
-  // Show up to 3 balances compactly
-  const balances = props.account.balances.slice(0, 3)
-  return balances
-    .map((b) => formatCurrency(b.balance, b.currency, { compact: true }))
-    .join(' · ')
+// Format single balance for display
+const formattedBalance = computed(() => {
+  const balances = props.account.balances
+  if (!balances || balances.length === 0) return '0'
+  const b = balances[0]
+  return formatCurrency(b.balance, b.currency, { compact: true })
 })
-
-// Check if there are more balances than shown
-const hasMoreBalances = computed(() => props.account.balances.length > 3)
 </script>
 
 <template>
@@ -65,7 +59,7 @@ const hasMoreBalances = computed(() => props.account.balances.length > 3)
           {{ account.name }}
         </p>
         <span
-          v-if="account.balances.length > 1"
+          v-if="account.balances?.length > 1"
           class="shrink-0 px-1.5 py-0.5 text-[10px] font-medium rounded bg-surface-light dark:bg-surface-dark text-text-secondary-light dark:text-text-secondary-dark"
         >
           {{ account.balances.length }}
@@ -78,17 +72,17 @@ const hasMoreBalances = computed(() => props.account.balances.length > 3)
 
     <!-- Balance -->
     <div
-      v-if="showBalance !== false"
+      v-if="showBalance"
       class="text-right shrink-0 min-w-0 max-w-[45%]"
     >
       <!-- Multi-currency -->
-      <div v-if="account.balances.length > 1" class="space-y-0.5">
+      <div v-if="account.balances?.length > 1" class="space-y-0.5">
         <div
           v-for="balance in account.balances.slice(0, 2)"
           :key="balance.currency"
           class="text-xs font-medium text-text-primary-light dark:text-text-primary-dark whitespace-nowrap"
         >
-          {{ getCurrencyByCode(balance.currency)?.flag }}
+          {{ getCurrencyByCode(balance.currency)?.flag ?? balance.currency }}
           {{ formatCurrency(balance.balance, balance.currency, { compact: true }) }}
         </div>
         <p
@@ -104,7 +98,7 @@ const hasMoreBalances = computed(() => props.account.balances.length > 3)
         v-else
         class="font-semibold text-sm text-text-primary-light dark:text-text-primary-dark truncate"
       >
-        {{ formattedBalances }}
+        {{ formattedBalance }}
       </p>
     </div>
 

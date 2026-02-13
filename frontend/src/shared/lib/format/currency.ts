@@ -37,7 +37,7 @@ export function formatCurrency(
     style: showSymbol ? 'currency' : 'decimal',
     currency: config.code,
     minimumFractionDigits: compact ? 0 : config.decimals,
-    maximumFractionDigits: config.decimals,
+    maximumFractionDigits: compact ? 2 : config.decimals,
     notation: compact ? 'compact' : 'standard',
     signDisplay: showSign ? 'exceptZero' : 'auto',
   })
