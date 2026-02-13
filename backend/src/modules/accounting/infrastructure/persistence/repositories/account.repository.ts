@@ -31,7 +31,7 @@ export class AccountRepository implements IAccountRepository {
   async findByUserId(userId: string): Promise<Account[]> {
     const ormEntities = await this.ormRepository.find({
       where: { userId },
-      order: { order: 'ASC' },
+      order: { order: 'ASC', createdAt: 'ASC' },
     });
 
     return ormEntities.map((entity) => AccountMapper.toDomain(entity));
@@ -54,7 +54,7 @@ export class AccountRepository implements IAccountRepository {
     const ormEntities = await this.ormRepository.find({
       where: { userId },
       relations: ['balances'],
-      order: { order: 'ASC' },
+      order: { order: 'ASC', createdAt: 'ASC' },
     });
 
     return ormEntities.map((entity) => AccountMapper.toDomain(entity));
