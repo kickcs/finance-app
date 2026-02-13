@@ -263,6 +263,8 @@ function handleViewAllReminders() {
             :spent-amount="spentThisMonth"
             :currency="currency"
             :loading="statsLoading"
+            @income-click="router.push('/analytics?type=income')"
+            @expense-click="router.push('/analytics?type=expense')"
           />
           <template #fallback>
             <SaveSpendSectionSkeleton />

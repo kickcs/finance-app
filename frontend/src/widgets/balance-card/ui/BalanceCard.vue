@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { UIcon, UCard } from '@/shared/ui'
-import { formatCurrency } from '@/shared/lib/format/currency'
+import { formatCurrency, COMPACT_FORMAT } from '@/shared/lib/format/currency'
 
 defineProps<{
   totalBalance: number
@@ -36,7 +36,7 @@ defineEmits<{
           v-if="!loading"
           class="text-4xl sm:text-5xl font-bold tracking-tight text-text-primary-light dark:text-text-primary-dark"
         >
-          {{ formatCurrency(totalBalance, currency) }}
+          {{ formatCurrency(totalBalance, currency, COMPACT_FORMAT) }}
         </h1>
       </Transition>
 

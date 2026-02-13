@@ -6,7 +6,8 @@ import { useRouter } from 'vue-router'
 import { AppHeader } from '@/widgets/header'
 import { BottomNav } from '@/widgets/bottom-nav'
 import { UTabs, UCard, UIcon, Skeleton } from '@/shared/ui'
-import { formatCurrency } from '@/shared/lib/format/currency'
+import { formatCurrency, COMPACT_FORMAT } from '@/shared/lib/format/currency'
+import { useExchangeRates } from '@/shared/api'
 import { useAnalyticsStats, type CategoryBreakdown } from '@/entities/transaction'
 import { useAccounts } from '@/entities/account'
 import { useDebts } from '@/entities/debt'
@@ -71,8 +72,19 @@ const {
   accountIds: computed(() => filters.value.selectedAccountIds),
 })
 
-// Load accounts for filter chips
-const { accounts } = useAccounts(userId)
+// Load accounts for filter chips and balance
+const { accounts, totalBalancesByCurrency } = useAccounts(userId)
+
+// Exchange rates for currency conversion
+const { convert } = useExchangeRates(currency)
+
+// Total balance converted to user's main currency
+const totalBalance = computed((): number => {
+  const balances: Record<string, number> = totalBalancesByCurrency.value
+  return Object.entries(balances).reduce(
+    (sum, [curr, amount]) => sum + convert(amount, curr), 0
+  )
+})
 
 // Load debts for debt summary
 const { debts, isLoading: debtsLoading } = useDebts(userId)
@@ -248,6 +260,7 @@ function handleAddTransaction() {
         :total-income="totalIncome"
         :total-expense="totalExpense"
         :currency="currency"
+        :total-balance="totalBalance"
       />
 
       <!-- Debt Summary Cards -->
@@ -275,7 +288,7 @@ function handleAddTransaction() {
               <span class="text-text-secondary-light dark:text-text-secondary-dark">Мне должны</span>
             </div>
             <span class="text-xl font-bold text-text-primary-light dark:text-text-primary-dark">
-              {{ formatCurrency(totalOwedToMe, currency) }}
+              {{ formatCurrency(totalOwedToMe, currency, COMPACT_FORMAT) }}
             </span>
           </div>
         </UCard>
@@ -296,7 +309,7 @@ function handleAddTransaction() {
               <span class="text-text-secondary-light dark:text-text-secondary-dark">Я должен</span>
             </div>
             <span class="text-xl font-bold text-text-primary-light dark:text-text-primary-dark">
-              {{ formatCurrency(totalIOwe, currency) }}
+              {{ formatCurrency(totalIOwe, currency, COMPACT_FORMAT) }}
             </span>
           </div>
         </UCard>

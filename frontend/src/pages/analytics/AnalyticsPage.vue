@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import { computed, inject } from 'vue'
+import { computed, inject, onMounted } from 'vue'
 import type { Ref } from 'vue'
 import type { User } from '@/shared/api/composables/useAuth'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { AppHeader } from '@/widgets/header'
 import { BottomNav } from '@/widgets/bottom-nav'
 import { UTabs, UCard, UIcon, UProgressBar, Skeleton } from '@/shared/ui'
 import { useAnalyticsStats, type CategoryBreakdown } from '@/entities/transaction'
 import { useAccounts } from '@/entities/account'
 import { useDebts } from '@/entities/debt'
-import { formatCurrency } from '@/shared/lib/format/currency'
+import { formatCurrency, COMPACT_FORMAT } from '@/shared/lib/format/currency'
 import {
   ModeToggle,
   DateRangePicker,
@@ -20,6 +20,7 @@ import {
 } from '@/features/analytics-filters'
 
 const router = useRouter()
+const route = useRoute()
 
 // Get user from provide/inject
 const user = inject<Ref<User | null>>('user')
@@ -156,6 +157,14 @@ function handleTypeChange(value: string | number) {
 function handleAddTransaction() {
   router.push('/transactions/new')
 }
+
+// Read initial type filter from query param
+onMounted(() => {
+  const queryType = route.query.type as string | undefined
+  if (queryType === 'income' || queryType === 'expense') {
+    setType(queryType)
+  }
+})
 </script>
 
 <template>
@@ -219,7 +228,7 @@ function handleAddTransaction() {
             </div>
             <Skeleton v-if="analyticsLoading" class="h-7 w-32 rounded" />
             <span v-else class="text-xl font-bold text-text-primary-light dark:text-text-primary-dark">
-              {{ formatCurrency(totalExpense, currency) }}
+              {{ formatCurrency(totalExpense, currency, COMPACT_FORMAT) }}
             </span>
           </div>
         </UCard>
@@ -238,7 +247,7 @@ function handleAddTransaction() {
             </div>
             <Skeleton v-if="analyticsLoading" class="h-7 w-32 rounded" />
             <span v-else class="text-xl font-bold text-text-primary-light dark:text-text-primary-dark">
-              {{ formatCurrency(totalIncome, currency) }}
+              {{ formatCurrency(totalIncome, currency, COMPACT_FORMAT) }}
             </span>
           </div>
         </UCard>
@@ -283,7 +292,7 @@ function handleAddTransaction() {
                 <span class="text-text-secondary-light dark:text-text-secondary-dark">Мне должны</span>
               </div>
               <span class="text-xl font-bold text-text-primary-light dark:text-text-primary-dark">
-                {{ formatCurrency(totalOwedToMe, currency) }}
+                {{ formatCurrency(totalOwedToMe, currency, COMPACT_FORMAT) }}
               </span>
             </div>
           </UCard>
@@ -304,7 +313,7 @@ function handleAddTransaction() {
                 <span class="text-text-secondary-light dark:text-text-secondary-dark">Я должен</span>
               </div>
               <span class="text-xl font-bold text-text-primary-light dark:text-text-primary-dark">
-                {{ formatCurrency(totalIOwe, currency) }}
+                {{ formatCurrency(totalIOwe, currency, COMPACT_FORMAT) }}
               </span>
             </div>
           </UCard>
@@ -370,7 +379,7 @@ function handleAddTransaction() {
                   </p>
                 </div>
                 <p class="font-semibold text-text-primary-light dark:text-text-primary-dark">
-                  {{ formatCurrency(stat.amount, currency) }}
+                  {{ formatCurrency(stat.amount, currency, COMPACT_FORMAT) }}
                 </p>
               </div>
               <UProgressBar

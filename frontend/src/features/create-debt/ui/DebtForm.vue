@@ -266,19 +266,37 @@ const displayDate = computed(() => {
       @update:model-value="updateField('description', $event as string)"
     />
 
+    <!-- Skip Balance Checkbox -->
+    <label class="flex items-center gap-3 cursor-pointer">
+      <input
+        type="checkbox"
+        :checked="formData.skipTransaction"
+        class="w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary"
+        @change="updateField('skipTransaction', ($event.target as HTMLInputElement).checked)"
+      />
+      <span class="text-sm text-text-primary-light dark:text-text-primary-dark">
+        {{ formData.debt_type === 'given' ? 'Не списывать с баланса' : 'Не добавлять на баланс' }}
+      </span>
+    </label>
+
     <!-- Info Box -->
     <div class="p-4 rounded-xl bg-surface-light dark:bg-surface-dark">
       <div class="flex items-start gap-3">
         <UIcon
-          :name="formData.debt_type === 'given' ? 'info' : 'info'"
+          name="info"
           size="sm"
           class="text-text-tertiary-light dark:text-text-tertiary-dark mt-0.5"
         />
         <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
-          {{ formData.debt_type === 'given'
-            ? `Сумма ${formData.amount > 0 ? formData.amount + ' ' + formData.currency : ''} будет списана с выбранного счёта`
-            : `Сумма ${formData.amount > 0 ? formData.amount + ' ' + formData.currency : ''} будет добавлена на выбранный счёт`
-          }}
+          <template v-if="formData.skipTransaction">
+            Будет создан только долг без изменения баланса счёта
+          </template>
+          <template v-else>
+            {{ formData.debt_type === 'given'
+              ? `Сумма ${formData.amount > 0 ? formData.amount + ' ' + formData.currency : ''} будет списана с выбранного счёта`
+              : `Сумма ${formData.amount > 0 ? formData.amount + ' ' + formData.currency : ''} будет добавлена на выбранный счёт`
+            }}
+          </template>
         </p>
       </div>
     </div>

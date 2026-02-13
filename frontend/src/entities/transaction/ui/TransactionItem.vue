@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, inject } from 'vue'
 import { UIcon } from '@/shared/ui'
-import { formatCurrency } from '@/shared/lib/format/currency'
+import { formatCurrency, COMPACT_FORMAT } from '@/shared/lib/format/currency'
 import { formatRelativeDate } from '@/shared/lib/format/date'
 import { getCategoryById as getCategoryByIdStatic } from '@/entities/category'
 import type { Category } from '@/entities/category'
@@ -59,23 +59,24 @@ const displayAmount = computed(() => {
 })
 
 const formattedAmount = computed(() => {
+  const compact = COMPACT_FORMAT
   if (isTransfer.value) {
     if (props.viewingAccountId) {
       if (isIncomingTransfer.value) {
         const amount = props.transaction.to_amount ?? props.transaction.amount
         const curr = props.transaction.to_currency || props.transaction.currency || 'UZS'
-        return `+${formatCurrency(amount, curr)}`
+        return `+${formatCurrency(amount, curr, compact)}`
       }
       const curr = props.transaction.currency || props.currency || 'UZS'
-      return `-${formatCurrency(props.transaction.amount, curr)}`
+      return `-${formatCurrency(props.transaction.amount, curr, compact)}`
     }
     const curr = props.transaction.currency || props.currency || 'UZS'
-    return formatCurrency(props.transaction.amount, curr)
+    return formatCurrency(props.transaction.amount, curr, compact)
   }
 
   const prefix = props.transaction.type === 'income' ? '+' : '-'
   const curr = props.transaction.currency || props.currency || 'UZS'
-  return `${prefix}${formatCurrency(displayAmount.value, curr)}`
+  return `${prefix}${formatCurrency(displayAmount.value, curr, compact)}`
 })
 
 const formattedDate = computed(() => formatRelativeDate(new Date(props.transaction.date).getTime()))
@@ -112,7 +113,12 @@ const formattedDate = computed(() => formatRelativeDate(new Date(props.transacti
         {{ isTransfer ? 'Перевод' : (category?.name || 'Транзакция') }}
       </p>
       <p class="text-[10px] text-text-tertiary-light dark:text-text-tertiary-dark truncate">
-        {{ isTransfer ? transferLabel : (transaction.description || formattedDate) }}
+        <template v-if="isTransfer">{{ transferLabel }}</template>
+        <template v-else>
+          <span v-if="accountName">{{ accountName }}</span>
+          <span v-if="accountName && (transaction.description || formattedDate)"> · </span>
+          <span>{{ transaction.description || formattedDate }}</span>
+        </template>
       </p>
     </div>
 
@@ -137,14 +143,14 @@ const formattedDate = computed(() => formatRelativeDate(new Date(props.transacti
         v-if="isTransfer && !viewingAccountId && transaction.to_currency && transaction.to_currency !== transaction.currency"
         class="text-[10px] text-text-tertiary-light dark:text-text-tertiary-dark"
       >
-        → {{ formatCurrency(transaction.to_amount || 0, transaction.to_currency) }}
+        → {{ formatCurrency(transaction.to_amount || 0, transaction.to_currency, COMPACT_FORMAT) }}
       </p>
       <!-- Original amount indicator when there are debt returns -->
       <p
         v-if="transaction.has_debt_returns && transaction.type === 'expense'"
         class="text-[10px] text-text-tertiary-light dark:text-text-tertiary-dark line-through"
       >
-        -{{ formatCurrency(transaction.amount, transaction.currency || currency || 'UZS') }}
+        -{{ formatCurrency(transaction.amount, transaction.currency || currency || 'UZS', COMPACT_FORMAT) }}
       </p>
     </div>
   </button>

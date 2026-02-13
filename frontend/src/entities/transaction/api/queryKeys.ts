@@ -1,4 +1,5 @@
 import type { TransactionFilters } from './transactionsApi'
+import { cleanUndefined } from '@/shared/lib/utils'
 
 // Query key factory for transactions entity
 export const transactionQueryKeys = {
@@ -8,9 +9,9 @@ export const transactionQueryKeys = {
   byDateRange: (userId: string, startDate: string, endDate: string) =>
     [...transactionQueryKeys.all, 'dateRange', userId, startDate, endDate] as const,
 
-  // Infinite query keys
+  // Infinite query keys - strip undefined/empty values for stable serialization
   infinite: (userId: string, filters?: TransactionFilters) =>
-    [...transactionQueryKeys.all, 'infinite', userId, filters ?? {}] as const,
+    [...transactionQueryKeys.all, 'infinite', userId, cleanUndefined(filters ?? {})] as const,
   infiniteByAccount: (accountId: string) =>
     [...transactionQueryKeys.all, 'infinite', 'account', accountId] as const,
   search: (userId: string, searchTerm: string) =>

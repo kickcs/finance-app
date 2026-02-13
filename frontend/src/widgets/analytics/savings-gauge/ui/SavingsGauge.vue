@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed, ref, onMounted } from 'vue'
 import { UCard, UIcon } from '@/shared/ui'
-import { formatCurrency } from '@/shared/lib/format/currency'
+import { formatCurrency, COMPACT_FORMAT } from '@/shared/lib/format/currency'
 
 const props = defineProps<{
   totalIncome: number
   totalExpense: number
   currency: string
+  totalBalance?: number
 }>()
 
 // Animation state
@@ -19,10 +20,15 @@ onMounted(() => {
 })
 
 // Savings calculations
-const savings = computed(() => props.totalIncome - props.totalExpense)
+const savings = computed(() =>
+  props.totalBalance !== undefined ? props.totalBalance : props.totalIncome - props.totalExpense
+)
 
 const savingsRate = computed(() => {
   if (props.totalIncome <= 0) return 0
+  if (props.totalBalance !== undefined) {
+    return (props.totalBalance / props.totalIncome) * 100
+  }
   return ((props.totalIncome - props.totalExpense) / props.totalIncome) * 100
 })
 
@@ -150,7 +156,7 @@ const progressOffset = computed(() => {
             class="text-3xl font-bold"
             :style="{ color: currentStatus.color }"
           >
-            {{ savingsRate.toFixed(0) }}%
+            {{ Math.min(savingsRate, 999).toFixed(0) }}%
           </p>
           <p
             class="text-sm font-medium"
@@ -179,7 +185,7 @@ const progressOffset = computed(() => {
           </span>
         </div>
         <span class="font-semibold text-success">
-          +{{ formatCurrency(totalIncome, currency) }}
+          +{{ formatCurrency(totalIncome, currency, COMPACT_FORMAT) }}
         </span>
       </div>
 
@@ -198,7 +204,7 @@ const progressOffset = computed(() => {
           </span>
         </div>
         <span class="font-semibold text-danger">
-          -{{ formatCurrency(totalExpense, currency) }}
+          -{{ formatCurrency(totalExpense, currency, COMPACT_FORMAT) }}
         </span>
       </div>
 
@@ -216,14 +222,14 @@ const progressOffset = computed(() => {
             />
           </div>
           <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
-            Сбережения
+            {{ totalBalance !== undefined ? 'Текущий баланс' : 'Сбережения' }}
           </span>
         </div>
         <span
           class="font-bold text-lg"
           :class="savings >= 0 ? 'text-primary' : 'text-danger'"
         >
-          {{ savings >= 0 ? '+' : '' }}{{ formatCurrency(savings, currency) }}
+          {{ savings >= 0 ? '+' : '' }}{{ formatCurrency(savings, currency, COMPACT_FORMAT) }}
         </span>
       </div>
     </div>

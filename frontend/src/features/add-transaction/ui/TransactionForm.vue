@@ -423,14 +423,13 @@ watch(
       <label class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark">
         Категория
       </label>
-      <div class="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 snap-x snap-mandatory scrollbar-hide">
+      <div class="grid grid-cols-4 sm:grid-cols-5 gap-2 max-h-48 overflow-y-auto">
         <CategoryCard
           v-for="category in categories"
           :key="category.id"
           :category="category"
           :selected="formData.categoryId === category.id"
-          size="large"
-          class="snap-start shrink-0"
+          size="medium"
           @click="updateField('categoryId', category.id)"
         />
       </div>
@@ -452,14 +451,22 @@ watch(
       @set-enabled="$emit('setSplitEnabled', $event)"
     />
 
-    <!-- Description -->
-    <UInput
-      :model-value="formData.description"
-      label="Комментарий"
-      placeholder="Добавьте описание..."
-      @update:model-value="updateField('description', $event as string)"
-      @keydown.enter.prevent
-    />
+    <!-- Description & Date Row -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <UInput
+        :model-value="formData.description"
+        label="Комментарий"
+        placeholder="Добавьте описание..."
+        @update:model-value="updateField('description', $event as string)"
+        @keydown.enter.prevent
+      />
+      <UInput
+        :model-value="new Date(formData.date).toISOString().split('T')[0]"
+        label="Дата"
+        type="date"
+        @update:model-value="(v: string | number) => { const p = String(v).split('-'); updateField('date', new Date(+p[0], +p[1] - 1, +p[2]).getTime()) }"
+      />
+    </div>
 
     <!-- Error Message -->
     <p v-if="error" class="text-xs text-danger">

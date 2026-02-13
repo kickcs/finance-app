@@ -45,6 +45,9 @@ export function formatCurrency(
   return formatter.format(amount)
 }
 
+/** Reusable compact formatting option */
+export const COMPACT_FORMAT = { compact: true } as const
+
 /**
  * Parse currency string to number
  */

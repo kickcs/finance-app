@@ -3,7 +3,7 @@ import { ref, computed, watchEffect } from 'vue'
 import { useVirtualizer } from '@tanstack/vue-virtual'
 import TransactionItem from './TransactionItem.vue'
 import { SwipeableItem, EmptyState } from '@/shared/ui'
-import { formatCurrency } from '@/shared/lib/format/currency'
+import { formatCurrency, COMPACT_FORMAT } from '@/shared/lib/format/currency'
 import type { Transaction, TransactionGroup } from '../model/types'
 
 interface HeaderData {
@@ -209,7 +209,7 @@ function isLastInGroup(index: number): boolean {
             class="text-sm font-medium"
             :class="(getHeaderData(virtualRow.index)?.total ?? 0) >= 0 ? 'text-success' : 'text-danger'"
           >
-            {{ (getHeaderData(virtualRow.index)?.total ?? 0) >= 0 ? '+' : '' }}{{ formatCurrency(getHeaderData(virtualRow.index)?.total ?? 0, currency) }}
+            {{ (getHeaderData(virtualRow.index)?.total ?? 0) >= 0 ? '+' : '' }}{{ formatCurrency(getHeaderData(virtualRow.index)?.total ?? 0, currency, COMPACT_FORMAT) }}
           </span>
         </div>
 

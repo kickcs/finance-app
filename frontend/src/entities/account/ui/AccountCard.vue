@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { UIcon } from '@/shared/ui'
-import { formatCurrency } from '@/shared/lib/format/currency'
+import { formatCurrency, COMPACT_FORMAT } from '@/shared/lib/format/currency'
 import { getCurrencyByCode } from '@/entities/currency'
 import type { AccountWithBalances } from '../model/types'
 
@@ -22,7 +22,7 @@ const formattedBalance = computed(() => {
   const balances = props.account.balances
   if (!balances || balances.length === 0) return '0'
   const b = balances[0]
-  return formatCurrency(b.balance, b.currency, { compact: true })
+  return formatCurrency(b.balance, b.currency, COMPACT_FORMAT)
 })
 </script>
 
@@ -83,7 +83,7 @@ const formattedBalance = computed(() => {
           class="text-xs font-medium text-text-primary-light dark:text-text-primary-dark whitespace-nowrap"
         >
           {{ getCurrencyByCode(balance.currency)?.flag ?? balance.currency }}
-          {{ formatCurrency(balance.balance, balance.currency, { compact: true }) }}
+          {{ formatCurrency(balance.balance, balance.currency, COMPACT_FORMAT) }}
         </div>
         <p
           v-if="account.balances.length > 2"

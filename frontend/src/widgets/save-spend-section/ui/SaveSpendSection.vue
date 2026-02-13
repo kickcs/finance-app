@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { UCard, UIcon, EmptyState } from '@/shared/ui'
-import { formatCurrency } from '@/shared/lib/format/currency'
+import { formatCurrency, COMPACT_FORMAT } from '@/shared/lib/format/currency'
 
 const props = defineProps<{
   savedAmount: number
@@ -24,6 +24,11 @@ const spentPercent = computed(() => {
 })
 
 const hasData = computed(() => props.savedAmount > 0 || props.spentAmount > 0)
+
+defineEmits<{
+  'income-click': []
+  'expense-click': []
+}>()
 </script>
 
 <template>
@@ -62,7 +67,7 @@ const hasData = computed(() => props.savedAmount > 0 || props.spentAmount > 0)
     <!-- Content -->
     <div v-else class="flex flex-col gap-3">
       <!-- Earned Card -->
-      <UCard padding="md" class="animate-fadeInUp" style="animation-delay: 0.03s;">
+      <UCard padding="md" class="animate-fadeInUp cursor-pointer hover:ring-1 hover:ring-success/30 transition-all" style="animation-delay: 0.03s;" @click="$emit('income-click')">
         <div class="flex items-center justify-between mb-3">
           <div class="flex items-center gap-2">
             <div class="w-8 h-8 rounded-lg bg-success-light flex items-center justify-center">
@@ -73,7 +78,7 @@ const hasData = computed(() => props.savedAmount > 0 || props.spentAmount > 0)
             </span>
           </div>
           <p class="text-xl font-semibold text-success">
-            +{{ formatCurrency(savedAmount, currency) }}
+            +{{ formatCurrency(savedAmount, currency, COMPACT_FORMAT) }}
           </p>
         </div>
 
@@ -87,7 +92,7 @@ const hasData = computed(() => props.savedAmount > 0 || props.spentAmount > 0)
       </UCard>
 
       <!-- Spent Card -->
-      <UCard padding="md" class="animate-fadeInUp" style="animation-delay: 0.06s;">
+      <UCard padding="md" class="animate-fadeInUp cursor-pointer hover:ring-1 hover:ring-danger/30 transition-all" style="animation-delay: 0.06s;" @click="$emit('expense-click')">
         <div class="flex items-center justify-between mb-3">
           <div class="flex items-center gap-2">
             <div class="w-8 h-8 rounded-lg bg-danger-light flex items-center justify-center">
@@ -98,7 +103,7 @@ const hasData = computed(() => props.savedAmount > 0 || props.spentAmount > 0)
             </span>
           </div>
           <p class="text-xl font-semibold text-danger">
-            -{{ formatCurrency(spentAmount, currency) }}
+            -{{ formatCurrency(spentAmount, currency, COMPACT_FORMAT) }}
           </p>
         </div>
 

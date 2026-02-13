@@ -14,6 +14,7 @@ export interface DebtFormData {
   account_id: string | null
   debt_date: string | null
   description: string
+  skipTransaction: boolean
 }
 
 const initialFormData: DebtFormData = {
@@ -24,6 +25,7 @@ const initialFormData: DebtFormData = {
   account_id: null,
   debt_date: new Date().toISOString().split('T')[0],
   description: '',
+  skipTransaction: false,
 }
 
 export function useCreateDebt() {
@@ -62,19 +64,21 @@ export function useCreateDebt() {
       const transactionType = isGiven ? 'expense' : 'income'
       const categoryId = isGiven ? 'debt_given' : 'debt_taken'
 
-      // 1. Create the linked transaction (backend handles balance update)
-      const transaction = await transactionsApi.create({
-        user_id: userId,
-        account_id: accountId,
-        category_id: categoryId,
-        amount: formData.value.amount,
-        currency: currency,
-        type: transactionType,
-        description: formData.value.description || `${isGiven ? 'Дал в долг' : 'Взял в долг'}: ${formData.value.person_name}`,
-        date: formData.value.debt_date ? new Date(formData.value.debt_date).toISOString() : new Date().toISOString(),
-        is_debt_related: true,
-      })
-      transactionId = transaction.id
+      // 1. Create the linked transaction (backend handles balance update) — unless skipTransaction
+      if (!formData.value.skipTransaction) {
+        const transaction = await transactionsApi.create({
+          user_id: userId,
+          account_id: accountId,
+          category_id: categoryId,
+          amount: formData.value.amount,
+          currency: currency,
+          type: transactionType,
+          description: formData.value.description || `${isGiven ? 'Дал в долг' : 'Взял в долг'}: ${formData.value.person_name}`,
+          date: formData.value.debt_date ? new Date(formData.value.debt_date).toISOString() : new Date().toISOString(),
+          is_debt_related: true,
+        })
+        transactionId = transaction.id
+      }
 
       // 2. Create the debt record with currency
       const debtName = `${isGiven ? 'Долг от' : 'Долг для'} ${formData.value.person_name}`
@@ -86,7 +90,7 @@ export function useCreateDebt() {
         debt_type: formData.value.debt_type,
         person_name: formData.value.person_name,
         account_id: accountId,
-        transaction_id: transaction.id,
+        transaction_id: transactionId,
         is_closed: false,
         currency: currency,
       })

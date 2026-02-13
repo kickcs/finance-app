@@ -33,7 +33,20 @@
       "Bash(gh run list:*)",
       "Bash(gh run view:*)",
       "Bash(gh run watch:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(git pull:*)",
+      "Bash(gh workflow:*)",
+      "Bash(cwebp:*)",
+      "Bash(cd:*)",
+      "Bash(bun run test:*)",
+      "Bash(git status:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx vue-tsc:*)",
+      "Bash(bun run:*)",
+      "Bash(node -e:*)",
+      "Bash(python3:*)",
+      "Bash(npx tailwindcss --help:*)",
+      "Skill(review)"
     ]
   }
 }

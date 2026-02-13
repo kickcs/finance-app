@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, inject } from 'vue'
+import type { Ref } from 'vue'
 import { UModal, UInput, UButton, UTabs, UIcon } from '@/shared/ui'
-import { CategoryCard, getCategoriesByType } from '@/entities/category'
+import { CategoryCard, useCategories } from '@/entities/category'
 import { formatCurrency } from '@/shared/lib/format/currency'
 import type { Transaction } from '@/shared/api/database.types'
+import type { User } from '@/shared/api/composables/useAuth'
 
 const props = defineProps<{
   modelValue: boolean
@@ -20,6 +22,11 @@ const emit = defineEmits<{
   cancel: []
   delete: []
 }>()
+
+// Get user for categories
+const user = inject<Ref<User | null>>('user')
+const userId = computed(() => user?.value?.id ?? null)
+const { getCategoriesByType } = useCategories(userId)
 
 // Check if transaction is a transfer
 const isTransfer = computed(() => props.transaction?.type === 'transfer')
@@ -66,7 +73,7 @@ function handleTypeChange(newType: string) {
   type.value = newType as 'expense' | 'income'
   // Reset category if switching types
   const availableCategories = getCategoriesByType(newType as 'expense' | 'income')
-  if (!availableCategories.find(c => c.id === categoryId.value)) {
+  if (!availableCategories.find((c: { id: string }) => c.id === categoryId.value)) {
     categoryId.value = ''
   }
 }

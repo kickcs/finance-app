@@ -16,7 +16,7 @@ import {
 import { SearchInput, useServerSearch } from '@/features/search-transactions'
 import { EditTransactionModal, DeleteTransactionModal, useEditTransaction } from '@/features/edit-transaction'
 import { useAccounts } from '@/entities/account'
-import { ALL_CATEGORIES } from '@/entities/category'
+import { ALL_CATEGORIES, useCategories } from '@/entities/category'
 import { UTabs, UIcon, UButton, UModal } from '@/shared/ui'
 import { formatDateGroup } from '@/shared/lib/format/date'
 import { useExchangeRates } from '@/shared/api'
@@ -153,6 +153,7 @@ const groupedTransactions = computed<TransactionGroup[]>(() => {
           return sum
         }
 
+        if (tx.type === 'transfer') return sum
         return sum + (tx.type === 'income' ? amount : -amount)
       }, 0),
     }))
@@ -252,8 +253,11 @@ function clearAdditionalFilters() {
   selectedCategoryId.value = null
 }
 
-// All categories available for filtering
-const usedCategories = computed(() => ALL_CATEGORIES)
+// User categories from API + fallback to static
+const { allCategories: userCategories } = useCategories(userId)
+const usedCategories = computed(() =>
+  userCategories.value.length > 0 ? userCategories.value : ALL_CATEGORIES
+)
 
 // Helper to get account name by id
 function getAccountName(accountId: string | null): string {
