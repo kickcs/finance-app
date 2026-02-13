@@ -1,6 +1,6 @@
 import { ValueObject } from '../../../../shared/domain/base';
 
-type AccountTypeValue = 'basic' | 'savings';
+type AccountTypeValue = 'basic' | 'savings' | 'credit_card' | 'cash' | 'loan' | 'deposit';
 
 interface AccountTypeProps {
   value: AccountTypeValue;
@@ -12,10 +12,18 @@ interface AccountTypeProps {
 export class AccountType extends ValueObject<AccountTypeProps> {
   static readonly BASIC = new AccountType({ value: 'basic' });
   static readonly SAVINGS = new AccountType({ value: 'savings' });
+  static readonly CREDIT_CARD = new AccountType({ value: 'credit_card' });
+  static readonly CASH = new AccountType({ value: 'cash' });
+  static readonly LOAN = new AccountType({ value: 'loan' });
+  static readonly DEPOSIT = new AccountType({ value: 'deposit' });
 
   private static readonly VALID_TYPES: AccountTypeValue[] = [
     'basic',
     'savings',
+    'credit_card',
+    'cash',
+    'loan',
+    'deposit',
   ];
 
   private constructor(props: AccountTypeProps) {
@@ -41,6 +49,22 @@ export class AccountType extends ValueObject<AccountTypeProps> {
 
   isSavings(): boolean {
     return this.props.value === 'savings';
+  }
+
+  isCreditCard(): boolean {
+    return this.props.value === 'credit_card';
+  }
+
+  isCash(): boolean {
+    return this.props.value === 'cash';
+  }
+
+  isLoan(): boolean {
+    return this.props.value === 'loan';
+  }
+
+  isDeposit(): boolean {
+    return this.props.value === 'deposit';
   }
 
   toString(): string {

@@ -10,9 +10,20 @@ interface AccountResponse {
   currency: string
   icon: string
   color: string
-  type: 'basic' | 'savings'
+  type: 'basic' | 'savings' | 'credit_card' | 'cash' | 'loan' | 'deposit'
   order: number
   createdAt: string
+  creditLimit: number | null
+  gracePeriodDays: number | null
+  billingDay: number | null
+  totalAmount: number | null
+  interestRate: number | null
+  monthlyPayment: number | null
+  startDate: string | null
+  endDate: string | null
+  maturityDate: string | null
+  isReplenishable: boolean | null
+  isWithdrawable: boolean | null
 }
 
 interface AccountBalanceResponse {
@@ -24,18 +35,35 @@ interface AccountBalanceResponse {
 }
 
 // Transform camelCase response to snake_case for frontend compatibility
-function transformAccount(acc: AccountResponse): Account {
+function transformAccountBase(acc: AccountResponse) {
   return {
     id: acc.id,
     user_id: acc.userId,
     name: acc.name,
-    balance: acc.balance,
-    currency: acc.currency,
     icon: acc.icon,
     color: acc.color,
     type: acc.type,
     order: acc.order,
     created_at: acc.createdAt,
+    credit_limit: acc.creditLimit,
+    grace_period_days: acc.gracePeriodDays,
+    billing_day: acc.billingDay,
+    total_amount: acc.totalAmount,
+    interest_rate: acc.interestRate,
+    monthly_payment: acc.monthlyPayment,
+    start_date: acc.startDate,
+    end_date: acc.endDate,
+    maturity_date: acc.maturityDate,
+    is_replenishable: acc.isReplenishable,
+    is_withdrawable: acc.isWithdrawable,
+  }
+}
+
+function transformAccount(acc: AccountResponse): Account {
+  return {
+    ...transformAccountBase(acc),
+    balance: acc.balance,
+    currency: acc.currency,
   }
 }
 
@@ -49,6 +77,29 @@ function transformBalance(bal: AccountBalanceResponse): AccountBalance {
   }
 }
 
+function transformAccountWithBalances(acc: AccountResponse & { balances: AccountBalanceResponse[] }): AccountWithBalances {
+  return {
+    ...transformAccountBase(acc),
+    balances: acc.balances?.map(transformBalance) ?? [],
+  }
+}
+
+function mapTypeFieldsToRequest(account: { credit_limit?: number | null; grace_period_days?: number | null; billing_day?: number | null; total_amount?: number | null; interest_rate?: number | null; monthly_payment?: number | null; start_date?: string | null; end_date?: string | null; maturity_date?: string | null; is_replenishable?: boolean | null; is_withdrawable?: boolean | null }) {
+  return {
+    creditLimit: account.credit_limit,
+    gracePeriodDays: account.grace_period_days,
+    billingDay: account.billing_day,
+    totalAmount: account.total_amount,
+    interestRate: account.interest_rate,
+    monthlyPayment: account.monthly_payment,
+    startDate: account.start_date,
+    endDate: account.end_date,
+    maturityDate: account.maturity_date,
+    isReplenishable: account.is_replenishable,
+    isWithdrawable: account.is_withdrawable,
+  }
+}
+
 export const accountsApi = {
   async getAll(_userId: string): Promise<Account[]> {
     // Backend gets userId from JWT token
@@ -59,17 +110,7 @@ export const accountsApi = {
   async getAllWithBalances(_userId: string): Promise<AccountWithBalances[]> {
     // Backend gets userId from JWT token and returns accounts with balances
     const data = await http.get<(AccountResponse & { balances: AccountBalanceResponse[] })[]>('/accounts')
-    return data.map((acc) => ({
-      id: acc.id,
-      user_id: acc.userId,
-      name: acc.name,
-      icon: acc.icon,
-      color: acc.color,
-      type: acc.type,
-      order: acc.order,
-      created_at: acc.createdAt,
-      balances: acc.balances?.map(transformBalance) ?? [],
-    }))
+    return data.map(transformAccountWithBalances)
   },
 
   async getById(accountId: string): Promise<Account | null> {
@@ -86,17 +127,7 @@ export const accountsApi = {
       const data = await http.get<AccountResponse & { balances: AccountBalanceResponse[] }>(
         `/accounts/${accountId}/with-balances`
       )
-      return {
-        id: data.id,
-        user_id: data.userId,
-        name: data.name,
-        icon: data.icon,
-        color: data.color,
-        type: data.type,
-        order: data.order,
-        created_at: data.createdAt,
-        balances: data.balances.map(transformBalance),
-      }
+      return transformAccountWithBalances(data)
     } catch {
       return null
     }
@@ -111,10 +142,10 @@ export const accountsApi = {
       color: account.color,
       type: account.type ?? 'basic',
       order: account.order ?? 0,
-      // If balance and currency are provided, convert to balances array
       balances: account.currency && account.balance !== undefined
         ? [{ currency: account.currency, balance: account.balance }]
         : undefined,
+      ...mapTypeFieldsToRequest(account),
     })
     return transformAccount(data)
   },
@@ -133,19 +164,10 @@ export const accountsApi = {
         type: account.type ?? 'basic',
         order: account.order ?? 0,
         balances,
+        ...mapTypeFieldsToRequest(account),
       }
     )
-    return {
-      id: data.id,
-      user_id: data.userId,
-      name: data.name,
-      icon: data.icon,
-      color: data.color,
-      type: data.type,
-      order: data.order,
-      created_at: data.createdAt,
-      balances: data.balances?.map(transformBalance) ?? [],
-    }
+    return transformAccountWithBalances(data)
   },
 
   async update(id: string, updates: Partial<Account>): Promise<Account> {
@@ -157,6 +179,7 @@ export const accountsApi = {
       color: updates.color,
       type: updates.type,
       order: updates.order,
+      ...mapTypeFieldsToRequest(updates),
     })
     return transformAccount(data)
   },

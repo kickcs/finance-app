@@ -1,10 +1,11 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { Inject, NotFoundException } from '@nestjs/common';
+import { Inject, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { UpdateAccountCommand } from './update-account.command';
 import {
   IAccountRepository,
   ACCOUNT_REPOSITORY,
 } from '../../../domain/repositories/account.repository.interface';
+import { toAccountResponse } from '../../shared/account-response.helper';
 
 @CommandHandler(UpdateAccountCommand)
 export class UpdateAccountHandler implements ICommandHandler<UpdateAccountCommand> {
@@ -20,19 +21,14 @@ export class UpdateAccountHandler implements ICommandHandler<UpdateAccountComman
       throw new NotFoundException('Account not found');
     }
 
+    if (account.userId !== command.userId) {
+      throw new ForbiddenException('Access denied');
+    }
+
     account.update(command.data);
 
     const savedAccount = await this.accountRepository.save(account);
 
-    return {
-      id: savedAccount.id,
-      userId: savedAccount.userId,
-      name: savedAccount.name,
-      icon: savedAccount.icon,
-      color: savedAccount.color,
-      type: savedAccount.typeValue,
-      order: savedAccount.order,
-      createdAt: savedAccount.createdAt,
-    };
+    return toAccountResponse(savedAccount);
   }
 }

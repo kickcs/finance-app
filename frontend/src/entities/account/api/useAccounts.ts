@@ -72,6 +72,17 @@ export function useAccounts(userId: MaybeRefOrGetter<string | null>) {
         color: newAccount.color,
         type: newAccount.type ?? 'basic',
         balances: [{ id: 'temp', account_id: 'temp', currency: newAccount.currency, balance: newAccount.balance ?? 0, created_at: new Date().toISOString() }],
+        credit_limit: newAccount.credit_limit ?? null,
+        grace_period_days: newAccount.grace_period_days ?? null,
+        billing_day: newAccount.billing_day ?? null,
+        total_amount: newAccount.total_amount ?? null,
+        interest_rate: newAccount.interest_rate ?? null,
+        monthly_payment: newAccount.monthly_payment ?? null,
+        start_date: newAccount.start_date ?? null,
+        end_date: newAccount.end_date ?? null,
+        maturity_date: newAccount.maturity_date ?? null,
+        is_replenishable: newAccount.is_replenishable ?? null,
+        is_withdrawable: newAccount.is_withdrawable ?? null,
       }
 
       queryClient.setQueryData<AccountWithBalances[]>(queryKey.value, (old) => [...(old ?? []), optimisticAccount])

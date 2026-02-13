@@ -1,5 +1,6 @@
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { ACCOUNT_ICONS, ACCOUNT_COLORS, accountQueryKeys } from '@/entities/account'
+import type { AccountType } from '@/entities/account'
 import { accountsApi } from '@/entities/account'
 import { queryClient } from '@/shared/api/queryClient'
 import { useToast } from '@/shared/ui'
@@ -14,17 +15,63 @@ export interface AccountFormData {
   balances: CurrencyBalance[]
   icon: string
   color: string
-  type: 'basic' | 'savings'
+  type: AccountType
+  // Credit card fields
+  creditLimit: number | null
+  gracePeriodDays: number | null
+  billingDay: number | null
+  // Loan fields
+  totalAmount: number | null
+  interestRate: number | null
+  monthlyPayment: number | null
+  startDate: string | null
+  endDate: string | null
+  // Deposit fields
+  maturityDate: string | null
+  isReplenishable: boolean | null
+  isWithdrawable: boolean | null
 }
 
-export function useCreateAccount() {
-  const { toast } = useToast()
-  const formData = ref<AccountFormData>({
+function getDefaultFormData(): AccountFormData {
+  return {
     name: '',
     balances: [{ currency: 'UZS', balance: 0 }],
     icon: ACCOUNT_ICONS[0],
     color: ACCOUNT_COLORS[0],
     type: 'basic',
+    creditLimit: null,
+    gracePeriodDays: null,
+    billingDay: null,
+    totalAmount: null,
+    interestRate: null,
+    monthlyPayment: null,
+    startDate: null,
+    endDate: null,
+    maturityDate: null,
+    isReplenishable: null,
+    isWithdrawable: null,
+  }
+}
+
+export function useCreateAccount() {
+  const { toast } = useToast()
+  const formData = ref<AccountFormData>(getDefaultFormData())
+
+  // Clear type-specific fields when type changes
+  watch(() => formData.value.type, (newType, oldType) => {
+    if (newType === oldType) return
+    // Reset all type-specific fields
+    formData.value.creditLimit = null
+    formData.value.gracePeriodDays = null
+    formData.value.billingDay = null
+    formData.value.totalAmount = null
+    formData.value.interestRate = null
+    formData.value.monthlyPayment = null
+    formData.value.startDate = null
+    formData.value.endDate = null
+    formData.value.maturityDate = null
+    formData.value.isReplenishable = null
+    formData.value.isWithdrawable = null
   })
 
   const isValid = computed(() => {
@@ -63,15 +110,33 @@ export function useCreateAccount() {
     error.value = null
 
     try {
+      const fd = formData.value
+
+      // For credit cards, user enters debt as positive number — negate for storage
+      const balances = fd.type === 'credit_card'
+        ? fd.balances.map((b) => ({ ...b, balance: b.balance !== 0 ? -Math.abs(b.balance) : 0 }))
+        : fd.balances
+
       const account = await accountsApi.createWithBalances(
         {
           user_id: userId,
-          name: formData.value.name.trim(),
-          icon: formData.value.icon,
-          color: formData.value.color,
-          type: formData.value.type,
+          name: fd.name.trim(),
+          icon: fd.icon,
+          color: fd.color,
+          type: fd.type,
+          credit_limit: fd.creditLimit,
+          grace_period_days: fd.gracePeriodDays,
+          billing_day: fd.billingDay,
+          total_amount: fd.totalAmount,
+          interest_rate: fd.interestRate,
+          monthly_payment: fd.monthlyPayment,
+          start_date: fd.startDate,
+          end_date: fd.endDate,
+          maturity_date: fd.maturityDate,
+          is_replenishable: fd.isReplenishable,
+          is_withdrawable: fd.isWithdrawable,
         },
-        formData.value.balances
+        balances
       )
 
       // Invalidate accounts cache so Dashboard and other pages refresh
@@ -132,13 +197,7 @@ export function useCreateAccount() {
   }
 
   function resetForm() {
-    formData.value = {
-      name: '',
-      balances: [{ currency: 'UZS', balance: 0 }],
-      icon: ACCOUNT_ICONS[0],
-      color: ACCOUNT_COLORS[0],
-      type: 'basic',
-    }
+    formData.value = getDefaultFormData()
     error.value = null
   }
 

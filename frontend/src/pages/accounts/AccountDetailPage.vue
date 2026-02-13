@@ -6,7 +6,7 @@ import type { User } from '@/shared/api/composables/useAuth'
 import { UButton, UIcon, UCard, EmptyState } from '@/shared/ui'
 import { formatCurrency } from '@/shared/lib/format/currency'
 import { formatDateGroup } from '@/shared/lib/format/date'
-import { useAccounts, type AccountWithBalances } from '@/entities/account'
+import { useAccounts, getAccountTypeLabel, type AccountWithBalances } from '@/entities/account'
 import {
   VirtualGroupedTransactionList,
   TransactionGroupSkeleton,
@@ -270,13 +270,63 @@ async function handleSetAsDefault() {
                 </span>
               </div>
               <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
-                {{ account.type === 'savings' ? 'Накопительный' : 'Основной' }}
+                {{ getAccountTypeLabel(account.type) }}
               </p>
             </div>
           </div>
 
-          <!-- Balances -->
-          <div class="mt-6 pt-6 border-t border-border-light dark:border-border-dark">
+          <!-- Credit Card Balances -->
+          <div v-if="account.type === 'credit_card' && account.credit_limit != null" class="mt-6 pt-6 border-t border-border-light dark:border-border-dark space-y-4">
+            <div v-for="balance in account.balances" :key="balance.currency" class="space-y-3">
+              <!-- Balance row -->
+              <div class="flex justify-between items-center">
+                <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
+                  {{ balance.balance < 0 ? 'Задолженность' : 'Собственные средства' }}
+                </span>
+                <span
+                  class="text-xl font-bold"
+                  :class="balance.balance < 0
+                    ? 'text-danger'
+                    : 'text-text-primary-light dark:text-text-primary-dark'"
+                >
+                  {{ formatCurrency(balance.balance, balance.currency) }}
+                </span>
+              </div>
+
+              <!-- Available -->
+              <div class="flex justify-between items-center">
+                <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">Доступно</span>
+                <span class="text-sm font-semibold text-success">
+                  {{ formatCurrency(account.credit_limit + balance.balance, balance.currency) }}
+                </span>
+              </div>
+
+              <!-- Limit -->
+              <div class="flex justify-between items-center">
+                <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">Лимит</span>
+                <span class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">
+                  {{ formatCurrency(account.credit_limit, balance.currency) }}
+                </span>
+              </div>
+
+              <!-- Progress bar -->
+              <div v-if="balance.balance < 0 && account.credit_limit > 0" class="space-y-1">
+                <div class="h-2 rounded-full bg-surface-light dark:bg-surface-dark overflow-hidden">
+                  <div
+                    class="h-full rounded-full transition-all duration-300"
+                    :class="Math.abs(balance.balance) / account.credit_limit > 0.8 ? 'bg-danger' : 'bg-primary'"
+                    :style="{ width: `${Math.min(Math.abs(balance.balance) / account.credit_limit * 100, 100)}%` }"
+                  />
+                </div>
+                <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark text-right">
+                  {{ Math.round(Math.abs(balance.balance) / account.credit_limit * 100) }}% использовано
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Regular Balances -->
+          <div v-else class="mt-6 pt-6 border-t border-border-light dark:border-border-dark">
             <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
               Баланс
             </span>
@@ -327,6 +377,79 @@ async function handleSetAsDefault() {
               >
                 <UIcon name="delete" size="md" />
               </UButton>
+            </div>
+          </div>
+        </UCard>
+
+        <!-- Type-Specific Info -->
+        <UCard v-if="account.type === 'credit_card' && (account.grace_period_days != null || account.billing_day != null)" class="p-5">
+          <h3 class="text-sm font-semibold text-text-secondary-light dark:text-text-secondary-dark mb-3">
+            Параметры кредитной карты
+          </h3>
+          <div class="space-y-2">
+            <div v-if="account.grace_period_days != null" class="flex justify-between">
+              <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">Грейс-период</span>
+              <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">{{ account.grace_period_days }} дней</span>
+            </div>
+            <div v-if="account.billing_day != null" class="flex justify-between">
+              <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">День выписки</span>
+              <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">{{ account.billing_day }}-е число</span>
+            </div>
+          </div>
+        </UCard>
+
+        <UCard v-if="account.type === 'loan' && (account.total_amount != null || account.interest_rate != null)" class="p-5">
+          <h3 class="text-sm font-semibold text-text-secondary-light dark:text-text-secondary-dark mb-3">
+            Параметры кредита
+          </h3>
+          <div class="space-y-2">
+            <div v-if="account.total_amount != null" class="flex justify-between">
+              <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">Сумма кредита</span>
+              <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
+                {{ formatCurrency(account.total_amount, account.balances?.[0]?.currency ?? 'UZS') }}
+              </span>
+            </div>
+            <div v-if="account.interest_rate != null" class="flex justify-between">
+              <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">Ставка</span>
+              <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">{{ account.interest_rate }}%</span>
+            </div>
+            <div v-if="account.monthly_payment != null" class="flex justify-between">
+              <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">Ежемесячный платёж</span>
+              <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
+                {{ formatCurrency(account.monthly_payment, account.balances?.[0]?.currency ?? 'UZS') }}
+              </span>
+            </div>
+            <div v-if="account.start_date" class="flex justify-between">
+              <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">Дата начала</span>
+              <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">{{ account.start_date }}</span>
+            </div>
+            <div v-if="account.end_date" class="flex justify-between">
+              <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">Дата окончания</span>
+              <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">{{ account.end_date }}</span>
+            </div>
+          </div>
+        </UCard>
+
+        <UCard v-if="account.type === 'deposit' && (account.interest_rate != null || account.maturity_date != null)" class="p-5">
+          <h3 class="text-sm font-semibold text-text-secondary-light dark:text-text-secondary-dark mb-3">
+            Параметры вклада
+          </h3>
+          <div class="space-y-2">
+            <div v-if="account.interest_rate != null" class="flex justify-between">
+              <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">Ставка</span>
+              <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">{{ account.interest_rate }}%</span>
+            </div>
+            <div v-if="account.maturity_date" class="flex justify-between">
+              <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">Дата окончания</span>
+              <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">{{ account.maturity_date }}</span>
+            </div>
+            <div v-if="account.is_replenishable != null" class="flex justify-between">
+              <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">Пополняемый</span>
+              <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">{{ account.is_replenishable ? 'Да' : 'Нет' }}</span>
+            </div>
+            <div v-if="account.is_withdrawable != null" class="flex justify-between">
+              <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">С возможностью снятия</span>
+              <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">{{ account.is_withdrawable ? 'Да' : 'Нет' }}</span>
             </div>
           </div>
         </UCard>

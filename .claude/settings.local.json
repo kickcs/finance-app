@@ -46,7 +46,8 @@
       "Bash(node -e:*)",
       "Bash(python3:*)",
       "Bash(npx tailwindcss --help:*)",
-      "Skill(review)"
+      "Skill(review)",
+      "Bash(find:*)"
     ]
   }
 }

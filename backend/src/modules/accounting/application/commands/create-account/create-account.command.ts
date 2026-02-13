@@ -1,3 +1,5 @@
+import { AccountTypeFields } from '../../../domain/aggregates/account/account.aggregate';
+
 export interface BalanceInput {
   currency: string;
   balance: number;
@@ -12,5 +14,6 @@ export class CreateAccountCommand {
     public readonly type: string = 'basic',
     public readonly order: number = 0,
     public readonly balances: BalanceInput[] = [],
+    public readonly typeFields?: AccountTypeFields,
   ) {}
 }

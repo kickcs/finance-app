@@ -6,6 +6,8 @@ import type { CurrencyBalance } from '../model/useCreateAccount'
 
 const props = defineProps<{
   balances: CurrencyBalance[]
+  label?: string
+  hint?: string
 }>()
 
 const emit = defineEmits<{
@@ -31,9 +33,14 @@ function addCurrency(code: string) {
 
 <template>
   <div class="space-y-4">
-    <label class="block text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
-      Валюты и балансы
-    </label>
+    <div>
+      <label class="block text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
+        {{ label ?? 'Валюты и балансы' }}
+      </label>
+      <p v-if="hint" class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark mt-0.5">
+        {{ hint }}
+      </p>
+    </div>
 
     <!-- Balance items -->
     <div class="space-y-3">

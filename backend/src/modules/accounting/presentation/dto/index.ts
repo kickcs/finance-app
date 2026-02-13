@@ -8,3 +8,4 @@ export * from './update-category.dto';
 export * from './transaction-queries.dto';
 export * from './account-balance.dto';
 export * from './analytics-query.dto';
+export * from './reorder-accounts.dto';

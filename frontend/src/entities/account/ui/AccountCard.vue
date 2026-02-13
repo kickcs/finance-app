@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { UIcon } from '@/shared/ui'
 import { formatCurrency, COMPACT_FORMAT } from '@/shared/lib/format/currency'
 import { getCurrencyByCode } from '@/entities/currency'
+import { getAccountTypeLabel } from '../model/account-types'
 import type { AccountWithBalances } from '../model/types'
 
 const props = withDefaults(defineProps<{
@@ -66,7 +67,7 @@ const formattedBalance = computed(() => {
         </span>
       </div>
       <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
-        {{ account.type === 'basic' ? 'Основной' : 'Накопительный' }}
+        {{ getAccountTypeLabel(account.type) }}
       </p>
     </div>
 

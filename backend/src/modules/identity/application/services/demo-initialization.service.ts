@@ -19,7 +19,7 @@ import {
   IProfileRepository,
   PROFILE_REPOSITORY,
 } from '../../domain/repositories/profile.repository.interface';
-import { Account } from '../../../accounting/domain/aggregates/account';
+import { Account, AccountTypeFields } from '../../../accounting/domain/aggregates/account';
 import { Transaction } from '../../../accounting/domain/aggregates/transaction';
 import { Debt } from '../../../debt/domain/aggregates/debt';
 import {
@@ -186,12 +186,19 @@ export class DemoInitializationService {
       this.randomBetween(5000000, 15000000),
     );
 
-    const accountsData = [
+    const accountsData: Array<{
+      name: string;
+      icon: string;
+      color: string;
+      type: string;
+      balances: Array<{ currency: string; balance: number }>;
+      typeFields?: AccountTypeFields;
+    }> = [
       {
         name: 'Кошелёк',
         icon: 'account_balance_wallet',
         color: '#3b82f6',
-        type: 'basic',
+        type: 'cash',
         balances: [{ currency: 'UZS', balance: walletBalance }],
       },
       {
@@ -211,6 +218,45 @@ export class DemoInitializationService {
         type: 'savings',
         balances: [{ currency: 'UZS', balance: savingsBalance }],
       },
+      {
+        name: 'Visa Gold',
+        icon: 'credit_card',
+        color: '#f59e0b',
+        type: 'credit_card',
+        balances: [{ currency: 'UZS', balance: this.roundToThousand(this.randomBetween(-1000000, 0)) }],
+        typeFields: {
+          creditLimit: 20000000,
+          gracePeriodDays: 55,
+          billingDay: 15,
+        },
+      },
+      {
+        name: 'Ипотека',
+        icon: 'account_balance',
+        color: '#ef4444',
+        type: 'loan',
+        balances: [{ currency: 'UZS', balance: -this.roundToThousand(this.randomBetween(150000000, 250000000)) }],
+        typeFields: {
+          totalAmount: 300000000,
+          interestRate: 22,
+          monthlyPayment: 4500000,
+          startDate: new Date('2024-01-15'),
+          endDate: new Date('2034-01-15'),
+        },
+      },
+      {
+        name: 'Срочный вклад',
+        icon: 'savings',
+        color: '#6366f1',
+        type: 'deposit',
+        balances: [{ currency: 'UZS', balance: this.roundToThousand(this.randomBetween(10000000, 30000000)) }],
+        typeFields: {
+          interestRate: 23,
+          maturityDate: new Date('2026-06-01'),
+          isReplenishable: true,
+          isWithdrawable: false,
+        },
+      },
     ];
 
     const savedAccounts: Account[] = [];
@@ -225,6 +271,7 @@ export class DemoInitializationService {
         data.type,
         i,
         data.balances,
+        data.typeFields,
       );
       const savedAccount = await this.accountRepository.save(account);
       await this.eventPublisher.publishEvents(account);

@@ -1,5 +1,5 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { Inject, NotFoundException } from '@nestjs/common';
+import { Inject, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { DeleteAccountCommand } from './delete-account.command';
 import {
   IAccountRepository,
@@ -20,6 +20,10 @@ export class DeleteAccountHandler implements ICommandHandler<DeleteAccountComman
 
     if (!account) {
       throw new NotFoundException('Account not found');
+    }
+
+    if (account.userId !== command.userId) {
+      throw new ForbiddenException('Access denied');
     }
 
     account.markDeleted();

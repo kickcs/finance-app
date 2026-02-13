@@ -54,9 +54,20 @@ export type Database = {
           currency: string
           icon: string
           color: string
-          type: 'basic' | 'savings'
+          type: 'basic' | 'savings' | 'credit_card' | 'cash' | 'loan' | 'deposit'
           order: number
           created_at: string
+          credit_limit: number | null
+          grace_period_days: number | null
+          billing_day: number | null
+          total_amount: number | null
+          interest_rate: number | null
+          monthly_payment: number | null
+          start_date: string | null
+          end_date: string | null
+          maturity_date: string | null
+          is_replenishable: boolean | null
+          is_withdrawable: boolean | null
         }
         Insert: {
           id?: string
@@ -66,9 +77,20 @@ export type Database = {
           currency: string
           icon: string
           color: string
-          type?: 'basic' | 'savings'
+          type?: 'basic' | 'savings' | 'credit_card' | 'cash' | 'loan' | 'deposit'
           order?: number
           created_at?: string
+          credit_limit?: number | null
+          grace_period_days?: number | null
+          billing_day?: number | null
+          total_amount?: number | null
+          interest_rate?: number | null
+          monthly_payment?: number | null
+          start_date?: string | null
+          end_date?: string | null
+          maturity_date?: string | null
+          is_replenishable?: boolean | null
+          is_withdrawable?: boolean | null
         }
         Update: {
           id?: string
@@ -78,9 +100,20 @@ export type Database = {
           currency?: string
           icon?: string
           color?: string
-          type?: 'basic' | 'savings'
+          type?: 'basic' | 'savings' | 'credit_card' | 'cash' | 'loan' | 'deposit'
           order?: number
           created_at?: string
+          credit_limit?: number | null
+          grace_period_days?: number | null
+          billing_day?: number | null
+          total_amount?: number | null
+          interest_rate?: number | null
+          monthly_payment?: number | null
+          start_date?: string | null
+          end_date?: string | null
+          maturity_date?: string | null
+          is_replenishable?: boolean | null
+          is_withdrawable?: boolean | null
         }
         Relationships: []
       }

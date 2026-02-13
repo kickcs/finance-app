@@ -74,6 +74,17 @@ export class AccountRepository implements IAccountRepository {
       color: ormEntity.color,
       type: ormEntity.type,
       order: ormEntity.order,
+      creditLimit: ormEntity.creditLimit,
+      gracePeriodDays: ormEntity.gracePeriodDays,
+      billingDay: ormEntity.billingDay,
+      totalAmount: ormEntity.totalAmount,
+      interestRate: ormEntity.interestRate,
+      monthlyPayment: ormEntity.monthlyPayment,
+      startDate: ormEntity.startDate,
+      endDate: ormEntity.endDate,
+      maturityDate: ormEntity.maturityDate,
+      isReplenishable: ormEntity.isReplenishable,
+      isWithdrawable: ormEntity.isWithdrawable,
     });
 
     // Upsert balances

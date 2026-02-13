@@ -4,6 +4,8 @@ import IconSelector from './IconSelector.vue'
 import ColorPicker from './ColorPicker.vue'
 import CurrencyBalanceList from './CurrencyBalanceList.vue'
 import type { AccountFormData } from '../model/useCreateAccount'
+import { VISIBLE_ACCOUNT_TYPES, ACCOUNT_TYPE_LABELS, AccountTypeFields } from '@/entities/account'
+import type { AccountType, AccountTypeFieldValues } from '@/entities/account'
 
 const props = defineProps<{
   formData: AccountFormData
@@ -37,14 +39,46 @@ function updateField<K extends keyof AccountFormData>(field: K, value: AccountFo
       :model-value="formData.name"
       label="Название счёта"
       placeholder="Например: Основная карта"
-     
+
       :error="nameError ?? undefined"
       @update:model-value="updateField('name', $event as string)"
+    />
+
+    <!-- Account Type -->
+    <div class="space-y-2">
+      <label class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">
+        Тип счёта
+      </label>
+      <div class="grid grid-cols-3 gap-2">
+        <button
+          v-for="t in VISIBLE_ACCOUNT_TYPES"
+          :key="t"
+          type="button"
+          :class="[
+            'px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 border',
+            formData.type === t
+              ? 'bg-primary text-white border-primary'
+              : 'bg-surface-light dark:bg-surface-dark text-text-secondary-light dark:text-text-secondary-dark border-border-light dark:border-border-dark hover:border-primary/50',
+          ]"
+          @click="updateField('type', t as AccountType)"
+        >
+          {{ ACCOUNT_TYPE_LABELS[t] }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Type-specific Fields -->
+    <AccountTypeFields
+      :type="formData.type"
+      :fields="formData"
+      @update:field="(key, value) => updateField(key as keyof AccountFormData, value as any)"
     />
 
     <!-- Currency Balances -->
     <CurrencyBalanceList
       :balances="formData.balances"
+      :label="formData.type === 'credit_card' ? 'Текущая задолженность' : undefined"
+      :hint="formData.type === 'credit_card' ? 'Введите 0, если задолженности нет' : undefined"
       @add="$emit('addCurrency', $event)"
       @remove="$emit('removeCurrency', $event)"
       @update-balance="(index, balance) => $emit('updateBalance', index, balance)"

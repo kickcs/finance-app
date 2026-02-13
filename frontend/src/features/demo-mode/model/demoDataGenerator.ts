@@ -4,8 +4,19 @@ export interface DemoAccountData {
   name: string
   icon: string
   color: string
-  type: 'basic' | 'savings'
+  type: 'basic' | 'savings' | 'credit_card' | 'cash' | 'loan' | 'deposit'
   balances: Array<{ currency: string; balance: number }>
+  creditLimit?: number
+  gracePeriodDays?: number
+  billingDay?: number
+  totalAmount?: number
+  interestRate?: number
+  monthlyPayment?: number
+  startDate?: string
+  endDate?: string
+  maturityDate?: string
+  isReplenishable?: boolean
+  isWithdrawable?: boolean
 }
 
 export interface DemoTransactionData {
@@ -285,7 +296,7 @@ export function generateDemoData(): GeneratedDemoData {
         name: 'Кошелёк',
         icon: 'account_balance_wallet',
         color: '#3b82f6',
-        type: 'basic',
+        type: 'cash',
         balances: [{ currency: 'UZS', balance: roundToThousand(walletBalance) }],
       },
       {
@@ -304,6 +315,39 @@ export function generateDemoData(): GeneratedDemoData {
         color: '#a855f7',
         type: 'savings',
         balances: [{ currency: 'UZS', balance: roundToThousand(savingsBalance) }],
+      },
+      {
+        name: 'Visa Gold',
+        icon: 'credit_card',
+        color: '#f59e0b',
+        type: 'credit_card',
+        balances: [{ currency: 'UZS', balance: roundToThousand(randomBetween(-1000000, 0)) }],
+        creditLimit: 20000000,
+        gracePeriodDays: 55,
+        billingDay: 15,
+      },
+      {
+        name: 'Ипотека',
+        icon: 'account_balance',
+        color: '#ef4444',
+        type: 'loan',
+        balances: [{ currency: 'UZS', balance: -roundToThousand(randomBetween(150000000, 250000000)) }],
+        totalAmount: 300000000,
+        interestRate: 22,
+        monthlyPayment: 4500000,
+        startDate: '2024-01-15',
+        endDate: '2034-01-15',
+      },
+      {
+        name: 'Срочный вклад',
+        icon: 'savings',
+        color: '#6366f1',
+        type: 'deposit',
+        balances: [{ currency: 'UZS', balance: roundToThousand(randomBetween(10000000, 30000000)) }],
+        interestRate: 23,
+        maturityDate: '2026-06-01',
+        isReplenishable: true,
+        isWithdrawable: false,
       },
     ],
     transactions,

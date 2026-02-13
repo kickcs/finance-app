@@ -7,6 +7,7 @@ import {
   ACCOUNT_REPOSITORY,
 } from '../../../domain/repositories/account.repository.interface';
 import { DomainEventPublisher } from '../../../../../shared';
+import { toAccountResponse } from '../../shared/account-response.helper';
 
 @CommandHandler(CreateAccountCommand)
 export class CreateAccountHandler implements ICommandHandler<CreateAccountCommand> {
@@ -26,29 +27,12 @@ export class CreateAccountHandler implements ICommandHandler<CreateAccountComman
       command.type,
       command.order,
       command.balances,
+      command.typeFields,
     );
 
     const savedAccount = await this.accountRepository.save(account);
     await this.eventPublisher.publishEvents(account);
 
-    return this.toResponse(savedAccount);
-  }
-
-  private toResponse(account: Account) {
-    return {
-      id: account.id,
-      userId: account.userId,
-      name: account.name,
-      icon: account.icon,
-      color: account.color,
-      type: account.typeValue,
-      order: account.order,
-      balances: account.balances.map((b) => ({
-        id: b.id,
-        currency: b.currencyCode,
-        balance: b.balanceAmount,
-      })),
-      createdAt: account.createdAt,
-    };
+    return toAccountResponse(savedAccount);
   }
 }

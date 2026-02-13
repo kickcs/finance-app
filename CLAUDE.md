@@ -107,7 +107,7 @@ shared/     # UI components, HTTP client, hooks
 
 **Data Transformation**: Backend returns camelCase (NestJS), frontend uses snake_case internally. Transform in `*Api.ts` files.
 
-**Authentication**: JWT-based via `useAuth()` composable, tokens in localStorage, auto-refresh on 401
+**Authentication**: JWT-based via `useAuth()` composable. Access token in localStorage, refresh token in httpOnly cookie (set by backend). Auto-refresh on 401.
 
 **Cursor Pagination**: Uses `{ date, createdAt }` cursor format (camelCase from backend)
 
@@ -138,6 +138,10 @@ VITE_API_URL=http://localhost:3000
 - `frontend/src/shared/api/http.ts` - HTTP client with JWT management
 - `frontend/src/shared/api/composables/useAuth.ts` - Authentication logic
 
+## Sub-project Documentation
+
+Both `backend/CLAUDE.md` and `frontend/CLAUDE.md` contain more detailed architecture docs for their respective projects.
+
 ## Common Gotchas
 
 - Backend requires `isolatedModules: false` in tsconfig due to interface usage with @Inject decorators
@@ -147,4 +151,5 @@ VITE_API_URL=http://localhost:3000
 - **Material Symbols**: Uses `display=block` to prevent icon text flash (FOUT) - do not change to `swap`
 - **Global state**: User auth provided via Vue `provide/inject` pattern from `App.vue`
 - **TypeORM synchronize**: Disabled (`synchronize: false`) - always use migrations for schema changes, never enable synchronize
+- **New ORM entities**: Must be registered in `backend/src/config/data-source.ts` entities array, otherwise migrations won't detect them
 - **Deployment**: Production uses GHCR images via `docker-compose.prod.yml`, deployed with GitHub Actions
