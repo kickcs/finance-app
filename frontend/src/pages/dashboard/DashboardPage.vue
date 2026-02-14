@@ -3,6 +3,8 @@ import { computed, inject, defineAsyncComponent, Suspense } from 'vue'
 import type { Ref } from 'vue'
 import type { User } from '@/shared/api/composables/useAuth'
 import { useRouter } from 'vue-router'
+import { queryClient } from '@/shared/api/queryClient'
+import { PullToRefresh } from '@/shared/ui'
 
 // Critical components - load immediately
 import { AppHeader } from '@/widgets/header'
@@ -202,10 +204,15 @@ function handleReminderClick(reminder: Reminder) {
 function handleViewAllReminders() {
   router.push('/reminders')
 }
+
+async function handleRefresh() {
+  await queryClient.invalidateQueries()
+}
 </script>
 
 <template>
   <div class="relative min-h-screen bg-background-light dark:bg-background-dark">
+    <PullToRefresh :on-refresh="handleRefresh">
     <div :style="{ paddingBottom: 'calc(7rem + var(--safe-area-inset-bottom))' }">
       <!-- Header -->
       <AppHeader>
@@ -324,6 +331,7 @@ function handleViewAllReminders() {
       </section>
     </main>
     </div>
+    </PullToRefresh>
 
     <!-- Bottom Navigation -->
     <BottomNav @add-click="handleAddTransaction" />

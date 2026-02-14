@@ -3,7 +3,7 @@
  * Uses Navigator Vibration API with graceful fallback
  */
 
-export type HapticPattern = 'tap' | 'success' | 'error' | 'warning' | 'swipe-threshold'
+export type HapticPattern = 'tap' | 'success' | 'error' | 'warning' | 'swipe-threshold' | 'pull-threshold'
 
 const PATTERNS: Record<HapticPattern, number | number[]> = {
   tap: 10,
@@ -11,6 +11,7 @@ const PATTERNS: Record<HapticPattern, number | number[]> = {
   error: [50, 25, 50],
   warning: 25,
   'swipe-threshold': 15,
+  'pull-threshold': 15,
 }
 
 function isSupported(): boolean {
@@ -54,5 +55,10 @@ export const haptics = {
   /** Swipe threshold crossed (15ms) */
   swipeThreshold(): void {
     vibrate('swipe-threshold')
+  },
+
+  /** Pull-to-refresh threshold crossed (15ms) */
+  pullThreshold(): void {
+    vibrate('pull-threshold')
   },
 }

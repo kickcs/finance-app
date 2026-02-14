@@ -3,6 +3,7 @@ import { ref, computed, inject, watch } from 'vue'
 import type { Ref } from 'vue'
 import type { User } from '@/shared/api/composables/useAuth'
 import { useRouter } from 'vue-router'
+import { queryClient } from '@/shared/api/queryClient'
 import { AppHeader } from '@/widgets/header'
 import { BottomNav } from '@/widgets/bottom-nav'
 import {
@@ -17,7 +18,7 @@ import { SearchInput, useServerSearch } from '@/features/search-transactions'
 import { EditTransactionModal, DeleteTransactionModal, useEditTransaction } from '@/features/edit-transaction'
 import { useAccounts } from '@/entities/account'
 import { ALL_CATEGORIES, useCategories } from '@/entities/category'
-import { UTabs, UIcon, UButton, UModal } from '@/shared/ui'
+import { UTabs, UIcon, UButton, UModal, PullToRefresh } from '@/shared/ui'
 import { formatDateGroup } from '@/shared/lib/format/date'
 import { useExchangeRates } from '@/shared/api'
 import { debtsApi } from '@/entities/debt'
@@ -272,10 +273,14 @@ function handleSwipeDelete(transaction: Transaction) {
   showDeleteModal.value = true
 }
 
+async function handleRefresh() {
+  await queryClient.invalidateQueries()
+}
 </script>
 
 <template>
   <div class="min-h-screen bg-background-light dark:bg-background-dark pb-28">
+    <PullToRefresh :on-refresh="handleRefresh">
     <!-- Header -->
     <AppHeader title="История" />
 
@@ -376,6 +381,7 @@ function handleSwipeDelete(transaction: Transaction) {
         </p>
       </div>
     </main>
+    </PullToRefresh>
 
     <!-- Filters Modal -->
     <UModal
