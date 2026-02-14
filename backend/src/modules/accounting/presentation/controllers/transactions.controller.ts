@@ -103,27 +103,33 @@ export class TransactionsController {
   }
 
   @Get('by-account/:accountId')
-  async findByAccount(@Param('accountId') accountId: string): Promise<unknown> {
-    return this.queryBus.execute(new GetTransactionsByAccountQuery(accountId));
+  async findByAccount(
+    @CurrentUser('sub') userId: string,
+    @Param('accountId') accountId: string,
+  ): Promise<unknown> {
+    return this.queryBus.execute(new GetTransactionsByAccountQuery(accountId, userId));
   }
 
   @Get('by-account/:accountId/with-incoming')
   async findByAccountWithIncoming(
+    @CurrentUser('sub') userId: string,
     @Param('accountId') accountId: string,
   ): Promise<unknown> {
     return this.queryBus.execute(
-      new GetTransactionsByAccountWithIncomingQuery(accountId),
+      new GetTransactionsByAccountWithIncomingQuery(accountId, userId),
     );
   }
 
   @Get('by-account/:accountId/paginated')
   async findByAccountPaginated(
+    @CurrentUser('sub') userId: string,
     @Param('accountId') accountId: string,
     @Query() pagination: AccountPaginationDto,
   ): Promise<unknown> {
     return this.queryBus.execute(
       new GetTransactionsByAccountPaginatedQuery(
         accountId,
+        userId,
         pagination.pageSize ?? 20,
         pagination.cursorDate,
         pagination.cursorCreatedAt,

@@ -1,5 +1,6 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { Inject, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { DataSource } from 'typeorm';
 import { UpdateTransactionCommand } from './update-transaction.command';
 import {
   ITransactionRepository,
@@ -19,6 +20,7 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
     @Inject(ACCOUNT_REPOSITORY)
     private readonly accountRepository: IAccountRepository,
     private readonly eventPublisher: DomainEventPublisher,
+    private readonly dataSource: DataSource,
   ) {}
 
   async execute(command: UpdateTransactionCommand) {
@@ -67,94 +69,94 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
       oldToAmount !== newToAmount ||
       oldToCurrency !== newToCurrency;
 
-    if (balanceChanged) {
-      // Handle non-transfer transactions (income/expense)
-      if (oldType !== 'transfer' && newType !== 'transfer') {
-        await this.handleNonTransferBalanceUpdate(
-          oldAccountId,
-          newAccountId,
-          oldAmount,
-          newAmount,
-          oldCurrency,
-          newCurrency,
-          oldType,
-          newType,
-        );
-      } else if (oldType === 'transfer' && newType === 'transfer') {
-        // Both old and new are transfers
-        await this.handleTransferBalanceUpdate(
-          oldAccountId,
-          newAccountId,
-          oldAmount,
-          newAmount,
-          oldCurrency,
-          newCurrency,
-          oldToAccountId,
-          newToAccountId,
-          oldToAmount,
-          newToAmount,
-          oldToCurrency,
-          newToCurrency,
-        );
-      } else if (oldType === 'transfer' && newType !== 'transfer') {
-        // Converting from transfer to income/expense
-        await this.reverseTransfer(
-          oldAccountId,
-          oldAmount,
-          oldCurrency,
-          oldToAccountId!,
-          oldToAmount!,
-          oldToCurrency!,
-        );
-        await this.applyNonTransfer(
-          newAccountId,
-          newAmount,
-          newCurrency,
-          newType,
-        );
-      } else {
-        // Converting from income/expense to transfer
-        await this.reverseNonTransfer(
-          oldAccountId,
-          oldAmount,
-          oldCurrency,
-          oldType,
-        );
-        await this.applyTransfer(
-          newAccountId,
-          newAmount,
-          newCurrency,
-          newToAccountId!,
-          newToAmount!,
-          newToCurrency!,
-        );
-      }
-    }
-
     // Update the transaction data
     transaction.update({
       ...command.data,
       date: command.data.date ? new Date(command.data.date) : undefined,
     });
 
-    const savedTransaction = await this.transactionRepository.save(transaction);
+    // Wrap all balance + transaction updates in a DB transaction
+    await this.dataSource.transaction(async () => {
+      if (balanceChanged) {
+        if (oldType !== 'transfer' && newType !== 'transfer') {
+          await this.handleNonTransferBalanceUpdate(
+            oldAccountId,
+            newAccountId,
+            oldAmount,
+            newAmount,
+            oldCurrency,
+            newCurrency,
+            oldType,
+            newType,
+          );
+        } else if (oldType === 'transfer' && newType === 'transfer') {
+          await this.handleTransferBalanceUpdate(
+            oldAccountId,
+            newAccountId,
+            oldAmount,
+            newAmount,
+            oldCurrency,
+            newCurrency,
+            oldToAccountId,
+            newToAccountId,
+            oldToAmount,
+            newToAmount,
+            oldToCurrency,
+            newToCurrency,
+          );
+        } else if (oldType === 'transfer' && newType !== 'transfer') {
+          await this.reverseTransfer(
+            oldAccountId,
+            oldAmount,
+            oldCurrency,
+            oldToAccountId!,
+            oldToAmount!,
+            oldToCurrency!,
+          );
+          await this.applyNonTransfer(
+            newAccountId,
+            newAmount,
+            newCurrency,
+            newType,
+          );
+        } else {
+          await this.reverseNonTransfer(
+            oldAccountId,
+            oldAmount,
+            oldCurrency,
+            oldType,
+          );
+          await this.applyTransfer(
+            newAccountId,
+            newAmount,
+            newCurrency,
+            newToAccountId!,
+            newToAmount!,
+            newToCurrency!,
+          );
+        }
+      }
+
+      await this.transactionRepository.save(transaction);
+    });
+
     await this.eventPublisher.publishEvents(transaction);
 
     return {
-      id: savedTransaction.id,
-      userId: savedTransaction.userId,
-      accountId: savedTransaction.accountId,
-      categoryId: savedTransaction.categoryId,
-      amount: savedTransaction.amountValue,
-      currency: savedTransaction.currency,
-      type: savedTransaction.typeValue,
-      description: savedTransaction.description,
-      date: savedTransaction.date,
-      isDebtRelated: savedTransaction.isDebtRelated,
-      toAccountId: savedTransaction.toAccountId,
-      toAmount: savedTransaction.toAmountValue,
-      toCurrency: savedTransaction.toCurrency,
-      createdAt: savedTransaction.createdAt,
+      id: transaction.id,
+      userId: transaction.userId,
+      accountId: transaction.accountId,
+      categoryId: transaction.categoryId,
+      amount: transaction.amountValue,
+      currency: transaction.currency,
+      type: transaction.typeValue,
+      description: transaction.description,
+      date: transaction.date,
+      isDebtRelated: transaction.isDebtRelated,
+      toAccountId: transaction.toAccountId,
+      toAmount: transaction.toAmountValue,
+      toCurrency: transaction.toCurrency,
+      createdAt: transaction.createdAt,
     };
   }
 

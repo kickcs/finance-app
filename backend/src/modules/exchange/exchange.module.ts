@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CqrsModule } from '@nestjs/cqrs';
-import { ScheduleModule } from '@nestjs/schedule';
 
 import { EXCHANGE_RATE_REPOSITORY } from './domain/repositories';
 import { CommandHandlers, RateSyncScheduler } from './application';
@@ -17,7 +16,6 @@ import { ExchangeRatesController } from './presentation/controllers';
 @Module({
   imports: [
     CqrsModule,
-    ScheduleModule.forRoot(),
     TypeOrmModule.forFeature([ExchangeRateOrmEntity]),
   ],
   controllers: [ExchangeRatesController],

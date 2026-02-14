@@ -1,5 +1,5 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { Inject, NotFoundException } from '@nestjs/common';
+import { Inject, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { DeleteDebtCommand } from './delete-debt.command';
 import { IDebtRepository, DEBT_REPOSITORY } from '../../../domain/repositories';
 
@@ -11,9 +11,12 @@ export class DeleteDebtHandler implements ICommandHandler<DeleteDebtCommand> {
   ) {}
 
   async execute(command: DeleteDebtCommand): Promise<void> {
-    const exists = await this.debtRepository.exists(command.id);
-    if (!exists) {
+    const debt = await this.debtRepository.findById(command.id);
+    if (!debt) {
       throw new NotFoundException('Debt not found');
+    }
+    if (debt.userId !== command.userId) {
+      throw new ForbiddenException('Access denied');
     }
     await this.debtRepository.delete(command.id);
   }

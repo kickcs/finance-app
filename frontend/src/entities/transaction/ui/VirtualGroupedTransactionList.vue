@@ -168,7 +168,7 @@ function isLastInGroup(index: number): boolean {
     >
       <div
         v-for="virtualRow in virtualRows"
-        :key="virtualRow.index"
+        :key="flatItems[virtualRow.index]?.key ?? `loading-${virtualRow.index}`"
         :style="{
           position: 'absolute',
           top: 0,

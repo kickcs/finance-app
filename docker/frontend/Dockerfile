@@ -59,6 +59,9 @@ RUN addgroup -g 1001 -S nginx-app && \
     chown -R nginx-app:nginx-app /var/run/nginx.pid && \
     chown -R nginx-app:nginx-app /usr/share/nginx/html
 
+# Switch to non-root user
+USER nginx-app
+
 # Expose port
 EXPOSE 80
 

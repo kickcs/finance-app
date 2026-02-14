@@ -23,9 +23,10 @@ import {
   RefreshCommand,
 } from '../../application/commands';
 import { GetProfileQuery } from '../../application/queries';
-import type {
-  AuthResponse,
-  AuthTokens,
+import {
+  TokenService,
+  type AuthResponse,
+  type AuthTokens,
 } from '../../application/services/token.service';
 
 // Cookie configuration
@@ -50,6 +51,7 @@ export class AuthController {
   constructor(
     private readonly commandBus: CommandBus,
     private readonly queryBus: QueryBus,
+    private readonly tokenService: TokenService,
   ) {}
 
   @Public()
@@ -150,8 +152,12 @@ export class AuthController {
       AuthTokens
     >(new RefreshCommand(refreshToken));
 
+    // Decode token to check if demo account, use appropriate cookie options
+    const payload = this.tokenService.verifyToken(tokens.accessToken);
+    const cookieOpts = payload.isDemo ? DEMO_COOKIE_OPTIONS : COOKIE_OPTIONS;
+
     // Set new refresh token in httpOnly cookie
-    response.cookie(REFRESH_TOKEN_COOKIE, tokens.refreshToken, COOKIE_OPTIONS);
+    response.cookie(REFRESH_TOKEN_COOKIE, tokens.refreshToken, cookieOpts);
 
     // Return only access token (refresh token is in cookie)
     return {

@@ -57,11 +57,20 @@ export function useTheme() {
     initialized = true
   }
 
+  function destroyTheme() {
+    if (mediaQueryCleanup) {
+      mediaQueryCleanup()
+      mediaQueryCleanup = null
+      initialized = false
+    }
+  }
+
   return {
     theme,
     isDark,
     setTheme,
     toggleTheme,
     initTheme,
+    destroyTheme,
   }
 }

@@ -1,5 +1,5 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { Inject, NotFoundException } from '@nestjs/common';
+import { Inject, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { UpdateDebtCommand } from './update-debt.command';
 import { IDebtRepository, DEBT_REPOSITORY } from '../../../domain/repositories';
 
@@ -14,6 +14,10 @@ export class UpdateDebtHandler implements ICommandHandler<UpdateDebtCommand> {
     const debt = await this.debtRepository.findById(command.id);
     if (!debt) {
       throw new NotFoundException('Debt not found');
+    }
+
+    if (debt.userId !== command.userId) {
+      throw new ForbiddenException('Access denied');
     }
 
     debt.update(command.data);

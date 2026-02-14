@@ -1,19 +1,30 @@
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
-import { Inject } from '@nestjs/common';
+import { Inject, ForbiddenException } from '@nestjs/common';
 import { GetTransactionsByAccountPaginatedQuery } from './get-transactions-by-account-paginated.query';
 import {
   ITransactionRepository,
   TRANSACTION_REPOSITORY,
 } from '../../../domain/repositories/transaction.repository.interface';
+import {
+  IAccountRepository,
+  ACCOUNT_REPOSITORY,
+} from '../../../domain/repositories/account.repository.interface';
 
 @QueryHandler(GetTransactionsByAccountPaginatedQuery)
 export class GetTransactionsByAccountPaginatedHandler implements IQueryHandler<GetTransactionsByAccountPaginatedQuery> {
   constructor(
     @Inject(TRANSACTION_REPOSITORY)
     private readonly transactionRepository: ITransactionRepository,
+    @Inject(ACCOUNT_REPOSITORY)
+    private readonly accountRepository: IAccountRepository,
   ) {}
 
   async execute(query: GetTransactionsByAccountPaginatedQuery) {
+    const account = await this.accountRepository.findById(query.accountId);
+    if (!account || account.userId !== query.userId) {
+      throw new ForbiddenException('Access denied');
+    }
+
     const cursor =
       query.cursorDate && query.cursorCreatedAt
         ? { date: query.cursorDate, createdAt: query.cursorCreatedAt }

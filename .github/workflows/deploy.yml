@@ -202,12 +202,20 @@ jobs:
             docker images "ghcr.io/$GITHUB_REPOSITORY/backend" --format "{{.ID}} {{.Tag}}" | grep -v latest | tail -n +4 | awk '{print $1}' | xargs -r docker rmi -f || true
             docker images "ghcr.io/$GITHUB_REPOSITORY/frontend" --format "{{.ID}} {{.Tag}}" | grep -v latest | tail -n +4 | awk '{print $1}' | xargs -r docker rmi -f || true
 
-            # Wait for services to be healthy
+            # Wait for services to be healthy with polling
             echo "Waiting for services to be healthy..."
-            sleep 30
-
-            # Check health
-            curl -f http://localhost:8080/api/health || echo "Health check failed, but deployment completed"
+            for i in $(seq 1 30); do
+              if curl -sf http://localhost:8080/api/health > /dev/null 2>&1; then
+                echo "Health check passed after ${i} attempts"
+                break
+              fi
+              if [ "$i" -eq 30 ]; then
+                echo "Health check failed after 30 attempts"
+                docker compose -f docker-compose.prod.yml logs --tail=50
+                exit 1
+              fi
+              sleep 2
+            done
 
       - name: Deployment notification
         if: always()

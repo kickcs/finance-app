@@ -1,6 +1,7 @@
 import { ref, computed } from 'vue'
 import { transactionsApi, transactionQueryKeys } from '@/entities/transaction'
 import { accountQueryKeys } from '@/entities/account'
+import { accountBalanceQueryKeys } from '@/entities/account-balance'
 import { queryClient } from '@/shared/api/queryClient'
 import { useToast } from '@/shared/ui'
 
@@ -92,6 +93,7 @@ export function useAddTransaction() {
       const invalidatePromises = [
         queryClient.invalidateQueries({ queryKey: transactionQueryKeys.list(userId) }),
         queryClient.invalidateQueries({ queryKey: accountQueryKeys.list(userId) }),
+        queryClient.invalidateQueries({ queryKey: accountBalanceQueryKeys.all }),
         // Invalidate infinite queries
         queryClient.invalidateQueries({ queryKey: ['transactions', 'infinite', userId] }),
         queryClient.invalidateQueries({ queryKey: transactionQueryKeys.infiniteByAccount(formData.value.accountId!) }),

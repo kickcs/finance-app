@@ -1,4 +1,4 @@
-import { ref, watch, type Ref } from 'vue'
+import { ref, watch, onScopeDispose, type Ref } from 'vue'
 
 /**
  * Reactive localStorage hook
@@ -20,7 +20,7 @@ export function useLocalStorage<T>(
   const storedValue = ref<T>(getStoredValue()) as Ref<T>
 
   // Watch for changes and sync to localStorage
-  watch(
+  const stopWatch = watch(
     storedValue,
     (newValue) => {
       try {
@@ -31,6 +31,9 @@ export function useLocalStorage<T>(
     },
     { deep: true }
   )
+
+  // Clean up watcher when the effect scope is disposed
+  onScopeDispose(stopWatch)
 
   return storedValue
 }

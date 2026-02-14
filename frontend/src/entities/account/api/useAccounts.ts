@@ -53,7 +53,10 @@ export function useAccounts(userId: MaybeRefOrGetter<string | null>) {
     mutationFn: (account: Omit<AccountInsert, 'user_id'>) => {
       const uid = toValue(userId)
       if (!uid) throw new Error('User not authenticated')
-      return accountsApi.create({ ...account, user_id: uid })
+      const balances = account.currency && account.balance !== undefined
+        ? [{ currency: account.currency, balance: account.balance }]
+        : [{ currency: account.currency ?? 'UZS', balance: 0 }]
+      return accountsApi.createWithBalances({ ...account, user_id: uid }, balances)
     },
     onMutate: async (newAccount) => {
       const uid = toValue(userId)

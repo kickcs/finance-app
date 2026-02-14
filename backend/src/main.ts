@@ -11,8 +11,12 @@ async function bootstrap() {
   app.use(cookieParser());
 
   // Enable CORS with credentials support for httpOnly cookies
+  const corsOrigin = process.env.CORS_ORIGIN;
+  if (!corsOrigin && process.env.NODE_ENV === 'production') {
+    throw new Error('CORS_ORIGIN environment variable must be set in production');
+  }
   app.enableCors({
-    origin: process.env.CORS_ORIGIN || true,
+    origin: corsOrigin || true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     credentials: true,
   });
@@ -27,7 +31,7 @@ async function bootstrap() {
       transform: true,
       forbidNonWhitelisted: true,
       transformOptions: {
-        enableImplicitConversion: true,
+        enableImplicitConversion: false,
       },
     }),
   );
@@ -48,9 +52,7 @@ async function bootstrap() {
   await app.listen(port, host);
 
   console.log(`Application is running on: http://localhost:${port}`);
-  console.log(`Network access: http://192.168.0.102:${port}`);
-  console.log(`API is available at: http://192.168.0.102:${port}/api`);
-  console.log(`Swagger docs: http://192.168.0.102:${port}/docs`);
+  console.log(`Swagger docs: http://localhost:${port}/docs`);
 }
 
 void bootstrap();

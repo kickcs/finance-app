@@ -2,6 +2,7 @@ import { ref } from 'vue'
 import { transactionsApi, transactionQueryKeys } from '@/entities/transaction'
 import { debtsApi } from '@/entities/debt'
 import { accountQueryKeys } from '@/entities/account'
+import { accountBalanceQueryKeys } from '@/entities/account-balance'
 import { queryClient } from '@/shared/api/queryClient'
 import type { Transaction } from '@/shared/api/database.types'
 
@@ -37,6 +38,7 @@ export function useEditTransaction(userId: string) {
         queryClient.invalidateQueries({ queryKey: transactionQueryKeys.list(userId) }),
         queryClient.invalidateQueries({ queryKey: transactionQueryKeys.byAccount(transaction.account_id) }),
         queryClient.invalidateQueries({ queryKey: accountQueryKeys.list(userId) }),
+        queryClient.invalidateQueries({ queryKey: accountBalanceQueryKeys.all }),
         // Invalidate infinite queries
         queryClient.invalidateQueries({ queryKey: ['transactions', 'infinite', userId] }),
         queryClient.invalidateQueries({ queryKey: transactionQueryKeys.infiniteByAccount(transaction.account_id) }),
@@ -91,6 +93,7 @@ export function useEditTransaction(userId: string) {
         queryClient.invalidateQueries({ queryKey: transactionQueryKeys.list(userId) }),
         queryClient.invalidateQueries({ queryKey: transactionQueryKeys.byAccount(transaction.account_id) }),
         queryClient.invalidateQueries({ queryKey: accountQueryKeys.list(userId) }),
+        queryClient.invalidateQueries({ queryKey: accountBalanceQueryKeys.all }),
         // Invalidate infinite queries
         queryClient.invalidateQueries({ queryKey: ['transactions', 'infinite', userId] }),
         queryClient.invalidateQueries({ queryKey: transactionQueryKeys.infiniteByAccount(transaction.account_id) }),

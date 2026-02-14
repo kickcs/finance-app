@@ -32,8 +32,11 @@ export class DebtsController {
   }
 
   @Get(':id')
-  async findOne(@Param('id') id: string): Promise<unknown> {
-    return this.queryBus.execute(new GetDebtByIdQuery(id));
+  async findOne(
+    @CurrentUser('sub') userId: string,
+    @Param('id') id: string,
+  ): Promise<unknown> {
+    return this.queryBus.execute(new GetDebtByIdQuery(id, userId));
   }
 
   @Post()
@@ -61,11 +64,12 @@ export class DebtsController {
 
   @Patch(':id')
   async update(
+    @CurrentUser('sub') userId: string,
     @Param('id') id: string,
     @Body() dto: UpdateDebtDto,
   ): Promise<unknown> {
     return this.commandBus.execute(
-      new UpdateDebtCommand(id, {
+      new UpdateDebtCommand(id, userId, {
         ...dto,
         nextPaymentDate:
           dto.nextPaymentDate !== undefined
@@ -79,7 +83,7 @@ export class DebtsController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async remove(@Param('id') id: string) {
-    await this.commandBus.execute(new DeleteDebtCommand(id));
+  async remove(@CurrentUser('sub') userId: string, @Param('id') id: string) {
+    await this.commandBus.execute(new DeleteDebtCommand(id, userId));
   }
 }

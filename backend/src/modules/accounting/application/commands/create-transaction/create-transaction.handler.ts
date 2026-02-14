@@ -5,6 +5,7 @@ import {
   NotFoundException,
   ForbiddenException,
 } from '@nestjs/common';
+import { DataSource } from 'typeorm';
 import { CreateTransactionCommand } from './create-transaction.command';
 import { Transaction } from '../../../domain/aggregates/transaction';
 import { TransferDomainService } from '../../../domain/services';
@@ -26,6 +27,7 @@ export class CreateTransactionHandler implements ICommandHandler<CreateTransacti
     @Inject(ACCOUNT_REPOSITORY)
     private readonly accountRepository: IAccountRepository,
     private readonly eventPublisher: DomainEventPublisher,
+    private readonly dataSource: DataSource,
   ) {}
 
   async execute(command: CreateTransactionCommand) {
@@ -88,13 +90,19 @@ export class CreateTransactionHandler implements ICommandHandler<CreateTransacti
         description,
       });
 
-      // Save both accounts
-      await this.accountRepository.save(account);
-      await this.accountRepository.save(toAccount);
+      // Save all within a database transaction
+      await this.dataSource.transaction(async () => {
+        await this.accountRepository.save(account);
+        await this.accountRepository.save(toAccount);
+        await this.transactionRepository.save(transaction);
+      });
 
-      // Publish account events
+      // Publish events after commit
       await this.eventPublisher.publishEvents(account);
       await this.eventPublisher.publishEvents(toAccount);
+      await this.eventPublisher.publishEvents(transaction);
+
+      return this.toResponse(transaction);
     } else {
       // Create income or expense transaction
       if (type === 'income') {
@@ -125,16 +133,18 @@ export class CreateTransactionHandler implements ICommandHandler<CreateTransacti
         account.debit(amount, currency);
       }
 
-      // Save account with updated balance
-      await this.accountRepository.save(account);
+      // Save within a database transaction
+      await this.dataSource.transaction(async () => {
+        await this.accountRepository.save(account);
+        await this.transactionRepository.save(transaction);
+      });
+
+      // Publish events after commit
       await this.eventPublisher.publishEvents(account);
+      await this.eventPublisher.publishEvents(transaction);
     }
 
-    // Save transaction
-    const savedTransaction = await this.transactionRepository.save(transaction);
-    await this.eventPublisher.publishEvents(transaction);
-
-    return this.toResponse(savedTransaction);
+    return this.toResponse(transaction);
   }
 
   private toResponse(transaction: Transaction) {

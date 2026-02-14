@@ -1,5 +1,5 @@
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
-import { Inject, NotFoundException } from '@nestjs/common';
+import { Inject, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { GetDebtByIdQuery } from './get-debt-by-id.query';
 import { IDebtRepository, DEBT_REPOSITORY } from '../../../domain/repositories';
 
@@ -15,6 +15,10 @@ export class GetDebtByIdHandler implements IQueryHandler<GetDebtByIdQuery> {
 
     if (!debt) {
       throw new NotFoundException(`Debt with id ${query.id} not found`);
+    }
+
+    if (debt.userId !== query.userId) {
+      throw new ForbiddenException('Access denied');
     }
 
     return {
