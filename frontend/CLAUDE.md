@@ -5,9 +5,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Build & Development Commands
 
 ```bash
-yarn dev          # Start dev server (Vite)
-yarn build        # Type-check + build for production
-yarn preview      # Preview production build locally
+bun run dev          # Start dev server (Vite)
+bun run build        # Type-check (vue-tsc) + build for production
+bun run preview      # Preview production build locally
 ```
 
 ## Architecture Overview

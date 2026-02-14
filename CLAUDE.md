@@ -16,6 +16,7 @@ bun run start:debug      # Debug mode with watch
 bun run build            # Build (verify before committing)
 bun run test             # Run Jest tests
 bun run test -- --testPathPattern=<pattern>  # Run a single test file
+bun run test:cov         # Tests with coverage
 bun run test:e2e         # E2E tests
 bun run lint             # ESLint with auto-fix
 
@@ -28,6 +29,7 @@ bun run preview          # Preview production build
 bun run migration:generate src/database/migrations/<MigrationName>  # Generate from entity changes
 bun run migration:run     # Apply pending migrations
 bun run migration:revert  # Revert last migration
+bun run migration:show    # Show migration status
 
 # Docker (local development)
 docker compose up -d postgres  # Start only PostgreSQL

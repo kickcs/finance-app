@@ -47,7 +47,9 @@
       "Bash(python3:*)",
       "Bash(npx tailwindcss --help:*)",
       "Skill(review)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(VITE_API_URL=http://localhost:3000 bun run build:*)",
+      "Bash(kill:*)"
     ]
   }
 }
