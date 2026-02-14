@@ -1,20 +1,7 @@
 <script setup lang="ts">
 import { UInput } from '@/shared/ui'
 import type { AccountType } from '../model/account-types'
-
-export interface AccountTypeFieldValues {
-  creditLimit: number | null
-  gracePeriodDays: number | null
-  billingDay: number | null
-  totalAmount: number | null
-  interestRate: number | null
-  monthlyPayment: number | null
-  startDate: string | null
-  endDate: string | null
-  maturityDate: string | null
-  isReplenishable: boolean | null
-  isWithdrawable: boolean | null
-}
+import type { AccountTypeFieldValues } from '../model/types'
 
 const props = defineProps<{
   type: AccountType
