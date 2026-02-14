@@ -197,6 +197,10 @@ jobs:
             # Start new containers
             docker compose -f docker-compose.prod.yml up -d
 
+            # Run database migrations
+            echo "Running database migrations..."
+            docker compose -f docker-compose.prod.yml exec -T backend npx typeorm migration:run -d dist/config/data-source.js
+
             # Clean up old images
             docker image prune -f
             docker images "ghcr.io/$GITHUB_REPOSITORY/backend" --format "{{.ID}} {{.Tag}}" | grep -v latest | tail -n +4 | awk '{print $1}' | xargs -r docker rmi -f || true
