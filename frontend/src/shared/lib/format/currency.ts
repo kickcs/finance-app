@@ -13,7 +13,7 @@ export const CURRENCIES: Record<string, CurrencyConfig> = {
   USD: { code: 'USD', symbol: '$', locale: 'en-US', decimals: 2 },
   EUR: { code: 'EUR', symbol: '€', locale: 'de-DE', decimals: 2 },
   RUB: { code: 'RUB', symbol: '₽', locale: 'ru-RU', decimals: 2 },
-  UZS: { code: 'UZS', symbol: 'сўм', locale: 'uz-UZ', decimals: 0 },
+  UZS: { code: 'UZS', symbol: 'сўм', locale: 'ru-RU', decimals: 0 },
   GBP: { code: 'GBP', symbol: '£', locale: 'en-GB', decimals: 2 },
   CNY: { code: 'CNY', symbol: '¥', locale: 'zh-CN', decimals: 2 },
 }
