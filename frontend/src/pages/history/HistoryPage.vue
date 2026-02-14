@@ -279,13 +279,14 @@ async function handleRefresh() {
 </script>
 
 <template>
-  <div class="min-h-screen bg-background-light dark:bg-background-dark pb-28">
-    <PullToRefresh :on-refresh="handleRefresh">
+  <div class="h-dvh flex flex-col overflow-hidden bg-background-light dark:bg-background-dark">
     <!-- Header -->
     <AppHeader title="История" />
 
-    <!-- Content -->
-    <main class="px-5 pt-8 space-y-4">
+    <!-- Scrollable Content -->
+    <div class="flex-1 overflow-y-auto">
+    <PullToRefresh :on-refresh="handleRefresh">
+    <main class="px-5 pt-8 pb-28 space-y-4">
       <!-- Search + Filter Button -->
       <div class="flex gap-2">
         <div class="flex-1">
@@ -382,6 +383,7 @@ async function handleRefresh() {
       </div>
     </main>
     </PullToRefresh>
+    </div>
 
     <!-- Filters Modal -->
     <UModal

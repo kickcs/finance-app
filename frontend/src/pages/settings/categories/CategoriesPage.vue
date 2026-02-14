@@ -150,9 +150,9 @@ async function confirmDelete() {
 </script>
 
 <template>
-  <div class="min-h-screen bg-background-light dark:bg-background-dark pb-28">
+  <div class="h-dvh flex flex-col overflow-hidden bg-background-light dark:bg-background-dark">
     <!-- Header -->
-    <header class="sticky top-0 z-30 pt-[var(--safe-area-inset-top)] bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-xl">
+    <header class="shrink-0 pt-[var(--safe-area-inset-top)] bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-xl z-30">
       <div class="flex items-center justify-between px-4 py-4">
         <UButton variant="ghost" size="sm" @click="goBack">
           <UIcon name="arrow_back" size="md" />
@@ -167,7 +167,7 @@ async function confirmDelete() {
     </header>
 
     <!-- Content -->
-    <main class="px-5 pt-8 pb-10 space-y-4">
+    <main class="flex-1 overflow-y-auto px-5 pt-8 pb-10 space-y-4">
       <!-- Tabs -->
       <UTabs v-model="activeTab" :items="tabItems" />
 
@@ -211,25 +211,25 @@ async function confirmDelete() {
                 {{ category.name }}
               </span>
 
-              <!-- Edit Button -->
-              <UButton
-                variant="ghost"
-                size="sm"
-                class="text-text-secondary-light dark:text-text-secondary-dark"
-                @click="openEditModal(category)"
-              >
-                <UIcon name="edit" size="sm" />
-              </UButton>
-
-              <!-- Delete Button -->
-              <UButton
-                variant="ghost"
-                size="sm"
-                class="text-danger"
-                @click="openDeleteModal(category)"
-              >
-                <UIcon name="delete" size="sm" />
-              </UButton>
+              <!-- Action Buttons -->
+              <div class="flex shrink-0 -mr-2">
+                <UButton
+                  variant="ghost"
+                  size="xs"
+                  class="text-text-secondary-light dark:text-text-secondary-dark"
+                  @click="openEditModal(category)"
+                >
+                  <UIcon name="edit" size="sm" />
+                </UButton>
+                <UButton
+                  variant="ghost"
+                  size="xs"
+                  class="text-danger"
+                  @click="openDeleteModal(category)"
+                >
+                  <UIcon name="delete" size="sm" />
+                </UButton>
+              </div>
             </div>
           </template>
         </draggable>
@@ -241,6 +241,18 @@ async function confirmDelete() {
           Нет категорий. Нажмите "+" чтобы добавить.
         </p>
       </div>
+
+      <!-- Add Category Button -->
+      <UButton
+        v-if="!isLoading"
+        variant="ghost"
+        full-width
+        class="!justify-center !gap-2 !p-4 !rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700 text-text-secondary-light dark:text-text-secondary-dark hover:border-primary hover:text-primary"
+        @click="openAddModal"
+      >
+        <UIcon name="add" size="md" />
+        <span class="font-medium">Добавить категорию</span>
+      </UButton>
     </main>
 
     <!-- Add/Edit Category Modal -->
