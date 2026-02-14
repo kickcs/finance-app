@@ -14,10 +14,7 @@ import {
 import { ExchangeRatesController } from './presentation/controllers';
 
 @Module({
-  imports: [
-    CqrsModule,
-    TypeOrmModule.forFeature([ExchangeRateOrmEntity]),
-  ],
+  imports: [CqrsModule, TypeOrmModule.forFeature([ExchangeRateOrmEntity])],
   controllers: [ExchangeRatesController],
   providers: [
     { provide: EXCHANGE_RATE_REPOSITORY, useClass: ExchangeRateRepository },

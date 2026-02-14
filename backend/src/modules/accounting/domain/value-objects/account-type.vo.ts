@@ -1,6 +1,12 @@
 import { ValueObject } from '../../../../shared/domain/base';
 
-type AccountTypeValue = 'basic' | 'savings' | 'credit_card' | 'cash' | 'loan' | 'deposit';
+type AccountTypeValue =
+  | 'basic'
+  | 'savings'
+  | 'credit_card'
+  | 'cash'
+  | 'loan'
+  | 'deposit';
 
 interface AccountTypeProps {
   value: AccountTypeValue;

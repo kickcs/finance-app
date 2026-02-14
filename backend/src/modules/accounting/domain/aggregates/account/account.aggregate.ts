@@ -248,16 +248,20 @@ export class Account extends AggregateRoot<string> {
     if (data.type !== undefined) this._type = AccountType.create(data.type);
     if (data.order !== undefined) this._order = data.order;
     if (data.creditLimit !== undefined) this._creditLimit = data.creditLimit;
-    if (data.gracePeriodDays !== undefined) this._gracePeriodDays = data.gracePeriodDays;
+    if (data.gracePeriodDays !== undefined)
+      this._gracePeriodDays = data.gracePeriodDays;
     if (data.billingDay !== undefined) this._billingDay = data.billingDay;
     if (data.totalAmount !== undefined) this._totalAmount = data.totalAmount;
     if (data.interestRate !== undefined) this._interestRate = data.interestRate;
-    if (data.monthlyPayment !== undefined) this._monthlyPayment = data.monthlyPayment;
+    if (data.monthlyPayment !== undefined)
+      this._monthlyPayment = data.monthlyPayment;
     if (data.startDate !== undefined) this._startDate = data.startDate;
     if (data.endDate !== undefined) this._endDate = data.endDate;
     if (data.maturityDate !== undefined) this._maturityDate = data.maturityDate;
-    if (data.isReplenishable !== undefined) this._isReplenishable = data.isReplenishable;
-    if (data.isWithdrawable !== undefined) this._isWithdrawable = data.isWithdrawable;
+    if (data.isReplenishable !== undefined)
+      this._isReplenishable = data.isReplenishable;
+    if (data.isWithdrawable !== undefined)
+      this._isWithdrawable = data.isWithdrawable;
   }
 
   setOrder(order: number): void {

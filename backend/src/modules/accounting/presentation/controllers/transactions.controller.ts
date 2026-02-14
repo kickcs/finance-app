@@ -107,7 +107,9 @@ export class TransactionsController {
     @CurrentUser('sub') userId: string,
     @Param('accountId') accountId: string,
   ): Promise<unknown> {
-    return this.queryBus.execute(new GetTransactionsByAccountQuery(accountId, userId));
+    return this.queryBus.execute(
+      new GetTransactionsByAccountQuery(accountId, userId),
+    );
   }
 
   @Get('by-account/:accountId/with-incoming')

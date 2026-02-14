@@ -92,19 +92,31 @@ export class AccountsController {
     return this.commandBus.execute(
       new UpdateAccountCommand(id, userId, {
         ...rest,
-        startDate: startDate !== undefined ? (startDate ? new Date(startDate) : null) : undefined,
-        endDate: endDate !== undefined ? (endDate ? new Date(endDate) : null) : undefined,
-        maturityDate: maturityDate !== undefined ? (maturityDate ? new Date(maturityDate) : null) : undefined,
+        startDate:
+          startDate !== undefined
+            ? startDate
+              ? new Date(startDate)
+              : null
+            : undefined,
+        endDate:
+          endDate !== undefined
+            ? endDate
+              ? new Date(endDate)
+              : null
+            : undefined,
+        maturityDate:
+          maturityDate !== undefined
+            ? maturityDate
+              ? new Date(maturityDate)
+              : null
+            : undefined,
       }),
     );
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async remove(
-    @CurrentUser('sub') userId: string,
-    @Param('id') id: string,
-  ) {
+  async remove(@CurrentUser('sub') userId: string, @Param('id') id: string) {
     await this.commandBus.execute(new DeleteAccountCommand(id, userId));
   }
 
@@ -114,7 +126,9 @@ export class AccountsController {
     @CurrentUser('sub') userId: string,
     @Body() dto: ReorderAccountsDto,
   ) {
-    await this.commandBus.execute(new ReorderAccountsCommand(dto.accountIds, userId));
+    await this.commandBus.execute(
+      new ReorderAccountsCommand(dto.accountIds, userId),
+    );
     return { success: true };
   }
 }

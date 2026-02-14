@@ -19,7 +19,10 @@ import {
   IProfileRepository,
   PROFILE_REPOSITORY,
 } from '../../domain/repositories/profile.repository.interface';
-import { Account, AccountTypeFields } from '../../../accounting/domain/aggregates/account';
+import {
+  Account,
+  AccountTypeFields,
+} from '../../../accounting/domain/aggregates/account';
 import { Transaction } from '../../../accounting/domain/aggregates/transaction';
 import { Debt } from '../../../debt/domain/aggregates/debt';
 import {
@@ -223,7 +226,12 @@ export class DemoInitializationService {
         icon: 'credit_card',
         color: '#f59e0b',
         type: 'credit_card',
-        balances: [{ currency: 'UZS', balance: this.roundToThousand(this.randomBetween(-1000000, 0)) }],
+        balances: [
+          {
+            currency: 'UZS',
+            balance: this.roundToThousand(this.randomBetween(-1000000, 0)),
+          },
+        ],
         typeFields: {
           creditLimit: 20000000,
           gracePeriodDays: 55,
@@ -235,7 +243,14 @@ export class DemoInitializationService {
         icon: 'account_balance',
         color: '#ef4444',
         type: 'loan',
-        balances: [{ currency: 'UZS', balance: -this.roundToThousand(this.randomBetween(150000000, 250000000)) }],
+        balances: [
+          {
+            currency: 'UZS',
+            balance: -this.roundToThousand(
+              this.randomBetween(150000000, 250000000),
+            ),
+          },
+        ],
         typeFields: {
           totalAmount: 300000000,
           interestRate: 22,
@@ -249,7 +264,14 @@ export class DemoInitializationService {
         icon: 'savings',
         color: '#6366f1',
         type: 'deposit',
-        balances: [{ currency: 'UZS', balance: this.roundToThousand(this.randomBetween(10000000, 30000000)) }],
+        balances: [
+          {
+            currency: 'UZS',
+            balance: this.roundToThousand(
+              this.randomBetween(10000000, 30000000),
+            ),
+          },
+        ],
         typeFields: {
           interestRate: 23,
           maturityDate: new Date('2026-06-01'),

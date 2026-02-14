@@ -37,7 +37,13 @@ export class AccountOrmEntity {
   order: number;
 
   // Credit card fields
-  @Column({ name: 'credit_limit', type: 'decimal', precision: 18, scale: 2, nullable: true })
+  @Column({
+    name: 'credit_limit',
+    type: 'decimal',
+    precision: 18,
+    scale: 2,
+    nullable: true,
+  })
   creditLimit: number | null;
 
   @Column({ name: 'grace_period_days', type: 'integer', nullable: true })
@@ -47,13 +53,31 @@ export class AccountOrmEntity {
   billingDay: number | null;
 
   // Loan fields
-  @Column({ name: 'total_amount', type: 'decimal', precision: 18, scale: 2, nullable: true })
+  @Column({
+    name: 'total_amount',
+    type: 'decimal',
+    precision: 18,
+    scale: 2,
+    nullable: true,
+  })
   totalAmount: number | null;
 
-  @Column({ name: 'interest_rate', type: 'decimal', precision: 5, scale: 2, nullable: true })
+  @Column({
+    name: 'interest_rate',
+    type: 'decimal',
+    precision: 5,
+    scale: 2,
+    nullable: true,
+  })
   interestRate: number | null;
 
-  @Column({ name: 'monthly_payment', type: 'decimal', precision: 18, scale: 2, nullable: true })
+  @Column({
+    name: 'monthly_payment',
+    type: 'decimal',
+    precision: 18,
+    scale: 2,
+    nullable: true,
+  })
   monthlyPayment: number | null;
 
   @Column({ name: 'start_date', type: 'date', nullable: true })

@@ -13,7 +13,9 @@ async function bootstrap() {
   // Enable CORS with credentials support for httpOnly cookies
   const corsOrigin = process.env.CORS_ORIGIN;
   if (!corsOrigin && process.env.NODE_ENV === 'production') {
-    throw new Error('CORS_ORIGIN environment variable must be set in production');
+    throw new Error(
+      'CORS_ORIGIN environment variable must be set in production',
+    );
   }
   app.enableCors({
     origin: corsOrigin || true,

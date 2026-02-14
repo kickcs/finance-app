@@ -34,20 +34,20 @@ export class UpdateAccountDto {
 
   // Credit card fields
   @IsOptional()
-  @ValidateIf((o) => o.creditLimit !== null)
+  @ValidateIf((o: UpdateAccountDto) => o.creditLimit !== null)
   @IsNumber()
   @Min(0)
   creditLimit?: number | null;
 
   @IsOptional()
-  @ValidateIf((o) => o.gracePeriodDays !== null)
+  @ValidateIf((o: UpdateAccountDto) => o.gracePeriodDays !== null)
   @IsInt()
   @Min(1)
   @Max(365)
   gracePeriodDays?: number | null;
 
   @IsOptional()
-  @ValidateIf((o) => o.billingDay !== null)
+  @ValidateIf((o: UpdateAccountDto) => o.billingDay !== null)
   @IsInt()
   @Min(1)
   @Max(31)
@@ -55,47 +55,47 @@ export class UpdateAccountDto {
 
   // Loan fields
   @IsOptional()
-  @ValidateIf((o) => o.totalAmount !== null)
+  @ValidateIf((o: UpdateAccountDto) => o.totalAmount !== null)
   @IsNumber()
   @Min(0)
   totalAmount?: number | null;
 
   @IsOptional()
-  @ValidateIf((o) => o.interestRate !== null)
+  @ValidateIf((o: UpdateAccountDto) => o.interestRate !== null)
   @IsNumber()
   @Min(0)
   @Max(100)
   interestRate?: number | null;
 
   @IsOptional()
-  @ValidateIf((o) => o.monthlyPayment !== null)
+  @ValidateIf((o: UpdateAccountDto) => o.monthlyPayment !== null)
   @IsNumber()
   @Min(0)
   monthlyPayment?: number | null;
 
   @IsOptional()
-  @ValidateIf((o) => o.startDate !== null)
+  @ValidateIf((o: UpdateAccountDto) => o.startDate !== null)
   @IsDateString()
   startDate?: string | null;
 
   @IsOptional()
-  @ValidateIf((o) => o.endDate !== null)
+  @ValidateIf((o: UpdateAccountDto) => o.endDate !== null)
   @IsDateString()
   endDate?: string | null;
 
   // Deposit fields
   @IsOptional()
-  @ValidateIf((o) => o.maturityDate !== null)
+  @ValidateIf((o: UpdateAccountDto) => o.maturityDate !== null)
   @IsDateString()
   maturityDate?: string | null;
 
   @IsOptional()
-  @ValidateIf((o) => o.isReplenishable !== null)
+  @ValidateIf((o: UpdateAccountDto) => o.isReplenishable !== null)
   @IsBoolean()
   isReplenishable?: boolean | null;
 
   @IsOptional()
-  @ValidateIf((o) => o.isWithdrawable !== null)
+  @ValidateIf((o: UpdateAccountDto) => o.isWithdrawable !== null)
   @IsBoolean()
   isWithdrawable?: boolean | null;
 }
