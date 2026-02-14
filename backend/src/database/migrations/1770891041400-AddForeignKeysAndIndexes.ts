@@ -4,6 +4,26 @@ export class AddForeignKeysAndIndexes1770891041400 implements MigrationInterface
   name = 'AddForeignKeysAndIndexes1770891041400';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    // Clean up orphaned records before adding FK constraints
+    const tables = ['accounts', 'transactions', 'categories', 'debts', 'goals', 'reminders'];
+    for (const table of tables) {
+      await queryRunner.query(
+        `DELETE FROM "${table}" WHERE "user_id" NOT IN (SELECT "id" FROM "profiles")`,
+      );
+    }
+    // Clean orphaned account_balances
+    await queryRunner.query(
+      `DELETE FROM "account_balances" WHERE "account_id" NOT IN (SELECT "id" FROM "accounts")`,
+    );
+    // Clean orphaned transactions referencing deleted accounts
+    await queryRunner.query(
+      `DELETE FROM "transactions" WHERE "account_id" NOT IN (SELECT "id" FROM "accounts")`,
+    );
+    // Nullify to_account_id references to deleted accounts
+    await queryRunner.query(
+      `UPDATE "transactions" SET "to_account_id" = NULL WHERE "to_account_id" IS NOT NULL AND "to_account_id" NOT IN (SELECT "id" FROM "accounts")`,
+    );
+
     // Foreign keys: user_id -> profiles(id) with CASCADE DELETE
     await queryRunner.query(
       `ALTER TABLE "accounts" ADD CONSTRAINT "FK_accounts_user_id" FOREIGN KEY ("user_id") REFERENCES "profiles"("id") ON DELETE CASCADE`,

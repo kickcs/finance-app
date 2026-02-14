@@ -194,12 +194,25 @@ jobs:
             # Stop and remove old containers
             docker compose -f docker-compose.prod.yml down --remove-orphans || true
 
-            # Start new containers
-            docker compose -f docker-compose.prod.yml up -d
+            # Start only postgres first, then run migrations before backend starts
+            docker compose -f docker-compose.prod.yml up -d postgres
 
-            # Run database migrations
+            # Wait for postgres to be healthy
+            echo "Waiting for postgres..."
+            for i in $(seq 1 15); do
+              if docker compose -f docker-compose.prod.yml exec -T postgres pg_isready -U postgres > /dev/null 2>&1; then
+                echo "Postgres ready"
+                break
+              fi
+              sleep 2
+            done
+
+            # Run database migrations using backend image
             echo "Running database migrations..."
-            docker compose -f docker-compose.prod.yml exec -T backend npx typeorm migration:run -d dist/config/data-source.js
+            docker compose -f docker-compose.prod.yml run --rm --no-deps -T backend npx typeorm migration:run -d dist/config/data-source.js
+
+            # Now start all containers
+            docker compose -f docker-compose.prod.yml up -d
 
             # Clean up old images
             docker image prune -f
