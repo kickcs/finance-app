@@ -1,6 +1,8 @@
 @import "@fontsource-variable/inter";
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* ============================================
    SHADCN-VUE CSS VARIABLES - Minimal & Clean
    ============================================ */
