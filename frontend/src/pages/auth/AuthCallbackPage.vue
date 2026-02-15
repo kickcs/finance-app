@@ -1,41 +1,43 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import { UCard, UIcon } from '@/shared/ui'
+import { ref, onMounted } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
+import { UCard, UIcon } from '@/shared/ui';
 
-const router = useRouter()
-const route = useRoute()
+const router = useRouter();
+const route = useRoute();
 
-const isProcessing = ref(true)
-const error = ref<string | null>(null)
+const isProcessing = ref(true);
+const error = ref<string | null>(null);
 
 onMounted(async () => {
   try {
     // With NestJS backend, OAuth callbacks would be handled differently
     // For now, just check for errors and redirect
-    const queryParams = route.query
+    const queryParams = route.query;
 
     // Check for error in URL params
-    const urlError = queryParams.error as string
-    const errorDescription = queryParams.error_description as string
+    const urlError = queryParams.error as string;
+    const errorDescription = queryParams.error_description as string;
 
     if (urlError) {
-      throw new Error(errorDescription || urlError)
+      throw new Error(errorDescription || urlError);
     }
 
     // OAuth not implemented in NestJS backend yet
     // Just redirect to login
-    error.value = 'OAuth авторизация не поддерживается. Используйте email/пароль.'
+    error.value =
+      'OAuth авторизация не поддерживается. Используйте email/пароль.';
   } catch (err) {
-    console.error('Auth callback error:', err)
-    error.value = err instanceof Error ? err.message : 'Произошла ошибка при авторизации'
+    console.error('Auth callback error:', err);
+    error.value =
+      err instanceof Error ? err.message : 'Произошла ошибка при авторизации';
   } finally {
-    isProcessing.value = false
+    isProcessing.value = false;
   }
-})
+});
 
 function goToLogin() {
-  router.push({ name: 'login' })
+  router.push({ name: 'login' });
 }
 </script>
 
@@ -61,13 +63,17 @@ function goToLogin() {
         >
           <UIcon name="error" size="xl" class="text-danger" />
         </div>
-        <h2 class="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark mb-2">
+        <h2
+          class="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark mb-2"
+        >
           Ошибка
         </h2>
         <p class="text-text-secondary-light dark:text-text-secondary-dark mb-4">
           {{ error }}
         </p>
-        <button class="text-primary font-medium" @click="goToLogin">Вернуться к входу</button>
+        <button class="text-primary font-medium" @click="goToLogin">
+          Вернуться к входу
+        </button>
       </template>
     </UCard>
   </div>

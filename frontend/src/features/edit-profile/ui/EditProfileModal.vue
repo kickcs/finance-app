@@ -1,37 +1,36 @@
 <script setup lang="ts">
-import { watch, toValue, type MaybeRefOrGetter } from 'vue'
-import { UModal, UInput, UButton } from '@/shared/ui'
-import { useEditProfile } from '../model/useEditProfile'
+import { watch, toValue, type MaybeRefOrGetter } from 'vue';
+import { UModal, UInput, UButton } from '@/shared/ui';
+import { useEditProfile } from '../model/useEditProfile';
 
 const props = defineProps<{
-  modelValue: boolean
-  userId: MaybeRefOrGetter<string | null>
-}>()
+  modelValue: boolean;
+  userId: MaybeRefOrGetter<string | null>;
+}>();
 
 const emit = defineEmits<{
-  'update:modelValue': [value: boolean]
-}>()
+  'update:modelValue': [value: boolean];
+}>();
 
-const { formData, isValid, isSubmitting, initForm, saveProfile } = useEditProfile(
-  () => toValue(props.userId)
-)
+const { formData, isValid, isSubmitting, initForm, saveProfile } =
+  useEditProfile(() => toValue(props.userId));
 
 watch(
   () => props.modelValue,
   (isOpen) => {
     if (isOpen) {
-      initForm()
+      initForm();
     }
-  }
-)
+  },
+);
 
 function closeModal() {
-  emit('update:modelValue', false)
+  emit('update:modelValue', false);
 }
 
 async function handleSave() {
-  await saveProfile()
-  closeModal()
+  await saveProfile();
+  closeModal();
 }
 </script>
 

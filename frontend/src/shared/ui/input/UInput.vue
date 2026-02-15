@@ -1,24 +1,24 @@
 <script setup lang="ts">
-import { computed, useId, ref, watch } from 'vue'
-import { cn } from '@/shared/lib/utils'
-import { formatNumberWithSpaces } from '@/shared/lib/format/currency'
-import { UIcon } from '@/shared/ui'
+import { computed, useId, ref, watch } from 'vue';
+import { cn } from '@/shared/lib/utils';
+import { formatNumberWithSpaces } from '@/shared/lib/format/currency';
+import { UIcon } from '@/shared/ui';
 
 export interface InputProps {
-  modelValue?: string | number
-  type?: 'text' | 'email' | 'password' | 'number' | 'tel' | 'date'
-  placeholder?: string
-  label?: string
-  error?: string
-  disabled?: boolean
-  variant?: 'default' | 'search' | 'currency'
-  icon?: string
-  suffix?: string
-  size?: 'md' | 'lg'
-  id?: string
-  min?: string
-  max?: string
-  showPasswordToggle?: boolean
+  modelValue?: string | number;
+  type?: 'text' | 'email' | 'password' | 'number' | 'tel' | 'date';
+  placeholder?: string;
+  label?: string;
+  error?: string;
+  disabled?: boolean;
+  variant?: 'default' | 'search' | 'currency';
+  icon?: string;
+  suffix?: string;
+  size?: 'md' | 'lg';
+  id?: string;
+  min?: string;
+  max?: string;
+  showPasswordToggle?: boolean;
 }
 
 const props = withDefaults(defineProps<InputProps>(), {
@@ -27,70 +27,78 @@ const props = withDefaults(defineProps<InputProps>(), {
   placeholder: '',
   variant: 'default',
   size: 'md',
-})
+});
 
 const emit = defineEmits<{
-  'update:modelValue': [value: string | number]
-  clear: []
-  keydown: [event: KeyboardEvent]
-}>()
+  'update:modelValue': [value: string | number];
+  clear: [];
+  keydown: [event: KeyboardEvent];
+}>();
 
-const generatedId = useId()
-const inputId = computed(() => props.id || generatedId)
+const generatedId = useId();
+const inputId = computed(() => props.id || generatedId);
 
 // Password visibility state
-const isPasswordVisible = ref(false)
+const isPasswordVisible = ref(false);
 
 function togglePasswordVisibility() {
-  isPasswordVisible.value = !isPasswordVisible.value
+  isPasswordVisible.value = !isPasswordVisible.value;
 }
 
 // Shake animation state
-const isShaking = ref(false)
+const isShaking = ref(false);
 
 // Trigger shake animation when error appears
-watch(() => props.error, (newError, oldError) => {
-  if (newError && !oldError) {
-    isShaking.value = true
-    setTimeout(() => {
-      isShaking.value = false
-    }, 400)
-  }
-})
+watch(
+  () => props.error,
+  (newError, oldError) => {
+    if (newError && !oldError) {
+      isShaking.value = true;
+      setTimeout(() => {
+        isShaking.value = false;
+      }, 400);
+    }
+  },
+);
 
 const inputValue = computed({
   get: () => {
     if (props.variant === 'currency') {
-      const value = props.modelValue
-      if (!value && value !== 0) return ''
-      return formatNumberWithSpaces(value)
+      const value = props.modelValue;
+      if (!value && value !== 0) return '';
+      return formatNumberWithSpaces(value);
     }
-    return props.modelValue
+    return props.modelValue;
   },
   set: (value) => {
     if (props.variant === 'currency') {
-      const cleaned = String(value).replace(/[^\d.]/g, '')
-      const parts = cleaned.split('.')
-      const sanitized = parts.length > 2 ? `${parts[0]}.${parts.slice(1).join('')}` : cleaned
-      emit('update:modelValue', sanitized)
+      const cleaned = String(value).replace(/[^\d.]/g, '');
+      const parts = cleaned.split('.');
+      const sanitized =
+        parts.length > 2 ? `${parts[0]}.${parts.slice(1).join('')}` : cleaned;
+      emit('update:modelValue', sanitized);
     } else {
-      emit('update:modelValue', value)
+      emit('update:modelValue', value);
     }
   },
-})
+});
 
 const inputType = computed(() => {
-  if (props.variant === 'currency') return 'text'
-  if (props.type === 'password' && props.showPasswordToggle && isPasswordVisible.value) {
-    return 'text'
+  if (props.variant === 'currency') return 'text';
+  if (
+    props.type === 'password' &&
+    props.showPasswordToggle &&
+    isPasswordVisible.value
+  ) {
+    return 'text';
   }
-  return props.type
-})
+  return props.type;
+});
 
 const inputMode = computed(() => {
-  if (props.variant === 'currency') return 'decimal'
-  return undefined
-})
+  if (props.variant === 'currency') return 'decimal';
+  return undefined;
+});
 </script>
 
 <template>
@@ -106,16 +114,20 @@ const inputMode = computed(() => {
 
     <!-- Input wrapper -->
     <div
-      :class="cn(
-        'relative flex items-center w-full rounded-lg transition-all duration-150 overflow-hidden',
-        'bg-card-light dark:bg-card-dark',
-        'border border-border-light dark:border-border-dark',
-        'focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/20',
-        variant === 'search' && 'bg-surface-light dark:bg-surface-dark border-transparent',
-        error && 'border-danger focus-within:border-danger focus-within:ring-danger/20',
-        disabled && 'opacity-50 pointer-events-none',
-        isShaking && 'animate-shake'
-      )"
+      :class="
+        cn(
+          'relative flex items-center w-full rounded-lg transition-all duration-150 overflow-hidden',
+          'bg-card-light dark:bg-card-dark',
+          'border border-border-light dark:border-border-dark',
+          'focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/20',
+          variant === 'search' &&
+            'bg-surface-light dark:bg-surface-dark border-transparent',
+          error &&
+            'border-danger focus-within:border-danger focus-within:ring-danger/20',
+          disabled && 'opacity-50 pointer-events-none',
+          isShaking && 'animate-shake',
+        )
+      "
     >
       <!-- Icon prefix -->
       <UIcon
@@ -137,26 +149,30 @@ const inputMode = computed(() => {
         :max="max"
         :aria-invalid="!!error"
         :aria-describedby="error ? `${inputId}-error` : undefined"
+        :class="
+          cn(
+            'bg-transparent border-none outline-none w-full',
+            'text-text-primary-light dark:text-text-primary-dark',
+            'placeholder:text-text-tertiary-light dark:placeholder:text-text-tertiary-dark',
+            size === 'lg' ? 'py-3.5' : 'py-3',
+            icon || variant === 'search' ? 'pl-2' : 'pl-3',
+            suffix || variant === 'currency' ? 'pr-2' : 'pr-3',
+            variant === 'currency' && 'text-2xl font-semibold min-w-0 flex-1',
+            variant !== 'currency' && 'flex-1 min-w-0 text-sm',
+          )
+        "
         @keydown="$emit('keydown', $event)"
-        :class="cn(
-          'bg-transparent border-none outline-none w-full',
-          'text-text-primary-light dark:text-text-primary-dark',
-          'placeholder:text-text-tertiary-light dark:placeholder:text-text-tertiary-dark',
-          size === 'lg' ? 'py-3.5' : 'py-3',
-          (icon || variant === 'search') ? 'pl-2' : 'pl-3',
-          (suffix || variant === 'currency') ? 'pr-2' : 'pr-3',
-          variant === 'currency' && 'text-2xl font-semibold min-w-0 flex-1',
-          variant !== 'currency' && 'flex-1 min-w-0 text-sm'
-        )"
       />
 
       <!-- Suffix -->
       <span
         v-if="suffix || variant === 'currency'"
-        :class="cn(
-          'text-text-secondary-light dark:text-text-secondary-dark pr-3 font-medium whitespace-nowrap flex-shrink-0',
-          variant === 'currency' && 'text-lg'
-        )"
+        :class="
+          cn(
+            'text-text-secondary-light dark:text-text-secondary-dark pr-3 font-medium whitespace-nowrap flex-shrink-0',
+            variant === 'currency' && 'text-lg',
+          )
+        "
       >
         {{ suffix }}
       </span>
@@ -169,12 +185,19 @@ const inputMode = computed(() => {
         class="flex items-center justify-center pr-3 text-text-tertiary-light dark:text-text-tertiary-dark hover:text-text-secondary-light dark:hover:text-text-secondary-dark transition-colors"
         @click="togglePasswordVisibility"
       >
-        <UIcon :name="isPasswordVisible ? 'visibility_off' : 'visibility'" size="sm" />
+        <UIcon
+          :name="isPasswordVisible ? 'visibility_off' : 'visibility'"
+          size="sm"
+        />
       </button>
 
       <!-- Error icon -->
       <span
-        v-if="error && variant !== 'currency' && !(type === 'password' && showPasswordToggle)"
+        v-if="
+          error &&
+          variant !== 'currency' &&
+          !(type === 'password' && showPasswordToggle)
+        "
         class="absolute right-3 text-danger"
       >
         <UIcon name="error" size="sm" />

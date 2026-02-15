@@ -1,114 +1,121 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { CalendarDate, type DateValue } from '@internationalized/date'
-import { UInput, UButton, UTabs, UIcon } from '@/shared/ui'
+import { computed, ref } from 'vue';
+import { CalendarDate, type DateValue } from '@internationalized/date';
+import { UInput, UButton, UTabs, UIcon } from '@/shared/ui';
 import {
   Popover,
   PopoverTrigger,
   PopoverContent,
-} from '@/shared/ui/primitives/popover'
-import { Calendar } from '@/shared/ui/primitives/calendar'
-import { DEBT_DIRECTION_LABELS, type DebtDirection } from '@/entities/debt'
-import { getCurrencyByCode } from '@/entities/currency'
-import type { DebtFormData } from '../model/useCreateDebt'
-import type { AccountWithBalances } from '@/entities/account'
+} from '@/shared/ui/primitives/popover';
+import { Calendar } from '@/shared/ui/primitives/calendar';
+import { DEBT_DIRECTION_LABELS, type DebtDirection } from '@/entities/debt';
+import { getCurrencyByCode } from '@/entities/currency';
+import type { DebtFormData } from '../model/useCreateDebt';
+import type { AccountWithBalances } from '@/entities/account';
 
 const props = defineProps<{
-  formData: DebtFormData
-  accounts: AccountWithBalances[]
-  isSubmitting?: boolean
-  error?: string | null
-}>()
+  formData: DebtFormData;
+  accounts: AccountWithBalances[];
+  isSubmitting?: boolean;
+  error?: string | null;
+}>();
 
 const emit = defineEmits<{
-  'update:formData': [value: DebtFormData]
-  submit: []
-}>()
+  'update:formData': [value: DebtFormData];
+  submit: [];
+}>();
 
-const debtTypeTabs = Object.entries(DEBT_DIRECTION_LABELS).map(([id, label]) => ({
-  id,
-  label,
-}))
+const debtTypeTabs = Object.entries(DEBT_DIRECTION_LABELS).map(
+  ([id, label]) => ({
+    id,
+    label,
+  }),
+);
 
 // Get selected account
 const selectedAccount = computed(() =>
-  props.accounts.find(a => a.id === props.formData.account_id)
-)
+  props.accounts.find((a) => a.id === props.formData.account_id),
+);
 
 // Get available currencies for selected account
 const availableCurrencies = computed(() => {
-  if (!selectedAccount.value) return []
-  return selectedAccount.value.balances.map(b => b.currency)
-})
+  if (!selectedAccount.value) return [];
+  return selectedAccount.value.balances.map((b) => b.currency);
+});
 
 // Check if account has multiple currencies
-const isMultiCurrency = computed(() => availableCurrencies.value.length > 1)
+const isMultiCurrency = computed(() => availableCurrencies.value.length > 1);
 
 // Get currency symbol for display
 const currencySymbol = computed(() => {
-  const currency = getCurrencyByCode(props.formData.currency)
-  return currency?.symbol || props.formData.currency
-})
+  const currency = getCurrencyByCode(props.formData.currency);
+  return currency?.symbol || props.formData.currency;
+});
 
-function updateField<K extends keyof DebtFormData>(field: K, value: DebtFormData[K]) {
-  emit('update:formData', { ...props.formData, [field]: value })
+function updateField<K extends keyof DebtFormData>(
+  field: K,
+  value: DebtFormData[K],
+) {
+  emit('update:formData', { ...props.formData, [field]: value });
 }
 
 function handleAccountChange(accountId: string) {
-  const account = props.accounts.find(a => a.id === accountId)
-  const firstCurrency = account?.balances[0]?.currency || 'UZS'
+  const account = props.accounts.find((a) => a.id === accountId);
+  const firstCurrency = account?.balances[0]?.currency || 'UZS';
 
   emit('update:formData', {
     ...props.formData,
     account_id: accountId,
     currency: firstCurrency,
-  })
+  });
 }
 
 function handleCurrencyChange(currency: string) {
   emit('update:formData', {
     ...props.formData,
     currency,
-  })
+  });
 }
 
 // Date picker
-const isDatePickerOpen = ref(false)
+const isDatePickerOpen = ref(false);
 
 // Convert string date to CalendarDate
 function parseDate(dateStr: string | null): DateValue | undefined {
-  if (!dateStr) return undefined
-  const [year, month, day] = dateStr.split('-').map(Number)
-  return new CalendarDate(year, month, day)
+  if (!dateStr) return undefined;
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new CalendarDate(year, month, day);
 }
 
 // Get current date value for calendar
 const calendarValue = computed(() => {
-  const dateStr = props.formData.debt_date || new Date().toISOString().split('T')[0]
-  return parseDate(dateStr)
-})
+  const dateStr =
+    props.formData.debt_date || new Date().toISOString().split('T')[0];
+  return parseDate(dateStr);
+});
 
 // Handle calendar date change
 function handleDateChange(value: DateValue | undefined) {
   if (value) {
-    const year = value.year
-    const month = String(value.month).padStart(2, '0')
-    const day = String(value.day).padStart(2, '0')
-    updateField('debt_date', `${year}-${month}-${day}`)
-    isDatePickerOpen.value = false
+    const year = value.year;
+    const month = String(value.month).padStart(2, '0');
+    const day = String(value.day).padStart(2, '0');
+    updateField('debt_date', `${year}-${month}-${day}`);
+    isDatePickerOpen.value = false;
   }
 }
 
 // Format date for display
 const displayDate = computed(() => {
-  const dateStr = props.formData.debt_date || new Date().toISOString().split('T')[0]
-  const date = new Date(dateStr)
+  const dateStr =
+    props.formData.debt_date || new Date().toISOString().split('T')[0];
+  const date = new Date(dateStr);
   return date.toLocaleDateString('ru-RU', {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
-  })
-})
+  });
+});
 </script>
 
 <template>
@@ -119,7 +126,9 @@ const displayDate = computed(() => {
   >
     <!-- Debt Type Tabs -->
     <div class="space-y-3">
-      <label class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">
+      <label
+        class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark"
+      >
         Тип долга
       </label>
       <UTabs
@@ -132,15 +141,20 @@ const displayDate = computed(() => {
     <!-- Person Name -->
     <UInput
       :model-value="formData.person_name"
-      :label="formData.debt_type === 'given' ? 'Кому дали в долг' : 'У кого взяли в долг'"
+      :label="
+        formData.debt_type === 'given'
+          ? 'Кому дали в долг'
+          : 'У кого взяли в долг'
+      "
       placeholder="Имя человека"
-     
       @update:model-value="updateField('person_name', $event as string)"
     />
 
     <!-- Amount with Currency -->
     <div class="space-y-2">
-      <label class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">
+      <label
+        class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark"
+      >
         Сумма
       </label>
       <div class="flex gap-2">
@@ -149,7 +163,9 @@ const displayDate = computed(() => {
           <select
             :value="formData.currency"
             class="appearance-none h-full bg-surface-light dark:bg-surface-dark rounded-xl px-3 pr-8 text-sm font-medium border border-border-light dark:border-border-dark focus:outline-none focus:ring-2 focus:ring-primary"
-            @change="handleCurrencyChange(($event.target as HTMLSelectElement).value)"
+            @change="
+              handleCurrencyChange(($event.target as HTMLSelectElement).value)
+            "
           >
             <option
               v-for="currency in availableCurrencies"
@@ -182,8 +198,12 @@ const displayDate = computed(() => {
 
     <!-- Account Selector -->
     <div class="space-y-3">
-      <label class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">
-        {{ formData.debt_type === 'given' ? 'С какого счёта' : 'На какой счёт' }}
+      <label
+        class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark"
+      >
+        {{
+          formData.debt_type === 'given' ? 'С какого счёта' : 'На какой счёт'
+        }}
       </label>
       <div class="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1">
         <button
@@ -204,10 +224,7 @@ const displayDate = computed(() => {
             :style="{ backgroundColor: account.color }"
           />
           <span class="truncate">{{ account.name }}</span>
-          <span
-            v-if="account.balances.length > 1"
-            class="text-xs opacity-60"
-          >
+          <span v-if="account.balances.length > 1" class="text-xs opacity-60">
             ({{ account.balances.length }} валют)
           </span>
         </button>
@@ -216,20 +233,16 @@ const displayDate = computed(() => {
 
     <!-- Date Input -->
     <div class="space-y-2">
-      <label class="block text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
+      <label
+        class="block text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
+      >
         Дата
       </label>
       <Popover v-model:open="isDatePickerOpen">
         <PopoverTrigger as-child>
           <button
             type="button"
-            class="w-full flex items-center justify-between gap-2 px-4 py-3 rounded-xl
-                   bg-surface-light dark:bg-surface-dark
-                   border border-gray-200 dark:border-gray-700
-                   text-text-primary-light dark:text-text-primary-dark
-                   hover:border-primary/50
-                   focus:outline-none focus:ring-2 focus:ring-primary/50
-                   transition-all"
+            class="w-full flex items-center justify-between gap-2 px-4 py-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-gray-200 dark:border-gray-700 text-text-primary-light dark:text-text-primary-dark hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
           >
             <div class="flex items-center gap-2">
               <UIcon
@@ -262,7 +275,6 @@ const displayDate = computed(() => {
       :model-value="formData.description"
       label="Комментарий (необязательно)"
       placeholder="Добавьте описание..."
-     
       @update:model-value="updateField('description', $event as string)"
     />
 
@@ -272,10 +284,19 @@ const displayDate = computed(() => {
         type="checkbox"
         :checked="formData.skipTransaction"
         class="w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary"
-        @change="updateField('skipTransaction', ($event.target as HTMLInputElement).checked)"
+        @change="
+          updateField(
+            'skipTransaction',
+            ($event.target as HTMLInputElement).checked,
+          )
+        "
       />
       <span class="text-sm text-text-primary-light dark:text-text-primary-dark">
-        {{ formData.debt_type === 'given' ? 'Не списывать с баланса' : 'Не добавлять на баланс' }}
+        {{
+          formData.debt_type === 'given'
+            ? 'Не списывать с баланса'
+            : 'Не добавлять на баланс'
+        }}
       </span>
     </label>
 
@@ -287,14 +308,17 @@ const displayDate = computed(() => {
           size="sm"
           class="text-text-tertiary-light dark:text-text-tertiary-dark mt-0.5"
         />
-        <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
+        <p
+          class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
+        >
           <template v-if="formData.skipTransaction">
             Будет создан только долг без изменения баланса счёта
           </template>
           <template v-else>
-            {{ formData.debt_type === 'given'
-              ? `Сумма ${formData.amount > 0 ? formData.amount + ' ' + formData.currency : ''} будет списана с выбранного счёта`
-              : `Сумма ${formData.amount > 0 ? formData.amount + ' ' + formData.currency : ''} будет добавлена на выбранный счёт`
+            {{
+              formData.debt_type === 'given'
+                ? `Сумма ${formData.amount > 0 ? formData.amount + ' ' + formData.currency : ''} будет списана с выбранного счёта`
+                : `Сумма ${formData.amount > 0 ? formData.amount + ' ' + formData.currency : ''} будет добавлена на выбранный счёт`
             }}
           </template>
         </p>
@@ -313,7 +337,11 @@ const displayDate = computed(() => {
       size="xl"
       full-width
       :loading="isSubmitting"
-      :disabled="!formData.person_name.trim() || formData.amount <= 0 || !formData.account_id"
+      :disabled="
+        !formData.person_name.trim() ||
+        formData.amount <= 0 ||
+        !formData.account_id
+      "
     >
       Создать долг
     </UButton>

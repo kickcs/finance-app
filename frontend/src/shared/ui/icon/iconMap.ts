@@ -1,4 +1,4 @@
-import type { Component } from 'vue'
+import type { Component } from 'vue';
 import {
   ArrowDown,
   ArrowLeft,
@@ -102,7 +102,7 @@ import {
   Wrench,
   X,
   Zap,
-} from 'lucide-vue-next'
+} from 'lucide-vue-next';
 
 export const iconMap: Record<string, Component> = {
   account_balance: Landmark,
@@ -210,4 +210,4 @@ export const iconMap: Record<string, Component> = {
   water_drop: Droplets,
   wifi: Wifi,
   work: Briefcase,
-}
+};

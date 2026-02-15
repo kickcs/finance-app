@@ -1,81 +1,75 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue'
-import { useSwipe } from '@/shared/lib/hooks/useSwipe'
-import { UIcon } from '@/shared/ui'
-import type { SwipeAction } from './types'
+import { computed } from 'vue';
+import { useSwipe } from '@/shared/lib/hooks/useSwipe';
+import { UIcon } from '@/shared/ui';
+import type { SwipeAction } from './types';
 
 const props = withDefaults(
   defineProps<{
     /** Left swipe action (delete) - revealed when swiping left */
-    leftAction?: SwipeAction
+    leftAction?: SwipeAction;
     /** Right swipe action (edit) - revealed when swiping right */
-    rightAction?: SwipeAction
+    rightAction?: SwipeAction;
     /** Disable swipe functionality */
-    disabled?: boolean
+    disabled?: boolean;
   }>(),
   {
     leftAction: () => ({ icon: 'delete', color: '#ef4444', label: 'Удалить' }),
     rightAction: () => ({ icon: 'edit', color: '#3b82f6', label: 'Изменить' }),
     disabled: false,
   },
-)
+);
 
 const emit = defineEmits<{
-  'action-left': []
-  'action-right': []
-}>()
+  'action-left': [];
+  'action-right': [];
+}>();
 
-const {
-  translateX,
-  isDragging,
-  swipeState,
-  resetSwipe,
-  handlers,
-} = useSwipe({
+const { translateX, isDragging, resetSwipe, handlers } = useSwipe({
   leftEnabled: !!props.leftAction && !props.disabled,
   rightEnabled: !!props.rightAction && !props.disabled,
-})
+});
 
 // Calculate action button opacity based on swipe distance
 const leftActionOpacity = computed(() => {
-  if (translateX.value >= 0) return 0
-  return Math.min(Math.abs(translateX.value) / 80, 1)
-})
+  if (translateX.value >= 0) return 0;
+  return Math.min(Math.abs(translateX.value) / 80, 1);
+});
 
 const rightActionOpacity = computed(() => {
-  if (translateX.value <= 0) return 0
-  return Math.min(translateX.value / 80, 1)
-})
+  if (translateX.value <= 0) return 0;
+  return Math.min(translateX.value / 80, 1);
+});
 
 // Handle action click when revealed
 function handleLeftAction() {
-  emit('action-left')
-  resetSwipe()
+  emit('action-left');
+  resetSwipe();
 }
 
 function handleRightAction() {
-  emit('action-right')
-  resetSwipe()
+  emit('action-right');
+  resetSwipe();
 }
 
 // Touch handlers
 function onTouchStart(e: TouchEvent) {
-  if (props.disabled) return
-  handlers.onTouchStart(e)
+  if (props.disabled) return;
+  handlers.onTouchStart(e);
 }
 
 function onTouchMove(e: TouchEvent) {
-  if (props.disabled) return
-  handlers.onTouchMove(e)
+  if (props.disabled) return;
+  handlers.onTouchMove(e);
 }
 
 function onTouchEnd() {
-  if (props.disabled) return
-  handlers.onTouchEnd()
+  if (props.disabled) return;
+  handlers.onTouchEnd();
 }
 
 // Expose resetSwipe for parent components
-defineExpose({ resetSwipe })
+defineExpose({ resetSwipe });
 </script>
 
 <template>

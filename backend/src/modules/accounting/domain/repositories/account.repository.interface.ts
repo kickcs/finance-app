@@ -1,4 +1,4 @@
-import { Account } from '../aggregates/account';
+import type { Account } from '../aggregates/account';
 
 export const ACCOUNT_REPOSITORY = Symbol('ACCOUNT_REPOSITORY');
 

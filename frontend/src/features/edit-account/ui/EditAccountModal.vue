@@ -1,87 +1,91 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
-import { UModal, UInput, UButton } from '@/shared/ui'
-import { IconSelector, ColorPicker } from '@/features/create-account'
-import { VISIBLE_ACCOUNT_TYPES, ACCOUNT_TYPE_LABELS, AccountTypeFields } from '@/entities/account'
-import type { AccountType, AccountTypeFieldValues } from '@/entities/account'
-import type { Account, AccountWithBalances } from '@/shared/api/database.types'
+import { ref, computed, watch } from 'vue';
+import { UModal, UInput, UButton } from '@/shared/ui';
+import { IconSelector, ColorPicker } from '@/features/create-account';
+import {
+  VISIBLE_ACCOUNT_TYPES,
+  ACCOUNT_TYPE_LABELS,
+  AccountTypeFields,
+} from '@/entities/account';
+import type { AccountType, AccountTypeFieldValues } from '@/entities/account';
+import type { Account, AccountWithBalances } from '@/shared/api/database.types';
 
 const props = defineProps<{
-  modelValue: boolean
-  account: Account | AccountWithBalances | null
-  isUpdating?: boolean
-}>()
+  modelValue: boolean;
+  account: Account | AccountWithBalances | null;
+  isUpdating?: boolean;
+}>();
 
 const emit = defineEmits<{
-  'update:modelValue': [value: boolean]
-  confirm: [updates: Partial<Account>]
-  cancel: []
-}>()
+  'update:modelValue': [value: boolean];
+  confirm: [updates: Partial<Account>];
+  cancel: [];
+}>();
 
 // Local form state
-const name = ref('')
-const icon = ref('')
-const color = ref('')
-const type = ref<AccountType>('basic')
+const name = ref('');
+const icon = ref('');
+const color = ref('');
+const type = ref<AccountType>('basic');
 
 // Type-specific fields
-const creditLimit = ref<number | null>(null)
-const gracePeriodDays = ref<number | null>(null)
-const billingDay = ref<number | null>(null)
-const totalAmount = ref<number | null>(null)
-const interestRate = ref<number | null>(null)
-const monthlyPayment = ref<number | null>(null)
-const startDate = ref<string | null>(null)
-const endDate = ref<string | null>(null)
-const maturityDate = ref<string | null>(null)
-const isReplenishable = ref<boolean | null>(null)
-const isWithdrawable = ref<boolean | null>(null)
+const creditLimit = ref<number | null>(null);
+const gracePeriodDays = ref<number | null>(null);
+const billingDay = ref<number | null>(null);
+const totalAmount = ref<number | null>(null);
+const interestRate = ref<number | null>(null);
+const monthlyPayment = ref<number | null>(null);
+const startDate = ref<string | null>(null);
+const endDate = ref<string | null>(null);
+const maturityDate = ref<string | null>(null);
+const isReplenishable = ref<boolean | null>(null);
+const isWithdrawable = ref<boolean | null>(null);
 
 // Guard to prevent type watcher from clearing fields during initialization
-let isInitializing = false
+let isInitializing = false;
 
 // Sync form state with account prop
 watch(
   () => props.account,
   (a) => {
     if (a) {
-      isInitializing = true
-      name.value = a.name
-      icon.value = a.icon
-      color.value = a.color
-      type.value = a.type as AccountType
-      creditLimit.value = a.credit_limit
-      gracePeriodDays.value = a.grace_period_days
-      billingDay.value = a.billing_day
-      totalAmount.value = a.total_amount
-      interestRate.value = a.interest_rate
-      monthlyPayment.value = a.monthly_payment
-      startDate.value = a.start_date
-      endDate.value = a.end_date
-      maturityDate.value = a.maturity_date
-      isReplenishable.value = a.is_replenishable
-      isWithdrawable.value = a.is_withdrawable
-      isInitializing = false
+      isInitializing = true;
+      name.value = a.name;
+      icon.value = a.icon;
+      color.value = a.color;
+      type.value = a.type as AccountType;
+      creditLimit.value = a.credit_limit;
+      gracePeriodDays.value = a.grace_period_days;
+      billingDay.value = a.billing_day;
+      totalAmount.value = a.total_amount;
+      interestRate.value = a.interest_rate;
+      monthlyPayment.value = a.monthly_payment;
+      startDate.value = a.start_date;
+      endDate.value = a.end_date;
+      maturityDate.value = a.maturity_date;
+      isReplenishable.value = a.is_replenishable;
+      isWithdrawable.value = a.is_withdrawable;
+      isInitializing = false;
     }
   },
-  { immediate: true }
-)
+  { immediate: true },
+);
 
 // Clear type-specific fields when type changes (skip during initialization)
 watch(type, (newType, oldType) => {
-  if (newType === oldType || isInitializing) return
-  creditLimit.value = null
-  gracePeriodDays.value = null
-  billingDay.value = null
-  totalAmount.value = null
-  interestRate.value = null
-  monthlyPayment.value = null
-  startDate.value = null
-  endDate.value = null
-  maturityDate.value = null
-  isReplenishable.value = null
-  isWithdrawable.value = null
-})
+  if (newType === oldType || isInitializing) return;
+  creditLimit.value = null;
+  gracePeriodDays.value = null;
+  billingDay.value = null;
+  totalAmount.value = null;
+  interestRate.value = null;
+  monthlyPayment.value = null;
+  startDate.value = null;
+  endDate.value = null;
+  maturityDate.value = null;
+  isReplenishable.value = null;
+  isWithdrawable.value = null;
+});
 
 const typeFields = computed<AccountTypeFieldValues>(() => ({
   creditLimit: creditLimit.value,
@@ -95,19 +99,31 @@ const typeFields = computed<AccountTypeFieldValues>(() => ({
   maturityDate: maturityDate.value,
   isReplenishable: isReplenishable.value,
   isWithdrawable: isWithdrawable.value,
-}))
+}));
 
-function updateTypeField(key: keyof AccountTypeFieldValues, value: AccountTypeFieldValues[keyof AccountTypeFieldValues]) {
+function updateTypeField(
+  key: keyof AccountTypeFieldValues,
+  value: AccountTypeFieldValues[keyof AccountTypeFieldValues],
+) {
   const refs: Record<keyof AccountTypeFieldValues, any> = {
-    creditLimit, gracePeriodDays, billingDay, totalAmount, interestRate,
-    monthlyPayment, startDate, endDate, maturityDate, isReplenishable, isWithdrawable,
-  }
-  refs[key].value = value
+    creditLimit,
+    gracePeriodDays,
+    billingDay,
+    totalAmount,
+    interestRate,
+    monthlyPayment,
+    startDate,
+    endDate,
+    maturityDate,
+    isReplenishable,
+    isWithdrawable,
+  };
+  refs[key].value = value;
 }
 
 function close() {
-  emit('update:modelValue', false)
-  emit('cancel')
+  emit('update:modelValue', false);
+  emit('cancel');
 }
 
 function confirm() {
@@ -127,7 +143,7 @@ function confirm() {
     maturity_date: maturityDate.value,
     is_replenishable: isReplenishable.value,
     is_withdrawable: isWithdrawable.value,
-  })
+  });
 }
 </script>
 
@@ -143,12 +159,13 @@ function confirm() {
         v-model="name"
         label="Название"
         placeholder="Наличные, Карта..."
-
       />
 
       <!-- Type -->
       <div class="space-y-2">
-        <label class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">
+        <label
+          class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark"
+        >
           Тип счёта
         </label>
         <div class="grid grid-cols-3 gap-2">
@@ -177,19 +194,14 @@ function confirm() {
       />
 
       <!-- Icon -->
-      <IconSelector
-        v-model="icon"
-        :color="color"
-      />
+      <IconSelector v-model="icon" :color="color" />
 
       <!-- Color -->
       <ColorPicker v-model="color" />
     </div>
 
     <template #actions>
-      <UButton variant="secondary" full-width @click="close">
-        Отмена
-      </UButton>
+      <UButton variant="secondary" full-width @click="close"> Отмена </UButton>
       <UButton
         variant="primary"
         full-width

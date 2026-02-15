@@ -1,21 +1,21 @@
 <script setup lang="ts">
-import { useToast } from '@/shared/lib/composables/useToast'
-import { UIcon } from '@/shared/ui'
-import Toast from './Toast.vue'
-import ToastClose from './ToastClose.vue'
-import ToastDescription from './ToastDescription.vue'
-import ToastTitle from './ToastTitle.vue'
-import ToastAction from './ToastAction.vue'
-import ToastViewport from './ToastViewport.vue'
+import { useToast } from '@/shared/lib/composables/useToast';
+import { UIcon } from '@/shared/ui';
+import Toast from './Toast.vue';
+import ToastClose from './ToastClose.vue';
+import ToastDescription from './ToastDescription.vue';
+import ToastTitle from './ToastTitle.vue';
+import ToastAction from './ToastAction.vue';
+import ToastViewport from './ToastViewport.vue';
 
-const { toasts, dismiss } = useToast()
+const { toasts, dismiss } = useToast();
 
 const variantIcons: Record<string, string> = {
   default: 'info',
   success: 'check_circle',
   error: 'error',
   warning: 'warning',
-}
+};
 </script>
 
 <template>

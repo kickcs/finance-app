@@ -1,6 +1,6 @@
 export interface Currency {
-  code: string
-  name: string
-  symbol: string
-  flag: string // Emoji flag
+  code: string;
+  name: string;
+  symbol: string;
+  flag: string; // Emoji flag
 }

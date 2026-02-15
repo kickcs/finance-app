@@ -1,6 +1,13 @@
 <script setup lang="ts">
-import { cva, type VariantProps } from 'class-variance-authority'
-import { cn } from '@/shared/lib/utils'
+import { cva, type VariantProps } from 'class-variance-authority';
+import { cn } from '@/shared/lib/utils';
+
+defineProps<{
+  variant?: BadgeVariants['variant'];
+  size?: BadgeVariants['size'];
+  shape?: BadgeVariants['shape'];
+  class?: string;
+}>();
 
 const badgeVariants = cva(
   'inline-flex items-center justify-center font-medium whitespace-nowrap',
@@ -32,26 +39,14 @@ const badgeVariants = cva(
       size: 'sm',
       shape: 'rounded',
     },
-  }
-)
+  },
+);
 
-type BadgeVariants = VariantProps<typeof badgeVariants>
-
-defineProps<{
-  variant?: BadgeVariants['variant']
-  size?: BadgeVariants['size']
-  shape?: BadgeVariants['shape']
-  class?: string
-}>()
+type BadgeVariants = VariantProps<typeof badgeVariants>;
 </script>
 
 <template>
-  <span
-    :class="cn(
-      badgeVariants({ variant, size, shape }),
-      $props.class,
-    )"
-  >
+  <span :class="cn(badgeVariants({ variant, size, shape }), $props.class)">
     <slot />
   </span>
 </template>

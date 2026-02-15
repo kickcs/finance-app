@@ -1,4 +1,4 @@
-import { Profile } from '../entities/profile.entity';
+import type { Profile } from '../entities/profile.entity';
 
 export const PROFILE_REPOSITORY = Symbol('PROFILE_REPOSITORY');
 

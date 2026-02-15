@@ -3,6 +3,6 @@ export const debtQueryKeys = {
   all: ['debts'] as const,
   list: (userId: string) => [...debtQueryKeys.all, 'list', userId] as const,
   detail: (debtId: string) => [...debtQueryKeys.all, 'detail', debtId] as const,
-}
+};
 
-export type DebtQueryKeys = typeof debtQueryKeys
+export type DebtQueryKeys = typeof debtQueryKeys;

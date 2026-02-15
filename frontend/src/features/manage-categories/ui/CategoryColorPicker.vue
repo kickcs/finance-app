@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { UColorPicker } from '@/shared/ui'
-import { CATEGORY_COLORS } from '../model/constants'
+import { UColorPicker } from '@/shared/ui';
+import { CATEGORY_COLORS } from '../model/constants';
 
 defineProps<{
-  modelValue: string
-}>()
+  modelValue: string;
+}>();
 
 defineEmits<{
-  'update:modelValue': [value: string]
-}>()
+  'update:modelValue': [value: string];
+}>();
 </script>
 
 <template>

@@ -21,6 +21,7 @@ export class GetTransactionsByAccountWithIncomingHandler implements IQueryHandle
 
   async execute(query: GetTransactionsByAccountWithIncomingQuery) {
     const account = await this.accountRepository.findById(query.accountId);
+    // eslint-disable-next-line @typescript-eslint/prefer-optional-chain -- explicit null check for security
     if (!account || account.userId !== query.userId) {
       throw new ForbiddenException('Access denied');
     }

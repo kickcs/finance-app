@@ -1,4 +1,4 @@
-import type { Currency } from './types'
+import type { Currency } from './types';
 
 export const CURRENCIES: Currency[] = [
   { code: 'USD', name: 'US Dollar', symbol: '$', flag: '🇺🇸' },
@@ -7,8 +7,8 @@ export const CURRENCIES: Currency[] = [
   { code: 'UZS', name: 'Uzbekistani Som', symbol: 'сўм', flag: '🇺🇿' },
   { code: 'GBP', name: 'British Pound', symbol: '£', flag: '🇬🇧' },
   { code: 'CNY', name: 'Chinese Yuan', symbol: '¥', flag: '🇨🇳' },
-]
+];
 
 export function getCurrencyByCode(code: string): Currency | undefined {
-  return CURRENCIES.find(c => c.code === code)
+  return CURRENCIES.find((c) => c.code === code);
 }

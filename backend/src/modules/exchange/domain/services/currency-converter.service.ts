@@ -1,4 +1,4 @@
-import { ExchangeRate } from '../aggregates';
+import type { ExchangeRate } from '../aggregates';
 
 export interface ConversionResult {
   amount: number;

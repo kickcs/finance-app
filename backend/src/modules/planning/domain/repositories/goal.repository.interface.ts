@@ -1,4 +1,4 @@
-import { Goal } from '../aggregates/goal';
+import type { Goal } from '../aggregates/goal';
 
 export const GOAL_REPOSITORY = Symbol('GOAL_REPOSITORY');
 

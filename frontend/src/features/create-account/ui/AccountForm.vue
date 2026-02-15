@@ -1,30 +1,37 @@
 <script setup lang="ts">
-import { UInput, UButton } from '@/shared/ui'
-import IconSelector from './IconSelector.vue'
-import ColorPicker from './ColorPicker.vue'
-import CurrencyBalanceList from './CurrencyBalanceList.vue'
-import type { AccountFormData } from '../model/useCreateAccount'
-import { VISIBLE_ACCOUNT_TYPES, ACCOUNT_TYPE_LABELS, AccountTypeFields } from '@/entities/account'
-import type { AccountType, AccountTypeFieldValues } from '@/entities/account'
+import { UInput, UButton } from '@/shared/ui';
+import IconSelector from './IconSelector.vue';
+import ColorPicker from './ColorPicker.vue';
+import CurrencyBalanceList from './CurrencyBalanceList.vue';
+import type { AccountFormData } from '../model/useCreateAccount';
+import {
+  VISIBLE_ACCOUNT_TYPES,
+  ACCOUNT_TYPE_LABELS,
+  AccountTypeFields,
+} from '@/entities/account';
+import type { AccountType } from '@/entities/account';
 
 const props = defineProps<{
-  formData: AccountFormData
-  isSubmitting?: boolean
-  error?: string | null
-  nameError?: string | null
-}>()
+  formData: AccountFormData;
+  isSubmitting?: boolean;
+  error?: string | null;
+  nameError?: string | null;
+}>();
 
 const emit = defineEmits<{
-  'update:formData': [value: AccountFormData]
-  submit: []
-  addCurrency: [currency: string]
-  removeCurrency: [index: number]
-  updateBalance: [index: number, balance: number]
-  updateCurrency: [index: number, currency: string]
-}>()
+  'update:formData': [value: AccountFormData];
+  submit: [];
+  addCurrency: [currency: string];
+  removeCurrency: [index: number];
+  updateBalance: [index: number, balance: number];
+  updateCurrency: [index: number, currency: string];
+}>();
 
-function updateField<K extends keyof AccountFormData>(field: K, value: AccountFormData[K]) {
-  emit('update:formData', { ...props.formData, [field]: value })
+function updateField<K extends keyof AccountFormData>(
+  field: K,
+  value: AccountFormData[K],
+) {
+  emit('update:formData', { ...props.formData, [field]: value });
 }
 </script>
 
@@ -39,14 +46,15 @@ function updateField<K extends keyof AccountFormData>(field: K, value: AccountFo
       :model-value="formData.name"
       label="Название счёта"
       placeholder="Например: Основная карта"
-
       :error="nameError ?? undefined"
       @update:model-value="updateField('name', $event as string)"
     />
 
     <!-- Account Type -->
     <div class="space-y-2">
-      <label class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">
+      <label
+        class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark"
+      >
         Тип счёта
       </label>
       <div class="grid grid-cols-3 gap-2">
@@ -71,18 +79,30 @@ function updateField<K extends keyof AccountFormData>(field: K, value: AccountFo
     <AccountTypeFields
       :type="formData.type"
       :fields="formData"
-      @update:field="(key, value) => updateField(key as keyof AccountFormData, value as any)"
+      @update:field="
+        (key, value) => updateField(key as keyof AccountFormData, value as any)
+      "
     />
 
     <!-- Currency Balances -->
     <CurrencyBalanceList
       :balances="formData.balances"
-      :label="formData.type === 'credit_card' ? 'Текущая задолженность' : undefined"
-      :hint="formData.type === 'credit_card' ? 'Введите 0, если задолженности нет' : undefined"
+      :label="
+        formData.type === 'credit_card' ? 'Текущая задолженность' : undefined
+      "
+      :hint="
+        formData.type === 'credit_card'
+          ? 'Введите 0, если задолженности нет'
+          : undefined
+      "
       @add="$emit('addCurrency', $event)"
       @remove="$emit('removeCurrency', $event)"
-      @update-balance="(index, balance) => $emit('updateBalance', index, balance)"
-      @update-currency="(index, currency) => $emit('updateCurrency', index, currency)"
+      @update-balance="
+        (index, balance) => $emit('updateBalance', index, balance)
+      "
+      @update-currency="
+        (index, currency) => $emit('updateCurrency', index, currency)
+      "
     />
 
     <!-- Icon Selector -->

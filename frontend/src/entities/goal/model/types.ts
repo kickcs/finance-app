@@ -1,6 +1,6 @@
 // Re-export from database types for consistency
-export type { Goal } from '@/shared/api/database.types'
-export type GoalId = string
+export type { Goal } from '@/shared/api/database.types';
+export type GoalId = string;
 
 export const GOAL_ICONS = [
   'savings',
@@ -13,7 +13,7 @@ export const GOAL_ICONS = [
   'celebration',
   'diamond',
   'favorite',
-] as const
+] as const;
 
 export const GOAL_COLORS = [
   '#3b82f6', // Blue
@@ -22,4 +22,4 @@ export const GOAL_COLORS = [
   '#a855f7', // Purple
   '#f59e0b', // Amber
   '#06b6d4', // Cyan
-] as const
+] as const;

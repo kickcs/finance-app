@@ -1,28 +1,28 @@
 <script setup lang="ts">
-import { AppHeader } from '@/widgets/header'
-import { BottomNav } from '@/widgets/bottom-nav'
-import { UCard, UIcon } from '@/shared/ui'
-import { navigateBack } from '@/app/router'
-import { useChangelog } from '@/features/changelog'
-import { CHANGELOG_TYPE_CONFIG } from '@/features/changelog/model/changelogData'
-import { useRouter } from 'vue-router'
+import { AppHeader } from '@/widgets/header';
+import { BottomNav } from '@/widgets/bottom-nav';
+import { UCard, UIcon } from '@/shared/ui';
+import { navigateBack } from '@/app/router';
+import { useChangelog } from '@/features/changelog';
+import { CHANGELOG_TYPE_CONFIG } from '@/features/changelog/model/changelogData';
+import { useRouter } from 'vue-router';
 
-const router = useRouter()
-const { allEntries, markAsSeen } = useChangelog()
+const router = useRouter();
+const { allEntries, markAsSeen } = useChangelog();
 
 // Mark as seen when visiting the page
-markAsSeen()
+markAsSeen();
 
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('ru-RU', {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
-  })
+  });
 }
 
 function handleAddTransaction() {
-  router.push('/transactions/new')
+  router.push('/transactions/new');
 }
 </script>
 
@@ -35,18 +35,21 @@ function handleAddTransaction() {
         <!-- Version badge + date -->
         <div class="flex items-center gap-3 mb-4">
           <span
-            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold
-                   bg-gradient-to-r from-primary to-primary/80 text-white"
+            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gradient-to-r from-primary to-primary/80 text-white"
           >
             v{{ entry.version }}
           </span>
-          <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
+          <span
+            class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
+          >
             {{ formatDate(entry.date) }}
           </span>
         </div>
 
         <!-- Title -->
-        <h2 class="text-base font-semibold text-text-primary-light dark:text-text-primary-dark mb-3">
+        <h2
+          class="text-base font-semibold text-text-primary-light dark:text-text-primary-dark mb-3"
+        >
           {{ entry.title }}
         </h2>
 
@@ -65,7 +68,9 @@ function handleAddTransaction() {
             >
               <UIcon :name="CHANGELOG_TYPE_CONFIG[item.type].icon" size="sm" />
             </div>
-            <span class="text-sm text-text-primary-light dark:text-text-primary-dark pt-1">
+            <span
+              class="text-sm text-text-primary-light dark:text-text-primary-dark pt-1"
+            >
               {{ item.text }}
             </span>
           </li>

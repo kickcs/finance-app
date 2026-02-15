@@ -1,30 +1,33 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { UIcon } from '@/shared/ui'
-import { formatCurrency, COMPACT_FORMAT } from '@/shared/lib/format/currency'
-import { getCurrencyByCode } from '@/entities/currency'
-import { getAccountTypeLabel } from '../model/account-types'
-import type { AccountWithBalances } from '../model/types'
+import { computed } from 'vue';
+import { UIcon } from '@/shared/ui';
+import { formatCurrency, COMPACT_FORMAT } from '@/shared/lib/format/currency';
+import { getCurrencyByCode } from '@/entities/currency';
+import { getAccountTypeLabel } from '../model/account-types';
+import type { AccountWithBalances } from '../model/types';
 
-const props = withDefaults(defineProps<{
-  account: AccountWithBalances
-  showBalance?: boolean
-  compact?: boolean
-}>(), {
-  showBalance: true,
-})
+const props = withDefaults(
+  defineProps<{
+    account: AccountWithBalances;
+    showBalance?: boolean;
+    compact?: boolean;
+  }>(),
+  {
+    showBalance: true,
+  },
+);
 
 defineEmits<{
-  click: []
-}>()
+  click: [];
+}>();
 
 // Format single balance for display
 const formattedBalance = computed(() => {
-  const balances = props.account.balances
-  if (!balances || balances.length === 0) return '0'
-  const b = balances[0]
-  return formatCurrency(b.balance, b.currency, COMPACT_FORMAT)
-})
+  const balances = props.account.balances;
+  if (!balances || balances.length === 0) return '0';
+  const b = balances[0];
+  return formatCurrency(b.balance, b.currency, COMPACT_FORMAT);
+});
 </script>
 
 <template>
@@ -46,17 +49,15 @@ const formattedBalance = computed(() => {
         backgroundColor: `${account.color}12`,
       }"
     >
-      <UIcon
-        :name="account.icon"
-        size="md"
-        :style="{ color: account.color }"
-      />
+      <UIcon :name="account.icon" size="md" :style="{ color: account.color }" />
     </div>
 
     <!-- Content -->
     <div class="flex-1 text-left min-w-0">
       <div class="flex items-center gap-1.5">
-        <p class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark truncate">
+        <p
+          class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark truncate"
+        >
           {{ account.name }}
         </p>
         <span
@@ -72,10 +73,7 @@ const formattedBalance = computed(() => {
     </div>
 
     <!-- Balance -->
-    <div
-      v-if="showBalance"
-      class="text-right shrink-0 min-w-0 max-w-[45%]"
-    >
+    <div v-if="showBalance" class="text-right shrink-0 min-w-0 max-w-[45%]">
       <!-- Multi-currency -->
       <div v-if="account.balances?.length > 1" class="space-y-0.5">
         <div
@@ -84,7 +82,9 @@ const formattedBalance = computed(() => {
           class="text-xs font-medium text-text-primary-light dark:text-text-primary-dark whitespace-nowrap"
         >
           {{ getCurrencyByCode(balance.currency)?.flag ?? balance.currency }}
-          {{ formatCurrency(balance.balance, balance.currency, COMPACT_FORMAT) }}
+          {{
+            formatCurrency(balance.balance, balance.currency, COMPACT_FORMAT)
+          }}
         </div>
         <p
           v-if="account.balances.length > 2"

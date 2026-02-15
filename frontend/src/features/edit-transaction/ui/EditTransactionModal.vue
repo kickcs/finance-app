@@ -1,86 +1,92 @@
 <script setup lang="ts">
-import { ref, watch, computed, inject } from 'vue'
-import type { Ref } from 'vue'
-import { UModal, UInput, UButton, UTabs, UIcon } from '@/shared/ui'
-import { CategoryCard, useCategories } from '@/entities/category'
-import { formatCurrency } from '@/shared/lib/format/currency'
-import type { Transaction } from '@/shared/api/database.types'
-import type { User } from '@/shared/api/composables/useAuth'
+import { ref, watch, computed, inject } from 'vue';
+import type { Ref } from 'vue';
+import { UModal, UInput, UButton, UTabs, UIcon } from '@/shared/ui';
+import { CategoryCard, useCategories } from '@/entities/category';
+import { formatCurrency } from '@/shared/lib/format/currency';
+import type { Transaction } from '@/shared/api/database.types';
+import type { User } from '@/shared/api/composables/useAuth';
 
 const props = defineProps<{
-  modelValue: boolean
-  transaction: Transaction | null
-  currency: string
-  isUpdating?: boolean
-  error?: string | null
-  hasSplitDebts?: boolean
-}>()
+  modelValue: boolean;
+  transaction: Transaction | null;
+  currency: string;
+  isUpdating?: boolean;
+  error?: string | null;
+  hasSplitDebts?: boolean;
+}>();
 
 const emit = defineEmits<{
-  'update:modelValue': [value: boolean]
-  confirm: [updates: Partial<Transaction>]
-  cancel: []
-  delete: []
-}>()
+  'update:modelValue': [value: boolean];
+  confirm: [updates: Partial<Transaction>];
+  cancel: [];
+  delete: [];
+}>();
 
 // Get user for categories
-const user = inject<Ref<User | null>>('user')
-const userId = computed(() => user?.value?.id ?? null)
-const { getCategoriesByType } = useCategories(userId)
+const user = inject<Ref<User | null>>('user');
+const userId = computed(() => user?.value?.id ?? null);
+const { getCategoriesByType } = useCategories(userId);
 
 // Check if transaction is a transfer
-const isTransfer = computed(() => props.transaction?.type === 'transfer')
+const isTransfer = computed(() => props.transaction?.type === 'transfer');
 
 // Check if transaction is debt-related (cannot be edited)
-const isDebtRelated = computed(() => props.transaction?.is_debt_related === true)
+const isDebtRelated = computed(
+  () => props.transaction?.is_debt_related === true,
+);
 
 // Check if transaction has split debts linked to it (cannot be edited)
-const hasSplitDebts = computed(() => props.hasSplitDebts === true)
+const hasSplitDebts = computed(() => props.hasSplitDebts === true);
 
 // Cannot edit if debt-related OR has split debts
-const isProtected = computed(() => isDebtRelated.value || hasSplitDebts.value)
+const isProtected = computed(() => isDebtRelated.value || hasSplitDebts.value);
 
 // Local form state (only for non-transfer)
-const type = ref<'expense' | 'income'>('expense')
-const amount = ref(0)
-const categoryId = ref('')
-const description = ref('')
-const date = ref('')
+const type = ref<'expense' | 'income'>('expense');
+const amount = ref(0);
+const categoryId = ref('');
+const description = ref('');
+const date = ref('');
 
 // Sync form state with transaction prop
 watch(
   () => props.transaction,
   (t) => {
     if (t && t.type !== 'transfer') {
-      type.value = t.type as 'expense' | 'income'
-      amount.value = t.amount
-      categoryId.value = t.category_id
-      description.value = t.description || ''
-      date.value = t.date ? t.date.split('T')[0] : ''
+      type.value = t.type as 'expense' | 'income';
+      amount.value = t.amount;
+      categoryId.value = t.category_id;
+      description.value = t.description || '';
+      date.value = t.date ? t.date.split('T')[0] : '';
     }
   },
-  { immediate: true }
-)
+  { immediate: true },
+);
 
 const tabItems = [
   { id: 'expense', label: 'Расход' },
   { id: 'income', label: 'Доход' },
-]
+];
 
-const categories = computed(() => getCategoriesByType(type.value))
+const categories = computed(() => getCategoriesByType(type.value));
 
 function handleTypeChange(newType: string) {
-  type.value = newType as 'expense' | 'income'
+  type.value = newType as 'expense' | 'income';
   // Reset category if switching types
-  const availableCategories = getCategoriesByType(newType as 'expense' | 'income')
-  if (!availableCategories.find((c: { id: string }) => c.id === categoryId.value)) {
-    categoryId.value = ''
+  const availableCategories = getCategoriesByType(
+    newType as 'expense' | 'income',
+  );
+  if (
+    !availableCategories.find((c: { id: string }) => c.id === categoryId.value)
+  ) {
+    categoryId.value = '';
   }
 }
 
 function close() {
-  emit('update:modelValue', false)
-  emit('cancel')
+  emit('update:modelValue', false);
+  emit('cancel');
 }
 
 function confirm() {
@@ -90,12 +96,12 @@ function confirm() {
     category_id: categoryId.value,
     description: description.value || null,
     date: date.value,
-  })
+  });
 }
 
 const isFormValid = computed(() => {
-  return categoryId.value && amount.value > 0
-})
+  return categoryId.value && amount.value > 0;
+});
 </script>
 
 <template>
@@ -105,7 +111,10 @@ const isFormValid = computed(() => {
     @update:model-value="emit('update:modelValue', $event)"
   >
     <!-- Error Message -->
-    <div v-if="error" class="mb-4 p-3 rounded-lg bg-danger/10 border border-danger/20">
+    <div
+      v-if="error"
+      class="mb-4 p-3 rounded-lg bg-danger/10 border border-danger/20"
+    >
       <div class="flex gap-2">
         <UIcon name="error" size="sm" class="text-danger shrink-0" />
         <p class="text-sm text-danger">{{ error }}</p>
@@ -115,41 +124,73 @@ const isFormValid = computed(() => {
     <!-- Protected Mode (debt-related OR has split debts): View Only -->
     <div v-if="isProtected && transaction" class="py-2">
       <div class="text-center mb-4">
-        <div class="w-12 h-12 mx-auto mb-3 rounded-xl bg-warning-light flex items-center justify-center">
-          <UIcon :name="hasSplitDebts ? 'group' : 'account_balance_wallet'" size="md" class="text-warning" />
+        <div
+          class="w-12 h-12 mx-auto mb-3 rounded-xl bg-warning-light flex items-center justify-center"
+        >
+          <UIcon
+            :name="hasSplitDebts ? 'group' : 'account_balance_wallet'"
+            size="md"
+            class="text-warning"
+          />
         </div>
-        <p class="text-sm text-text-primary-light dark:text-text-primary-dark font-medium mb-0.5">
-          {{ hasSplitDebts ? 'Транзакция с раздельным счётом' : 'Транзакция связана с долгом' }}
+        <p
+          class="text-sm text-text-primary-light dark:text-text-primary-dark font-medium mb-0.5"
+        >
+          {{
+            hasSplitDebts
+              ? 'Транзакция с раздельным счётом'
+              : 'Транзакция связана с долгом'
+          }}
         </p>
-        <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
+        <p
+          class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
+        >
           Управляйте долгом в разделе "Долги"
         </p>
       </div>
 
       <!-- Transaction Details -->
-      <div class="space-y-2 p-3 rounded-lg bg-surface-light dark:bg-surface-dark">
+      <div
+        class="space-y-2 p-3 rounded-lg bg-surface-light dark:bg-surface-dark"
+      >
         <div class="flex justify-between items-center">
-          <span class="text-xs text-text-secondary-light dark:text-text-secondary-dark">Сумма</span>
-          <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
+          <span
+            class="text-xs text-text-secondary-light dark:text-text-secondary-dark"
+            >Сумма</span
+          >
+          <span
+            class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
+          >
             {{ formatCurrency(transaction.amount, transaction.currency) }}
           </span>
         </div>
-        <div v-if="transaction.description" class="flex justify-between items-center">
-          <span class="text-xs text-text-secondary-light dark:text-text-secondary-dark">Описание</span>
-          <span class="text-xs text-text-primary-light dark:text-text-primary-dark">
+        <div
+          v-if="transaction.description"
+          class="flex justify-between items-center"
+        >
+          <span
+            class="text-xs text-text-secondary-light dark:text-text-secondary-dark"
+            >Описание</span
+          >
+          <span
+            class="text-xs text-text-primary-light dark:text-text-primary-dark"
+          >
             {{ transaction.description }}
           </span>
         </div>
       </div>
 
       <!-- Info -->
-      <div class="mt-3 p-2.5 rounded-lg bg-warning-light border border-warning/20">
+      <div
+        class="mt-3 p-2.5 rounded-lg bg-warning-light border border-warning/20"
+      >
         <div class="flex gap-1.5">
           <UIcon name="info" size="xs" class="text-warning shrink-0 mt-0.5" />
           <p class="text-xs text-warning">
-            {{ hasSplitDebts
-              ? 'Эту транзакцию нельзя редактировать, пока есть связанные долги. Сначала закройте долги в разделе "Долги".'
-              : 'Эту транзакцию нельзя редактировать или удалять напрямую. Перейдите в раздел "Долги" для управления.'
+            {{
+              hasSplitDebts
+                ? 'Эту транзакцию нельзя редактировать, пока есть связанные долги. Сначала закройте долги в разделе "Долги".'
+                : 'Эту транзакцию нельзя редактировать или удалять напрямую. Перейдите в раздел "Долги" для управления.'
             }}
           </p>
         </div>
@@ -159,34 +200,63 @@ const isFormValid = computed(() => {
     <!-- Transfer Mode: Delete Only -->
     <div v-else-if="isTransfer && transaction" class="py-2">
       <div class="text-center mb-4">
-        <div class="w-12 h-12 mx-auto mb-3 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
+        <div
+          class="w-12 h-12 mx-auto mb-3 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center"
+        >
           <UIcon name="swap_horiz" size="md" class="text-indigo-500" />
         </div>
-        <p class="text-sm text-text-primary-light dark:text-text-primary-dark font-medium mb-0.5">
+        <p
+          class="text-sm text-text-primary-light dark:text-text-primary-dark font-medium mb-0.5"
+        >
           Это перевод между счетами
         </p>
-        <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
+        <p
+          class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
+        >
           Переводы можно только удалить
         </p>
       </div>
 
       <!-- Transfer Details -->
-      <div class="space-y-2 p-3 rounded-lg bg-surface-light dark:bg-surface-dark">
+      <div
+        class="space-y-2 p-3 rounded-lg bg-surface-light dark:bg-surface-dark"
+      >
         <div class="flex justify-between items-center">
-          <span class="text-xs text-text-secondary-light dark:text-text-secondary-dark">Списание</span>
-          <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
+          <span
+            class="text-xs text-text-secondary-light dark:text-text-secondary-dark"
+            >Списание</span
+          >
+          <span
+            class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
+          >
             {{ formatCurrency(transaction.amount, transaction.currency) }}
           </span>
         </div>
-        <div v-if="transaction.to_amount && transaction.to_currency" class="flex justify-between items-center">
-          <span class="text-xs text-text-secondary-light dark:text-text-secondary-dark">Зачисление</span>
-          <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
+        <div
+          v-if="transaction.to_amount && transaction.to_currency"
+          class="flex justify-between items-center"
+        >
+          <span
+            class="text-xs text-text-secondary-light dark:text-text-secondary-dark"
+            >Зачисление</span
+          >
+          <span
+            class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
+          >
             {{ formatCurrency(transaction.to_amount, transaction.to_currency) }}
           </span>
         </div>
-        <div v-if="transaction.description" class="flex justify-between items-center">
-          <span class="text-xs text-text-secondary-light dark:text-text-secondary-dark">Комментарий</span>
-          <span class="text-xs text-text-primary-light dark:text-text-primary-dark">
+        <div
+          v-if="transaction.description"
+          class="flex justify-between items-center"
+        >
+          <span
+            class="text-xs text-text-secondary-light dark:text-text-secondary-dark"
+            >Комментарий</span
+          >
+          <span
+            class="text-xs text-text-primary-light dark:text-text-primary-dark"
+          >
             {{ transaction.description }}
           </span>
         </div>
@@ -225,7 +295,9 @@ const isFormValid = computed(() => {
 
       <!-- Category Grid -->
       <div class="space-y-2">
-        <label class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark">
+        <label
+          class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark"
+        >
           Категория
         </label>
         <div
@@ -252,14 +324,8 @@ const isFormValid = computed(() => {
           v-model="description"
           label="Комментарий"
           placeholder="Описание..."
-         
         />
-        <UInput
-          v-model="date"
-          label="Дата"
-          type="date"
-         
-        />
+        <UInput v-model="date" label="Дата" type="date" />
       </div>
     </div>
 

@@ -1,46 +1,42 @@
 <script setup lang="ts">
-import { UIcon, UButton } from '@/shared/ui'
+import { UIcon, UButton } from '@/shared/ui';
 
 interface Action {
-  label: string
-  onClick?: () => void
+  label: string;
+  onClick?: () => void;
 }
 
 interface Props {
-  icon: string
-  title: string
-  description?: string
-  iconSize?: 'sm' | 'md' | 'lg' | 'xl'
-  action?: Action
-  animated?: boolean
+  icon: string;
+  title: string;
+  description?: string;
+  iconSize?: 'sm' | 'md' | 'lg' | 'xl';
+  action?: Action;
+  animated?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   iconSize: 'lg',
   animated: true,
-})
+});
 
 const emit = defineEmits<{
-  action: []
-}>()
+  action: [];
+}>();
 
 function handleAction() {
   if (props.action?.onClick) {
-    props.action.onClick()
+    props.action.onClick();
   }
-  emit('action')
+  emit('action');
 }
 </script>
 
 <template>
-  <div
-    class="text-center py-12 px-6"
-    :class="animated && 'animate-fadeInUp'"
-  >
+  <div class="text-center py-12 px-6" :class="animated && 'animate-fadeInUp'">
     <!-- Icon -->
     <div
-      class="w-14 h-14 mx-auto mb-4 rounded-xl bg-surface-light dark:bg-surface-dark
-             flex items-center justify-center"
+      class="w-14 h-14 mx-auto mb-4 rounded-xl bg-surface-light dark:bg-surface-dark flex items-center justify-center"
     >
       <UIcon
         :name="icon"
@@ -50,7 +46,9 @@ function handleAction() {
     </div>
 
     <!-- Title -->
-    <p class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark mb-1">
+    <p
+      class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark mb-1"
+    >
       {{ title }}
     </p>
 

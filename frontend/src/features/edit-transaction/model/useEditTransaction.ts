@@ -1,83 +1,105 @@
-import { ref } from 'vue'
-import { transactionsApi, transactionQueryKeys } from '@/entities/transaction'
-import { debtsApi } from '@/entities/debt'
-import { accountQueryKeys } from '@/entities/account'
-import { accountBalanceQueryKeys } from '@/entities/account-balance'
-import { queryClient } from '@/shared/api/queryClient'
-import type { Transaction } from '@/shared/api/database.types'
+import { ref } from 'vue';
+import { transactionsApi, transactionQueryKeys } from '@/entities/transaction';
+import { debtsApi } from '@/entities/debt';
+import { accountQueryKeys } from '@/entities/account';
+import { accountBalanceQueryKeys } from '@/entities/account-balance';
+import { queryClient } from '@/shared/api/queryClient';
+import type { Transaction } from '@/shared/api/database.types';
 
 export function useEditTransaction(userId: string) {
-  const isUpdating = ref(false)
-  const isDeleting = ref(false)
-  const error = ref<string | null>(null)
+  const isUpdating = ref(false);
+  const isDeleting = ref(false);
+  const error = ref<string | null>(null);
 
-  async function update(transaction: Transaction, updates: Partial<Transaction>) {
+  async function update(
+    transaction: Transaction,
+    updates: Partial<Transaction>,
+  ) {
     // Debt-related transactions cannot be edited
     if (transaction.is_debt_related) {
-      error.value = 'Транзакции долгов нельзя редактировать. Управляйте долгом в разделе "Долги"'
-      return false
+      error.value =
+        'Транзакции долгов нельзя редактировать. Управляйте долгом в разделе "Долги"';
+      return false;
     }
 
     // Transfers cannot be edited
     if (transaction.type === 'transfer') {
-      error.value = 'Переводы нельзя редактировать, только удалять'
-      return false
+      error.value = 'Переводы нельзя редактировать, только удалять';
+      return false;
     }
 
-    isUpdating.value = true
-    error.value = null
+    isUpdating.value = true;
+    error.value = null;
 
     try {
       // Update transaction
       // Note: Backend should handle balance recalculation in production
       // Currently, amount/type changes may not update balances correctly
-      await transactionsApi.update(transaction.id, updates)
+      await transactionsApi.update(transaction.id, updates);
 
       // Invalidate caches (including infinite queries and monthly stats)
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: transactionQueryKeys.list(userId) }),
-        queryClient.invalidateQueries({ queryKey: transactionQueryKeys.byAccount(transaction.account_id) }),
-        queryClient.invalidateQueries({ queryKey: accountQueryKeys.list(userId) }),
-        queryClient.invalidateQueries({ queryKey: accountBalanceQueryKeys.all }),
+        queryClient.invalidateQueries({
+          queryKey: transactionQueryKeys.list(userId),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: transactionQueryKeys.byAccount(transaction.account_id),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: accountQueryKeys.list(userId),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: accountBalanceQueryKeys.all,
+        }),
         // Invalidate infinite queries
-        queryClient.invalidateQueries({ queryKey: ['transactions', 'infinite', userId] }),
-        queryClient.invalidateQueries({ queryKey: transactionQueryKeys.infiniteByAccount(transaction.account_id) }),
+        queryClient.invalidateQueries({
+          queryKey: ['transactions', 'infinite', userId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: transactionQueryKeys.infiniteByAccount(
+            transaction.account_id,
+          ),
+        }),
         // Invalidate monthly stats (for dashboard)
-        queryClient.invalidateQueries({ queryKey: ['transactions', 'monthly-stats'] }),
-      ])
+        queryClient.invalidateQueries({
+          queryKey: ['transactions', 'monthly-stats'],
+        }),
+      ]);
 
-      return true
+      return true;
     } catch (e) {
-      error.value = 'Не удалось обновить транзакцию'
-      console.error('Failed to update transaction:', e)
-      return false
+      error.value = 'Не удалось обновить транзакцию';
+      console.error('Failed to update transaction:', e);
+      return false;
     } finally {
-      isUpdating.value = false
+      isUpdating.value = false;
     }
   }
 
   async function remove(transaction: Transaction) {
     // Debt-related transactions cannot be deleted directly
     if (transaction.is_debt_related) {
-      error.value = 'Транзакции долгов нельзя удалять. Удалите долг в разделе "Долги"'
-      return false
+      error.value =
+        'Транзакции долгов нельзя удалять. Удалите долг в разделе "Долги"';
+      return false;
     }
 
-    isDeleting.value = true
-    error.value = null
+    isDeleting.value = true;
+    error.value = null;
 
     // Check if there are OPEN split debts linked to this transaction
     // Closed debts are OK - the transaction amount already reflects payments
     try {
-      const allDebts = await debtsApi.getAll(userId)
+      const allDebts = await debtsApi.getAll(userId);
       const linkedDebts = allDebts.filter(
-        (d) => d.source_transaction_id === transaction.id && !d.is_closed
-      )
+        (d) => d.source_transaction_id === transaction.id && !d.is_closed,
+      );
 
       if (linkedDebts.length > 0) {
-        error.value = 'Нельзя удалить транзакцию с открытыми долгами. Сначала закройте или удалите связанные долги'
-        isDeleting.value = false
-        return false
+        error.value =
+          'Нельзя удалить транзакцию с открытыми долгами. Сначала закройте или удалите связанные долги';
+        isDeleting.value = false;
+        return false;
       }
     } catch {
       // Ignore check error, continue with deletion
@@ -86,38 +108,60 @@ export function useEditTransaction(userId: string) {
     try {
       // Delete transaction
       // Note: Backend automatically reverses account balance when deleting
-      await transactionsApi.delete(transaction.id)
+      await transactionsApi.delete(transaction.id);
 
       // Invalidate caches (including infinite queries and monthly stats)
       const invalidatePromises = [
-        queryClient.invalidateQueries({ queryKey: transactionQueryKeys.list(userId) }),
-        queryClient.invalidateQueries({ queryKey: transactionQueryKeys.byAccount(transaction.account_id) }),
-        queryClient.invalidateQueries({ queryKey: accountQueryKeys.list(userId) }),
-        queryClient.invalidateQueries({ queryKey: accountBalanceQueryKeys.all }),
+        queryClient.invalidateQueries({
+          queryKey: transactionQueryKeys.list(userId),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: transactionQueryKeys.byAccount(transaction.account_id),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: accountQueryKeys.list(userId),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: accountBalanceQueryKeys.all,
+        }),
         // Invalidate infinite queries
-        queryClient.invalidateQueries({ queryKey: ['transactions', 'infinite', userId] }),
-        queryClient.invalidateQueries({ queryKey: transactionQueryKeys.infiniteByAccount(transaction.account_id) }),
+        queryClient.invalidateQueries({
+          queryKey: ['transactions', 'infinite', userId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: transactionQueryKeys.infiniteByAccount(
+            transaction.account_id,
+          ),
+        }),
         // Invalidate monthly stats (for dashboard)
-        queryClient.invalidateQueries({ queryKey: ['transactions', 'monthly-stats'] }),
-      ]
+        queryClient.invalidateQueries({
+          queryKey: ['transactions', 'monthly-stats'],
+        }),
+      ];
 
       // Also invalidate target account cache for transfers
       if (transaction.type === 'transfer' && transaction.to_account_id) {
         invalidatePromises.push(
-          queryClient.invalidateQueries({ queryKey: transactionQueryKeys.byAccount(transaction.to_account_id) }),
-          queryClient.invalidateQueries({ queryKey: transactionQueryKeys.infiniteByAccount(transaction.to_account_id) })
-        )
+          queryClient.invalidateQueries({
+            queryKey: transactionQueryKeys.byAccount(transaction.to_account_id),
+          }),
+          queryClient.invalidateQueries({
+            queryKey: transactionQueryKeys.infiniteByAccount(
+              transaction.to_account_id,
+            ),
+          }),
+        );
       }
 
-      await Promise.all(invalidatePromises)
+      await Promise.all(invalidatePromises);
 
-      return true
+      return true;
     } catch (e) {
-      error.value = 'Не удалось удалить транзакцию'
-      console.error('Failed to delete transaction:', e)
-      return false
+      error.value = 'Не удалось удалить транзакцию';
+      console.error('Failed to delete transaction:', e);
+      return false;
     } finally {
-      isDeleting.value = false
+      isDeleting.value = false;
     }
   }
 
@@ -127,5 +171,5 @@ export function useEditTransaction(userId: string) {
     error,
     update,
     remove,
-  }
+  };
 }

@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { Skeleton } from '@/shared/ui'
+import { Skeleton } from '@/shared/ui';
 
 withDefaults(
   defineProps<{
-    compact?: boolean
+    compact?: boolean;
   }>(),
   {
     compact: false,
   },
-)
+);
 </script>
 
 <template>

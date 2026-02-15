@@ -1,1 +1,1 @@
-export { default as UTabs } from './UTabs.vue'
+export { default as UTabs } from './UTabs.vue';

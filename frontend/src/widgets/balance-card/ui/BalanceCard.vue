@@ -1,30 +1,35 @@
 <script setup lang="ts">
-import { UIcon, UCard } from '@/shared/ui'
-import { formatCurrency, COMPACT_FORMAT } from '@/shared/lib/format/currency'
+import { UIcon, UCard } from '@/shared/ui';
+import { formatCurrency, COMPACT_FORMAT } from '@/shared/lib/format/currency';
 
 defineProps<{
-  totalBalance: number
-  currency: string
-  percentChange?: number
-  loading?: boolean
-}>()
+  totalBalance: number;
+  currency: string;
+  percentChange?: number;
+  loading?: boolean;
+}>();
 
 defineEmits<{
-  'income-click': []
-  'expense-click': []
-}>()
+  'income-click': [];
+  'expense-click': [];
+}>();
 </script>
 
 <template>
   <UCard class="p-6">
     <!-- Balance Section -->
     <div class="text-center mb-8">
-      <p class="text-xs font-medium tracking-wide text-text-secondary-light dark:text-text-secondary-dark mb-2">
+      <p
+        class="text-xs font-medium tracking-wide text-text-secondary-light dark:text-text-secondary-dark mb-2"
+      >
         Общий баланс
       </p>
 
       <!-- Loading skeleton -->
-      <div v-if="loading" class="h-12 w-48 mx-auto rounded-lg bg-surface-light dark:bg-surface-dark animate-shimmer" />
+      <div
+        v-if="loading"
+        class="h-12 w-48 mx-auto rounded-lg bg-surface-light dark:bg-surface-dark animate-shimmer"
+      />
 
       <!-- Balance amount - clean typography with fade-in -->
       <Transition
@@ -47,15 +52,21 @@ defineEmits<{
           'inline-flex items-center gap-1 mt-3 px-2.5 py-1 rounded-md text-xs font-medium',
           percentChange >= 0
             ? 'bg-success-light text-success'
-            : 'bg-danger-light text-danger'
+            : 'bg-danger-light text-danger',
         ]"
       >
         <UIcon
           :name="percentChange >= 0 ? 'trending_up' : 'trending_down'"
           size="xs"
         />
-        <span>{{ percentChange >= 0 ? '+' : '' }}{{ percentChange.toFixed(1) }}%</span>
-        <span class="text-text-tertiary-light dark:text-text-tertiary-dark ml-0.5">vs прошлый месяц</span>
+        <span
+          >{{ percentChange >= 0 ? '+' : ''
+          }}{{ percentChange.toFixed(1) }}%</span
+        >
+        <span
+          class="text-text-tertiary-light dark:text-text-tertiary-dark ml-0.5"
+          >vs прошлый месяц</span
+        >
       </div>
     </div>
 
@@ -63,13 +74,7 @@ defineEmits<{
     <div class="flex gap-3">
       <!-- Income Button -->
       <button
-        class="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-lg
-               bg-surface-light dark:bg-surface-dark
-               border border-border-light dark:border-border-dark
-               hover:border-success/40 hover:bg-success-light
-               active:opacity-80
-               focus:outline-none focus-visible:ring-2 focus-visible:ring-success focus-visible:ring-offset-2
-               transition-all duration-150"
+        class="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-lg bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:border-success/40 hover:bg-success-light active:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-success focus-visible:ring-offset-2 transition-all duration-150"
         @click="$emit('income-click')"
       >
         <div
@@ -77,20 +82,16 @@ defineEmits<{
         >
           <UIcon name="add" size="sm" class="text-success" />
         </div>
-        <span class="font-medium text-sm text-text-primary-light dark:text-text-primary-dark">
+        <span
+          class="font-medium text-sm text-text-primary-light dark:text-text-primary-dark"
+        >
           Доход
         </span>
       </button>
 
       <!-- Expense Button -->
       <button
-        class="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-lg
-               bg-surface-light dark:bg-surface-dark
-               border border-border-light dark:border-border-dark
-               hover:border-danger/40 hover:bg-danger-light
-               active:opacity-80
-               focus:outline-none focus-visible:ring-2 focus-visible:ring-danger focus-visible:ring-offset-2
-               transition-all duration-150"
+        class="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-lg bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:border-danger/40 hover:bg-danger-light active:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger focus-visible:ring-offset-2 transition-all duration-150"
         @click="$emit('expense-click')"
       >
         <div
@@ -98,7 +99,9 @@ defineEmits<{
         >
           <UIcon name="remove" size="sm" class="text-danger" />
         </div>
-        <span class="font-medium text-sm text-text-primary-light dark:text-text-primary-dark">
+        <span
+          class="font-medium text-sm text-text-primary-light dark:text-text-primary-dark"
+        >
           Расход
         </span>
       </button>

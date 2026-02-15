@@ -1,1 +1,1 @@
-export { default as PullToRefresh } from './PullToRefresh.vue'
+export { default as PullToRefresh } from './PullToRefresh.vue';

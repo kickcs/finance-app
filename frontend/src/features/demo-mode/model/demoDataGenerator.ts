@@ -1,57 +1,55 @@
-import type { AccountInsert, TransactionInsert, DebtInsert, ReminderInsert } from '@/shared/api'
-
 export interface DemoAccountData {
-  name: string
-  icon: string
-  color: string
-  type: 'basic' | 'savings' | 'credit_card' | 'cash' | 'loan' | 'deposit'
-  balances: Array<{ currency: string; balance: number }>
-  creditLimit?: number
-  gracePeriodDays?: number
-  billingDay?: number
-  totalAmount?: number
-  interestRate?: number
-  monthlyPayment?: number
-  startDate?: string
-  endDate?: string
-  maturityDate?: string
-  isReplenishable?: boolean
-  isWithdrawable?: boolean
+  name: string;
+  icon: string;
+  color: string;
+  type: 'basic' | 'savings' | 'credit_card' | 'cash' | 'loan' | 'deposit';
+  balances: Array<{ currency: string; balance: number }>;
+  creditLimit?: number;
+  gracePeriodDays?: number;
+  billingDay?: number;
+  totalAmount?: number;
+  interestRate?: number;
+  monthlyPayment?: number;
+  startDate?: string;
+  endDate?: string;
+  maturityDate?: string;
+  isReplenishable?: boolean;
+  isWithdrawable?: boolean;
 }
 
 export interface DemoTransactionData {
-  accountIndex: number
-  category_id: string
-  amount: number
-  currency: string
-  type: 'income' | 'expense'
-  description: string
-  date: string
+  accountIndex: number;
+  category_id: string;
+  amount: number;
+  currency: string;
+  type: 'income' | 'expense';
+  description: string;
+  date: string;
 }
 
 export interface DemoDebtData {
-  name: string
-  total_amount: number
-  remaining_amount: number
-  currency: string
-  debt_type: 'given' | 'taken'
-  person_name: string
+  name: string;
+  total_amount: number;
+  remaining_amount: number;
+  currency: string;
+  debt_type: 'given' | 'taken';
+  person_name: string;
 }
 
 export interface DemoReminderData {
-  name: string
-  amount: number
-  frequency: 'weekly' | 'monthly' | 'yearly' | 'once'
-  next_date: string
-  icon: string
-  color: string
+  name: string;
+  amount: number;
+  frequency: 'weekly' | 'monthly' | 'yearly' | 'once';
+  next_date: string;
+  icon: string;
+  color: string;
 }
 
 export interface GeneratedDemoData {
-  accounts: DemoAccountData[]
-  transactions: DemoTransactionData[]
-  debt: DemoDebtData
-  reminders: DemoReminderData[]
+  accounts: DemoAccountData[];
+  transactions: DemoTransactionData[];
+  debt: DemoDebtData;
+  reminders: DemoReminderData[];
 }
 
 // Category amounts in UZS (realistic ranges)
@@ -76,11 +74,17 @@ const CATEGORY_AMOUNTS: Record<string, { min: number; max: number }> = {
   gifts_income: { min: 100000, max: 500000 },
   cashback: { min: 10000, max: 100000 },
   other_income: { min: 50000, max: 500000 },
-}
+};
 
 // Description templates for each category
 const CATEGORY_DESCRIPTIONS: Record<string, string[]> = {
-  groceries: ['Makro', 'Korzinka', 'Havas', 'Овощи на базаре', 'Продукты на неделю'],
+  groceries: [
+    'Makro',
+    'Korzinka',
+    'Havas',
+    'Овощи на базаре',
+    'Продукты на неделю',
+  ],
   transport: ['Yandex Go', 'Метро', 'Заправка', 'MyTaxi', 'Автобус'],
   health: ['Аптека', 'Анализы', 'Врач', 'Стоматолог', 'Витамины'],
   housing: ['Коммунальные', 'Интернет', 'Уборка', 'Ремонт', 'Мебель'],
@@ -98,7 +102,7 @@ const CATEGORY_DESCRIPTIONS: Record<string, string[]> = {
   gifts_income: ['Подарок', 'От родителей'],
   cashback: ['Кэшбек Uzcard', 'Кэшбек Payme'],
   other_income: ['Возврат', 'Продажа', 'Прочее'],
-}
+};
 
 // Expense categories with weights (probability)
 const EXPENSE_CATEGORIES: Array<{ id: string; weight: number }> = [
@@ -114,7 +118,7 @@ const EXPENSE_CATEGORIES: Array<{ id: string; weight: number }> = [
   { id: 'sport', weight: 5 },
   { id: 'travel', weight: 2 },
   { id: 'other_expense', weight: 2 },
-]
+];
 
 // Income categories with weights
 const INCOME_CATEGORIES: Array<{ id: string; weight: number }> = [
@@ -123,70 +127,70 @@ const INCOME_CATEGORIES: Array<{ id: string; weight: number }> = [
   { id: 'gifts_income', weight: 15 },
   { id: 'investments', weight: 10 },
   { id: 'other_income', weight: 5 },
-]
+];
 
 function randomBetween(min: number, max: number): number {
-  return Math.floor(Math.random() * (max - min + 1)) + min
+  return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
 function roundToThousand(amount: number): number {
-  return Math.round(amount / 1000) * 1000
+  return Math.round(amount / 1000) * 1000;
 }
 
 function pickWeighted<T extends { weight: number }>(items: T[]): T {
-  const totalWeight = items.reduce((sum, item) => sum + item.weight, 0)
-  let random = Math.random() * totalWeight
+  const totalWeight = items.reduce((sum, item) => sum + item.weight, 0);
+  let random = Math.random() * totalWeight;
 
   for (const item of items) {
-    random -= item.weight
-    if (random <= 0) return item
+    random -= item.weight;
+    if (random <= 0) return item;
   }
 
-  return items[items.length - 1]
+  return items[items.length - 1];
 }
 
 function pickRandom<T>(items: T[]): T {
-  return items[Math.floor(Math.random() * items.length)]
+  return items[Math.floor(Math.random() * items.length)];
 }
 
 function formatDate(date: Date): string {
-  return date.toISOString().split('T')[0]
+  return date.toISOString().split('T')[0];
 }
 
 function getNextMonthDate(dayOfMonth: number): string {
-  const now = new Date()
-  const nextDate = new Date(now.getFullYear(), now.getMonth(), dayOfMonth)
+  const now = new Date();
+  const nextDate = new Date(now.getFullYear(), now.getMonth(), dayOfMonth);
 
   // If the day has passed this month, move to next month
   if (nextDate <= now) {
-    nextDate.setMonth(nextDate.getMonth() + 1)
+    nextDate.setMonth(nextDate.getMonth() + 1);
   }
 
-  return formatDate(nextDate)
+  return formatDate(nextDate);
 }
 
 function generateTransactions(): DemoTransactionData[] {
-  const transactions: DemoTransactionData[] = []
-  const now = new Date()
+  const transactions: DemoTransactionData[] = [];
+  const now = new Date();
 
   // Generate transactions for the last 30 days
   for (let daysAgo = 0; daysAgo < 30; daysAgo++) {
-    const date = new Date(now)
-    date.setDate(date.getDate() - daysAgo)
-    const dateStr = formatDate(date)
+    const date = new Date(now);
+    date.setDate(date.getDate() - daysAgo);
+    const dateStr = formatDate(date);
 
     // 2-5 transactions per day
-    const txCount = randomBetween(2, 5)
+    const txCount = randomBetween(2, 5);
 
     for (let i = 0; i < txCount; i++) {
       // 80% expenses, 20% income (excluding salary)
-      const isExpense = Math.random() < 0.8
+      const isExpense = Math.random() < 0.8;
 
       if (isExpense) {
-        const category = pickWeighted(EXPENSE_CATEGORIES)
-        const amounts = CATEGORY_AMOUNTS[category.id]
-        const amount = roundToThousand(randomBetween(amounts.min, amounts.max))
-        const descriptions = CATEGORY_DESCRIPTIONS[category.id]
+        const category = pickWeighted(EXPENSE_CATEGORIES);
+        const amounts = CATEGORY_AMOUNTS[category.id];
+        const amount = roundToThousand(randomBetween(amounts.min, amounts.max));
+        const descriptions = CATEGORY_DESCRIPTIONS[category.id];
 
         transactions.push({
           accountIndex: Math.random() < 0.6 ? 1 : 0, // 60% card, 40% wallet
@@ -196,12 +200,12 @@ function generateTransactions(): DemoTransactionData[] {
           type: 'expense',
           description: pickRandom(descriptions),
           date: dateStr,
-        })
+        });
       } else {
-        const category = pickWeighted(INCOME_CATEGORIES)
-        const amounts = CATEGORY_AMOUNTS[category.id]
-        const amount = roundToThousand(randomBetween(amounts.min, amounts.max))
-        const descriptions = CATEGORY_DESCRIPTIONS[category.id]
+        const category = pickWeighted(INCOME_CATEGORIES);
+        const amounts = CATEGORY_AMOUNTS[category.id];
+        const amount = roundToThousand(randomBetween(amounts.min, amounts.max));
+        const descriptions = CATEGORY_DESCRIPTIONS[category.id];
 
         transactions.push({
           accountIndex: Math.random() < 0.7 ? 1 : 0, // 70% to card
@@ -211,16 +215,16 @@ function generateTransactions(): DemoTransactionData[] {
           type: 'income',
           description: pickRandom(descriptions),
           date: dateStr,
-        })
+        });
       }
     }
   }
 
   // Add salary on 1st and 15th of current month
-  const salaryAmount = roundToThousand(randomBetween(8000000, 12000000))
+  const salaryAmount = roundToThousand(randomBetween(8000000, 12000000));
 
   // Salary on 1st
-  const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+  const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   if (firstOfMonth <= now) {
     transactions.push({
       accountIndex: 1, // Card
@@ -230,11 +234,11 @@ function generateTransactions(): DemoTransactionData[] {
       type: 'income',
       description: 'Зарплата',
       date: formatDate(firstOfMonth),
-    })
+    });
   }
 
   // Salary on 15th
-  const fifteenthOfMonth = new Date(now.getFullYear(), now.getMonth(), 15)
+  const fifteenthOfMonth = new Date(now.getFullYear(), now.getMonth(), 15);
   if (fifteenthOfMonth <= now) {
     transactions.push({
       accountIndex: 1, // Card
@@ -244,14 +248,14 @@ function generateTransactions(): DemoTransactionData[] {
       type: 'income',
       description: 'Аванс',
       date: formatDate(fifteenthOfMonth),
-    })
+    });
   }
 
   // Add salary from previous month if within 30 days
-  const prevMonth1st = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-  const prevMonth15th = new Date(now.getFullYear(), now.getMonth() - 1, 15)
-  const thirtyDaysAgo = new Date(now)
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+  const prevMonth1st = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const prevMonth15th = new Date(now.getFullYear(), now.getMonth() - 1, 15);
+  const thirtyDaysAgo = new Date(now);
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
   if (prevMonth1st >= thirtyDaysAgo) {
     transactions.push({
@@ -262,7 +266,7 @@ function generateTransactions(): DemoTransactionData[] {
       type: 'income',
       description: 'Зарплата',
       date: formatDate(prevMonth1st),
-    })
+    });
   }
 
   if (prevMonth15th >= thirtyDaysAgo) {
@@ -274,21 +278,21 @@ function generateTransactions(): DemoTransactionData[] {
       type: 'income',
       description: 'Аванс',
       date: formatDate(prevMonth15th),
-    })
+    });
   }
 
-  return transactions
+  return transactions;
 }
 
 export function generateDemoData(): GeneratedDemoData {
-  const transactions = generateTransactions()
+  const transactions = generateTransactions();
 
   // Calculate realistic balances based on transactions
   // Start with base amounts and adjust
-  const walletBalance = randomBetween(800000, 2000000)
-  const cardBalanceUZS = randomBetween(3000000, 8000000)
-  const cardBalanceUSD = randomBetween(100, 500)
-  const savingsBalance = randomBetween(5000000, 15000000)
+  const walletBalance = randomBetween(800000, 2000000);
+  const cardBalanceUZS = randomBetween(3000000, 8000000);
+  const cardBalanceUSD = randomBetween(100, 500);
+  const savingsBalance = randomBetween(5000000, 15000000);
 
   return {
     accounts: [
@@ -297,7 +301,9 @@ export function generateDemoData(): GeneratedDemoData {
         icon: 'account_balance_wallet',
         color: '#3b82f6',
         type: 'cash',
-        balances: [{ currency: 'UZS', balance: roundToThousand(walletBalance) }],
+        balances: [
+          { currency: 'UZS', balance: roundToThousand(walletBalance) },
+        ],
       },
       {
         name: 'Карта Visa',
@@ -314,14 +320,21 @@ export function generateDemoData(): GeneratedDemoData {
         icon: 'savings',
         color: '#a855f7',
         type: 'savings',
-        balances: [{ currency: 'UZS', balance: roundToThousand(savingsBalance) }],
+        balances: [
+          { currency: 'UZS', balance: roundToThousand(savingsBalance) },
+        ],
       },
       {
         name: 'Visa Gold',
         icon: 'credit_card',
         color: '#f59e0b',
         type: 'credit_card',
-        balances: [{ currency: 'UZS', balance: roundToThousand(randomBetween(-1000000, 0)) }],
+        balances: [
+          {
+            currency: 'UZS',
+            balance: roundToThousand(randomBetween(-1000000, 0)),
+          },
+        ],
         creditLimit: 20000000,
         gracePeriodDays: 55,
         billingDay: 15,
@@ -331,7 +344,12 @@ export function generateDemoData(): GeneratedDemoData {
         icon: 'account_balance',
         color: '#ef4444',
         type: 'loan',
-        balances: [{ currency: 'UZS', balance: -roundToThousand(randomBetween(150000000, 250000000)) }],
+        balances: [
+          {
+            currency: 'UZS',
+            balance: -roundToThousand(randomBetween(150000000, 250000000)),
+          },
+        ],
         totalAmount: 300000000,
         interestRate: 22,
         monthlyPayment: 4500000,
@@ -343,7 +361,12 @@ export function generateDemoData(): GeneratedDemoData {
         icon: 'savings',
         color: '#6366f1',
         type: 'deposit',
-        balances: [{ currency: 'UZS', balance: roundToThousand(randomBetween(10000000, 30000000)) }],
+        balances: [
+          {
+            currency: 'UZS',
+            balance: roundToThousand(randomBetween(10000000, 30000000)),
+          },
+        ],
         interestRate: 23,
         maturityDate: '2026-06-01',
         isReplenishable: true,
@@ -385,5 +408,5 @@ export function generateDemoData(): GeneratedDemoData {
         color: '#1db954',
       },
     ],
-  }
+  };
 }

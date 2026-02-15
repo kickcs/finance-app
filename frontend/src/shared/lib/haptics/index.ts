@@ -1,1 +1,1 @@
-export { haptics, type HapticPattern } from './haptics'
+export { haptics, type HapticPattern } from './haptics';

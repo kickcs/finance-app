@@ -1,4 +1,4 @@
-import { Category } from '../aggregates/category';
+import type { Category } from '../aggregates/category';
 
 export const CATEGORY_REPOSITORY = Symbol('CATEGORY_REPOSITORY');
 

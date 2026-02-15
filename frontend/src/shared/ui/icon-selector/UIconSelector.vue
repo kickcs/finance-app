@@ -1,18 +1,18 @@
 <script setup lang="ts">
-import { UIcon } from '@/shared/ui'
+import { UIcon } from '@/shared/ui';
 
 defineProps<{
-  modelValue: string
-  icons: readonly string[]
-  color?: string
-  label?: string
-  maxHeight?: string
-  itemSize?: string
-}>()
+  modelValue: string;
+  icons: readonly string[];
+  color?: string;
+  label?: string;
+  maxHeight?: string;
+  itemSize?: string;
+}>();
 
 defineEmits<{
-  'update:modelValue': [value: string]
-}>()
+  'update:modelValue': [value: string];
+}>();
 </script>
 
 <template>
@@ -40,14 +40,19 @@ defineEmits<{
             ? 'ring-2 ring-offset-2 ring-primary dark:ring-offset-background-dark'
             : 'bg-surface-light dark:bg-surface-dark',
         ]"
-        :style="modelValue === icon ? { backgroundColor: `${color}20` } : undefined"
+        :style="
+          modelValue === icon ? { backgroundColor: `${color}20` } : undefined
+        "
         @click="$emit('update:modelValue', icon)"
       >
         <UIcon
           :name="icon"
           size="md"
           :style="modelValue === icon ? { color } : undefined"
-          :class="modelValue !== icon && 'text-text-secondary-light dark:text-text-secondary-dark'"
+          :class="
+            modelValue !== icon &&
+            'text-text-secondary-light dark:text-text-secondary-dark'
+          "
         />
       </button>
     </div>

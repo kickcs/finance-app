@@ -1,4 +1,4 @@
-import { Reminder } from '../aggregates/reminder';
+import type { Reminder } from '../aggregates/reminder';
 
 export const REMINDER_REPOSITORY = Symbol('REMINDER_REPOSITORY');
 

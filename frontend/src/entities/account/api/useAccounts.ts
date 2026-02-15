@@ -1,34 +1,33 @@
-import { computed, toValue, type MaybeRefOrGetter } from 'vue'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
-import { accountQueryKeys } from './queryKeys'
-import { accountsApi } from './accountsApi'
-import type { Account, AccountInsert, AccountWithBalances } from '@/shared/api/database.types'
+import { computed, toValue, type MaybeRefOrGetter } from 'vue';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
+import { accountQueryKeys } from './queryKeys';
+import { accountsApi } from './accountsApi';
+import type {
+  Account,
+  AccountInsert,
+  AccountWithBalances,
+} from '@/shared/api/database.types';
 
 export function useAccounts(userId: MaybeRefOrGetter<string | null>) {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
 
   const queryKey = computed(() => {
-    const uid = toValue(userId)
-    return uid ? accountQueryKeys.list(uid) : accountQueryKeys.all
-  })
+    const uid = toValue(userId);
+    return uid ? accountQueryKeys.list(uid) : accountQueryKeys.all;
+  });
 
   // Main query - now fetches accounts with balances
-  const {
-    data,
-    isLoading,
-    error,
-    refetch,
-  } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: queryKey,
     queryFn: () => {
-      const uid = toValue(userId)
-      if (!uid) return []
-      return accountsApi.getAllWithBalances(uid)
+      const uid = toValue(userId);
+      if (!uid) return [];
+      return accountsApi.getAllWithBalances(uid);
     },
     enabled: computed(() => !!toValue(userId)),
-  })
+  });
 
-  const accounts = computed<AccountWithBalances[]>(() => data.value ?? [])
+  const accounts = computed<AccountWithBalances[]>(() => data.value ?? []);
 
   // Create mutation with balances
   const createWithBalancesMutation = useMutation({
@@ -36,34 +35,43 @@ export function useAccounts(userId: MaybeRefOrGetter<string | null>) {
       account,
       balances,
     }: {
-      account: Omit<AccountInsert, 'user_id' | 'balance' | 'currency'>
-      balances: Array<{ currency: string; balance: number }>
+      account: Omit<AccountInsert, 'user_id' | 'balance' | 'currency'>;
+      balances: Array<{ currency: string; balance: number }>;
     }) => {
-      const uid = toValue(userId)
-      if (!uid) throw new Error('User not authenticated')
-      return accountsApi.createWithBalances({ ...account, user_id: uid }, balances)
+      const uid = toValue(userId);
+      if (!uid) throw new Error('User not authenticated');
+      return accountsApi.createWithBalances(
+        { ...account, user_id: uid },
+        balances,
+      );
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKey.value })
+      queryClient.invalidateQueries({ queryKey: queryKey.value });
     },
-  })
+  });
 
   // Legacy create mutation (for backward compatibility)
   const createMutation = useMutation({
     mutationFn: (account: Omit<AccountInsert, 'user_id'>) => {
-      const uid = toValue(userId)
-      if (!uid) throw new Error('User not authenticated')
-      const balances = account.currency && account.balance !== undefined
-        ? [{ currency: account.currency, balance: account.balance }]
-        : [{ currency: account.currency ?? 'UZS', balance: 0 }]
-      return accountsApi.createWithBalances({ ...account, user_id: uid }, balances)
+      const uid = toValue(userId);
+      if (!uid) throw new Error('User not authenticated');
+      const balances =
+        account.currency && account.balance !== undefined
+          ? [{ currency: account.currency, balance: account.balance }]
+          : [{ currency: account.currency ?? 'UZS', balance: 0 }];
+      return accountsApi.createWithBalances(
+        { ...account, user_id: uid },
+        balances,
+      );
     },
     onMutate: async (newAccount) => {
-      const uid = toValue(userId)
-      if (!uid) return
+      const uid = toValue(userId);
+      if (!uid) return;
 
-      await queryClient.cancelQueries({ queryKey: queryKey.value })
-      const previousAccounts = queryClient.getQueryData<AccountWithBalances[]>(queryKey.value)
+      await queryClient.cancelQueries({ queryKey: queryKey.value });
+      const previousAccounts = queryClient.getQueryData<AccountWithBalances[]>(
+        queryKey.value,
+      );
 
       const optimisticAccount: AccountWithBalances = {
         id: `temp-${Date.now()}`,
@@ -74,7 +82,15 @@ export function useAccounts(userId: MaybeRefOrGetter<string | null>) {
         icon: newAccount.icon,
         color: newAccount.color,
         type: newAccount.type ?? 'basic',
-        balances: [{ id: 'temp', account_id: 'temp', currency: newAccount.currency, balance: newAccount.balance ?? 0, created_at: new Date().toISOString() }],
+        balances: [
+          {
+            id: 'temp',
+            account_id: 'temp',
+            currency: newAccount.currency,
+            balance: newAccount.balance ?? 0,
+            created_at: new Date().toISOString(),
+          },
+        ],
         credit_limit: newAccount.credit_limit ?? null,
         grace_period_days: newAccount.grace_period_days ?? null,
         billing_day: newAccount.billing_day ?? null,
@@ -86,119 +102,132 @@ export function useAccounts(userId: MaybeRefOrGetter<string | null>) {
         maturity_date: newAccount.maturity_date ?? null,
         is_replenishable: newAccount.is_replenishable ?? null,
         is_withdrawable: newAccount.is_withdrawable ?? null,
-      }
+      };
 
-      queryClient.setQueryData<AccountWithBalances[]>(queryKey.value, (old) => [...(old ?? []), optimisticAccount])
+      queryClient.setQueryData<AccountWithBalances[]>(queryKey.value, (old) => [
+        ...(old ?? []),
+        optimisticAccount,
+      ]);
 
-      return { previousAccounts }
+      return { previousAccounts };
     },
     onError: (_err, _newAccount, context) => {
       if (context?.previousAccounts) {
-        queryClient.setQueryData(queryKey.value, context.previousAccounts)
+        queryClient.setQueryData(queryKey.value, context.previousAccounts);
       }
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: queryKey.value })
+      queryClient.invalidateQueries({ queryKey: queryKey.value });
     },
-  })
+  });
 
   // Update mutation
   const updateMutation = useMutation({
     mutationFn: ({ id, updates }: { id: string; updates: Partial<Account> }) =>
       accountsApi.update(id, updates),
     onMutate: async ({ id, updates }) => {
-      await queryClient.cancelQueries({ queryKey: queryKey.value })
-      const previousAccounts = queryClient.getQueryData<AccountWithBalances[]>(queryKey.value)
+      await queryClient.cancelQueries({ queryKey: queryKey.value });
+      const previousAccounts = queryClient.getQueryData<AccountWithBalances[]>(
+        queryKey.value,
+      );
 
-      queryClient.setQueryData<AccountWithBalances[]>(queryKey.value, (old) =>
-        old?.map((a) => (a.id === id ? { ...a, ...updates } : a)) ?? []
-      )
+      queryClient.setQueryData<AccountWithBalances[]>(
+        queryKey.value,
+        (old) =>
+          old?.map((a) => (a.id === id ? { ...a, ...updates } : a)) ?? [],
+      );
 
-      return { previousAccounts }
+      return { previousAccounts };
     },
     onError: (_err, _variables, context) => {
       if (context?.previousAccounts) {
-        queryClient.setQueryData(queryKey.value, context.previousAccounts)
+        queryClient.setQueryData(queryKey.value, context.previousAccounts);
       }
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: queryKey.value })
+      queryClient.invalidateQueries({ queryKey: queryKey.value });
     },
-  })
+  });
 
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: (id: string) => accountsApi.delete(id),
     onMutate: async (id) => {
-      await queryClient.cancelQueries({ queryKey: queryKey.value })
-      const previousAccounts = queryClient.getQueryData<AccountWithBalances[]>(queryKey.value)
+      await queryClient.cancelQueries({ queryKey: queryKey.value });
+      const previousAccounts = queryClient.getQueryData<AccountWithBalances[]>(
+        queryKey.value,
+      );
 
-      queryClient.setQueryData<AccountWithBalances[]>(queryKey.value, (old) => old?.filter((a) => a.id !== id) ?? [])
+      queryClient.setQueryData<AccountWithBalances[]>(
+        queryKey.value,
+        (old) => old?.filter((a) => a.id !== id) ?? [],
+      );
 
-      return { previousAccounts }
+      return { previousAccounts };
     },
     onError: (_err, _id, context) => {
       if (context?.previousAccounts) {
-        queryClient.setQueryData(queryKey.value, context.previousAccounts)
+        queryClient.setQueryData(queryKey.value, context.previousAccounts);
       }
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: queryKey.value })
+      queryClient.invalidateQueries({ queryKey: queryKey.value });
     },
-  })
+  });
 
   // Computed values
   const totalBalance = computed(() => {
     // Sum all balances (without conversion - for simple display)
     return accounts.value.reduce((sum, acc) => {
-      return sum + acc.balances.reduce((bSum, b) => bSum + b.balance, 0)
-    }, 0)
-  })
+      return sum + acc.balances.reduce((bSum, b) => bSum + b.balance, 0);
+    }, 0);
+  });
 
   // Get total balance by currency (for display breakdown)
   const totalBalancesByCurrency = computed(() => {
-    const totals: Record<string, number> = {}
+    const totals: Record<string, number> = {};
     for (const account of accounts.value) {
       for (const balance of account.balances) {
-        totals[balance.currency] = (totals[balance.currency] ?? 0) + balance.balance
+        totals[balance.currency] =
+          (totals[balance.currency] ?? 0) + balance.balance;
       }
     }
-    return totals
-  })
+    return totals;
+  });
 
   // Helper functions
   function getAccountById(id: string): AccountWithBalances | undefined {
-    return accounts.value.find((a) => a.id === id)
+    return accounts.value.find((a) => a.id === id);
   }
 
   async function createAccount(account: Omit<AccountInsert, 'user_id'>) {
-    return createMutation.mutateAsync(account)
+    return createMutation.mutateAsync(account);
   }
 
   async function createAccountWithBalances(
     account: Omit<AccountInsert, 'user_id' | 'balance' | 'currency'>,
-    balances: Array<{ currency: string; balance: number }>
+    balances: Array<{ currency: string; balance: number }>,
   ) {
-    return createWithBalancesMutation.mutateAsync({ account, balances })
+    return createWithBalancesMutation.mutateAsync({ account, balances });
   }
 
   async function updateAccount(id: string, updates: Partial<Account>) {
-    return updateMutation.mutateAsync({ id, updates })
+    return updateMutation.mutateAsync({ id, updates });
   }
 
   async function updateBalance(id: string, amount: number) {
-    const account = getAccountById(id)
-    if (!account) throw new Error('Account not found')
+    const account = getAccountById(id);
+    if (!account) throw new Error('Account not found');
     // Legacy: update first balance
-    const firstBalance = account.balances[0]
+    const firstBalance = account.balances[0];
     if (firstBalance) {
-      return updateAccount(id, { balance: firstBalance.balance + amount })
+      return updateAccount(id, { balance: firstBalance.balance + amount });
     }
-    throw new Error('No balance found')
+    throw new Error('No balance found');
   }
 
   async function deleteAccount(id: string) {
-    return deleteMutation.mutateAsync(id)
+    return deleteMutation.mutateAsync(id);
   }
 
   return {
@@ -214,5 +243,5 @@ export function useAccounts(userId: MaybeRefOrGetter<string | null>) {
     deleteAccount,
     getAccountById,
     refetch,
-  }
+  };
 }

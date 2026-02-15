@@ -1,4 +1,4 @@
-import { Transaction } from '../aggregates/transaction';
+import type { Transaction } from '../aggregates/transaction';
 
 export const TRANSACTION_REPOSITORY = Symbol('TRANSACTION_REPOSITORY');
 

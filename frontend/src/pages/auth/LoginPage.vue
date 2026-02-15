@@ -1,204 +1,215 @@
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
-import { useRouter } from 'vue-router'
-import { UButton, UInput, UIcon } from '@/shared/ui'
-import { useAuth } from '@/shared/api/composables/useAuth'
-import { profileApi } from '@/shared/api/services/profileApi'
+import { ref, watch, computed } from 'vue';
+import { useRouter } from 'vue-router';
+import { UButton, UInput, UIcon } from '@/shared/ui';
+import { useAuth } from '@/shared/api/composables/useAuth';
+import { profileApi } from '@/shared/api/services/profileApi';
 
-const router = useRouter()
-const { signIn, signUp, signInAnonymously, isLoading, error } = useAuth()
+const router = useRouter();
+const {
+  signIn,
+  signUp,
+  signInAnonymously,
+  isLoading,
+  error: _error,
+} = useAuth();
 
-const isSignUp = ref(false)
-const email = ref('')
-const password = ref('')
-const confirmPassword = ref('')
-const localError = ref<string | null>(null)
+const isSignUp = ref(false);
+const email = ref('');
+const password = ref('');
+const confirmPassword = ref('');
+const localError = ref<string | null>(null);
 
 // Email verification state
-const showEmailVerification = ref(false)
-const verificationEmail = ref('')
+const showEmailVerification = ref(false);
+const verificationEmail = ref('');
 
 // Validation state
-const emailError = ref<string | undefined>(undefined)
-const passwordError = ref<string | undefined>(undefined)
-const confirmPasswordError = ref<string | undefined>(undefined)
+const emailError = ref<string | undefined>(undefined);
+const passwordError = ref<string | undefined>(undefined);
+const confirmPasswordError = ref<string | undefined>(undefined);
 
 // Validation constants
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-const MIN_PASSWORD_LENGTH = 6
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MIN_PASSWORD_LENGTH = 6;
 
 // Validation functions
 function validateEmail(): boolean {
   if (!email.value.trim()) {
-    emailError.value = 'Email обязателен'
-    return false
+    emailError.value = 'Email обязателен';
+    return false;
   }
   if (!EMAIL_REGEX.test(email.value)) {
-    emailError.value = 'Введите корректный email'
-    return false
+    emailError.value = 'Введите корректный email';
+    return false;
   }
-  emailError.value = undefined
-  return true
+  emailError.value = undefined;
+  return true;
 }
 
 function validatePassword(): boolean {
   if (!password.value) {
-    passwordError.value = 'Пароль обязателен'
-    return false
+    passwordError.value = 'Пароль обязателен';
+    return false;
   }
   if (isSignUp.value && password.value.length < MIN_PASSWORD_LENGTH) {
-    passwordError.value = `Минимум ${MIN_PASSWORD_LENGTH} символов`
-    return false
+    passwordError.value = `Минимум ${MIN_PASSWORD_LENGTH} символов`;
+    return false;
   }
-  passwordError.value = undefined
-  return true
+  passwordError.value = undefined;
+  return true;
 }
 
 function validateConfirmPassword(): boolean {
   if (!isSignUp.value) {
-    confirmPasswordError.value = undefined
-    return true
+    confirmPasswordError.value = undefined;
+    return true;
   }
   if (!confirmPassword.value) {
-    confirmPasswordError.value = 'Подтвердите пароль'
-    return false
+    confirmPasswordError.value = 'Подтвердите пароль';
+    return false;
   }
   if (confirmPassword.value !== password.value) {
-    confirmPasswordError.value = 'Пароли не совпадают'
-    return false
+    confirmPasswordError.value = 'Пароли не совпадают';
+    return false;
   }
-  confirmPasswordError.value = undefined
-  return true
+  confirmPasswordError.value = undefined;
+  return true;
 }
 
 function validateForm(): boolean {
-  const isEmailValid = validateEmail()
-  const isPasswordValid = validatePassword()
-  const isConfirmPasswordValid = validateConfirmPassword()
-  return isEmailValid && isPasswordValid && isConfirmPasswordValid
+  const isEmailValid = validateEmail();
+  const isPasswordValid = validatePassword();
+  const isConfirmPasswordValid = validateConfirmPassword();
+  return isEmailValid && isPasswordValid && isConfirmPasswordValid;
 }
 
 // Clear errors on input
 watch(email, () => {
-  if (emailError.value) validateEmail()
-})
+  if (emailError.value) validateEmail();
+});
 
 watch(password, () => {
-  if (passwordError.value) validatePassword()
+  if (passwordError.value) validatePassword();
   // Also revalidate confirm password if it was already validated
   if (confirmPasswordError.value && confirmPassword.value) {
-    validateConfirmPassword()
+    validateConfirmPassword();
   }
-})
+});
 
 watch(confirmPassword, () => {
-  if (confirmPasswordError.value) validateConfirmPassword()
-})
+  if (confirmPasswordError.value) validateConfirmPassword();
+});
 
 // Clear confirm password when switching modes
 watch(isSignUp, () => {
-  confirmPassword.value = ''
-  confirmPasswordError.value = undefined
-})
+  confirmPassword.value = '';
+  confirmPasswordError.value = undefined;
+});
 
 async function handleSubmit() {
   // Validate before submission
   if (!validateForm()) {
-    return
+    return;
   }
 
   try {
-    localError.value = null
+    localError.value = null;
 
     if (isSignUp.value) {
-      const data = await signUp(email.value, password.value)
+      const data = await signUp(email.value, password.value);
 
       // With NestJS backend, registration returns user directly
       if (data.user) {
         // Navigate to onboarding
-        router.push({ name: 'first-account' })
+        router.push({ name: 'first-account' });
       }
     } else {
-      const data = await signIn(email.value, password.value)
+      const data = await signIn(email.value, password.value);
 
       // Проверить, завершил ли пользователь onboarding
       if (data.user) {
-        const profile = await profileApi.getById(data.user.id)
+        const profile = await profileApi.getById(data.user.id);
 
         if (profile?.has_completed_onboarding) {
           // Синхронизируем localStorage
-          localStorage.setItem('onboardingComplete', 'true')
+          localStorage.setItem('onboardingComplete', 'true');
           if (profile.currency) {
-            localStorage.setItem('selectedCurrency', profile.currency)
+            localStorage.setItem('selectedCurrency', profile.currency);
           }
-          router.push({ name: 'dashboard' })
+          router.push({ name: 'dashboard' });
         } else {
           // Не завершил onboarding - отправляем на создание первого счёта
-          router.push({ name: 'first-account' })
+          router.push({ name: 'first-account' });
         }
       }
     }
   } catch (err: unknown) {
     // Логируем для отладки
-    console.error('Auth error:', err)
+    console.error('Auth error:', err);
 
-    const errorMessage = err instanceof Error ? err.message : 'Произошла ошибка'
+    const errorMessage =
+      err instanceof Error ? err.message : 'Произошла ошибка';
 
     // Обработка ошибки "email уже зарегистрирован"
-    if (errorMessage.toLowerCase().includes('already registered') ||
-        errorMessage.toLowerCase().includes('already exists') ||
-        errorMessage.toLowerCase().includes('user already')) {
-      localError.value = 'Этот email уже зарегистрирован. Попробуйте войти.'
-    } else if (errorMessage.toLowerCase().includes('invalid login') ||
-               errorMessage.toLowerCase().includes('invalid credentials') ||
-               errorMessage.toLowerCase().includes('unauthorized')) {
-      localError.value = 'Неверный email или пароль'
+    if (
+      errorMessage.toLowerCase().includes('already registered') ||
+      errorMessage.toLowerCase().includes('already exists') ||
+      errorMessage.toLowerCase().includes('user already')
+    ) {
+      localError.value = 'Этот email уже зарегистрирован. Попробуйте войти.';
+    } else if (
+      errorMessage.toLowerCase().includes('invalid login') ||
+      errorMessage.toLowerCase().includes('invalid credentials') ||
+      errorMessage.toLowerCase().includes('unauthorized')
+    ) {
+      localError.value = 'Неверный email или пароль';
     } else if (errorMessage.toLowerCase().includes('email not confirmed')) {
-      localError.value = 'Email не подтверждён. Проверьте почту.'
+      localError.value = 'Email не подтверждён. Проверьте почту.';
     } else {
-      localError.value = errorMessage
+      localError.value = errorMessage;
     }
   }
 }
 
 function backToLogin() {
-  showEmailVerification.value = false
-  verificationEmail.value = ''
+  showEmailVerification.value = false;
+  verificationEmail.value = '';
 }
 
 // Demo mode
-const isDemoLoading = ref(false)
+const isDemoLoading = ref(false);
 
 // Combined loading state - blocks all buttons when any action is in progress
-const isAnyLoading = computed(() => isLoading.value || isDemoLoading.value)
+const isAnyLoading = computed(() => isLoading.value || isDemoLoading.value);
 
 async function handleDemoMode() {
-  if (isDemoLoading.value) return
+  if (isDemoLoading.value) return;
   try {
-    isDemoLoading.value = true
-    localError.value = null
+    isDemoLoading.value = true;
+    localError.value = null;
 
-    const { user } = await signInAnonymously()
+    const { user } = await signInAnonymously();
 
     if (user) {
       // Demo data is now initialized on the backend automatically
       // Just set localStorage flags and navigate to dashboard
-      localStorage.setItem('onboardingComplete', 'true')
-      localStorage.setItem('selectedCurrency', 'UZS')
+      localStorage.setItem('onboardingComplete', 'true');
+      localStorage.setItem('selectedCurrency', 'UZS');
 
       // Navigate directly to dashboard
-      router.push({ name: 'dashboard' })
+      router.push({ name: 'dashboard' });
     }
   } catch (err) {
-    console.error('Demo mode error:', err)
+    console.error('Demo mode error:', err);
     // Check for rate limiting error
     if (err instanceof Error && err.message.includes('429')) {
-      localError.value = 'Слишком много запросов. Попробуйте позже.'
+      localError.value = 'Слишком много запросов. Попробуйте позже.';
     } else {
-      localError.value = 'Не удалось запустить демо режим'
+      localError.value = 'Не удалось запустить демо режим';
     }
   } finally {
-    isDemoLoading.value = false
+    isDemoLoading.value = false;
   }
 }
 </script>
@@ -209,12 +220,15 @@ async function handleDemoMode() {
   >
     <!-- Background glow effects -->
     <div class="fixed inset-0 pointer-events-none -z-0 overflow-hidden">
-      <div class="absolute -top-[10%] -right-[5%] w-[300px] h-[300px] bg-primary/5 rounded-full blur-[80px]" />
-      <div class="absolute -bottom-[10%] -left-[10%] w-[250px] h-[250px] bg-primary/5 rounded-full blur-[60px]" />
+      <div
+        class="absolute -top-[10%] -right-[5%] w-[300px] h-[300px] bg-primary/5 rounded-full blur-[80px]"
+      />
+      <div
+        class="absolute -bottom-[10%] -left-[10%] w-[250px] h-[250px] bg-primary/5 rounded-full blur-[60px]"
+      />
     </div>
 
     <div class="w-full max-w-[420px] flex flex-col relative z-10">
-
       <!-- Email Verification Message -->
       <template v-if="showEmailVerification">
         <div class="flex flex-col items-center text-center">
@@ -228,12 +242,18 @@ async function handleDemoMode() {
           >
             Проверьте почту
           </h2>
-          <p class="text-text-secondary-light dark:text-text-secondary-dark mb-4">
+          <p
+            class="text-text-secondary-light dark:text-text-secondary-dark mb-4"
+          >
             Мы отправили письмо на
-            <strong class="text-text-primary-light dark:text-text-primary-dark">{{ verificationEmail }}</strong>.
-            Перейдите по ссылке для подтверждения аккаунта.
+            <strong
+              class="text-text-primary-light dark:text-text-primary-dark"
+              >{{ verificationEmail }}</strong
+            >. Перейдите по ссылке для подтверждения аккаунта.
           </p>
-          <UButton variant="ghost" @click="backToLogin">Вернуться к входу</UButton>
+          <UButton variant="ghost" @click="backToLogin"
+            >Вернуться к входу</UButton
+          >
         </div>
       </template>
 
@@ -241,8 +261,12 @@ async function handleDemoMode() {
       <template v-else>
         <!-- Logo & Title -->
         <div class="flex flex-col items-center justify-center mb-10">
-          <h1 class="text-primary text-5xl font-extrabold tracking-tight mb-3">Ouro</h1>
-          <h2 class="text-text-primary-light dark:text-text-primary-dark text-xl font-bold leading-tight tracking-[-0.015em] text-center opacity-90">
+          <h1 class="text-primary text-5xl font-extrabold tracking-tight mb-3">
+            Ouro
+          </h1>
+          <h2
+            class="text-text-primary-light dark:text-text-primary-dark text-xl font-bold leading-tight tracking-[-0.015em] text-center opacity-90"
+          >
             {{ isSignUp ? 'Создайте аккаунт' : 'Войдите в аккаунт' }}
           </h2>
         </div>
@@ -307,12 +331,22 @@ async function handleDemoMode() {
           </form>
 
           <!-- Sign Up / Sign In toggle card -->
-          <div v-if="!isSignUp" class="p-4 rounded-2xl bg-card-light dark:bg-surface-dark border border-border-light dark:border-border-dark/50 shadow-xs">
+          <div
+            v-if="!isSignUp"
+            class="p-4 rounded-2xl bg-card-light dark:bg-surface-dark border border-border-light dark:border-border-dark/50 shadow-xs"
+          >
             <div class="flex flex-col items-center text-center gap-3">
               <div>
-                <h3 class="text-base font-bold text-text-primary-light dark:text-text-primary-dark">Впервые здесь?</h3>
-                <p class="text-xs text-text-secondary-light dark:text-text-secondary-dark mt-1 leading-relaxed">
-                  Создайте учётную запись, чтобы начать отслеживать свои финансы.
+                <h3
+                  class="text-base font-bold text-text-primary-light dark:text-text-primary-dark"
+                >
+                  Впервые здесь?
+                </h3>
+                <p
+                  class="text-xs text-text-secondary-light dark:text-text-secondary-dark mt-1 leading-relaxed"
+                >
+                  Создайте учётную запись, чтобы начать отслеживать свои
+                  финансы.
                 </p>
               </div>
               <button
@@ -326,16 +360,26 @@ async function handleDemoMode() {
           </div>
 
           <!-- Back to login (when in sign up mode) -->
-          <p v-else class="text-center text-sm text-text-secondary-light dark:text-text-secondary-dark">
+          <p
+            v-else
+            class="text-center text-sm text-text-secondary-light dark:text-text-secondary-dark"
+          >
             Уже есть аккаунт?
-            <button type="button" class="text-primary font-semibold ml-1" @click="isSignUp = false">
+            <button
+              type="button"
+              class="text-primary font-semibold ml-1"
+              @click="isSignUp = false"
+            >
               Войти
             </button>
           </p>
 
           <!-- Demo divider -->
           <div class="flex items-center justify-center my-1">
-            <span class="text-xs font-medium text-text-tertiary-light dark:text-text-tertiary-dark uppercase tracking-widest">или попробуйте</span>
+            <span
+              class="text-xs font-medium text-text-tertiary-light dark:text-text-tertiary-dark uppercase tracking-widest"
+              >или попробуйте</span
+            >
           </div>
 
           <!-- Demo Mode Button -->
@@ -346,14 +390,34 @@ async function handleDemoMode() {
               @click="handleDemoMode"
             >
               <span class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors duration-300">
-                  <svg v-if="isDemoLoading" class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                <div
+                  class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors duration-300"
+                >
+                  <svg
+                    v-if="isDemoLoading"
+                    class="animate-spin h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      class="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      stroke-width="4"
+                    />
+                    <path
+                      class="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    />
                   </svg>
                   <UIcon v-else name="play_arrow" size="sm" />
                 </div>
-                <span class="text-text-primary-light dark:text-text-primary-dark font-bold text-base">
+                <span
+                  class="text-text-primary-light dark:text-text-primary-dark font-bold text-base"
+                >
                   {{ isDemoLoading ? 'Создание демо...' : 'Попробовать демо' }}
                 </span>
               </span>
@@ -363,7 +427,9 @@ async function handleDemoMode() {
                 class="text-text-tertiary-light dark:text-text-tertiary-dark group-hover:text-primary transition-colors"
               />
             </button>
-            <p class="text-center text-xs text-text-tertiary-light dark:text-text-tertiary-dark font-medium">
+            <p
+              class="text-center text-xs text-text-tertiary-light dark:text-text-tertiary-dark font-medium"
+            >
               Доступ ко всем функциям на 1 час
             </p>
           </div>

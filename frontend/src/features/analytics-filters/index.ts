@@ -6,12 +6,12 @@ export type {
   DateRange,
   AnalyticsFilters,
   CategoryStat,
-} from './model/types'
+} from './model/types';
 
 // Composable
-export { useAnalyticsFilters } from './model/useAnalyticsFilters'
+export { useAnalyticsFilters } from './model/useAnalyticsFilters';
 
 // UI Components
-export { default as ModeToggle } from './ui/ModeToggle.vue'
-export { default as DateRangePicker } from './ui/DateRangePicker.vue'
-export { default as FilterChips } from './ui/FilterChips.vue'
+export { default as ModeToggle } from './ui/ModeToggle.vue';
+export { default as DateRangePicker } from './ui/DateRangePicker.vue';
+export { default as FilterChips } from './ui/FilterChips.vue';

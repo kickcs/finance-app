@@ -45,7 +45,7 @@ export class Currency extends ValueObject<CurrencyProps> {
   static create(code: string): Currency {
     const normalizedCode = code.toUpperCase().trim();
 
-    if (!normalizedCode || normalizedCode.length !== 3) {
+    if (normalizedCode?.length !== 3) {
       throw new Error(`Invalid currency code: ${code}. Must be 3 characters.`);
     }
 

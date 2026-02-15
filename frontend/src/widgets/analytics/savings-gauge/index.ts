@@ -1,1 +1,1 @@
-export { default as SavingsGauge } from './ui/SavingsGauge.vue'
+export { default as SavingsGauge } from './ui/SavingsGauge.vue';

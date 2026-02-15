@@ -1,17 +1,18 @@
 <script setup lang="ts">
-import { UInput } from '@/shared/ui'
-import { CurrencyItem, useCurrencySelection } from '@/features/select-currency'
-import type { Currency } from '@/entities/currency'
+import { UInput } from '@/shared/ui';
+import { CurrencyItem, useCurrencySelection } from '@/features/select-currency';
+import type { Currency } from '@/entities/currency';
 
 defineProps<{
-  selectedCode?: string
-}>()
+  selectedCode?: string;
+}>();
 
-const emit = defineEmits<{
-  select: [currency: Currency]
-}>()
+const _emit = defineEmits<{
+  select: [currency: Currency];
+}>();
 
-const { searchQuery, filteredCurrencies, setSearchQuery } = useCurrencySelection()
+const { searchQuery, filteredCurrencies, setSearchQuery } =
+  useCurrencySelection();
 </script>
 
 <template>

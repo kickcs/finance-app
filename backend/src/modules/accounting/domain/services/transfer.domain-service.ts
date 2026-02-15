@@ -1,4 +1,4 @@
-import { Account } from '../aggregates/account';
+import type { Account } from '../aggregates/account';
 import { Transaction } from '../aggregates/transaction';
 
 export interface TransferParams {
