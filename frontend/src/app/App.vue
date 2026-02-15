@@ -7,6 +7,7 @@ import { transitionName } from '@/app/router'
 import { useCategories } from '@/entities/category'
 import { ToastProvider, Toaster } from '@/shared/ui/primitives/toast'
 import { DemoBanner, useDemoMode } from '@/features/demo-mode'
+import { useChangelog, ChangelogModal } from '@/features/changelog'
 
 // Initialize theme synchronously on script setup (before mount)
 const { initTheme } = useTheme()
@@ -26,11 +27,20 @@ const { profile } = useProfile(userId)
 // Demo mode
 const { isDemo, formattedRemaining } = useDemoMode(profile)
 
+// Changelog modal
+const { hasUnseenChanges } = useChangelog()
+const showChangelogModal = ref(false)
+
 // Initialize auth on app mount
 onMounted(async () => {
   // Start auth initialization immediately
   await initializeAuth()
   isAppReady.value = true
+
+  // Show changelog modal if there are unseen changes
+  if (isAuthenticated.value && hasUnseenChanges.value) {
+    showChangelogModal.value = true
+  }
 })
 
 // Provide auth state to all components
@@ -62,6 +72,9 @@ provide('getCategoryById', getCategoryById)
         </Transition>
       </RouterView>
     </div>
+
+    <!-- Changelog modal -->
+    <ChangelogModal v-model="showChangelogModal" />
 
     <!-- Toast notifications -->
     <Toaster />

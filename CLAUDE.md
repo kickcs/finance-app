@@ -160,6 +160,14 @@ VITE_API_URL=http://localhost:3000
 
 Both `backend/CLAUDE.md` and `frontend/CLAUDE.md` contain more detailed architecture docs for their respective projects.
 
+## Changelog
+
+When adding user-facing features, fixes, or improvements, update `frontend/src/features/changelog/model/changelogData.ts`:
+- Bump `CURRENT_VERSION` (semver: patch for fixes, minor for features)
+- Add a new entry at the **top** of `CHANGELOG_ENTRIES` array
+- Write descriptions **на русском**, простым языком для обычных пользователей (не разработчиков). Например: «Добавлен учёт долгов» вместо «Implement debt tracking module with CQRS handlers»
+- Each item has a `type`: `feature` (новая функция), `fix` (исправление), `improvement` (улучшение)
+
 ## Common Gotchas
 
 - Backend requires `isolatedModules: false` in tsconfig due to interface usage with @Inject decorators
