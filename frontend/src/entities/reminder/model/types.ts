@@ -13,6 +13,21 @@ export const REMINDER_ICONS = [
   'school',
   'medical_services',
   'payments',
+  'cottage',
+  'directions_car',
+  'music_note',
+  'tv',
+  'sports_esports',
+  'local_cafe',
+  'movie',
+  'credit_card',
+  'notifications',
+  'laptop_mac',
+  'pets',
+  'cardiology',
+  'local_gas_station',
+  'flight',
+  'shopping_cart',
 ] as const
 
 export const FREQUENCY_LABELS: Record<'weekly' | 'monthly' | 'yearly' | 'once', string> = {
