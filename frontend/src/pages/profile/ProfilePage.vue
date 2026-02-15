@@ -9,6 +9,7 @@ import { UButton, UIcon, UCard, UModal } from '@/shared/ui'
 import { getCurrencyByCode } from '@/entities/currency'
 import { useAuth, useProfile } from '@/shared/api'
 import { EditProfileModal } from '@/features/edit-profile'
+import { useChangelog } from '@/features/changelog'
 
 const router = useRouter()
 const { signOut } = useAuth()
@@ -27,11 +28,15 @@ const userEmail = computed(() => user?.value?.email || 'user@example.com')
 const currencyCode = computed(() => localStorage.getItem('selectedCurrency') || 'UZS')
 const currency = computed(() => getCurrencyByCode(currencyCode.value))
 
+// Changelog
+const { hasUnseenChanges, markAsSeen } = useChangelog()
+
 // Modal states
 const showLogoutModal = ref(false)
 const showEditProfileModal = ref(false)
 
 const menuItems = [
+  { id: 'whats-new', icon: 'new_releases', label: 'Что нового', badge: hasUnseenChanges },
   { id: 'currency', icon: 'currency_exchange', label: 'Валюта', value: () => currency.value?.code },
   { id: 'categories', icon: 'category', label: 'Категории' },
   { id: 'about', icon: 'info', label: 'О приложении' },
@@ -39,6 +44,10 @@ const menuItems = [
 
 function handleMenuClick(itemId: string) {
   switch (itemId) {
+    case 'whats-new':
+      markAsSeen()
+      router.push('/changelog')
+      break
     case 'currency':
       router.push('/settings/currency')
       break
@@ -123,6 +132,10 @@ function handleAddTransaction() {
           >
             {{ item.value() }}
           </span>
+          <span
+            v-if="item.badge?.value"
+            class="w-2.5 h-2.5 rounded-full bg-danger mr-1"
+          />
           <UIcon name="chevron_right" size="sm" class="text-text-tertiary-light dark:text-text-tertiary-dark" />
         </button>
       </UCard>
