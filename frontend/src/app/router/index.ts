@@ -55,6 +55,13 @@ export const router = createRouter({
       component: () => import('@/pages/dashboard/DashboardPage.vue'),
       meta: { requiresAuth: true, requiresOnboarding: true },
     },
+    // Welcome onboarding (pre-auth)
+    {
+      path: '/welcome',
+      name: 'welcome',
+      component: () => import('@/pages/onboarding/welcome/WelcomePage.vue'),
+      meta: { guestOnly: true },
+    },
     // Auth routes
     {
       path: '/auth/login',
@@ -246,6 +253,10 @@ async function checkOnboardingStatus(userId: string): Promise<boolean> {
   return localOnboarding
 }
 
+function hasSeenOnboarding(): boolean {
+  return localStorage.getItem('hasSeenOnboarding') === 'true'
+}
+
 // Helper function to check if demo account has expired
 async function checkDemoExpiry(userId: string): Promise<boolean> {
   const profile = await getOrFetchProfile(userId)
@@ -280,7 +291,13 @@ router.beforeEach(async (to, from, next) => {
 
   // Route requires authentication
   if (to.meta.requiresAuth && !isAuthenticated) {
-    next({ name: 'login' })
+    next({ name: hasSeenOnboarding() ? 'login' : 'welcome' })
+    return
+  }
+
+  // Redirect to welcome onboarding before login on first visit
+  if (to.name === 'login' && !isAuthenticated && !hasSeenOnboarding()) {
+    next({ name: 'welcome' })
     return
   }
 
