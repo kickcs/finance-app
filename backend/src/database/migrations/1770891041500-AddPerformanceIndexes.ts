@@ -20,11 +20,6 @@ export class AddPerformanceIndexes1770891041500 implements MigrationInterface {
       `CREATE INDEX "IDX_transactions_category_id" ON "transactions" ("category_id")`,
     );
 
-    // Index for debt-related transaction lookups (source_transaction_id for returned amounts)
-    await queryRunner.query(
-      `CREATE INDEX "IDX_transactions_source_transaction_id" ON "transactions" ("source_transaction_id") WHERE "source_transaction_id" IS NOT NULL`,
-    );
-
     // Index for account_balances lookup by account_id
     await queryRunner.query(
       `CREATE INDEX "IDX_account_balances_account_id" ON "account_balances" ("account_id")`,
@@ -39,7 +34,6 @@ export class AddPerformanceIndexes1770891041500 implements MigrationInterface {
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`DROP INDEX IF EXISTS "IDX_reminders_next_date"`);
     await queryRunner.query(`DROP INDEX IF EXISTS "IDX_account_balances_account_id"`);
-    await queryRunner.query(`DROP INDEX IF EXISTS "IDX_transactions_source_transaction_id"`);
     await queryRunner.query(`DROP INDEX IF EXISTS "IDX_transactions_category_id"`);
     await queryRunner.query(`DROP INDEX IF EXISTS "IDX_transactions_type"`);
     await queryRunner.query(`DROP INDEX IF EXISTS "IDX_transactions_user_date_created"`);
