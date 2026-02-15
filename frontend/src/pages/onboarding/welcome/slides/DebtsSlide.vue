@@ -33,7 +33,7 @@ const features = [
 </script>
 
 <template>
-  <div class="w-full h-full flex-shrink-0 flex flex-col items-center px-6 relative max-w-md mx-auto">
+  <div class="w-full h-full flex-shrink-0 flex flex-col items-center px-6 relative max-w-md mx-auto" style="contain: layout style paint">
     <!-- Center glow -->
     <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-primary/10 blur-[90px] rounded-full pointer-events-none z-0" />
 

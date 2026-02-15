@@ -19,6 +19,7 @@ const containerRef = ref<HTMLElement | null>(null)
 const touchStartX = ref(0)
 const touchDeltaX = ref(0)
 const isSwiping = ref(false)
+const cachedWidth = ref(DEFAULT_VIEWPORT_WIDTH)
 
 const isLastSlide = computed(() => currentSlide.value === TOTAL_SLIDES - 1)
 
@@ -47,6 +48,9 @@ function onTouchStart(e: TouchEvent) {
   touchStartX.value = e.touches[0].clientX
   touchDeltaX.value = 0
   isSwiping.value = true
+  if (containerRef.value) {
+    cachedWidth.value = containerRef.value.offsetWidth
+  }
 }
 
 function onTouchMove(e: TouchEvent) {
@@ -68,8 +72,7 @@ function onTouchEnd() {
 
 const carouselTransform = computed(() => {
   const baseOffset = -currentSlide.value * 100
-  const containerWidth = containerRef.value?.offsetWidth || DEFAULT_VIEWPORT_WIDTH
-  const swipeOffset = isSwiping.value ? (touchDeltaX.value / containerWidth) * 100 : 0
+  const swipeOffset = isSwiping.value ? (touchDeltaX.value / (cachedWidth.value || DEFAULT_VIEWPORT_WIDTH)) * 100 : 0
   return `translateX(${baseOffset + swipeOffset}%)`
 })
 </script>
@@ -97,13 +100,13 @@ const carouselTransform = computed(() => {
     <div
       class="flex-1 overflow-hidden"
       @touchstart="onTouchStart"
-      @touchmove="onTouchMove"
+      @touchmove.prevent="onTouchMove"
       @touchend="onTouchEnd"
     >
       <div
         class="h-full flex"
         :class="{ 'transition-transform duration-300 ease-out': !isSwiping }"
-        :style="{ transform: carouselTransform }"
+        :style="{ transform: carouselTransform, willChange: 'transform' }"
       >
         <WelcomeSlide />
         <AccountsSlide />

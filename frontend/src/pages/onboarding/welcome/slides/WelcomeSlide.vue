@@ -3,7 +3,7 @@ import { UIcon } from '@/shared/ui'
 </script>
 
 <template>
-  <div class="w-full h-full flex-shrink-0 flex flex-col items-center justify-between px-6 pt-2 pb-6 relative z-10">
+  <div class="w-full h-full flex-shrink-0 flex flex-col items-center justify-between px-6 pt-2 pb-6 relative z-10" style="contain: layout style paint">
     <!-- Title -->
     <div class="text-center w-full z-20">
       <h1 class="text-[32px] font-bold text-primary tracking-tight leading-tight">Ouro</h1>

@@ -30,7 +30,7 @@ const iconTextClasses: Record<string, string> = {
 </script>
 
 <template>
-  <div class="w-full h-full flex-shrink-0 flex flex-col px-6 relative z-10">
+  <div class="w-full h-full flex-shrink-0 flex flex-col px-6 relative z-10" style="contain: layout style paint">
     <!-- Big top glow -->
     <div class="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-lg h-[500px] bg-primary/10 blur-[120px] rounded-full pointer-events-none z-0" />
 
