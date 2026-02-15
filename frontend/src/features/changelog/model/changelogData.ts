@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.1.0'
+export const CURRENT_VERSION = '1.1.1'
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement'
 
@@ -21,6 +21,14 @@ export const CHANGELOG_TYPE_CONFIG: Record<ChangelogItemType, { icon: string; co
 }
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.1.1',
+    date: '2026-02-15',
+    title: 'Приветственный экран',
+    items: [
+      { type: 'feature', text: 'Добавлен экран знакомства с приложением для новых пользователей' },
+    ],
+  },
   {
     version: '1.1.0',
     date: '2026-02-15',
