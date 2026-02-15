@@ -1,7 +1,8 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { Inject, NotFoundException } from '@nestjs/common';
+import { Inject, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { UpdateGoalCommand } from './update-goal.command';
 import { IGoalRepository, GOAL_REPOSITORY } from '../../../domain/repositories';
+import { GoalResponseMapper } from '../../mappers';
 
 @CommandHandler(UpdateGoalCommand)
 export class UpdateGoalHandler implements ICommandHandler<UpdateGoalCommand> {
@@ -16,21 +17,13 @@ export class UpdateGoalHandler implements ICommandHandler<UpdateGoalCommand> {
       throw new NotFoundException('Goal not found');
     }
 
+    if (goal.userId !== command.userId) {
+      throw new ForbiddenException('Access denied');
+    }
+
     goal.update(command.data);
     const savedGoal = await this.goalRepository.save(goal);
 
-    return {
-      id: savedGoal.id,
-      userId: savedGoal.userId,
-      name: savedGoal.name,
-      targetAmount: savedGoal.targetAmount,
-      currentAmount: savedGoal.currentAmount,
-      deadline: savedGoal.deadline,
-      icon: savedGoal.icon,
-      color: savedGoal.color,
-      progress: savedGoal.progress,
-      isCompleted: savedGoal.isCompleted,
-      createdAt: savedGoal.createdAt,
-    };
+    return GoalResponseMapper.toResponse(savedGoal);
   }
 }

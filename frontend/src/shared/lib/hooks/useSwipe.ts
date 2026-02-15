@@ -31,6 +31,7 @@ export function useSwipe(config?: SwipeConfig) {
   let currentX = 0
   let isHorizontalSwipe: boolean | null = null
   let hasTriggeredHaptic = false
+  let animationFrameId: number | null = null
 
   function onTouchStart(e: TouchEvent) {
     startX = e.touches[0].clientX
@@ -124,6 +125,11 @@ export function useSwipe(config?: SwipeConfig) {
   }
 
   function animateToZero() {
+    if (animationFrameId !== null) {
+      cancelAnimationFrame(animationFrameId)
+      animationFrameId = null
+    }
+
     const startValue = translateX.value
     const startTime = performance.now()
     const duration = 200
@@ -137,14 +143,15 @@ export function useSwipe(config?: SwipeConfig) {
       translateX.value = startValue * (1 - eased)
 
       if (progress < 1) {
-        requestAnimationFrame(animate)
+        animationFrameId = requestAnimationFrame(animate)
       } else {
         translateX.value = 0
         swipeState.value = 'idle'
+        animationFrameId = null
       }
     }
 
-    requestAnimationFrame(animate)
+    animationFrameId = requestAnimationFrame(animate)
   }
 
   function resetSwipe() {
@@ -153,6 +160,10 @@ export function useSwipe(config?: SwipeConfig) {
 
   // Cleanup
   onUnmounted(() => {
+    if (animationFrameId !== null) {
+      cancelAnimationFrame(animationFrameId)
+      animationFrameId = null
+    }
     isDragging.value = false
     translateX.value = 0
     swipeState.value = 'idle'

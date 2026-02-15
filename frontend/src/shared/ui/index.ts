@@ -11,6 +11,8 @@ export { SwipeableItem, type SwipeAction } from './swipeable'
 export { EmptyState } from './empty-state'
 export { PullToRefresh } from './pull-to-refresh'
 export { ViewAllButton } from './view-all-button'
+export { UColorPicker } from './color-picker'
+export { UIconSelector } from './icon-selector'
 
 // Toast exports
 export {

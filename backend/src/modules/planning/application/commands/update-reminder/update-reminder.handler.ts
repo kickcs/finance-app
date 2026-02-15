@@ -1,10 +1,11 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { Inject, NotFoundException } from '@nestjs/common';
+import { Inject, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { UpdateReminderCommand } from './update-reminder.command';
 import {
   IReminderRepository,
   REMINDER_REPOSITORY,
 } from '../../../domain/repositories';
+import { ReminderResponseMapper } from '../../mappers';
 
 @CommandHandler(UpdateReminderCommand)
 export class UpdateReminderHandler implements ICommandHandler<UpdateReminderCommand> {
@@ -19,21 +20,13 @@ export class UpdateReminderHandler implements ICommandHandler<UpdateReminderComm
       throw new NotFoundException('Reminder not found');
     }
 
+    if (reminder.userId !== command.userId) {
+      throw new ForbiddenException('Access denied');
+    }
+
     reminder.update(command.data);
     const savedReminder = await this.reminderRepository.save(reminder);
 
-    return {
-      id: savedReminder.id,
-      userId: savedReminder.userId,
-      name: savedReminder.name,
-      amount: savedReminder.amount,
-      frequency: savedReminder.frequency,
-      nextDate: savedReminder.nextDate,
-      icon: savedReminder.icon,
-      color: savedReminder.color,
-      isActive: savedReminder.isActive,
-      isDue: savedReminder.isDue,
-      createdAt: savedReminder.createdAt,
-    };
+    return ReminderResponseMapper.toResponse(savedReminder);
   }
 }

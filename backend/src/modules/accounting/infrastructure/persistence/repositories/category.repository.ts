@@ -65,10 +65,16 @@ export class CategoryRepository implements ICategoryRepository {
   }
 
   async updateSortOrder(categoryIds: string[]): Promise<void> {
-    await Promise.all(
-      categoryIds.map((id, index) =>
-        this.ormRepository.update(id, { sortOrder: index }),
-      ),
+    if (categoryIds.length === 0) return;
+
+    // Batch update using a single query with CASE WHEN
+    const whenClauses = categoryIds
+      .map((_, index) => `WHEN id = $${index + 1} THEN ${index}`)
+      .join(' ');
+
+    await this.ormRepository.query(
+      `UPDATE "categories" SET "sort_order" = CASE ${whenClauses} END WHERE "id" IN (${categoryIds.map((_, i) => `$${i + 1}`).join(', ')})`,
+      categoryIds,
     );
   }
 }

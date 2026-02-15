@@ -3,6 +3,7 @@ import { Inject } from '@nestjs/common';
 import { CreateGoalCommand } from './create-goal.command';
 import { Goal } from '../../../domain/aggregates/goal';
 import { IGoalRepository, GOAL_REPOSITORY } from '../../../domain/repositories';
+import { GoalResponseMapper } from '../../mappers';
 
 @CommandHandler(CreateGoalCommand)
 export class CreateGoalHandler implements ICommandHandler<CreateGoalCommand> {
@@ -25,22 +26,6 @@ export class CreateGoalHandler implements ICommandHandler<CreateGoalCommand> {
 
     const savedGoal = await this.goalRepository.save(goal);
 
-    return this.toResponse(savedGoal);
-  }
-
-  private toResponse(goal: Goal) {
-    return {
-      id: goal.id,
-      userId: goal.userId,
-      name: goal.name,
-      targetAmount: goal.targetAmount,
-      currentAmount: goal.currentAmount,
-      deadline: goal.deadline,
-      icon: goal.icon,
-      color: goal.color,
-      progress: goal.progress,
-      isCompleted: goal.isCompleted,
-      createdAt: goal.createdAt,
-    };
+    return GoalResponseMapper.toResponse(savedGoal);
   }
 }
