@@ -166,10 +166,7 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
     };
   }
 
-  private async validateAccountOwnership(
-    accountId: string,
-    userId: string,
-  ) {
+  private async validateAccountOwnership(accountId: string, userId: string) {
     const account =
       await this.accountRepository.findByIdWithBalances(accountId);
     if (!account) {
@@ -320,7 +317,10 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
     toAmount: number,
     toCurrency: string,
   ): Promise<void> {
-    const fromAccount = await this.validateAccountOwnership(fromAccountId, userId);
+    const fromAccount = await this.validateAccountOwnership(
+      fromAccountId,
+      userId,
+    );
     const toAccount = await this.validateAccountOwnership(toAccountId, userId);
 
     // Reverse debit from source (credit it back)
@@ -343,7 +343,10 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
     toAmount: number,
     toCurrency: string,
   ): Promise<void> {
-    const fromAccount = await this.validateAccountOwnership(fromAccountId, userId);
+    const fromAccount = await this.validateAccountOwnership(
+      fromAccountId,
+      userId,
+    );
     const toAccount = await this.validateAccountOwnership(toAccountId, userId);
 
     // Debit source account

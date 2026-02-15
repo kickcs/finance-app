@@ -18,6 +18,6 @@ export class GoalResponseMapper {
   }
 
   static toResponseList(goals: Goal[]) {
-    return goals.map(GoalResponseMapper.toResponse);
+    return goals.map((goal) => GoalResponseMapper.toResponse(goal));
   }
 }

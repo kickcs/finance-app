@@ -33,9 +33,15 @@ export class AddPerformanceIndexes1770891041500 implements MigrationInterface {
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`DROP INDEX IF EXISTS "IDX_reminders_next_date"`);
-    await queryRunner.query(`DROP INDEX IF EXISTS "IDX_account_balances_account_id"`);
-    await queryRunner.query(`DROP INDEX IF EXISTS "IDX_transactions_category_id"`);
+    await queryRunner.query(
+      `DROP INDEX IF EXISTS "IDX_account_balances_account_id"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX IF EXISTS "IDX_transactions_category_id"`,
+    );
     await queryRunner.query(`DROP INDEX IF EXISTS "IDX_transactions_type"`);
-    await queryRunner.query(`DROP INDEX IF EXISTS "IDX_transactions_user_date_created"`);
+    await queryRunner.query(
+      `DROP INDEX IF EXISTS "IDX_transactions_user_date_created"`,
+    );
   }
 }

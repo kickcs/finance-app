@@ -5,7 +5,14 @@ export class AddForeignKeysAndIndexes1770891041400 implements MigrationInterface
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Clean up orphaned records before adding FK constraints
-    const tables = ['accounts', 'transactions', 'categories', 'debts', 'goals', 'reminders'];
+    const tables = [
+      'accounts',
+      'transactions',
+      'categories',
+      'debts',
+      'goals',
+      'reminders',
+    ];
     for (const table of tables) {
       await queryRunner.query(
         `DELETE FROM "${table}" WHERE "user_id" NOT IN (SELECT "id" FROM "profiles")`,
