@@ -25,6 +25,9 @@ import { debtsApi } from '@/entities/debt'
 
 const router = useRouter()
 
+// Scroll container ref for PTR in fixed-layout pages
+const scrollContainerRef = ref<HTMLElement | null>(null)
+
 // Get user from provide/inject
 const user = inject<Ref<User | null>>('user')
 const userId = computed(() => user?.value?.id ?? '')
@@ -284,8 +287,8 @@ async function handleRefresh() {
     <AppHeader title="История" />
 
     <!-- Scrollable Content -->
-    <div class="flex-1 overflow-y-auto">
-    <PullToRefresh :on-refresh="handleRefresh">
+    <div ref="scrollContainerRef" class="flex-1 overflow-y-auto">
+    <PullToRefresh :on-refresh="handleRefresh" :container-ref="scrollContainerRef">
     <main class="px-5 pt-8 pb-28 space-y-4">
       <!-- Search + Filter Button -->
       <div class="flex gap-2">

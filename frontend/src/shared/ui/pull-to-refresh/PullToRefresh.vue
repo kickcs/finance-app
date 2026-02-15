@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, toRef } from 'vue'
 import { usePullToRefresh } from '@/shared/lib/hooks/usePullToRefresh'
 import { onBeforeRouteLeave } from 'vue-router'
 
 const props = defineProps<{
   onRefresh: () => Promise<void>
+  containerRef?: HTMLElement | null
 }>()
 
 const THRESHOLD = 64
@@ -18,6 +19,7 @@ const {
 } = usePullToRefresh({
   threshold: THRESHOLD,
   onRefresh: props.onRefresh,
+  containerRef: toRef(props, 'containerRef'),
 })
 
 const contentStyle = computed(() => {

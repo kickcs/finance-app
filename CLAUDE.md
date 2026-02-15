@@ -36,6 +36,10 @@ docker compose up -d postgres  # Start only PostgreSQL
 docker compose up -d           # Start all services (postgres, backend, frontend)
 ```
 
+## CI/CD
+
+GitHub Actions (`deploy.yml`) runs: validate (lint + test + type-check with PostgreSQL) → build Docker images → push to GHCR → deploy via SSH with migrations. Production uses `docker-compose.prod.yml`.
+
 ## Project Structure
 
 ```
@@ -113,6 +117,18 @@ shared/     # UI components, HTTP client, hooks
 
 **Cursor Pagination**: Uses `{ date, createdAt }` cursor format (camelCase from backend)
 
+### Frontend UI Components (`shared/ui/`)
+
+Custom component library wrapping Reka UI headless primitives:
+- `UButton` — variants: `primary`, `secondary`, `ghost`, `icon`, `danger`, `outline`; sizes: `xs`, `sm`, `md`, `lg`, `xl`; props: `fullWidth`, `loading`, `disabled`
+- `UInput` — variants: `default`, `search`, `currency`; sizes: `md`, `lg`; supports `icon`, `suffix`, `showPasswordToggle`
+- `UCard` — variants: `default`, `bordered`, `flat`; padding: `none`, `sm`, `md`, `lg`; `hoverable`, `clickable`
+- `UModal`, `UTabs`, `UIcon`, `Skeleton`, `SwipeableItem`, `EmptyState`, `PullToRefresh`, `Toast`
+
+### Page Layout Pattern
+
+Most pages use `min-h-screen bg-background-light dark:bg-background-dark pb-28` (pb-28 reserves space for fixed BottomNav). Pages with fixed-scroll layout use `h-dvh flex flex-col overflow-hidden` with `flex-1 overflow-y-auto` on the scrollable section (see HistoryPage, CategoriesPage).
+
 ## Environment Variables
 
 ```bash
@@ -154,4 +170,5 @@ Both `backend/CLAUDE.md` and `frontend/CLAUDE.md` contain more detailed architec
 - **Global state**: User auth provided via Vue `provide/inject` pattern from `App.vue`
 - **TypeORM synchronize**: Disabled (`synchronize: false`) - always use migrations for schema changes, never enable synchronize
 - **New ORM entities**: Must be registered in `backend/src/config/data-source.ts` entities array, otherwise migrations won't detect them
-- **Deployment**: Production uses GHCR images via `docker-compose.prod.yml`, deployed with GitHub Actions
+- **PullToRefresh**: Wraps content in two nested divs (relative container + transform content), which breaks flex layout chains. When using with `h-dvh` fixed layout, wrap PullToRefresh in a separate `flex-1 overflow-y-auto` div rather than making PullToRefresh itself flex
+- **Tailwind v4**: Uses class-based dark mode strategy; theme tokens defined in `frontend/src/app/styles/` (background-light/dark, text-primary-light/dark, etc.)
