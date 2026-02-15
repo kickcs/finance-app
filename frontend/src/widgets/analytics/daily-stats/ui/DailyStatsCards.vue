@@ -79,7 +79,7 @@ const statusConfig = {
           <p class="text-base font-semibold text-text-primary-light dark:text-text-primary-dark">
             {{ formatCurrency(avgDailyExpense, currency) }}
           </p>
-          <p class="text-[10px] text-text-tertiary-light dark:text-text-tertiary-dark">/день</p>
+          <p class="text-caption-sm text-text-tertiary-light dark:text-text-tertiary-dark">/день</p>
         </div>
       </div>
     </UCard>
@@ -114,7 +114,7 @@ const statusConfig = {
           >
             {{ formatCurrency(Math.max(0, safeDaily), currency) }}
           </p>
-          <p class="text-[10px] text-text-tertiary-light dark:text-text-tertiary-dark">/день</p>
+          <p class="text-caption-sm text-text-tertiary-light dark:text-text-tertiary-dark">/день</p>
         </div>
       </div>
 

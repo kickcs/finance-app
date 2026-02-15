@@ -138,7 +138,7 @@ function handleAddTransaction() {
           <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark mb-1">
             Вам должны
           </p>
-          <p class="text-lg font-bold text-amber-500">
+          <p class="text-lg font-bold text-debt-given">
             {{ formatCurrency(totalGivenDebts, currency) }}
           </p>
         </UCard>
@@ -148,7 +148,7 @@ function handleAddTransaction() {
           <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark mb-1">
             Вы должны
           </p>
-          <p class="text-lg font-bold text-purple-500">
+          <p class="text-lg font-bold text-debt-received">
             {{ formatCurrency(totalTakenDebts, currency) }}
           </p>
         </UCard>
@@ -215,12 +215,12 @@ function handleAddTransaction() {
               <div class="flex items-center gap-2">
                 <div
                   class="w-8 h-8 rounded-full flex items-center justify-center"
-                  :class="group.debtType === 'given' ? 'bg-amber-500/10' : 'bg-purple-500/10'"
+                  :class="group.debtType === 'given' ? 'bg-debt-given-light' : 'bg-debt-received-light'"
                 >
                   <UIcon
                     name="person"
                     size="sm"
-                    :class="group.debtType === 'given' ? 'text-amber-500' : 'text-purple-500'"
+                    :class="group.debtType === 'given' ? 'text-debt-given' : 'text-debt-received'"
                   />
                 </div>
                 <div>
@@ -235,7 +235,7 @@ function handleAddTransaction() {
               <div class="text-right">
                 <p
                   class="font-bold"
-                  :class="group.debtType === 'given' ? 'text-amber-500' : 'text-purple-500'"
+                  :class="group.debtType === 'given' ? 'text-debt-given' : 'text-debt-received'"
                 >
                   {{ formatCurrency(group.totalRemaining, currency) }}
                 </p>

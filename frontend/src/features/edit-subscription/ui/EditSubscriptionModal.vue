@@ -74,14 +74,14 @@ function formatDate(dateStr: string): string {
                  shadow-2xl"
         >
           <!-- Header -->
-          <div class="sticky top-0 z-10 px-4 pt-4 pb-3 bg-card-light dark:bg-card-dark border-b border-gray-100 dark:border-gray-800">
+          <div class="sticky top-0 z-10 px-4 pt-4 pb-3 bg-card-light dark:bg-card-dark border-b border-border-light dark:border-border-dark">
             <div class="flex items-center justify-between">
               <h2 class="text-base font-semibold text-text-primary-light dark:text-text-primary-dark">
                 {{ isEditing ? 'Редактировать' : 'Подписка' }}
               </h2>
               <button
                 class="w-7 h-7 flex items-center justify-center rounded-full
-                       hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                       hover:bg-surface-light dark:hover:bg-surface-dark transition-colors"
                 @click="$emit('close')"
               >
                 <UIcon name="close" size="xs" class="text-text-secondary-light dark:text-text-secondary-dark" />
@@ -115,7 +115,7 @@ function formatDate(dateStr: string): string {
 
             <!-- Amount & Date Row -->
             <div class="grid grid-cols-2 gap-2">
-              <div class="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50">
+              <div class="p-3 rounded-xl bg-surface-light dark:bg-surface-dark">
                 <p class="text-xs text-text-secondary-light dark:text-text-secondary-dark mb-0.5">
                   Сумма
                 </p>
@@ -123,7 +123,7 @@ function formatDate(dateStr: string): string {
                   {{ formatCurrency(subscription.amount, currency) }}
                 </p>
               </div>
-              <div class="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50">
+              <div class="p-3 rounded-xl bg-surface-light dark:bg-surface-dark">
                 <p class="text-xs text-text-secondary-light dark:text-text-secondary-dark mb-0.5">
                   Следующий
                 </p>

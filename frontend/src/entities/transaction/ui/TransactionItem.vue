@@ -112,7 +112,7 @@ const formattedDate = computed(() => formatRelativeDate(new Date(props.transacti
       <p class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark truncate">
         {{ isTransfer ? 'Перевод' : (category?.name || 'Транзакция') }}
       </p>
-      <p class="text-[10px] text-text-tertiary-light dark:text-text-tertiary-dark truncate">
+      <p class="text-caption-sm text-text-tertiary-light dark:text-text-tertiary-dark truncate">
         <template v-if="isTransfer">{{ transferLabel }}</template>
         <template v-else>
           <span v-if="accountName">{{ accountName }}</span>
@@ -141,14 +141,14 @@ const formattedDate = computed(() => formatRelativeDate(new Date(props.transacti
       <!-- Conversion for multi-currency transfers -->
       <p
         v-if="isTransfer && !viewingAccountId && transaction.to_currency && transaction.to_currency !== transaction.currency"
-        class="text-[10px] text-text-tertiary-light dark:text-text-tertiary-dark"
+        class="text-caption-sm text-text-tertiary-light dark:text-text-tertiary-dark"
       >
         → {{ formatCurrency(transaction.to_amount || 0, transaction.to_currency, COMPACT_FORMAT) }}
       </p>
       <!-- Original amount indicator when there are debt returns -->
       <p
         v-if="transaction.has_debt_returns && transaction.type === 'expense'"
-        class="text-[10px] text-text-tertiary-light dark:text-text-tertiary-dark line-through"
+        class="text-caption-sm text-text-tertiary-light dark:text-text-tertiary-dark line-through"
       >
         -{{ formatCurrency(transaction.amount, transaction.currency || currency || 'UZS', COMPACT_FORMAT) }}
       </p>

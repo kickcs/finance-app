@@ -22,7 +22,7 @@ const sizeConfig = computed(() => {
         container: 'gap-0.5 p-1 rounded-md',
         icon: 'w-7 h-7 rounded-md',
         iconSize: 'xs' as const,
-        text: 'text-[9px] leading-tight max-w-[44px]',
+        text: 'text-caption-xs leading-tight max-w-[44px]',
       }
     case 'medium':
       return {

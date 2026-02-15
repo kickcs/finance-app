@@ -269,11 +269,11 @@ function handleAddTransaction() {
         >
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
+              <div class="w-10 h-10 rounded-xl bg-debt-given-light flex items-center justify-center">
                 <UIcon
                   name="arrow_upward"
                   size="md"
-                  class="text-amber-500"
+                  class="text-debt-given"
                 />
               </div>
               <span class="text-text-secondary-light dark:text-text-secondary-dark">Мне должны</span>
@@ -290,11 +290,11 @@ function handleAddTransaction() {
         >
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
+              <div class="w-10 h-10 rounded-xl bg-debt-received-light flex items-center justify-center">
                 <UIcon
                   name="arrow_downward"
                   size="md"
-                  class="text-purple-500"
+                  class="text-debt-received"
                 />
               </div>
               <span class="text-text-secondary-light dark:text-text-secondary-dark">Я должен</span>

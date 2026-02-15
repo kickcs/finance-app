@@ -301,7 +301,7 @@ async function handleRefresh() {
           />
         </div>
         <button
-          class="relative shrink-0 w-12 h-12 rounded-xl bg-surface-light dark:bg-surface-dark flex items-center justify-center transition-colors hover:bg-gray-200 dark:hover:bg-gray-700"
+          class="relative shrink-0 w-12 h-12 rounded-xl bg-surface-light dark:bg-surface-dark flex items-center justify-center transition-colors hover:bg-border-light dark:hover:bg-border-dark"
           @click="showFiltersModal = true"
         >
           <UIcon name="tune" size="md" class="text-text-secondary-light dark:text-text-secondary-dark" />
@@ -342,7 +342,7 @@ async function handleRefresh() {
         </button>
         <button
           v-if="activeFiltersCount > 1"
-          class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-gray-100 dark:bg-gray-800 text-text-secondary-light dark:text-text-secondary-dark text-sm font-medium"
+          class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-surface-light dark:bg-surface-dark text-text-secondary-light dark:text-text-secondary-dark text-sm font-medium"
           @click="clearAdditionalFilters"
         >
           Сбросить все
@@ -374,7 +374,7 @@ async function handleRefresh() {
         v-else
         class="py-16 text-center"
       >
-        <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+        <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-surface-light dark:bg-surface-dark flex items-center justify-center">
           <UIcon name="receipt_long" size="lg" class="text-text-tertiary-light dark:text-text-tertiary-dark" />
         </div>
         <p class="text-text-secondary-light dark:text-text-secondary-dark mb-2">

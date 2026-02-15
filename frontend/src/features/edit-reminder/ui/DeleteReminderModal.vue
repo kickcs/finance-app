@@ -35,8 +35,8 @@ function confirm() {
     <div v-if="reminder" class="space-y-4">
       <!-- Reminder Info Card -->
       <div class="flex items-center gap-3 p-4 rounded-xl bg-surface-light dark:bg-surface-dark">
-        <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-purple-500/10">
-          <UIcon :name="reminder.icon" size="md" class="text-purple-500" />
+        <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-reminder-light">
+          <UIcon :name="reminder.icon" size="md" class="text-reminder" />
         </div>
         <div class="flex-1 min-w-0">
           <p class="font-semibold text-text-primary-light dark:text-text-primary-dark truncate">

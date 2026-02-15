@@ -119,11 +119,14 @@ shared/     # UI components, HTTP client, hooks
 
 ### Frontend UI Components (`shared/ui/`)
 
-Custom component library wrapping Reka UI headless primitives:
+Custom component library wrapping Reka UI headless primitives (CVA-based variants):
 - `UButton` — variants: `primary`, `secondary`, `ghost`, `icon`, `danger`, `outline`; sizes: `xs`, `sm`, `md`, `lg`, `xl`; props: `fullWidth`, `loading`, `disabled`
+- `UBadge` — variants: `primary`, `success`, `danger`, `warning`, `neutral`, `debt-given`, `debt-received`, `goal`, `reminder`; sizes: `xs`, `sm`, `md`; shapes: `rounded`, `pill`
 - `UInput` — variants: `default`, `search`, `currency`; sizes: `md`, `lg`; supports `icon`, `suffix`, `showPasswordToggle`
 - `UCard` — variants: `default`, `bordered`, `flat`; padding: `none`, `sm`, `md`, `lg`; `hoverable`, `clickable`
-- `UModal`, `UTabs`, `UIcon`, `Skeleton`, `SwipeableItem`, `EmptyState`, `PullToRefresh`, `Toast`
+- `UModal`, `UTabs`, `UIcon`, `UProgressBar`, `Skeleton`, `SwipeableItem`, `EmptyState`, `PullToRefresh`, `Toast`
+
+Full design system documentation (tokens, typography, spacing, components, patterns): see `frontend/DESIGN_SYSTEM.md`
 
 ### Page Layout Pattern
 
@@ -179,4 +182,5 @@ When adding user-facing features, fixes, or improvements, update `frontend/src/f
 - **TypeORM synchronize**: Disabled (`synchronize: false`) - always use migrations for schema changes, never enable synchronize
 - **New ORM entities**: Must be registered in `backend/src/config/data-source.ts` entities array, otherwise migrations won't detect them
 - **PullToRefresh**: Wraps content in two nested divs (relative container + transform content), which breaks flex layout chains. When using with `h-dvh` fixed layout, wrap PullToRefresh in a separate `flex-1 overflow-y-auto` div rather than making PullToRefresh itself flex
-- **Tailwind v4**: Uses class-based dark mode strategy; theme tokens defined in `frontend/src/app/styles/` (background-light/dark, text-primary-light/dark, etc.)
+- **Tailwind v4**: Uses class-based dark mode strategy; theme tokens defined in `frontend/src/app/styles/index.css` (`@theme` block)
+- **Design tokens**: Always use semantic tokens instead of raw Tailwind colors. Use `bg-surface-light dark:bg-surface-dark` not `bg-gray-100 dark:bg-gray-800`. Use `text-caption-sm` not `text-[10px]`. Use domain tokens (`debt-given`, `reminder`, `goal`) not `amber-500`/`purple-500`. See `frontend/DESIGN_SYSTEM.md` § Anti-Patterns

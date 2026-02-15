@@ -76,7 +76,7 @@ function handleToggle() {
       </div>
       <div
         class="w-12 h-7 rounded-full transition-all relative"
-        :class="splitData.enabled ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-600'"
+        :class="splitData.enabled ? 'bg-primary' : 'bg-border-light dark:bg-border-dark'"
       >
         <div
           class="absolute w-5 h-5 bg-white rounded-full top-1 transition-all shadow-sm"

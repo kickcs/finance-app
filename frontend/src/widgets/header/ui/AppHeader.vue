@@ -74,7 +74,7 @@ defineEmits<{
           <span
             v-if="notificationCount && notificationCount > 0"
             class="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] px-1
-                   bg-danger text-white text-[9px] font-semibold
+                   bg-danger text-white text-caption-xs font-semibold
                    rounded-full flex items-center justify-center
                    border-2 border-background-light dark:border-background-dark"
           >

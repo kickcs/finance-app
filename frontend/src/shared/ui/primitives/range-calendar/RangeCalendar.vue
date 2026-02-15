@@ -45,7 +45,7 @@ const emit = defineEmits<{
   >
     <RangeCalendarHeader class="relative flex w-full items-center justify-between pt-1">
       <RangeCalendarPrev
-        class="inline-flex size-7 items-center justify-center rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+        class="inline-flex size-7 items-center justify-center rounded-md hover:bg-surface-light dark:hover:bg-surface-dark transition-colors"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -66,7 +66,7 @@ const emit = defineEmits<{
       <RangeCalendarHeading class="text-sm font-medium" />
 
       <RangeCalendarNext
-        class="inline-flex size-7 items-center justify-center rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+        class="inline-flex size-7 items-center justify-center rounded-md hover:bg-surface-light dark:hover:bg-surface-dark transition-colors"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -117,7 +117,7 @@ const emit = defineEmits<{
               <RangeCalendarCellTrigger
                 :day="weekDate"
                 :month="month.value"
-                class="inline-flex size-8 items-center justify-center rounded-md text-sm transition-colors hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 data-[selected]:bg-primary data-[selected]:text-white data-[disabled]:text-gray-300 dark:data-[disabled]:text-gray-600 data-[disabled]:pointer-events-none data-[outside-view]:text-gray-400 dark:data-[outside-view]:text-gray-500 data-[today]:bg-gray-100 dark:data-[today]:bg-gray-800 data-[highlighted]:bg-primary/10 data-[selection-start]:bg-primary data-[selection-start]:text-white data-[selection-end]:bg-primary data-[selection-end]:text-white"
+                class="inline-flex size-8 items-center justify-center rounded-md text-sm transition-colors hover:bg-surface-light dark:hover:bg-surface-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 data-[selected]:bg-primary data-[selected]:text-white data-[disabled]:text-gray-300 dark:data-[disabled]:text-gray-600 data-[disabled]:pointer-events-none data-[outside-view]:text-gray-400 dark:data-[outside-view]:text-gray-500 data-[today]:bg-surface-light dark:data-[today]:bg-surface-dark data-[highlighted]:bg-primary/10 data-[selection-start]:bg-primary data-[selection-start]:text-white data-[selection-end]:bg-primary data-[selection-end]:text-white"
               />
             </RangeCalendarCell>
           </RangeCalendarGridRow>

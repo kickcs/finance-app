@@ -115,8 +115,8 @@ const isFormValid = computed(() => {
     <!-- Protected Mode (debt-related OR has split debts): View Only -->
     <div v-if="isProtected && transaction" class="py-2">
       <div class="text-center mb-4">
-        <div class="w-12 h-12 mx-auto mb-3 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-          <UIcon :name="hasSplitDebts ? 'group' : 'account_balance_wallet'" size="md" class="text-amber-600" />
+        <div class="w-12 h-12 mx-auto mb-3 rounded-xl bg-warning-light flex items-center justify-center">
+          <UIcon :name="hasSplitDebts ? 'group' : 'account_balance_wallet'" size="md" class="text-warning" />
         </div>
         <p class="text-sm text-text-primary-light dark:text-text-primary-dark font-medium mb-0.5">
           {{ hasSplitDebts ? 'Транзакция с раздельным счётом' : 'Транзакция связана с долгом' }}
@@ -143,10 +143,10 @@ const isFormValid = computed(() => {
       </div>
 
       <!-- Info -->
-      <div class="mt-3 p-2.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+      <div class="mt-3 p-2.5 rounded-lg bg-warning-light border border-warning/20">
         <div class="flex gap-1.5">
-          <UIcon name="info" size="xs" class="text-amber-600 shrink-0 mt-0.5" />
-          <p class="text-xs text-amber-700 dark:text-amber-400">
+          <UIcon name="info" size="xs" class="text-warning shrink-0 mt-0.5" />
+          <p class="text-xs text-warning">
             {{ hasSplitDebts
               ? 'Эту транзакцию нельзя редактировать, пока есть связанные долги. Сначала закройте долги в разделе "Долги".'
               : 'Эту транзакцию нельзя редактировать или удалять напрямую. Перейдите в раздел "Долги" для управления.'
