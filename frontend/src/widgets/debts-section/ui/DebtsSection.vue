@@ -138,7 +138,7 @@ function isOverdue(date: string | null): boolean {
         </h2>
         <span
           v-if="overdueCount > 0"
-          class="px-1.5 py-0.5 text-caption-sm font-semibold rounded-md bg-danger text-white"
+          class="px-1.5 py-0.5 text-xs font-semibold rounded-md bg-danger text-white"
         >
           {{ overdueCount }}
         </span>
@@ -230,13 +230,13 @@ function isOverdue(date: string | null): boolean {
               </p>
               <div class="flex items-center gap-1">
                 <span
-                  class="text-caption-sm text-text-tertiary-light dark:text-text-tertiary-dark"
+                  class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
                 >
                   {{ group.debtType === 'given' ? 'Вам должен' : 'Вы должны' }}
                 </span>
                 <span
                   v-if="group.debts.length > 1"
-                  class="text-caption-sm text-text-tertiary-light dark:text-text-tertiary-dark"
+                  class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
                 >
                   · {{ group.debts.length }}
                 </span>
@@ -253,7 +253,7 @@ function isOverdue(date: string | null): boolean {
             </p>
             <p
               v-if="group.nearestDueDate"
-              class="text-caption-sm"
+              class="text-xs"
               :class="
                 isOverdue(group.nearestDueDate)
                   ? 'text-danger font-medium'

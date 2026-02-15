@@ -143,7 +143,7 @@ const centerInfo = computed(() => {
           class="absolute inset-0 flex flex-col items-center justify-center text-center px-6"
         >
           <span
-            class="text-caption-sm text-text-tertiary-light dark:text-text-tertiary-dark mb-0.5 truncate max-w-[90px]"
+            class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark mb-0.5 truncate max-w-[90px]"
           >
             {{ centerInfo.label }}
           </span>
@@ -154,7 +154,7 @@ const centerInfo = computed(() => {
           </span>
           <span
             v-if="selectedSegment"
-            class="text-caption-sm text-text-tertiary-light dark:text-text-tertiary-dark"
+            class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
           >
             {{ centerInfo.percent.toFixed(1) }}%
           </span>
@@ -186,7 +186,7 @@ const centerInfo = computed(() => {
             {{ segment.label }}
           </p>
           <p
-            class="text-caption-sm text-text-tertiary-light dark:text-text-tertiary-dark"
+            class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
           >
             {{ segment.percent.toFixed(1) }}%
           </p>

@@ -84,7 +84,7 @@ const statusConfig = {
             {{ formatCurrency(avgDailyExpense, currency) }}
           </p>
           <p
-            class="text-caption-sm text-text-tertiary-light dark:text-text-tertiary-dark"
+            class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
           >
             /день
           </p>
@@ -127,7 +127,7 @@ const statusConfig = {
             {{ formatCurrency(Math.max(0, safeDaily), currency) }}
           </p>
           <p
-            class="text-caption-sm text-text-tertiary-light dark:text-text-tertiary-dark"
+            class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
           >
             /день
           </p>
