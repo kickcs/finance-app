@@ -12,13 +12,9 @@ import { UIcon } from '@/shared/ui'
 
     <!-- Cards area -->
     <div class="relative w-full max-w-sm flex-grow flex items-center justify-center py-6">
-      <!-- Background glow -->
-      <div class="absolute w-[80%] aspect-square bg-primary/20 blur-[80px] rounded-full top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
-
       <div class="relative w-full flex flex-col items-center justify-center gap-6">
         <!-- Main balance card -->
-        <div class="w-full bg-card-dark border border-white/10 rounded-2xl p-6 shadow-2xl shadow-black/50 z-20 relative overflow-hidden">
-          <div class="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none" />
+        <div class="w-full bg-card-dark border border-white/10 rounded-2xl p-6 z-20 relative overflow-hidden">
           <div class="flex justify-between items-start mb-8 relative z-10">
             <div>
               <p class="text-text-tertiary-dark text-xs font-medium uppercase tracking-wider mb-1">Общий баланс</p>
@@ -40,7 +36,7 @@ import { UIcon } from '@/shared/ui'
 
         <!-- Two sub-cards -->
         <div class="flex gap-4 w-full px-1">
-          <div class="flex-1 bg-card-dark border border-white/5 rounded-2xl p-5 shadow-lg shadow-black/30 z-10 transform translate-y-2">
+          <div class="flex-1 bg-card-dark border border-white/5 rounded-2xl p-5 z-10 transform translate-y-2">
             <div class="flex flex-col gap-3">
               <div class="flex items-center justify-between">
                 <span class="text-[10px] text-text-tertiary-dark font-semibold uppercase tracking-wider">Наличные</span>
@@ -49,7 +45,7 @@ import { UIcon } from '@/shared/ui'
               <p class="text-xl font-bold text-text-primary-dark tracking-tight">$850.00</p>
             </div>
           </div>
-          <div class="flex-1 bg-card-dark border border-white/5 rounded-2xl p-5 shadow-lg shadow-black/30 z-10 transform -translate-y-2">
+          <div class="flex-1 bg-card-dark border border-white/5 rounded-2xl p-5 z-10 transform -translate-y-2">
             <div class="flex flex-col gap-3">
               <div class="flex items-center justify-between">
                 <span class="text-[10px] text-text-tertiary-dark font-semibold uppercase tracking-wider">Карта</span>
