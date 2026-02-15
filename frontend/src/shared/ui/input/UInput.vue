@@ -118,12 +118,12 @@ const inputMode = computed(() => {
       )"
     >
       <!-- Icon prefix -->
-      <span
+      <UIcon
         v-if="icon || variant === 'search'"
-        class="material-symbols-outlined text-text-tertiary-light dark:text-text-tertiary-dark pl-3 text-xl"
-      >
-        {{ icon || 'search' }}
-      </span>
+        :name="icon || 'search'"
+        size="lg"
+        class="text-text-tertiary-light dark:text-text-tertiary-dark pl-3"
+      />
 
       <!-- Input -->
       <input

@@ -174,7 +174,7 @@ When adding user-facing features, fixes, or improvements, update `frontend/src/f
 - Frontend uses multi-currency support via `account_balances` table
 - **API field naming**: Backend returns camelCase, frontend transforms to snake_case - ensure consistency in cursor/pagination interfaces
 - **Profile fields**: When adding new profile fields, update both `ProfileResponse` type and all handlers that return it (get-profile, update-profile, create-demo-user, etc.)
-- **Material Symbols**: Uses `display=block` to prevent icon text flash (FOUT) - do not change to `swap`
+- **Icons (Lucide)**: All icons use `lucide-vue-next` via `<UIcon name="material_symbol_name" />`. When adding a new icon, add its Material Symbol → Lucide mapping to `frontend/src/shared/ui/icon/iconMap.ts`
 - **Global state**: User auth provided via Vue `provide/inject` pattern from `App.vue`
 - **TypeORM synchronize**: Disabled (`synchronize: false`) - always use migrations for schema changes, never enable synchronize
 - **New ORM entities**: Must be registered in `backend/src/config/data-source.ts` entities array, otherwise migrations won't detect them

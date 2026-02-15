@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import { iconMap } from './iconMap'
+
 export interface IconProps {
   name: string
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl'
@@ -7,36 +10,42 @@ export interface IconProps {
   ariaLabel?: string
 }
 
-withDefaults(defineProps<IconProps>(), {
+const props = withDefaults(defineProps<IconProps>(), {
   size: 'md',
   filled: false,
 })
 
-const fontVariationFilled = "'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24"
-const fontVariationOutlined = "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24"
+const sizeMap: Record<string, number> = {
+  xs: 12,
+  sm: 16,
+  md: 20,
+  lg: 24,
+  xl: 28,
+  '2xl': 32,
+}
+
+const iconComponent = computed(() => iconMap[props.name])
+const pixelSize = computed(() => sizeMap[props.size])
 </script>
 
 <template>
-  <span
-    :class="[
-      'material-symbols-outlined inline-flex items-center justify-center select-none',
-      {
-        'text-xs': size === 'xs',
-        'text-sm': size === 'sm',
-        'text-base': size === 'md',
-        'text-xl': size === 'lg',
-        'text-2xl': size === 'xl',
-        'text-3xl': size === '2xl',
-      },
-      color,
-    ]"
-    :style="{
-      fontVariationSettings: filled ? fontVariationFilled : fontVariationOutlined,
-    }"
+  <component
+    v-if="iconComponent"
+    :is="iconComponent"
+    :size="pixelSize"
+    :fill="filled ? 'currentColor' : 'none'"
+    :stroke-width="2"
+    :class="['inline-flex shrink-0', color]"
     :aria-hidden="!ariaLabel"
     :aria-label="ariaLabel"
     :role="ariaLabel ? 'img' : undefined"
-  >
-    {{ name }}
-  </span>
+  />
+  <span
+    v-else
+    :class="['inline-flex items-center justify-center select-none', color]"
+    :style="{ width: `${pixelSize}px`, height: `${pixelSize}px`, fontSize: `${pixelSize}px`, lineHeight: 1 }"
+    :aria-hidden="!ariaLabel"
+    :aria-label="ariaLabel"
+    :role="ariaLabel ? 'img' : undefined"
+  >?</span>
 </template>

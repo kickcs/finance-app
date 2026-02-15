@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { UCard } from '@/shared/ui'
+import { UCard, UIcon } from '@/shared/ui'
 
 const router = useRouter()
 const route = useRoute()
@@ -59,7 +59,7 @@ function goToLogin() {
         <div
           class="w-12 h-12 rounded-full bg-danger/10 flex items-center justify-center mx-auto mb-4"
         >
-          <span class="material-symbols-rounded text-danger text-2xl">error</span>
+          <UIcon name="error" size="xl" class="text-danger" />
         </div>
         <h2 class="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark mb-2">
           Ошибка
