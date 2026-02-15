@@ -23,16 +23,16 @@ const chartSegments = [
     <div class="absolute bottom-[-10%] right-[-10%] w-[60%] h-[50%] bg-primary-pressed/10 rounded-full blur-[100px] pointer-events-none z-0" />
 
     <!-- Title -->
-    <div class="text-center mt-2 mb-8 w-full relative z-10">
+    <div class="text-center mt-2 mb-4 w-full relative z-10">
       <h1 class="text-3xl font-bold text-text-primary-dark tracking-tight leading-tight">Анализируйте свои<br />расходы</h1>
     </div>
 
     <!-- Analytics card -->
-    <div class="w-full bg-card-dark border border-white/5 rounded-2xl p-6 shadow-2xl relative overflow-hidden mb-8 z-10">
+    <div class="w-full bg-card-dark border border-white/5 rounded-2xl p-5 shadow-2xl relative overflow-hidden mb-4 z-10">
       <div class="absolute top-0 right-0 w-32 h-32 bg-primary/10 blur-[60px] rounded-full pointer-events-none" />
 
       <!-- Tab bar -->
-      <div class="flex bg-black/20 p-1 rounded-lg mb-8 relative z-10">
+      <div class="flex bg-black/20 p-1 rounded-lg mb-5 relative z-10">
         <div class="flex-1 py-1.5 text-xs font-medium text-text-tertiary-dark text-center rounded-md">Неделя</div>
         <div class="flex-1 py-1.5 text-xs font-medium text-text-primary-dark bg-white/10 text-center rounded-md shadow-sm">Месяц</div>
         <div class="flex-1 py-1.5 text-xs font-medium text-text-tertiary-dark text-center rounded-md">Год</div>
@@ -41,7 +41,7 @@ const chartSegments = [
       <!-- Chart + legend -->
       <div class="flex flex-col items-center justify-center gap-6">
         <!-- Donut chart -->
-        <div class="relative w-48 h-48 flex-shrink-0">
+        <div class="relative w-36 h-36 flex-shrink-0">
           <svg class="transform -rotate-90 w-full h-full" viewBox="0 0 200 200">
             <circle
               v-for="(seg, idx) in chartSegments"
@@ -84,7 +84,7 @@ const chartSegments = [
     </div>
 
     <!-- Bottom feature tags -->
-    <div class="w-full flex justify-center gap-8 mb-8 z-10">
+    <div class="w-full flex justify-center gap-8 mb-4 z-10">
       <div class="flex items-center gap-2 text-text-tertiary-dark">
         <UIcon name="pie_chart" size="sm" class="text-primary" />
         <span class="text-xs font-medium">Детальная аналитика</span>
