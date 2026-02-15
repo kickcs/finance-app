@@ -120,7 +120,7 @@ const formattedDate = computed(() =>
         {{ isTransfer ? 'Перевод' : category?.name || 'Транзакция' }}
       </p>
       <p
-        class="text-caption-sm text-text-tertiary-light dark:text-text-tertiary-dark truncate"
+        class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark truncate"
       >
         <template v-if="isTransfer">{{ transferLabel }}</template>
         <template v-else>
@@ -161,7 +161,7 @@ const formattedDate = computed(() =>
           transaction.to_currency &&
           transaction.to_currency !== transaction.currency
         "
-        class="text-caption-sm text-text-tertiary-light dark:text-text-tertiary-dark"
+        class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
       >
         →
         {{
@@ -175,7 +175,7 @@ const formattedDate = computed(() =>
       <!-- Original amount indicator when there are debt returns -->
       <p
         v-if="transaction.has_debt_returns && transaction.type === 'expense'"
-        class="text-caption-sm text-text-tertiary-light dark:text-text-tertiary-dark line-through"
+        class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark line-through"
       >
         -{{
           formatCurrency(

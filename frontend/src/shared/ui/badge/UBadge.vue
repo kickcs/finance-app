@@ -25,7 +25,7 @@ const badgeVariants = cva(
         reminder: 'bg-reminder-light text-reminder',
       },
       size: {
-        xs: 'px-1.5 py-0.5 text-caption-sm',
+        xs: 'px-1.5 py-0.5 text-xs',
         sm: 'px-2 py-0.5 text-caption',
         md: 'px-2.5 py-1 text-xs',
       },

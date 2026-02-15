@@ -49,7 +49,7 @@ function getBarWidth(amount: number): string {
         <div class="flex items-center gap-3 mb-2">
           <!-- Rank -->
           <span
-            class="w-5 h-5 rounded text-caption-sm font-semibold flex items-center justify-center"
+            class="w-5 h-5 rounded text-xs font-semibold flex items-center justify-center"
             :class="[
               index === 0
                 ? 'bg-primary-light text-primary'
@@ -86,7 +86,7 @@ function getBarWidth(amount: number): string {
               {{ formatCurrency(category.amount, currency) }}
             </p>
             <p
-              class="text-caption-sm text-text-tertiary-light dark:text-text-tertiary-dark"
+              class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
             >
               {{ category.percent.toFixed(1) }}%
             </p>

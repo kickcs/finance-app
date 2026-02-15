@@ -57,7 +57,7 @@ function isDueToday(reminder: Reminder): boolean {
         </h2>
         <span
           v-if="todayCount > 0"
-          class="px-1.5 py-0.5 text-caption-sm font-semibold rounded-md bg-primary text-white"
+          class="px-1.5 py-0.5 text-xs font-semibold rounded-md bg-primary text-white"
         >
           {{ todayCount }}
         </span>
