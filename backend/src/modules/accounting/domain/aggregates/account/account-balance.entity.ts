@@ -90,15 +90,6 @@ export class AccountBalance extends Entity<string> {
     }
     const previousBalance = this._balance.amount;
     this._balance = this._balance.subtract(amount);
-
-    // Warn if balance becomes negative (overdraft scenario)
-    if (this._balance.amount < 0 && previousBalance >= 0) {
-      console.warn(
-        `[AccountBalance] Account ${this._accountId} balance went negative: ` +
-          `${previousBalance} ${this.currencyCode} → ${this._balance.amount} ${this.currencyCode}`,
-      );
-    }
-
     return previousBalance;
   }
 

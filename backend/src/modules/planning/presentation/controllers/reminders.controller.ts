@@ -35,8 +35,11 @@ export class RemindersController {
   }
 
   @Get(':id')
-  async findOne(@Param('id') id: string): Promise<unknown> {
-    return this.queryBus.execute(new GetReminderByIdQuery(id));
+  async findOne(
+    @CurrentUser('sub') userId: string,
+    @Param('id') id: string,
+  ): Promise<unknown> {
+    return this.queryBus.execute(new GetReminderByIdQuery(id, userId));
   }
 
   @Post()
@@ -59,11 +62,12 @@ export class RemindersController {
 
   @Patch(':id')
   async update(
+    @CurrentUser('sub') userId: string,
     @Param('id') id: string,
     @Body() dto: UpdateReminderDto,
   ): Promise<unknown> {
     return this.commandBus.execute(
-      new UpdateReminderCommand(id, {
+      new UpdateReminderCommand(id, userId, {
         ...dto,
         nextDate: dto.nextDate ? new Date(dto.nextDate) : undefined,
       }),
@@ -72,7 +76,7 @@ export class RemindersController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async remove(@Param('id') id: string) {
-    await this.commandBus.execute(new DeleteReminderCommand(id));
+  async remove(@CurrentUser('sub') userId: string, @Param('id') id: string) {
+    await this.commandBus.execute(new DeleteReminderCommand(id, userId));
   }
 }

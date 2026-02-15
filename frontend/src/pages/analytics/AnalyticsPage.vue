@@ -17,6 +17,7 @@ import {
   useAnalyticsFilters,
   type LitePeriod,
   type TransactionType,
+  type CategoryStat,
 } from '@/features/analytics-filters'
 
 const router = useRouter()
@@ -101,15 +102,6 @@ const totalIOwe = computed(() => {
 })
 
 // Category statistics from server-side calculation
-interface CategoryStat {
-  id: string
-  name: string
-  icon: string
-  color: string
-  amount: number
-  percent: number
-}
-
 const categoryStats = computed<CategoryStat[]>(() => {
   // Filter by type
   let filtered: CategoryBreakdown[]

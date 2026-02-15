@@ -1,5 +1,5 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { Inject, NotFoundException } from '@nestjs/common';
+import { Inject, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { DeleteReminderCommand } from './delete-reminder.command';
 import {
   IReminderRepository,
@@ -14,9 +14,12 @@ export class DeleteReminderHandler implements ICommandHandler<DeleteReminderComm
   ) {}
 
   async execute(command: DeleteReminderCommand): Promise<void> {
-    const exists = await this.reminderRepository.exists(command.id);
-    if (!exists) {
+    const reminder = await this.reminderRepository.findById(command.id);
+    if (!reminder) {
       throw new NotFoundException('Reminder not found');
+    }
+    if (reminder.userId !== command.userId) {
+      throw new ForbiddenException('Access denied');
     }
     await this.reminderRepository.delete(command.id);
   }

@@ -1,10 +1,11 @@
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
-import { Inject, NotFoundException } from '@nestjs/common';
+import { Inject, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { GetReminderByIdQuery } from './get-reminder-by-id.query';
 import {
   IReminderRepository,
   REMINDER_REPOSITORY,
 } from '../../../domain/repositories';
+import { ReminderResponseMapper } from '../../mappers';
 
 @QueryHandler(GetReminderByIdQuery)
 export class GetReminderByIdHandler implements IQueryHandler<GetReminderByIdQuery> {
@@ -20,18 +21,10 @@ export class GetReminderByIdHandler implements IQueryHandler<GetReminderByIdQuer
       throw new NotFoundException(`Reminder with id ${query.id} not found`);
     }
 
-    return {
-      id: reminder.id,
-      userId: reminder.userId,
-      name: reminder.name,
-      amount: reminder.amount,
-      frequency: reminder.frequency,
-      nextDate: reminder.nextDate,
-      icon: reminder.icon,
-      color: reminder.color,
-      isActive: reminder.isActive,
-      isDue: reminder.isDue,
-      createdAt: reminder.createdAt,
-    };
+    if (reminder.userId !== query.userId) {
+      throw new ForbiddenException('Access denied');
+    }
+
+    return ReminderResponseMapper.toResponse(reminder);
   }
 }

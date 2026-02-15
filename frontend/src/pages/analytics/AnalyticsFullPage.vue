@@ -18,6 +18,7 @@ import {
   useAnalyticsFilters,
   type LitePeriod,
   type TransactionType,
+  type CategoryStat,
 } from '@/features/analytics-filters'
 import {
   DonutChart,
@@ -119,16 +120,6 @@ const totalIOwe = computed(() => {
     .filter((d) => d.debt_type === 'taken' && !d.is_closed)
     .reduce((sum, d) => sum + d.remaining_amount, 0)
 })
-
-// Category statistics interface
-interface CategoryStat {
-  id: string
-  name: string
-  icon: string
-  color: string
-  amount: number
-  percent: number
-}
 
 // Expense category statistics from server-side calculation (filtered by type)
 const expenseCategoryStats = computed<CategoryStat[]>(() => {

@@ -27,44 +27,54 @@ export function clearTokens(): void {
   // Cookie is cleared via /auth/logout endpoint
 }
 
-// Token refresh logic
+// Token refresh logic with subscriber pattern to prevent race conditions
 let isRefreshing = false
-let refreshPromise: Promise<boolean> | null = null
+let refreshSubscribers: Array<(success: boolean) => void> = []
+
+function onRefreshComplete(success: boolean) {
+  refreshSubscribers.forEach((callback) => callback(success))
+  refreshSubscribers = []
+}
+
+function waitForRefresh(): Promise<boolean> {
+  return new Promise((resolve) => {
+    refreshSubscribers.push(resolve)
+  })
+}
 
 export async function refreshTokens(): Promise<boolean> {
-  if (isRefreshing && refreshPromise) {
-    return refreshPromise
+  if (isRefreshing) {
+    return waitForRefresh()
   }
 
   isRefreshing = true
-  refreshPromise = (async () => {
-    try {
-      // Refresh token is sent automatically via httpOnly cookie
-      const response = await fetch(`${API_URL}/auth/refresh`, {
-        method: 'POST',
-        credentials: 'include', // Send cookies
-        headers: { 'Content-Type': 'application/json' },
-        // No body needed - refresh token is in cookie
-      })
 
-      if (!response.ok) {
-        clearTokens()
-        return false
-      }
+  try {
+    // Refresh token is sent automatically via httpOnly cookie
+    const response = await fetch(`${API_URL}/auth/refresh`, {
+      method: 'POST',
+      credentials: 'include', // Send cookies
+      headers: { 'Content-Type': 'application/json' },
+      // No body needed - refresh token is in cookie
+    })
 
-      const data = await response.json()
-      setTokens(data.accessToken) // Only access token in response
-      return true
-    } catch {
+    if (!response.ok) {
       clearTokens()
+      onRefreshComplete(false)
       return false
-    } finally {
-      isRefreshing = false
-      refreshPromise = null
     }
-  })()
 
-  return refreshPromise
+    const data = await response.json()
+    setTokens(data.accessToken) // Only access token in response
+    onRefreshComplete(true)
+    return true
+  } catch {
+    clearTokens()
+    onRefreshComplete(false)
+    return false
+  } finally {
+    isRefreshing = false
+  }
 }
 
 // Main HTTP client

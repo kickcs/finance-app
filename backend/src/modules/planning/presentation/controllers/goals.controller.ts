@@ -32,8 +32,11 @@ export class GoalsController {
   }
 
   @Get(':id')
-  async findOne(@Param('id') id: string): Promise<unknown> {
-    return this.queryBus.execute(new GetGoalByIdQuery(id));
+  async findOne(
+    @CurrentUser('sub') userId: string,
+    @Param('id') id: string,
+  ): Promise<unknown> {
+    return this.queryBus.execute(new GetGoalByIdQuery(id, userId));
   }
 
   @Post()
@@ -56,11 +59,12 @@ export class GoalsController {
 
   @Patch(':id')
   async update(
+    @CurrentUser('sub') userId: string,
     @Param('id') id: string,
     @Body() dto: UpdateGoalDto,
   ): Promise<unknown> {
     return this.commandBus.execute(
-      new UpdateGoalCommand(id, {
+      new UpdateGoalCommand(id, userId, {
         ...dto,
         deadline:
           dto.deadline !== undefined
@@ -74,7 +78,7 @@ export class GoalsController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async remove(@Param('id') id: string) {
-    await this.commandBus.execute(new DeleteGoalCommand(id));
+  async remove(@CurrentUser('sub') userId: string, @Param('id') id: string) {
+    await this.commandBus.execute(new DeleteGoalCommand(id, userId));
   }
 }

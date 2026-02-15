@@ -113,18 +113,18 @@ export class ExchangeRateRepository implements IExchangeRateRepository {
       ['baseCurrency', 'targetCurrency'],
     );
 
-    // Return all saved entities
-    const savedEntities: ExchangeRate[] = [];
-    for (const entity of ormEntities) {
-      const saved = await this.findByPair(
-        entity.baseCurrency,
-        entity.targetCurrency,
-      );
-      if (saved) {
-        savedEntities.push(saved);
-      }
-    }
+    // Fetch all saved entities in a single query instead of N separate queries
+    const conditions = ormEntities.map((e) => ({
+      baseCurrency: e.baseCurrency,
+      targetCurrency: e.targetCurrency,
+    }));
 
-    return savedEntities;
+    const savedOrmEntities = await this.ormRepository.find({
+      where: conditions,
+    });
+
+    return savedOrmEntities.map((entity) =>
+      ExchangeRateMapper.toDomain(entity),
+    );
   }
 }

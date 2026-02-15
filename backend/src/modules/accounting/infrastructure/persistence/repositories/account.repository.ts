@@ -117,10 +117,16 @@ export class AccountRepository implements IAccountRepository {
   }
 
   async updateOrder(accountIds: string[]): Promise<void> {
-    await Promise.all(
-      accountIds.map((id, index) =>
-        this.ormRepository.update(id, { order: index }),
-      ),
+    if (accountIds.length === 0) return;
+
+    // Batch update using a single query with CASE WHEN
+    const whenClauses = accountIds
+      .map((_, index) => `WHEN id = $${index + 1} THEN ${index}`)
+      .join(' ');
+
+    await this.ormRepository.query(
+      `UPDATE "accounts" SET "order" = CASE ${whenClauses} END WHERE "id" IN (${accountIds.map((_, i) => `$${i + 1}`).join(', ')})`,
+      accountIds,
     );
   }
 }
