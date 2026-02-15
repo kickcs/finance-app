@@ -34,7 +34,7 @@ const pixelSize = computed(() => sizeMap[props.size])
     :is="iconComponent"
     :size="pixelSize"
     :fill="filled ? 'currentColor' : 'none'"
-    :stroke-width="2"
+    :stroke-width="filled ? 0 : 2"
     :class="['inline-flex shrink-0', color]"
     :aria-hidden="!ariaLabel"
     :aria-label="ariaLabel"
