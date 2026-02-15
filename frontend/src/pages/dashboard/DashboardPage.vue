@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, inject, defineAsyncComponent, Suspense } from 'vue'
+import { computed, inject, ref, defineAsyncComponent, Suspense } from 'vue'
 import type { Ref } from 'vue'
 import type { User } from '@/shared/api/composables/useAuth'
 import { useRouter } from 'vue-router'
@@ -205,17 +205,17 @@ function handleViewAllReminders() {
   router.push('/reminders')
 }
 
+const scrollContainerRef = ref<HTMLElement>()
+
 async function handleRefresh() {
   await queryClient.invalidateQueries()
 }
 </script>
 
 <template>
-  <div class="relative min-h-screen bg-background-light dark:bg-background-dark">
-    <PullToRefresh :on-refresh="handleRefresh">
-    <div :style="{ paddingBottom: 'calc(7rem + var(--safe-area-inset-bottom))' }">
-      <!-- Header -->
-      <AppHeader>
+  <div class="h-dvh flex flex-col overflow-hidden bg-background-light dark:bg-background-dark">
+    <!-- Header -->
+    <AppHeader>
       <template #logo>
         <div
           class="flex items-center gap-2.5 group cursor-pointer"
@@ -244,94 +244,96 @@ async function handleRefresh() {
       </template>
     </AppHeader>
 
-    <!-- Content with grouped sections -->
-    <main class="relative z-10 px-5 pt-8 space-y-8">
-      <!-- Hero Section - tight grouping for balance and stats -->
-      <section class="space-y-4 animate-fadeInUp">
-        <!-- Balance Card with Suspense -->
-        <Suspense>
-          <BalanceCard
-            :total-balance="totalBalance"
-            :currency="currency"
-            :percent-change="percentChange"
-            :loading="accountsLoading || statsLoading || ratesLoading"
-            @income-click="handleIncomeClick"
-            @expense-click="handleExpenseClick"
-          />
-          <template #fallback>
-            <BalanceCardSkeleton />
-          </template>
-        </Suspense>
+    <!-- Scrollable content -->
+    <div ref="scrollContainerRef" class="flex-1 overflow-y-auto">
+      <PullToRefresh :on-refresh="handleRefresh" :container-ref="scrollContainerRef">
+        <main class="relative z-10 px-5 pt-8 space-y-8 pb-28">
+          <!-- Hero Section - tight grouping for balance and stats -->
+          <section class="space-y-4 animate-fadeInUp">
+            <!-- Balance Card with Suspense -->
+            <Suspense>
+              <BalanceCard
+                :total-balance="totalBalance"
+                :currency="currency"
+                :percent-change="percentChange"
+                :loading="accountsLoading || statsLoading || ratesLoading"
+                @income-click="handleIncomeClick"
+                @expense-click="handleExpenseClick"
+              />
+              <template #fallback>
+                <BalanceCardSkeleton />
+              </template>
+            </Suspense>
 
-        <!-- Save & Spend with Suspense -->
-        <Suspense>
-          <SaveSpendSection
-            :saved-amount="savedThisMonth"
-            :spent-amount="spentThisMonth"
-            :currency="currency"
-            :loading="statsLoading"
-            @income-click="router.push('/analytics?type=income')"
-            @expense-click="router.push('/analytics?type=expense')"
-          />
-          <template #fallback>
-            <SaveSpendSectionSkeleton />
-          </template>
-        </Suspense>
-      </section>
+            <!-- Save & Spend with Suspense -->
+            <Suspense>
+              <SaveSpendSection
+                :saved-amount="savedThisMonth"
+                :spent-amount="spentThisMonth"
+                :currency="currency"
+                :loading="statsLoading"
+                @income-click="router.push('/analytics?type=income')"
+                @expense-click="router.push('/analytics?type=expense')"
+              />
+              <template #fallback>
+                <SaveSpendSectionSkeleton />
+              </template>
+            </Suspense>
+          </section>
 
-      <!-- Finance Section -->
-      <section class="space-y-5 animate-fadeInUp" style="animation-delay: 0.1s;">
-        <!-- Accounts with Suspense -->
-        <Suspense>
-          <AccountStack
-            :accounts="accounts"
-            :loading="accountsLoading"
-            @account-click="handleAccountClick"
-            @add-click="handleAddAccount"
-            @view-all="handleViewAllAccounts"
-          />
-          <template #fallback>
-            <AccountStackSkeleton />
-          </template>
-        </Suspense>
+          <!-- Finance Section -->
+          <section class="space-y-5 animate-fadeInUp" style="animation-delay: 0.1s;">
+            <!-- Accounts with Suspense -->
+            <Suspense>
+              <AccountStack
+                :accounts="accounts"
+                :loading="accountsLoading"
+                @account-click="handleAccountClick"
+                @add-click="handleAddAccount"
+                @view-all="handleViewAllAccounts"
+              />
+              <template #fallback>
+                <AccountStackSkeleton />
+              </template>
+            </Suspense>
 
-        <!-- Debts with Suspense -->
-        <Suspense>
-          <DebtsSection
-            :debts="debts"
-            :currency="currency"
-            :loading="debtsLoading"
-            @debt-click="handleDebtClick"
-            @person-click="handlePersonClick"
-            @add-click="handleAddDebt"
-            @view-all="handleViewAllDebts"
-          />
-          <template #fallback>
-            <DebtsSectionSkeleton />
-          </template>
-        </Suspense>
-      </section>
+            <!-- Debts with Suspense -->
+            <Suspense>
+              <DebtsSection
+                :debts="debts"
+                :currency="currency"
+                :loading="debtsLoading"
+                @debt-click="handleDebtClick"
+                @person-click="handlePersonClick"
+                @add-click="handleAddDebt"
+                @view-all="handleViewAllDebts"
+              />
+              <template #fallback>
+                <DebtsSectionSkeleton />
+              </template>
+            </Suspense>
+          </section>
 
-      <!-- Utilities Section -->
-      <section class="animate-fadeInUp" style="animation-delay: 0.2s;">
-        <!-- Reminders (Subscriptions) with Suspense -->
-        <Suspense>
-          <RemindersSection
-            :reminders="reminders"
-            :currency="currency"
-            :loading="remindersLoading"
-            @reminder-click="handleReminderClick"
-            @add-click="handleAddReminder"
-            @view-all="handleViewAllReminders"
-          />
-          <template #fallback>
-            <RemindersSectionSkeleton />
-          </template>
-        </Suspense>
-      </section>
-    </main>
+          <!-- Utilities Section -->
+          <section class="animate-fadeInUp" style="animation-delay: 0.2s;">
+            <!-- Reminders (Subscriptions) with Suspense -->
+            <Suspense>
+              <RemindersSection
+                :reminders="reminders"
+                :currency="currency"
+                :loading="remindersLoading"
+                @reminder-click="handleReminderClick"
+                @add-click="handleAddReminder"
+                @view-all="handleViewAllReminders"
+              />
+              <template #fallback>
+                <RemindersSectionSkeleton />
+              </template>
+            </Suspense>
+          </section>
+        </main>
+      </PullToRefresh>
     </div>
-    </PullToRefresh>
 
     <!-- Bottom Navigation -->
     <BottomNav @add-click="handleAddTransaction" />
