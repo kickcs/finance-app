@@ -16,19 +16,11 @@
     <link rel="apple-touch-icon" href="/logo-192.png">
 
     <!-- DNS Prefetch / Preconnect for external services -->
-    <link rel="dns-prefetch" href="https://fonts.googleapis.com">
-    <link rel="dns-prefetch" href="https://fonts.gstatic.com">
     <link rel="dns-prefetch" href="https://app.ouro-finance.top">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://app.ouro-finance.top" crossorigin>
 
     <!-- Inter font is now self-hosted via @fontsource-variable/inter -->
-
-    <!-- Material Symbols - only used icons, display=block prevents FOUT
-         NOTE: when adding a new icon in code, also add its name to icon_names below -->
-    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL@24,400,0&icon_names=account_balance,account_balance_wallet,add,arrow_back,arrow_downward,arrow_forward,arrow_upward,build,calendar_month,calendar_today,cardiology,category,celebration,check,check_circle,checkroom,chevron_right,child_care,cleaning_services,close,cottage,credit_card,credit_score,currency_exchange,dark_mode,delete,diamond,directions_car,drag_indicator,edit,electric_bolt,error,expand_more,family_restroom,favorite,fitness_center,flag,flight,group,history,home,info,light_mode,list,local_bar,local_cafe,local_gas_station,local_shipping,logout,mark_email_read,medical_services,monetization_on,more_horiz,movie,music_note,notifications,payments,person,pets,phone_android,pie_chart,play_circle,receipt_long,redeem,remove,reply,reply_all,restaurant,savings,school,search,sentiment_neutral,sentiment_satisfied,sentiment_very_dissatisfied,sentiment_very_satisfied,shopping_basket,shopping_cart,smoking_rooms,sports_esports,star,subscriptions,swap_horiz,timer,trending_down,trending_up,tune,tv,visibility,visibility_off,volunteer_activism,warning,water_drop,wifi,work&display=block" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL@24,400,0&icon_names=account_balance,account_balance_wallet,add,arrow_back,arrow_downward,arrow_forward,arrow_upward,build,calendar_month,calendar_today,cardiology,category,celebration,check,check_circle,checkroom,chevron_right,child_care,cleaning_services,close,cottage,credit_card,credit_score,currency_exchange,dark_mode,delete,diamond,directions_car,drag_indicator,edit,electric_bolt,error,expand_more,family_restroom,favorite,fitness_center,flag,flight,group,history,home,info,light_mode,list,local_bar,local_cafe,local_gas_station,local_shipping,logout,mark_email_read,medical_services,monetization_on,more_horiz,movie,music_note,notifications,payments,person,pets,phone_android,pie_chart,play_circle,receipt_long,redeem,remove,reply,reply_all,restaurant,savings,school,search,sentiment_neutral,sentiment_satisfied,sentiment_very_dissatisfied,sentiment_very_satisfied,shopping_basket,shopping_cart,smoking_rooms,sports_esports,star,subscriptions,swap_horiz,timer,trending_down,trending_up,tune,tv,visibility,visibility_off,volunteer_activism,warning,water_drop,wifi,work&display=block"></noscript>
+    <!-- Icons provided by lucide-vue-next (bundled SVGs, no external requests) -->
 
     <!-- Prevent white flash on load + Initial loading skeleton -->
     <style>
@@ -103,24 +95,6 @@
         display: none;
       }
 
-      /* Prevent icon text flash (FOIT) while Material Symbols font loads */
-      /* Icons will be invisible until font is ready, preventing text flash */
-      .material-symbols-outlined {
-        font-family: 'Material Symbols Outlined', sans-serif;
-        font-weight: 400;
-        font-style: normal;
-        line-height: 1;
-        letter-spacing: normal;
-        text-transform: none;
-        display: inline-block;
-        white-space: nowrap;
-        word-wrap: normal;
-        direction: ltr;
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
-        text-rendering: optimizeLegibility;
-        font-feature-settings: 'liga';
-      }
     </style>
 
     <!-- Theme detection script - runs before render -->
