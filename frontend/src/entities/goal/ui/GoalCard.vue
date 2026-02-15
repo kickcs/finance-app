@@ -1,35 +1,38 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { UIcon, UProgressBar } from '@/shared/ui'
-import { formatCurrency } from '@/shared/lib/format/currency'
-import type { Goal } from '../model/types'
+import { computed } from 'vue';
+import { UIcon, UProgressBar } from '@/shared/ui';
+import { formatCurrency } from '@/shared/lib/format/currency';
+import type { Goal } from '../model/types';
 
 const props = defineProps<{
-  goal: Goal
-  currency?: string
-  compact?: boolean
-}>()
+  goal: Goal;
+  currency?: string;
+  compact?: boolean;
+}>();
 
 defineEmits<{
-  click: []
-}>()
+  click: [];
+}>();
 
 const progress = computed(() => {
-  if (props.goal.target_amount === 0) return 0
-  return Math.min((props.goal.current_amount / props.goal.target_amount) * 100, 100)
-})
+  if (props.goal.target_amount === 0) return 0;
+  return Math.min(
+    (props.goal.current_amount / props.goal.target_amount) * 100,
+    100,
+  );
+});
 
-const remaining = computed(() => {
-  return Math.max(props.goal.target_amount - props.goal.current_amount, 0)
-})
+const _remaining = computed(() => {
+  return Math.max(props.goal.target_amount - props.goal.current_amount, 0);
+});
 
 const daysLeft = computed(() => {
-  if (!props.goal.deadline) return null
-  const now = Date.now()
-  const deadlineMs = new Date(props.goal.deadline).getTime()
-  const diff = deadlineMs - now
-  return Math.max(Math.ceil(diff / (1000 * 60 * 60 * 24)), 0)
-})
+  if (!props.goal.deadline) return null;
+  const now = Date.now();
+  const deadlineMs = new Date(props.goal.deadline).getTime();
+  const diff = deadlineMs - now;
+  return Math.max(Math.ceil(diff / (1000 * 60 * 60 * 24)), 0);
+});
 </script>
 
 <template>
@@ -51,17 +54,15 @@ const daysLeft = computed(() => {
           backgroundColor: `${goal.color}20`,
         }"
       >
-        <UIcon
-          :name="goal.icon"
-          size="md"
-          :style="{ color: goal.color }"
-        />
+        <UIcon :name="goal.icon" size="md" :style="{ color: goal.color }" />
       </div>
 
       <!-- Content -->
       <div class="flex-1 min-w-0">
         <div class="flex items-center justify-between gap-2 mb-1">
-          <p class="font-semibold text-text-primary-light dark:text-text-primary-dark truncate">
+          <p
+            class="font-semibold text-text-primary-light dark:text-text-primary-dark truncate"
+          >
             {{ goal.name }}
           </p>
           <span

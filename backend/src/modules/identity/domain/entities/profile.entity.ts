@@ -1,5 +1,5 @@
 import { AggregateRoot } from '../../../../shared/domain/base';
-import { Email } from '../value-objects/email.vo';
+import type { Email } from '../value-objects/email.vo';
 import { Password } from '../value-objects/password.vo';
 import { ProfileCreatedEvent } from '../events/profile-created.event';
 import { ProfileUpdatedEvent } from '../events/profile-updated.event';

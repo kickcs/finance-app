@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { watch, onUnmounted } from 'vue'
+import { watch, onUnmounted } from 'vue';
 import {
   DialogRoot,
   DialogPortal,
@@ -7,30 +7,30 @@ import {
   DialogContent,
   DialogTitle,
   DialogClose,
-} from 'reka-ui'
-import { cn } from '@/shared/lib/utils'
-import { UIcon } from '../icon'
+} from 'reka-ui';
+import { cn } from '@/shared/lib/utils';
+import { UIcon } from '../icon';
 
 const props = withDefaults(
   defineProps<{
-    modelValue: boolean
-    title?: string
-    closeable?: boolean
+    modelValue: boolean;
+    title?: string;
+    closeable?: boolean;
   }>(),
   {
     closeable: true,
-  }
-)
+  },
+);
 
 const emit = defineEmits<{
-  'update:modelValue': [value: boolean]
-  close: []
-}>()
+  'update:modelValue': [value: boolean];
+  close: [];
+}>();
 
 function handleOpenChange(open: boolean) {
-  emit('update:modelValue', open)
+  emit('update:modelValue', open);
   if (!open) {
-    emit('close')
+    emit('close');
   }
 }
 
@@ -39,20 +39,21 @@ watch(
   () => props.modelValue,
   (isOpen) => {
     if (isOpen) {
-      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth
-      document.body.style.overflow = 'hidden'
-      document.body.style.paddingRight = `${scrollbarWidth}px`
+      const scrollbarWidth =
+        window.innerWidth - document.documentElement.clientWidth;
+      document.body.style.overflow = 'hidden';
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
     } else {
-      document.body.style.overflow = ''
-      document.body.style.paddingRight = ''
+      document.body.style.overflow = '';
+      document.body.style.paddingRight = '';
     }
-  }
-)
+  },
+);
 
 onUnmounted(() => {
-  document.body.style.overflow = ''
-  document.body.style.paddingRight = ''
-})
+  document.body.style.overflow = '';
+  document.body.style.paddingRight = '';
+});
 </script>
 
 <template>
@@ -62,16 +63,18 @@ onUnmounted(() => {
         class="fixed inset-0 z-50 bg-black/40 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 duration-150"
       />
       <DialogContent
-        :class="cn(
-          'fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2',
-          'bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark',
-          'data-[state=open]:animate-in data-[state=closed]:animate-out',
-          'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
-          'data-[state=closed]:zoom-out-98 data-[state=open]:zoom-in-98',
-          'data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%]',
-          'data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]',
-          'duration-150'
-        )"
+        :class="
+          cn(
+            'fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2',
+            'bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark',
+            'data-[state=open]:animate-in data-[state=closed]:animate-out',
+            'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
+            'data-[state=closed]:zoom-out-98 data-[state=open]:zoom-in-98',
+            'data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%]',
+            'data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]',
+            'duration-150',
+          )
+        "
         @escape-key-down="closeable ? undefined : $event.preventDefault()"
         @pointer-down-outside="closeable ? undefined : $event.preventDefault()"
         @interact-outside="closeable ? undefined : $event.preventDefault()"
@@ -90,11 +93,7 @@ onUnmounted(() => {
           <div v-else />
           <DialogClose
             v-if="closeable"
-            class="rounded-lg p-1.5 text-text-secondary-light dark:text-text-secondary-dark
-                   hover:bg-surface-light dark:hover:bg-surface-dark
-                   transition-colors duration-150
-                   focus:outline-none focus-visible:ring-2 focus-visible:ring-primary
-                   active:opacity-80"
+            class="rounded-lg p-1.5 text-text-secondary-light dark:text-text-secondary-dark hover:bg-surface-light dark:hover:bg-surface-dark transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary active:opacity-80"
           >
             <UIcon name="close" size="sm" />
             <span class="sr-only">Close</span>

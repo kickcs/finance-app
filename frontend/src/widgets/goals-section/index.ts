@@ -1,1 +1,1 @@
-export { default as GoalsSection } from './ui/GoalsSection.vue'
+export { default as GoalsSection } from './ui/GoalsSection.vue';

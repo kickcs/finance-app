@@ -1,19 +1,19 @@
 <script setup lang="ts">
-import { ref, computed, watchEffect } from 'vue'
-import { useVirtualizer } from '@tanstack/vue-virtual'
-import TransactionItem from './TransactionItem.vue'
-import { EmptyState } from '@/shared/ui'
-import type { Transaction } from '../model/types'
+import { ref, computed, watchEffect } from 'vue';
+import { useVirtualizer } from '@tanstack/vue-virtual';
+import TransactionItem from './TransactionItem.vue';
+import { EmptyState } from '@/shared/ui';
+import type { Transaction } from '../model/types';
 
 const props = withDefaults(
   defineProps<{
-    transactions: Transaction[]
-    currency?: string
-    hasNextPage?: boolean
-    isFetchingNextPage?: boolean
-    viewingAccountId?: string
-    getAccountName?: (id: string | null) => string
-    height?: string
+    transactions: Transaction[];
+    currency?: string;
+    hasNextPage?: boolean;
+    isFetchingNextPage?: boolean;
+    viewingAccountId?: string;
+    getAccountName?: (id: string | null) => string;
+    height?: string;
   }>(),
   {
     currency: 'UZS',
@@ -21,22 +21,22 @@ const props = withDefaults(
     isFetchingNextPage: false,
     height: 'calc(100vh - 280px)',
   },
-)
+);
 
 const emit = defineEmits<{
-  loadMore: []
-  transactionClick: [transaction: Transaction]
-}>()
+  loadMore: [];
+  transactionClick: [transaction: Transaction];
+}>();
 
-const parentRef = ref<HTMLElement | null>(null)
+const parentRef = ref<HTMLElement | null>(null);
 
 // Estimated height for transaction item
-const ITEM_HEIGHT = 72
-const LOADING_HEIGHT = 48
+const ITEM_HEIGHT = 72;
+const LOADING_HEIGHT = 48;
 
 const rowCount = computed(() =>
   props.hasNextPage ? props.transactions.length + 1 : props.transactions.length,
-)
+);
 
 const virtualizer = useVirtualizer(
   computed(() => ({
@@ -46,34 +46,30 @@ const virtualizer = useVirtualizer(
       index >= props.transactions.length ? LOADING_HEIGHT : ITEM_HEIGHT,
     overscan: 5,
   })),
-)
+);
 
-const virtualRows = computed(() => virtualizer.value.getVirtualItems())
-const totalSize = computed(() => virtualizer.value.getTotalSize())
+const virtualRows = computed(() => virtualizer.value.getVirtualItems());
+const totalSize = computed(() => virtualizer.value.getTotalSize());
 
 // Trigger load more when last item is visible
 watchEffect(() => {
-  const items = virtualRows.value
-  const [lastItem] = [...items].reverse()
+  const items = virtualRows.value;
+  const [lastItem] = [...items].reverse();
 
-  if (!lastItem) return
+  if (!lastItem) return;
 
   if (
     lastItem.index >= props.transactions.length - 1 &&
     props.hasNextPage &&
     !props.isFetchingNextPage
   ) {
-    emit('loadMore')
+    emit('loadMore');
   }
-})
+});
 </script>
 
 <template>
-  <div
-    ref="parentRef"
-    class="overflow-auto"
-    :style="{ height }"
-  >
+  <div ref="parentRef" class="overflow-auto" :style="{ height }">
     <div
       :style="{
         height: `${totalSize}px`,
@@ -118,8 +114,14 @@ watchEffect(() => {
           :transaction="transactions[virtualRow.index]"
           :currency="currency"
           :viewing-account-id="viewingAccountId"
-          :account-name="getAccountName?.(transactions[virtualRow.index].account_id)"
-          :to-account-name="getAccountName?.(transactions[virtualRow.index].to_account_id ?? null)"
+          :account-name="
+            getAccountName?.(transactions[virtualRow.index].account_id)
+          "
+          :to-account-name="
+            getAccountName?.(
+              transactions[virtualRow.index].to_account_id ?? null,
+            )
+          "
           @click="emit('transactionClick', transactions[virtualRow.index])"
         />
       </div>

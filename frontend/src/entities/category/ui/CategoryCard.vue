@@ -1,19 +1,19 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { UIcon } from '@/shared/ui'
-import type { Category } from '../model/types'
+import { computed } from 'vue';
+import { UIcon } from '@/shared/ui';
+import type { Category } from '../model/types';
 
 const props = defineProps<{
-  category: Category
-  selected?: boolean
-  size?: 'compact' | 'medium' | 'large'
-  role?: string
-  ariaSelected?: boolean
-}>()
+  category: Category;
+  selected?: boolean;
+  size?: 'compact' | 'medium' | 'large';
+  role?: string;
+  ariaSelected?: boolean;
+}>();
 
 defineEmits<{
-  click: []
-}>()
+  click: [];
+}>();
 
 const sizeConfig = computed(() => {
   switch (props.size) {
@@ -23,14 +23,14 @@ const sizeConfig = computed(() => {
         icon: 'w-7 h-7 rounded-md',
         iconSize: 'xs' as const,
         text: 'text-caption-xs leading-tight max-w-[44px]',
-      }
+      };
     case 'medium':
       return {
         container: 'gap-1 p-2 rounded-xl',
         icon: 'w-10 h-10 rounded-xl',
         iconSize: 'sm' as const,
         text: 'text-xs max-w-[72px]',
-      }
+      };
     case 'large':
     default:
       return {
@@ -38,9 +38,9 @@ const sizeConfig = computed(() => {
         icon: 'w-16 h-16 rounded-2xl',
         iconSize: 'xl' as const,
         text: 'text-xs max-w-[72px]',
-      }
+      };
   }
-})
+});
 </script>
 
 <template>
@@ -56,19 +56,20 @@ const sizeConfig = computed(() => {
         ? 'shadow-sm'
         : 'hover:bg-surface-light dark:hover:bg-surface-dark',
     ]"
-    :style="selected ? {
-      backgroundColor: `${category.color}15`,
-      boxShadow: `inset 0 0 0 3px ${category.color}`,
-      transform: 'scale(1.02)'
-    } : {}"
+    :style="
+      selected
+        ? {
+            backgroundColor: `${category.color}15`,
+            boxShadow: `inset 0 0 0 3px ${category.color}`,
+            transform: 'scale(1.02)',
+          }
+        : {}
+    "
     @click="$emit('click')"
   >
     <!-- Icon container -->
     <div
-      :class="[
-        'flex items-center justify-center',
-        sizeConfig.icon,
-      ]"
+      :class="['flex items-center justify-center', sizeConfig.icon]"
       :style="{
         backgroundColor: `${category.color}25`,
       }"
@@ -82,10 +83,7 @@ const sizeConfig = computed(() => {
 
     <!-- Label -->
     <span
-      :class="[
-        'font-medium truncate text-center',
-        sizeConfig.text,
-      ]"
+      :class="['font-medium truncate text-center', sizeConfig.text]"
       :style="selected ? { color: category.color } : {}"
     >
       {{ category.name }}

@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import { UIconSelector } from '@/shared/ui'
-import { ACCOUNT_ICONS } from '@/entities/account'
+import { UIconSelector } from '@/shared/ui';
+import { ACCOUNT_ICONS } from '@/entities/account';
 
 defineProps<{
-  modelValue: string
-  color?: string
-}>()
+  modelValue: string;
+  color?: string;
+}>();
 
 defineEmits<{
-  'update:modelValue': [value: string]
-}>()
+  'update:modelValue': [value: string];
+}>();
 </script>
 
 <template>

@@ -11,7 +11,7 @@ export const CATEGORY_COLORS = [
   '#6366f1', // indigo
   '#14b8a6', // teal
   '#64748b', // slate
-]
+];
 
 export const CATEGORY_ICONS = [
   // Common expense
@@ -53,4 +53,4 @@ export const CATEGORY_ICONS = [
   'shopping_cart',
   'local_shipping',
   'build',
-]
+];

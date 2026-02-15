@@ -21,6 +21,7 @@ export class GetTransactionsByAccountPaginatedHandler implements IQueryHandler<G
 
   async execute(query: GetTransactionsByAccountPaginatedQuery) {
     const account = await this.accountRepository.findById(query.accountId);
+    // eslint-disable-next-line @typescript-eslint/prefer-optional-chain -- explicit null check for security
     if (!account || account.userId !== query.userId) {
       throw new ForbiddenException('Access denied');
     }

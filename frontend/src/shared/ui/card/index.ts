@@ -1,1 +1,1 @@
-export { default as UCard } from './UCard.vue'
+export { default as UCard } from './UCard.vue';

@@ -1,5 +1,5 @@
-import { Account } from '../aggregates/account';
-import { Transaction } from '../aggregates/transaction';
+import type { Account } from '../aggregates/account';
+import type { Transaction } from '../aggregates/transaction';
 
 /**
  * Balance Calculation Domain Service

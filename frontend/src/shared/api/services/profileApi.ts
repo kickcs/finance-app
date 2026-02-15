@@ -1,17 +1,17 @@
-import { http } from '../http'
-import type { Profile } from '../database.types'
+import { http } from '../http';
+import type { Profile } from '../database.types';
 
 // Response type from NestJS backend (camelCase)
 interface ProfileResponse {
-  id: string
-  name: string | null
-  email: string | null
-  currency: string
-  hasCompletedOnboarding: boolean
-  defaultAccountId: string | null
-  createdAt: string
-  isDemo: boolean
-  demoExpiresAt: string | null
+  id: string;
+  name: string | null;
+  email: string | null;
+  currency: string;
+  hasCompletedOnboarding: boolean;
+  defaultAccountId: string | null;
+  createdAt: string;
+  isDemo: boolean;
+  demoExpiresAt: string | null;
 }
 
 function transformProfile(profile: ProfileResponse): Profile {
@@ -25,24 +25,27 @@ function transformProfile(profile: ProfileResponse): Profile {
     created_at: profile.createdAt,
     is_demo: profile.isDemo,
     demo_expires_at: profile.demoExpiresAt,
-  }
+  };
 }
 
 export const profileApi = {
   async getById(_userId: string): Promise<Profile | null> {
     try {
       // Backend gets userId from JWT token
-      const data = await http.get<ProfileResponse>('/profiles/me')
-      return transformProfile(data)
+      const data = await http.get<ProfileResponse>('/profiles/me');
+      return transformProfile(data);
     } catch {
-      return null
+      return null;
     }
   },
 
   async getOrCreate(_userId: string): Promise<Profile> {
     // Backend gets userId from JWT token
-    const data = await http.post<ProfileResponse>('/profiles/get-or-create', {})
-    return transformProfile(data)
+    const data = await http.post<ProfileResponse>(
+      '/profiles/get-or-create',
+      {},
+    );
+    return transformProfile(data);
   },
 
   async update(_userId: string, updates: Partial<Profile>): Promise<Profile> {
@@ -53,7 +56,7 @@ export const profileApi = {
       currency: updates.currency,
       hasCompletedOnboarding: updates.has_completed_onboarding,
       defaultAccountId: updates.default_account_id,
-    })
-    return transformProfile(data)
+    });
+    return transformProfile(data);
   },
-}
+};

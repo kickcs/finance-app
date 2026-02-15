@@ -25,7 +25,7 @@ export class RefreshHandler implements ICommandHandler<RefreshCommand> {
 
       const profile = await this.profileRepository.findById(payload.sub);
 
-      if (!profile || !profile.refreshToken) {
+      if (!profile?.refreshToken) {
         throw new UnauthorizedException('Invalid refresh token');
       }
 

@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import { UIcon } from '@/shared/ui'
+import { UIcon } from '@/shared/ui';
 
 defineProps<{
-  modelValue: string
-  colors: readonly string[]
-  label?: string
-}>()
+  modelValue: string;
+  colors: readonly string[];
+  label?: string;
+}>();
 
 defineEmits<{
-  'update:modelValue': [value: string]
-}>()
+  'update:modelValue': [value: string];
+}>();
 </script>
 
 <template>
@@ -28,7 +28,8 @@ defineEmits<{
         :class="[
           'w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200',
           'hover:scale-110 active:scale-95',
-          modelValue === color && 'ring-2 ring-offset-2 dark:ring-offset-background-dark',
+          modelValue === color &&
+            'ring-2 ring-offset-2 dark:ring-offset-background-dark',
         ]"
         :style="{
           backgroundColor: color,

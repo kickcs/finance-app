@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { UIcon, Skeleton } from '@/shared/ui'
+import { UIcon, Skeleton } from '@/shared/ui';
 </script>
 
 <template>
@@ -7,7 +7,9 @@ import { UIcon, Skeleton } from '@/shared/ui'
     <!-- Header -->
     <div class="flex items-center justify-between px-1">
       <div class="flex items-center gap-2">
-        <div class="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+        <div
+          class="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center"
+        >
           <UIcon name="account_balance_wallet" size="sm" class="text-primary" />
         </div>
         <Skeleton class="h-5 w-16 rounded" />
@@ -17,9 +19,7 @@ import { UIcon, Skeleton } from '@/shared/ui'
 
     <!-- Account Cards Skeleton -->
     <div
-      class="p-3 rounded-2xl bg-card-light/50 dark:bg-card-dark/50
-             border border-white/30 dark:border-white/5
-             space-y-2"
+      class="p-3 rounded-2xl bg-card-light/50 dark:bg-card-dark/50 border border-white/30 dark:border-white/5 space-y-2"
     >
       <Skeleton v-for="i in 2" :key="i" class="h-[72px] rounded-xl" />
 

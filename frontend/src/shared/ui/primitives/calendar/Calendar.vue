@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { DateValue } from '@internationalized/date'
+import type { DateValue } from '@internationalized/date';
 import {
   CalendarCell,
   CalendarCellTrigger,
@@ -13,20 +13,20 @@ import {
   CalendarNext,
   CalendarPrev,
   CalendarRoot,
-} from 'reka-ui'
-import { type HTMLAttributes } from 'vue'
-import { cn } from '@/shared/lib/utils'
+} from 'reka-ui';
+import { type HTMLAttributes } from 'vue';
+import { cn } from '@/shared/lib/utils';
 
 const props = defineProps<{
-  modelValue?: DateValue
-  class?: HTMLAttributes['class']
-  locale?: string
-  maxValue?: DateValue
-}>()
+  modelValue?: DateValue;
+  class?: HTMLAttributes['class'];
+  locale?: string;
+  maxValue?: DateValue;
+}>();
 
 const emit = defineEmits<{
-  'update:modelValue': [value: DateValue | undefined]
-}>()
+  'update:modelValue': [value: DateValue | undefined];
+}>();
 </script>
 
 <template>
@@ -36,9 +36,13 @@ const emit = defineEmits<{
     :locale="locale"
     :max-value="maxValue"
     :class="cn('p-3', props.class)"
-    @update:model-value="emit('update:modelValue', $event as DateValue | undefined)"
+    @update:model-value="
+      emit('update:modelValue', $event as DateValue | undefined)
+    "
   >
-    <CalendarHeader class="relative flex w-full items-center justify-between pt-1">
+    <CalendarHeader
+      class="relative flex w-full items-center justify-between pt-1"
+    >
       <CalendarPrev
         class="inline-flex size-7 items-center justify-center rounded-md hover:bg-surface-light dark:hover:bg-surface-dark transition-colors"
       >

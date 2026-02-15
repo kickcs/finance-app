@@ -1,4 +1,4 @@
-import { Account } from '../../domain/aggregates/account';
+import type { Account } from '../../domain/aggregates/account';
 
 export function toAccountResponse(account: Account) {
   return {

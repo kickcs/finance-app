@@ -1,56 +1,62 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { UIcon, UProgressBar } from '@/shared/ui'
-import { formatCurrency } from '@/shared/lib/format/currency'
-import { formatDate } from '@/shared/lib/format/date'
-import type { Debt } from '../model/types'
-import { DEBT_DIRECTION_COLORS } from '../model/types'
+import { computed } from 'vue';
+import { UIcon, UProgressBar } from '@/shared/ui';
+import { formatCurrency } from '@/shared/lib/format/currency';
+import { formatDate } from '@/shared/lib/format/date';
+import type { Debt } from '../model/types';
+import { DEBT_DIRECTION_COLORS } from '../model/types';
 
 const props = defineProps<{
-  debt: Debt
-  compact?: boolean
-}>()
+  debt: Debt;
+  compact?: boolean;
+}>();
 
 defineEmits<{
-  click: []
-}>()
+  click: [];
+}>();
 
 // Use debt's own currency
-const debtCurrency = computed(() => props.debt.currency || 'UZS')
+const debtCurrency = computed(() => props.debt.currency || 'UZS');
 
 const progress = computed(() => {
-  if (props.debt.total_amount === 0) return 0
-  const paid = props.debt.total_amount - props.debt.remaining_amount
-  return Math.min((paid / props.debt.total_amount) * 100, 100)
-})
+  if (props.debt.total_amount === 0) return 0;
+  const paid = props.debt.total_amount - props.debt.remaining_amount;
+  return Math.min((paid / props.debt.total_amount) * 100, 100);
+});
 
-const paid = computed(() => {
-  return props.debt.total_amount - props.debt.remaining_amount
-})
+const _paid = computed(() => {
+  return props.debt.total_amount - props.debt.remaining_amount;
+});
 
 const nextPaymentFormatted = computed(() => {
-  if (!props.debt.next_payment_date) return null
-  return formatDate(new Date(props.debt.next_payment_date).getTime(), { format: 'short' })
-})
+  if (!props.debt.next_payment_date) return null;
+  return formatDate(new Date(props.debt.next_payment_date).getTime(), {
+    format: 'short',
+  });
+});
 
 const isOverdue = computed(() => {
-  if (!props.debt.next_payment_date) return false
-  return new Date(props.debt.next_payment_date).getTime() < Date.now()
-})
+  if (!props.debt.next_payment_date) return false;
+  return new Date(props.debt.next_payment_date).getTime() < Date.now();
+});
 
 // Get display name - prefer person_name over name
 const displayName = computed(() => {
-  return props.debt.person_name || props.debt.name
-})
+  return props.debt.person_name || props.debt.name;
+});
 
 // Get debt type info
-const isGiven = computed(() => props.debt.debt_type === 'given')
-const debtColor = computed(() => DEBT_DIRECTION_COLORS[props.debt.debt_type] || '#3b82f6')
-const debtIcon = computed(() => isGiven.value ? 'arrow_upward' : 'arrow_downward')
-const debtLabel = computed(() => isGiven.value ? 'Вам должны' : 'Вы должны')
+const isGiven = computed(() => props.debt.debt_type === 'given');
+const debtColor = computed(
+  () => DEBT_DIRECTION_COLORS[props.debt.debt_type] || '#3b82f6',
+);
+const debtIcon = computed(() =>
+  isGiven.value ? 'arrow_upward' : 'arrow_downward',
+);
+const debtLabel = computed(() => (isGiven.value ? 'Вам должны' : 'Вы должны'));
 
 // Check if debt is from split expense
-const isFromSplit = computed(() => !!props.debt.source_transaction_id)
+const isFromSplit = computed(() => !!props.debt.source_transaction_id);
 </script>
 
 <template>
@@ -83,33 +89,41 @@ const isFromSplit = computed(() => !!props.debt.source_transaction_id)
       <div class="flex-1 min-w-0">
         <div class="flex items-center justify-between gap-2">
           <div class="min-w-0 flex-1">
-            <p class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark truncate">
+            <p
+              class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark truncate"
+            >
               {{ displayName }}
             </p>
-            <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark flex items-center gap-1">
+            <p
+              class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark flex items-center gap-1"
+            >
               {{ debtLabel }}
-              <span v-if="isFromSplit" class="inline-flex items-center gap-0.5 text-primary">
+              <span
+                v-if="isFromSplit"
+                class="inline-flex items-center gap-0.5 text-primary"
+              >
                 <UIcon name="group" size="xs" />
               </span>
             </p>
           </div>
           <!-- Right side: amount + badge -->
           <div class="text-right shrink-0">
-            <p class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark">
+            <p
+              class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark"
+            >
               {{ formatCurrency(debt.remaining_amount, debtCurrency) }}
             </p>
             <!-- Closed badge or date -->
-            <span
-              v-if="debt.is_closed"
-              class="text-xs text-success"
-            >
+            <span v-if="debt.is_closed" class="text-xs text-success">
               Погашен
             </span>
             <span
               v-else-if="nextPaymentFormatted"
               class="text-xs"
               :class="[
-                isOverdue ? 'text-danger' : 'text-text-tertiary-light dark:text-text-tertiary-dark'
+                isOverdue
+                  ? 'text-danger'
+                  : 'text-text-tertiary-light dark:text-text-tertiary-dark',
               ]"
             >
               {{ nextPaymentFormatted }}

@@ -1,46 +1,48 @@
-import { ref } from 'vue'
-import { useReminders, reminderQueryKeys } from '@/entities/reminder'
-import type { Reminder } from '@/shared/api/database.types'
-import { queryClient } from '@/shared/api/queryClient'
+import { ref } from 'vue';
+import { useReminders, reminderQueryKeys } from '@/entities/reminder';
+import type { Reminder } from '@/shared/api/database.types';
+import { queryClient } from '@/shared/api/queryClient';
 
 export function useEditReminder(userId: string) {
-  const { updateReminder, deleteReminder } = useReminders(userId)
+  const { updateReminder, deleteReminder } = useReminders(userId);
 
-  const isUpdating = ref(false)
-  const isDeleting = ref(false)
-  const error = ref<string | null>(null)
+  const isUpdating = ref(false);
+  const isDeleting = ref(false);
+  const error = ref<string | null>(null);
 
   async function update(reminderId: string, updates: Partial<Reminder>) {
-    isUpdating.value = true
-    error.value = null
+    isUpdating.value = true;
+    error.value = null;
 
     try {
-      await updateReminder(reminderId, updates)
-      return true
+      await updateReminder(reminderId, updates);
+      return true;
     } catch (e) {
-      error.value = 'Не удалось обновить подписку'
-      console.error('Failed to update reminder:', e)
-      return false
+      error.value = 'Не удалось обновить подписку';
+      console.error('Failed to update reminder:', e);
+      return false;
     } finally {
-      isUpdating.value = false
+      isUpdating.value = false;
     }
   }
 
   async function remove(reminderId: string) {
-    isDeleting.value = true
-    error.value = null
+    isDeleting.value = true;
+    error.value = null;
 
     try {
-      await deleteReminder(reminderId)
+      await deleteReminder(reminderId);
       // Invalidate cache
-      await queryClient.invalidateQueries({ queryKey: reminderQueryKeys.list(userId) })
-      return true
+      await queryClient.invalidateQueries({
+        queryKey: reminderQueryKeys.list(userId),
+      });
+      return true;
     } catch (e) {
-      error.value = 'Не удалось удалить подписку'
-      console.error('Failed to delete reminder:', e)
-      return false
+      error.value = 'Не удалось удалить подписку';
+      console.error('Failed to delete reminder:', e);
+      return false;
     } finally {
-      isDeleting.value = false
+      isDeleting.value = false;
     }
   }
 
@@ -50,5 +52,5 @@ export function useEditReminder(userId: string) {
     error,
     update,
     remove,
-  }
+  };
 }

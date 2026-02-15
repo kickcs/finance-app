@@ -1,44 +1,47 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { UInput, UButton, UTabs } from '@/shared/ui'
-import { ACCOUNT_COLORS } from '@/entities/account'
-import { FREQUENCY_LABELS } from '@/entities/reminder'
-import { getTodayISO, isPastDate } from '@/shared/lib/date'
-import IconSelector from './IconSelector.vue'
-import ColorPicker from './ColorPicker.vue'
-import type { ReminderFormData } from '../model/useCreateReminder'
+import { computed } from 'vue';
+import { UInput, UButton, UTabs } from '@/shared/ui';
+import { FREQUENCY_LABELS } from '@/entities/reminder';
+import { getTodayISO, isPastDate } from '@/shared/lib/date';
+import IconSelector from './IconSelector.vue';
+import ColorPicker from './ColorPicker.vue';
+import type { ReminderFormData } from '../model/useCreateReminder';
 
 const props = defineProps<{
-  formData: ReminderFormData
-  isSubmitting?: boolean
-  error?: string | null
-  currency: string
-}>()
+  formData: ReminderFormData;
+  isSubmitting?: boolean;
+  error?: string | null;
+  currency: string;
+}>();
 
 const emit = defineEmits<{
-  'update:formData': [value: ReminderFormData]
-  submit: []
-}>()
+  'update:formData': [value: ReminderFormData];
+  submit: [];
+}>();
 
 const frequencyTabs = Object.entries(FREQUENCY_LABELS).map(([id, label]) => ({
   id,
   label,
-}))
+}));
 
-function updateField<K extends keyof ReminderFormData>(field: K, value: ReminderFormData[K]) {
-  emit('update:formData', { ...props.formData, [field]: value })
+function updateField<K extends keyof ReminderFormData>(
+  field: K,
+  value: ReminderFormData[K],
+) {
+  emit('update:formData', { ...props.formData, [field]: value });
 }
 
-const today = computed(() => getTodayISO())
+const today = computed(() => getTodayISO());
 
 const dateError = computed(() => {
   if (props.formData.next_date && isPastDate(props.formData.next_date)) {
-    return 'Дата не может быть в прошлом'
+    return 'Дата не может быть в прошлом';
   }
-  return null
-})
+  return null;
+});
 
-const isFormValid = props.formData.name.trim().length > 0 && props.formData.amount > 0
+const _isFormValid =
+  props.formData.name.trim().length > 0 && props.formData.amount > 0;
 </script>
 
 <template>
@@ -52,7 +55,6 @@ const isFormValid = props.formData.name.trim().length > 0 && props.formData.amou
       :model-value="formData.name"
       label="Название подписки"
       placeholder="Netflix, Spotify, Яндекс Плюс..."
-     
       @update:model-value="updateField('name', $event as string)"
     />
 
@@ -69,13 +71,17 @@ const isFormValid = props.formData.name.trim().length > 0 && props.formData.amou
 
     <!-- Frequency -->
     <div class="space-y-3">
-      <label class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">
+      <label
+        class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark"
+      >
         Частота оплаты
       </label>
       <UTabs
         :items="frequencyTabs"
         :model-value="formData.frequency"
-        @update:model-value="updateField('frequency', $event as ReminderFormData['frequency'])"
+        @update:model-value="
+          updateField('frequency', $event as ReminderFormData['frequency'])
+        "
       />
     </div>
 
@@ -84,7 +90,6 @@ const isFormValid = props.formData.name.trim().length > 0 && props.formData.amou
       :model-value="formData.next_date"
       label="Дата следующего платежа"
       type="date"
-     
       :min="today"
       :error="dateError ?? undefined"
       @update:model-value="updateField('next_date', $event as string)"

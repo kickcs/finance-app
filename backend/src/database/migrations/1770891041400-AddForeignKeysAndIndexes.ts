@@ -1,4 +1,4 @@
-import { MigrationInterface, QueryRunner } from 'typeorm';
+import type { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class AddForeignKeysAndIndexes1770891041400 implements MigrationInterface {
   name = 'AddForeignKeysAndIndexes1770891041400';

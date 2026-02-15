@@ -1,1 +1,1 @@
-export { default as ChangelogPage } from './ChangelogPage.vue'
+export { default as ChangelogPage } from './ChangelogPage.vue';

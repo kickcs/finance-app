@@ -21,7 +21,7 @@ export class LoginHandler implements ICommandHandler<LoginCommand> {
       command.email.toLowerCase(),
     );
 
-    if (!profile || !profile.password) {
+    if (!profile?.password) {
       throw new UnauthorizedException('Invalid credentials');
     }
 

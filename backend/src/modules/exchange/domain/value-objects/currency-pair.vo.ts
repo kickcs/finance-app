@@ -15,14 +15,18 @@ export class CurrencyPair extends ValueObject<CurrencyPairProps> {
   }
 
   static create(baseCurrency: string, targetCurrency: string): CurrencyPair {
+    if (!baseCurrency || !targetCurrency) {
+      throw new Error('Currency codes cannot be null or empty');
+    }
+
     const base = baseCurrency.toUpperCase().trim();
     const target = targetCurrency.toUpperCase().trim();
 
-    if (!base || base.length !== 3) {
+    if (base.length !== 3) {
       throw new Error(`Invalid base currency code: ${baseCurrency}`);
     }
 
-    if (!target || target.length !== 3) {
+    if (target.length !== 3) {
       throw new Error(`Invalid target currency code: ${targetCurrency}`);
     }
 

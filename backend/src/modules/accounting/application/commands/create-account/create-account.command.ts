@@ -1,4 +1,4 @@
-import { AccountTypeFields } from '../../../domain/aggregates/account/account.aggregate';
+import type { AccountTypeFields } from '../../../domain/aggregates/account/account.aggregate';
 
 export interface BalanceInput {
   currency: string;

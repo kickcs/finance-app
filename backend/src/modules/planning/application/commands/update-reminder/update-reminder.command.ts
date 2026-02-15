@@ -1,4 +1,4 @@
-import { ReminderFrequency } from '../../../domain/aggregates/reminder';
+import type { ReminderFrequency } from '../../../domain/aggregates/reminder';
 
 export class UpdateReminderCommand {
   constructor(

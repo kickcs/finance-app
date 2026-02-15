@@ -1,4 +1,4 @@
-import { Debt } from '../aggregates/debt';
+import type { Debt } from '../aggregates/debt';
 
 export const DEBT_REPOSITORY = Symbol('DEBT_REPOSITORY');
 

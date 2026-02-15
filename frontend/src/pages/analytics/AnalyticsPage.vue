@@ -1,15 +1,18 @@
 <script setup lang="ts">
-import { computed, inject, onMounted } from 'vue'
-import type { Ref } from 'vue'
-import type { User } from '@/shared/api/composables/useAuth'
-import { useRouter, useRoute } from 'vue-router'
-import { AppHeader } from '@/widgets/header'
-import { BottomNav } from '@/widgets/bottom-nav'
-import { UTabs, UCard, UIcon, UProgressBar, Skeleton } from '@/shared/ui'
-import { useAnalyticsStats, type CategoryBreakdown } from '@/entities/transaction'
-import { useAccounts } from '@/entities/account'
-import { useDebts } from '@/entities/debt'
-import { formatCurrency, COMPACT_FORMAT } from '@/shared/lib/format/currency'
+import { computed, inject, onMounted } from 'vue';
+import type { Ref } from 'vue';
+import type { User } from '@/shared/api/composables/useAuth';
+import { useRouter, useRoute } from 'vue-router';
+import { AppHeader } from '@/widgets/header';
+import { BottomNav } from '@/widgets/bottom-nav';
+import { UTabs, UCard, UIcon, UProgressBar, Skeleton } from '@/shared/ui';
+import {
+  useAnalyticsStats,
+  type CategoryBreakdown,
+} from '@/entities/transaction';
+import { useAccounts } from '@/entities/account';
+import { useDebts } from '@/entities/debt';
+import { formatCurrency, COMPACT_FORMAT } from '@/shared/lib/format/currency';
 import {
   ModeToggle,
   DateRangePicker,
@@ -18,17 +21,19 @@ import {
   type LitePeriod,
   type TransactionType,
   type CategoryStat,
-} from '@/features/analytics-filters'
+} from '@/features/analytics-filters';
 
-const router = useRouter()
-const route = useRoute()
+const router = useRouter();
+const route = useRoute();
 
 // Get user from provide/inject
-const user = inject<Ref<User | null>>('user')
-const userId = computed(() => user?.value?.id ?? '')
+const user = inject<Ref<User | null>>('user');
+const userId = computed(() => user?.value?.id ?? '');
 
 // Get user currency from localStorage
-const currency = computed(() => localStorage.getItem('selectedCurrency') || 'UZS')
+const currency = computed(
+  () => localStorage.getItem('selectedCurrency') || 'UZS',
+);
 
 // Analytics filters
 const {
@@ -39,18 +44,18 @@ const {
   setCustomDateRange,
   toggleAccount,
   clearAccountFilters,
-} = useAnalyticsFilters()
+} = useAnalyticsFilters();
 
 // Convert date range to ISO strings for API
 const startDateStr = computed(() => {
-  const d = effectiveDateRange.value.startDate
-  return d ? d.toISOString().split('T')[0] : null
-})
+  const d = effectiveDateRange.value.startDate;
+  return d ? d.toISOString().split('T')[0] : null;
+});
 
 const endDateStr = computed(() => {
-  const d = effectiveDateRange.value.endDate
-  return d ? d.toISOString().split('T')[0] : null
-})
+  const d = effectiveDateRange.value.endDate;
+  return d ? d.toISOString().split('T')[0] : null;
+});
 
 // Use analytics API for server-side calculations
 const {
@@ -62,13 +67,13 @@ const {
   startDate: startDateStr,
   endDate: endDateStr,
   accountIds: computed(() => filters.value.selectedAccountIds),
-})
+});
 
 // Load accounts for filter chips
-const { accounts } = useAccounts(userId)
+const { accounts } = useAccounts(userId);
 
 // Load debts for debt summary
-const { debts, isLoading: debtsLoading } = useDebts(userId)
+const { debts, isLoading: debtsLoading } = useDebts(userId);
 
 // Period tabs
 const periodItems = [
@@ -76,43 +81,45 @@ const periodItems = [
   { id: 'month-start', label: 'С начала месяца' },
   { id: 'year-start', label: 'С начала года' },
   { id: 'custom', label: 'Свой период' },
-]
+];
 
 // Type tabs with "Все"
 const typeItems = [
   { id: 'all', label: 'Все' },
   { id: 'expense', label: 'Расходы' },
   { id: 'income', label: 'Доходы' },
-]
+];
 
 // Show custom date picker
-const showCustomDatePicker = computed(() => filters.value.period === 'custom')
+const showCustomDatePicker = computed(() => filters.value.period === 'custom');
 
 // Debt summaries
 const totalOwedToMe = computed(() => {
   return debts.value
     .filter((d) => d.debt_type === 'given' && !d.is_closed)
-    .reduce((sum, d) => sum + d.remaining_amount, 0)
-})
+    .reduce((sum, d) => sum + d.remaining_amount, 0);
+});
 
 const totalIOwe = computed(() => {
   return debts.value
     .filter((d) => d.debt_type === 'taken' && !d.is_closed)
-    .reduce((sum, d) => sum + d.remaining_amount, 0)
-})
+    .reduce((sum, d) => sum + d.remaining_amount, 0);
+});
 
 // Category statistics from server-side calculation
 const categoryStats = computed<CategoryStat[]>(() => {
   // Filter by type
-  let filtered: CategoryBreakdown[]
+  let filtered: CategoryBreakdown[];
   if (filters.value.type === 'all') {
-    filtered = categoryBreakdown.value
+    filtered = categoryBreakdown.value;
   } else {
-    filtered = categoryBreakdown.value.filter((c) => c.type === filters.value.type)
+    filtered = categoryBreakdown.value.filter(
+      (c) => c.type === filters.value.type,
+    );
   }
 
   // Calculate total for percentages
-  const total = filtered.reduce((sum, c) => sum + c.amount, 0)
+  const total = filtered.reduce((sum, c) => sum + c.amount, 0);
 
   // Map to CategoryStat format - use category details from API response
   return filtered
@@ -124,8 +131,8 @@ const categoryStats = computed<CategoryStat[]>(() => {
       amount: c.amount,
       percent: total > 0 ? (c.amount / total) * 100 : 0,
     }))
-    .sort((a, b) => b.amount - a.amount)
-})
+    .sort((a, b) => b.amount - a.amount);
+});
 
 // Prepare filter chips data
 const accountChips = computed(() => {
@@ -134,34 +141,36 @@ const accountChips = computed(() => {
     name: acc.name,
     icon: acc.icon,
     color: acc.color,
-  }))
-})
+  }));
+});
 
 // Handlers
 function handlePeriodChange(value: string | number) {
-  setPeriod(value as LitePeriod)
+  setPeriod(value as LitePeriod);
 }
 
 function handleTypeChange(value: string | number) {
-  setType(value as TransactionType)
+  setType(value as TransactionType);
 }
 
 function handleAddTransaction() {
-  router.push('/transactions/new')
+  router.push('/transactions/new');
 }
 
 // Read initial type filter from query param
 onMounted(() => {
-  const queryType = route.query.type as string | undefined
+  const queryType = route.query.type as string | undefined;
   if (queryType === 'income' || queryType === 'expense') {
-    setType(queryType)
+    setType(queryType);
   }
-})
+});
 </script>
 
 <template>
-  <div class="min-h-screen bg-background-light dark:bg-background-dark"
-       :style="{ paddingBottom: 'calc(7rem + var(--safe-area-inset-bottom))' }">
+  <div
+    class="min-h-screen bg-background-light dark:bg-background-dark"
+    :style="{ paddingBottom: 'calc(7rem + var(--safe-area-inset-bottom))' }"
+  >
     <!-- Header with Mode Toggle -->
     <AppHeader title="Аналитика">
       <template #actions>
@@ -209,17 +218,21 @@ onMounted(() => {
         <UCard class="p-4">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-xl bg-danger/10 flex items-center justify-center">
-                <UIcon
-                  name="trending_down"
-                  size="md"
-                  class="text-danger"
-                />
+              <div
+                class="w-10 h-10 rounded-xl bg-danger/10 flex items-center justify-center"
+              >
+                <UIcon name="trending_down" size="md" class="text-danger" />
               </div>
-              <span class="text-text-secondary-light dark:text-text-secondary-dark">Расходы</span>
+              <span
+                class="text-text-secondary-light dark:text-text-secondary-dark"
+                >Расходы</span
+              >
             </div>
             <Skeleton v-if="analyticsLoading" class="h-7 w-32 rounded" />
-            <span v-else class="text-xl font-bold text-text-primary-light dark:text-text-primary-dark">
+            <span
+              v-else
+              class="text-xl font-bold text-text-primary-light dark:text-text-primary-dark"
+            >
               {{ formatCurrency(totalExpense, currency, COMPACT_FORMAT) }}
             </span>
           </div>
@@ -228,17 +241,21 @@ onMounted(() => {
         <UCard class="p-4">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-xl bg-success/10 flex items-center justify-center">
-                <UIcon
-                  name="trending_up"
-                  size="md"
-                  class="text-success"
-                />
+              <div
+                class="w-10 h-10 rounded-xl bg-success/10 flex items-center justify-center"
+              >
+                <UIcon name="trending_up" size="md" class="text-success" />
               </div>
-              <span class="text-text-secondary-light dark:text-text-secondary-dark">Доходы</span>
+              <span
+                class="text-text-secondary-light dark:text-text-secondary-dark"
+                >Доходы</span
+              >
             </div>
             <Skeleton v-if="analyticsLoading" class="h-7 w-32 rounded" />
-            <span v-else class="text-xl font-bold text-text-primary-light dark:text-text-primary-dark">
+            <span
+              v-else
+              class="text-xl font-bold text-text-primary-light dark:text-text-primary-dark"
+            >
               {{ formatCurrency(totalIncome, currency, COMPACT_FORMAT) }}
             </span>
           </div>
@@ -250,7 +267,9 @@ onMounted(() => {
         v-if="debtsLoading || totalOwedToMe > 0 || totalIOwe > 0"
         class="space-y-3"
       >
-        <h2 class="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark">
+        <h2
+          class="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark"
+        >
           Долги
         </h2>
 
@@ -268,43 +287,51 @@ onMounted(() => {
         </template>
 
         <template v-else>
-          <UCard
-            v-if="totalOwedToMe > 0"
-            class="p-4"
-          >
+          <UCard v-if="totalOwedToMe > 0" class="p-4">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-debt-given-light flex items-center justify-center">
+                <div
+                  class="w-10 h-10 rounded-xl bg-debt-given-light flex items-center justify-center"
+                >
                   <UIcon
                     name="arrow_upward"
                     size="md"
                     class="text-debt-given"
                   />
                 </div>
-                <span class="text-text-secondary-light dark:text-text-secondary-dark">Мне должны</span>
+                <span
+                  class="text-text-secondary-light dark:text-text-secondary-dark"
+                  >Мне должны</span
+                >
               </div>
-              <span class="text-xl font-bold text-text-primary-light dark:text-text-primary-dark">
+              <span
+                class="text-xl font-bold text-text-primary-light dark:text-text-primary-dark"
+              >
                 {{ formatCurrency(totalOwedToMe, currency, COMPACT_FORMAT) }}
               </span>
             </div>
           </UCard>
 
-          <UCard
-            v-if="totalIOwe > 0"
-            class="p-4"
-          >
+          <UCard v-if="totalIOwe > 0" class="p-4">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-debt-received-light flex items-center justify-center">
+                <div
+                  class="w-10 h-10 rounded-xl bg-debt-received-light flex items-center justify-center"
+                >
                   <UIcon
                     name="arrow_downward"
                     size="md"
                     class="text-debt-received"
                   />
                 </div>
-                <span class="text-text-secondary-light dark:text-text-secondary-dark">Я должен</span>
+                <span
+                  class="text-text-secondary-light dark:text-text-secondary-dark"
+                  >Я должен</span
+                >
               </div>
-              <span class="text-xl font-bold text-text-primary-light dark:text-text-primary-dark">
+              <span
+                class="text-xl font-bold text-text-primary-light dark:text-text-primary-dark"
+              >
                 {{ formatCurrency(totalIOwe, currency, COMPACT_FORMAT) }}
               </span>
             </div>
@@ -315,7 +342,9 @@ onMounted(() => {
       <!-- Category Breakdown -->
       <div class="space-y-3">
         <div class="flex items-center justify-between">
-          <h2 class="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark">
+          <h2
+            class="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark"
+          >
             По категориям
           </h2>
           <UTabs
@@ -342,15 +371,8 @@ onMounted(() => {
         </template>
 
         <template v-else>
-          <div
-            v-if="categoryStats.length > 0"
-            class="space-y-3"
-          >
-            <UCard
-              v-for="stat in categoryStats"
-              :key="stat.id"
-              class="p-4"
-            >
+          <div v-if="categoryStats.length > 0" class="space-y-3">
+            <UCard v-for="stat in categoryStats" :key="stat.id" class="p-4">
               <div class="flex items-center gap-3 mb-3">
                 <div
                   class="w-10 h-10 rounded-xl flex items-center justify-center"
@@ -363,14 +385,20 @@ onMounted(() => {
                   />
                 </div>
                 <div class="flex-1">
-                  <p class="font-medium text-text-primary-light dark:text-text-primary-dark">
+                  <p
+                    class="font-medium text-text-primary-light dark:text-text-primary-dark"
+                  >
                     {{ stat.name }}
                   </p>
-                  <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
+                  <p
+                    class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
+                  >
                     {{ stat.percent.toFixed(1) }}%
                   </p>
                 </div>
-                <p class="font-semibold text-text-primary-light dark:text-text-primary-dark">
+                <p
+                  class="font-semibold text-text-primary-light dark:text-text-primary-dark"
+                >
                   {{ formatCurrency(stat.amount, currency, COMPACT_FORMAT) }}
                 </p>
               </div>
@@ -383,10 +411,7 @@ onMounted(() => {
           </div>
 
           <!-- Empty State -->
-          <div
-            v-else
-            class="py-12 text-center"
-          >
+          <div v-else class="py-12 text-center">
             <div
               class="w-16 h-16 mx-auto mb-4 rounded-full bg-surface-light dark:bg-surface-dark flex items-center justify-center"
             >

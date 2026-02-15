@@ -1,4 +1,4 @@
-import { Goal } from '../../domain/aggregates/goal';
+import type { Goal } from '../../domain/aggregates/goal';
 
 export class GoalResponseMapper {
   static toResponse(goal: Goal) {

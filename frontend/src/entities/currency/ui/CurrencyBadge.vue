@@ -1,18 +1,20 @@
 <script setup lang="ts">
-import { getCurrencyByCode } from '../model/constants'
+import { getCurrencyByCode } from '../model/constants';
 
 const props = defineProps<{
-  code: string
-  showName?: boolean
-}>()
+  code: string;
+  showName?: boolean;
+}>();
 
-const currency = getCurrencyByCode(props.code)
+const currency = getCurrencyByCode(props.code);
 </script>
 
 <template>
   <div class="flex items-center gap-2">
     <span class="text-lg">{{ currency?.flag ?? '🌐' }}</span>
-    <span class="font-semibold text-text-primary-light dark:text-text-primary-dark">
+    <span
+      class="font-semibold text-text-primary-light dark:text-text-primary-dark"
+    >
       {{ code }}
     </span>
     <span

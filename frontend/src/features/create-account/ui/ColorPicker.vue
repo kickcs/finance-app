@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { UColorPicker } from '@/shared/ui'
-import { ACCOUNT_COLORS } from '@/entities/account'
+import { UColorPicker } from '@/shared/ui';
+import { ACCOUNT_COLORS } from '@/entities/account';
 
 defineProps<{
-  modelValue: string
-}>()
+  modelValue: string;
+}>();
 
 defineEmits<{
-  'update:modelValue': [value: string]
-}>()
+  'update:modelValue': [value: string];
+}>();
 </script>
 
 <template>

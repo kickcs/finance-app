@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import { UIconSelector } from '@/shared/ui'
-import { CATEGORY_ICONS } from '../model/constants'
+import { UIconSelector } from '@/shared/ui';
+import { CATEGORY_ICONS } from '../model/constants';
 
 defineProps<{
-  modelValue: string
-  color?: string
-}>()
+  modelValue: string;
+  color?: string;
+}>();
 
 defineEmits<{
-  'update:modelValue': [value: string]
-}>()
+  'update:modelValue': [value: string];
+}>();
 </script>
 
 <template>

@@ -1,18 +1,23 @@
-import { computed } from 'vue'
-import { useLocalStorage } from '@/shared/lib/hooks/useLocalStorage'
-import { CURRENT_VERSION, CHANGELOG_ENTRIES } from './changelogData'
+import { computed } from 'vue';
+import { useLocalStorage } from '@/shared/lib/hooks/useLocalStorage';
+import { CURRENT_VERSION, CHANGELOG_ENTRIES } from './changelogData';
 
 export function useChangelog() {
-  const lastSeenVersion = useLocalStorage<string | null>('lastSeenChangelogVersion', null)
+  const lastSeenVersion = useLocalStorage<string | null>(
+    'lastSeenChangelogVersion',
+    null,
+  );
 
-  const hasUnseenChanges = computed(() => lastSeenVersion.value !== CURRENT_VERSION)
+  const hasUnseenChanges = computed(
+    () => lastSeenVersion.value !== CURRENT_VERSION,
+  );
 
-  const latestEntry = computed(() => CHANGELOG_ENTRIES[0])
+  const latestEntry = computed(() => CHANGELOG_ENTRIES[0]);
 
-  const allEntries = computed(() => CHANGELOG_ENTRIES)
+  const allEntries = computed(() => CHANGELOG_ENTRIES);
 
   function markAsSeen() {
-    lastSeenVersion.value = CURRENT_VERSION
+    lastSeenVersion.value = CURRENT_VERSION;
   }
 
   return {
@@ -20,5 +25,5 @@ export function useChangelog() {
     latestEntry,
     allEntries,
     markAsSeen,
-  }
+  };
 }

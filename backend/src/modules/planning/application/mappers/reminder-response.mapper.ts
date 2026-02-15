@@ -1,4 +1,4 @@
-import { Reminder } from '../../domain/aggregates/reminder';
+import type { Reminder } from '../../domain/aggregates/reminder';
 
 export class ReminderResponseMapper {
   static toResponse(reminder: Reminder) {

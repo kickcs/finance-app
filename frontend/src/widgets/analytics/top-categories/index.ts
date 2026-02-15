@@ -1,1 +1,1 @@
-export { default as TopCategories } from './ui/TopCategories.vue'
+export { default as TopCategories } from './ui/TopCategories.vue';

@@ -1,18 +1,18 @@
-import { http } from '@/shared/api/http'
-import type { Reminder, ReminderInsert } from '@/shared/api/database.types'
+import { http } from '@/shared/api/http';
+import type { Reminder, ReminderInsert } from '@/shared/api/database.types';
 
 // Response type from NestJS backend (camelCase)
 interface ReminderResponse {
-  id: string
-  userId: string
-  name: string
-  amount: number
-  frequency: 'weekly' | 'monthly' | 'yearly' | 'once'
-  nextDate: string
-  icon: string
-  color: string
-  isActive: boolean
-  createdAt: string
+  id: string;
+  userId: string;
+  name: string;
+  amount: number;
+  frequency: 'weekly' | 'monthly' | 'yearly' | 'once';
+  nextDate: string;
+  icon: string;
+  color: string;
+  isActive: boolean;
+  createdAt: string;
 }
 
 function transformReminder(reminder: ReminderResponse): Reminder {
@@ -27,22 +27,22 @@ function transformReminder(reminder: ReminderResponse): Reminder {
     color: reminder.color,
     is_active: reminder.isActive,
     created_at: reminder.createdAt,
-  }
+  };
 }
 
 export const remindersApi = {
   async getAll(_userId: string): Promise<Reminder[]> {
     // Backend gets userId from JWT token
-    const data = await http.get<ReminderResponse[]>('/reminders')
-    return data.map(transformReminder)
+    const data = await http.get<ReminderResponse[]>('/reminders');
+    return data.map(transformReminder);
   },
 
   async getById(reminderId: string): Promise<Reminder | null> {
     try {
-      const data = await http.get<ReminderResponse>(`/reminders/${reminderId}`)
-      return transformReminder(data)
+      const data = await http.get<ReminderResponse>(`/reminders/${reminderId}`);
+      return transformReminder(data);
     } catch {
-      return null
+      return null;
     }
   },
 
@@ -56,8 +56,8 @@ export const remindersApi = {
       nextDate: reminder.next_date,
       icon: reminder.icon,
       color: reminder.color,
-    })
-    return transformReminder(data)
+    });
+    return transformReminder(data);
   },
 
   async update(id: string, updates: Partial<Reminder>): Promise<Reminder> {
@@ -69,11 +69,11 @@ export const remindersApi = {
       icon: updates.icon,
       color: updates.color,
       isActive: updates.is_active,
-    })
-    return transformReminder(data)
+    });
+    return transformReminder(data);
   },
 
   async delete(id: string): Promise<void> {
-    await http.delete(`/reminders/${id}`)
+    await http.delete(`/reminders/${id}`);
   },
-}
+};

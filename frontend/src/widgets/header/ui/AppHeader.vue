@@ -1,18 +1,18 @@
 <script setup lang="ts">
-import { UIcon, UButton } from '@/shared/ui'
+import { UIcon, UButton } from '@/shared/ui';
 
 defineProps<{
-  title?: string
-  showBack?: boolean
-  showNotifications?: boolean
-  transparent?: boolean
-  notificationCount?: number
-}>()
+  title?: string;
+  showBack?: boolean;
+  showNotifications?: boolean;
+  transparent?: boolean;
+  notificationCount?: number;
+}>();
 
 defineEmits<{
-  back: []
-  notifications: []
-}>()
+  back: [];
+  notifications: [];
+}>();
 </script>
 
 <template>
@@ -22,7 +22,7 @@ defineEmits<{
       'transition-colors duration-150',
       transparent
         ? 'bg-transparent'
-        : 'bg-background-light dark:bg-background-dark border-b border-border-light dark:border-border-dark'
+        : 'bg-background-light dark:bg-background-dark border-b border-border-light dark:border-border-dark',
     ]"
     :style="{ paddingTop: 'calc(0.75rem + var(--safe-area-inset-top))' }"
   >
@@ -73,10 +73,7 @@ defineEmits<{
           <!-- Notification badge -->
           <span
             v-if="notificationCount && notificationCount > 0"
-            class="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] px-1
-                   bg-danger text-white text-caption-xs font-semibold
-                   rounded-full flex items-center justify-center
-                   border-2 border-background-light dark:border-background-dark"
+            class="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] px-1 bg-danger text-white text-caption-xs font-semibold rounded-full flex items-center justify-center border-2 border-background-light dark:border-background-dark"
           >
             {{ notificationCount > 9 ? '9+' : notificationCount }}
           </span>

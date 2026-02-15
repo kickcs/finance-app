@@ -1,1 +1,1 @@
-export { default as UIconSelector } from './UIconSelector.vue'
+export { default as UIconSelector } from './UIconSelector.vue';

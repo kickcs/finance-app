@@ -1,5 +1,5 @@
 import { AggregateRoot as NestAggregateRoot } from '@nestjs/cqrs';
-import { DomainEvent } from './domain-event.base';
+import type { DomainEvent } from './domain-event.base';
 
 /**
  * Base Aggregate Root class

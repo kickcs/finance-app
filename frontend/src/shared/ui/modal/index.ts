@@ -1,1 +1,1 @@
-export { default as UModal } from './UModal.vue'
+export { default as UModal } from './UModal.vue';

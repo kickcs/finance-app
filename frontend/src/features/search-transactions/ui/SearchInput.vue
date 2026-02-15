@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import { UInput } from '@/shared/ui'
+import { UInput } from '@/shared/ui';
 
 defineProps<{
-  modelValue: string
-  placeholder?: string
-}>()
+  modelValue: string;
+  placeholder?: string;
+}>();
 
 defineEmits<{
-  'update:modelValue': [value: string]
-  clear: []
-}>()
+  'update:modelValue': [value: string];
+  clear: [];
+}>();
 </script>
 
 <template>

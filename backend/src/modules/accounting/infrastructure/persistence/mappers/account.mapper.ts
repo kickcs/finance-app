@@ -27,15 +27,15 @@ export class AccountMapper {
       balances,
       createdAt: ormEntity.createdAt,
       creditLimit:
-        ormEntity.creditLimit != null ? Number(ormEntity.creditLimit) : null,
+        ormEntity.creditLimit !== null ? Number(ormEntity.creditLimit) : null,
       gracePeriodDays: ormEntity.gracePeriodDays,
       billingDay: ormEntity.billingDay,
       totalAmount:
-        ormEntity.totalAmount != null ? Number(ormEntity.totalAmount) : null,
+        ormEntity.totalAmount !== null ? Number(ormEntity.totalAmount) : null,
       interestRate:
-        ormEntity.interestRate != null ? Number(ormEntity.interestRate) : null,
+        ormEntity.interestRate !== null ? Number(ormEntity.interestRate) : null,
       monthlyPayment:
-        ormEntity.monthlyPayment != null
+        ormEntity.monthlyPayment !== null
           ? Number(ormEntity.monthlyPayment)
           : null,
       startDate: ormEntity.startDate,

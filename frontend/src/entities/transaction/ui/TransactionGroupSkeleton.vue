@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import { Skeleton } from '@/shared/ui'
-import TransactionItemSkeleton from './TransactionItemSkeleton.vue'
+import { Skeleton } from '@/shared/ui';
+import TransactionItemSkeleton from './TransactionItemSkeleton.vue';
 
 withDefaults(
   defineProps<{
     /** Number of transaction items to show */
-    count?: number
+    count?: number;
   }>(),
   {
     count: 3,
   },
-)
+);
 </script>
 
 <template>

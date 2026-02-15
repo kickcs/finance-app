@@ -1,6 +1,6 @@
 // Re-export from database types for consistency
-export type { Reminder } from '@/shared/api/database.types'
-export type ReminderId = string
+export type { Reminder } from '@/shared/api/database.types';
+export type ReminderId = string;
 
 export const REMINDER_ICONS = [
   'receipt_long',
@@ -28,11 +28,14 @@ export const REMINDER_ICONS = [
   'local_gas_station',
   'flight',
   'shopping_cart',
-] as const
+] as const;
 
-export const FREQUENCY_LABELS: Record<'weekly' | 'monthly' | 'yearly' | 'once', string> = {
+export const FREQUENCY_LABELS: Record<
+  'weekly' | 'monthly' | 'yearly' | 'once',
+  string
+> = {
   weekly: 'Неделя',
   monthly: 'Месяц',
   yearly: 'Год',
   once: 'Разово',
-}
+};

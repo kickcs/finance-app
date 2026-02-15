@@ -3,5 +3,5 @@ export {
   TooltipRoot as Tooltip,
   TooltipTrigger,
   TooltipPortal,
-} from 'reka-ui'
-export { default as TooltipContent } from './TooltipContent.vue'
+} from 'reka-ui';
+export { default as TooltipContent } from './TooltipContent.vue';

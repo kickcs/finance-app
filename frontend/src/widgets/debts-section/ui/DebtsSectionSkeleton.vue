@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { UIcon, Skeleton } from '@/shared/ui'
+import { UIcon, Skeleton } from '@/shared/ui';
 </script>
 
 <template>
@@ -7,7 +7,9 @@ import { UIcon, Skeleton } from '@/shared/ui'
     <!-- Header -->
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-1.5">
-        <div class="w-6 h-6 rounded-md bg-rose-500/10 flex items-center justify-center">
+        <div
+          class="w-6 h-6 rounded-md bg-rose-500/10 flex items-center justify-center"
+        >
           <UIcon name="credit_card" size="xs" class="text-rose-500" />
         </div>
         <Skeleton class="h-4 w-12 rounded" />

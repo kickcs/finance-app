@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import type { ToastDescriptionProps } from 'reka-ui'
-import type { HTMLAttributes } from 'vue'
-import { ToastDescription } from 'reka-ui'
-import { cn } from '@/shared/lib/utils'
+import type { ToastDescriptionProps } from 'reka-ui';
+import type { HTMLAttributes } from 'vue';
+import { ToastDescription } from 'reka-ui';
+import { cn } from '@/shared/lib/utils';
 
-const props = defineProps<ToastDescriptionProps & { class?: HTMLAttributes['class'] }>()
+const props = defineProps<
+  ToastDescriptionProps & { class?: HTMLAttributes['class'] }
+>();
 </script>
 
 <template>

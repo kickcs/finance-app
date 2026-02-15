@@ -1,41 +1,42 @@
 <script setup lang="ts">
-import { computed, inject } from 'vue'
-import type { Ref } from 'vue'
-import type { User } from '@/shared/api/composables/useAuth'
-import { useRouter } from 'vue-router'
-import { AppHeader } from '@/widgets/header'
-import { BottomNav } from '@/widgets/bottom-nav'
-import { UTabs, UCard, UIcon, Skeleton } from '@/shared/ui'
-import { formatCurrency, COMPACT_FORMAT } from '@/shared/lib/format/currency'
-import { useExchangeRates } from '@/shared/api'
-import { useAnalyticsStats, type CategoryBreakdown } from '@/entities/transaction'
-import { useAccounts } from '@/entities/account'
-import { useDebts } from '@/entities/debt'
+import { computed, inject } from 'vue';
+import type { Ref } from 'vue';
+import type { User } from '@/shared/api/composables/useAuth';
+import { useRouter } from 'vue-router';
+import { AppHeader } from '@/widgets/header';
+import { BottomNav } from '@/widgets/bottom-nav';
+import { UTabs, UCard, UIcon } from '@/shared/ui';
+import { formatCurrency, COMPACT_FORMAT } from '@/shared/lib/format/currency';
+import { useExchangeRates } from '@/shared/api';
+import { useAnalyticsStats } from '@/entities/transaction';
+import { useAccounts } from '@/entities/account';
+import { useDebts } from '@/entities/debt';
 import {
   ModeToggle,
   DateRangePicker,
   FilterChips,
   useAnalyticsFilters,
   type LitePeriod,
-  type TransactionType,
   type CategoryStat,
-} from '@/features/analytics-filters'
+} from '@/features/analytics-filters';
 import {
   DonutChart,
   DailyStatsCards,
   TopCategories,
   SavingsGauge,
   type DonutSegment,
-} from '@/widgets/analytics'
+} from '@/widgets/analytics';
 
-const router = useRouter()
+const router = useRouter();
 
 // Get user from provide/inject
-const user = inject<Ref<User | null>>('user')
-const userId = computed(() => user?.value?.id ?? '')
+const user = inject<Ref<User | null>>('user');
+const userId = computed(() => user?.value?.id ?? '');
 
 // Get user currency from localStorage
-const currency = computed(() => localStorage.getItem('selectedCurrency') || 'UZS')
+const currency = computed(
+  () => localStorage.getItem('selectedCurrency') || 'UZS',
+);
 
 // Analytics filters
 const {
@@ -44,51 +45,52 @@ const {
   daysInPeriod,
   daysRemainingInMonth,
   setPeriod,
-  setType,
   setCustomDateRange,
   toggleAccount,
   clearAccountFilters,
-} = useAnalyticsFilters()
+} = useAnalyticsFilters();
 
 // Convert date range to ISO strings for API
 const startDateStr = computed(() => {
-  const d = effectiveDateRange.value.startDate
-  return d ? d.toISOString().split('T')[0] : null
-})
+  const d = effectiveDateRange.value.startDate;
+  return d ? d.toISOString().split('T')[0] : null;
+});
 
 const endDateStr = computed(() => {
-  const d = effectiveDateRange.value.endDate
-  return d ? d.toISOString().split('T')[0] : null
-})
+  const d = effectiveDateRange.value.endDate;
+  return d ? d.toISOString().split('T')[0] : null;
+});
 
 // Use analytics API for server-side calculations
 const {
   totalExpense,
   totalIncome,
   categoryBreakdown,
-  isLoading: analyticsLoading,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  isLoading,
 } = useAnalyticsStats({
   startDate: startDateStr,
   endDate: endDateStr,
   accountIds: computed(() => filters.value.selectedAccountIds),
-})
+});
 
 // Load accounts for filter chips and balance
-const { accounts, totalBalancesByCurrency } = useAccounts(userId)
+const { accounts, totalBalancesByCurrency } = useAccounts(userId);
 
 // Exchange rates for currency conversion
-const { convert } = useExchangeRates(currency)
+const { convert } = useExchangeRates(currency);
 
 // Total balance converted to user's main currency
 const totalBalance = computed((): number => {
-  const balances: Record<string, number> = totalBalancesByCurrency.value
+  const balances: Record<string, number> = totalBalancesByCurrency.value;
   return Object.entries(balances).reduce(
-    (sum, [curr, amount]) => sum + convert(amount, curr), 0
-  )
-})
+    (sum, [curr, amount]) => sum + convert(amount, curr),
+    0,
+  );
+});
 
 // Load debts for debt summary
-const { debts, isLoading: debtsLoading } = useDebts(userId)
+const { debts } = useDebts(userId);
 
 // Period tabs
 const periodItems = [
@@ -96,38 +98,31 @@ const periodItems = [
   { id: 'month-start', label: 'С начала месяца' },
   { id: 'year-start', label: 'С начала года' },
   { id: 'custom', label: 'Свой период' },
-]
-
-// Type tabs with "Все"
-const typeItems = [
-  { id: 'all', label: 'Все' },
-  { id: 'expense', label: 'Расходы' },
-  { id: 'income', label: 'Доходы' },
-]
+];
 
 // Show custom date picker
-const showCustomDatePicker = computed(() => filters.value.period === 'custom')
+const showCustomDatePicker = computed(() => filters.value.period === 'custom');
 
 // Debt summaries
 const totalOwedToMe = computed(() => {
   return debts.value
     .filter((d) => d.debt_type === 'given' && !d.is_closed)
-    .reduce((sum, d) => sum + d.remaining_amount, 0)
-})
+    .reduce((sum, d) => sum + d.remaining_amount, 0);
+});
 
 const totalIOwe = computed(() => {
   return debts.value
     .filter((d) => d.debt_type === 'taken' && !d.is_closed)
-    .reduce((sum, d) => sum + d.remaining_amount, 0)
-})
+    .reduce((sum, d) => sum + d.remaining_amount, 0);
+});
 
 // Expense category statistics from server-side calculation (filtered by type)
 const expenseCategoryStats = computed<CategoryStat[]>(() => {
   // Filter only expense categories
-  const filtered = categoryBreakdown.value.filter((c) => c.type === 'expense')
+  const filtered = categoryBreakdown.value.filter((c) => c.type === 'expense');
 
   // Calculate total for percentages
-  const total = filtered.reduce((sum, c) => sum + c.amount, 0)
+  const total = filtered.reduce((sum, c) => sum + c.amount, 0);
 
   // Map to CategoryStat format - use category details from API response
   return filtered
@@ -139,8 +134,8 @@ const expenseCategoryStats = computed<CategoryStat[]>(() => {
       amount: c.amount,
       percent: total > 0 ? (c.amount / total) * 100 : 0,
     }))
-    .sort((a, b) => b.amount - a.amount)
-})
+    .sort((a, b) => b.amount - a.amount);
+});
 
 // Convert category stats to donut segments
 const donutSegments = computed<DonutSegment[]>(() => {
@@ -151,8 +146,8 @@ const donutSegments = computed<DonutSegment[]>(() => {
     percent: stat.percent,
     color: stat.color,
     icon: stat.icon,
-  }))
-})
+  }));
+});
 
 // Prepare filter chips data
 const accountChips = computed(() => {
@@ -161,20 +156,16 @@ const accountChips = computed(() => {
     name: acc.name,
     icon: acc.icon,
     color: acc.color,
-  }))
-})
+  }));
+});
 
 // Handlers
 function handlePeriodChange(value: string | number) {
-  setPeriod(value as LitePeriod)
-}
-
-function handleTypeChange(value: string | number) {
-  setType(value as TransactionType)
+  setPeriod(value as LitePeriod);
 }
 
 function handleAddTransaction() {
-  router.push('/transactions/new')
+  router.push('/transactions/new');
 }
 </script>
 
@@ -255,51 +246,54 @@ function handleAddTransaction() {
       />
 
       <!-- Debt Summary Cards -->
-      <div
-        v-if="totalOwedToMe > 0 || totalIOwe > 0"
-        class="space-y-3"
-      >
-        <h2 class="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark">
+      <div v-if="totalOwedToMe > 0 || totalIOwe > 0" class="space-y-3">
+        <h2
+          class="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark"
+        >
           Долги
         </h2>
 
-        <UCard
-          v-if="totalOwedToMe > 0"
-          class="p-4"
-        >
+        <UCard v-if="totalOwedToMe > 0" class="p-4">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-xl bg-debt-given-light flex items-center justify-center">
-                <UIcon
-                  name="arrow_upward"
-                  size="md"
-                  class="text-debt-given"
-                />
+              <div
+                class="w-10 h-10 rounded-xl bg-debt-given-light flex items-center justify-center"
+              >
+                <UIcon name="arrow_upward" size="md" class="text-debt-given" />
               </div>
-              <span class="text-text-secondary-light dark:text-text-secondary-dark">Мне должны</span>
+              <span
+                class="text-text-secondary-light dark:text-text-secondary-dark"
+                >Мне должны</span
+              >
             </div>
-            <span class="text-xl font-bold text-text-primary-light dark:text-text-primary-dark">
+            <span
+              class="text-xl font-bold text-text-primary-light dark:text-text-primary-dark"
+            >
               {{ formatCurrency(totalOwedToMe, currency, COMPACT_FORMAT) }}
             </span>
           </div>
         </UCard>
 
-        <UCard
-          v-if="totalIOwe > 0"
-          class="p-4"
-        >
+        <UCard v-if="totalIOwe > 0" class="p-4">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-xl bg-debt-received-light flex items-center justify-center">
+              <div
+                class="w-10 h-10 rounded-xl bg-debt-received-light flex items-center justify-center"
+              >
                 <UIcon
                   name="arrow_downward"
                   size="md"
                   class="text-debt-received"
                 />
               </div>
-              <span class="text-text-secondary-light dark:text-text-secondary-dark">Я должен</span>
+              <span
+                class="text-text-secondary-light dark:text-text-secondary-dark"
+                >Я должен</span
+              >
             </div>
-            <span class="text-xl font-bold text-text-primary-light dark:text-text-primary-dark">
+            <span
+              class="text-xl font-bold text-text-primary-light dark:text-text-primary-dark"
+            >
               {{ formatCurrency(totalIOwe, currency, COMPACT_FORMAT) }}
             </span>
           </div>

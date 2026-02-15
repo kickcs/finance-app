@@ -1,34 +1,36 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { UIcon } from '@/shared/ui'
-import { formatCurrency } from '@/shared/lib/format/currency'
-import { formatDate } from '@/shared/lib/format/date'
-import type { Reminder } from '../model/types'
-import { FREQUENCY_LABELS } from '../model/types'
+import { computed } from 'vue';
+import { UIcon } from '@/shared/ui';
+import { formatCurrency } from '@/shared/lib/format/currency';
+import { formatDate } from '@/shared/lib/format/date';
+import type { Reminder } from '../model/types';
+import { FREQUENCY_LABELS } from '../model/types';
 
 const props = defineProps<{
-  reminder: Reminder
-  currency?: string
-  compact?: boolean
-}>()
+  reminder: Reminder;
+  currency?: string;
+  compact?: boolean;
+}>();
 
 defineEmits<{
-  click: []
-}>()
+  click: [];
+}>();
 
 const nextDateFormatted = computed(() => {
-  return formatDate(new Date(props.reminder.next_date).getTime(), { format: 'short' })
-})
+  return formatDate(new Date(props.reminder.next_date).getTime(), {
+    format: 'short',
+  });
+});
 
 const isUpcoming = computed(() => {
-  const nextDateMs = new Date(props.reminder.next_date).getTime()
-  const threeDays = 3 * 24 * 60 * 60 * 1000
-  return nextDateMs - Date.now() < threeDays && nextDateMs > Date.now()
-})
+  const nextDateMs = new Date(props.reminder.next_date).getTime();
+  const threeDays = 3 * 24 * 60 * 60 * 1000;
+  return nextDateMs - Date.now() < threeDays && nextDateMs > Date.now();
+});
 
 const isOverdue = computed(() => {
-  return new Date(props.reminder.next_date).getTime() < Date.now()
-})
+  return new Date(props.reminder.next_date).getTime() < Date.now();
+});
 </script>
 
 <template>
@@ -51,7 +53,7 @@ const isOverdue = computed(() => {
           ? 'bg-danger/10'
           : isUpcoming
             ? 'bg-warning/10'
-            : 'bg-surface-light dark:bg-surface-dark'
+            : 'bg-surface-light dark:bg-surface-dark',
       ]"
     >
       <UIcon
@@ -62,14 +64,16 @@ const isOverdue = computed(() => {
             ? 'text-danger'
             : isUpcoming
               ? 'text-warning'
-              : 'text-text-secondary-light dark:text-text-secondary-dark'
+              : 'text-text-secondary-light dark:text-text-secondary-dark',
         ]"
       />
     </div>
 
     <!-- Content -->
     <div class="flex-1 text-left min-w-0">
-      <p class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark truncate">
+      <p
+        class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark truncate"
+      >
         {{ reminder.name }}
       </p>
       <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
@@ -79,7 +83,9 @@ const isOverdue = computed(() => {
 
     <!-- Right side -->
     <div class="text-right shrink-0">
-      <p class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark">
+      <p
+        class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark"
+      >
         {{ formatCurrency(reminder.amount, currency || 'UZS') }}
       </p>
       <p
@@ -89,7 +95,7 @@ const isOverdue = computed(() => {
             ? 'text-danger'
             : isUpcoming
               ? 'text-warning'
-              : 'text-text-tertiary-light dark:text-text-tertiary-dark'
+              : 'text-text-tertiary-light dark:text-text-tertiary-dark',
         ]"
       >
         {{ nextDateFormatted }}

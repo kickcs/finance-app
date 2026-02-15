@@ -1,4 +1,4 @@
-import { profileApi } from '@/shared/api/services/profileApi'
+import { profileApi } from '@/shared/api/services/profileApi';
 
 /**
  * Demo mode API utilities
@@ -15,20 +15,20 @@ export const demoApi = {
    * Check if a demo account has expired
    */
   async isDemoExpired(userId: string): Promise<boolean> {
-    const profile = await profileApi.getById(userId)
+    const profile = await profileApi.getById(userId);
 
     if (!profile?.is_demo || !profile.demo_expires_at) {
-      return false
+      return false;
     }
 
-    return new Date(profile.demo_expires_at) < new Date()
+    return new Date(profile.demo_expires_at) < new Date();
   },
 
   /**
    * Get demo expiration time
    */
   async getDemoExpiresAt(userId: string): Promise<string | null> {
-    const profile = await profileApi.getById(userId)
-    return profile?.demo_expires_at ?? null
+    const profile = await profileApi.getById(userId);
+    return profile?.demo_expires_at ?? null;
   },
-}
+};

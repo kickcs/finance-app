@@ -1,43 +1,48 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { UInput, UButton, UIcon } from '@/shared/ui'
-import { CURRENCIES, getCurrencyByCode } from '@/entities/currency'
-import type { CurrencyBalance } from '../model/useCreateAccount'
+import { computed, ref } from 'vue';
+import { UInput, UButton, UIcon } from '@/shared/ui';
+import { CURRENCIES, getCurrencyByCode } from '@/entities/currency';
+import type { CurrencyBalance } from '../model/useCreateAccount';
 
 const props = defineProps<{
-  balances: CurrencyBalance[]
-  label?: string
-  hint?: string
-}>()
+  balances: CurrencyBalance[];
+  label?: string;
+  hint?: string;
+}>();
 
 const emit = defineEmits<{
-  add: [currency: string]
-  remove: [index: number]
-  updateBalance: [index: number, balance: number]
-  updateCurrency: [index: number, currency: string]
-}>()
+  add: [currency: string];
+  remove: [index: number];
+  updateBalance: [index: number, balance: number];
+  updateCurrency: [index: number, currency: string];
+}>();
 
-const showCurrencyPicker = ref(false)
+const showCurrencyPicker = ref(false);
 
 // Currencies not yet added
 const availableCurrencies = computed(() => {
-  const usedCurrencies = props.balances.map((b) => b.currency)
-  return CURRENCIES.filter((c) => !usedCurrencies.includes(c.code))
-})
+  const usedCurrencies = props.balances.map((b) => b.currency);
+  return CURRENCIES.filter((c) => !usedCurrencies.includes(c.code));
+});
 
 function addCurrency(code: string) {
-  emit('add', code)
-  showCurrencyPicker.value = false
+  emit('add', code);
+  showCurrencyPicker.value = false;
 }
 </script>
 
 <template>
   <div class="space-y-4">
     <div>
-      <label class="block text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
+      <label
+        class="block text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
+      >
         {{ label ?? 'Валюты и балансы' }}
       </label>
-      <p v-if="hint" class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark mt-0.5">
+      <p
+        v-if="hint"
+        class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark mt-0.5"
+      >
         {{ hint }}
       </p>
     </div>
@@ -56,13 +61,21 @@ function addCurrency(code: string) {
           <select
             :value="balance.currency"
             class="w-full h-full pl-3 pr-8 appearance-none bg-transparent text-sm font-medium text-text-primary-light dark:text-text-primary-dark focus:outline-none"
-            @change="$emit('updateCurrency', index, ($event.target as HTMLSelectElement).value)"
+            @change="
+              $emit(
+                'updateCurrency',
+                index,
+                ($event.target as HTMLSelectElement).value,
+              )
+            "
           >
             <option
               v-for="curr in CURRENCIES"
               :key="curr.code"
               :value="curr.code"
-              :disabled="balances.some((b, i) => i !== index && b.currency === curr.code)"
+              :disabled="
+                balances.some((b, i) => i !== index && b.currency === curr.code)
+              "
             >
               {{ curr.flag }} {{ curr.code }}
             </option>
@@ -80,8 +93,12 @@ function addCurrency(code: string) {
             :model-value="String(balance.balance)"
             placeholder="0"
             variant="currency"
-            :suffix="getCurrencyByCode(balance.currency)?.symbol || balance.currency"
-            @update:model-value="$emit('updateBalance', index, Number($event) || 0)"
+            :suffix="
+              getCurrencyByCode(balance.currency)?.symbol || balance.currency
+            "
+            @update:model-value="
+              $emit('updateBalance', index, Number($event) || 0)
+            "
           />
         </div>
 

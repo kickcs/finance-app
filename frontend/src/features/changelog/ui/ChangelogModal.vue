@@ -1,23 +1,23 @@
 <script setup lang="ts">
-import { UModal, UButton, UIcon } from '@/shared/ui'
-import { CHANGELOG_TYPE_CONFIG } from '../model/changelogData'
-import { useChangelog } from '../model/useChangelog'
+import { UModal, UButton, UIcon } from '@/shared/ui';
+import { CHANGELOG_TYPE_CONFIG } from '../model/changelogData';
+import { useChangelog } from '../model/useChangelog';
 
-const modelValue = defineModel<boolean>({ required: true })
+const modelValue = defineModel<boolean>({ required: true });
 
-const { latestEntry, markAsSeen } = useChangelog()
+const { latestEntry, markAsSeen } = useChangelog();
 
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('ru-RU', {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
-  })
+  });
 }
 
 function handleClose() {
-  markAsSeen()
-  modelValue.value = false
+  markAsSeen();
+  modelValue.value = false;
 }
 </script>
 
@@ -27,12 +27,13 @@ function handleClose() {
       <!-- Version badge + date -->
       <div class="flex items-center gap-3">
         <span
-          class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold
-                 bg-gradient-to-r from-primary to-primary/80 text-white"
+          class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gradient-to-r from-primary to-primary/80 text-white"
         >
           v{{ latestEntry.version }}
         </span>
-        <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
+        <span
+          class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
+        >
           {{ formatDate(latestEntry.date) }}
         </span>
       </div>
@@ -53,7 +54,9 @@ function handleClose() {
           >
             <UIcon :name="CHANGELOG_TYPE_CONFIG[item.type].icon" size="sm" />
           </div>
-          <span class="text-sm text-text-primary-light dark:text-text-primary-dark pt-1">
+          <span
+            class="text-sm text-text-primary-light dark:text-text-primary-dark pt-1"
+          >
             {{ item.text }}
           </span>
         </li>

@@ -1,16 +1,16 @@
-export type SplitMethod = 'equal' | 'custom'
+export type SplitMethod = 'equal' | 'custom';
 
 export interface SplitParticipant {
-  id: string
-  personName: string
-  amount: number
+  id: string;
+  personName: string;
+  amount: number;
 }
 
 export interface SplitExpenseData {
-  enabled: boolean
-  method: SplitMethod
-  myShare: number
-  participants: SplitParticipant[]
+  enabled: boolean;
+  method: SplitMethod;
+  myShare: number;
+  participants: SplitParticipant[];
 }
 
 export const initialSplitData: SplitExpenseData = {
@@ -18,4 +18,4 @@ export const initialSplitData: SplitExpenseData = {
   method: 'equal',
   myShare: 0,
   participants: [],
-}
+};

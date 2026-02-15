@@ -1,24 +1,24 @@
-import { http } from '@/shared/api/http'
-import type { Debt, DebtInsert } from '@/shared/api/database.types'
+import { http } from '@/shared/api/http';
+import type { Debt, DebtInsert } from '@/shared/api/database.types';
 
 // Response type from NestJS backend (camelCase)
 interface DebtResponse {
-  id: string
-  userId: string
-  name: string
-  totalAmount: number
-  remainingAmount: number
-  monthlyPayment: number | null
-  nextPaymentDate: string | null
-  createdAt: string
-  debtType: 'given' | 'taken'
-  personName: string | null
-  accountId: string | null
-  transactionId: string | null
-  closeTransactionId: string | null
-  isClosed: boolean
-  currency: string
-  sourceTransactionId: string | null
+  id: string;
+  userId: string;
+  name: string;
+  totalAmount: number;
+  remainingAmount: number;
+  monthlyPayment: number | null;
+  nextPaymentDate: string | null;
+  createdAt: string;
+  debtType: 'given' | 'taken';
+  personName: string | null;
+  accountId: string | null;
+  transactionId: string | null;
+  closeTransactionId: string | null;
+  isClosed: boolean;
+  currency: string;
+  sourceTransactionId: string | null;
 }
 
 function transformDebt(debt: DebtResponse): Debt {
@@ -39,22 +39,22 @@ function transformDebt(debt: DebtResponse): Debt {
     is_closed: debt.isClosed,
     currency: debt.currency,
     source_transaction_id: debt.sourceTransactionId,
-  }
+  };
 }
 
 export const debtsApi = {
   async getAll(_userId: string): Promise<Debt[]> {
     // Backend gets userId from JWT token
-    const data = await http.get<DebtResponse[]>('/debts')
-    return data.map(transformDebt)
+    const data = await http.get<DebtResponse[]>('/debts');
+    return data.map(transformDebt);
   },
 
   async getById(debtId: string): Promise<Debt | null> {
     try {
-      const data = await http.get<DebtResponse>(`/debts/${debtId}`)
-      return transformDebt(data)
+      const data = await http.get<DebtResponse>(`/debts/${debtId}`);
+      return transformDebt(data);
     } catch {
-      return null
+      return null;
     }
   },
 
@@ -74,8 +74,8 @@ export const debtsApi = {
       isClosed: debt.is_closed ?? false,
       currency: debt.currency ?? 'UZS',
       sourceTransactionId: debt.source_transaction_id,
-    })
-    return transformDebt(data)
+    });
+    return transformDebt(data);
   },
 
   async update(id: string, updates: Partial<Debt>): Promise<Debt> {
@@ -93,11 +93,11 @@ export const debtsApi = {
       isClosed: updates.is_closed,
       currency: updates.currency,
       sourceTransactionId: updates.source_transaction_id,
-    })
-    return transformDebt(data)
+    });
+    return transformDebt(data);
   },
 
   async delete(id: string): Promise<void> {
-    await http.delete(`/debts/${id}`)
+    await http.delete(`/debts/${id}`);
   },
-}
+};

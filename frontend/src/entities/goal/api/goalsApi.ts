@@ -1,17 +1,17 @@
-import { http } from '@/shared/api/http'
-import type { Goal, GoalInsert } from '@/shared/api/database.types'
+import { http } from '@/shared/api/http';
+import type { Goal, GoalInsert } from '@/shared/api/database.types';
 
 // Response type from NestJS backend (camelCase)
 interface GoalResponse {
-  id: string
-  userId: string
-  name: string
-  targetAmount: number
-  currentAmount: number
-  deadline: string | null
-  icon: string
-  color: string
-  createdAt: string
+  id: string;
+  userId: string;
+  name: string;
+  targetAmount: number;
+  currentAmount: number;
+  deadline: string | null;
+  icon: string;
+  color: string;
+  createdAt: string;
 }
 
 function transformGoal(goal: GoalResponse): Goal {
@@ -25,22 +25,22 @@ function transformGoal(goal: GoalResponse): Goal {
     icon: goal.icon,
     color: goal.color,
     created_at: goal.createdAt,
-  }
+  };
 }
 
 export const goalsApi = {
   async getAll(_userId: string): Promise<Goal[]> {
     // Backend gets userId from JWT token
-    const data = await http.get<GoalResponse[]>('/goals')
-    return data.map(transformGoal)
+    const data = await http.get<GoalResponse[]>('/goals');
+    return data.map(transformGoal);
   },
 
   async getById(goalId: string): Promise<Goal | null> {
     try {
-      const data = await http.get<GoalResponse>(`/goals/${goalId}`)
-      return transformGoal(data)
+      const data = await http.get<GoalResponse>(`/goals/${goalId}`);
+      return transformGoal(data);
     } catch {
-      return null
+      return null;
     }
   },
 
@@ -53,8 +53,8 @@ export const goalsApi = {
       deadline: goal.deadline,
       icon: goal.icon,
       color: goal.color,
-    })
-    return transformGoal(data)
+    });
+    return transformGoal(data);
   },
 
   async update(id: string, updates: Partial<Goal>): Promise<Goal> {
@@ -65,11 +65,11 @@ export const goalsApi = {
       deadline: updates.deadline,
       icon: updates.icon,
       color: updates.color,
-    })
-    return transformGoal(data)
+    });
+    return transformGoal(data);
   },
 
   async delete(id: string): Promise<void> {
-    await http.delete(`/goals/${id}`)
+    await http.delete(`/goals/${id}`);
   },
-}
+};

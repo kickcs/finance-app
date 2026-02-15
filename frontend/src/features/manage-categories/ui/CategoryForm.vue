@@ -1,19 +1,19 @@
 <script setup lang="ts">
-import { UInput } from '@/shared/ui'
-import CategoryColorPicker from './CategoryColorPicker.vue'
-import CategoryIconPicker from './CategoryIconPicker.vue'
-import type { CategoryFormData } from '../model/useManageCategories'
+import { UInput } from '@/shared/ui';
+import CategoryColorPicker from './CategoryColorPicker.vue';
+import CategoryIconPicker from './CategoryIconPicker.vue';
+import type { CategoryFormData } from '../model/useManageCategories';
 
 defineProps<{
-  formData: CategoryFormData
-  nameError?: string | null
-}>()
+  formData: CategoryFormData;
+  nameError?: string | null;
+}>();
 
 const emit = defineEmits<{
-  'update:name': [value: string]
-  'update:icon': [value: string]
-  'update:color': [value: string]
-}>()
+  'update:name': [value: string];
+  'update:icon': [value: string];
+  'update:color': [value: string];
+}>();
 </script>
 
 <template>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { DateValue } from '@internationalized/date'
+import type { DateValue } from '@internationalized/date';
 import {
   RangeCalendarCell,
   RangeCalendarCellTrigger,
@@ -13,25 +13,25 @@ import {
   RangeCalendarNext,
   RangeCalendarPrev,
   RangeCalendarRoot,
-} from 'reka-ui'
-import { type HTMLAttributes } from 'vue'
-import { cn } from '@/shared/lib/utils'
+} from 'reka-ui';
+import { type HTMLAttributes } from 'vue';
+import { cn } from '@/shared/lib/utils';
 
 interface DateRange {
-  start: DateValue | undefined
-  end: DateValue | undefined
+  start: DateValue | undefined;
+  end: DateValue | undefined;
 }
 
 const props = defineProps<{
-  modelValue?: DateRange
-  class?: HTMLAttributes['class']
-  locale?: string
-  maxValue?: DateValue
-}>()
+  modelValue?: DateRange;
+  class?: HTMLAttributes['class'];
+  locale?: string;
+  maxValue?: DateValue;
+}>();
 
 const emit = defineEmits<{
-  'update:modelValue': [value: DateRange]
-}>()
+  'update:modelValue': [value: DateRange];
+}>();
 </script>
 
 <template>
@@ -43,7 +43,9 @@ const emit = defineEmits<{
     :class="cn('p-3', props.class)"
     @update:model-value="emit('update:modelValue', $event as DateRange)"
   >
-    <RangeCalendarHeader class="relative flex w-full items-center justify-between pt-1">
+    <RangeCalendarHeader
+      class="relative flex w-full items-center justify-between pt-1"
+    >
       <RangeCalendarPrev
         class="inline-flex size-7 items-center justify-center rounded-md hover:bg-surface-light dark:hover:bg-surface-dark transition-colors"
       >

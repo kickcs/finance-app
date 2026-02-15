@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import { UIconSelector } from '@/shared/ui'
-import { REMINDER_ICONS } from '@/entities/reminder'
+import { UIconSelector } from '@/shared/ui';
+import { REMINDER_ICONS } from '@/entities/reminder';
 
 defineProps<{
-  modelValue: string
-  color?: string
-}>()
+  modelValue: string;
+  color?: string;
+}>();
 
 defineEmits<{
-  'update:modelValue': [value: string]
-}>()
+  'update:modelValue': [value: string];
+}>();
 </script>
 
 <template>

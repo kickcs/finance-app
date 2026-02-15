@@ -1,18 +1,21 @@
 <script setup lang="ts">
-import { ref, computed, inject, watch, defineAsyncComponent } from 'vue'
-import type { Ref } from 'vue'
-import type { User } from '@/shared/api/composables/useAuth'
-import { UButton, UIcon, UCard, UTabs, UModal } from '@/shared/ui'
+import { ref, computed, inject, watch, defineAsyncComponent } from 'vue';
+import type { Ref } from 'vue';
+import type { User } from '@/shared/api/composables/useAuth';
+import { UButton, UIcon, UCard, UTabs, UModal } from '@/shared/ui';
 
-const draggable = defineAsyncComponent(() => import('vuedraggable'))
-import { useCategories } from '@/entities/category'
-import type { UserCategory } from '@/shared/api/database.types'
-import { CategoryForm, useManageCategories } from '@/features/manage-categories'
-import { navigateBack } from '@/app/router'
+const draggable = defineAsyncComponent(() => import('vuedraggable'));
+import { useCategories } from '@/entities/category';
+import type { UserCategory } from '@/shared/api/database.types';
+import {
+  CategoryForm,
+  useManageCategories,
+} from '@/features/manage-categories';
+import { navigateBack } from '@/app/router';
 
 // Get user from provide/inject
-const user = inject<Ref<User | null>>('user')
-const userId = computed(() => user?.value?.id ?? null)
+const user = inject<Ref<User | null>>('user');
+const userId = computed(() => user?.value?.id ?? null);
 
 // Categories composable - now all categories come from DB
 const {
@@ -22,86 +25,87 @@ const {
   deleteCategory,
   reorderCategories,
   isLoading,
-} = useCategories(userId)
+} = useCategories(userId);
 
 // Form state
-const { formData, isValid, isSubmitting, resetForm, updateField } = useManageCategories()
+const { formData, isValid, isSubmitting, resetForm, updateField } =
+  useManageCategories();
 
 const tabItems = [
   { id: 'expense', label: 'Расходы' },
   { id: 'income', label: 'Доходы' },
-]
+];
 
-const activeTab = ref<'expense' | 'income'>('expense')
+const activeTab = ref<'expense' | 'income'>('expense');
 
 // Modal states
-const showFormModal = ref(false)
-const showDeleteModal = ref(false)
-const editingCategory = ref<UserCategory | null>(null)
-const categoryToDelete = ref<{ id: string; name: string } | null>(null)
+const showFormModal = ref(false);
+const showDeleteModal = ref(false);
+const editingCategory = ref<UserCategory | null>(null);
+const categoryToDelete = ref<{ id: string; name: string } | null>(null);
 
 // Mode: 'create' or 'edit'
-const isEditMode = computed(() => editingCategory.value !== null)
+const isEditMode = computed(() => editingCategory.value !== null);
 const modalTitle = computed(() => {
   if (isEditMode.value) {
-    return 'Редактирование категории'
+    return 'Редактирование категории';
   }
-  return `Новая категория ${activeTab.value === 'expense' ? 'расходов' : 'доходов'}`
-})
+  return `Новая категория ${activeTab.value === 'expense' ? 'расходов' : 'доходов'}`;
+});
 
 // Local mutable list for draggable (filtered by type)
-const localCategories = ref<UserCategory[]>([])
+const localCategories = ref<UserCategory[]>([]);
 
 // Watch categories and activeTab to update local list
 watch(
   [categories, activeTab],
   ([cats, tab]) => {
-    localCategories.value = cats.filter((c) => c.type === tab)
+    localCategories.value = cats.filter((c) => c.type === tab);
   },
-  { immediate: true }
-)
+  { immediate: true },
+);
 
 // Handle drag end - save new order
 async function handleDragEnd() {
   // Get all category IDs in new order
-  const categoryIds = localCategories.value.map((c) => c.id)
+  const categoryIds = localCategories.value.map((c) => c.id);
   try {
-    await reorderCategories(categoryIds)
+    await reorderCategories(categoryIds);
   } catch (error) {
-    console.error('Failed to reorder categories:', error)
+    console.error('Failed to reorder categories:', error);
   }
 }
 
 function goBack() {
-  navigateBack()
+  navigateBack();
 }
 
 function openAddModal() {
-  editingCategory.value = null
-  resetForm(activeTab.value)
-  showFormModal.value = true
+  editingCategory.value = null;
+  resetForm(activeTab.value);
+  showFormModal.value = true;
 }
 
 function openEditModal(category: UserCategory) {
-  editingCategory.value = category
+  editingCategory.value = category;
   formData.value = {
     name: category.name,
     icon: category.icon,
     color: category.color,
     type: category.type,
-  }
-  showFormModal.value = true
+  };
+  showFormModal.value = true;
 }
 
 function closeFormModal() {
-  showFormModal.value = false
-  editingCategory.value = null
+  showFormModal.value = false;
+  editingCategory.value = null;
 }
 
 async function handleSave() {
-  if (!isValid.value || isSubmitting.value) return
+  if (!isValid.value || isSubmitting.value) return;
 
-  isSubmitting.value = true
+  isSubmitting.value = true;
   try {
     if (isEditMode.value && editingCategory.value) {
       // Update existing category
@@ -109,7 +113,7 @@ async function handleSave() {
         name: formData.value.name.trim(),
         icon: formData.value.icon,
         color: formData.value.color,
-      })
+      });
     } else {
       // Create new category
       await createCategory({
@@ -117,47 +121,53 @@ async function handleSave() {
         icon: formData.value.icon,
         color: formData.value.color,
         type: formData.value.type,
-      })
+      });
     }
-    closeFormModal()
+    closeFormModal();
   } catch (error) {
-    console.error('Failed to save category:', error)
+    console.error('Failed to save category:', error);
   } finally {
-    isSubmitting.value = false
+    isSubmitting.value = false;
   }
 }
 
 function openDeleteModal(category: UserCategory) {
-  categoryToDelete.value = { id: category.id, name: category.name }
-  showDeleteModal.value = true
+  categoryToDelete.value = { id: category.id, name: category.name };
+  showDeleteModal.value = true;
 }
 
 function closeDeleteModal() {
-  showDeleteModal.value = false
-  categoryToDelete.value = null
+  showDeleteModal.value = false;
+  categoryToDelete.value = null;
 }
 
 async function confirmDelete() {
-  if (!categoryToDelete.value) return
+  if (!categoryToDelete.value) return;
 
   try {
-    await deleteCategory(categoryToDelete.value.id)
-    closeDeleteModal()
+    await deleteCategory(categoryToDelete.value.id);
+    closeDeleteModal();
   } catch (error) {
-    console.error('Failed to delete category:', error)
+    console.error('Failed to delete category:', error);
   }
 }
 </script>
 
 <template>
-  <div class="h-dvh flex flex-col overflow-hidden bg-background-light dark:bg-background-dark">
+  <div
+    class="h-dvh flex flex-col overflow-hidden bg-background-light dark:bg-background-dark"
+  >
     <!-- Header -->
-    <header class="shrink-0 pt-[var(--safe-area-inset-top)] bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-xl z-30">
+    <header
+      class="shrink-0 pt-[var(--safe-area-inset-top)] bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-xl z-30"
+    >
       <div class="flex items-center justify-between px-4 py-4">
         <UButton variant="ghost" size="sm" @click="goBack">
           <UIcon name="arrow_back" size="md" />
         </UButton>
-        <h1 class="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark">
+        <h1
+          class="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark"
+        >
           Категории
         </h1>
         <UButton variant="ghost" size="sm" @click="openAddModal">
@@ -173,7 +183,9 @@ async function confirmDelete() {
 
       <!-- Loading state -->
       <div v-if="isLoading" class="flex justify-center py-8">
-        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        <div
+          class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"
+        />
       </div>
 
       <!-- Categories List with Drag and Drop -->
@@ -188,9 +200,13 @@ async function confirmDelete() {
           @end="handleDragEnd"
         >
           <template #item="{ element: category }">
-            <div class="flex items-center gap-3 p-4 bg-card-light dark:bg-card-dark">
+            <div
+              class="flex items-center gap-3 p-4 bg-card-light dark:bg-card-dark"
+            >
               <!-- Drag Handle -->
-              <div class="drag-handle cursor-grab active:cursor-grabbing text-text-tertiary-light dark:text-text-tertiary-dark">
+              <div
+                class="drag-handle cursor-grab active:cursor-grabbing text-text-tertiary-light dark:text-text-tertiary-dark"
+              >
                 <UIcon name="drag_indicator" size="md" />
               </div>
 
@@ -207,7 +223,9 @@ async function confirmDelete() {
               </div>
 
               <!-- Category Name -->
-              <span class="flex-1 font-medium text-text-primary-light dark:text-text-primary-dark truncate">
+              <span
+                class="flex-1 font-medium text-text-primary-light dark:text-text-primary-dark truncate"
+              >
                 {{ category.name }}
               </span>
 
@@ -256,11 +274,7 @@ async function confirmDelete() {
     </main>
 
     <!-- Add/Edit Category Modal -->
-    <UModal
-      v-model="showFormModal"
-      :title="modalTitle"
-      @close="closeFormModal"
-    >
+    <UModal v-model="showFormModal" :title="modalTitle" @close="closeFormModal">
       <CategoryForm
         :form-data="formData"
         @update:name="updateField('name', $event)"
@@ -278,7 +292,13 @@ async function confirmDelete() {
           :disabled="!isValid || isSubmitting"
           @click="handleSave"
         >
-          {{ isSubmitting ? 'Сохранение...' : (isEditMode ? 'Сохранить' : 'Создать') }}
+          {{
+            isSubmitting
+              ? 'Сохранение...'
+              : isEditMode
+                ? 'Сохранить'
+                : 'Создать'
+          }}
         </UButton>
       </template>
     </UModal>

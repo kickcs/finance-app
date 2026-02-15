@@ -1,45 +1,39 @@
 <script setup lang="ts">
-import { UIcon } from '@/shared/ui'
-
 export interface FilterChip {
-  id: string
-  name: string
-  icon?: string
-  color?: string
+  id: string;
+  name: string;
+  icon?: string;
+  color?: string;
 }
 
 const props = defineProps<{
-  items: FilterChip[]
-  selectedIds: string[]
-  label?: string
-}>()
+  items: FilterChip[];
+  selectedIds: string[];
+  label?: string;
+}>();
 
 const emit = defineEmits<{
-  toggle: [id: string]
-  clear: []
-}>()
+  toggle: [id: string];
+  clear: [];
+}>();
 
 function isSelected(id: string): boolean {
-  return props.selectedIds.includes(id)
+  return props.selectedIds.includes(id);
 }
 
 function handleChipClick(id: string) {
-  emit('toggle', id)
+  emit('toggle', id);
 }
 </script>
 
 <template>
   <div class="space-y-1.5">
-    <div
-      v-if="label"
-      class="flex items-center justify-between px-1"
-    >
-      <span class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark">
+    <div v-if="label" class="flex items-center justify-between px-1">
+      <span
+        class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark"
+      >
         {{ label }}
-        <span
-          v-if="selectedIds.length > 0"
-          class="text-primary"
-        >
+        <span v-if="selectedIds.length > 0" class="text-primary">
           ({{ selectedIds.length }})
         </span>
       </span>
@@ -66,15 +60,17 @@ function handleChipClick(id: string) {
               : [
                   'bg-surface-light dark:bg-surface-dark',
                   'text-text-primary-light dark:text-text-primary-dark',
-                  'active:bg-border-light dark:active:bg-border-dark'
-                ]
+                  'active:bg-border-light dark:active:bg-border-dark',
+                ],
           ]"
           @click="handleChipClick(item.id)"
         >
           <span
             v-if="item.color"
             class="w-2 h-2 rounded-full flex-shrink-0"
-            :style="{ backgroundColor: isSelected(item.id) ? 'white' : item.color }"
+            :style="{
+              backgroundColor: isSelected(item.id) ? 'white' : item.color,
+            }"
           />
           <span>{{ item.name }}</span>
         </button>

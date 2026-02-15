@@ -1,19 +1,35 @@
 <script setup lang="ts">
-import { cva, type VariantProps } from 'class-variance-authority'
-import { Primitive } from 'reka-ui'
-import { cn } from '@/shared/lib/utils'
+import { cva, type VariantProps } from 'class-variance-authority';
+import { Primitive } from 'reka-ui';
+import { cn } from '@/shared/lib/utils';
+
+const _props = withDefaults(defineProps<ButtonProps>(), {
+  variant: 'primary',
+  size: 'md',
+  disabled: false,
+  loading: false,
+  fullWidth: false,
+});
+
+const emit = defineEmits<{
+  click: [event: MouseEvent];
+}>();
 
 const buttonVariants = cva(
   'inline-flex items-center justify-center gap-2 font-semibold rounded-lg transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none hover:scale-[1.02] active:scale-[0.98]',
   {
     variants: {
       variant: {
-        primary: 'bg-primary text-white hover:bg-primary-hover active:bg-primary-pressed',
-        secondary: 'bg-card-light dark:bg-card-dark text-text-primary-light dark:text-text-primary-dark border border-border-light dark:border-border-dark hover:bg-surface-light dark:hover:bg-surface-dark',
-        ghost: 'bg-transparent text-text-primary-light dark:text-text-primary-dark hover:bg-surface-light dark:hover:bg-surface-dark hover:scale-100 active:scale-100',
+        primary:
+          'bg-primary text-white hover:bg-primary-hover active:bg-primary-pressed',
+        secondary:
+          'bg-card-light dark:bg-card-dark text-text-primary-light dark:text-text-primary-dark border border-border-light dark:border-border-dark hover:bg-surface-light dark:hover:bg-surface-dark',
+        ghost:
+          'bg-transparent text-text-primary-light dark:text-text-primary-dark hover:bg-surface-light dark:hover:bg-surface-dark hover:scale-100 active:scale-100',
         icon: 'bg-transparent text-text-primary-light dark:text-text-primary-dark hover:bg-surface-light dark:hover:bg-surface-dark !rounded-lg hover:scale-100 active:scale-100',
         danger: 'bg-danger text-white hover:opacity-90 active:opacity-80',
-        outline: 'bg-transparent text-primary border border-primary hover:bg-primary-light',
+        outline:
+          'bg-transparent text-primary border border-primary hover:bg-primary-light',
       },
       size: {
         xs: 'h-7 px-2.5 text-xs',
@@ -27,30 +43,18 @@ const buttonVariants = cva(
       variant: 'primary',
       size: 'md',
     },
-  }
-)
+  },
+);
 
-export type ButtonVariants = VariantProps<typeof buttonVariants>
+export type ButtonVariants = VariantProps<typeof buttonVariants>;
 
 export interface ButtonProps {
-  variant?: 'primary' | 'secondary' | 'ghost' | 'icon' | 'danger' | 'outline'
-  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
-  disabled?: boolean
-  loading?: boolean
-  fullWidth?: boolean
+  variant?: 'primary' | 'secondary' | 'ghost' | 'icon' | 'danger' | 'outline';
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+  disabled?: boolean;
+  loading?: boolean;
+  fullWidth?: boolean;
 }
-
-const props = withDefaults(defineProps<ButtonProps>(), {
-  variant: 'primary',
-  size: 'md',
-  disabled: false,
-  loading: false,
-  fullWidth: false,
-})
-
-const emit = defineEmits<{
-  click: [event: MouseEvent]
-}>()
 
 const iconSizeClasses: Record<string, string> = {
   xs: 'w-7 h-7 px-0',
@@ -58,17 +62,22 @@ const iconSizeClasses: Record<string, string> = {
   md: 'w-10 h-10 px-0',
   lg: 'w-11 h-11 px-0',
   xl: 'w-12 h-12 px-0',
-}
+};
 </script>
 
 <template>
   <Primitive
     as="button"
-    :class="cn(
-      buttonVariants({ variant, size: variant === 'icon' ? undefined : size }),
-      variant === 'icon' && iconSizeClasses[size],
-      fullWidth && 'w-full'
-    )"
+    :class="
+      cn(
+        buttonVariants({
+          variant,
+          size: variant === 'icon' ? undefined : size,
+        }),
+        variant === 'icon' && iconSizeClasses[size],
+        fullWidth && 'w-full',
+      )
+    "
     :disabled="disabled || loading"
     :aria-disabled="disabled || loading || undefined"
     :aria-busy="loading || undefined"

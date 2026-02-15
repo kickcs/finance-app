@@ -1,63 +1,67 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, provide, shallowRef } from 'vue'
-import { RouterView } from 'vue-router'
-import { useTheme } from '@/features/toggle-theme'
-import { initializeAuth, useAuth, useProfile } from '@/shared/api'
-import { transitionName } from '@/app/router'
-import { useCategories } from '@/entities/category'
-import { ToastProvider, Toaster } from '@/shared/ui/primitives/toast'
-import { DemoBanner, useDemoMode } from '@/features/demo-mode'
-import { useChangelog, ChangelogModal } from '@/features/changelog'
+import { ref, computed, onMounted, provide } from 'vue';
+import { RouterView } from 'vue-router';
+import { useTheme } from '@/features/toggle-theme';
+import { initializeAuth, useAuth, useProfile } from '@/shared/api';
+import { transitionName } from '@/app/router';
+import { useCategories } from '@/entities/category';
+import { ToastProvider, Toaster } from '@/shared/ui/primitives/toast';
+import { DemoBanner, useDemoMode } from '@/features/demo-mode';
+import { useChangelog, ChangelogModal } from '@/features/changelog';
 
 // Initialize theme synchronously on script setup (before mount)
-const { initTheme } = useTheme()
-initTheme()
+const { initTheme } = useTheme();
+initTheme();
 
 // Auth state
-const { user, isLoading: authLoading, isAuthenticated } = useAuth()
-const isAppReady = ref(false)
+const { user, isLoading: _authLoading, isAuthenticated } = useAuth();
+const isAppReady = ref(false);
 
 // Categories - get getCategoryById for global use
-const userId = computed(() => user.value?.id ?? null)
-const { getCategoryById } = useCategories(userId)
+const userId = computed(() => user.value?.id ?? null);
+const { getCategoryById } = useCategories(userId);
 
 // Get user profile for demo mode
-const { profile } = useProfile(userId)
+const { profile } = useProfile(userId);
 
 // Demo mode
-const { isDemo, formattedRemaining } = useDemoMode(profile)
+const { isDemo, formattedRemaining } = useDemoMode(profile);
 
 // Changelog modal
-const { hasUnseenChanges } = useChangelog()
-const showChangelogModal = ref(false)
+const { hasUnseenChanges } = useChangelog();
+const showChangelogModal = ref(false);
 
 // Initialize auth on app mount
 onMounted(async () => {
   // Start auth initialization immediately
-  await initializeAuth()
-  isAppReady.value = true
+  await initializeAuth();
+  isAppReady.value = true;
 
   // Show changelog modal if there are unseen changes
   if (isAuthenticated.value && hasUnseenChanges.value) {
-    showChangelogModal.value = true
+    showChangelogModal.value = true;
   }
-})
+});
 
 // Provide auth state to all components
-provide('user', user)
-provide('isAuthenticated', isAuthenticated)
-provide('getCategoryById', getCategoryById)
+provide('user', user);
+provide('isAuthenticated', isAuthenticated);
+provide('getCategoryById', getCategoryById);
 </script>
 
 <template>
   <ToastProvider>
-    <div class="min-h-screen bg-background-light dark:bg-background-dark text-text-primary-light dark:text-text-primary-dark antialiased relative overflow-x-hidden">
+    <div
+      class="min-h-screen bg-background-light dark:bg-background-dark text-text-primary-light dark:text-text-primary-dark antialiased relative overflow-x-hidden"
+    >
       <!-- Loading state while auth initializes -->
       <div
         v-if="!isAppReady"
         class="min-h-screen flex items-center justify-center"
       >
-        <div class="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        <div
+          class="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"
+        />
       </div>
 
       <!-- Demo Banner - shown globally when in demo mode -->
@@ -66,7 +70,11 @@ provide('getCategoryById', getCategoryById)
       <!-- App content -->
       <RouterView v-slot="{ Component, route }">
         <!-- When transitionName is 'none' (browser gesture), skip Transition entirely -->
-        <component v-if="transitionName === 'none'" :is="Component" :key="route.path" />
+        <component
+          :is="Component"
+          v-if="transitionName === 'none'"
+          :key="route.path"
+        />
         <Transition v-else :name="transitionName">
           <component :is="Component" :key="route.path" />
         </Transition>
@@ -102,8 +110,9 @@ provide('getCategoryById', getCategoryById)
 }
 
 .slide-forward-leave-active {
-  transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1),
-              opacity 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+  transition:
+    transform 0.35s cubic-bezier(0.32, 0.72, 0, 1),
+    opacity 0.35s cubic-bezier(0.32, 0.72, 0, 1);
   z-index: 5;
 }
 
@@ -127,8 +136,9 @@ provide('getCategoryById', getCategoryById)
 
 /* Slide back - returning to previous screen */
 .slide-back-enter-active {
-  transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1),
-              opacity 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+  transition:
+    transform 0.35s cubic-bezier(0.32, 0.72, 0, 1),
+    opacity 0.35s cubic-bezier(0.32, 0.72, 0, 1);
   z-index: 5;
 }
 

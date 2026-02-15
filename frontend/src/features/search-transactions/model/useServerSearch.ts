@@ -1,37 +1,42 @@
-import { ref, computed, watch, toValue, type MaybeRefOrGetter } from 'vue'
-import { useInfiniteQuery } from '@tanstack/vue-query'
-import { useDebounceFn } from '@vueuse/core'
-import { transactionsApi, transactionQueryKeys, type PaginatedResult, type PaginatedCursor } from '@/entities/transaction'
-import type { Transaction } from '@/entities/transaction'
+import { ref, computed, watch, toValue, type MaybeRefOrGetter } from 'vue';
+import { useInfiniteQuery } from '@tanstack/vue-query';
+import { useDebounceFn } from '@vueuse/core';
+import {
+  transactionsApi,
+  transactionQueryKeys,
+  type PaginatedResult,
+  type PaginatedCursor,
+} from '@/entities/transaction';
+import type { Transaction } from '@/entities/transaction';
 
-const PAGE_SIZE = 20
-const MIN_SEARCH_LENGTH = 2
-const DEBOUNCE_MS = 300
+const PAGE_SIZE = 20;
+const MIN_SEARCH_LENGTH = 2;
+const DEBOUNCE_MS = 300;
 
 export function useServerSearch(userId: MaybeRefOrGetter<string | null>) {
-  const searchTerm = ref('')
-  const debouncedTerm = ref('')
+  const searchTerm = ref('');
+  const debouncedTerm = ref('');
 
   // Debounce search input to avoid excessive API calls
   const updateDebounced = useDebounceFn((value: string) => {
-    debouncedTerm.value = value
-  }, DEBOUNCE_MS)
+    debouncedTerm.value = value;
+  }, DEBOUNCE_MS);
 
   watch(searchTerm, (value) => {
-    updateDebounced(value.trim())
-  })
+    updateDebounced(value.trim());
+  });
 
   const isSearchActive = computed(
     () => debouncedTerm.value.length >= MIN_SEARCH_LENGTH,
-  )
+  );
 
   const queryKey = computed(() => {
-    const uid = toValue(userId)
+    const uid = toValue(userId);
     if (!uid || !isSearchActive.value) {
-      return ['search', 'disabled']
+      return ['search', 'disabled'];
     }
-    return transactionQueryKeys.search(uid, debouncedTerm.value)
-  })
+    return transactionQueryKeys.search(uid, debouncedTerm.value);
+  });
 
   const {
     data,
@@ -44,30 +49,40 @@ export function useServerSearch(userId: MaybeRefOrGetter<string | null>) {
   } = useInfiniteQuery({
     queryKey: queryKey,
     queryFn: async ({ pageParam }): Promise<PaginatedResult<Transaction>> => {
-      const uid = toValue(userId)
+      const uid = toValue(userId);
       if (!uid || !isSearchActive.value) {
-        return { data: [], nextCursor: null, hasMore: false }
+        return { data: [], nextCursor: null, hasMore: false };
       }
-      return transactionsApi.searchPaginated(uid, debouncedTerm.value, PAGE_SIZE, pageParam)
+      return transactionsApi.searchPaginated(
+        uid,
+        debouncedTerm.value,
+        PAGE_SIZE,
+        pageParam,
+      );
     },
     initialPageParam: undefined as PaginatedCursor | undefined,
-    getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.nextCursor : undefined),
+    getNextPageParam: (lastPage) =>
+      lastPage.hasMore ? lastPage.nextCursor : undefined,
     enabled: computed(() => !!toValue(userId) && isSearchActive.value),
-  })
+  });
 
   // Flatten all pages into single array
-  const results = computed(() => data.value?.pages.flatMap((page) => page.data) ?? [])
+  const results = computed(
+    () => data.value?.pages.flatMap((page) => page.data) ?? [],
+  );
 
-  const hasResults = computed(() => results.value.length > 0)
-  const isEmpty = computed(() => isSearchActive.value && !isLoading.value && !hasResults.value)
+  const hasResults = computed(() => results.value.length > 0);
+  const isEmpty = computed(
+    () => isSearchActive.value && !isLoading.value && !hasResults.value,
+  );
 
   function setQuery(newQuery: string) {
-    searchTerm.value = newQuery
+    searchTerm.value = newQuery;
   }
 
   function clearSearch() {
-    searchTerm.value = ''
-    debouncedTerm.value = ''
+    searchTerm.value = '';
+    debouncedTerm.value = '';
   }
 
   return {
@@ -84,5 +99,5 @@ export function useServerSearch(userId: MaybeRefOrGetter<string | null>) {
     setQuery,
     clearSearch,
     refetch,
-  }
+  };
 }

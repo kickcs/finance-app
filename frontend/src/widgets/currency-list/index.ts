@@ -1,1 +1,1 @@
-export { default as CurrencyList } from './ui/CurrencyList.vue'
+export { default as CurrencyList } from './ui/CurrencyList.vue';

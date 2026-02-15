@@ -1,7 +1,5 @@
-import {
-  Reminder,
-  ReminderFrequency,
-} from '../../../domain/aggregates/reminder';
+import type { ReminderFrequency } from '../../../domain/aggregates/reminder';
+import { Reminder } from '../../../domain/aggregates/reminder';
 import { ReminderOrmEntity } from '../typeorm/reminder.orm-entity';
 
 export class ReminderMapper {

@@ -1,1 +1,1 @@
-export { default as BottomNav } from './ui/BottomNav.vue'
+export { default as BottomNav } from './ui/BottomNav.vue';

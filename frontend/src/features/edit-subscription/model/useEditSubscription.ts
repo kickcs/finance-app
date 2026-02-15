@@ -1,25 +1,25 @@
-import { ref, computed } from 'vue'
-import type { Reminder } from '@/entities/reminder'
-import { REMINDER_ICONS } from '@/entities/reminder'
-import { ACCOUNT_COLORS } from '@/entities/account'
+import { ref, computed } from 'vue';
+import type { Reminder } from '@/entities/reminder';
+import { REMINDER_ICONS } from '@/entities/reminder';
+import { ACCOUNT_COLORS } from '@/entities/account';
 
 export interface SubscriptionFormData {
-  name: string
-  amount: number
-  frequency: 'weekly' | 'monthly' | 'yearly' | 'once'
-  next_date: string
-  icon: string
-  color: string
+  name: string;
+  amount: number;
+  frequency: 'weekly' | 'monthly' | 'yearly' | 'once';
+  next_date: string;
+  icon: string;
+  color: string;
 }
 
 export function useEditSubscription() {
-  const isOpen = ref(false)
-  const isEditing = ref(false)
-  const selectedSubscription = ref<Reminder | null>(null)
-  const isSubmitting = ref(false)
-  const isDeleting = ref(false)
-  const showDeleteConfirm = ref(false)
-  const error = ref<string | null>(null)
+  const isOpen = ref(false);
+  const isEditing = ref(false);
+  const selectedSubscription = ref<Reminder | null>(null);
+  const isSubmitting = ref(false);
+  const isDeleting = ref(false);
+  const showDeleteConfirm = ref(false);
+  const error = ref<string | null>(null);
 
   const formData = ref<SubscriptionFormData>({
     name: '',
@@ -28,14 +28,14 @@ export function useEditSubscription() {
     next_date: '',
     icon: REMINDER_ICONS[0],
     color: ACCOUNT_COLORS[0],
-  })
+  });
 
   const isFormValid = computed(() => {
-    return formData.value.name.trim().length > 0 && formData.value.amount > 0
-  })
+    return formData.value.name.trim().length > 0 && formData.value.amount > 0;
+  });
 
   function openModal(subscription: Reminder) {
-    selectedSubscription.value = subscription
+    selectedSubscription.value = subscription;
     formData.value = {
       name: subscription.name,
       amount: subscription.amount,
@@ -43,23 +43,23 @@ export function useEditSubscription() {
       next_date: subscription.next_date.split('T')[0],
       icon: subscription.icon,
       color: subscription.color,
-    }
-    isEditing.value = false
-    showDeleteConfirm.value = false
-    error.value = null
-    isOpen.value = true
+    };
+    isEditing.value = false;
+    showDeleteConfirm.value = false;
+    error.value = null;
+    isOpen.value = true;
   }
 
   function closeModal() {
-    isOpen.value = false
-    isEditing.value = false
-    showDeleteConfirm.value = false
-    selectedSubscription.value = null
-    error.value = null
+    isOpen.value = false;
+    isEditing.value = false;
+    showDeleteConfirm.value = false;
+    selectedSubscription.value = null;
+    error.value = null;
   }
 
   function startEditing() {
-    isEditing.value = true
+    isEditing.value = true;
   }
 
   function cancelEditing() {
@@ -71,22 +71,25 @@ export function useEditSubscription() {
         next_date: selectedSubscription.value.next_date.split('T')[0],
         icon: selectedSubscription.value.icon,
         color: selectedSubscription.value.color,
-      }
+      };
     }
-    isEditing.value = false
-    error.value = null
+    isEditing.value = false;
+    error.value = null;
   }
 
-  function updateField<K extends keyof SubscriptionFormData>(field: K, value: SubscriptionFormData[K]) {
-    formData.value[field] = value
+  function updateField<K extends keyof SubscriptionFormData>(
+    field: K,
+    value: SubscriptionFormData[K],
+  ) {
+    formData.value[field] = value;
   }
 
   function requestDelete() {
-    showDeleteConfirm.value = true
+    showDeleteConfirm.value = true;
   }
 
   function cancelDelete() {
-    showDeleteConfirm.value = false
+    showDeleteConfirm.value = false;
   }
 
   return {
@@ -106,5 +109,5 @@ export function useEditSubscription() {
     updateField,
     requestDelete,
     cancelDelete,
-  }
+  };
 }

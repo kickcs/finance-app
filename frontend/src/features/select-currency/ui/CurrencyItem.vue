@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import { UIcon } from '@/shared/ui'
-import type { Currency } from '@/entities/currency'
+import { UIcon } from '@/shared/ui';
+import type { Currency } from '@/entities/currency';
 
 defineProps<{
-  currency: Currency
-  selected?: boolean
-}>()
+  currency: Currency;
+  selected?: boolean;
+}>();
 
 defineEmits<{
-  select: []
-}>()
+  select: [];
+}>();
 </script>
 
 <template>
@@ -27,16 +27,22 @@ defineEmits<{
 
     <!-- Content -->
     <div class="flex-1 text-left">
-      <p class="font-semibold text-text-primary-light dark:text-text-primary-dark">
+      <p
+        class="font-semibold text-text-primary-light dark:text-text-primary-dark"
+      >
         {{ currency.code }}
       </p>
-      <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
+      <p
+        class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
+      >
         {{ currency.name }}
       </p>
     </div>
 
     <!-- Symbol -->
-    <span class="text-text-tertiary-light dark:text-text-tertiary-dark font-medium">
+    <span
+      class="text-text-tertiary-light dark:text-text-tertiary-dark font-medium"
+    >
       {{ currency.symbol }}
     </span>
 
