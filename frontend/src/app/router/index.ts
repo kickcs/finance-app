@@ -197,6 +197,13 @@ export const router = createRouter({
       meta: { requiresAuth: true, requiresOnboarding: true },
     },
     {
+      path: '/settings/import',
+      name: 'settings-import',
+      component: () =>
+        import('@/pages/settings/import/ImportPage.vue'),
+      meta: { requiresAuth: true, requiresOnboarding: true },
+    },
+    {
       path: '/settings/categories',
       name: 'settings-categories',
       component: () => import('@/pages/settings/categories/CategoriesPage.vue'),

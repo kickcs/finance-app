@@ -28,6 +28,10 @@ export * from './reorder-categories/reorder-categories.handler';
 export * from './initialize-default-categories/initialize-default-categories.command';
 export * from './initialize-default-categories/initialize-default-categories.handler';
 
+// Bulk import commands
+export * from './bulk-import/bulk-import.command';
+export * from './bulk-import/bulk-import.handler';
+
 // Account Balance commands
 export * from './upsert-balance/upsert-balance.command';
 export * from './upsert-balance/upsert-balance.handler';
@@ -58,6 +62,7 @@ import { CreateManyBalancesHandler } from './create-many-balances/create-many-ba
 import { UpdateBalanceByDeltaHandler } from './update-balance-by-delta/update-balance-by-delta.handler';
 import { DeleteBalanceHandler } from './delete-balance/delete-balance.handler';
 import { DeleteBalancesByAccountHandler } from './delete-balances-by-account/delete-balances-by-account.handler';
+import { BulkImportHandler } from './bulk-import/bulk-import.handler';
 
 export const CommandHandlers = [
   CreateAccountHandler,
@@ -77,4 +82,5 @@ export const CommandHandlers = [
   UpdateBalanceByDeltaHandler,
   DeleteBalanceHandler,
   DeleteBalancesByAccountHandler,
+  BulkImportHandler,
 ];

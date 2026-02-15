@@ -46,6 +46,7 @@ const menuItems = [
     label: 'Что нового',
     badge: hasUnseenChanges,
   },
+  { id: 'import', icon: 'download', label: 'Импорт данных' },
   {
     id: 'currency',
     icon: 'currency_exchange',
@@ -61,6 +62,9 @@ function handleMenuClick(itemId: string) {
     case 'whats-new':
       markAsSeen();
       router.push('/changelog');
+      break;
+    case 'import':
+      router.push('/settings/import');
       break;
     case 'currency':
       router.push('/settings/currency');

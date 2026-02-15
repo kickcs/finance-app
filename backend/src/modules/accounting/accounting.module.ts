@@ -34,6 +34,7 @@ import {
   TransactionsController,
   CategoriesController,
   AccountBalancesController,
+  ImportController,
 } from './presentation/controllers';
 
 @Module({
@@ -51,6 +52,7 @@ import {
     TransactionsController,
     CategoriesController,
     AccountBalancesController,
+    ImportController,
   ],
   providers: [
     // Repositories
