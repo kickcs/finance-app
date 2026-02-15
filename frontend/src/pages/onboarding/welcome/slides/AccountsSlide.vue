@@ -31,9 +31,6 @@ const iconTextClasses: Record<string, string> = {
 
 <template>
   <div class="w-full h-full flex-shrink-0 flex flex-col px-6 relative z-10" style="contain: layout style paint">
-    <!-- Big top glow -->
-    <div class="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-lg h-[500px] bg-primary/10 blur-[120px] rounded-full pointer-events-none z-0" />
-
     <!-- Title left-aligned -->
     <div class="mt-2 mb-8 relative z-10">
       <h1 class="text-3xl font-bold text-text-primary-dark tracking-tight leading-tight">
@@ -48,7 +45,7 @@ const iconTextClasses: Record<string, string> = {
         <div
           v-for="acc in accountTypes"
           :key="acc.label"
-          class="bg-card-dark border border-white/5 rounded-xl p-4 shadow-lg flex flex-col justify-between aspect-[1.1/1]"
+          class="bg-card-dark border border-white/5 rounded-xl p-4 flex flex-col justify-between aspect-[1.1/1]"
         >
           <div class="w-10 h-10 rounded-full flex items-center justify-center" :class="iconBgClasses[acc.color]">
             <UIcon :name="acc.icon" size="sm" :class="iconTextClasses[acc.color]" />

@@ -82,9 +82,6 @@ const carouselTransform = computed(() => {
     ref="containerRef"
     class="h-dvh flex flex-col bg-background-dark overflow-hidden relative select-none"
   >
-    <!-- Dot pattern overlay -->
-    <div class="fixed inset-0 pointer-events-none opacity-[0.03] z-0 dot-pattern" />
-
     <!-- Skip button -->
     <header class="safe-area-inset-top px-6 py-4 flex justify-end items-center z-50 relative">
       <button
@@ -124,7 +121,7 @@ const carouselTransform = computed(() => {
           :key="i"
           class="h-2 w-2 rounded-full transition-colors"
           :class="currentSlide === i - 1
-            ? 'bg-primary shadow-[0_0_8px_rgba(79,70,229,0.6)]'
+            ? 'bg-primary'
             : 'bg-text-tertiary-dark/30'"
           :aria-label="`Слайд ${i}`"
           @click="goToSlide(i - 1)"
@@ -136,7 +133,7 @@ const carouselTransform = computed(() => {
         variant="primary"
         size="xl"
         full-width
-        class="!h-14 !rounded-xl !text-lg !font-semibold !shadow-lg !shadow-primary/25"
+        class="!h-14 !rounded-xl !text-lg !font-semibold"
         @click="nextSlide"
       >
         {{ isLastSlide ? 'Начать' : 'Далее' }}
@@ -145,9 +142,3 @@ const carouselTransform = computed(() => {
   </div>
 </template>
 
-<style scoped>
-.dot-pattern {
-  background-image: radial-gradient(circle at 1px 1px, #ffffff 1px, transparent 0);
-  background-size: 32px 32px;
-}
-</style>

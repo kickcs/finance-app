@@ -2,10 +2,10 @@
 import { UIcon } from '@/shared/ui'
 
 const categories = [
-  { label: 'Продукты', amount: '32,500 ₽', color: '#4F46E5', glow: 'rgba(79,70,229,0.5)' },
-  { label: 'Разное', amount: '21,400 ₽', color: '#8B5CF6', glow: 'rgba(139,92,246,0.5)' },
-  { label: 'Развлечения', amount: '16,800 ₽', color: '#EC4899', glow: 'rgba(236,72,153,0.5)' },
-  { label: 'Транспорт', amount: '13,500 ₽', color: '#06B6D4', glow: 'rgba(6,182,212,0.5)' },
+  { label: 'Продукты', amount: '32,500 ₽', color: '#4F46E5' },
+  { label: 'Разное', amount: '21,400 ₽', color: '#8B5CF6' },
+  { label: 'Развлечения', amount: '16,800 ₽', color: '#EC4899' },
+  { label: 'Транспорт', amount: '13,500 ₽', color: '#06B6D4' },
 ] as const
 
 const chartSegments = [
@@ -18,18 +18,13 @@ const chartSegments = [
 
 <template>
   <div class="w-full h-full flex-shrink-0 flex flex-col items-center px-6 relative">
-    <!-- Background glows -->
-    <div class="absolute top-[-10%] left-[-10%] w-[50%] h-[40%] bg-primary/10 rounded-full blur-[120px] pointer-events-none z-0" />
-    <div class="absolute bottom-[-10%] right-[-10%] w-[60%] h-[50%] bg-primary-pressed/10 rounded-full blur-[100px] pointer-events-none z-0" />
-
     <!-- Title -->
     <div class="text-center mt-2 mb-4 w-full relative z-10">
       <h1 class="text-3xl font-bold text-text-primary-dark tracking-tight leading-tight">Анализируйте свои<br />расходы</h1>
     </div>
 
     <!-- Analytics card -->
-    <div class="w-full bg-card-dark border border-white/5 rounded-2xl p-5 shadow-2xl relative overflow-hidden mb-4 z-10">
-      <div class="absolute top-0 right-0 w-32 h-32 bg-primary/10 blur-[60px] rounded-full pointer-events-none" />
+    <div class="w-full bg-card-dark border border-white/5 rounded-2xl p-5 relative overflow-hidden mb-4 z-10">
 
       <!-- Tab bar -->
       <div class="flex bg-black/20 p-1 rounded-lg mb-5 relative z-10">
@@ -73,7 +68,7 @@ const chartSegments = [
             <div class="flex items-center gap-3">
               <div
                 class="w-2.5 h-2.5 rounded-full"
-                :style="{ backgroundColor: cat.color, boxShadow: `0 0 8px ${cat.glow}` }"
+                :style="{ backgroundColor: cat.color }"
               />
               <span class="text-sm text-text-secondary-dark font-medium">{{ cat.label }}</span>
             </div>

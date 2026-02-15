@@ -4,7 +4,7 @@ import { UIcon } from '@/shared/ui'
 const debts = [
   {
     icon: 'arrow_outward',
-    dotClass: 'bg-debt-given shadow-[0_0_8px_rgba(245,158,11,0.5)]',
+    dotClass: 'bg-debt-given',
     iconClass: 'text-debt-given',
     label: 'Дал в долг',
     name: 'Иван',
@@ -12,7 +12,7 @@ const debts = [
   },
   {
     icon: 'call_received',
-    dotClass: 'bg-debt-received shadow-[0_0_8px_rgba(168,85,247,0.5)]',
+    dotClass: 'bg-debt-received',
     iconClass: 'text-debt-received',
     label: 'Взял в долг',
     name: 'Банк',
@@ -34,21 +34,18 @@ const features = [
 
 <template>
   <div class="w-full h-full flex-shrink-0 flex flex-col items-center px-6 relative max-w-md mx-auto" style="contain: layout style paint">
-    <!-- Center glow -->
-    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-primary/10 blur-[90px] rounded-full pointer-events-none z-0" />
-
     <!-- Title -->
-    <div class="text-center mt-2 mb-8 z-10">
+    <div class="text-center mt-2 mb-4 z-10">
       <h1 class="text-3xl font-bold text-text-primary-dark tracking-tight leading-tight">Долги и подписки<br />под контролем</h1>
     </div>
 
-    <div class="relative w-full flex-grow flex flex-col items-center justify-start gap-6">
+    <div class="relative w-full flex-grow flex flex-col items-center justify-start gap-4">
       <!-- Two debt cards side by side -->
       <div class="grid grid-cols-2 gap-4 w-full z-10">
         <div
           v-for="debt in debts"
           :key="debt.label"
-          class="bg-card-dark border border-white/5 rounded-xl p-4 shadow-lg flex flex-col justify-between h-32 relative overflow-hidden"
+          class="bg-card-dark border border-white/5 rounded-xl p-4 flex flex-col justify-between h-28 relative overflow-hidden"
         >
           <div class="absolute top-0 right-0 p-3 opacity-10">
             <UIcon :name="debt.icon" :class="[debt.iconClass, 'text-4xl']" />
@@ -67,7 +64,7 @@ const features = [
       </div>
 
       <!-- Reminders card -->
-      <div class="w-full bg-card-dark border border-white/5 rounded-xl p-5 shadow-lg z-10">
+      <div class="w-full bg-card-dark border border-white/5 rounded-xl p-4 z-10">
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-sm font-semibold text-text-secondary-dark">Напоминания</h3>
           <UIcon name="notifications" size="xs" class="text-text-tertiary-dark" />
@@ -93,7 +90,7 @@ const features = [
       </div>
 
       <!-- Feature list -->
-      <div class="w-full space-y-4 mt-2 px-2 z-10">
+      <div class="w-full space-y-3 px-2 z-10">
         <div
           v-for="feat in features"
           :key="feat.text"
