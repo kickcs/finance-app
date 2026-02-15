@@ -109,14 +109,14 @@ function handleAddTransaction() {
       </UCard>
 
       <!-- Menu Items -->
-      <UCard class="divide-y divide-gray-100 dark:divide-gray-800">
+      <UCard class="divide-y divide-border-light dark:divide-border-dark">
         <button
           v-for="item in menuItems"
           :key="item.id"
-          class="w-full flex items-center gap-4 p-4 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/50"
+          class="w-full flex items-center gap-4 p-4 transition-colors hover:bg-surface-light dark:hover:bg-surface-dark"
           @click="handleMenuClick(item.id)"
         >
-          <div class="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+          <div class="w-10 h-10 rounded-xl bg-surface-light dark:bg-surface-dark flex items-center justify-center">
             <UIcon
               :name="item.icon"
               size="md"

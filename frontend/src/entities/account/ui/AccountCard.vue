@@ -61,7 +61,7 @@ const formattedBalance = computed(() => {
         </p>
         <span
           v-if="account.balances?.length > 1"
-          class="shrink-0 px-1.5 py-0.5 text-[10px] font-medium rounded bg-surface-light dark:bg-surface-dark text-text-secondary-light dark:text-text-secondary-dark"
+          class="shrink-0 px-1.5 py-0.5 text-caption-sm font-medium rounded bg-surface-light dark:bg-surface-dark text-text-secondary-light dark:text-text-secondary-dark"
         >
           {{ account.balances.length }}
         </span>
@@ -88,7 +88,7 @@ const formattedBalance = computed(() => {
         </div>
         <p
           v-if="account.balances.length > 2"
-          class="text-[10px] text-text-tertiary-light dark:text-text-tertiary-dark"
+          class="text-caption-sm text-text-tertiary-light dark:text-text-tertiary-dark"
         >
           +{{ account.balances.length - 2 }} ещё
         </p>

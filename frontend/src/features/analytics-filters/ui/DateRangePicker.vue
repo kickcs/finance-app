@@ -89,10 +89,10 @@ const today = new CalendarDate(
     <PopoverTrigger as-child>
       <button
         class="w-full flex items-center justify-between gap-2 px-4 py-3 rounded-xl
-               bg-white dark:bg-gray-800
-               border border-gray-200 dark:border-gray-700
+               bg-card-light dark:bg-card-dark
+               border border-border-light dark:border-border-dark
                text-text-primary-light dark:text-text-primary-dark
-               hover:border-primary/50 hover:bg-gray-50 dark:hover:bg-gray-750
+               hover:border-primary/50 hover:bg-surface-light dark:hover:bg-surface-dark
                transition-all duration-200"
       >
         <div class="flex items-center gap-2">

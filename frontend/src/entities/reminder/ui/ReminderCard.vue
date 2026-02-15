@@ -51,7 +51,7 @@ const isOverdue = computed(() => {
           ? 'bg-danger/10'
           : isUpcoming
             ? 'bg-warning/10'
-            : 'bg-gray-100 dark:bg-gray-800'
+            : 'bg-surface-light dark:bg-surface-dark'
       ]"
     >
       <UIcon

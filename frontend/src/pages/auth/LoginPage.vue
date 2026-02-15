@@ -301,9 +301,9 @@ async function handleDemoMode() {
 
         <!-- Divider -->
         <div class="flex items-center gap-4 my-6">
-          <div class="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+          <div class="flex-1 h-px bg-border-light dark:bg-border-dark" />
           <span class="text-sm text-text-tertiary-light dark:text-text-tertiary-dark">или</span>
-          <div class="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+          <div class="flex-1 h-px bg-border-light dark:bg-border-dark" />
         </div>
 
         <!-- OAuth Buttons (disabled for now - not implemented in NestJS) -->
@@ -343,11 +343,11 @@ async function handleDemoMode() {
         <!-- Demo Mode -->
         <div class="mt-4">
           <div class="flex items-center gap-4 my-4">
-            <div class="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+            <div class="flex-1 h-px bg-border-light dark:bg-border-dark" />
             <span class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
               или попробуйте
             </span>
-            <div class="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+            <div class="flex-1 h-px bg-border-light dark:bg-border-dark" />
           </div>
 
           <UButton

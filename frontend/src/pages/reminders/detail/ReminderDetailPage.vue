@@ -120,7 +120,7 @@ function goBack() {
                   ? 'bg-danger/10'
                   : isUpcoming
                     ? 'bg-warning/10'
-                    : 'bg-purple-500/10'
+                    : 'bg-reminder-light'
               ]"
             >
               <UIcon
@@ -131,7 +131,7 @@ function goBack() {
                     ? 'text-danger'
                     : isUpcoming
                       ? 'text-warning'
-                      : 'text-purple-500'
+                      : 'text-reminder'
                 ]"
               />
             </div>
@@ -161,7 +161,7 @@ function goBack() {
             </span>
             <span
               v-else-if="!reminder.is_active"
-              class="px-3 py-1 rounded-full text-xs font-medium bg-gray-500/10 text-gray-500"
+              class="px-3 py-1 rounded-full text-xs font-medium bg-neutral-light text-neutral"
             >
               Неактивна
             </span>

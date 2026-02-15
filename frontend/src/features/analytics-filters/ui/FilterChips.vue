@@ -64,9 +64,9 @@ function handleChipClick(id: string) {
             isSelected(item.id)
               ? 'bg-primary text-white shadow-sm'
               : [
-                  'bg-gray-100 dark:bg-gray-800',
+                  'bg-surface-light dark:bg-surface-dark',
                   'text-text-primary-light dark:text-text-primary-dark',
-                  'active:bg-gray-200 dark:active:bg-gray-700'
+                  'active:bg-border-light dark:active:bg-border-dark'
                 ]
           ]"
           @click="handleChipClick(item.id)"

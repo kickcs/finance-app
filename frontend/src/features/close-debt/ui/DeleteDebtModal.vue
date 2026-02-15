@@ -37,12 +37,12 @@ function confirm() {
       <div class="flex items-center gap-3 p-4 rounded-xl bg-surface-light dark:bg-surface-dark">
         <div
           class="w-12 h-12 rounded-xl flex items-center justify-center"
-          :class="debt.debt_type === 'given' ? 'bg-amber-500/10' : 'bg-purple-500/10'"
+          :class="debt.debt_type === 'given' ? 'bg-debt-given-light' : 'bg-debt-received-light'"
         >
           <UIcon
             :name="debt.debt_type === 'given' ? 'arrow_upward' : 'arrow_downward'"
             size="md"
-            :class="debt.debt_type === 'given' ? 'text-amber-500' : 'text-purple-500'"
+            :class="debt.debt_type === 'given' ? 'text-debt-given' : 'text-debt-received'"
           />
         </div>
         <div class="flex-1 min-w-0">

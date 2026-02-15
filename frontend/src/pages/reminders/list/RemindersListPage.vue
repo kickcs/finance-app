@@ -106,7 +106,7 @@ function handleAddTransaction() {
           <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark mb-1">
             Сегодня
           </p>
-          <p class="text-lg font-bold text-purple-500">
+          <p class="text-lg font-bold text-reminder">
             {{ todayReminders.length }}
           </p>
         </UCard>
@@ -140,12 +140,12 @@ function handleAddTransaction() {
             <!-- Today highlight bar -->
             <div
               v-if="isDueToday(reminder)"
-              class="absolute left-0 top-0 bottom-0 w-1 bg-purple-500 rounded-l-xl"
+              class="absolute left-0 top-0 bottom-0 w-1 bg-reminder rounded-l-xl"
             />
             <ReminderCard
               :reminder="reminder"
               :currency="currency"
-              :class="isDueToday(reminder) && 'bg-purple-500/5'"
+              :class="isDueToday(reminder) && 'bg-reminder-light'"
               @click="handleReminderClick(reminder)"
             />
           </div>
@@ -156,8 +156,8 @@ function handleAddTransaction() {
           v-else
           class="py-12 text-center bg-card-light dark:bg-card-dark rounded-2xl"
         >
-          <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-purple-500/10 flex items-center justify-center">
-            <UIcon name="notifications" size="lg" class="text-purple-500" />
+          <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-reminder-light flex items-center justify-center">
+            <UIcon name="notifications" size="lg" class="text-reminder" />
           </div>
           <p class="text-text-secondary-light dark:text-text-secondary-dark mb-4 font-semibold">
             Нет подписок

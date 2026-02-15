@@ -38,7 +38,7 @@ defineEmits<{
           itemSize || 'w-12 h-12',
           modelValue === icon
             ? 'ring-2 ring-offset-2 ring-primary dark:ring-offset-background-dark'
-            : 'bg-gray-100 dark:bg-gray-800',
+            : 'bg-surface-light dark:bg-surface-dark',
         ]"
         :style="modelValue === icon ? { backgroundColor: `${color}20` } : undefined"
         @click="$emit('update:modelValue', icon)"

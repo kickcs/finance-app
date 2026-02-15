@@ -1,4 +1,5 @@
 // UI Kit exports
+export { UBadge } from './badge'
 export { UButton } from './button'
 export { UInput } from './input'
 export { UCard } from './card'
