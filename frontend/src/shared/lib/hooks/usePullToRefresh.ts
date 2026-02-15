@@ -1,4 +1,4 @@
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted, type Ref } from 'vue'
 import { haptics } from '@/shared/lib/haptics'
 
 export interface PullToRefreshConfig {
@@ -8,15 +8,16 @@ export interface PullToRefreshConfig {
   maxPull?: number
   /** Callback when refresh is triggered */
   onRefresh: () => Promise<void>
+  /** Optional scroll container ref (defaults to window scrolling) */
+  containerRef?: Ref<HTMLElement | null | undefined>
 }
-
-const RUBBER_BAND_RESISTANCE = 2.5
 
 export function usePullToRefresh(config: PullToRefreshConfig) {
   const {
     threshold = 64,
     maxPull = 128,
     onRefresh,
+    containerRef,
   } = config
 
   const pullDistance = ref(0)
@@ -31,9 +32,16 @@ export function usePullToRefresh(config: PullToRefreshConfig) {
   let rafId: number | null = null
   let animationId: number | null = null
 
+  function getScrollTop(): number {
+    if (containerRef?.value) {
+      return containerRef.value.scrollTop
+    }
+    return window.scrollY
+  }
+
   function onTouchStart(e: TouchEvent) {
     if (isRefreshing.value) return
-    if (window.scrollY > 0) return
+    if (getScrollTop() > 0) return
 
     startX = e.touches[0].clientX
     startY = e.touches[0].clientY
@@ -44,7 +52,7 @@ export function usePullToRefresh(config: PullToRefreshConfig) {
   function onTouchMove(e: TouchEvent) {
     if (!e.touches[0]) return
     if (isRefreshing.value) return
-    if (window.scrollY > 0) {
+    if (getScrollTop() > 0) {
       if (isPulling.value) resetPull()
       return
     }
@@ -70,12 +78,12 @@ export function usePullToRefresh(config: PullToRefreshConfig) {
     e.preventDefault()
     isPulling.value = true
 
-    // Rubber-band resistance
-    const distance = Math.min(diffY * (1 - diffY / (maxPull * RUBBER_BAND_RESISTANCE)), maxPull)
+    // Exponential resistance for natural iOS-like spring feel
+    const distance = maxPull * (1 - Math.exp((-0.5 * diffY) / maxPull))
 
     if (rafId !== null) cancelAnimationFrame(rafId)
     rafId = requestAnimationFrame(() => {
-      pullDistance.value = Math.max(0, distance)
+      pullDistance.value = Math.max(0, Math.min(distance, maxPull))
 
       const reached = pullDistance.value >= threshold
       if (reached && !hasTriggeredHaptic) {
@@ -154,16 +162,47 @@ export function usePullToRefresh(config: PullToRefreshConfig) {
     startY = 0
   }
 
+  function addListeners(target: HTMLElement | Window) {
+    target.addEventListener('touchstart', onTouchStart as EventListener, { passive: true })
+    target.addEventListener('touchmove', onTouchMove as EventListener, { passive: false })
+    target.addEventListener('touchend', onTouchEnd as EventListener, { passive: true })
+  }
+
+  function removeListeners(target: HTMLElement | Window) {
+    target.removeEventListener('touchstart', onTouchStart as EventListener)
+    target.removeEventListener('touchmove', onTouchMove as EventListener)
+    target.removeEventListener('touchend', onTouchEnd as EventListener)
+  }
+
+  let currentTarget: HTMLElement | Window | null = null
+
+  function setupListeners() {
+    const newTarget = containerRef?.value ?? window
+    if (newTarget === currentTarget) return
+
+    if (currentTarget) {
+      removeListeners(currentTarget)
+    }
+    currentTarget = newTarget
+    addListeners(currentTarget)
+  }
+
   onMounted(() => {
-    window.addEventListener('touchstart', onTouchStart, { passive: true })
-    window.addEventListener('touchmove', onTouchMove, { passive: false })
-    window.addEventListener('touchend', onTouchEnd, { passive: true })
+    setupListeners()
   })
 
+  // Watch for containerRef changes (container may mount later)
+  if (containerRef) {
+    watch(containerRef, () => {
+      setupListeners()
+    })
+  }
+
   onUnmounted(() => {
-    window.removeEventListener('touchstart', onTouchStart)
-    window.removeEventListener('touchmove', onTouchMove)
-    window.removeEventListener('touchend', onTouchEnd)
+    if (currentTarget) {
+      removeListeners(currentTarget)
+      currentTarget = null
+    }
     if (rafId !== null) cancelAnimationFrame(rafId)
     if (animationId !== null) cancelAnimationFrame(animationId)
   })
