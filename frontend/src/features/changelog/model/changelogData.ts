@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.2.0';
+export const CURRENT_VERSION = '1.2.1';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,17 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.2.1',
+    date: '2026-02-16',
+    title: 'Исправление статистики',
+    items: [
+      {
+        type: 'fix',
+        text: 'Возврат долга больше не отображается как доход в статистике и аналитике',
+      },
+    ],
+  },
   {
     version: '1.2.0',
     date: '2026-02-16',

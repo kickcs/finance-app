@@ -46,6 +46,16 @@ export class CreateTransactionHandler implements ICommandHandler<CreateTransacti
       toCurrency,
     } = command;
 
+    // TODO: TEMP DEBUG - remove after verifying isDebtRelated saves correctly
+    if (
+      categoryId &&
+      ['debt_given', 'debt_taken', 'debt_return_to_me', 'debt_return_from_me'].includes(categoryId)
+    ) {
+      console.log(
+        `[DEBUG] CreateTransaction: categoryId=${categoryId}, isDebtRelated=${isDebtRelated} (type: ${typeof isDebtRelated})`,
+      );
+    }
+
     const transactionId = crypto.randomUUID();
     let transaction: Transaction;
 

@@ -365,6 +365,9 @@ export class TransactionRepository implements ITransactionRepository {
       .select('SUM(t.amount)', 'total')
       .andWhere('t.type = :type', { type: 'income' })
       .andWhere('(t.is_debt_related = false OR t.is_debt_related IS NULL)')
+      .andWhere(
+        "t.category_id NOT IN ('debt_given', 'debt_taken', 'debt_return_to_me', 'debt_return_from_me')",
+      )
       .getRawOne<{ total: string | null }>();
 
     // 2. Regular expense (non-debt-related, handles NULL as false)
@@ -372,6 +375,9 @@ export class TransactionRepository implements ITransactionRepository {
       .select('SUM(t.amount)', 'total')
       .andWhere('t.type = :type', { type: 'expense' })
       .andWhere('(t.is_debt_related = false OR t.is_debt_related IS NULL)')
+      .andWhere(
+        "t.category_id NOT IN ('debt_given', 'debt_taken', 'debt_return_to_me', 'debt_return_from_me')",
+      )
       .getRawOne<{ total: string | null }>();
 
     // 3. Debt given (counts as expense - money I lent out)
@@ -426,6 +432,9 @@ export class TransactionRepository implements ITransactionRepository {
       .addSelect('SUM(t.amount)', 'amount')
       .andWhere('t.type = :type', { type: 'income' })
       .andWhere('(t.is_debt_related = false OR t.is_debt_related IS NULL)')
+      .andWhere(
+        "t.category_id NOT IN ('debt_given', 'debt_taken', 'debt_return_to_me', 'debt_return_from_me')",
+      )
       .groupBy('t.currency')
       .getRawMany<{ currency: string; amount: string }>();
 
@@ -435,6 +444,9 @@ export class TransactionRepository implements ITransactionRepository {
       .addSelect('SUM(t.amount)', 'amount')
       .andWhere('t.type = :type', { type: 'expense' })
       .andWhere('(t.is_debt_related = false OR t.is_debt_related IS NULL)')
+      .andWhere(
+        "t.category_id NOT IN ('debt_given', 'debt_taken', 'debt_return_to_me', 'debt_return_from_me')",
+      )
       .groupBy('t.currency')
       .getRawMany<{ currency: string; amount: string }>();
 
@@ -578,6 +590,9 @@ export class TransactionRepository implements ITransactionRepository {
     const regularIncomeResult = await createBaseQuery()
       .andWhere('t.type = :type', { type: 'income' })
       .andWhere('(t.is_debt_related = false OR t.is_debt_related IS NULL)')
+      .andWhere(
+        "t.category_id NOT IN ('debt_given', 'debt_taken', 'debt_return_to_me', 'debt_return_from_me')",
+      )
       .select('SUM(t.amount)', 'total')
       .getRawOne<{ total: string | null }>();
 
@@ -585,6 +600,9 @@ export class TransactionRepository implements ITransactionRepository {
     const regularExpenseResult = await createBaseQuery()
       .andWhere('t.type = :type', { type: 'expense' })
       .andWhere('(t.is_debt_related = false OR t.is_debt_related IS NULL)')
+      .andWhere(
+        "t.category_id NOT IN ('debt_given', 'debt_taken', 'debt_return_to_me', 'debt_return_from_me')",
+      )
       .select('SUM(t.amount)', 'total')
       .getRawOne<{ total: string | null }>();
 
@@ -637,6 +655,9 @@ export class TransactionRepository implements ITransactionRepository {
     const regularIncomeByCurrencyResult = await createBaseQuery()
       .andWhere('t.type = :type', { type: 'income' })
       .andWhere('(t.is_debt_related = false OR t.is_debt_related IS NULL)')
+      .andWhere(
+        "t.category_id NOT IN ('debt_given', 'debt_taken', 'debt_return_to_me', 'debt_return_from_me')",
+      )
       .select('t.currency', 'currency')
       .addSelect('SUM(t.amount)', 'amount')
       .groupBy('t.currency')
@@ -646,6 +667,9 @@ export class TransactionRepository implements ITransactionRepository {
     const regularExpenseByCurrencyResult = await createBaseQuery()
       .andWhere('t.type = :type', { type: 'expense' })
       .andWhere('(t.is_debt_related = false OR t.is_debt_related IS NULL)')
+      .andWhere(
+        "t.category_id NOT IN ('debt_given', 'debt_taken', 'debt_return_to_me', 'debt_return_from_me')",
+      )
       .select('t.currency', 'currency')
       .addSelect('SUM(t.amount)', 'amount')
       .groupBy('t.currency')
@@ -760,6 +784,9 @@ export class TransactionRepository implements ITransactionRepository {
     const categoryBreakdownResult = await createBaseQuery()
       .andWhere('t.type IN (:...types)', { types: ['income', 'expense'] })
       .andWhere('(t.is_debt_related = false OR t.is_debt_related IS NULL)')
+      .andWhere(
+        "t.category_id NOT IN ('debt_given', 'debt_taken', 'debt_return_to_me', 'debt_return_from_me')",
+      )
       .leftJoin(CategoryOrmEntity, 'c', 'c.id::text = t.category_id')
       .select('t.category_id', 'categoryId')
       .addSelect('c.name', 'categoryName')
