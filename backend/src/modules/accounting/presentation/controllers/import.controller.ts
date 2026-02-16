@@ -13,7 +13,11 @@ export class ImportController {
   async importTransactions(
     @CurrentUser('sub') userId: string,
     @Body() dto: BulkImportDto,
-  ) {
+  ): Promise<{
+    importedCount: number;
+    categoriesCreated: string[];
+    accountsCreated: string[];
+  }> {
     return this.commandBus.execute(
       new BulkImportCommand(userId, dto.transactions),
     );
