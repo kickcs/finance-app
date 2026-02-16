@@ -8,6 +8,7 @@ import { useCategories } from '@/entities/category';
 import { ToastProvider, Toaster } from '@/shared/ui/primitives/toast';
 import { DemoBanner, useDemoMode } from '@/features/demo-mode';
 import { useChangelog, ChangelogModal } from '@/features/changelog';
+import { NavigationProgress } from '@/shared/ui/navigation-progress';
 
 // Initialize theme synchronously on script setup (before mount)
 const { initTheme } = useTheme();
@@ -54,6 +55,9 @@ provide('getCategoryById', getCategoryById);
     <div
       class="min-h-screen bg-background-light dark:bg-background-dark text-text-primary-light dark:text-text-primary-dark antialiased relative overflow-x-hidden"
     >
+      <!-- Navigation progress bar -->
+      <NavigationProgress />
+
       <!-- Loading state while auth initializes -->
       <div
         v-if="!isAppReady"
