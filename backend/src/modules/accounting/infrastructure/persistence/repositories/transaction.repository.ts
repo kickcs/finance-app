@@ -386,16 +386,18 @@ export class TransactionRepository implements ITransactionRepository {
       .andWhere("t.category_id = 'debt_taken'")
       .getRawOne<{ total: string | null }>();
 
-    // 5. Debt returns TO ME (subtract from expenses - these offset my expenses)
+    // 5. Debt returns TO ME (subtract from expenses - only if original debt affected balance)
     const debtReturnsToMeResult = await createBaseQuery()
       .select('SUM(t.amount)', 'total')
       .andWhere("t.category_id = 'debt_return_to_me'")
+      .andWhere('t.is_debt_related = true')
       .getRawOne<{ total: string | null }>();
 
-    // 6. Debt returns FROM ME (subtract from income - these offset my income)
+    // 6. Debt returns FROM ME (subtract from income - only if original debt affected balance)
     const debtReturnsFromMeResult = await createBaseQuery()
       .select('SUM(t.amount)', 'total')
       .andWhere("t.category_id = 'debt_return_from_me'")
+      .andWhere('t.is_debt_related = true')
       .getRawOne<{ total: string | null }>();
 
     // Calculate NET values
@@ -452,19 +454,21 @@ export class TransactionRepository implements ITransactionRepository {
       .groupBy('t.currency')
       .getRawMany<{ currency: string; amount: string }>();
 
-    // 11. Debt returns TO ME by currency
+    // 11. Debt returns TO ME by currency (only if original debt affected balance)
     const debtReturnsToMeByCurrencyResult = await createBaseQuery()
       .select('t.currency', 'currency')
       .addSelect('SUM(t.amount)', 'amount')
       .andWhere("t.category_id = 'debt_return_to_me'")
+      .andWhere('t.is_debt_related = true')
       .groupBy('t.currency')
       .getRawMany<{ currency: string; amount: string }>();
 
-    // 12. Debt returns FROM ME by currency
+    // 12. Debt returns FROM ME by currency (only if original debt affected balance)
     const debtReturnsFromMeByCurrencyResult = await createBaseQuery()
       .select('t.currency', 'currency')
       .addSelect('SUM(t.amount)', 'amount')
       .andWhere("t.category_id = 'debt_return_from_me'")
+      .andWhere('t.is_debt_related = true')
       .groupBy('t.currency')
       .getRawMany<{ currency: string; amount: string }>();
 
@@ -596,15 +600,17 @@ export class TransactionRepository implements ITransactionRepository {
       .select('SUM(t.amount)', 'total')
       .getRawOne<{ total: string | null }>();
 
-    // 5. Debt returns TO ME (subtract from expenses)
+    // 5. Debt returns TO ME (subtract from expenses - only if original debt affected balance)
     const debtReturnsToMeResult = await createBaseQuery()
       .andWhere("t.category_id = 'debt_return_to_me'")
+      .andWhere('t.is_debt_related = true')
       .select('SUM(t.amount)', 'total')
       .getRawOne<{ total: string | null }>();
 
-    // 6. Debt returns FROM ME (subtract from income)
+    // 6. Debt returns FROM ME (subtract from income - only if original debt affected balance)
     const debtReturnsFromMeResult = await createBaseQuery()
       .andWhere("t.category_id = 'debt_return_from_me'")
+      .andWhere('t.is_debt_related = true')
       .select('SUM(t.amount)', 'total')
       .getRawOne<{ total: string | null }>();
 
@@ -661,17 +667,19 @@ export class TransactionRepository implements ITransactionRepository {
       .groupBy('t.currency')
       .getRawMany<{ currency: string; amount: string }>();
 
-    // 11. Debt returns TO ME by currency
+    // 11. Debt returns TO ME by currency (only if original debt affected balance)
     const debtReturnsToMeByCurrencyResult = await createBaseQuery()
       .andWhere("t.category_id = 'debt_return_to_me'")
+      .andWhere('t.is_debt_related = true')
       .select('t.currency', 'currency')
       .addSelect('SUM(t.amount)', 'amount')
       .groupBy('t.currency')
       .getRawMany<{ currency: string; amount: string }>();
 
-    // 12. Debt returns FROM ME by currency
+    // 12. Debt returns FROM ME by currency (only if original debt affected balance)
     const debtReturnsFromMeByCurrencyResult = await createBaseQuery()
       .andWhere("t.category_id = 'debt_return_from_me'")
+      .andWhere('t.is_debt_related = true')
       .select('t.currency', 'currency')
       .addSelect('SUM(t.amount)', 'amount')
       .groupBy('t.currency')
