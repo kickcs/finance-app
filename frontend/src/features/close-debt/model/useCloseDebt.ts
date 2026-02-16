@@ -39,6 +39,12 @@ export function useCloseDebt() {
         ? `Возврат от ${debt.person_name}: доля в общем счёте`
         : `Закрытие долга: ${debt.person_name || debt.name}`;
 
+      // Only mark as debt-related if the original debt had a transaction that affected balance
+      // (either a direct debt transaction or a linked source expense)
+      // If created with "Не списывать с баланса", no transaction existed, so the return
+      // should not offset expenses in stats calculations
+      const hadBalanceEffect = !!(debt.transaction_id || debt.source_transaction_id);
+
       // 1. Create closing transaction (backend handles balance)
       const transaction = await transactionsApi.create({
         user_id: userId,
@@ -49,7 +55,7 @@ export function useCloseDebt() {
         type: transactionType,
         description,
         date: new Date().toISOString(),
-        is_debt_related: true,
+        is_debt_related: hadBalanceEffect,
       });
 
       // 2. Mark debt as closed

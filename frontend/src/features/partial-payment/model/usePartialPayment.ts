@@ -68,6 +68,9 @@ export function usePartialPayment() {
           ? 'debt_return_to_me'
           : 'debt_return_from_me';
 
+        // Only mark as debt-related if the original debt had a balance-affecting transaction
+        const hadBalanceEffect = !!debt.transaction_id;
+
         // 1. Create partial payment transaction (backend handles balance)
         await transactionsApi.create({
           user_id: userId,
@@ -78,7 +81,7 @@ export function usePartialPayment() {
           type: transactionType,
           description: `Частичный платёж: ${debt.person_name || debt.name}`,
           date: new Date().toISOString(),
-          is_debt_related: true,
+          is_debt_related: hadBalanceEffect,
         });
 
         // 2. Update debt remaining amount
