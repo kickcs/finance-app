@@ -1,16 +1,17 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import {
-  ReminderCard,
   ReminderCardSkeleton,
   type Reminder,
 } from '@/entities/reminder';
 import { UIcon, UButton } from '@/shared/ui';
+import { formatCurrency, COMPACT_FORMAT } from '@/shared/lib/format/currency';
 
 const props = defineProps<{
   reminders: Reminder[];
   currency: string;
   loading?: boolean;
+  hidden?: boolean;
 }>();
 
 defineEmits<{
@@ -33,15 +34,14 @@ const todayCount = computed(() => {
   }).length;
 });
 
-// Check if reminder is due today
-function isDueToday(reminder: Reminder): boolean {
-  if (!reminder.next_date) return false;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const date = new Date(reminder.next_date);
-  return date >= today && date < tomorrow;
+function isUpcoming(reminder: Reminder): boolean {
+  const nextDateMs = new Date(reminder.next_date).getTime();
+  const threeDays = 3 * 24 * 60 * 60 * 1000;
+  return nextDateMs - Date.now() < threeDays && nextDateMs > Date.now();
+}
+
+function isOverdue(reminder: Reminder): boolean {
+  return new Date(reminder.next_date).getTime() < Date.now();
 }
 </script>
 
@@ -62,41 +62,79 @@ function isDueToday(reminder: Reminder): boolean {
           {{ todayCount }}
         </span>
       </div>
-      <UButton
-        v-if="reminders.length > 0"
-        variant="ghost"
-        size="xs"
-        @click="$emit('view-all')"
-      >
-        <UIcon name="chevron_right" size="xs" />
-      </UButton>
+      <div class="flex items-center gap-1">
+        <UButton variant="ghost" size="xs" @click="$emit('add-click')">
+          <UIcon name="add" size="xs" />
+        </UButton>
+        <UButton
+          v-if="reminders.length > 0"
+          variant="ghost"
+          size="xs"
+          @click="$emit('view-all')"
+        >
+          Все
+          <UIcon name="chevron_right" size="xs" />
+        </UButton>
+      </div>
     </div>
 
     <!-- Loading state -->
-    <div v-if="loading" class="space-y-2">
-      <ReminderCardSkeleton v-for="i in 3" :key="i" :compact="true" />
+    <div v-if="loading" class="flex gap-3 overflow-hidden">
+      <div
+        v-for="i in 3"
+        :key="i"
+        class="shrink-0 w-36 h-28 rounded-xl bg-surface-light dark:bg-surface-dark animate-shimmer"
+      />
     </div>
 
-    <!-- Reminders List -->
-    <div v-else-if="reminders.length > 0" class="space-y-2">
-      <div
-        v-for="reminder in reminders.slice(0, 5)"
+    <!-- Horizontal scroll list -->
+    <div
+      v-else-if="reminders.length > 0"
+      class="flex gap-3 overflow-x-auto no-scrollbar -mx-5 px-5 pb-1"
+    >
+      <button
+        v-for="reminder in reminders.slice(0, 8)"
         :key="reminder.id"
-        class="relative"
+        class="shrink-0 w-36 p-3 rounded-xl text-left bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark hover:bg-surface-light dark:hover:bg-surface-dark active:opacity-80 transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        :aria-label="`${reminder.name}, ${formatCurrency(reminder.amount, currency || 'UZS')}`"
+        @click="$emit('reminder-click', reminder)"
       >
-        <!-- Today highlight -->
+        <!-- Icon -->
         <div
-          v-if="isDueToday(reminder)"
-          class="absolute left-0 top-0 bottom-0 w-0.5 rounded-full bg-primary"
-        />
-        <ReminderCard
-          :reminder="reminder"
-          :currency="currency"
-          :compact="true"
-          :class="isDueToday(reminder) && 'bg-primary-light'"
-          @click="$emit('reminder-click', reminder)"
-        />
-      </div>
+          class="w-9 h-9 rounded-lg flex items-center justify-center mb-2.5"
+          :class="[
+            isOverdue(reminder)
+              ? 'bg-danger/10'
+              : isUpcoming(reminder)
+                ? 'bg-warning/10'
+                : 'bg-surface-light dark:bg-surface-dark',
+          ]"
+        >
+          <UIcon
+            :name="reminder.icon"
+            size="md"
+            :class="[
+              isOverdue(reminder)
+                ? 'text-danger'
+                : isUpcoming(reminder)
+                  ? 'text-warning'
+                  : 'text-text-secondary-light dark:text-text-secondary-dark',
+            ]"
+          />
+        </div>
+
+        <!-- Name -->
+        <p
+          class="text-body-sm font-medium text-text-primary-light dark:text-text-primary-dark truncate mb-0.5"
+        >
+          {{ reminder.name }}
+        </p>
+
+        <!-- Amount -->
+        <p class="text-xs font-semibold text-text-primary-light dark:text-text-primary-dark">
+          {{ hidden ? '••••' : formatCurrency(reminder.amount, currency || 'UZS', COMPACT_FORMAT) }}
+        </p>
+      </button>
     </div>
 
     <!-- Empty state -->

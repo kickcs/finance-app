@@ -11,6 +11,7 @@ const props = withDefaults(
     account: AccountWithBalances;
     showBalance?: boolean;
     compact?: boolean;
+    hidden?: boolean;
   }>(),
   {
     showBalance: true,
@@ -74,8 +75,16 @@ const formattedBalance = computed(() => {
 
     <!-- Balance -->
     <div v-if="showBalance" class="text-right shrink-0 min-w-0 max-w-[45%]">
+      <!-- Hidden -->
+      <p
+        v-if="hidden"
+        class="font-semibold text-sm text-text-primary-light dark:text-text-primary-dark"
+      >
+        ••••
+      </p>
+
       <!-- Multi-currency -->
-      <div v-if="account.balances?.length > 1" class="space-y-0.5">
+      <div v-else-if="account.balances?.length > 1" class="space-y-0.5">
         <div
           v-for="balance in account.balances.slice(0, 2)"
           :key="balance.currency"

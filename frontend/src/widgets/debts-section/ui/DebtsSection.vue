@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import {
   DebtCardSkeleton,
   type Debt,
   DEBT_DIRECTION_COLORS,
 } from '@/entities/debt';
-import { UIcon, UButton } from '@/shared/ui';
+import { UIcon, UButton, UTabs } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { formatDate } from '@/shared/lib/format/date';
 import { useExchangeRates } from '@/shared/api';
@@ -22,6 +22,7 @@ const props = defineProps<{
   debts: Debt[];
   currency: string;
   loading?: boolean;
+  hidden?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -30,6 +31,13 @@ const emit = defineEmits<{
   'add-click': [];
   'view-all': [];
 }>();
+
+const activeTab = ref('given');
+
+const debtTabs = [
+  { id: 'given', label: 'Вам должны' },
+  { id: 'taken', label: 'Вы должны' },
+];
 
 function handleGroupClick(group: DebtByPerson) {
   if (group.debts.length === 1) {
@@ -80,9 +88,6 @@ const debtsByPerson = computed<DebtByPerson[]>(() => {
   }
 
   return Object.values(grouped).sort((a, b) => {
-    if (a.debtType !== b.debtType) {
-      return a.debtType === 'given' ? -1 : 1;
-    }
     if (a.nearestDueDate && b.nearestDueDate) {
       return (
         new Date(a.nearestDueDate).getTime() -
@@ -95,22 +100,8 @@ const debtsByPerson = computed<DebtByPerson[]>(() => {
   });
 });
 
-const totalGivenDebts = computed(() => {
-  return activeDebts.value
-    .filter((d) => d.debt_type === 'given')
-    .reduce(
-      (sum, d) => sum + convert(d.remaining_amount, d.currency || 'UZS'),
-      0,
-    );
-});
-
-const totalTakenDebts = computed(() => {
-  return activeDebts.value
-    .filter((d) => d.debt_type === 'taken')
-    .reduce(
-      (sum, d) => sum + convert(d.remaining_amount, d.currency || 'UZS'),
-      0,
-    );
+const filteredDebts = computed(() => {
+  return debtsByPerson.value.filter((g) => g.debtType === activeTab.value);
 });
 
 const overdueCount = computed(() => {
@@ -153,54 +144,34 @@ function isOverdue(date: string | null): boolean {
           size="xs"
           @click="$emit('view-all')"
         >
+          Все
           <UIcon name="chevron_right" size="xs" />
         </UButton>
       </div>
     </div>
 
-    <!-- Summary -->
-    <div
+    <!-- Tabs -->
+    <UTabs
       v-if="activeDebts.length > 0 && !loading"
-      class="grid grid-cols-2 gap-2"
-    >
-      <div
-        class="flex items-center justify-between px-3 py-2 rounded-lg bg-surface-light dark:bg-surface-dark"
-      >
-        <span
-          class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
-          >Вам</span
-        >
-        <span class="text-xs font-semibold text-warning">
-          {{ formatCurrency(totalGivenDebts, currency) }}
-        </span>
-      </div>
-      <div
-        class="flex items-center justify-between px-3 py-2 rounded-lg bg-surface-light dark:bg-surface-dark"
-      >
-        <span
-          class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
-          >Вы</span
-        >
-        <span class="text-xs font-semibold text-cat-entertainment">
-          {{ formatCurrency(totalTakenDebts, currency) }}
-        </span>
-      </div>
-    </div>
+      v-model="activeTab"
+      :items="debtTabs"
+      size="sm"
+    />
 
     <!-- Loading state -->
     <div v-if="loading" class="space-y-2">
       <DebtCardSkeleton v-for="i in 2" :key="i" />
     </div>
 
-    <!-- Debts List -->
+    <!-- Filtered Debts List -->
     <TransitionGroup
-      v-else-if="debtsByPerson.length > 0"
+      v-else-if="filteredDebts.length > 0"
       name="debt-list"
       tag="div"
       class="space-y-2"
     >
       <button
-        v-for="(group, index) in debtsByPerson.slice(0, 3)"
+        v-for="(group, index) in filteredDebts.slice(0, 4)"
         :key="`${group.personName}_${group.debtType}`"
         class="w-full p-3 rounded-xl text-left bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark hover:bg-surface-light dark:hover:bg-surface-dark active:opacity-80 transition-all duration-150 animate-fadeInUp"
         :style="{ animationDelay: `${index * 0.03}s` }"
@@ -228,52 +199,53 @@ function isOverdue(date: string | null): boolean {
               >
                 {{ group.personName }}
               </p>
-              <div class="flex items-center gap-1">
-                <span
-                  class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
-                >
-                  {{ group.debtType === 'given' ? 'Вам должен' : 'Вы должны' }}
-                </span>
-                <span
-                  v-if="group.debts.length > 1"
-                  class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
-                >
-                  · {{ group.debts.length }}
-                </span>
-              </div>
+              <p
+                v-if="group.nearestDueDate"
+                class="text-xs"
+                :class="
+                  isOverdue(group.nearestDueDate)
+                    ? 'text-danger font-medium'
+                    : 'text-text-tertiary-light dark:text-text-tertiary-dark'
+                "
+              >
+                {{
+                  isOverdue(group.nearestDueDate)
+                    ? 'Просрочено'
+                    : formatDate(group.nearestDueDate, { format: 'short' })
+                }}
+              </p>
+              <p
+                v-else
+                class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
+              >
+                {{ group.debts.length > 1 ? `${group.debts.length} долга` : 'Без срока' }}
+              </p>
             </div>
           </div>
 
-          <div class="text-right shrink-0">
-            <p
-              class="text-sm font-semibold"
-              :style="{ color: DEBT_DIRECTION_COLORS[group.debtType] }"
-            >
-              {{ formatCurrency(group.totalRemaining, currency) }}
-            </p>
-            <p
-              v-if="group.nearestDueDate"
-              class="text-xs"
-              :class="
-                isOverdue(group.nearestDueDate)
-                  ? 'text-danger font-medium'
-                  : 'text-text-tertiary-light dark:text-text-tertiary-dark'
-              "
-            >
-              {{
-                isOverdue(group.nearestDueDate)
-                  ? 'Просрочено'
-                  : formatDate(group.nearestDueDate, { format: 'short' })
-              }}
-            </p>
-          </div>
+          <p
+            class="text-sm font-semibold shrink-0"
+            :style="{ color: DEBT_DIRECTION_COLORS[group.debtType] }"
+          >
+            {{ hidden ? '••••' : formatCurrency(group.totalRemaining, currency) }}
+          </p>
         </div>
       </button>
     </TransitionGroup>
 
-    <!-- Empty state -->
+    <!-- Empty state for current tab -->
     <div
-      v-else
+      v-else-if="activeDebts.length > 0"
+      class="py-6 text-center"
+    >
+      <p class="text-sm text-text-tertiary-light dark:text-text-tertiary-dark">
+        {{ activeTab === 'given' ? 'Нет долгов «вам должны»' : 'Нет долгов «вы должны»' }}
+      </p>
+    </div>
+
+    <!-- Empty state — no debts at all -->
+    <div
+      v-else-if="!loading"
       class="py-8 text-center rounded-xl border border-border-light dark:border-border-dark border-dashed"
     >
       <div

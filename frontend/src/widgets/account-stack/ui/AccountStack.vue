@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { AccountCard, type AccountWithBalances } from '@/entities/account';
-import { UIcon, UButton, ViewAllButton } from '@/shared/ui';
+import { UIcon, UButton } from '@/shared/ui';
 
 defineProps<{
   accounts: AccountWithBalances[];
   loading?: boolean;
+  hidden?: boolean;
 }>();
 
 defineEmits<{
@@ -15,7 +16,7 @@ defineEmits<{
 </script>
 
 <template>
-  <div class="space-y-4">
+  <div class="space-y-3">
     <!-- Header -->
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-2">
@@ -31,37 +32,53 @@ defineEmits<{
           {{ accounts.length }}
         </span>
       </div>
-      <UButton variant="ghost" size="sm" @click="$emit('add-click')">
-        <UIcon name="add" size="xs" class="mr-0.5" />
-        Добавить
-      </UButton>
+      <div class="flex items-center gap-1">
+        <UButton variant="ghost" size="xs" @click="$emit('add-click')">
+          <UIcon name="add" size="xs" />
+        </UButton>
+        <UButton
+          v-if="accounts.length > 0"
+          variant="ghost"
+          size="xs"
+          @click="$emit('view-all')"
+        >
+          Все
+          <UIcon name="chevron_right" size="xs" />
+        </UButton>
+      </div>
     </div>
 
     <!-- Loading state -->
-    <div v-if="loading" class="space-y-2">
+    <div v-if="loading" class="space-y-1">
       <div
-        v-for="i in 2"
+        v-for="i in 3"
         :key="i"
-        class="h-16 rounded-lg bg-surface-light dark:bg-surface-dark animate-shimmer"
+        class="h-14 rounded-xl bg-surface-light dark:bg-surface-dark animate-shimmer"
       />
     </div>
 
-    <!-- Account Cards -->
-    <div v-else-if="accounts.length > 0" class="space-y-2">
+    <!-- Account List -->
+    <div
+      v-else-if="accounts.length > 0"
+      class="rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark overflow-hidden"
+    >
       <AccountCard
         v-for="(account, index) in accounts"
         :key="account.id"
         :account="account"
-        class="animate-fadeInUp"
+        :compact="true"
+        :hidden="hidden"
+        :class="[
+          'animate-fadeInUp !rounded-none !border-0',
+          index < accounts.length - 1 && 'border-b border-border-light dark:border-border-dark',
+        ]"
         :style="{ animationDelay: `${index * 0.03}s` }"
         @click="$emit('account-click', account)"
       />
 
-      <!-- View All Button -->
-      <ViewAllButton @click="$emit('view-all')"> Все счета </ViewAllButton>
     </div>
 
-    <!-- Empty state - minimal -->
+    <!-- Empty state -->
     <div
       v-else
       class="py-10 text-center rounded-xl border border-border-light dark:border-border-dark border-dashed"

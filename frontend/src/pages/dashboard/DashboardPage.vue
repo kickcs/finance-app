@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, inject, ref, defineAsyncComponent } from 'vue';
+import { useLocalStorage } from '@/shared/lib/hooks/useLocalStorage';
 import type { Ref } from 'vue';
 import type { User } from '@/shared/api/composables/useAuth';
 import { useRouter } from 'vue-router';
@@ -223,6 +224,8 @@ function handleViewAllReminders() {
 
 const { showModal: showInstallModal } = usePwaInstall();
 
+const isHidden = useLocalStorage('balance_hidden', false);
+
 const scrollContainerRef = ref<HTMLElement>();
 
 async function handleRefresh() {
@@ -264,17 +267,19 @@ async function handleRefresh() {
         :on-refresh="handleRefresh"
         :container-ref="scrollContainerRef"
       >
-        <main class="relative z-10 px-5 pt-8 space-y-8 pb-28">
+        <main class="relative z-10 px-5 pt-6 space-y-6 pb-28">
           <!-- PWA Install Banner -->
           <InstallPwaBanner @install="showInstallModal = true" />
 
-          <!-- Hero Section - tight grouping for balance and stats -->
-          <section class="space-y-4 animate-fadeInUp">
+          <!-- Hero Section — balance + stats -->
+          <section class="space-y-6 animate-fadeInUp">
             <BalanceCard
               :total-balance="totalBalance"
               :currency="currency"
               :percent-change="percentChange"
               :loading="accountsLoading || statsLoading || ratesLoading"
+              :hidden="isHidden"
+              @toggle-hidden="isHidden = !isHidden"
               @income-click="handleIncomeClick"
               @expense-click="handleExpenseClick"
             />
@@ -284,30 +289,32 @@ async function handleRefresh() {
               :spent-amount="spentThisMonth"
               :currency="currency"
               :loading="statsLoading"
+              :hidden="isHidden"
               @income-click="router.push('/analytics?type=income')"
               @expense-click="router.push('/analytics?type=expense')"
             />
           </section>
 
-          <!-- Finance Section -->
-          <section
-            class="space-y-5 animate-fadeInUp"
-            style="animation-delay: 0.1s"
-          >
+          <!-- Accounts -->
+          <section class="animate-fadeInUp" style="animation-delay: 0.1s">
             <AccountStack
               :accounts="accounts"
               :loading="accountsLoading"
+              :hidden="isHidden"
               @account-click="handleAccountClick"
               @add-click="handleAddAccount"
               @view-all="handleViewAllAccounts"
             />
+          </section>
 
-            <!-- Debts with Suspense -->
+          <!-- Debts -->
+          <section class="animate-fadeInUp" style="animation-delay: 0.15s">
             <Suspense>
               <DebtsSection
                 :debts="debts"
                 :currency="currency"
                 :loading="debtsLoading"
+                :hidden="isHidden"
                 @debt-click="handleDebtClick"
                 @person-click="handlePersonClick"
                 @add-click="handleAddDebt"
@@ -319,14 +326,14 @@ async function handleRefresh() {
             </Suspense>
           </section>
 
-          <!-- Utilities Section -->
+          <!-- Subscriptions -->
           <section class="animate-fadeInUp" style="animation-delay: 0.2s">
-            <!-- Reminders (Subscriptions) with Suspense -->
             <Suspense>
               <RemindersSection
                 :reminders="reminders"
                 :currency="currency"
                 :loading="remindersLoading"
+                :hidden="isHidden"
                 @reminder-click="handleReminderClick"
                 @add-click="handleAddReminder"
                 @view-all="handleViewAllReminders"
