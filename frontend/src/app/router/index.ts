@@ -10,22 +10,36 @@ export const transitionName = ref<
   'slide-forward' | 'slide-back' | 'fade' | 'none'
 >('fade');
 
-// Prefetch critical page components for faster navigation
+// Prefetch all page components for instant navigation
 const prefetchPages = () => {
-  // Prefetch main navigation pages after initial load
-  const idle = requestIdleCallback?.(() => {
+  const prefetch = () => {
+    // Main navigation pages
     import('@/pages/history/HistoryPage.vue');
     import('@/pages/analytics/AnalyticsPage.vue');
     import('@/pages/profile/ProfilePage.vue');
     import('@/pages/transactions/new/AddTransactionPage.vue');
-  });
+    // Analytics
+    import('@/pages/analytics/AnalyticsFullPage.vue');
+    // Accounts
+    import('@/pages/accounts/AccountsPage.vue');
+    import('@/pages/accounts/AccountDetailPage.vue');
+    // Debts
+    import('@/pages/debts/list/DebtsListPage.vue');
+    import('@/pages/debts/detail/DebtDetailPage.vue');
+    import('@/pages/debts/new/AddDebtPage.vue');
+    // Reminders
+    import('@/pages/reminders/list/RemindersListPage.vue');
+    import('@/pages/reminders/detail/ReminderDetailPage.vue');
+    import('@/pages/reminders/new/AddReminderPage.vue');
+    // Settings & misc
+    import('@/pages/changelog/ChangelogPage.vue');
+    import('@/pages/settings/currency/CurrencySettingsPage.vue');
+    import('@/pages/settings/categories/CategoriesPage.vue');
+    import('@/pages/settings/import/ImportPage.vue');
+  };
+  const idle = requestIdleCallback?.(prefetch);
   if (idle === undefined) {
-    setTimeout(() => {
-      import('@/pages/history/HistoryPage.vue');
-      import('@/pages/analytics/AnalyticsPage.vue');
-      import('@/pages/profile/ProfilePage.vue');
-      import('@/pages/transactions/new/AddTransactionPage.vue');
-    }, 2000);
+    setTimeout(prefetch, 2000);
   }
 };
 
