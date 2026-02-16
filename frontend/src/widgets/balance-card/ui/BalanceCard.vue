@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { UIcon, UCard } from '@/shared/ui';
 import { formatCurrency, COMPACT_FORMAT } from '@/shared/lib/format/currency';
+import { useLocalStorage } from '@/shared/lib/hooks/useLocalStorage';
 
 defineProps<{
   totalBalance: number;
@@ -13,17 +14,31 @@ defineEmits<{
   'income-click': [];
   'expense-click': [];
 }>();
+
+const isBalanceHidden = useLocalStorage('balance_hidden', false);
 </script>
 
 <template>
   <UCard class="p-6">
     <!-- Balance Section -->
     <div class="text-center mb-8">
-      <p
-        class="text-xs font-medium tracking-wide text-text-secondary-light dark:text-text-secondary-dark mb-2"
-      >
-        Общий баланс
-      </p>
+      <div class="flex items-center justify-center gap-1 mb-2">
+        <p
+          class="text-xs font-medium tracking-wide text-text-secondary-light dark:text-text-secondary-dark"
+        >
+          Общий баланс
+        </p>
+        <button
+          :aria-label="isBalanceHidden ? 'Показать баланс' : 'Скрыть баланс'"
+          class="p-1 rounded-md text-text-tertiary-light dark:text-text-tertiary-dark hover:text-text-secondary-light dark:hover:text-text-secondary-dark transition-colors"
+          @click="isBalanceHidden = !isBalanceHidden"
+        >
+          <UIcon
+            :name="isBalanceHidden ? 'visibility_off' : 'visibility'"
+            size="xs"
+          />
+        </button>
+      </div>
 
       <!-- Loading skeleton -->
       <div
@@ -41,13 +56,13 @@ defineEmits<{
           v-if="!loading"
           class="text-4xl sm:text-5xl font-bold tracking-tight text-text-primary-light dark:text-text-primary-dark"
         >
-          {{ formatCurrency(totalBalance, currency, COMPACT_FORMAT) }}
+          {{ isBalanceHidden ? '••••••' : formatCurrency(totalBalance, currency, COMPACT_FORMAT) }}
         </h1>
       </Transition>
 
       <!-- Trend indicator - minimal -->
       <div
-        v-if="percentChange !== undefined && !loading"
+        v-if="percentChange !== undefined && !loading && !isBalanceHidden"
         :class="[
           'inline-flex items-center gap-1 mt-3 px-2.5 py-1 rounded-md text-xs font-medium',
           percentChange >= 0
