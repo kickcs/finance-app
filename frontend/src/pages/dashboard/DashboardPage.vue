@@ -264,12 +264,12 @@ async function handleRefresh() {
         :on-refresh="handleRefresh"
         :container-ref="scrollContainerRef"
       >
-        <main class="relative z-10 px-5 pt-8 space-y-8 pb-28">
+        <main class="relative z-10 px-5 pt-6 space-y-6 pb-28">
           <!-- PWA Install Banner -->
           <InstallPwaBanner @install="showInstallModal = true" />
 
-          <!-- Hero Section - tight grouping for balance and stats -->
-          <section class="space-y-4 animate-fadeInUp">
+          <!-- Hero Section — balance + stats -->
+          <section class="space-y-6 animate-fadeInUp">
             <BalanceCard
               :total-balance="totalBalance"
               :currency="currency"
@@ -289,11 +289,8 @@ async function handleRefresh() {
             />
           </section>
 
-          <!-- Finance Section -->
-          <section
-            class="space-y-5 animate-fadeInUp"
-            style="animation-delay: 0.1s"
-          >
+          <!-- Accounts -->
+          <section class="animate-fadeInUp" style="animation-delay: 0.1s">
             <AccountStack
               :accounts="accounts"
               :loading="accountsLoading"
@@ -301,8 +298,10 @@ async function handleRefresh() {
               @add-click="handleAddAccount"
               @view-all="handleViewAllAccounts"
             />
+          </section>
 
-            <!-- Debts with Suspense -->
+          <!-- Debts -->
+          <section class="animate-fadeInUp" style="animation-delay: 0.15s">
             <Suspense>
               <DebtsSection
                 :debts="debts"
@@ -319,9 +318,8 @@ async function handleRefresh() {
             </Suspense>
           </section>
 
-          <!-- Utilities Section -->
+          <!-- Subscriptions -->
           <section class="animate-fadeInUp" style="animation-delay: 0.2s">
-            <!-- Reminders (Subscriptions) with Suspense -->
             <Suspense>
               <RemindersSection
                 :reminders="reminders"
