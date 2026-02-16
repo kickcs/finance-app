@@ -68,6 +68,8 @@ export interface ITransactionRepository {
   ): Promise<Transaction[]>;
   save(transaction: Transaction): Promise<Transaction>;
   delete(id: string): Promise<void>;
+  deleteByAccountId(accountId: string): Promise<void>;
+  countByAccountId(accountId: string): Promise<number>;
   exists(id: string): Promise<boolean>;
 
   // Paginated queries

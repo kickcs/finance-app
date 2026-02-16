@@ -305,4 +305,11 @@ export const transactionsApi = {
       params,
     });
   },
+
+  async countByAccount(accountId: string): Promise<number> {
+    const data = await http.get<{ count: number }>(
+      `/transactions/by-account/${accountId}/count`,
+    );
+    return data.count;
+  },
 };

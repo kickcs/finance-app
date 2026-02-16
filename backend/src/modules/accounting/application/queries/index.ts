@@ -21,6 +21,8 @@ export * from './get-transactions-by-account-with-incoming/get-transactions-by-a
 export * from './get-transactions-by-account-with-incoming/get-transactions-by-account-with-incoming.handler';
 export * from './get-transactions-by-account-paginated/get-transactions-by-account-paginated.query';
 export * from './get-transactions-by-account-paginated/get-transactions-by-account-paginated.handler';
+export * from './count-transactions-by-account/count-transactions-by-account.query';
+export * from './count-transactions-by-account/count-transactions-by-account.handler';
 
 // Category queries
 export * from './get-categories/get-categories.query';
@@ -46,6 +48,7 @@ import { GetTransactionsByAccountWithIncomingHandler } from './get-transactions-
 import { GetTransactionsByAccountPaginatedHandler } from './get-transactions-by-account-paginated/get-transactions-by-account-paginated.handler';
 import { GetBalancesByAccountHandler } from './get-balances-by-account/get-balances-by-account.handler';
 import { GetBalancesByAccountsHandler } from './get-balances-by-accounts/get-balances-by-accounts.handler';
+import { CountTransactionsByAccountHandler } from './count-transactions-by-account/count-transactions-by-account.handler';
 
 export const QueryHandlers = [
   GetAccountsHandler,
@@ -61,4 +64,5 @@ export const QueryHandlers = [
   GetTransactionsByAccountPaginatedHandler,
   GetBalancesByAccountHandler,
   GetBalancesByAccountsHandler,
+  CountTransactionsByAccountHandler,
 ];

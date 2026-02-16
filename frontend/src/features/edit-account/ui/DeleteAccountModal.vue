@@ -8,6 +8,7 @@ const props = defineProps<{
   modelValue: boolean;
   account: Account | AccountWithBalances | null;
   transactionsCount: number;
+  isLoadingCount?: boolean;
   currency: string;
   isDeleting?: boolean;
   error?: string | null;
@@ -96,7 +97,10 @@ function confirm() {
             <p class="text-sm text-danger font-medium">
               Счёт будет полностью удалён
             </p>
-            <p v-if="transactionsCount > 0" class="text-sm text-danger">
+            <p v-if="isLoadingCount" class="text-sm text-danger">
+              Подсчёт транзакций...
+            </p>
+            <p v-else-if="transactionsCount > 0" class="text-sm text-danger">
               {{ transactionsCount }}
               {{
                 transactionsCount === 1

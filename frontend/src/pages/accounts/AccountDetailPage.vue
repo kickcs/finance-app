@@ -15,9 +15,12 @@ import {
   VirtualGroupedTransactionList,
   TransactionGroupSkeleton,
   useInfiniteAccountTransactions,
+  transactionsApi,
+  transactionQueryKeys,
   type Transaction,
   type TransactionGroup,
 } from '@/entities/transaction';
+import { useQuery } from '@tanstack/vue-query';
 import {
   EditAccountModal,
   DeleteAccountModal,
@@ -62,7 +65,6 @@ const {
   hasNextPage,
   isFetchingNextPage,
   fetchNextPage,
-  totalCount: _totalCount,
 } = useInfiniteAccountTransactions(accountId);
 
 // Helper to get account name by id
@@ -121,6 +123,18 @@ const {
   remove: removeAccountFn,
   isDefaultAccount,
 } = useEditAccount(userId.value);
+
+// Total transaction count for this account (lazy - only fetched when delete modal opens)
+const {
+  data: accountTransactionsCount,
+  isLoading: isLoadingTransactionsCount,
+} = useQuery({
+  queryKey: computed(() =>
+    transactionQueryKeys.countByAccount(accountId.value),
+  ),
+  queryFn: () => transactionsApi.countByAccount(accountId.value),
+  enabled: computed(() => showDeleteAccountModal.value && !!accountId.value),
+});
 
 // Check before opening delete modal
 function openDeleteModal() {
@@ -722,7 +736,8 @@ async function handleSetAsDefault() {
     <DeleteAccountModal
       v-model="showDeleteAccountModal"
       :account="account"
-      :transactions-count="accountTransactions.length"
+      :transactions-count="accountTransactionsCount ?? 0"
+      :is-loading-count="isLoadingTransactionsCount"
       :currency="currency"
       :is-deleting="isDeletingAccount"
       :error="accountError"

@@ -29,6 +29,8 @@ export const transactionQueryKeys = {
     [...transactionQueryKeys.all, 'infinite', 'account', accountId] as const,
   search: (userId: string, searchTerm: string) =>
     [...transactionQueryKeys.all, 'search', userId, searchTerm] as const,
+  countByAccount: (accountId: string) =>
+    [...transactionQueryKeys.all, 'count', 'account', accountId] as const,
 };
 
 export type TransactionQueryKeys = typeof transactionQueryKeys;

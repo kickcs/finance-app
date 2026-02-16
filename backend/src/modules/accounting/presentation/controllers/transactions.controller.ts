@@ -34,6 +34,7 @@ import {
   GetTransactionsByAccountQuery,
   GetTransactionsByAccountWithIncomingQuery,
   GetTransactionsByAccountPaginatedQuery,
+  CountTransactionsByAccountQuery,
 } from '../../application/queries';
 
 @Controller('transactions')
@@ -119,6 +120,16 @@ export class TransactionsController {
   ): Promise<unknown> {
     return this.queryBus.execute(
       new GetTransactionsByAccountWithIncomingQuery(accountId, userId),
+    );
+  }
+
+  @Get('by-account/:accountId/count')
+  async countByAccount(
+    @CurrentUser('sub') userId: string,
+    @Param('accountId') accountId: string,
+  ): Promise<{ count: number }> {
+    return this.queryBus.execute(
+      new CountTransactionsByAccountQuery(accountId, userId),
     );
   }
 

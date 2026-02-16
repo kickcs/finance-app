@@ -103,6 +103,24 @@ export class TransactionRepository implements ITransactionRepository {
     await this.ormRepository.delete(id);
   }
 
+  async deleteByAccountId(accountId: string): Promise<void> {
+    // Delete outgoing transactions and incoming transfers in parallel
+    await Promise.all([
+      this.ormRepository.delete({ accountId }),
+      this.ormRepository.delete({ toAccountId: accountId, type: 'transfer' }),
+    ]);
+  }
+
+  async countByAccountId(accountId: string): Promise<number> {
+    const [outgoing, incoming] = await Promise.all([
+      this.ormRepository.count({ where: { accountId } }),
+      this.ormRepository.count({
+        where: { toAccountId: accountId, type: 'transfer' },
+      }),
+    ]);
+    return outgoing + incoming;
+  }
+
   async exists(id: string): Promise<boolean> {
     const count = await this.ormRepository.count({ where: { id } });
     return count > 0;
