@@ -197,6 +197,13 @@ export const router = createRouter({
       meta: { requiresAuth: true, requiresOnboarding: true },
     },
     {
+      path: '/settings/import',
+      name: 'settings-import',
+      component: () =>
+        import('@/pages/settings/import/ImportPage.vue'),
+      meta: { requiresAuth: true, requiresOnboarding: true },
+    },
+    {
       path: '/settings/categories',
       name: 'settings-categories',
       component: () => import('@/pages/settings/categories/CategoriesPage.vue'),
@@ -233,6 +240,11 @@ async function getOrFetchProfile(userId: string): Promise<Profile | null> {
 
 // In-memory flag to skip repeated onboarding checks after first success
 let onboardingVerified = false;
+
+// Reset onboarding verification flag (call on logout/user switch)
+export function resetOnboardingVerified() {
+  onboardingVerified = false;
+}
 
 // Helper function to check onboarding status
 async function checkOnboardingStatus(userId: string): Promise<boolean> {

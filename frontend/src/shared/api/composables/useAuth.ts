@@ -1,6 +1,7 @@
 import { ref, computed, readonly } from 'vue';
 import { http, setTokens, clearTokens, getAccessToken } from '../http';
 import { queryClient } from '../queryClient';
+import { resetOnboardingVerified } from '@/app/router';
 
 // User type matching Profile entity from backend
 export interface User {
@@ -210,6 +211,9 @@ export function useAuth() {
       // Clear localStorage
       localStorage.removeItem('onboardingComplete');
       localStorage.removeItem('selectedCurrency');
+
+      // Reset in-memory onboarding flag
+      resetOnboardingVerified();
     } catch (err) {
       error.value = err as Error;
       throw err;
