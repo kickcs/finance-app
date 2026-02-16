@@ -78,7 +78,7 @@ export function usePartialPayment() {
           type: transactionType,
           description: `Частичный платёж: ${debt.person_name || debt.name}`,
           date: new Date().toISOString(),
-          is_debt_related: true,
+          is_debt_related: !!debt.transaction_id,
         });
 
         // 2. Update debt remaining amount
