@@ -16,29 +16,16 @@ import {
   usePwaInstall,
 } from '@/features/install-pwa';
 
-// Skeleton components - load immediately for fallbacks
-import { BalanceCardSkeleton } from '@/widgets/balance-card';
-import { AccountStackSkeleton } from '@/widgets/account-stack';
-import { SaveSpendSectionSkeleton } from '@/widgets/save-spend-section';
+// Above-the-fold widgets — eager load (no extra chunk downloads)
+import BalanceCard from '@/widgets/balance-card/ui/BalanceCard.vue';
+import SaveSpendSection from '@/widgets/save-spend-section/ui/SaveSpendSection.vue';
+import AccountStack from '@/widgets/account-stack/ui/AccountStack.vue';
+
+// Below-fold skeleton fallbacks
 import { DebtsSectionSkeleton } from '@/widgets/debts-section';
 import { RemindersSectionSkeleton } from '@/widgets/reminders-section';
 
-// Lazy load heavy widget components
-const BalanceCard = defineAsyncComponent({
-  loader: () => import('@/widgets/balance-card/ui/BalanceCard.vue'),
-  delay: 0,
-});
-
-const AccountStack = defineAsyncComponent({
-  loader: () => import('@/widgets/account-stack/ui/AccountStack.vue'),
-  delay: 0,
-});
-
-const SaveSpendSection = defineAsyncComponent({
-  loader: () => import('@/widgets/save-spend-section/ui/SaveSpendSection.vue'),
-  delay: 0,
-});
-
+// Below-fold widgets — lazy load
 const DebtsSection = defineAsyncComponent({
   loader: () => import('@/widgets/debts-section/ui/DebtsSection.vue'),
   delay: 0,
@@ -283,35 +270,23 @@ async function handleRefresh() {
 
           <!-- Hero Section - tight grouping for balance and stats -->
           <section class="space-y-4 animate-fadeInUp">
-            <!-- Balance Card with Suspense -->
-            <Suspense>
-              <BalanceCard
-                :total-balance="totalBalance"
-                :currency="currency"
-                :percent-change="percentChange"
-                :loading="accountsLoading || statsLoading || ratesLoading"
-                @income-click="handleIncomeClick"
-                @expense-click="handleExpenseClick"
-              />
-              <template #fallback>
-                <BalanceCardSkeleton />
-              </template>
-            </Suspense>
+            <BalanceCard
+              :total-balance="totalBalance"
+              :currency="currency"
+              :percent-change="percentChange"
+              :loading="accountsLoading || statsLoading || ratesLoading"
+              @income-click="handleIncomeClick"
+              @expense-click="handleExpenseClick"
+            />
 
-            <!-- Save & Spend with Suspense -->
-            <Suspense>
-              <SaveSpendSection
-                :saved-amount="savedThisMonth"
-                :spent-amount="spentThisMonth"
-                :currency="currency"
-                :loading="statsLoading"
-                @income-click="router.push('/analytics?type=income')"
-                @expense-click="router.push('/analytics?type=expense')"
-              />
-              <template #fallback>
-                <SaveSpendSectionSkeleton />
-              </template>
-            </Suspense>
+            <SaveSpendSection
+              :saved-amount="savedThisMonth"
+              :spent-amount="spentThisMonth"
+              :currency="currency"
+              :loading="statsLoading"
+              @income-click="router.push('/analytics?type=income')"
+              @expense-click="router.push('/analytics?type=expense')"
+            />
           </section>
 
           <!-- Finance Section -->
@@ -319,19 +294,13 @@ async function handleRefresh() {
             class="space-y-5 animate-fadeInUp"
             style="animation-delay: 0.1s"
           >
-            <!-- Accounts with Suspense -->
-            <Suspense>
-              <AccountStack
-                :accounts="accounts"
-                :loading="accountsLoading"
-                @account-click="handleAccountClick"
-                @add-click="handleAddAccount"
-                @view-all="handleViewAllAccounts"
-              />
-              <template #fallback>
-                <AccountStackSkeleton />
-              </template>
-            </Suspense>
+            <AccountStack
+              :accounts="accounts"
+              :loading="accountsLoading"
+              @account-click="handleAccountClick"
+              @add-click="handleAddAccount"
+              @view-all="handleViewAllAccounts"
+            />
 
             <!-- Debts with Suspense -->
             <Suspense>
