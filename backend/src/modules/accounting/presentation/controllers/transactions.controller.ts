@@ -163,15 +163,6 @@ export class TransactionsController {
     @CurrentUser('sub') userId: string,
     @Body() dto: CreateTransactionDto,
   ): Promise<unknown> {
-    // TODO: TEMP DEBUG - remove after verifying isDebtRelated saves correctly
-    if (
-      dto.categoryId &&
-      ['debt_given', 'debt_taken', 'debt_return_to_me', 'debt_return_from_me'].includes(dto.categoryId)
-    ) {
-      console.log(
-        `[DEBUG] Controller DTO: categoryId=${dto.categoryId}, isDebtRelated=${dto.isDebtRelated} (type: ${typeof dto.isDebtRelated}), keys: ${Object.keys(dto).join(',')}`,
-      );
-    }
     return this.commandBus.execute(
       new CreateTransactionCommand(
         userId,

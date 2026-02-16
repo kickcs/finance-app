@@ -49,7 +49,7 @@ export function useCloseDebt() {
         type: transactionType,
         description,
         date: new Date().toISOString(),
-        is_debt_related: !!debt.transaction_id,
+        is_debt_related: true,
       });
 
       // 2. Mark debt as closed
