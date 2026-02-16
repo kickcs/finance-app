@@ -10,6 +10,11 @@ import { PullToRefresh } from '@/shared/ui';
 import { AppHeader } from '@/widgets/header';
 import { BottomNav } from '@/widgets/bottom-nav';
 import { ThemeToggle } from '@/features/toggle-theme';
+import {
+  InstallPwaBanner,
+  InstallPwaModal,
+  usePwaInstall,
+} from '@/features/install-pwa';
 
 // Skeleton components - load immediately for fallbacks
 import { BalanceCardSkeleton } from '@/widgets/balance-card';
@@ -229,6 +234,8 @@ function handleViewAllReminders() {
   router.push('/reminders');
 }
 
+const { showModal: showInstallModal } = usePwaInstall();
+
 const scrollContainerRef = ref<HTMLElement>();
 
 async function handleRefresh() {
@@ -271,6 +278,9 @@ async function handleRefresh() {
         :container-ref="scrollContainerRef"
       >
         <main class="relative z-10 px-5 pt-8 space-y-8 pb-28">
+          <!-- PWA Install Banner -->
+          <InstallPwaBanner @install="showInstallModal = true" />
+
           <!-- Hero Section - tight grouping for balance and stats -->
           <section class="space-y-4 animate-fadeInUp">
             <!-- Balance Card with Suspense -->
@@ -363,5 +373,8 @@ async function handleRefresh() {
 
     <!-- Bottom Navigation -->
     <BottomNav @add-click="handleAddTransaction" />
+
+    <!-- PWA Install Modal -->
+    <InstallPwaModal v-model="showInstallModal" />
   </div>
 </template>

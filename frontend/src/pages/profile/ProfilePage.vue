@@ -10,6 +10,7 @@ import { getCurrencyByCode } from '@/entities/currency';
 import { useAuth, useProfile } from '@/shared/api';
 import { EditProfileModal } from '@/features/edit-profile';
 import { useChangelog } from '@/features/changelog';
+import { InstallPwaModal, usePwaInstall } from '@/features/install-pwa';
 
 const router = useRouter();
 const { signOut } = useAuth();
@@ -34,6 +35,10 @@ const currency = computed(() => getCurrencyByCode(currencyCode.value));
 
 // Changelog
 const { hasUnseenChanges, markAsSeen } = useChangelog();
+
+// PWA install
+const { showModal: showInstallModal, openModal: openInstallModal } =
+  usePwaInstall();
 
 // Modal states
 const showLogoutModal = ref(false);
@@ -71,6 +76,9 @@ function handleMenuClick(itemId: string) {
       break;
     case 'categories':
       router.push('/settings/categories');
+      break;
+    case 'about':
+      openInstallModal();
       break;
     default:
       console.log('Menu item clicked:', itemId);
@@ -216,6 +224,9 @@ function handleAddTransaction() {
         </UButton>
       </template>
     </UModal>
+
+    <!-- PWA Install Modal -->
+    <InstallPwaModal v-model="showInstallModal" />
 
     <!-- Edit Profile Modal -->
     <EditProfileModal
