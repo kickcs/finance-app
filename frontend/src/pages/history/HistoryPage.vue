@@ -22,15 +22,12 @@ import {
 } from '@/features/edit-transaction';
 import { useAccounts } from '@/entities/account';
 import { ALL_CATEGORIES, useCategories } from '@/entities/category';
-import { UTabs, UIcon, UButton, UModal, PullToRefresh } from '@/shared/ui';
+import { UTabs, UIcon, UButton, UModal } from '@/shared/ui';
 import { formatDateGroup } from '@/shared/lib/format/date';
 import { useExchangeRates } from '@/shared/api';
 import { debtsApi } from '@/entities/debt';
 
 const router = useRouter();
-
-// Scroll container ref for PTR in fixed-layout pages
-const scrollContainerRef = ref<HTMLElement | null>(null);
 
 // Get user from provide/inject
 const user = inject<Ref<User | null>>('user');
@@ -301,8 +298,15 @@ function handleSwipeDelete(transaction: Transaction) {
   showDeleteModal.value = true;
 }
 
+// Refresh all data
+const isRefreshing = ref(false);
 async function handleRefresh() {
-  await queryClient.invalidateQueries();
+  isRefreshing.value = true;
+  try {
+    await queryClient.invalidateQueries();
+  } finally {
+    isRefreshing.value = false;
+  }
 }
 </script>
 
@@ -311,134 +315,148 @@ async function handleRefresh() {
     class="h-dvh flex flex-col overflow-hidden bg-background-light dark:bg-background-dark"
   >
     <!-- Header -->
-    <AppHeader title="История" />
-
-    <!-- Scrollable Content -->
-    <div ref="scrollContainerRef" class="flex-1 overflow-y-auto">
-      <PullToRefresh
-        :on-refresh="handleRefresh"
-        :container-ref="scrollContainerRef"
-      >
-        <main class="px-5 pt-8 pb-28 space-y-4">
-          <!-- Search + Filter Button -->
-          <div class="flex gap-2">
-            <div class="flex-1">
-              <SearchInput
-                :model-value="searchTerm"
-                placeholder="Поиск транзакций..."
-                @update:model-value="setQuery"
-                @clear="clearSearch"
-              />
-            </div>
-            <button
-              class="relative shrink-0 w-12 h-12 rounded-xl bg-surface-light dark:bg-surface-dark flex items-center justify-center transition-colors hover:bg-border-light dark:hover:bg-border-dark"
-              @click="showFiltersModal = true"
-            >
-              <UIcon
-                name="tune"
-                size="md"
-                class="text-text-secondary-light dark:text-text-secondary-dark"
-              />
-              <!-- Active filters badge -->
-              <span
-                v-if="activeFiltersCount > 0"
-                class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-primary text-white text-xs font-semibold flex items-center justify-center"
-              >
-                {{ activeFiltersCount }}
-              </span>
-            </button>
-          </div>
-
-          <!-- Type Filter Tabs -->
-          <UTabs
-            v-model="activeTypeFilter"
-            :items="typeFilterItems"
+    <AppHeader title="История">
+      <template #actions>
+        <UButton
+          variant="ghost"
+          size="sm"
+          class="!p-2"
+          :disabled="isRefreshing"
+          aria-label="Обновить"
+          @click="handleRefresh"
+        >
+          <UIcon
+            name="refresh"
             size="sm"
+            :class="{ 'animate-spin': isRefreshing }"
           />
+        </UButton>
+      </template>
+    </AppHeader>
 
-          <!-- Active Filters Chips -->
-          <div v-if="activeFiltersCount > 0" class="flex flex-wrap gap-2">
-            <button
-              v-if="selectedAccountId"
-              class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium"
-              @click="selectedAccountId = null"
-            >
-              {{
-                accounts.find((a) => a.id === selectedAccountId)?.name || 'Счёт'
-              }}
-              <UIcon name="close" size="xs" />
-            </button>
-            <button
-              v-if="selectedCategoryId"
-              class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium"
-              @click="selectedCategoryId = null"
-            >
-              {{
-                usedCategories.find((c) => c.id === selectedCategoryId)?.name ||
-                'Категория'
-              }}
-              <UIcon name="close" size="xs" />
-            </button>
-            <button
-              v-if="activeFiltersCount > 1"
-              class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-surface-light dark:bg-surface-dark text-text-secondary-light dark:text-text-secondary-dark text-sm font-medium"
-              @click="clearAdditionalFilters"
-            >
-              Сбросить все
-            </button>
-          </div>
-
-          <!-- Loading State with Skeleton -->
-          <div
-            v-if="currentIsLoading && displayedTransactions.length === 0"
-            class="space-y-4"
+    <!-- Fixed Controls -->
+    <div class="px-5 pt-4 space-y-4 shrink-0">
+      <!-- Search + Filter Button -->
+      <div class="flex gap-2">
+        <div class="flex-1">
+          <SearchInput
+            :model-value="searchTerm"
+            placeholder="Поиск транзакций..."
+            @update:model-value="setQuery"
+            @clear="clearSearch"
+          />
+        </div>
+        <button
+          class="relative shrink-0 w-12 h-12 rounded-xl bg-surface-light dark:bg-surface-dark flex items-center justify-center transition-colors hover:bg-border-light dark:hover:bg-border-dark"
+          @click="showFiltersModal = true"
+        >
+          <UIcon
+            name="tune"
+            size="md"
+            class="text-text-secondary-light dark:text-text-secondary-dark"
+          />
+          <!-- Active filters badge -->
+          <span
+            v-if="activeFiltersCount > 0"
+            class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-primary text-white text-xs font-semibold flex items-center justify-center"
           >
-            <TransactionGroupSkeleton v-for="i in 3" :key="i" :count="3" />
-          </div>
+            {{ activeFiltersCount }}
+          </span>
+        </button>
+      </div>
 
-          <!-- Virtualized Transaction Groups -->
-          <VirtualGroupedTransactionList
-            v-else-if="groupedTransactions.length > 0"
-            :groups="groupedTransactions"
-            :currency="currency"
-            :has-next-page="currentHasNextPage"
-            :is-fetching-next-page="currentIsFetchingNextPage"
-            :get-account-name="getAccountName"
-            :swipe-enabled="true"
-            @load-more="handleLoadMore"
-            @transaction-click="handleTransactionClick"
-            @transaction-edit="handleTransactionClick"
-            @transaction-delete="handleSwipeDelete"
+      <!-- Type Filter Tabs -->
+      <UTabs
+        v-model="activeTypeFilter"
+        :items="typeFilterItems"
+        size="sm"
+      />
+
+      <!-- Active Filters Chips -->
+      <div v-if="activeFiltersCount > 0" class="flex flex-wrap gap-2">
+        <button
+          v-if="selectedAccountId"
+          class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium"
+          @click="selectedAccountId = null"
+        >
+          {{
+            accounts.find((a) => a.id === selectedAccountId)?.name || 'Счёт'
+          }}
+          <UIcon name="close" size="xs" />
+        </button>
+        <button
+          v-if="selectedCategoryId"
+          class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium"
+          @click="selectedCategoryId = null"
+        >
+          {{
+            usedCategories.find((c) => c.id === selectedCategoryId)?.name ||
+            'Категория'
+          }}
+          <UIcon name="close" size="xs" />
+        </button>
+        <button
+          v-if="activeFiltersCount > 1"
+          class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-surface-light dark:bg-surface-dark text-text-secondary-light dark:text-text-secondary-dark text-sm font-medium"
+          @click="clearAdditionalFilters"
+        >
+          Сбросить все
+        </button>
+      </div>
+    </div>
+
+    <!-- Content Area: fills remaining space -->
+    <div class="flex-1 min-h-0 px-5 pt-4">
+      <!-- Loading State with Skeleton -->
+      <div
+        v-if="currentIsLoading && displayedTransactions.length === 0"
+        class="space-y-4 overflow-y-auto h-full pb-28"
+      >
+        <TransactionGroupSkeleton v-for="i in 3" :key="i" :count="3" />
+      </div>
+
+      <!-- Virtualized Transaction Groups -->
+      <VirtualGroupedTransactionList
+        v-else-if="groupedTransactions.length > 0"
+        :groups="groupedTransactions"
+        :currency="currency"
+        :has-next-page="currentHasNextPage"
+        :is-fetching-next-page="currentIsFetchingNextPage"
+        :get-account-name="getAccountName"
+        :swipe-enabled="true"
+        height="100%"
+        @load-more="handleLoadMore"
+        @transaction-click="handleTransactionClick"
+        @transaction-edit="handleTransactionClick"
+        @transaction-delete="handleSwipeDelete"
+      />
+
+      <!-- Empty State -->
+      <div v-else class="py-16 text-center">
+        <div
+          class="w-16 h-16 mx-auto mb-4 rounded-full bg-surface-light dark:bg-surface-dark flex items-center justify-center"
+        >
+          <UIcon
+            name="receipt_long"
+            size="lg"
+            class="text-text-tertiary-light dark:text-text-tertiary-dark"
           />
-
-          <!-- Empty State -->
-          <div v-else class="py-16 text-center">
-            <div
-              class="w-16 h-16 mx-auto mb-4 rounded-full bg-surface-light dark:bg-surface-dark flex items-center justify-center"
-            >
-              <UIcon
-                name="receipt_long"
-                size="lg"
-                class="text-text-tertiary-light dark:text-text-tertiary-dark"
-              />
-            </div>
-            <p
-              class="text-text-secondary-light dark:text-text-secondary-dark mb-2"
-            >
-              {{ isEmpty ? 'Ничего не найдено' : 'Нет транзакций' }}
-            </p>
-            <p
-              class="text-sm text-text-tertiary-light dark:text-text-tertiary-dark"
-            >
-              {{
-                isEmpty
-                  ? 'Попробуйте изменить фильтры'
-                  : 'Добавьте первую транзакцию'
-              }}
-            </p>
-          </div>
-        </main>
-      </PullToRefresh>
+        </div>
+        <p
+          class="text-text-secondary-light dark:text-text-secondary-dark mb-2"
+        >
+          {{ isEmpty ? 'Ничего не найдено' : 'Нет транзакций' }}
+        </p>
+        <p
+          class="text-sm text-text-tertiary-light dark:text-text-tertiary-dark"
+        >
+          {{
+            isEmpty
+              ? 'Попробуйте изменить фильтры'
+              : 'Добавьте первую транзакцию'
+          }}
+        </p>
+      </div>
     </div>
 
     <!-- Filters Modal -->
