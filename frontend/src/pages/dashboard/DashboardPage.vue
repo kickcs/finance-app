@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, inject, ref, defineAsyncComponent } from 'vue';
+import { useLocalStorage } from '@/shared/lib/hooks/useLocalStorage';
 import type { Ref } from 'vue';
 import type { User } from '@/shared/api/composables/useAuth';
 import { useRouter } from 'vue-router';
@@ -223,6 +224,8 @@ function handleViewAllReminders() {
 
 const { showModal: showInstallModal } = usePwaInstall();
 
+const isHidden = useLocalStorage('balance_hidden', false);
+
 const scrollContainerRef = ref<HTMLElement>();
 
 async function handleRefresh() {
@@ -275,6 +278,8 @@ async function handleRefresh() {
               :currency="currency"
               :percent-change="percentChange"
               :loading="accountsLoading || statsLoading || ratesLoading"
+              :hidden="isHidden"
+              @toggle-hidden="isHidden = !isHidden"
               @income-click="handleIncomeClick"
               @expense-click="handleExpenseClick"
             />
@@ -284,6 +289,7 @@ async function handleRefresh() {
               :spent-amount="spentThisMonth"
               :currency="currency"
               :loading="statsLoading"
+              :hidden="isHidden"
               @income-click="router.push('/analytics?type=income')"
               @expense-click="router.push('/analytics?type=expense')"
             />
@@ -294,6 +300,7 @@ async function handleRefresh() {
             <AccountStack
               :accounts="accounts"
               :loading="accountsLoading"
+              :hidden="isHidden"
               @account-click="handleAccountClick"
               @add-click="handleAddAccount"
               @view-all="handleViewAllAccounts"
@@ -307,6 +314,7 @@ async function handleRefresh() {
                 :debts="debts"
                 :currency="currency"
                 :loading="debtsLoading"
+                :hidden="isHidden"
                 @debt-click="handleDebtClick"
                 @person-click="handlePersonClick"
                 @add-click="handleAddDebt"
@@ -325,6 +333,7 @@ async function handleRefresh() {
                 :reminders="reminders"
                 :currency="currency"
                 :loading="remindersLoading"
+                :hidden="isHidden"
                 @reminder-click="handleReminderClick"
                 @add-click="handleAddReminder"
                 @view-all="handleViewAllReminders"

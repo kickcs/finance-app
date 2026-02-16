@@ -1,21 +1,20 @@
 <script setup lang="ts">
 import { UIcon } from '@/shared/ui';
 import { formatCurrency, COMPACT_FORMAT } from '@/shared/lib/format/currency';
-import { useLocalStorage } from '@/shared/lib/hooks/useLocalStorage';
 
 defineProps<{
   totalBalance: number;
   currency: string;
   percentChange?: number;
   loading?: boolean;
+  hidden?: boolean;
 }>();
 
 defineEmits<{
   'income-click': [];
   'expense-click': [];
+  'toggle-hidden': [];
 }>();
-
-const isBalanceHidden = useLocalStorage('balance_hidden', false);
 </script>
 
 <template>
@@ -28,12 +27,12 @@ const isBalanceHidden = useLocalStorage('balance_hidden', false);
         Общий баланс
       </p>
       <button
-        :aria-label="isBalanceHidden ? 'Показать баланс' : 'Скрыть баланс'"
+        :aria-label="hidden ? 'Показать баланс' : 'Скрыть баланс'"
         class="p-1 rounded-md text-text-tertiary-light dark:text-text-tertiary-dark hover:text-text-secondary-light dark:hover:text-text-secondary-dark transition-colors"
-        @click="isBalanceHidden = !isBalanceHidden"
+        @click="$emit('toggle-hidden')"
       >
         <UIcon
-          :name="isBalanceHidden ? 'visibility_off' : 'visibility'"
+          :name="hidden ? 'visibility_off' : 'visibility'"
           size="xs"
         />
       </button>
@@ -55,13 +54,13 @@ const isBalanceHidden = useLocalStorage('balance_hidden', false);
         v-if="!loading"
         class="text-4xl sm:text-5xl font-bold tracking-tight text-text-primary-light dark:text-text-primary-dark"
       >
-        {{ isBalanceHidden ? '••••••' : formatCurrency(totalBalance, currency, COMPACT_FORMAT) }}
+        {{ hidden ? '••••••' : formatCurrency(totalBalance, currency, COMPACT_FORMAT) }}
       </h1>
     </Transition>
 
     <!-- Trend indicator -->
     <div
-      v-if="percentChange !== undefined && !loading && !isBalanceHidden"
+      v-if="percentChange !== undefined && !loading && !hidden"
       :class="[
         'inline-flex items-center gap-1 mt-2 px-2.5 py-1 rounded-full text-xs font-medium',
         percentChange >= 0

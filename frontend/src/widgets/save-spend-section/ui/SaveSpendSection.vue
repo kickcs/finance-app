@@ -9,6 +9,7 @@ const props = defineProps<{
   currency: string;
   period?: string;
   loading?: boolean;
+  hidden?: boolean;
 }>();
 
 defineEmits<{
@@ -83,7 +84,7 @@ const hasData = computed(() => props.savedAmount > 0 || props.spentAmount > 0);
           </span>
         </div>
         <p class="text-h3 font-semibold text-success">
-          {{ formatCurrency(savedAmount, currency, COMPACT_FORMAT) }}
+          {{ hidden ? '••••' : formatCurrency(savedAmount, currency, COMPACT_FORMAT) }}
         </p>
       </UCard>
 
@@ -107,7 +108,7 @@ const hasData = computed(() => props.savedAmount > 0 || props.spentAmount > 0);
           </span>
         </div>
         <p class="text-h3 font-semibold text-danger">
-          {{ formatCurrency(spentAmount, currency, COMPACT_FORMAT) }}
+          {{ hidden ? '••••' : formatCurrency(spentAmount, currency, COMPACT_FORMAT) }}
         </p>
       </UCard>
     </div>

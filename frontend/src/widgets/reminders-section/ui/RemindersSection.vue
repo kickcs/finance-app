@@ -11,6 +11,7 @@ const props = defineProps<{
   reminders: Reminder[];
   currency: string;
   loading?: boolean;
+  hidden?: boolean;
 }>();
 
 defineEmits<{
@@ -131,7 +132,7 @@ function isOverdue(reminder: Reminder): boolean {
 
         <!-- Amount -->
         <p class="text-xs font-semibold text-text-primary-light dark:text-text-primary-dark">
-          {{ formatCurrency(reminder.amount, currency || 'UZS', COMPACT_FORMAT) }}
+          {{ hidden ? '••••' : formatCurrency(reminder.amount, currency || 'UZS', COMPACT_FORMAT) }}
         </p>
       </button>
     </div>

@@ -5,6 +5,7 @@ import { UIcon, UButton } from '@/shared/ui';
 defineProps<{
   accounts: AccountWithBalances[];
   loading?: boolean;
+  hidden?: boolean;
 }>();
 
 defineEmits<{
@@ -66,6 +67,7 @@ defineEmits<{
         :key="account.id"
         :account="account"
         :compact="true"
+        :hidden="hidden"
         :class="[
           'animate-fadeInUp !rounded-none !border-0',
           index < accounts.length - 1 && 'border-b border-border-light dark:border-border-dark',

@@ -22,6 +22,7 @@ const props = defineProps<{
   debts: Debt[];
   currency: string;
   loading?: boolean;
+  hidden?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -226,7 +227,7 @@ function isOverdue(date: string | null): boolean {
             class="text-sm font-semibold shrink-0"
             :style="{ color: DEBT_DIRECTION_COLORS[group.debtType] }"
           >
-            {{ formatCurrency(group.totalRemaining, currency) }}
+            {{ hidden ? '••••' : formatCurrency(group.totalRemaining, currency) }}
           </p>
         </div>
       </button>
