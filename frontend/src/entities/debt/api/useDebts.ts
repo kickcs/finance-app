@@ -143,7 +143,7 @@ export function useDebts(userId: MaybeRefOrGetter<string | null>) {
 
     for (const debt of debts.value) {
       if (debt.is_closed) continue;
-      const personName = debt.person_name || debt.name;
+      const personName = (debt.person_name || debt.name).trim();
       const existing = groups.get(personName);
       if (existing) {
         existing.debts.push(debt);

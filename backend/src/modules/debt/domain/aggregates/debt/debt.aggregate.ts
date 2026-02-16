@@ -83,7 +83,7 @@ export class Debt extends AggregateRoot<string> {
         : null,
       nextPaymentDate: nextPaymentDate || null,
       debtType: DebtType.create(debtType),
-      personName: personName || null,
+      personName: personName?.trim() || null,
       accountId: accountId || null,
       transactionId: null,
       closeTransactionId: null,
@@ -226,7 +226,8 @@ export class Debt extends AggregateRoot<string> {
       this._nextPaymentDate = data.nextPaymentDate;
     if (data.debtType !== undefined)
       this._debtType = DebtType.create(data.debtType);
-    if (data.personName !== undefined) this._personName = data.personName;
+    if (data.personName !== undefined)
+      this._personName = data.personName?.trim() || null;
     if (data.accountId !== undefined) this._accountId = data.accountId;
     if (data.transactionId !== undefined)
       this._transactionId = data.transactionId;
