@@ -1,11 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { ref } from 'vue';
 import { waitForAuth } from '@/shared/api/composables/useAuth';
+import type { User } from '@/shared/api/composables/useAuth';
 import { clearTokens } from '@/shared/api/http';
 import { queryClient } from '@/shared/api/queryClient';
-import { queryKeys } from '@/shared/api/queryKeys';
-import { profileApi } from '@/shared/api/services/profileApi';
-import type { Profile } from '@/shared/api/database.types';
 
 // Navigation direction state for page transitions
 export const transitionName = ref<
@@ -216,27 +214,6 @@ export const router = createRouter({
   ],
 });
 
-// Get profile from cache or fetch it
-async function getOrFetchProfile(userId: string): Promise<Profile | null> {
-  const queryKey = queryKeys.profile.detail(userId);
-
-  // Try to get from cache first
-  const cached = queryClient.getQueryData<Profile | null>(queryKey);
-  if (cached !== undefined) return cached;
-
-  // If not cached, fetch and cache
-  try {
-    return await queryClient.fetchQuery({
-      queryKey,
-      queryFn: () => profileApi.getById(userId),
-      staleTime: 1000 * 60 * 5, // 5 minutes
-    });
-  } catch (err) {
-    console.warn('Could not fetch profile:', err);
-    return null;
-  }
-}
-
 // In-memory flag to skip repeated onboarding checks after first success
 let onboardingVerified = false;
 
@@ -245,29 +222,11 @@ export function resetOnboardingVerified() {
   onboardingVerified = false;
 }
 
-// Helper function to check onboarding status
-async function checkOnboardingStatus(userId: string): Promise<boolean> {
-  // Skip network/cache check if already verified this session
+// Synchronous onboarding check using user object + localStorage (no network)
+function checkOnboardingStatusFast(): boolean {
   if (onboardingVerified) return true;
 
-  // First check localStorage for fast response
   const localOnboarding = localStorage.getItem('onboardingComplete') === 'true';
-
-  const profile = await getOrFetchProfile(userId);
-
-  if (profile) {
-    // Sync localStorage with database
-    if (profile.has_completed_onboarding) {
-      localStorage.setItem('onboardingComplete', 'true');
-      onboardingVerified = true;
-    }
-    if (profile.currency) {
-      localStorage.setItem('selectedCurrency', profile.currency);
-    }
-    return profile.has_completed_onboarding;
-  }
-
-  // Fallback to localStorage
   if (localOnboarding) {
     onboardingVerified = true;
   }
@@ -278,31 +237,30 @@ function hasSeenOnboarding(): boolean {
   return localStorage.getItem('hasSeenOnboarding') === 'true';
 }
 
-// Helper function to check if demo account has expired
-async function checkDemoExpiry(userId: string): Promise<boolean> {
-  const profile = await getOrFetchProfile(userId);
+// Synchronous demo expiry check using user object + localStorage (no network)
+function checkDemoExpiryFast(user: User): boolean {
+  if (!user.isDemo) return false;
 
-  if (!profile?.is_demo || !profile.demo_expires_at) {
-    return false;
-  }
+  const expiresAt =
+    user.demoExpiresAt || localStorage.getItem('demoExpiresAt');
+  if (!expiresAt) return false;
 
-  return new Date(profile.demo_expires_at) < new Date();
+  return new Date(expiresAt) < new Date();
 }
 
 // Navigation guard for auth and onboarding
 router.beforeEach(async (to, from, next) => {
-  // Wait for auth to initialize
+  // Wait for auth to initialize (optimistic — returns instantly if JWT is valid)
   const user = await waitForAuth();
   const isAuthenticated = !!user;
 
-  // Check if demo account has expired
+  // Check if demo account has expired (sync — uses JWT + localStorage)
   if (isAuthenticated && user) {
-    const demoExpired = await checkDemoExpiry(user.id);
-    if (demoExpired) {
-      // Sign out and redirect to login
+    if (checkDemoExpiryFast(user)) {
       clearTokens();
       localStorage.removeItem('onboardingComplete');
       localStorage.removeItem('selectedCurrency');
+      localStorage.removeItem('demoExpiresAt');
       onboardingVerified = false;
       queryClient.clear();
       next({ name: 'login' });
@@ -324,10 +282,7 @@ router.beforeEach(async (to, from, next) => {
 
   // Route is for guests only (login page)
   if (to.meta.guestOnly && isAuthenticated) {
-    const onboardingComplete = await checkOnboardingStatus(user!.id);
-
-    // If authenticated but not onboarded, go to first account creation
-    if (!onboardingComplete) {
+    if (!checkOnboardingStatusFast()) {
       next({ name: 'first-account' });
     } else {
       next({ name: 'dashboard' });
@@ -337,9 +292,7 @@ router.beforeEach(async (to, from, next) => {
 
   // Route requires completed onboarding
   if (to.meta.requiresOnboarding && isAuthenticated) {
-    const onboardingComplete = await checkOnboardingStatus(user!.id);
-
-    if (!onboardingComplete) {
+    if (!checkOnboardingStatusFast()) {
       next({ name: 'first-account' });
       return;
     }
@@ -347,11 +300,17 @@ router.beforeEach(async (to, from, next) => {
 
   // If onboarding is complete and trying to access onboarding pages
   if (isAuthenticated && to.path.startsWith('/onboarding')) {
-    const onboardingComplete = await checkOnboardingStatus(user!.id);
-    if (onboardingComplete) {
+    if (checkOnboardingStatusFast()) {
       next({ name: 'dashboard' });
       return;
     }
+  }
+
+  // Prefetch dashboard data while page chunk downloads
+  if (to.name === 'dashboard' && isAuthenticated && user) {
+    import('./dashboardPrefetch').then(({ prefetchDashboardData }) => {
+      prefetchDashboardData(user.id);
+    });
   }
 
   next();

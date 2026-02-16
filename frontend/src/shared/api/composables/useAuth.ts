@@ -59,6 +59,25 @@ function isTokenExpired(token: string): boolean {
   return payload.exp * 1000 < Date.now();
 }
 
+// Build an optimistic User from JWT payload + localStorage cache
+function createOptimisticUser(token: string): User | null {
+  const payload = decodeJwtPayload(token);
+  if (!payload) return null;
+
+  return {
+    id: payload.sub,
+    name: null,
+    email: payload.email ?? null,
+    currency: localStorage.getItem('selectedCurrency') || 'UZS',
+    hasCompletedOnboarding:
+      localStorage.getItem('onboardingComplete') === 'true',
+    defaultAccountId: null,
+    createdAt: '',
+    isDemo: payload.isDemo ?? false,
+    demoExpiresAt: localStorage.getItem('demoExpiresAt'),
+  };
+}
+
 // Initialize auth once at app start
 export async function initializeAuth(): Promise<User | null> {
   if (isInitialized.value) {
@@ -69,7 +88,7 @@ export async function initializeAuth(): Promise<User | null> {
     isLoading.value = true;
     error.value = null;
 
-    const token = getAccessToken();
+    let token = getAccessToken();
     if (!token) {
       // No token at all, user is not authenticated
       user.value = null;
@@ -87,9 +106,50 @@ export async function initializeAuth(): Promise<User | null> {
         isInitialized.value = true;
         return null;
       }
+      // Use the refreshed token
+      token = getAccessToken()!;
     }
 
-    // Fetch current user profile
+    // Set optimistic user from JWT immediately — unblocks router + UI
+    const optimisticUser = createOptimisticUser(token);
+    if (optimisticUser) {
+      user.value = optimisticUser;
+      isInitialized.value = true;
+      isLoading.value = false;
+
+      // Verify with /auth/me in background (non-blocking)
+      http
+        .get<User>('/auth/me')
+        .then((userData) => {
+          user.value = userData;
+          // Sync localStorage with authoritative data
+          if (userData.currency) {
+            localStorage.setItem('selectedCurrency', userData.currency);
+          }
+          if (userData.hasCompletedOnboarding) {
+            localStorage.setItem('onboardingComplete', 'true');
+          }
+          if (userData.demoExpiresAt) {
+            localStorage.setItem('demoExpiresAt', userData.demoExpiresAt);
+          }
+        })
+        .catch(() => {
+          // Token was invalid — clear everything
+          clearTokens();
+          user.value = null;
+          // Redirect to login if we're on a protected page
+          import('@/app/router').then(({ router }) => {
+            const currentRoute = router.currentRoute.value;
+            if (currentRoute.meta.requiresAuth) {
+              router.push({ name: 'login' });
+            }
+          });
+        });
+
+      return optimisticUser;
+    }
+
+    // Fallback: JWT decode failed, fetch synchronously
     const userData = await http.get<User>('/auth/me');
     user.value = userData;
 
@@ -211,6 +271,7 @@ export function useAuth() {
       // Clear localStorage
       localStorage.removeItem('onboardingComplete');
       localStorage.removeItem('selectedCurrency');
+      localStorage.removeItem('demoExpiresAt');
 
       // Reset in-memory onboarding flag
       resetOnboardingVerified();

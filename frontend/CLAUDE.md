@@ -62,7 +62,7 @@ const { mutate: createAccount } = useAccounts().create()
 ### Authentication Flow
 
 - `useAuth()` composable handles JWT-based authentication (email/password, anonymous)
-- Tokens stored in localStorage (`access_token`, `refresh_token`)
+- Access token in localStorage, refresh token in httpOnly cookie (set by backend)
 - HTTP client (`http.ts`) auto-refreshes tokens on 401 responses
 - Router guards check `requiresAuth` and `requiresOnboarding` route meta
 - Demo mode with expiry for anonymous users
