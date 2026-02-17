@@ -16,6 +16,11 @@ import {
   InstallPwaModal,
   usePwaInstall,
 } from '@/features/install-pwa';
+import {
+  QuickActionModal,
+  useQuickActions,
+  type QuickAction,
+} from '@/features/configure-quick-action';
 
 // Above-the-fold widgets — eager load (no extra chunk downloads)
 import BalanceCard from '@/widgets/balance-card/ui/BalanceCard.vue';
@@ -215,36 +220,48 @@ function handleExpenseClick() {
   router.push('/transactions/new?type=expense');
 }
 
-const quickActions = [
-  {
-    label: 'Перевод',
-    icon: 'swap_horiz',
-    route: '/transactions/new?type=transfer',
-    bgClass: 'bg-primary-light',
-    iconClass: 'text-primary',
-  },
-  {
-    label: 'Разделить',
-    icon: 'call_split',
-    route: '/transactions/new',
-    bgClass: 'bg-success-light',
-    iconClass: 'text-success',
-  },
-  {
-    label: 'Курсы',
-    icon: 'currency_exchange',
-    route: '/settings/currency',
-    bgClass: 'bg-warning-light',
-    iconClass: 'text-warning',
-  },
-  {
-    label: 'Категории',
-    icon: 'category',
-    route: '/settings/categories',
-    bgClass: 'bg-info-light',
-    iconClass: 'text-info',
-  },
-];
+const { slots: quickActionSlots, addAction, updateAction, removeAction, getCategory } =
+  useQuickActions();
+
+const showQuickActionModal = ref(false);
+const editingAction = ref<QuickAction | null>(null);
+
+function handleQuickActionClick(action: QuickAction | null) {
+  if (!action) {
+    editingAction.value = null;
+    showQuickActionModal.value = true;
+    return;
+  }
+  router.push(
+    `/transactions/new?type=expense&categoryId=${action.categoryId}&accountId=${action.accountId}`,
+  );
+}
+
+function handleQuickActionLongPress(action: QuickAction | null) {
+  if (!action) {
+    editingAction.value = null;
+    showQuickActionModal.value = true;
+    return;
+  }
+  editingAction.value = action;
+  showQuickActionModal.value = true;
+}
+
+function handleQuickActionSave(data: { label: string; categoryId: string; accountId: string }) {
+  if (editingAction.value) {
+    updateAction(editingAction.value.id, data);
+  } else {
+    addAction(data);
+  }
+  editingAction.value = null;
+}
+
+function handleQuickActionDelete() {
+  if (editingAction.value) {
+    removeAction(editingAction.value.id);
+  }
+  editingAction.value = null;
+}
 
 function handleTransactionClick(_tx: Transaction) {
   router.push('/history');
@@ -371,20 +388,35 @@ async function handleRefresh() {
           <section>
             <div class="grid grid-cols-4 gap-3">
               <button
-                v-for="action in quickActions"
-                :key="action.label"
+                v-for="(action, index) in quickActionSlots"
+                :key="action?.id ?? `empty-${index}`"
                 class="flex flex-col items-center gap-1.5 py-3 rounded-xl bg-surface-light dark:bg-surface-dark hover:opacity-80 active:scale-95 transition-all duration-150"
-                @click="router.push(action.route)"
+                @click="handleQuickActionClick(action)"
+                @contextmenu.prevent="handleQuickActionLongPress(action)"
               >
-                <div
-                  class="w-10 h-10 rounded-xl flex items-center justify-center"
-                  :class="action.bgClass"
-                >
-                  <UIcon :name="action.icon" size="sm" :class="action.iconClass" />
-                </div>
-                <span class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark">
-                  {{ action.label }}
-                </span>
+                <template v-if="action">
+                  <div
+                    class="w-10 h-10 rounded-xl flex items-center justify-center"
+                    :style="{ backgroundColor: (getCategory(action.categoryId)?.color ?? '#64748b') + '1A' }"
+                  >
+                    <UIcon
+                      :name="getCategory(action.categoryId)?.icon ?? 'receipt_long'"
+                      size="sm"
+                      :style="{ color: getCategory(action.categoryId)?.color ?? '#64748b' }"
+                    />
+                  </div>
+                  <span class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark truncate w-full text-center px-1">
+                    {{ action.label }}
+                  </span>
+                </template>
+                <template v-else>
+                  <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-border-light dark:bg-border-dark">
+                    <UIcon name="add" size="sm" class="text-text-tertiary-light dark:text-text-tertiary-dark" />
+                  </div>
+                  <span class="text-xs font-medium text-text-tertiary-light dark:text-text-tertiary-dark">
+                    Добавить
+                  </span>
+                </template>
               </button>
             </div>
           </section>
@@ -464,5 +496,14 @@ async function handleRefresh() {
 
     <!-- PWA Install Modal -->
     <InstallPwaModal v-model="showInstallModal" />
+
+    <!-- Quick Action Configure Modal -->
+    <QuickActionModal
+      v-model="showQuickActionModal"
+      :accounts="accounts"
+      :edit-action="editingAction"
+      @save="handleQuickActionSave"
+      @delete="handleQuickActionDelete"
+    />
   </div>
 </template>
