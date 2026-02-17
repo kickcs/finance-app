@@ -57,8 +57,14 @@ onMounted(() => {
   resetSplit();
 
   const typeParam = route.query.type as string;
-  if (typeParam === 'income' || typeParam === 'expense') {
+  if (typeParam === 'income' || typeParam === 'expense' || typeParam === 'transfer') {
     setType(typeParam);
+  }
+
+  // Pre-fill category from quick action preset
+  const categoryId = route.query.categoryId as string;
+  if (categoryId) {
+    updateField('categoryId', categoryId);
   }
 });
 
@@ -67,9 +73,16 @@ watch(
   [accounts, defaultAccountId],
   ([accs, defaultId]) => {
     if (accs.length > 0 && !formData.value.accountId) {
-      // Use default account if available, otherwise first account
-      const selectedId =
-        defaultId && accs.some((a) => a.id === defaultId)
+      // Check for query param override first
+      const queryAccountId = route.query.accountId as string;
+      const queryAccount = queryAccountId
+        ? accs.find((a) => a.id === queryAccountId)
+        : null;
+
+      // Use query param > default account > first account
+      const selectedId = queryAccount
+        ? queryAccountId
+        : defaultId && accs.some((a) => a.id === defaultId)
           ? defaultId
           : accs[0].id;
 
