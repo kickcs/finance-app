@@ -43,8 +43,7 @@ function handleClose() {
         <li
           v-for="(item, index) in latestEntry.items"
           :key="index"
-          class="flex items-start gap-3 animate-fadeInUp"
-          :style="{ animationDelay: `${index * 60}ms` }"
+          class="flex items-start gap-3"
         >
           <div
             :class="[
@@ -71,19 +70,3 @@ function handleClose() {
   </UModal>
 </template>
 
-<style scoped>
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-fadeInUp {
-  animation: fadeInUp 0.3s ease-out both;
-}
-</style>

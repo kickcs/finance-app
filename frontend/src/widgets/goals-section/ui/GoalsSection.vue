@@ -115,8 +115,8 @@ function isNearCompletion(goal: Goal): boolean {
       <div
         v-for="(goal, index) in goals.slice(0, 3)"
         :key="goal.id"
-        class="animate-fadeInUp"
-        :style="{ animationDelay: `${index * 0.05}s` }"
+
+
       >
         <GoalCard
           :goal="goal"

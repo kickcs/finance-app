@@ -19,7 +19,7 @@ function handleDismiss(e: Event) {
 </script>
 
 <template>
-  <div v-if="showBanner" class="animate-fadeInUp">
+  <div v-if="showBanner">
     <UCard
       class="cursor-pointer border border-primary/20 dark:border-primary/30 bg-gradient-to-r from-primary/5 to-transparent dark:from-primary/10"
       @click="handleClick"

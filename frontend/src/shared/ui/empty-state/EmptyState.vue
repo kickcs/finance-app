@@ -12,12 +12,10 @@ interface Props {
   description?: string;
   iconSize?: 'sm' | 'md' | 'lg' | 'xl';
   action?: Action;
-  animated?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   iconSize: 'lg',
-  animated: true,
 });
 
 const emit = defineEmits<{
@@ -33,7 +31,7 @@ function handleAction() {
 </script>
 
 <template>
-  <div class="text-center py-12 px-6" :class="animated && 'animate-fadeInUp'">
+  <div class="text-center py-12 px-6">
     <!-- Icon -->
     <div
       class="w-14 h-14 mx-auto mb-4 rounded-xl bg-surface-light dark:bg-surface-dark flex items-center justify-center"

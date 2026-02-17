@@ -243,12 +243,6 @@ export function useAuth() {
     }
   }
 
-  async function signInWithOAuth(_provider: 'google' | 'github' | 'apple') {
-    // OAuth not implemented in NestJS backend yet
-    // This would require additional setup with passport strategies
-    throw new Error('OAuth not implemented. Please use email/password login.');
-  }
-
   async function signOut() {
     try {
       isLoading.value = true;
@@ -281,11 +275,6 @@ export function useAuth() {
     } finally {
       isLoading.value = false;
     }
-  }
-
-  async function resetPassword(_email: string) {
-    // Password reset not implemented in NestJS backend yet
-    throw new Error('Password reset not implemented.');
   }
 
   async function signInAnonymously() {
@@ -324,10 +313,6 @@ export function useAuth() {
     }
   }
 
-  function cleanup() {
-    // Nothing to clean up for HTTP-based auth
-  }
-
   return {
     user: readonly(user),
     isLoading: readonly(isLoading),
@@ -337,12 +322,9 @@ export function useAuth() {
     isAnonymous,
     signUp,
     signIn,
-    signInWithOAuth,
     signInAnonymously,
     signOut,
-    resetPassword,
     refreshUser,
     initialize: initializeAuth,
-    cleanup,
   };
 }

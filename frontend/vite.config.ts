@@ -3,6 +3,7 @@ import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
 import { compression } from 'vite-plugin-compression2'
 import VueDevTools from 'vite-plugin-vue-devtools'
+import { VitePWA } from 'vite-plugin-pwa'
 import { fileURLToPath, URL } from 'node:url'
 
 export default defineConfig({
@@ -10,6 +11,42 @@ export default defineConfig({
     vue(),
     tailwindcss(),
     VueDevTools(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
+        navigateFallback: '/index.html',
+        navigateFallbackAllowlist: [/^(?!\/?api\/).*/],
+        runtimeCaching: [
+          {
+            urlPattern: /\/api\/(?!auth\/).*/,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'api-cache',
+              expiration: { maxEntries: 100, maxAgeSeconds: 300 },
+              networkTimeoutSeconds: 5,
+            },
+          },
+        ],
+      },
+      manifest: {
+        name: 'Ouro Finance',
+        short_name: 'Ouro',
+        description: 'Управляйте личными финансами: учёт доходов и расходов, мультивалютные счета, долги, цели и напоминания',
+        start_url: '/',
+        scope: '/',
+        display: 'standalone',
+        orientation: 'portrait',
+        theme_color: '#f59e0b',
+        background_color: '#f8f9fa',
+        icons: [
+          { src: '/logo-192.webp', sizes: '192x192', type: 'image/webp', purpose: 'any maskable' },
+          { src: '/logo-512.webp', sizes: '512x512', type: 'image/webp', purpose: 'any maskable' },
+          { src: '/logo-192.png', sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
+          { src: '/logo-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+        ],
+      },
+    }),
     compression({ algorithm: 'gzip' }),
     compression({ algorithm: 'brotliCompress' }),
   ],

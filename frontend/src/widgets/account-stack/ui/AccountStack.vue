@@ -69,10 +69,9 @@ defineEmits<{
         :compact="true"
         :hidden="hidden"
         :class="[
-          'animate-fadeInUp !rounded-none !border-0',
+          '!rounded-none !border-0',
           index < accounts.length - 1 && 'border-b border-border-light dark:border-border-dark',
         ]"
-        :style="{ animationDelay: `${index * 0.03}s` }"
         @click="$emit('account-click', account)"
       />
 
