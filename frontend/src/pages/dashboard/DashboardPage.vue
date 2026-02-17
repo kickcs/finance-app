@@ -5,7 +5,7 @@ import type { Ref } from 'vue';
 import type { User } from '@/shared/api/composables/useAuth';
 import { useRouter } from 'vue-router';
 import { queryClient } from '@/shared/api/queryClient';
-import { PullToRefresh } from '@/shared/ui';
+import { PullToRefresh, UIcon } from '@/shared/ui';
 
 // Critical components - load immediately
 import { AppHeader } from '@/widgets/header';
@@ -206,6 +206,37 @@ function handleExpenseClick() {
   router.push('/transactions/new?type=expense');
 }
 
+const quickActions = [
+  {
+    label: 'Перевод',
+    icon: 'swap_horiz',
+    route: '/transactions/new?type=transfer',
+    bgClass: 'bg-primary-light',
+    iconClass: 'text-primary',
+  },
+  {
+    label: 'Разделить',
+    icon: 'call_split',
+    route: '/transactions/new',
+    bgClass: 'bg-success-light',
+    iconClass: 'text-success',
+  },
+  {
+    label: 'Курсы',
+    icon: 'currency_exchange',
+    route: '/settings/currency',
+    bgClass: 'bg-warning-light',
+    iconClass: 'text-warning',
+  },
+  {
+    label: 'Категории',
+    icon: 'category',
+    route: '/settings/categories',
+    bgClass: 'bg-info-light',
+    iconClass: 'text-info',
+  },
+];
+
 function handleAddReminder() {
   router.push({ name: 'new-reminder' });
 }
@@ -317,6 +348,28 @@ async function handleRefresh() {
               @income-click="router.push('/analytics?type=income')"
               @expense-click="router.push('/analytics?type=expense')"
             />
+          </section>
+
+          <!-- Quick Actions -->
+          <section>
+            <div class="grid grid-cols-4 gap-3">
+              <button
+                v-for="action in quickActions"
+                :key="action.label"
+                class="flex flex-col items-center gap-1.5 py-3 rounded-xl bg-surface-light dark:bg-surface-dark hover:opacity-80 active:scale-95 transition-all duration-150"
+                @click="router.push(action.route)"
+              >
+                <div
+                  class="w-10 h-10 rounded-xl flex items-center justify-center"
+                  :class="action.bgClass"
+                >
+                  <UIcon :name="action.icon" size="sm" :class="action.iconClass" />
+                </div>
+                <span class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark">
+                  {{ action.label }}
+                </span>
+              </button>
+            </div>
           </section>
 
           <!-- Accounts -->
