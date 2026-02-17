@@ -59,6 +59,21 @@ const currency = computed(
     'UZS',
 );
 
+// Time-based greeting
+const greeting = computed(() => {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12) return 'Доброе утро';
+  if (hour >= 12 && hour < 17) return 'Добрый день';
+  if (hour >= 17 && hour < 23) return 'Добрый вечер';
+  return 'Доброй ночи';
+});
+
+const userName = computed(() => {
+  const fullName = profile.value?.name || user?.value?.name;
+  if (!fullName) return '';
+  return fullName.split(' ')[0];
+});
+
 // Exchange rates for currency conversion
 const { convert, isLoading: ratesLoading } = useExchangeRates(currency);
 
@@ -247,13 +262,22 @@ async function handleRefresh() {
           <div
             class="w-9 h-9 rounded-xl flex items-center justify-center bg-gradient-to-br from-primary to-primary-hover shadow-lg shadow-primary/25 group-hover:shadow-xl group-hover:shadow-primary/30 group-hover:scale-105 transition-all duration-200"
           >
-            <span class="text-white font-bold text-base">O</span>
+            <span class="text-white font-bold text-base">
+              {{ userName ? userName[0].toUpperCase() : 'O' }}
+            </span>
           </div>
-          <span
-            class="font-bold text-lg text-text-primary-light dark:text-text-primary-dark group-hover:text-primary transition-colors"
-          >
-            Ouro
-          </span>
+          <div class="flex flex-col">
+            <span
+              class="text-xs text-text-secondary-light dark:text-text-secondary-dark leading-tight"
+            >
+              {{ greeting }}
+            </span>
+            <span
+              class="font-bold text-base text-text-primary-light dark:text-text-primary-dark group-hover:text-primary transition-colors leading-tight"
+            >
+              {{ userName || 'Ouro' }}
+            </span>
+          </div>
         </div>
       </template>
       <template #actions>
