@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue';
+import { computed, watch, ref, nextTick, onMounted, onUnmounted } from 'vue';
 import { UInput, UButton, UTabs, UIcon } from '@/shared/ui';
 import { CategoryCard } from '@/entities/category';
 import type { Category } from '@/entities/category';
@@ -10,6 +10,8 @@ import type { TransactionFormData } from '../model/useAddTransaction';
 import type { AccountWithBalances } from '@/entities/account';
 import { SplitExpenseSection } from '@/features/split-expense';
 import type { SplitExpenseData, SplitMethod } from '@/features/split-expense';
+import AmountInput from './AmountInput.vue';
+import AccountSelector from './AccountSelector.vue';
 
 const props = defineProps<{
   formData: TransactionFormData;
@@ -41,17 +43,18 @@ const tabItems = [
   { id: 'transfer', label: 'Перевод' },
 ];
 
+const typeOrder = ['expense', 'income', 'transfer'] as const;
+
+// Scroll-snap refs and state
+const scrollContainer = ref<HTMLElement | null>(null);
+let isScrollingProgrammatically = false;
+let scrollDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
 // Exchange rates for auto-conversion
 const baseCurrency = computed(() => props.userCurrency || 'UZS');
 const { convertBetween } = useExchangeRates(baseCurrency);
 
 const isTransfer = computed(() => props.formData.type === 'transfer');
-
-const categories = computed(() =>
-  props.formData.type === 'expense'
-    ? props.expenseCategories
-    : props.incomeCategories,
-);
 
 const selectedAccount = computed(() =>
   props.accounts.find((a) => a.id === props.formData.accountId),
@@ -62,14 +65,11 @@ const targetAccount = computed(() =>
 );
 
 // Available target accounts for transfer
-// Include current account if it has multiple currencies (for currency conversion)
 const availableTargetAccounts = computed(() => {
   const current = selectedAccount.value;
-  // If current account has multiple currencies, include it in the list
   if (current && current.balances.length > 1) {
     return props.accounts;
   }
-  // Otherwise exclude current account
   return props.accounts.filter((a) => a.id !== props.formData.accountId);
 });
 
@@ -83,17 +83,14 @@ const availableCurrencies = computed(() => {
 const targetAccountCurrencies = computed(() => {
   if (!targetAccount.value) return [];
   const currencies = targetAccount.value.balances.map((b) => b.currency);
-  // If same account, exclude the source currency
   if (targetAccount.value.id === props.formData.accountId) {
     return currencies.filter((c) => c !== props.formData.currency);
   }
   return currencies;
 });
 
-// Check if account has multiple currencies
 const isMultiCurrency = computed(() => availableCurrencies.value.length > 1);
 
-// Баланс выбранной валюты на исходном счёте
 const currentBalance = computed(() => {
   if (!selectedAccount.value) return 0;
   return (
@@ -103,13 +100,11 @@ const currentBalance = computed(() => {
   );
 });
 
-// Достаточно ли средств для списания (для расходов и трансферов)
 const hasSufficientFunds = computed(() => {
   if (props.formData.type === 'income') return true;
   return props.formData.amount <= currentBalance.value;
 });
 
-// Show to_amount field when currencies differ
 const showToAmountField = computed(() => {
   return (
     isTransfer.value &&
@@ -119,7 +114,6 @@ const showToAmountField = computed(() => {
   );
 });
 
-// Get currency symbol for display
 const currencySymbol = computed(() => {
   const currency = getCurrencyByCode(props.formData.currency);
   return currency?.symbol || props.formData.currency;
@@ -144,7 +138,7 @@ function updateField<K extends keyof TransactionFormData>(
   emit('update:formData', { ...props.formData, [field]: value });
 }
 
-function handleTypeChange(type: string) {
+function applyTypeChange(type: string) {
   emit('update:formData', {
     ...props.formData,
     type: type as 'income' | 'expense' | 'transfer',
@@ -155,17 +149,112 @@ function handleTypeChange(type: string) {
   });
 }
 
+// --- Scroll-snap sync ---
+
+function resetProgrammaticFlag() {
+  isScrollingProgrammatically = false;
+}
+
+function scrollToPanel(index: number, smooth = true) {
+  if (!scrollContainer.value) return;
+
+  isScrollingProgrammatically = true;
+  const panelWidth = scrollContainer.value.offsetWidth;
+  scrollContainer.value.scrollTo({
+    left: panelWidth * index,
+    behavior: smooth ? 'smooth' : 'instant',
+  });
+
+  // Reset flag via scrollend event (with timeout safety fallback)
+  scrollContainer.value.addEventListener('scrollend', resetProgrammaticFlag, {
+    once: true,
+  });
+  setTimeout(resetProgrammaticFlag, 600);
+}
+
+// Tab click → scroll to panel
+function handleTabClick(type: string) {
+  const index = typeOrder.indexOf(type as (typeof typeOrder)[number]);
+  if (index === -1) return;
+
+  applyTypeChange(type);
+  scrollToPanel(index);
+}
+
+// Detect active panel from scroll position and update type
+function detectPanelFromScroll() {
+  if (isScrollingProgrammatically || !scrollContainer.value) return;
+
+  const container = scrollContainer.value;
+  const panelWidth = container.offsetWidth;
+  const scrollLeft = container.scrollLeft;
+  const index = Math.round(scrollLeft / panelWidth);
+  const clampedIndex = Math.max(0, Math.min(index, typeOrder.length - 1));
+  const newType = typeOrder[clampedIndex];
+
+  if (newType !== props.formData.type) {
+    applyTypeChange(newType);
+  }
+}
+
+// scrollend handler (native, for supported browsers)
+function handleScrollEnd() {
+  detectPanelFromScroll();
+}
+
+// scroll handler (debounced fallback for browsers without scrollend)
+function handleScroll() {
+  if (scrollDebounceTimer) clearTimeout(scrollDebounceTimer);
+  scrollDebounceTimer = setTimeout(() => {
+    detectPanelFromScroll();
+  }, 150);
+}
+
+onUnmounted(() => {
+  if (scrollDebounceTimer) clearTimeout(scrollDebounceTimer);
+});
+
+// Scroll to initial position on mount (if type is not 'expense')
+onMounted(() => {
+  nextTick(() => {
+    const index = typeOrder.indexOf(
+      props.formData.type as (typeof typeOrder)[number],
+    );
+    if (index > 0) {
+      scrollToPanel(index, false);
+    }
+  });
+});
+
+// Watch for external type changes (e.g. from query params)
+watch(
+  () => props.formData.type,
+  (newType) => {
+    const index = typeOrder.indexOf(newType as (typeof typeOrder)[number]);
+    if (index === -1 || !scrollContainer.value) return;
+
+    const panelWidth = scrollContainer.value.offsetWidth;
+    const currentIndex = Math.round(
+      scrollContainer.value.scrollLeft / panelWidth,
+    );
+
+    if (currentIndex !== index) {
+      scrollToPanel(index);
+    }
+  },
+);
+
+// --- Account and transfer handlers ---
+
 function handleAccountChange(accountId: string) {
   const account = props.accounts.find((a) => a.id === accountId);
   const firstCurrency = account?.balances[0]?.currency || 'UZS';
 
-  // Reset target account if it's the same and will have no valid currencies
   const updates: Partial<TransactionFormData> = {
     accountId,
     currency: firstCurrency,
   };
 
-  // If in transfer mode and target is the same account, reset toCurrency
   if (
     props.formData.type === 'transfer' &&
     props.formData.toAccountId === accountId
@@ -192,7 +281,6 @@ function handleAccountChange(accountId: string) {
 function handleTargetAccountChange(accountId: string) {
   const account = props.accounts.find((a) => a.id === accountId);
 
-  // If same account, pick a different currency than the source
   let firstCurrency: string;
   if (accountId === props.formData.accountId) {
     const otherCurrencies =
@@ -204,7 +292,6 @@ function handleTargetAccountChange(accountId: string) {
     firstCurrency = account?.balances[0]?.currency || 'UZS';
   }
 
-  // Calculate converted amount
   const toAmount = calculateConvertedAmount(
     props.formData.amount,
     props.formData.currency,
@@ -220,7 +307,6 @@ function handleTargetAccountChange(accountId: string) {
 }
 
 function handleToCurrencyChange(currency: string) {
-  // Calculate converted amount
   const toAmount = calculateConvertedAmount(
     props.formData.amount,
     props.formData.currency,
@@ -297,250 +383,263 @@ watch(
     <UTabs
       :model-value="formData.type"
       :items="tabItems"
-      @update:model-value="handleTypeChange"
+      @update:model-value="handleTabClick"
     />
 
-    <!-- Amount Input with Currency Selector -->
-    <div class="space-y-1.5">
-      <label
-        v-if="isTransfer"
-        class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark"
-      >
-        Сумма списания
-      </label>
-      <div class="flex gap-2">
-        <!-- Currency Selector (only for multi-currency accounts) -->
-        <div v-if="isMultiCurrency" class="relative shrink-0">
-          <select
-            :value="formData.currency"
-            class="appearance-none h-full bg-surface-light dark:bg-surface-dark rounded-lg px-2.5 pr-7 text-sm font-medium border border-border-light dark:border-border-dark focus:outline-none focus:ring-2 focus:ring-primary"
-            @change="
-              updateField(
-                'currency',
-                ($event.target as HTMLSelectElement).value,
-              )
-            "
-          >
-            <option
-              v-for="currency in availableCurrencies"
-              :key="currency"
-              :value="currency"
+    <!-- Swipeable panels -->
+    <div
+      ref="scrollContainer"
+      class="flex overflow-x-auto snap-x snap-mandatory no-scrollbar -mx-4"
+      @scrollend="handleScrollEnd"
+      @scroll="handleScroll"
+    >
+      <!-- Panel: Expense -->
+      <div class="min-w-full snap-start px-4">
+        <div class="space-y-4">
+          <AmountInput
+            :amount="formData.amount"
+            :currency="formData.currency"
+            :currency-symbol="currencySymbol"
+            :available-currencies="availableCurrencies"
+            :is-multi-currency="isMultiCurrency"
+            :show-insufficient-funds="!hasSufficientFunds"
+            :current-balance="currentBalance"
+            @update:amount="updateField('amount', $event)"
+            @update:currency="updateField('currency', $event)"
+          />
+
+          <AccountSelector
+            :accounts="accounts"
+            :selected-id="formData.accountId"
+            label="Счёт"
+            @select="handleAccountChange"
+          />
+
+          <!-- Category Grid -->
+          <div class="space-y-2">
+            <label
+              class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark"
             >
-              {{ getCurrencyByCode(currency)?.flag }} {{ currency }}
-            </option>
-          </select>
-          <UIcon
-            name="expand_more"
-            size="sm"
-            class="absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none text-text-tertiary-light dark:text-text-tertiary-dark"
+              Категория
+            </label>
+            <div
+              class="grid grid-cols-4 sm:grid-cols-5 gap-2 max-h-[168px] overflow-y-auto"
+            >
+              <CategoryCard
+                v-for="category in expenseCategories"
+                :key="category.id"
+                :category="category"
+                :selected="formData.categoryId === category.id"
+                size="medium"
+                @click="updateField('categoryId', category.id)"
+              />
+            </div>
+          </div>
+
+          <!-- Split Expense Section -->
+          <SplitExpenseSection
+            v-if="splitData"
+            :total-amount="formData.amount"
+            :currency="formData.currency"
+            :split-data="splitData"
+            :validation-error="splitValidationError"
+            @add-participant="$emit('addParticipant', $event)"
+            @remove-participant="$emit('removeParticipant', $event)"
+            @update-participant-amount="
+              (id, amount) => $emit('updateParticipantAmount', id, amount)
+            "
+            @update-participant-name="
+              (id, name) => $emit('updateParticipantName', id, name)
+            "
+            @set-method="$emit('setSplitMethod', $event)"
+            @set-my-share="$emit('setMyShare', $event)"
+            @set-enabled="$emit('setSplitEnabled', $event)"
           />
         </div>
+      </div>
 
-        <!-- Amount Input -->
-        <div class="flex-1">
-          <UInput
-            :model-value="String(formData.amount || '')"
-            placeholder="0"
-            variant="currency"
-            type="number"
-            :suffix="currencySymbol"
-            @update:model-value="updateField('amount', Number($event) || 0)"
-            @keydown.enter.prevent
+      <!-- Panel: Income -->
+      <div class="min-w-full snap-start px-4">
+        <div class="space-y-4">
+          <AmountInput
+            :amount="formData.amount"
+            :currency="formData.currency"
+            :currency-symbol="currencySymbol"
+            :available-currencies="availableCurrencies"
+            :is-multi-currency="isMultiCurrency"
+            @update:amount="updateField('amount', $event)"
+            @update:currency="updateField('currency', $event)"
           />
-        </div>
-      </div>
-      <!-- Предупреждение о недостатке средств -->
-      <p
-        v-if="!hasSufficientFunds && formData.amount > 0"
-        class="text-xs text-warning"
-      >
-        Недостаточно средств. Баланс:
-        {{ formatCurrency(currentBalance, formData.currency) }}
-      </p>
-    </div>
 
-    <!-- Account Selector -->
-    <div class="space-y-2">
-      <label
-        class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark"
-      >
-        {{ isTransfer ? 'Со счёта' : 'Счёт' }}
-      </label>
-      <div class="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
-        <button
-          v-for="account in accounts"
-          :key="account.id"
-          type="button"
-          :class="[
-            'flex items-center gap-1.5 px-3 py-1.5 rounded-lg whitespace-nowrap transition-all text-sm',
-            'border',
-            formData.accountId === account.id
-              ? 'border-primary bg-primary/10 text-primary'
-              : 'border-gray-200 dark:border-gray-700 text-text-secondary-light dark:text-text-secondary-dark',
-          ]"
-          @click="handleAccountChange(account.id)"
-        >
-          <span
-            class="w-2.5 h-2.5 rounded-full"
-            :style="{ backgroundColor: account.color }"
+          <AccountSelector
+            :accounts="accounts"
+            :selected-id="formData.accountId"
+            label="Счёт"
+            @select="handleAccountChange"
           />
-          {{ account.name }}
-          <span v-if="account.balances.length > 1" class="text-xs opacity-60">
-            ({{ account.balances.length }})
-          </span>
-        </button>
-      </div>
-    </div>
 
-    <!-- Transfer Target Account (only for transfers) -->
-    <div v-if="isTransfer" class="space-y-2">
-      <!-- Transfer arrow indicator -->
-      <div class="flex justify-center">
-        <div
-          class="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center"
-        >
-          <UIcon name="arrow_downward" size="sm" class="text-indigo-500" />
-        </div>
-      </div>
-
-      <label
-        class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark"
-      >
-        На счёт
-      </label>
-      <div class="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
-        <button
-          v-for="account in availableTargetAccounts"
-          :key="account.id"
-          type="button"
-          :class="[
-            'flex items-center gap-1.5 px-3 py-1.5 rounded-lg whitespace-nowrap transition-all text-sm',
-            'border',
-            formData.toAccountId === account.id
-              ? 'border-indigo-500 bg-indigo-500/10 text-indigo-500'
-              : 'border-gray-200 dark:border-gray-700 text-text-secondary-light dark:text-text-secondary-dark',
-          ]"
-          @click="handleTargetAccountChange(account.id)"
-        >
-          <span
-            class="w-2.5 h-2.5 rounded-full"
-            :style="{ backgroundColor: account.color }"
-          />
-          {{ account.name }}
-          <span
-            v-if="account.id === formData.accountId"
-            class="text-xs opacity-60"
-          >
-            (конв.)
-          </span>
-          <span
-            v-else-if="account.balances.length > 1"
-            class="text-xs opacity-60"
-          >
-            ({{ account.balances.length }})
-          </span>
-        </button>
-      </div>
-
-      <!-- Target Currency Selector (if target account has multiple currencies or same account) -->
-      <div
-        v-if="targetAccount && targetAccountCurrencies.length > 0"
-        class="mt-1.5"
-      >
-        <label
-          class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-1.5 block"
-        >
-          Валюта зачисления
-        </label>
-        <div class="flex gap-1.5 flex-wrap">
-          <button
-            v-for="currency in targetAccountCurrencies"
-            :key="currency"
-            type="button"
-            :class="[
-              'px-2.5 py-1 rounded-md text-sm font-medium transition-all',
-              formData.toCurrency === currency
-                ? 'bg-indigo-500 text-white'
-                : 'bg-surface-light dark:bg-surface-dark text-text-secondary-light dark:text-text-secondary-dark',
-            ]"
-            @click="handleToCurrencyChange(currency)"
-          >
-            {{ getCurrencyByCode(currency)?.flag }} {{ currency }}
-          </button>
+          <!-- Category Grid -->
+          <div class="space-y-2">
+            <label
+              class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark"
+            >
+              Категория
+            </label>
+            <div
+              class="grid grid-cols-4 sm:grid-cols-5 gap-2 max-h-[168px] overflow-y-auto"
+            >
+              <CategoryCard
+                v-for="category in incomeCategories"
+                :key="category.id"
+                :category="category"
+                :selected="formData.categoryId === category.id"
+                size="medium"
+                @click="updateField('categoryId', category.id)"
+              />
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- Target Amount (when currencies differ - for conversion) -->
-      <div v-if="showToAmountField" class="mt-2">
-        <label
-          class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-1.5 block"
-        >
-          Сумма зачисления ({{ formData.toCurrency }})
-        </label>
-        <UInput
-          :model-value="String(formData.toAmount || '')"
-          placeholder="0"
-          variant="currency"
-          type="number"
-          :suffix="
-            getCurrencyByCode(formData.toCurrency ?? '')?.symbol ||
-            formData.toCurrency ||
-            ''
-          "
-          @update:model-value="handleToAmountChange(Number($event) || 0)"
-          @keydown.enter.prevent
-        />
-        <p
-          class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark mt-0.5"
-        >
-          {{ formatCurrency(formData.amount, formData.currency) }} →
-          {{
-            formatCurrency(formData.toAmount || 0, formData.toCurrency || '')
-          }}
-        </p>
+      <!-- Panel: Transfer -->
+      <div class="min-w-full snap-start px-4">
+        <div class="space-y-4">
+          <AmountInput
+            :amount="formData.amount"
+            :currency="formData.currency"
+            :currency-symbol="currencySymbol"
+            :available-currencies="availableCurrencies"
+            :is-multi-currency="isMultiCurrency"
+            :show-insufficient-funds="!hasSufficientFunds"
+            :current-balance="currentBalance"
+            label="Сумма списания"
+            @update:amount="updateField('amount', $event)"
+            @update:currency="updateField('currency', $event)"
+          />
+
+          <AccountSelector
+            :accounts="accounts"
+            :selected-id="formData.accountId"
+            label="Со счёта"
+            @select="handleAccountChange"
+          />
+
+          <!-- Transfer arrow indicator -->
+          <div class="flex justify-center">
+            <div
+              class="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center"
+            >
+              <UIcon name="arrow_downward" size="sm" class="text-indigo-500" />
+            </div>
+          </div>
+
+          <!-- Target Account -->
+          <div class="space-y-2">
+            <label
+              class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark"
+            >
+              На счёт
+            </label>
+            <div class="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
+              <button
+                v-for="account in availableTargetAccounts"
+                :key="account.id"
+                type="button"
+                :class="[
+                  'flex items-center gap-1.5 px-3 py-1.5 rounded-lg whitespace-nowrap transition-all text-sm',
+                  'border',
+                  formData.toAccountId === account.id
+                    ? 'border-indigo-500 bg-indigo-500/10 text-indigo-500'
+                    : 'border-gray-200 dark:border-gray-700 text-text-secondary-light dark:text-text-secondary-dark',
+                ]"
+                @click="handleTargetAccountChange(account.id)"
+              >
+                <span
+                  class="w-2.5 h-2.5 rounded-full"
+                  :style="{ backgroundColor: account.color }"
+                />
+                {{ account.name }}
+                <span
+                  v-if="account.id === formData.accountId"
+                  class="text-xs opacity-60"
+                >
+                  (конв.)
+                </span>
+                <span
+                  v-else-if="account.balances.length > 1"
+                  class="text-xs opacity-60"
+                >
+                  ({{ account.balances.length }})
+                </span>
+              </button>
+            </div>
+
+            <!-- Target Currency Selector -->
+            <div
+              v-if="targetAccount && targetAccountCurrencies.length > 0"
+              class="mt-1.5"
+            >
+              <label
+                class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-1.5 block"
+              >
+                Валюта зачисления
+              </label>
+              <div class="flex gap-1.5 flex-wrap">
+                <button
+                  v-for="currency in targetAccountCurrencies"
+                  :key="currency"
+                  type="button"
+                  :class="[
+                    'px-2.5 py-1 rounded-md text-sm font-medium transition-all',
+                    formData.toCurrency === currency
+                      ? 'bg-indigo-500 text-white'
+                      : 'bg-surface-light dark:bg-surface-dark text-text-secondary-light dark:text-text-secondary-dark',
+                  ]"
+                  @click="handleToCurrencyChange(currency)"
+                >
+                  {{ getCurrencyByCode(currency)?.flag }} {{ currency }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Target Amount (when currencies differ) -->
+            <div v-if="showToAmountField" class="mt-2">
+              <label
+                class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-1.5 block"
+              >
+                Сумма зачисления ({{ formData.toCurrency }})
+              </label>
+              <UInput
+                :model-value="String(formData.toAmount || '')"
+                placeholder="0"
+                variant="currency"
+                type="number"
+                :suffix="
+                  getCurrencyByCode(formData.toCurrency ?? '')?.symbol ||
+                  formData.toCurrency ||
+                  ''
+                "
+                @update:model-value="handleToAmountChange(Number($event) || 0)"
+                @keydown.enter.prevent
+              />
+              <p
+                class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark mt-0.5"
+              >
+                {{ formatCurrency(formData.amount, formData.currency) }} →
+                {{
+                  formatCurrency(
+                    formData.toAmount || 0,
+                    formData.toCurrency || '',
+                  )
+                }}
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- Category Horizontal Scroll (hide for transfers) -->
-    <div v-if="!isTransfer" class="space-y-2">
-      <label
-        class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark"
-      >
-        Категория
-      </label>
-      <div
-        class="grid grid-cols-4 sm:grid-cols-5 gap-2 max-h-48 overflow-y-auto"
-      >
-        <CategoryCard
-          v-for="category in categories"
-          :key="category.id"
-          :category="category"
-          :selected="formData.categoryId === category.id"
-          size="medium"
-          @click="updateField('categoryId', category.id)"
-        />
-      </div>
-    </div>
-
-    <!-- Split Expense Section (only for expenses) -->
-    <SplitExpenseSection
-      v-if="formData.type === 'expense' && splitData"
-      :total-amount="formData.amount"
-      :currency="formData.currency"
-      :split-data="splitData"
-      :validation-error="splitValidationError"
-      @add-participant="$emit('addParticipant', $event)"
-      @remove-participant="$emit('removeParticipant', $event)"
-      @update-participant-amount="
-        (id, amount) => $emit('updateParticipantAmount', id, amount)
-      "
-      @update-participant-name="
-        (id, name) => $emit('updateParticipantName', id, name)
-      "
-      @set-method="$emit('setSplitMethod', $event)"
-      @set-my-share="$emit('setMyShare', $event)"
-      @set-enabled="$emit('setSplitEnabled', $event)"
-    />
+    <!-- Common fields (outside swipe area) -->
 
     <!-- Description & Date Row -->
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
