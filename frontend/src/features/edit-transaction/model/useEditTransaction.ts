@@ -1,9 +1,8 @@
 import { ref } from 'vue';
-import { transactionsApi, transactionQueryKeys } from '@/entities/transaction';
+import { transactionsApi } from '@/entities/transaction';
 import { debtsApi } from '@/entities/debt';
-import { accountQueryKeys } from '@/entities/account';
-import { accountBalanceQueryKeys } from '@/entities/account-balance';
 import { queryClient } from '@/shared/api/queryClient';
+import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
 import type { Transaction } from '@/shared/api/database.types';
 
 export function useEditTransaction(userId: string) {
@@ -37,33 +36,10 @@ export function useEditTransaction(userId: string) {
       // Currently, amount/type changes may not update balances correctly
       await transactionsApi.update(transaction.id, updates);
 
-      // Invalidate caches (including infinite queries and monthly stats)
+      // Invalidate all related caches
       await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: transactionQueryKeys.list(userId),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: transactionQueryKeys.byAccount(transaction.account_id),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: accountQueryKeys.list(userId),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: accountBalanceQueryKeys.all,
-        }),
-        // Invalidate infinite queries
-        queryClient.invalidateQueries({
-          queryKey: ['transactions', 'infinite', userId],
-        }),
-        queryClient.invalidateQueries({
-          queryKey: transactionQueryKeys.infiniteByAccount(
-            transaction.account_id,
-          ),
-        }),
-        // Invalidate monthly stats (for dashboard)
-        queryClient.invalidateQueries({
-          queryKey: ['transactions', 'monthly-stats'],
-        }),
+        invalidateTransactionRelated(queryClient, userId),
+        invalidateAccountRelated(queryClient, userId),
       ]);
 
       return true;
@@ -110,50 +86,11 @@ export function useEditTransaction(userId: string) {
       // Note: Backend automatically reverses account balance when deleting
       await transactionsApi.delete(transaction.id);
 
-      // Invalidate caches (including infinite queries and monthly stats)
-      const invalidatePromises = [
-        queryClient.invalidateQueries({
-          queryKey: transactionQueryKeys.list(userId),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: transactionQueryKeys.byAccount(transaction.account_id),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: accountQueryKeys.list(userId),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: accountBalanceQueryKeys.all,
-        }),
-        // Invalidate infinite queries
-        queryClient.invalidateQueries({
-          queryKey: ['transactions', 'infinite', userId],
-        }),
-        queryClient.invalidateQueries({
-          queryKey: transactionQueryKeys.infiniteByAccount(
-            transaction.account_id,
-          ),
-        }),
-        // Invalidate monthly stats (for dashboard)
-        queryClient.invalidateQueries({
-          queryKey: ['transactions', 'monthly-stats'],
-        }),
-      ];
-
-      // Also invalidate target account cache for transfers
-      if (transaction.type === 'transfer' && transaction.to_account_id) {
-        invalidatePromises.push(
-          queryClient.invalidateQueries({
-            queryKey: transactionQueryKeys.byAccount(transaction.to_account_id),
-          }),
-          queryClient.invalidateQueries({
-            queryKey: transactionQueryKeys.infiniteByAccount(
-              transaction.to_account_id,
-            ),
-          }),
-        );
-      }
-
-      await Promise.all(invalidatePromises);
+      // Invalidate all related caches
+      await Promise.all([
+        invalidateTransactionRelated(queryClient, userId),
+        invalidateAccountRelated(queryClient, userId),
+      ]);
 
       return true;
     } catch (e) {

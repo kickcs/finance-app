@@ -2,6 +2,7 @@ import { computed, toValue, type MaybeRefOrGetter } from 'vue';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import { accountBalancesApi } from './accountBalancesApi';
 import { accountBalanceQueryKeys } from './queryKeys';
+import { accountQueryKeys } from '@/entities/account/api/queryKeys';
 import type { AccountBalance } from '@/shared/api/database.types';
 
 export function useAccountBalances(accountId: MaybeRefOrGetter<string | null>) {
@@ -24,6 +25,14 @@ export function useAccountBalances(accountId: MaybeRefOrGetter<string | null>) {
     enabled: computed(() => !!toValue(accountId)),
   });
 
+  function invalidateRelated() {
+    return Promise.all([
+      queryClient.invalidateQueries({ queryKey: queryKey.value }),
+      // Also invalidate accounts list (which embeds balances)
+      queryClient.invalidateQueries({ queryKey: accountQueryKeys.all }),
+    ]);
+  }
+
   const upsertMutation = useMutation({
     mutationFn: ({
       currency,
@@ -36,9 +45,7 @@ export function useAccountBalances(accountId: MaybeRefOrGetter<string | null>) {
       if (!id) throw new Error('Account ID is required');
       return accountBalancesApi.upsert(id, currency, balance);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKey.value });
-    },
+    onSuccess: () => invalidateRelated(),
   });
 
   const updateByDeltaMutation = useMutation({
@@ -47,9 +54,7 @@ export function useAccountBalances(accountId: MaybeRefOrGetter<string | null>) {
       if (!id) throw new Error('Account ID is required');
       return accountBalancesApi.updateByDelta(id, currency, delta);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKey.value });
-    },
+    onSuccess: () => invalidateRelated(),
   });
 
   const deleteMutation = useMutation({
@@ -58,9 +63,7 @@ export function useAccountBalances(accountId: MaybeRefOrGetter<string | null>) {
       if (!id) throw new Error('Account ID is required');
       return accountBalancesApi.delete(id, currency);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKey.value });
-    },
+    onSuccess: () => invalidateRelated(),
   });
 
   // Computed helpers

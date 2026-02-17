@@ -1,6 +1,7 @@
 import { computed, toValue, type MaybeRefOrGetter } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { transactionsApi, type AnalyticsStats } from './transactionsApi';
+import { transactionQueryKeys } from './queryKeys';
 
 export interface UseAnalyticsStatsOptions {
   startDate: MaybeRefOrGetter<string | null>;
@@ -21,7 +22,7 @@ export function useAnalyticsStats(options: UseAnalyticsStatsOptions) {
     const start = toValue(options.startDate);
     const end = toValue(options.endDate);
     const accounts = toValue(options.accountIds) ?? [];
-    return ['transactions', 'analytics-stats', start, end, accounts.join(',')];
+    return transactionQueryKeys.analyticsStats(start, end, accounts);
   });
 
   const enabled = computed(() => {

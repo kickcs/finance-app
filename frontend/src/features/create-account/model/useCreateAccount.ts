@@ -2,11 +2,11 @@ import { ref, computed, watch } from 'vue';
 import {
   ACCOUNT_ICONS,
   ACCOUNT_COLORS,
-  accountQueryKeys,
 } from '@/entities/account';
 import type { AccountType } from '@/entities/account';
 import { accountsApi } from '@/entities/account';
 import { queryClient } from '@/shared/api/queryClient';
+import { invalidateAccountRelated } from '@/shared/api/invalidation';
 import { useToast } from '@/shared/ui';
 
 export interface CurrencyBalance {
@@ -150,10 +150,8 @@ export function useCreateAccount() {
         balances,
       );
 
-      // Invalidate accounts cache so Dashboard and other pages refresh
-      await queryClient.invalidateQueries({
-        queryKey: accountQueryKeys.list(userId),
-      });
+      // Invalidate accounts + balances cache so Dashboard and other pages refresh
+      await invalidateAccountRelated(queryClient, userId);
 
       toast({
         title: 'Счёт создан',

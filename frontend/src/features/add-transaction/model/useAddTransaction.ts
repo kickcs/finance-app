@@ -1,8 +1,7 @@
 import { ref, computed } from 'vue';
-import { transactionsApi, transactionQueryKeys } from '@/entities/transaction';
-import { accountQueryKeys } from '@/entities/account';
-import { accountBalanceQueryKeys } from '@/entities/account-balance';
+import { transactionsApi } from '@/entities/transaction';
 import { queryClient } from '@/shared/api/queryClient';
+import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
 import { useToast } from '@/shared/ui';
 
 export interface TransactionFormData {
@@ -89,48 +88,11 @@ export function useAddTransaction() {
         to_currency: isTransfer ? formData.value.toCurrency : null,
       });
 
-      // Invalidate Vue Query caches to trigger refetch (including infinite queries and monthly stats)
-      const invalidatePromises = [
-        queryClient.invalidateQueries({
-          queryKey: transactionQueryKeys.list(userId),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: accountQueryKeys.list(userId),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: accountBalanceQueryKeys.all,
-        }),
-        // Invalidate infinite queries
-        queryClient.invalidateQueries({
-          queryKey: ['transactions', 'infinite', userId],
-        }),
-        queryClient.invalidateQueries({
-          queryKey: transactionQueryKeys.infiniteByAccount(
-            formData.value.accountId!,
-          ),
-        }),
-        // Invalidate monthly stats (for dashboard)
-        queryClient.invalidateQueries({
-          queryKey: ['transactions', 'monthly-stats'],
-        }),
-        // Invalidate recent transactions (for dashboard)
-        queryClient.invalidateQueries({
-          queryKey: transactionQueryKeys.recent(userId),
-        }),
-      ];
-
-      // Also invalidate target account cache for transfers
-      if (isTransfer && formData.value.toAccountId) {
-        invalidatePromises.push(
-          queryClient.invalidateQueries({
-            queryKey: transactionQueryKeys.infiniteByAccount(
-              formData.value.toAccountId,
-            ),
-          }),
-        );
-      }
-
-      await Promise.all(invalidatePromises);
+      // Invalidate all related caches
+      await Promise.all([
+        invalidateTransactionRelated(queryClient, userId),
+        invalidateAccountRelated(queryClient, userId),
+      ]);
 
       // Show success toast
       const typeLabels = {

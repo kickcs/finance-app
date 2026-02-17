@@ -1,8 +1,8 @@
 import { ref } from 'vue';
-import { transactionsApi, transactionQueryKeys } from '@/entities/transaction';
+import { transactionsApi } from '@/entities/transaction';
 import { debtsApi, debtQueryKeys } from '@/entities/debt';
-import { accountQueryKeys } from '@/entities/account';
 import { queryClient } from '@/shared/api/queryClient';
+import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
 import type { Debt } from '@/shared/api/database.types';
 
 export function usePartialPayment() {
@@ -94,24 +94,11 @@ export function usePartialPayment() {
         });
       }
 
-      // Invalidate caches (including monthly stats)
-      // Use resetQueries for accounts to ensure fresh data is fetched (bypasses staleTime)
+      // Invalidate caches
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: debtQueryKeys.list(userId) }),
-        queryClient.invalidateQueries({
-          queryKey: transactionQueryKeys.list(userId),
-        }),
-        queryClient.resetQueries({ queryKey: accountQueryKeys.list(userId) }),
-        queryClient.invalidateQueries({
-          queryKey: ['transactions', 'infinite', userId],
-        }),
-        queryClient.invalidateQueries({
-          queryKey: transactionQueryKeys.infiniteByAccount(selectedAccountId),
-        }),
-        // Invalidate monthly stats (for dashboard)
-        queryClient.invalidateQueries({
-          queryKey: ['transactions', 'monthly-stats'],
-        }),
+        invalidateTransactionRelated(queryClient, userId),
+        invalidateAccountRelated(queryClient, userId),
       ]);
 
       return true;

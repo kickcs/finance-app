@@ -1,9 +1,9 @@
 import { ref } from 'vue';
-import { useAccounts, accountQueryKeys } from '@/entities/account';
-import { transactionQueryKeys } from '@/entities/transaction';
+import { useAccounts } from '@/entities/account';
 import { useProfile } from '@/shared/api';
 import type { Account } from '@/shared/api/database.types';
 import { queryClient } from '@/shared/api/queryClient';
+import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
 
 export function useEditAccount(userId: string) {
   const { updateAccount, deleteAccount } = useAccounts(userId);
@@ -42,21 +42,10 @@ export function useEditAccount(userId: string) {
 
     try {
       await deleteAccount(accountId);
-      // Invalidate caches (including infinite queries)
+      // Invalidate all related caches (accounts, balances, transactions, monthly stats)
       await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: accountQueryKeys.list(userId),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: transactionQueryKeys.list(userId),
-        }),
-        // Invalidate infinite queries
-        queryClient.invalidateQueries({
-          queryKey: ['transactions', 'infinite', userId],
-        }),
-        queryClient.invalidateQueries({
-          queryKey: transactionQueryKeys.infiniteByAccount(accountId),
-        }),
+        invalidateAccountRelated(queryClient, userId),
+        invalidateTransactionRelated(queryClient, userId),
       ]);
       return true;
     } catch (e) {
