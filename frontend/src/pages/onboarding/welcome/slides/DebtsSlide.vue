@@ -124,7 +124,7 @@ const features = [
                 <span class="text-sm font-medium text-text-primary-dark">{{
                   item.title
                 }}</span>
-                <span class="text-[10px] text-text-tertiary-dark">{{
+                <span class="text-caption-sm text-text-tertiary-dark">{{
                   item.date
                 }}</span>
               </div>

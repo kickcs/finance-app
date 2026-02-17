@@ -71,7 +71,7 @@ import { UIcon } from '@/shared/ui';
             <div class="flex flex-col gap-3">
               <div class="flex items-center justify-between">
                 <span
-                  class="text-[10px] text-text-tertiary-dark font-semibold uppercase tracking-wider"
+                  class="text-caption-sm text-text-tertiary-dark font-semibold uppercase tracking-wider"
                   >Наличные</span
                 >
                 <UIcon name="payments" size="sm" class="text-success" />
@@ -89,7 +89,7 @@ import { UIcon } from '@/shared/ui';
             <div class="flex flex-col gap-3">
               <div class="flex items-center justify-between">
                 <span
-                  class="text-[10px] text-text-tertiary-dark font-semibold uppercase tracking-wider"
+                  class="text-caption-sm text-text-tertiary-dark font-semibold uppercase tracking-wider"
                   >Карта</span
                 >
                 <UIcon name="credit_card" size="sm" class="text-primary" />

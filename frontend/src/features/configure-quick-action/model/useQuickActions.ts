@@ -1,12 +1,12 @@
 import { computed } from 'vue';
 import { useLocalStorage } from '@/shared/lib/hooks/useLocalStorage';
-import { getCategoryById } from '@/entities/category';
 import type { QuickAction } from './types';
 
 const MAX_SLOTS = 4;
 
 export function useQuickActions() {
   const actions = useLocalStorage<QuickAction[]>('quick_actions', []);
+  const hidden = useLocalStorage<boolean>('quick_actions_hidden', false);
 
   const slots = computed(() => {
     const result: (QuickAction | null)[] = [];
@@ -34,9 +34,9 @@ export function useQuickActions() {
     actions.value = actions.value.filter((a) => a.id !== id);
   }
 
-  function getCategory(categoryId: string) {
-    return getCategoryById(categoryId);
+  function toggleHidden() {
+    hidden.value = !hidden.value;
   }
 
-  return { slots, actions, addAction, updateAction, removeAction, getCategory };
+  return { slots, actions, hidden, addAction, updateAction, removeAction, toggleHidden };
 }

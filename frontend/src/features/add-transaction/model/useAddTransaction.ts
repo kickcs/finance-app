@@ -113,6 +113,10 @@ export function useAddTransaction() {
         queryClient.invalidateQueries({
           queryKey: ['transactions', 'monthly-stats'],
         }),
+        // Invalidate recent transactions (for dashboard)
+        queryClient.invalidateQueries({
+          queryKey: transactionQueryKeys.recent(userId),
+        }),
       ];
 
       // Also invalidate target account cache for transfers

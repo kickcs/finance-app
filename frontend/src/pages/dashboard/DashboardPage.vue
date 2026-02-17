@@ -54,6 +54,7 @@ import { useMonthlyStats, useRecentTransactions } from '@/entities/transaction';
 import type { Transaction } from '@/entities/transaction';
 import { useDebts, type Debt } from '@/entities/debt';
 import { useReminders, type Reminder } from '@/entities/reminder';
+import { useCategories } from '@/entities/category';
 import { useProfile, useExchangeRates } from '@/shared/api';
 
 const router = useRouter();
@@ -97,6 +98,14 @@ const {
 } = useAccounts(userId);
 const { debts, isLoading: debtsLoading } = useDebts(userId);
 const { reminders, isLoading: remindersLoading } = useReminders(userId);
+const { expenseCategories, allCategories } = useCategories(userId);
+const categoryMap = computed(() => {
+  const map = new Map<string, { icon: string; color: string }>();
+  for (const cat of allCategories.value) {
+    map.set(cat.id, { icon: cat.icon, color: cat.color });
+  }
+  return map;
+});
 const { transactions: recentTransactions, isLoading: recentTxLoading } =
   useRecentTransactions(userId, 5);
 
@@ -220,7 +229,7 @@ function handleExpenseClick() {
   router.push('/transactions/new?type=expense');
 }
 
-const { slots: quickActionSlots, addAction, updateAction, removeAction, getCategory } =
+const { slots: quickActionSlots, addAction, updateAction, removeAction, hidden: quickActionsHidden } =
   useQuickActions();
 
 const showQuickActionModal = ref(false);
@@ -305,6 +314,7 @@ function handleViewAllReminders() {
 const { showModal: showInstallModal } = usePwaInstall();
 
 const isHidden = useLocalStorage('balance_hidden', false);
+const quickActionsHintDismissed = useLocalStorage('quick_actions_hint_dismissed', false);
 
 const scrollContainerRef = ref<HTMLElement>();
 
@@ -385,7 +395,7 @@ async function handleRefresh() {
           </section>
 
           <!-- Quick Actions -->
-          <section>
+          <section v-if="!quickActionsHidden">
             <div class="grid grid-cols-4 gap-3">
               <button
                 v-for="(action, index) in quickActionSlots"
@@ -397,12 +407,12 @@ async function handleRefresh() {
                 <template v-if="action">
                   <div
                     class="w-10 h-10 rounded-xl flex items-center justify-center"
-                    :style="{ backgroundColor: (getCategory(action.categoryId)?.color ?? '#64748b') + '1A' }"
+                    :style="{ backgroundColor: (categoryMap.get(action.categoryId)?.color ?? '#64748b') + '1A' }"
                   >
                     <UIcon
-                      :name="getCategory(action.categoryId)?.icon ?? 'receipt_long'"
+                      :name="categoryMap.get(action.categoryId)?.icon ?? 'receipt_long'"
                       size="sm"
-                      :style="{ color: getCategory(action.categoryId)?.color ?? '#64748b' }"
+                      :style="{ color: categoryMap.get(action.categoryId)?.color ?? '#64748b' }"
                     />
                   </div>
                   <span class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark truncate w-full text-center px-1">
@@ -417,6 +427,25 @@ async function handleRefresh() {
                     Добавить
                   </span>
                 </template>
+              </button>
+            </div>
+            <!-- Hint — shown once until dismissed -->
+            <div
+              v-if="!quickActionsHintDismissed"
+              class="mt-2 flex items-start gap-2 px-1"
+            >
+              <p class="text-caption-xs leading-snug text-text-tertiary-light dark:text-text-tertiary-dark">
+                Удерживайте кнопку для редактирования. Настроить или скрыть — в
+                <button
+                  class="underline text-primary"
+                  @click="router.push('/settings/quick-actions')"
+                >Профиль → Быстрые действия</button>.
+              </p>
+              <button
+                class="shrink-0 p-0.5 rounded text-text-tertiary-light dark:text-text-tertiary-dark hover:text-text-secondary-light dark:hover:text-text-secondary-dark"
+                @click="quickActionsHintDismissed = true"
+              >
+                <UIcon name="close" size="xs" />
               </button>
             </div>
           </section>
@@ -501,6 +530,7 @@ async function handleRefresh() {
     <QuickActionModal
       v-model="showQuickActionModal"
       :accounts="accounts"
+      :expense-categories="expenseCategories"
       :edit-action="editingAction"
       @save="handleQuickActionSave"
       @delete="handleQuickActionDelete"
