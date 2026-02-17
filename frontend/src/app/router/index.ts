@@ -220,6 +220,12 @@ export const router = createRouter({
       component: () => import('@/pages/settings/categories/CategoriesPage.vue'),
       meta: { requiresAuth: true, requiresOnboarding: true },
     },
+    {
+      path: '/settings/quick-actions',
+      name: 'settings-quick-actions',
+      component: () => import('@/pages/settings/quick-actions/QuickActionsSettingsPage.vue'),
+      meta: { requiresAuth: true, requiresOnboarding: true },
+    },
     // Catch-all redirect
     {
       path: '/:pathMatch(.*)*',
