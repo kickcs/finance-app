@@ -230,52 +230,6 @@ h1, h2, h3, h4, h5, h6 {
    ANIMATIONS - Subtle & Fast
    ============================================ */
 
-/* Fade in up animation - faster */
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-fadeInUp {
-  animation: fadeInUp 0.2s ease-out forwards;
-}
-
-/* Stagger animation delays - standardized */
-:root {
-  --stagger-1: 0.05s;
-  --stagger-2: 0.1s;
-  --stagger-3: 0.15s;
-  --stagger-4: 0.2s;
-  --stagger-5: 0.25s;
-}
-
-.stagger-1 { animation-delay: var(--stagger-1); }
-.stagger-2 { animation-delay: var(--stagger-2); }
-.stagger-3 { animation-delay: var(--stagger-3); }
-.stagger-4 { animation-delay: var(--stagger-4); }
-.stagger-5 { animation-delay: var(--stagger-5); }
-
-/* Scale in animation - subtle */
-@keyframes scaleIn {
-  from {
-    opacity: 0;
-    transform: scale(0.96);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-.animate-scaleIn {
-  animation: scaleIn 0.15s ease-out forwards;
-}
 
 /* Shimmer effect for skeleton loaders - cleaner */
 @keyframes shimmer {
@@ -325,22 +279,6 @@ h1, h2, h3, h4, h5, h6 {
   animation: shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97);
 }
 
-/* Slide in from bottom - faster */
-@keyframes slideInFromBottom {
-  from {
-    opacity: 0;
-    transform: translateY(100%);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-slideInFromBottom {
-  animation: slideInFromBottom 0.2s ease-out forwards;
-}
-
 /* Safe area utilities */
 .safe-area-inset-bottom {
   padding-bottom: env(safe-area-inset-bottom, 0px);
@@ -374,26 +312,3 @@ h1, h2, h3, h4, h5, h6 {
    UTILITY CLASSES - Minimal Design
    ============================================ */
 
-/* Clean card with border */
-.card-minimal {
-  @apply bg-card-light dark:bg-card-dark;
-  @apply border border-border-light dark:border-border-dark;
-  @apply rounded-xl;
-}
-
-/* Subtle hover state */
-.hover-subtle {
-  @apply transition-colors duration-150;
-  @apply hover:bg-surface-light dark:hover:bg-surface-dark;
-}
-
-/* Focus ring - indigo */
-.focus-ring {
-  @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2;
-}
-
-/* Active press state */
-.active-press {
-  @apply active:opacity-80;
-  transition: opacity 0.1s ease-out;
-}

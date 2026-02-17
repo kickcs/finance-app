@@ -272,7 +272,7 @@ async function handleRefresh() {
           <InstallPwaBanner @install="showInstallModal = true" />
 
           <!-- Hero Section — balance + stats -->
-          <section class="space-y-6 animate-fadeInUp">
+          <section class="space-y-6">
             <BalanceCard
               :total-balance="totalBalance"
               :currency="currency"
@@ -296,7 +296,7 @@ async function handleRefresh() {
           </section>
 
           <!-- Accounts -->
-          <section class="animate-fadeInUp" style="animation-delay: 0.1s">
+          <section>
             <AccountStack
               :accounts="accounts"
               :loading="accountsLoading"
@@ -308,7 +308,7 @@ async function handleRefresh() {
           </section>
 
           <!-- Debts -->
-          <section class="animate-fadeInUp" style="animation-delay: 0.15s">
+          <section>
             <Suspense>
               <DebtsSection
                 :debts="debts"
@@ -327,7 +327,7 @@ async function handleRefresh() {
           </section>
 
           <!-- Subscriptions -->
-          <section class="animate-fadeInUp" style="animation-delay: 0.2s">
+          <section>
             <Suspense>
               <RemindersSection
                 :reminders="reminders"

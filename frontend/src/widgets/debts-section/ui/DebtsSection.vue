@@ -173,8 +173,7 @@ function isOverdue(date: string | null): boolean {
       <button
         v-for="(group, index) in filteredDebts.slice(0, 4)"
         :key="`${group.personName}_${group.debtType}`"
-        class="w-full p-3 rounded-xl text-left bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark hover:bg-surface-light dark:hover:bg-surface-dark active:opacity-80 transition-all duration-150 animate-fadeInUp"
-        :style="{ animationDelay: `${index * 0.03}s` }"
+        class="w-full p-3 rounded-xl text-left bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark hover:bg-surface-light dark:hover:bg-surface-dark active:opacity-80 transition-all duration-150"
         @click="handleGroupClick(group)"
       >
         <div class="flex items-center justify-between">

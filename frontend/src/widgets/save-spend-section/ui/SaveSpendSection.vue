@@ -58,7 +58,6 @@ const hasData = computed(() => props.savedAmount > 0 || props.spentAmount > 0);
         icon="trending_up"
         title="Нет данных за месяц"
         description="Добавьте доходы и расходы для отслеживания статистики"
-        :animated="true"
       />
     </UCard>
 
@@ -67,8 +66,7 @@ const hasData = computed(() => props.savedAmount > 0 || props.spentAmount > 0);
       <!-- Earned Card -->
       <UCard
         padding="md"
-        class="animate-fadeInUp cursor-pointer hover:ring-1 hover:ring-success/30 transition-all"
-        style="animation-delay: 0.03s"
+        class="cursor-pointer hover:ring-1 hover:ring-success/30 transition-all"
         @click="$emit('income-click')"
       >
         <div class="flex items-center gap-1.5 mb-2">
@@ -91,8 +89,7 @@ const hasData = computed(() => props.savedAmount > 0 || props.spentAmount > 0);
       <!-- Spent Card -->
       <UCard
         padding="md"
-        class="animate-fadeInUp cursor-pointer hover:ring-1 hover:ring-danger/30 transition-all"
-        style="animation-delay: 0.06s"
+        class="cursor-pointer hover:ring-1 hover:ring-danger/30 transition-all"
         @click="$emit('expense-click')"
       >
         <div class="flex items-center gap-1.5 mb-2">

@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.2.1';
+export const CURRENT_VERSION = '1.2.2';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,21 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.2.2',
+    date: '2026-02-17',
+    title: 'Автообновление приложения',
+    items: [
+      {
+        type: 'improvement',
+        text: 'Приложение теперь обновляется автоматически — не нужно закрывать и открывать заново',
+      },
+      {
+        type: 'improvement',
+        text: 'Обновлённый дизайн главного экрана и виджетов',
+      },
+    ],
+  },
   {
     version: '1.2.1',
     date: '2026-02-16',
