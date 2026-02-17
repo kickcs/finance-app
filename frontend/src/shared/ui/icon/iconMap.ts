@@ -121,6 +121,7 @@ export const iconMap: Record<string, Component> = {
   bug_report: Bug,
   build: Wrench,
   call_received: CircleArrowDown,
+  call_split: Share2,
   calendar_month: CalendarDays,
   calendar_today: CalendarCheck,
   cardiology: HeartPulse,

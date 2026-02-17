@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.2.2';
+export const CURRENT_VERSION = '1.3.0';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,25 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.3.0',
+    date: '2026-02-17',
+    title: 'Обновлённая главная страница',
+    items: [
+      {
+        type: 'feature',
+        text: 'Персональное приветствие — доброе утро/день/вечер с вашим именем',
+      },
+      {
+        type: 'feature',
+        text: 'Настраиваемые быстрые действия — выберите категорию и счёт для каждой кнопки',
+      },
+      {
+        type: 'feature',
+        text: 'Последние 5 операций прямо на главной странице',
+      },
+    ],
+  },
   {
     version: '1.2.2',
     date: '2026-02-17',

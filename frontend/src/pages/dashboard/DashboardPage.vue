@@ -5,7 +5,7 @@ import type { Ref } from 'vue';
 import type { User } from '@/shared/api/composables/useAuth';
 import { useRouter } from 'vue-router';
 import { queryClient } from '@/shared/api/queryClient';
-import { PullToRefresh } from '@/shared/ui';
+import { PullToRefresh, UIcon } from '@/shared/ui';
 
 // Critical components - load immediately
 import { AppHeader } from '@/widgets/header';
@@ -16,6 +16,11 @@ import {
   InstallPwaModal,
   usePwaInstall,
 } from '@/features/install-pwa';
+import {
+  QuickActionModal,
+  useQuickActions,
+  type QuickAction,
+} from '@/features/configure-quick-action';
 
 // Above-the-fold widgets — eager load (no extra chunk downloads)
 import BalanceCard from '@/widgets/balance-card/ui/BalanceCard.vue';
@@ -25,6 +30,7 @@ import AccountStack from '@/widgets/account-stack/ui/AccountStack.vue';
 // Below-fold skeleton fallbacks
 import { DebtsSectionSkeleton } from '@/widgets/debts-section';
 import { RemindersSectionSkeleton } from '@/widgets/reminders-section';
+import { RecentTransactionsSkeleton } from '@/widgets/recent-transactions';
 
 // Below-fold widgets — lazy load
 const DebtsSection = defineAsyncComponent({
@@ -37,11 +43,18 @@ const RemindersSection = defineAsyncComponent({
   delay: 0,
 });
 
+const RecentTransactions = defineAsyncComponent({
+  loader: () => import('@/widgets/recent-transactions/ui/RecentTransactions.vue'),
+  delay: 0,
+});
+
 // API composables
 import { useAccounts, type AccountWithBalances } from '@/entities/account';
-import { useMonthlyStats } from '@/entities/transaction';
+import { useMonthlyStats, useRecentTransactions } from '@/entities/transaction';
+import type { Transaction } from '@/entities/transaction';
 import { useDebts, type Debt } from '@/entities/debt';
 import { useReminders, type Reminder } from '@/entities/reminder';
+import { useCategories } from '@/entities/category';
 import { useProfile, useExchangeRates } from '@/shared/api';
 
 const router = useRouter();
@@ -59,6 +72,21 @@ const currency = computed(
     'UZS',
 );
 
+// Time-based greeting
+const greeting = computed(() => {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12) return 'Доброе утро';
+  if (hour >= 12 && hour < 17) return 'Добрый день';
+  if (hour >= 17 && hour < 23) return 'Добрый вечер';
+  return 'Доброй ночи';
+});
+
+const userName = computed(() => {
+  const fullName = profile.value?.name || user?.value?.name;
+  if (!fullName) return '';
+  return fullName.split(' ')[0];
+});
+
 // Exchange rates for currency conversion
 const { convert, isLoading: ratesLoading } = useExchangeRates(currency);
 
@@ -70,6 +98,16 @@ const {
 } = useAccounts(userId);
 const { debts, isLoading: debtsLoading } = useDebts(userId);
 const { reminders, isLoading: remindersLoading } = useReminders(userId);
+const { expenseCategories, allCategories } = useCategories(userId);
+const categoryMap = computed(() => {
+  const map = new Map<string, { icon: string; color: string }>();
+  for (const cat of allCategories.value) {
+    map.set(cat.id, { icon: cat.icon, color: cat.color });
+  }
+  return map;
+});
+const { transactions: recentTransactions, isLoading: recentTxLoading } =
+  useRecentTransactions(userId, 5);
 
 // Monthly statistics from server (accurate, no limit issues)
 const now = new Date();
@@ -191,6 +229,57 @@ function handleExpenseClick() {
   router.push('/transactions/new?type=expense');
 }
 
+const { slots: quickActionSlots, addAction, updateAction, removeAction, hidden: quickActionsHidden } =
+  useQuickActions();
+
+const showQuickActionModal = ref(false);
+const editingAction = ref<QuickAction | null>(null);
+
+function handleQuickActionClick(action: QuickAction | null) {
+  if (!action) {
+    editingAction.value = null;
+    showQuickActionModal.value = true;
+    return;
+  }
+  router.push(
+    `/transactions/new?type=expense&categoryId=${action.categoryId}&accountId=${action.accountId}`,
+  );
+}
+
+function handleQuickActionLongPress(action: QuickAction | null) {
+  if (!action) {
+    editingAction.value = null;
+    showQuickActionModal.value = true;
+    return;
+  }
+  editingAction.value = action;
+  showQuickActionModal.value = true;
+}
+
+function handleQuickActionSave(data: { label: string; categoryId: string; accountId: string }) {
+  if (editingAction.value) {
+    updateAction(editingAction.value.id, data);
+  } else {
+    addAction(data);
+  }
+  editingAction.value = null;
+}
+
+function handleQuickActionDelete() {
+  if (editingAction.value) {
+    removeAction(editingAction.value.id);
+  }
+  editingAction.value = null;
+}
+
+function handleTransactionClick(_tx: Transaction) {
+  router.push('/history');
+}
+
+function handleViewAllTransactions() {
+  router.push('/history');
+}
+
 function handleAddReminder() {
   router.push({ name: 'new-reminder' });
 }
@@ -225,6 +314,7 @@ function handleViewAllReminders() {
 const { showModal: showInstallModal } = usePwaInstall();
 
 const isHidden = useLocalStorage('balance_hidden', false);
+const quickActionsHintDismissed = useLocalStorage('quick_actions_hint_dismissed', false);
 
 const scrollContainerRef = ref<HTMLElement>();
 
@@ -247,13 +337,22 @@ async function handleRefresh() {
           <div
             class="w-9 h-9 rounded-xl flex items-center justify-center bg-gradient-to-br from-primary to-primary-hover shadow-lg shadow-primary/25 group-hover:shadow-xl group-hover:shadow-primary/30 group-hover:scale-105 transition-all duration-200"
           >
-            <span class="text-white font-bold text-base">O</span>
+            <span class="text-white font-bold text-base">
+              {{ userName ? userName[0].toUpperCase() : 'O' }}
+            </span>
           </div>
-          <span
-            class="font-bold text-lg text-text-primary-light dark:text-text-primary-dark group-hover:text-primary transition-colors"
-          >
-            Ouro
-          </span>
+          <div class="flex flex-col">
+            <span
+              class="text-xs text-text-secondary-light dark:text-text-secondary-dark leading-tight"
+            >
+              {{ greeting }}
+            </span>
+            <span
+              class="font-bold text-base text-text-primary-light dark:text-text-primary-dark group-hover:text-primary transition-colors leading-tight"
+            >
+              {{ userName || 'Ouro' }}
+            </span>
+          </div>
         </div>
       </template>
       <template #actions>
@@ -295,6 +394,62 @@ async function handleRefresh() {
             />
           </section>
 
+          <!-- Quick Actions -->
+          <section v-if="!quickActionsHidden">
+            <div class="grid grid-cols-4 gap-3">
+              <button
+                v-for="(action, index) in quickActionSlots"
+                :key="action?.id ?? `empty-${index}`"
+                class="flex flex-col items-center gap-1.5 py-3 rounded-xl bg-surface-light dark:bg-surface-dark hover:opacity-80 active:scale-95 transition-all duration-150"
+                @click="handleQuickActionClick(action)"
+                @contextmenu.prevent="handleQuickActionLongPress(action)"
+              >
+                <template v-if="action">
+                  <div
+                    class="w-10 h-10 rounded-xl flex items-center justify-center"
+                    :style="{ backgroundColor: (categoryMap.get(action.categoryId)?.color ?? '#64748b') + '1A' }"
+                  >
+                    <UIcon
+                      :name="categoryMap.get(action.categoryId)?.icon ?? 'receipt_long'"
+                      size="sm"
+                      :style="{ color: categoryMap.get(action.categoryId)?.color ?? '#64748b' }"
+                    />
+                  </div>
+                  <span class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark truncate w-full text-center px-1">
+                    {{ action.label }}
+                  </span>
+                </template>
+                <template v-else>
+                  <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-border-light dark:bg-border-dark">
+                    <UIcon name="add" size="sm" class="text-text-tertiary-light dark:text-text-tertiary-dark" />
+                  </div>
+                  <span class="text-xs font-medium text-text-tertiary-light dark:text-text-tertiary-dark">
+                    Добавить
+                  </span>
+                </template>
+              </button>
+            </div>
+            <!-- Hint — shown once until dismissed -->
+            <div
+              v-if="!quickActionsHintDismissed"
+              class="mt-2 flex items-start gap-2 px-1"
+            >
+              <p class="text-caption-xs leading-snug text-text-tertiary-light dark:text-text-tertiary-dark">
+                Удерживайте кнопку для редактирования. Настроить или скрыть — в
+                <button
+                  class="underline text-primary"
+                  @click="router.push('/settings/quick-actions')"
+                >Профиль → Быстрые действия</button>.
+              </p>
+              <button
+                class="shrink-0 p-0.5 rounded text-text-tertiary-light dark:text-text-tertiary-dark hover:text-text-secondary-light dark:hover:text-text-secondary-dark"
+                @click="quickActionsHintDismissed = true"
+              >
+                <UIcon name="close" size="xs" />
+              </button>
+            </div>
+          </section>
+
           <!-- Accounts -->
           <section>
             <AccountStack
@@ -305,6 +460,24 @@ async function handleRefresh() {
               @add-click="handleAddAccount"
               @view-all="handleViewAllAccounts"
             />
+          </section>
+
+          <!-- Recent Transactions -->
+          <section>
+            <Suspense>
+              <RecentTransactions
+                :transactions="recentTransactions"
+                :user-id="userId"
+                :loading="recentTxLoading"
+                :hidden="isHidden"
+                @transaction-click="handleTransactionClick"
+                @add-click="handleAddTransaction"
+                @view-all="handleViewAllTransactions"
+              />
+              <template #fallback>
+                <RecentTransactionsSkeleton />
+              </template>
+            </Suspense>
           </section>
 
           <!-- Debts -->
@@ -352,5 +525,15 @@ async function handleRefresh() {
 
     <!-- PWA Install Modal -->
     <InstallPwaModal v-model="showInstallModal" />
+
+    <!-- Quick Action Configure Modal -->
+    <QuickActionModal
+      v-model="showQuickActionModal"
+      :accounts="accounts"
+      :expense-categories="expenseCategories"
+      :edit-action="editingAction"
+      @save="handleQuickActionSave"
+      @delete="handleQuickActionDelete"
+    />
   </div>
 </template>

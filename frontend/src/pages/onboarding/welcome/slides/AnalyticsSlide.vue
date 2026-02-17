@@ -75,7 +75,7 @@ const chartSegments = [
             class="absolute inset-0 flex flex-col items-center justify-center text-center"
           >
             <span
-              class="text-[10px] text-text-tertiary-dark font-medium uppercase tracking-wider"
+              class="text-caption-sm text-text-tertiary-dark font-medium uppercase tracking-wider"
               >Итого</span
             >
             <span class="text-xl font-bold text-text-primary-dark"

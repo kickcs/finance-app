@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { UCard, UIcon, UButton, EmptyState } from '@/shared/ui';
+import { UCard, UIcon, UButton } from '@/shared/ui';
 import { formatCurrency, COMPACT_FORMAT } from '@/shared/lib/format/currency';
 
 const props = defineProps<{
@@ -52,13 +52,23 @@ const hasData = computed(() => props.savedAmount > 0 || props.spentAmount > 0);
       </UCard>
     </div>
 
-    <!-- Empty state -->
+    <!-- Empty state — compact -->
     <UCard v-else-if="!hasData" padding="md">
-      <EmptyState
-        icon="trending_up"
-        title="Нет данных за месяц"
-        description="Добавьте доходы и расходы для отслеживания статистики"
-      />
+      <div class="flex items-center gap-3 py-1">
+        <div
+          class="w-9 h-9 shrink-0 rounded-lg bg-surface-light dark:bg-surface-dark flex items-center justify-center"
+        >
+          <UIcon name="trending_up" size="sm" class="text-text-tertiary-light dark:text-text-tertiary-dark" />
+        </div>
+        <div>
+          <p class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
+            Нет данных за месяц
+          </p>
+          <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
+            Добавьте доходы и расходы
+          </p>
+        </div>
+      </div>
     </UCard>
 
     <!-- Content — two side-by-side cards -->

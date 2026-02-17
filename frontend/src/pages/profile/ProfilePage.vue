@@ -59,6 +59,7 @@ const menuItems = [
     value: () => currency.value?.code,
   },
   { id: 'categories', icon: 'category', label: 'Категории' },
+  { id: 'quick-actions', icon: 'bolt', label: 'Быстрые действия' },
   { id: 'about', icon: 'info', label: 'О приложении' },
 ];
 
@@ -76,6 +77,9 @@ function handleMenuClick(itemId: string) {
       break;
     case 'categories':
       router.push('/settings/categories');
+      break;
+    case 'quick-actions':
+      router.push('/settings/quick-actions');
       break;
     case 'about':
       openInstallModal();

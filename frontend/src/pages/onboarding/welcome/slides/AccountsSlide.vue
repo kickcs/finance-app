@@ -79,7 +79,7 @@ const iconTextClasses: Record<string, string> = {
           </div>
           <div>
             <p
-              class="text-text-tertiary-dark text-[11px] font-semibold uppercase tracking-wider mb-1"
+              class="text-text-tertiary-dark text-caption font-semibold uppercase tracking-wider mb-1"
             >
               {{ acc.label }}
             </p>
