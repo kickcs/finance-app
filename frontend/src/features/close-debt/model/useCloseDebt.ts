@@ -1,8 +1,8 @@
 import { ref } from 'vue';
-import { transactionsApi, transactionQueryKeys } from '@/entities/transaction';
+import { transactionsApi } from '@/entities/transaction';
 import { debtsApi, debtQueryKeys } from '@/entities/debt';
-import { accountQueryKeys } from '@/entities/account';
 import { queryClient } from '@/shared/api/queryClient';
+import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
 import type { Debt } from '@/shared/api/database.types';
 
 export function useCloseDebt() {
@@ -65,25 +65,11 @@ export function useCloseDebt() {
         close_transaction_id: transaction.id,
       });
 
-      // Invalidate caches (including infinite queries and monthly stats)
-      // Use resetQueries for accounts to ensure fresh data is fetched (bypasses staleTime)
+      // Invalidate caches
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: debtQueryKeys.list(userId) }),
-        queryClient.invalidateQueries({
-          queryKey: transactionQueryKeys.list(userId),
-        }),
-        queryClient.resetQueries({ queryKey: accountQueryKeys.list(userId) }),
-        // Invalidate infinite queries
-        queryClient.invalidateQueries({
-          queryKey: ['transactions', 'infinite', userId],
-        }),
-        queryClient.invalidateQueries({
-          queryKey: transactionQueryKeys.infiniteByAccount(debt.account_id),
-        }),
-        // Invalidate monthly stats (for dashboard)
-        queryClient.invalidateQueries({
-          queryKey: ['transactions', 'monthly-stats'],
-        }),
+        invalidateTransactionRelated(queryClient, userId),
+        invalidateAccountRelated(queryClient, userId),
       ]);
 
       return true;
@@ -120,34 +106,12 @@ export function useCloseDebt() {
       // 3. Delete the debt
       await debtsApi.delete(debt.id);
 
-      // 4. Invalidate caches (including infinite queries and monthly stats)
-      // Use resetQueries for accounts to ensure fresh data is fetched (bypasses staleTime)
-      const invalidatePromises = [
+      // 4. Invalidate caches
+      await Promise.all([
         queryClient.invalidateQueries({ queryKey: debtQueryKeys.list(userId) }),
-        queryClient.invalidateQueries({
-          queryKey: transactionQueryKeys.list(userId),
-        }),
-        queryClient.resetQueries({ queryKey: accountQueryKeys.list(userId) }),
-        // Invalidate infinite queries
-        queryClient.invalidateQueries({
-          queryKey: ['transactions', 'infinite', userId],
-        }),
-        // Invalidate monthly stats (for dashboard)
-        queryClient.invalidateQueries({
-          queryKey: ['transactions', 'monthly-stats'],
-        }),
-      ];
-
-      // Also invalidate account-specific cache if debt had an account
-      if (debt.account_id) {
-        invalidatePromises.push(
-          queryClient.invalidateQueries({
-            queryKey: transactionQueryKeys.infiniteByAccount(debt.account_id),
-          }),
-        );
-      }
-
-      await Promise.all(invalidatePromises);
+        invalidateTransactionRelated(queryClient, userId),
+        invalidateAccountRelated(queryClient, userId),
+      ]);
 
       return true;
     } catch (e) {

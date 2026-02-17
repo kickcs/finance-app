@@ -18,6 +18,8 @@ export const transactionQueryKeys = {
     ] as const,
 
   // Infinite query keys - strip undefined/empty values for stable serialization
+  infinitePrefix: () =>
+    [...transactionQueryKeys.all, 'infinite'] as const,
   infinite: (userId: string, filters?: TransactionFilters) =>
     [
       ...transactionQueryKeys.all,
@@ -27,12 +29,24 @@ export const transactionQueryKeys = {
     ] as const,
   infiniteByAccount: (accountId: string) =>
     [...transactionQueryKeys.all, 'infinite', 'account', accountId] as const,
+  searchPrefix: () =>
+    [...transactionQueryKeys.all, 'search'] as const,
   search: (userId: string, searchTerm: string) =>
     [...transactionQueryKeys.all, 'search', userId, searchTerm] as const,
+  countPrefix: () =>
+    [...transactionQueryKeys.all, 'count'] as const,
   countByAccount: (accountId: string) =>
     [...transactionQueryKeys.all, 'count', 'account', accountId] as const,
   recent: (userId: string) =>
     [...transactionQueryKeys.all, 'recent', userId] as const,
+  monthlyStats: (userId: string, year: number, month: number) =>
+    [...transactionQueryKeys.all, 'monthly-stats', userId, year, month] as const,
+  monthlyStatsPrefix: () =>
+    [...transactionQueryKeys.all, 'monthly-stats'] as const,
+  analyticsStats: (startDate: string | null, endDate: string | null, accountIds: string[]) =>
+    [...transactionQueryKeys.all, 'analytics-stats', startDate, endDate, accountIds.join(',')] as const,
+  analyticsStatsPrefix: () =>
+    [...transactionQueryKeys.all, 'analytics-stats'] as const,
 };
 
 export type TransactionQueryKeys = typeof transactionQueryKeys;

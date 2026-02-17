@@ -1,5 +1,9 @@
 import { useMutation, useQueryClient } from '@tanstack/vue-query';
 import { importApi } from './importApi';
+import { transactionQueryKeys } from '@/entities/transaction';
+import { accountQueryKeys } from '@/entities/account';
+import { accountBalanceQueryKeys } from '@/entities/account-balance';
+import { categoryQueryKeys } from '@/entities/category';
 import type { ParsedTransaction } from '@/shared/lib/csv/parseMoneyLoverCsv';
 
 export function useImportData() {
@@ -10,11 +14,11 @@ export function useImportData() {
       importApi.importTransactions(transactions),
     onSuccess() {
       // Invalidate all related queries so UI refreshes
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['accounts'] });
-      queryClient.invalidateQueries({ queryKey: ['categories'] });
-      queryClient.invalidateQueries({ queryKey: ['analytics'] });
-      queryClient.invalidateQueries({ queryKey: ['monthly-stats'] });
+      // Using .all prefix keys to cover all sub-queries
+      queryClient.invalidateQueries({ queryKey: transactionQueryKeys.all });
+      queryClient.invalidateQueries({ queryKey: accountQueryKeys.all });
+      queryClient.invalidateQueries({ queryKey: accountBalanceQueryKeys.all });
+      queryClient.invalidateQueries({ queryKey: categoryQueryKeys.all });
     },
   });
 

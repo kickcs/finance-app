@@ -1,8 +1,8 @@
 import { ref, computed } from 'vue';
-import { transactionsApi, transactionQueryKeys } from '@/entities/transaction';
+import { transactionsApi } from '@/entities/transaction';
 import { debtsApi, debtQueryKeys } from '@/entities/debt';
-import { accountQueryKeys } from '@/entities/account';
 import { queryClient } from '@/shared/api/queryClient';
+import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
 import { useToast } from '@/shared/ui';
 import type { DebtDirection } from '@/entities/debt';
 
@@ -99,26 +99,11 @@ export function useCreateDebt() {
         currency: currency,
       });
 
-      // 3. Invalidate caches (including infinite queries and monthly stats)
+      // 3. Invalidate caches
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: debtQueryKeys.list(userId) }),
-        queryClient.invalidateQueries({
-          queryKey: transactionQueryKeys.list(userId),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: accountQueryKeys.list(userId),
-        }),
-        // Invalidate infinite queries
-        queryClient.invalidateQueries({
-          queryKey: ['transactions', 'infinite', userId],
-        }),
-        queryClient.invalidateQueries({
-          queryKey: transactionQueryKeys.infiniteByAccount(accountId),
-        }),
-        // Invalidate monthly stats (for dashboard)
-        queryClient.invalidateQueries({
-          queryKey: ['transactions', 'monthly-stats'],
-        }),
+        invalidateTransactionRelated(queryClient, userId),
+        invalidateAccountRelated(queryClient, userId),
       ]);
 
       // Show success toast

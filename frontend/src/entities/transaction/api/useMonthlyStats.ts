@@ -1,6 +1,7 @@
 import { computed, toValue, type MaybeRefOrGetter } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { transactionsApi, type MonthlyStats } from './transactionsApi';
+import { transactionQueryKeys } from './queryKeys';
 
 export interface UseMonthlyStatsOptions {
   year?: number;
@@ -17,7 +18,9 @@ export function useMonthlyStats(
 
   const queryKey = computed(() => {
     const uid = toValue(userId);
-    return ['transactions', 'monthly-stats', uid, year, month];
+    return uid
+      ? transactionQueryKeys.monthlyStats(uid, year, month)
+      : transactionQueryKeys.monthlyStatsPrefix();
   });
 
   const { data, isLoading, error, refetch } = useQuery({

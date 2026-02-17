@@ -1,6 +1,7 @@
 import { queryClient } from '@/shared/api/queryClient';
 import { profileQueryKeys } from '@/shared/api/queryKeys';
 import { accountQueryKeys } from '@/entities/account';
+import { transactionQueryKeys } from '@/entities/transaction';
 import { debtQueryKeys } from '@/entities/debt';
 import { reminderQueryKeys } from '@/entities/reminder';
 
@@ -45,17 +46,11 @@ export function prefetchDashboardData(userId: string) {
   import('@/entities/transaction/api/transactionsApi').then(
     ({ transactionsApi }) => {
       queryClient.prefetchQuery({
-        queryKey: ['transactions', 'monthly-stats', userId, year, month],
+        queryKey: transactionQueryKeys.monthlyStats(userId, year, month),
         queryFn: () => transactionsApi.getMonthlyStats(userId, year, month),
       });
       queryClient.prefetchQuery({
-        queryKey: [
-          'transactions',
-          'monthly-stats',
-          userId,
-          lastYear,
-          lastMonthNum,
-        ],
+        queryKey: transactionQueryKeys.monthlyStats(userId, lastYear, lastMonthNum),
         queryFn: () =>
           transactionsApi.getMonthlyStats(userId, lastYear, lastMonthNum),
       });

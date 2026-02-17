@@ -1,7 +1,6 @@
 import { ref } from 'vue';
-import { useReminders, reminderQueryKeys } from '@/entities/reminder';
+import { useReminders } from '@/entities/reminder';
 import type { Reminder } from '@/shared/api/database.types';
-import { queryClient } from '@/shared/api/queryClient';
 
 export function useEditReminder(userId: string) {
   const { updateReminder, deleteReminder } = useReminders(userId);
@@ -31,11 +30,8 @@ export function useEditReminder(userId: string) {
     error.value = null;
 
     try {
+      // useReminders.deleteReminder already handles cache invalidation via onSettled
       await deleteReminder(reminderId);
-      // Invalidate cache
-      await queryClient.invalidateQueries({
-        queryKey: reminderQueryKeys.list(userId),
-      });
       return true;
     } catch (e) {
       error.value = 'Не удалось удалить подписку';
