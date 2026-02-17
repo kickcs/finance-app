@@ -27,6 +27,7 @@ const {
 } = useCategories(userId);
 const { profile, defaultAccountId } = useProfile(userId);
 const userCurrency = computed(() => profile.value?.currency || 'UZS');
+const isQuickAction = computed(() => !!route.query.categoryId);
 const _isLoading = computed(
   () => accountsLoading.value || categoriesLoading.value,
 );
@@ -232,6 +233,7 @@ function goBack() {
         :error="error"
         :split-data="splitData"
         :split-validation-error="splitValidationError"
+        :autofocus-amount="isQuickAction"
         @submit="handleSubmit"
         @add-participant="addParticipant"
         @remove-participant="removeParticipant"

@@ -23,6 +23,7 @@ const props = defineProps<{
   error?: string | null;
   splitData?: SplitExpenseData;
   splitValidationError?: string | null;
+  autofocusAmount?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -404,6 +405,7 @@ watch(
             :is-multi-currency="isMultiCurrency"
             :show-insufficient-funds="!hasSufficientFunds"
             :current-balance="currentBalance"
+            :autofocus="autofocusAmount"
             @update:amount="updateField('amount', $event)"
             @update:currency="updateField('currency', $event)"
           />
