@@ -1,9 +1,10 @@
 <script setup lang="ts">
+import { ref, onMounted, nextTick } from 'vue';
 import { UInput, UIcon } from '@/shared/ui';
 import { getCurrencyByCode } from '@/entities/currency';
 import { formatCurrency } from '@/shared/lib/format/currency';
 
-defineProps<{
+const props = defineProps<{
   amount: number;
   currency: string;
   currencySymbol: string;
@@ -12,12 +13,23 @@ defineProps<{
   label?: string;
   showInsufficientFunds?: boolean;
   currentBalance?: number;
+  autofocus?: boolean;
 }>();
 
 const emit = defineEmits<{
   'update:amount': [value: number];
   'update:currency': [value: string];
 }>();
+
+const amountInputRef = ref<InstanceType<typeof UInput> | null>(null);
+
+onMounted(() => {
+  if (props.autofocus) {
+    nextTick(() => {
+      amountInputRef.value?.focus();
+    });
+  }
+});
 </script>
 
 <template>
@@ -53,6 +65,7 @@ const emit = defineEmits<{
       </div>
       <div class="flex-1">
         <UInput
+          ref="amountInputRef"
           :model-value="String(amount || '')"
           placeholder="0"
           variant="currency"

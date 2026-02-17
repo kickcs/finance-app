@@ -99,6 +99,12 @@ const inputMode = computed(() => {
   if (props.variant === 'currency') return 'decimal';
   return undefined;
 });
+
+const inputRef = ref<HTMLInputElement | null>(null);
+
+defineExpose({
+  focus: () => inputRef.value?.focus(),
+});
 </script>
 
 <template>
@@ -139,6 +145,7 @@ const inputMode = computed(() => {
 
       <!-- Input -->
       <input
+        ref="inputRef"
         :id="inputId"
         v-model="inputValue"
         :type="inputType"
