@@ -25,6 +25,7 @@ import AccountStack from '@/widgets/account-stack/ui/AccountStack.vue';
 // Below-fold skeleton fallbacks
 import { DebtsSectionSkeleton } from '@/widgets/debts-section';
 import { RemindersSectionSkeleton } from '@/widgets/reminders-section';
+import { RecentTransactionsSkeleton } from '@/widgets/recent-transactions';
 
 // Below-fold widgets — lazy load
 const DebtsSection = defineAsyncComponent({
@@ -37,9 +38,15 @@ const RemindersSection = defineAsyncComponent({
   delay: 0,
 });
 
+const RecentTransactions = defineAsyncComponent({
+  loader: () => import('@/widgets/recent-transactions/ui/RecentTransactions.vue'),
+  delay: 0,
+});
+
 // API composables
 import { useAccounts, type AccountWithBalances } from '@/entities/account';
-import { useMonthlyStats } from '@/entities/transaction';
+import { useMonthlyStats, useRecentTransactions } from '@/entities/transaction';
+import type { Transaction } from '@/entities/transaction';
 import { useDebts, type Debt } from '@/entities/debt';
 import { useReminders, type Reminder } from '@/entities/reminder';
 import { useProfile, useExchangeRates } from '@/shared/api';
@@ -85,6 +92,8 @@ const {
 } = useAccounts(userId);
 const { debts, isLoading: debtsLoading } = useDebts(userId);
 const { reminders, isLoading: remindersLoading } = useReminders(userId);
+const { transactions: recentTransactions, isLoading: recentTxLoading } =
+  useRecentTransactions(userId, 5);
 
 // Monthly statistics from server (accurate, no limit issues)
 const now = new Date();
@@ -237,6 +246,14 @@ const quickActions = [
   },
 ];
 
+function handleTransactionClick(_tx: Transaction) {
+  router.push('/history');
+}
+
+function handleViewAllTransactions() {
+  router.push('/history');
+}
+
 function handleAddReminder() {
   router.push({ name: 'new-reminder' });
 }
@@ -382,6 +399,24 @@ async function handleRefresh() {
               @add-click="handleAddAccount"
               @view-all="handleViewAllAccounts"
             />
+          </section>
+
+          <!-- Recent Transactions -->
+          <section>
+            <Suspense>
+              <RecentTransactions
+                :transactions="recentTransactions"
+                :user-id="userId"
+                :loading="recentTxLoading"
+                :hidden="isHidden"
+                @transaction-click="handleTransactionClick"
+                @add-click="handleAddTransaction"
+                @view-all="handleViewAllTransactions"
+              />
+              <template #fallback>
+                <RecentTransactionsSkeleton />
+              </template>
+            </Suspense>
           </section>
 
           <!-- Debts -->

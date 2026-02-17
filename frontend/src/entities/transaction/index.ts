@@ -14,3 +14,6 @@ export * from './api';
 // Infinite Query Composables
 export { useInfiniteTransactions } from './api/useInfiniteTransactions';
 export { useInfiniteAccountTransactions } from './api/useInfiniteAccountTransactions';
+
+// Recent Transactions
+export { useRecentTransactions } from './api/useRecentTransactions';
