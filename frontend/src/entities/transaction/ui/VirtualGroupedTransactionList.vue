@@ -70,12 +70,13 @@ const flatItems = computed<FlatItem[]>(() => {
 // Heights
 const HEADER_HEIGHT = 44;
 const LOADING_HEIGHT = 48;
+// 72px fits both with and without balance-after row:
+// items-center flex constrains row height to icon (h-9=36px) + p-3×2=24px = 60px base;
+// items with strikethrough+balance reach ~72px, so 72 is the correct ceiling.
 const TRANSACTION_HEIGHT = 72;
-const TRANSACTION_HEIGHT_WITH_BALANCE = 84; // +12px for balance-after row
-
-const transactionHeight = computed(() =>
-  props.getBalanceAfter ? TRANSACTION_HEIGHT_WITH_BALANCE : TRANSACTION_HEIGHT,
-);
+// Edge case: expense with has_debt_returns + balanceAfter renders 3 rows in the
+// amount column (amount + strikethrough + balance), pushing height above 72px.
+const TRANSACTION_HEIGHT_TALL = 84;
 
 const rowCount = computed(() =>
   props.hasNextPage ? flatItems.value.length + 1 : flatItems.value.length,
@@ -84,9 +85,13 @@ const rowCount = computed(() =>
 // Dynamic size based on item type
 const getItemSize = (index: number) => {
   if (index >= flatItems.value.length) return LOADING_HEIGHT;
-  return flatItems.value[index].type === 'header'
-    ? HEADER_HEIGHT
-    : transactionHeight.value;
+  if (flatItems.value[index].type === 'header') return HEADER_HEIGHT;
+  const tx = flatItems.value[index].data as Transaction;
+  const hasThreeRows =
+    props.getBalanceAfter !== undefined &&
+    tx.has_debt_returns &&
+    tx.type === 'expense';
+  return hasThreeRows ? TRANSACTION_HEIGHT_TALL : TRANSACTION_HEIGHT;
 };
 
 const virtualizer = useVirtualizer(

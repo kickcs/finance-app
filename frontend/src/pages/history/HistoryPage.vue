@@ -458,32 +458,36 @@ async function handleRefresh() {
       </div>
     </div>
 
-    <!-- Content Area: fills remaining space, pb-20 accounts for fixed BottomNav -->
-    <div class="flex-1 min-h-0 px-5 pt-4 pb-20">
+    <!-- Content Area: flex column so virtualizer height is set by flex, not by % of padded parent -->
+    <div class="flex-1 min-h-0 px-5 pt-4 flex flex-col">
       <!-- Loading State with Skeleton -->
       <div
         v-if="currentIsLoading && displayedTransactions.length === 0"
-        class="space-y-4 overflow-y-auto h-full pb-28"
+        class="flex-1 space-y-4 overflow-y-auto"
       >
         <TransactionGroupSkeleton v-for="i in 3" :key="i" :count="3" />
       </div>
 
-      <!-- Virtualized Transaction Groups -->
-      <VirtualGroupedTransactionList
+      <!-- Virtualized Transaction Groups: flex-1 wrapper ensures virtualizer gets definite height from flex, not from % -->
+      <div
         v-else-if="groupedTransactions.length > 0"
-        :groups="groupedTransactions"
-        :currency="currency"
-        :has-next-page="currentHasNextPage"
-        :is-fetching-next-page="currentIsFetchingNextPage"
-        :get-account-name="getAccountName"
-        :get-balance-after="getBalanceAfter"
-        :swipe-enabled="true"
-        height="100%"
-        @load-more="handleLoadMore"
-        @transaction-click="handleTransactionClick"
-        @transaction-edit="handleTransactionClick"
-        @transaction-delete="handleSwipeDelete"
-      />
+        class="flex-1 min-h-0"
+      >
+        <VirtualGroupedTransactionList
+          :groups="groupedTransactions"
+          :currency="currency"
+          :has-next-page="currentHasNextPage"
+          :is-fetching-next-page="currentIsFetchingNextPage"
+          :get-account-name="getAccountName"
+          :get-balance-after="getBalanceAfter"
+          :swipe-enabled="true"
+          height="100%"
+          @load-more="handleLoadMore"
+          @transaction-click="handleTransactionClick"
+          @transaction-edit="handleTransactionClick"
+          @transaction-delete="handleSwipeDelete"
+        />
+      </div>
 
       <!-- Empty State -->
       <div v-else class="py-16 text-center">
@@ -511,6 +515,9 @@ async function handleRefresh() {
           }}
         </p>
       </div>
+
+      <!-- Spacer for fixed BottomNav — sits outside the flex-1 blocks so the virtualizer height excludes it -->
+      <div class="shrink-0 h-20" />
     </div>
 
     <!-- Filters Modal -->
