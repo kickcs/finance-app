@@ -13,6 +13,7 @@ const props = defineProps<{
   accountName?: string;
   toAccountName?: string;
   viewingAccountId?: string;
+  balanceAfter?: number;
 }>();
 defineEmits<{
   click: [];
@@ -82,6 +83,10 @@ const formattedAmount = computed(() => {
   const curr = props.transaction.currency || props.currency || 'UZS';
   return `${prefix}${formatCurrency(displayAmount.value, curr, compact)}`;
 });
+
+const displayCurrency = computed(
+  () => props.transaction.currency || props.currency || 'UZS',
+);
 
 const formattedDate = computed(() =>
   formatRelativeDate(new Date(props.transaction.date).getTime()),
@@ -180,10 +185,17 @@ const formattedDate = computed(() =>
         -{{
           formatCurrency(
             transaction.amount,
-            transaction.currency || currency || 'UZS',
+            displayCurrency,
             COMPACT_FORMAT,
           )
         }}
+      </p>
+      <!-- Balance after transaction -->
+      <p
+        v-if="balanceAfter !== undefined"
+        class="text-caption-sm text-text-tertiary-light dark:text-text-tertiary-dark"
+      >
+        = {{ formatCurrency(balanceAfter, displayCurrency, COMPACT_FORMAT) }}
       </p>
     </div>
   </button>

@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.3.0';
+export const CURRENT_VERSION = '1.3.1';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,17 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.3.1',
+    date: '2026-02-18',
+    title: 'Баланс после транзакции',
+    items: [
+      {
+        type: 'improvement',
+        text: 'В истории транзакций теперь отображается баланс счёта после каждой операции — как в банковской выписке',
+      },
+    ],
+  },
   {
     version: '1.3.0',
     date: '2026-02-17',

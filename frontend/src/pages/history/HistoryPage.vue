@@ -292,6 +292,59 @@ function getAccountName(accountId: string | null): string {
   return account?.name ?? '';
 }
 
+// Compute balance_after for each transaction by walking backwards from current balance.
+// Key: `${accountId}_${currency}` to handle multi-currency accounts.
+const balanceAfterMap = computed(() => {
+  const map = new Map<string, number>();
+  const running = new Map<string, number>();
+
+  for (const acc of accounts.value) {
+    for (const b of acc.balances) {
+      running.set(`${acc.id}_${b.currency}`, b.balance);
+    }
+  }
+
+  for (const tx of displayedTransactions.value) {
+    const txCurrency = tx.currency || currency.value;
+    const srcKey = `${tx.account_id}_${txCurrency}`;
+    const current = running.get(srcKey);
+    if (current !== undefined) {
+      map.set(tx.id, current);
+      if (tx.type === 'income') {
+        running.set(srcKey, current - tx.amount);
+      } else if (tx.type === 'expense') {
+        running.set(srcKey, current + tx.amount);
+      } else if (tx.type === 'transfer') {
+        running.set(srcKey, current + tx.amount);
+        if (tx.to_account_id) {
+          const toCurrency = tx.to_currency || txCurrency;
+          const destKey = `${tx.to_account_id}_${toCurrency}`;
+          const dest = running.get(destKey);
+          if (dest !== undefined) {
+            running.set(destKey, dest - (tx.to_amount ?? tx.amount));
+          }
+        }
+      }
+    }
+  }
+
+  return map;
+});
+
+// Balance is only meaningful when all transactions are displayed without filters.
+// With filters active, the algorithm walks an incomplete set and produces wrong results.
+const balanceAfterEnabled = computed(
+  () =>
+    !isSearchActive.value &&
+    activeTypeFilter.value === 'all' &&
+    activeFiltersCount.value === 0,
+);
+
+function getBalanceAfter(txId: string): number | undefined {
+  if (!balanceAfterEnabled.value) return undefined;
+  return balanceAfterMap.value.get(txId);
+}
+
 // Handle swipe delete action
 function handleSwipeDelete(transaction: Transaction) {
   selectedTransaction.value = transaction;
@@ -423,6 +476,7 @@ async function handleRefresh() {
         :has-next-page="currentHasNextPage"
         :is-fetching-next-page="currentIsFetchingNextPage"
         :get-account-name="getAccountName"
+        :get-balance-after="getBalanceAfter"
         :swipe-enabled="true"
         height="100%"
         @load-more="handleLoadMore"
