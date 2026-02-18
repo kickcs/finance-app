@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { ReminderCardSkeleton, type Reminder } from '@/entities/reminder';
-import { UIcon, UButton } from '@/shared/ui';
-import { formatCurrency, COMPACT_FORMAT } from '@/shared/lib/format/currency';
+import { type Reminder } from '@/entities/reminder';
+import { UBadge, SectionHeader, IconBadge, EmptyState } from '@/shared/ui';
+import { formatMasked, COMPACT_FORMAT } from '@/shared/lib/format/currency';
 
 const props = defineProps<{
   reminders: Reminder[];
@@ -40,40 +40,35 @@ function isUpcoming(reminder: Reminder): boolean {
 function isOverdue(reminder: Reminder): boolean {
   return new Date(reminder.next_date).getTime() < Date.now();
 }
+
+function iconBgClass(reminder: Reminder): string {
+  if (isOverdue(reminder)) return 'bg-danger/10';
+  if (isUpcoming(reminder)) return 'bg-warning/10';
+  return 'bg-surface-light dark:bg-surface-dark';
+}
+
+function iconClass(reminder: Reminder): string {
+  if (isOverdue(reminder)) return 'text-danger';
+  if (isUpcoming(reminder)) return 'text-warning';
+  return 'text-text-secondary-light dark:text-text-secondary-dark';
+}
 </script>
 
 <template>
   <div class="space-y-3">
     <!-- Header -->
-    <div class="flex items-center justify-between">
-      <div class="flex items-center gap-2">
-        <h2
-          class="text-base font-semibold text-text-primary-light dark:text-text-primary-dark"
+    <SectionHeader
+      title="Подписки"
+      :count="reminders.length"
+      @add-click="$emit('add-click')"
+      @view-all="$emit('view-all')"
+    >
+      <template #badge>
+        <UBadge v-if="todayCount > 0" variant="primary" size="xs"
+          >{{ todayCount }} сегодня</UBadge
         >
-          Подписки
-        </h2>
-        <span
-          v-if="todayCount > 0"
-          class="px-1.5 py-0.5 text-xs font-semibold rounded-md bg-primary text-white"
-        >
-          {{ todayCount }}
-        </span>
-      </div>
-      <div class="flex items-center gap-1">
-        <UButton variant="ghost" size="xs" @click="$emit('add-click')">
-          <UIcon name="add" size="xs" />
-        </UButton>
-        <UButton
-          v-if="reminders.length > 0"
-          variant="ghost"
-          size="xs"
-          @click="$emit('view-all')"
-        >
-          Все
-          <UIcon name="chevron_right" size="xs" />
-        </UButton>
-      </div>
-    </div>
+      </template>
+    </SectionHeader>
 
     <!-- Loading state -->
     <div v-if="loading" class="flex gap-3 overflow-hidden">
@@ -93,32 +88,17 @@ function isOverdue(reminder: Reminder): boolean {
         v-for="reminder in reminders.slice(0, 8)"
         :key="reminder.id"
         class="shrink-0 w-36 p-3 rounded-xl text-left bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark hover:bg-surface-light dark:hover:bg-surface-dark active:opacity-80 transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-        :aria-label="`${reminder.name}, ${formatCurrency(reminder.amount, currency || 'UZS')}`"
+        :aria-label="`${reminder.name}, ${formatMasked(reminder.amount, currency || 'UZS', hidden ?? false)}`"
         @click="$emit('reminder-click', reminder)"
       >
         <!-- Icon -->
-        <div
-          class="w-9 h-9 rounded-lg flex items-center justify-center mb-2.5"
-          :class="[
-            isOverdue(reminder)
-              ? 'bg-danger/10'
-              : isUpcoming(reminder)
-                ? 'bg-warning/10'
-                : 'bg-surface-light dark:bg-surface-dark',
-          ]"
-        >
-          <UIcon
-            :name="reminder.icon"
-            size="md"
-            :class="[
-              isOverdue(reminder)
-                ? 'text-danger'
-                : isUpcoming(reminder)
-                  ? 'text-warning'
-                  : 'text-text-secondary-light dark:text-text-secondary-dark',
-            ]"
-          />
-        </div>
+        <IconBadge
+          :icon="reminder.icon"
+          size="md"
+          :bg-class="iconBgClass(reminder)"
+          :icon-class="iconClass(reminder)"
+          class="mb-2.5"
+        />
 
         <!-- Name -->
         <p
@@ -132,46 +112,25 @@ function isOverdue(reminder: Reminder): boolean {
           class="text-xs font-semibold text-text-primary-light dark:text-text-primary-dark"
         >
           {{
-            hidden
-              ? '••••'
-              : formatCurrency(
-                  reminder.amount,
-                  currency || 'UZS',
-                  COMPACT_FORMAT,
-                )
+            formatMasked(
+              reminder.amount,
+              currency || 'UZS',
+              hidden ?? false,
+              COMPACT_FORMAT,
+            )
           }}
         </p>
       </button>
     </div>
 
     <!-- Empty state -->
-    <div
+    <EmptyState
       v-else
-      class="py-8 text-center rounded-xl border border-border-light dark:border-border-dark border-dashed"
-    >
-      <div
-        class="w-10 h-10 mx-auto mb-2 rounded-lg bg-surface-light dark:bg-surface-dark flex items-center justify-center"
-      >
-        <UIcon
-          name="notifications"
-          size="md"
-          class="text-text-tertiary-light dark:text-text-tertiary-dark"
-        />
-      </div>
-      <p
-        class="text-sm text-text-secondary-light dark:text-text-secondary-dark mb-0.5"
-      >
-        Нет подписок
-      </p>
-      <p
-        class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark mb-3"
-      >
-        Добавьте для отслеживания платежей
-      </p>
-      <UButton variant="secondary" size="xs" @click="$emit('add-click')">
-        <UIcon name="add" size="xs" class="mr-0.5" />
-        Добавить
-      </UButton>
-    </div>
+      variant="inline"
+      icon="notifications"
+      title="Нет подписок"
+      description="Добавьте для отслеживания платежей"
+      :action="{ label: 'Добавить', onClick: () => $emit('add-click') }"
+    />
   </div>
 </template>

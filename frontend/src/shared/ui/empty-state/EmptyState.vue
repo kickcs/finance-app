@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { UIcon, UButton } from '@/shared/ui';
+import { UIcon } from '@/shared/ui/icon';
+import { UButton } from '@/shared/ui/button';
 
 interface Action {
   label: string;
@@ -12,10 +13,13 @@ interface Props {
   description?: string;
   iconSize?: 'sm' | 'md' | 'lg' | 'xl';
   action?: Action;
+  variant?: 'default' | 'inline';
+  iconBgClass?: string;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   iconSize: 'lg',
+  variant: 'default',
 });
 
 const emit = defineEmits<{
@@ -31,21 +35,36 @@ function handleAction() {
 </script>
 
 <template>
-  <div class="text-center py-12 px-6">
+  <div
+    :class="[
+      'text-center',
+      variant === 'inline'
+        ? 'py-8 rounded-xl border border-border-light dark:border-border-dark border-dashed'
+        : 'py-12 px-6',
+    ]"
+  >
     <!-- Icon -->
     <div
-      class="w-14 h-14 mx-auto mb-4 rounded-xl bg-surface-light dark:bg-surface-dark flex items-center justify-center"
+      :class="[
+        'mx-auto flex items-center justify-center',
+        variant === 'inline'
+          ? 'w-10 h-10 mb-2 rounded-lg'
+          : 'w-14 h-14 mb-4 rounded-xl',
+        iconBgClass || 'bg-surface-light dark:bg-surface-dark',
+      ]"
     >
       <UIcon
         :name="icon"
-        :size="iconSize"
+        :size="variant === 'inline' ? 'md' : iconSize"
         class="text-text-tertiary-light dark:text-text-tertiary-dark"
       />
     </div>
 
     <!-- Title -->
     <p
-      class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark mb-1"
+      :class="[
+        'text-sm font-medium text-text-primary-light dark:text-text-primary-dark mb-1',
+      ]"
     >
       {{ title }}
     </p>
@@ -53,7 +72,10 @@ function handleAction() {
     <!-- Description -->
     <p
       v-if="description"
-      class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark max-w-xs mx-auto"
+      :class="[
+        'text-text-tertiary-light dark:text-text-tertiary-dark',
+        variant === 'inline' ? 'text-xs mb-4' : 'text-xs max-w-xs mx-auto',
+      ]"
     >
       {{ description }}
     </p>
@@ -63,7 +85,7 @@ function handleAction() {
       v-if="action"
       variant="primary"
       size="sm"
-      class="mt-4"
+      :class="{ 'mt-4': variant === 'default' }"
       @click="handleAction"
     >
       {{ action.label }}

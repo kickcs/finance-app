@@ -3,7 +3,7 @@ import { ref, computed, inject } from 'vue';
 import type { Ref } from 'vue';
 import type { User } from '@/shared/api/composables/useAuth';
 import { AppHeader } from '@/widgets/header';
-import { UButton, UIcon } from '@/shared/ui';
+import { UIcon } from '@/shared/ui';
 import {
   QuickActionModal,
   useQuickActions,

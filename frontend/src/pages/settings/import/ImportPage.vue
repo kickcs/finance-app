@@ -5,10 +5,7 @@ import { AppHeader } from '@/widgets/header';
 import { UButton, UIcon, UCard } from '@/shared/ui';
 import { navigateBack } from '@/app/router';
 import { parseMoneyLoverCsv } from '@/shared/lib/csv/parseMoneyLoverCsv';
-import type {
-  ParsedTransaction,
-  ParseResult,
-} from '@/shared/lib/csv/parseMoneyLoverCsv';
+import type { ParseResult } from '@/shared/lib/csv/parseMoneyLoverCsv';
 import { useImportData } from '@/features/import-data';
 import type { ImportResult } from '@/features/import-data';
 
@@ -334,9 +331,7 @@ function goHome() {
             @click="handleImport"
           >
             Импортировать
-            {{
-              parseResult.stats.total_rows.toLocaleString('ru-RU')
-            }}
+            {{ parseResult.stats.total_rows.toLocaleString('ru-RU') }}
             транзакций
           </UButton>
         </div>

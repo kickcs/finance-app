@@ -1,7 +1,11 @@
 import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import type { Ref } from 'vue';
 
-export const TRANSACTION_TYPE_ORDER = ['expense', 'income', 'transfer'] as const;
+export const TRANSACTION_TYPE_ORDER = [
+  'expense',
+  'income',
+  'transfer',
+] as const;
 export type TransactionType = (typeof TRANSACTION_TYPE_ORDER)[number];
 
 export function useScrollableTabs(

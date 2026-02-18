@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { computed, inject } from 'vue';
-import type { Ref } from 'vue';
-import type { User } from '@/shared/api/composables/useAuth';
+import { computed } from 'vue';
 import { useRouter } from 'vue-router';
+import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
+import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 import { AppHeader } from '@/widgets/header';
 import { BottomNav } from '@/widgets/bottom-nav';
-import { UTabs, UCard, UIcon } from '@/shared/ui';
+import { UTabs } from '@/shared/ui';
 import { formatCurrency, COMPACT_FORMAT } from '@/shared/lib/format/currency';
 import { useExchangeRates } from '@/shared/api';
 import { useAnalyticsStats } from '@/entities/transaction';
@@ -24,19 +24,14 @@ import {
   DailyStatsCards,
   TopCategories,
   SavingsGauge,
+  StatCard,
   type DonutSegment,
 } from '@/widgets/analytics';
 
 const router = useRouter();
 
-// Get user from provide/inject
-const user = inject<Ref<User | null>>('user');
-const userId = computed(() => user?.value?.id ?? '');
-
-// Get user currency from localStorage
-const currency = computed(
-  () => localStorage.getItem('selectedCurrency') || 'UZS',
-);
+const { userId } = useCurrentUser();
+const { currency } = useUserCurrency();
 
 // Analytics filters
 const {
@@ -253,51 +248,22 @@ function handleAddTransaction() {
           Долги
         </h2>
 
-        <UCard v-if="totalOwedToMe > 0" class="p-4">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-3">
-              <div
-                class="w-10 h-10 rounded-xl bg-debt-given-light flex items-center justify-center"
-              >
-                <UIcon name="arrow_upward" size="md" class="text-debt-given" />
-              </div>
-              <span
-                class="text-text-secondary-light dark:text-text-secondary-dark"
-                >Мне должны</span
-              >
-            </div>
-            <span
-              class="text-xl font-bold text-text-primary-light dark:text-text-primary-dark"
-            >
-              {{ formatCurrency(totalOwedToMe, currency, COMPACT_FORMAT) }}
-            </span>
-          </div>
-        </UCard>
-
-        <UCard v-if="totalIOwe > 0" class="p-4">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-3">
-              <div
-                class="w-10 h-10 rounded-xl bg-debt-received-light flex items-center justify-center"
-              >
-                <UIcon
-                  name="arrow_downward"
-                  size="md"
-                  class="text-debt-received"
-                />
-              </div>
-              <span
-                class="text-text-secondary-light dark:text-text-secondary-dark"
-                >Я должен</span
-              >
-            </div>
-            <span
-              class="text-xl font-bold text-text-primary-light dark:text-text-primary-dark"
-            >
-              {{ formatCurrency(totalIOwe, currency, COMPACT_FORMAT) }}
-            </span>
-          </div>
-        </UCard>
+        <StatCard
+          v-if="totalOwedToMe > 0"
+          icon="arrow_upward"
+          label="Мне должны"
+          :value="formatCurrency(totalOwedToMe, currency, COMPACT_FORMAT)"
+          icon-bg-class="bg-debt-given-light"
+          icon-class="text-debt-given"
+        />
+        <StatCard
+          v-if="totalIOwe > 0"
+          icon="arrow_downward"
+          label="Я должен"
+          :value="formatCurrency(totalIOwe, currency, COMPACT_FORMAT)"
+          icon-bg-class="bg-debt-received-light"
+          icon-class="text-debt-received"
+        />
       </div>
     </main>
 

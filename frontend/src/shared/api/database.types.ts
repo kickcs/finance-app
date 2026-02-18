@@ -485,7 +485,9 @@ export type UserCategoryInsert =
   Database['public']['Tables']['categories']['Insert'];
 
 // Extended types for multi-currency accounts
-export interface AccountWithBalances
-  extends Omit<Account, 'balance' | 'currency'> {
+export interface AccountWithBalances extends Omit<
+  Account,
+  'balance' | 'currency'
+> {
   balances: AccountBalance[];
 }

@@ -39,7 +39,6 @@ const _isLoading = computed(
 // Use the add transaction feature
 const { formData, isValid, setType, updateField } = useTransactionForm();
 const { isSubmitting, error, submit } = useSubmitTransaction();
-  
 
 // Use split expense feature
 const {

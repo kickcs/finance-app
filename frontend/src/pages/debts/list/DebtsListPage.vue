@@ -1,26 +1,22 @@
 <script setup lang="ts">
-import { ref, computed, inject, watch } from 'vue';
-import type { Ref } from 'vue';
-import type { User } from '@/shared/api/composables/useAuth';
+import { ref, computed, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { BottomNav } from '@/widgets/bottom-nav';
+import { AppHeader } from '@/widgets/header';
 import { DebtCard, useDebts, type Debt } from '@/entities/debt';
 import { UButton, UIcon, UCard, Skeleton } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { useExchangeRates } from '@/shared/api';
 import { navigateBack } from '@/app/router';
+import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
+import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
+import { listTransition } from '@/shared/lib/transitions';
 
 const router = useRouter();
 const route = useRoute();
 
-// Get user from provide/inject
-const user = inject<Ref<User | null>>('user');
-const userId = computed(() => user?.value?.id ?? '');
-
-// Get user currency from localStorage
-const currency = computed(
-  () => localStorage.getItem('selectedCurrency') || 'UZS',
-);
+const { userId } = useCurrentUser();
+const { currency } = useUserCurrency();
 
 // Exchange rates for converting debts to user's main currency
 const { convert } = useExchangeRates(currency);
@@ -113,23 +109,13 @@ function handleAddTransaction() {
 <template>
   <div class="min-h-screen bg-background-light dark:bg-background-dark pb-28">
     <!-- Header -->
-    <header
-      class="sticky top-0 z-30 pt-[var(--safe-area-inset-top)] bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-xl"
-    >
-      <div class="flex items-center justify-between px-4 py-4">
-        <UButton variant="ghost" size="sm" @click="goBack">
-          <UIcon name="arrow_back" size="md" />
+    <AppHeader blur show-back title="Долги" @back="goBack">
+      <template #actions>
+        <UButton variant="ghost" size="sm" class="!p-2" @click="handleAddDebt">
+          <UIcon name="add" size="sm" />
         </UButton>
-        <h1
-          class="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark"
-        >
-          Долги
-        </h1>
-        <UButton variant="ghost" icon-only @click="handleAddDebt">
-          <UIcon name="add" size="md" />
-        </UButton>
-      </div>
-    </header>
+      </template>
+    </AppHeader>
 
     <!-- Content -->
     <main class="px-5 pt-8 space-y-6">
@@ -310,9 +296,13 @@ function handleAddTransaction() {
           <!-- Flat View (all debts) -->
           <TransitionGroup
             v-else-if="activeDebts.length > 0 && viewMode === 'flat'"
-            name="list"
             tag="div"
             class="space-y-2"
+            :enter-active-class="listTransition.enterActiveClass"
+            :leave-active-class="listTransition.leaveActiveClass"
+            :enter-from-class="listTransition.enterFromClass"
+            :leave-to-class="listTransition.leaveToClass"
+            :move-class="listTransition.moveClass"
           >
             <DebtCard
               v-for="debt in activeDebts"
@@ -355,25 +345,3 @@ function handleAddTransaction() {
     <BottomNav @add-click="handleAddTransaction" />
   </div>
 </template>
-
-<style scoped>
-/* List transition animations */
-.list-enter-active,
-.list-leave-active {
-  transition: all 0.25s ease;
-}
-
-.list-enter-from {
-  opacity: 0;
-  transform: translateY(-10px);
-}
-
-.list-leave-to {
-  opacity: 0;
-  transform: translateY(10px);
-}
-
-.list-move {
-  transition: transform 0.25s ease;
-}
-</style>

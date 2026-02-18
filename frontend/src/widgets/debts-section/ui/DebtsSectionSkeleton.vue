@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { UIcon, Skeleton } from '@/shared/ui';
+import { UIcon, Skeleton, SkeletonListItem } from '@/shared/ui';
 </script>
 
 <template>
@@ -8,9 +8,9 @@ import { UIcon, Skeleton } from '@/shared/ui';
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-1.5">
         <div
-          class="w-6 h-6 rounded-md bg-rose-500/10 flex items-center justify-center"
+          class="w-6 h-6 rounded-md bg-danger-light flex items-center justify-center"
         >
-          <UIcon name="credit_card" size="xs" class="text-rose-500" />
+          <UIcon name="credit_card" size="xs" class="text-danger" />
         </div>
         <Skeleton class="h-4 w-12 rounded" />
       </div>
@@ -25,25 +25,7 @@ import { UIcon, Skeleton } from '@/shared/ui';
 
     <!-- Debts List Skeleton -->
     <div class="space-y-2">
-      <div
-        v-for="i in 2"
-        :key="i"
-        class="p-3 rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark"
-      >
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <Skeleton class="w-9 h-9 rounded-xl" />
-            <div class="space-y-1.5">
-              <Skeleton class="h-4 w-24 rounded" />
-              <Skeleton class="h-3 w-16 rounded" />
-            </div>
-          </div>
-          <div class="text-right space-y-1">
-            <Skeleton class="h-4 w-20 rounded" />
-            <Skeleton class="h-3 w-14 rounded" />
-          </div>
-        </div>
-      </div>
+      <SkeletonListItem v-for="i in 2" :key="i" />
     </div>
   </div>
 </template>

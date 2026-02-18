@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, inject } from 'vue';
-import type { Ref } from 'vue';
-import type { User } from '@/shared/api/composables/useAuth';
+import { ref, computed } from 'vue';
+import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
+import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 import { useRouter } from 'vue-router';
 import { queryClient } from '@/shared/api/queryClient';
 import { AppHeader } from '@/widgets/header';
@@ -29,14 +29,8 @@ import { debtsApi } from '@/entities/debt';
 
 const router = useRouter();
 
-// Get user from provide/inject
-const user = inject<Ref<User | null>>('user');
-const userId = computed(() => user?.value?.id ?? '');
-
-// Get user currency from localStorage
-const currency = computed(
-  () => localStorage.getItem('selectedCurrency') || 'UZS',
-);
+const { userId } = useCurrentUser();
+const { currency } = useUserCurrency();
 
 // Exchange rates for currency conversion
 const { convert } = useExchangeRates(currency);

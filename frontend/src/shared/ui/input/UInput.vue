@@ -147,8 +147,8 @@ defineExpose({
 
       <!-- Input -->
       <input
-        ref="inputRef"
         :id="inputId"
+        ref="inputRef"
         v-model="inputValue"
         :type="inputType"
         :inputmode="inputMode"

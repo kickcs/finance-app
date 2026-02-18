@@ -7,7 +7,7 @@ export { UProgressBar } from './progress-bar';
 export { UIcon } from './icon';
 export { UTabs } from './tabs';
 export { UModal } from './modal';
-export { Skeleton } from './primitives/skeleton';
+export { Skeleton, SkeletonListItem } from './primitives/skeleton';
 export { SwipeableItem, type SwipeAction } from './swipeable';
 export { EmptyState } from './empty-state';
 export { PullToRefresh } from './pull-to-refresh';
@@ -27,3 +27,6 @@ export {
   Toaster,
   useToast,
 } from './primitives/toast';
+
+export { SectionHeader } from './section-header';
+export { IconBadge } from './icon-badge';

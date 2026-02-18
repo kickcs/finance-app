@@ -6,6 +6,7 @@ defineProps<{
   showBack?: boolean;
   showNotifications?: boolean;
   transparent?: boolean;
+  blur?: boolean;
   notificationCount?: number;
 }>();
 
@@ -22,7 +23,9 @@ defineEmits<{
       'transition-colors duration-150',
       transparent
         ? 'bg-transparent'
-        : 'bg-background-light dark:bg-background-dark border-b border-border-light dark:border-border-dark',
+        : blur
+          ? 'bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-xl'
+          : 'bg-background-light dark:bg-background-dark border-b border-border-light dark:border-border-dark',
     ]"
     :style="{ paddingTop: 'calc(0.75rem + var(--safe-area-inset-top))' }"
   >

@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { computed, inject, ref, defineAsyncComponent } from 'vue';
+import { computed, ref, defineAsyncComponent } from 'vue';
 import { useLocalStorage } from '@/shared/lib/hooks/useLocalStorage';
-import type { Ref } from 'vue';
-import type { User } from '@/shared/api/composables/useAuth';
+import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useRouter } from 'vue-router';
 import { queryClient } from '@/shared/api/queryClient';
 import { PullToRefresh, UIcon } from '@/shared/ui';
@@ -60,9 +59,7 @@ import { useProfile, useExchangeRates } from '@/shared/api';
 
 const router = useRouter();
 
-// Get user from provide/inject
-const user = inject<Ref<User | null>>('user');
-const userId = computed(() => user?.value?.id ?? '');
+const { user, userId } = useCurrentUser();
 
 // Get user currency from profile (fallback to localStorage for backward compatibility)
 const { profile } = useProfile(userId);

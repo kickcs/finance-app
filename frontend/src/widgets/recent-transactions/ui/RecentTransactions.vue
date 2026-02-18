@@ -5,7 +5,7 @@ import {
   TransactionItemSkeleton,
 } from '@/entities/transaction';
 import type { Transaction } from '@/entities/transaction';
-import { UIcon, UButton, EmptyState } from '@/shared/ui';
+import { EmptyState, SectionHeader } from '@/shared/ui';
 import { useAccounts } from '@/entities/account';
 
 const props = defineProps<{
@@ -35,31 +35,14 @@ function getToAccountName(toAccountId: string | null): string {
 
 <template>
   <div>
-    <div class="flex items-center justify-between mb-3">
-      <div class="flex items-center gap-2">
-        <h2
-          class="text-base font-semibold text-text-primary-light dark:text-text-primary-dark"
-        >
-          Последние операции
-        </h2>
-      </div>
-      <div class="flex items-center gap-1">
-        <UButton variant="ghost" size="xs" @click="$emit('add-click')">
-          <UIcon name="add" size="xs" />
-        </UButton>
-        <UButton
-          v-if="transactions.length > 0"
-          variant="ghost"
-          size="xs"
-          @click="$emit('view-all')"
-        >
-          Все
-          <template #icon-right>
-            <UIcon name="chevron_right" size="xs" />
-          </template>
-        </UButton>
-      </div>
-    </div>
+    <SectionHeader
+      title="Последние операции"
+      :count="transactions.length"
+      :show-view-all="transactions.length > 0"
+      class="mb-3"
+      @add-click="$emit('add-click')"
+      @view-all="$emit('view-all')"
+    />
 
     <div
       v-if="loading"
@@ -73,11 +56,8 @@ function getToAccountName(toAccountId: string | null): string {
       icon="receipt_long"
       title="Нет операций"
       description="Добавьте первую транзакцию"
-    >
-      <UButton variant="primary" size="sm" @click="$emit('add-click')">
-        Добавить
-      </UButton>
-    </EmptyState>
+      :action="{ label: 'Добавить', onClick: () => $emit('add-click') }"
+    />
 
     <div
       v-else
