@@ -405,8 +405,8 @@ async function handleRefresh() {
       </div>
     </div>
 
-    <!-- Content Area: fills remaining space -->
-    <div class="flex-1 min-h-0 px-5 pt-4">
+    <!-- Content Area: fills remaining space, pb-20 accounts for fixed BottomNav -->
+    <div class="flex-1 min-h-0 px-5 pt-4 pb-20">
       <!-- Loading State with Skeleton -->
       <div
         v-if="currentIsLoading && displayedTransactions.length === 0"
