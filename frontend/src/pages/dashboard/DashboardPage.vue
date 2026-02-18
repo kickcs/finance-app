@@ -44,7 +44,8 @@ const RemindersSection = defineAsyncComponent({
 });
 
 const RecentTransactions = defineAsyncComponent({
-  loader: () => import('@/widgets/recent-transactions/ui/RecentTransactions.vue'),
+  loader: () =>
+    import('@/widgets/recent-transactions/ui/RecentTransactions.vue'),
   delay: 0,
 });
 
@@ -229,8 +230,13 @@ function handleExpenseClick() {
   router.push('/transactions/new?type=expense');
 }
 
-const { slots: quickActionSlots, addAction, updateAction, removeAction, hidden: quickActionsHidden } =
-  useQuickActions();
+const {
+  slots: quickActionSlots,
+  addAction,
+  updateAction,
+  removeAction,
+  hidden: quickActionsHidden,
+} = useQuickActions();
 
 const showQuickActionModal = ref(false);
 const editingAction = ref<QuickAction | null>(null);
@@ -256,7 +262,11 @@ function handleQuickActionLongPress(action: QuickAction | null) {
   showQuickActionModal.value = true;
 }
 
-function handleQuickActionSave(data: { label: string; categoryId: string; accountId: string }) {
+function handleQuickActionSave(data: {
+  label: string;
+  categoryId: string;
+  accountId: string;
+}) {
   if (editingAction.value) {
     updateAction(editingAction.value.id, data);
   } else {
@@ -314,7 +324,10 @@ function handleViewAllReminders() {
 const { showModal: showInstallModal } = usePwaInstall();
 
 const isHidden = useLocalStorage('balance_hidden', false);
-const quickActionsHintDismissed = useLocalStorage('quick_actions_hint_dismissed', false);
+const quickActionsHintDismissed = useLocalStorage(
+  'quick_actions_hint_dismissed',
+  false,
+);
 
 const scrollContainerRef = ref<HTMLElement>();
 
@@ -407,23 +420,44 @@ async function handleRefresh() {
                 <template v-if="action">
                   <div
                     class="w-10 h-10 rounded-xl flex items-center justify-center"
-                    :style="{ backgroundColor: (categoryMap.get(action.categoryId)?.color ?? '#64748b') + '1A' }"
+                    :style="{
+                      backgroundColor:
+                        (categoryMap.get(action.categoryId)?.color ??
+                          '#64748b') + '1A',
+                    }"
                   >
                     <UIcon
-                      :name="categoryMap.get(action.categoryId)?.icon ?? 'receipt_long'"
+                      :name="
+                        categoryMap.get(action.categoryId)?.icon ??
+                        'receipt_long'
+                      "
                       size="sm"
-                      :style="{ color: categoryMap.get(action.categoryId)?.color ?? '#64748b' }"
+                      :style="{
+                        color:
+                          categoryMap.get(action.categoryId)?.color ??
+                          '#64748b',
+                      }"
                     />
                   </div>
-                  <span class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark truncate w-full text-center px-1">
+                  <span
+                    class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark truncate w-full text-center px-1"
+                  >
                     {{ action.label }}
                   </span>
                 </template>
                 <template v-else>
-                  <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-border-light dark:bg-border-dark">
-                    <UIcon name="add" size="sm" class="text-text-tertiary-light dark:text-text-tertiary-dark" />
+                  <div
+                    class="w-10 h-10 rounded-xl flex items-center justify-center bg-border-light dark:bg-border-dark"
+                  >
+                    <UIcon
+                      name="add"
+                      size="sm"
+                      class="text-text-tertiary-light dark:text-text-tertiary-dark"
+                    />
                   </div>
-                  <span class="text-xs font-medium text-text-tertiary-light dark:text-text-tertiary-dark">
+                  <span
+                    class="text-xs font-medium text-text-tertiary-light dark:text-text-tertiary-dark"
+                  >
                     Добавить
                   </span>
                 </template>
@@ -434,12 +468,16 @@ async function handleRefresh() {
               v-if="!quickActionsHintDismissed"
               class="mt-2 flex items-start gap-2 px-1"
             >
-              <p class="text-caption-xs leading-snug text-text-tertiary-light dark:text-text-tertiary-dark">
+              <p
+                class="text-caption-xs leading-snug text-text-tertiary-light dark:text-text-tertiary-dark"
+              >
                 Удерживайте кнопку для редактирования. Настроить или скрыть — в
                 <button
                   class="underline text-primary"
                   @click="router.push('/settings/quick-actions')"
-                >Профиль → Быстрые действия</button>.
+                >
+                  Профиль → Быстрые действия</button
+                >.
               </p>
               <button
                 class="shrink-0 p-0.5 rounded text-text-tertiary-light dark:text-text-tertiary-dark hover:text-text-secondary-light dark:hover:text-text-secondary-dark"

@@ -58,7 +58,11 @@ onMounted(() => {
   resetSplit();
 
   const typeParam = route.query.type as string;
-  if (typeParam === 'income' || typeParam === 'expense' || typeParam === 'transfer') {
+  if (
+    typeParam === 'income' ||
+    typeParam === 'expense' ||
+    typeParam === 'transfer'
+  ) {
     setType(typeParam);
   }
 

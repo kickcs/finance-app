@@ -419,11 +419,7 @@ async function handleRefresh() {
       </div>
 
       <!-- Type Filter Tabs -->
-      <UTabs
-        v-model="activeTypeFilter"
-        :items="typeFilterItems"
-        size="sm"
-      />
+      <UTabs v-model="activeTypeFilter" :items="typeFilterItems" size="sm" />
 
       <!-- Active Filters Chips -->
       <div v-if="activeFiltersCount > 0" class="flex flex-wrap gap-2">
@@ -432,9 +428,7 @@ async function handleRefresh() {
           class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium"
           @click="selectedAccountId = null"
         >
-          {{
-            accounts.find((a) => a.id === selectedAccountId)?.name || 'Счёт'
-          }}
+          {{ accounts.find((a) => a.id === selectedAccountId)?.name || 'Счёт' }}
           <UIcon name="close" size="xs" />
         </button>
         <button
@@ -469,10 +463,7 @@ async function handleRefresh() {
       </div>
 
       <!-- Virtualized Transaction Groups: flex-1 wrapper ensures virtualizer gets definite height from flex, not from % -->
-      <div
-        v-else-if="groupedTransactions.length > 0"
-        class="flex-1 min-h-0"
-      >
+      <div v-else-if="groupedTransactions.length > 0" class="flex-1 min-h-0">
         <VirtualGroupedTransactionList
           :groups="groupedTransactions"
           :currency="currency"
@@ -500,9 +491,7 @@ async function handleRefresh() {
             class="text-text-tertiary-light dark:text-text-tertiary-dark"
           />
         </div>
-        <p
-          class="text-text-secondary-light dark:text-text-secondary-dark mb-2"
-        >
+        <p class="text-text-secondary-light dark:text-text-secondary-dark mb-2">
           {{ isEmpty ? 'Ничего не найдено' : 'Нет транзакций' }}
         </p>
         <p

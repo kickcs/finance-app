@@ -58,13 +58,21 @@ const hasData = computed(() => props.savedAmount > 0 || props.spentAmount > 0);
         <div
           class="w-9 h-9 shrink-0 rounded-lg bg-surface-light dark:bg-surface-dark flex items-center justify-center"
         >
-          <UIcon name="trending_up" size="sm" class="text-text-tertiary-light dark:text-text-tertiary-dark" />
+          <UIcon
+            name="trending_up"
+            size="sm"
+            class="text-text-tertiary-light dark:text-text-tertiary-dark"
+          />
         </div>
         <div>
-          <p class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
+          <p
+            class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
+          >
             Нет данных за месяц
           </p>
-          <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
+          <p
+            class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
+          >
             Добавьте доходы и расходы
           </p>
         </div>
@@ -92,7 +100,11 @@ const hasData = computed(() => props.savedAmount > 0 || props.spentAmount > 0);
           </span>
         </div>
         <p class="text-h3 font-semibold text-success">
-          {{ hidden ? '••••' : formatCurrency(savedAmount, currency, COMPACT_FORMAT) }}
+          {{
+            hidden
+              ? '••••'
+              : formatCurrency(savedAmount, currency, COMPACT_FORMAT)
+          }}
         </p>
       </UCard>
 
@@ -115,7 +127,11 @@ const hasData = computed(() => props.savedAmount > 0 || props.spentAmount > 0);
           </span>
         </div>
         <p class="text-h3 font-semibold text-danger">
-          {{ hidden ? '••••' : formatCurrency(spentAmount, currency, COMPACT_FORMAT) }}
+          {{
+            hidden
+              ? '••••'
+              : formatCurrency(spentAmount, currency, COMPACT_FORMAT)
+          }}
         </p>
       </UCard>
     </div>

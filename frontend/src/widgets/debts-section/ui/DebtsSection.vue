@@ -217,7 +217,11 @@ function isOverdue(date: string | null): boolean {
                 v-else
                 class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
               >
-                {{ group.debts.length > 1 ? `${group.debts.length} долга` : 'Без срока' }}
+                {{
+                  group.debts.length > 1
+                    ? `${group.debts.length} долга`
+                    : 'Без срока'
+                }}
               </p>
             </div>
           </div>
@@ -226,19 +230,22 @@ function isOverdue(date: string | null): boolean {
             class="text-sm font-semibold shrink-0"
             :style="{ color: DEBT_DIRECTION_COLORS[group.debtType] }"
           >
-            {{ hidden ? '••••' : formatCurrency(group.totalRemaining, currency) }}
+            {{
+              hidden ? '••••' : formatCurrency(group.totalRemaining, currency)
+            }}
           </p>
         </div>
       </button>
     </TransitionGroup>
 
     <!-- Empty state for current tab -->
-    <div
-      v-else-if="activeDebts.length > 0"
-      class="py-6 text-center"
-    >
+    <div v-else-if="activeDebts.length > 0" class="py-6 text-center">
       <p class="text-sm text-text-tertiary-light dark:text-text-tertiary-dark">
-        {{ activeTab === 'given' ? 'Нет долгов «вам должны»' : 'Нет долгов «вы должны»' }}
+        {{
+          activeTab === 'given'
+            ? 'Нет долгов «вам должны»'
+            : 'Нет долгов «вы должны»'
+        }}
       </p>
     </div>
 

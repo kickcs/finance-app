@@ -17,7 +17,8 @@ const user = inject<Ref<User | null>>('user');
 const userId = computed(() => user?.value?.id ?? '');
 const { accounts } = useAccounts(userId);
 const { expenseCategories, getCategoryById } = useCategories(userId);
-const { slots, addAction, updateAction, removeAction, hidden, toggleHidden } = useQuickActions();
+const { slots, addAction, updateAction, removeAction, hidden, toggleHidden } =
+  useQuickActions();
 
 const showModal = ref(false);
 const editingAction = ref<QuickAction | null>(null);
@@ -27,7 +28,11 @@ function handleSlotClick(action: QuickAction | null) {
   showModal.value = true;
 }
 
-function handleSave(data: { label: string; categoryId: string; accountId: string }) {
+function handleSave(data: {
+  label: string;
+  categoryId: string;
+  accountId: string;
+}) {
   if (editingAction.value) {
     updateAction(editingAction.value.id, data);
   } else {
@@ -49,8 +54,11 @@ function handleDelete() {
     <AppHeader title="Быстрые действия" show-back @back="navigateBack" />
 
     <main class="px-5 pt-6 pb-28 space-y-4">
-      <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
-        Настройте до 4 быстрых кнопок на главном экране. Каждая кнопка открывает добавление расхода с выбранной категорией и счётом.
+      <p
+        class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
+      >
+        Настройте до 4 быстрых кнопок на главном экране. Каждая кнопка открывает
+        добавление расхода с выбранной категорией и счётом.
       </p>
 
       <!-- Visibility toggle -->
@@ -64,7 +72,9 @@ function handleDelete() {
             size="sm"
             class="text-text-secondary-light dark:text-text-secondary-dark"
           />
-          <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
+          <span
+            class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
+          >
             Показывать на главной
           </span>
         </div>
@@ -89,29 +99,56 @@ function handleDelete() {
           <template v-if="action">
             <div
               class="w-10 h-10 shrink-0 rounded-lg flex items-center justify-center"
-              :style="{ backgroundColor: (getCategoryById(action.categoryId)?.color ?? '#64748b') + '1A' }"
+              :style="{
+                backgroundColor:
+                  (getCategoryById(action.categoryId)?.color ?? '#64748b') +
+                  '1A',
+              }"
             >
               <UIcon
-                :name="getCategoryById(action.categoryId)?.icon ?? 'receipt_long'"
+                :name="
+                  getCategoryById(action.categoryId)?.icon ?? 'receipt_long'
+                "
                 size="sm"
-                :style="{ color: getCategoryById(action.categoryId)?.color ?? '#64748b' }"
+                :style="{
+                  color: getCategoryById(action.categoryId)?.color ?? '#64748b',
+                }"
               />
             </div>
             <div class="flex-1 text-left">
-              <p class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
+              <p
+                class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
+              >
                 {{ action.label }}
               </p>
-              <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
-                {{ accounts?.find((a) => a.id === action.accountId)?.name || 'Счёт не найден' }}
+              <p
+                class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
+              >
+                {{
+                  accounts?.find((a) => a.id === action.accountId)?.name ||
+                  'Счёт не найден'
+                }}
               </p>
             </div>
-            <UIcon name="chevron_right" size="sm" class="text-text-tertiary-light dark:text-text-tertiary-dark" />
+            <UIcon
+              name="chevron_right"
+              size="sm"
+              class="text-text-tertiary-light dark:text-text-tertiary-dark"
+            />
           </template>
           <template v-else>
-            <div class="w-10 h-10 shrink-0 rounded-lg bg-border-light dark:bg-border-dark flex items-center justify-center">
-              <UIcon name="add" size="sm" class="text-text-tertiary-light dark:text-text-tertiary-dark" />
+            <div
+              class="w-10 h-10 shrink-0 rounded-lg bg-border-light dark:bg-border-dark flex items-center justify-center"
+            >
+              <UIcon
+                name="add"
+                size="sm"
+                class="text-text-tertiary-light dark:text-text-tertiary-dark"
+              />
             </div>
-            <span class="text-sm text-text-tertiary-light dark:text-text-tertiary-dark">
+            <span
+              class="text-sm text-text-tertiary-light dark:text-text-tertiary-dark"
+            >
               Слот {{ index + 1 }} — нажмите чтобы настроить
             </span>
           </template>

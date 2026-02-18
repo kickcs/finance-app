@@ -42,10 +42,7 @@ const emit = defineEmits<{
         />
         {{ account.name }}
         <slot name="badge" :account="account">
-          <span
-            v-if="account.balances.length > 1"
-            class="text-xs opacity-60"
-          >
+          <span v-if="account.balances.length > 1" class="text-xs opacity-60">
             ({{ account.balances.length }})
           </span>
         </slot>

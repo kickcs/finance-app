@@ -51,8 +51,8 @@ async function handleFileChange(event: Event) {
   target.value = '';
 }
 
-const previewTransactions = computed(() =>
-  parseResult.value?.data.slice(0, 20) ?? [],
+const previewTransactions = computed(
+  () => parseResult.value?.data.slice(0, 20) ?? [],
 );
 
 function formatDate(iso: string): string {
@@ -245,10 +245,7 @@ function goHome() {
             </p>
           </UCard>
 
-          <UCard
-            v-if="parseResult.stats.date_range"
-            class="p-4 text-center"
-          >
+          <UCard v-if="parseResult.stats.date_range" class="p-4 text-center">
             <p
               class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark"
             >
@@ -304,9 +301,7 @@ function goHome() {
             <div class="text-right shrink-0">
               <p
                 class="text-sm font-semibold"
-                :class="
-                  tx.amount >= 0 ? 'text-success' : 'text-danger'
-                "
+                :class="tx.amount >= 0 ? 'text-success' : 'text-danger'"
               >
                 {{ formatAmount(tx.amount) }}
               </p>
@@ -328,7 +323,9 @@ function goHome() {
         </UCard>
 
         <!-- Import button -->
-        <div class="fixed bottom-0 left-0 right-0 p-5 bg-background-light dark:bg-background-dark border-t border-border-light dark:border-border-dark">
+        <div
+          class="fixed bottom-0 left-0 right-0 p-5 bg-background-light dark:bg-background-dark border-t border-border-light dark:border-border-dark"
+        >
           <UButton
             variant="primary"
             size="lg"
@@ -336,7 +333,11 @@ function goHome() {
             :loading="importMutation.isPending.value"
             @click="handleImport"
           >
-            Импортировать {{ parseResult.stats.total_rows.toLocaleString('ru-RU') }} транзакций
+            Импортировать
+            {{
+              parseResult.stats.total_rows.toLocaleString('ru-RU')
+            }}
+            транзакций
           </UButton>
         </div>
 
@@ -390,10 +391,7 @@ function goHome() {
               </p>
             </UCard>
 
-            <UCard
-              v-if="importResult.accounts_created.length > 0"
-              class="p-4"
-            >
+            <UCard v-if="importResult.accounts_created.length > 0" class="p-4">
               <p
                 class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark mb-2"
               >
@@ -417,12 +415,7 @@ function goHome() {
             >
               К транзакциям
             </UButton>
-            <UButton
-              variant="secondary"
-              size="lg"
-              full-width
-              @click="goHome"
-            >
+            <UButton variant="secondary" size="lg" full-width @click="goHome">
               На главную
             </UButton>
           </div>

@@ -2,7 +2,10 @@ import { ref } from 'vue';
 import { transactionsApi } from '@/entities/transaction';
 import { debtsApi } from '@/entities/debt';
 import { queryClient } from '@/shared/api/queryClient';
-import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
+import {
+  invalidateTransactionRelated,
+  invalidateAccountRelated,
+} from '@/shared/api/invalidation';
 import type { Transaction } from '@/shared/api/database.types';
 
 export function useEditTransaction(userId: string) {

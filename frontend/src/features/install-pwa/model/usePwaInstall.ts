@@ -41,9 +41,7 @@ export function usePwaInstall() {
   const platform = detectPlatform();
   const isStandalone = isRunningStandalone();
 
-  const showBanner = computed(
-    () => !isStandalone && !isDismissed.value,
-  );
+  const showBanner = computed(() => !isStandalone && !isDismissed.value);
 
   function openModal() {
     showModal.value = true;

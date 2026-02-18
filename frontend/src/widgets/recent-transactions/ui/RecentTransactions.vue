@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { TransactionItem, TransactionItemSkeleton } from '@/entities/transaction';
+import {
+  TransactionItem,
+  TransactionItemSkeleton,
+} from '@/entities/transaction';
 import type { Transaction } from '@/entities/transaction';
 import { UIcon, UButton, EmptyState } from '@/shared/ui';
 import { useAccounts } from '@/entities/account';
@@ -34,16 +37,14 @@ function getToAccountName(toAccountId: string | null): string {
   <div>
     <div class="flex items-center justify-between mb-3">
       <div class="flex items-center gap-2">
-        <h2 class="text-base font-semibold text-text-primary-light dark:text-text-primary-dark">
+        <h2
+          class="text-base font-semibold text-text-primary-light dark:text-text-primary-dark"
+        >
           Последние операции
         </h2>
       </div>
       <div class="flex items-center gap-1">
-        <UButton
-          variant="ghost"
-          size="xs"
-          @click="$emit('add-click')"
-        >
+        <UButton variant="ghost" size="xs" @click="$emit('add-click')">
           <UIcon name="add" size="xs" />
         </UButton>
         <UButton
@@ -60,7 +61,10 @@ function getToAccountName(toAccountId: string | null): string {
       </div>
     </div>
 
-    <div v-if="loading" class="rounded-xl border border-border-light dark:border-border-dark overflow-hidden">
+    <div
+      v-if="loading"
+      class="rounded-xl border border-border-light dark:border-border-dark overflow-hidden"
+    >
       <TransactionItemSkeleton v-for="i in 3" :key="i" />
     </div>
 

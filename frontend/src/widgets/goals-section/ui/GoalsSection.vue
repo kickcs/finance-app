@@ -112,12 +112,7 @@ function isNearCompletion(goal: Goal): boolean {
 
     <!-- Goals List -->
     <div v-else-if="goals.length > 0" class="space-y-2">
-      <div
-        v-for="(goal, index) in goals.slice(0, 3)"
-        :key="goal.id"
-
-
-      >
+      <div v-for="(goal, index) in goals.slice(0, 3)" :key="goal.id">
         <GoalCard
           :goal="goal"
           :currency="currency"

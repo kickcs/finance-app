@@ -70,11 +70,11 @@ defineEmits<{
         :hidden="hidden"
         :class="[
           '!rounded-none !border-0',
-          index < accounts.length - 1 && 'border-b border-border-light dark:border-border-dark',
+          index < accounts.length - 1 &&
+            'border-b border-border-light dark:border-border-dark',
         ]"
         @click="$emit('account-click', account)"
       />
-
     </div>
 
     <!-- Empty state -->

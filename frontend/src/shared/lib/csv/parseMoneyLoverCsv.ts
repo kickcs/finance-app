@@ -38,7 +38,9 @@ function parseDDMMYYYY(dateStr: string): string | null {
   const parts = dateStr.trim().split('/');
   if (parts.length !== 3) return null;
   const [day, month, year] = parts;
-  const d = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T12:00:00.000Z`);
+  const d = new Date(
+    `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T12:00:00.000Z`,
+  );
   if (isNaN(d.getTime())) return null;
   return d.toISOString();
 }

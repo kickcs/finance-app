@@ -1,7 +1,10 @@
 import { ref, computed } from 'vue';
 import { transactionsApi } from '@/entities/transaction';
 import { queryClient } from '@/shared/api/queryClient';
-import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
+import {
+  invalidateTransactionRelated,
+  invalidateAccountRelated,
+} from '@/shared/api/invalidation';
 import { useToast } from '@/shared/ui';
 
 export interface TransactionFormData {

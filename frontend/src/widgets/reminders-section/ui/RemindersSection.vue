@@ -1,9 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import {
-  ReminderCardSkeleton,
-  type Reminder,
-} from '@/entities/reminder';
+import { ReminderCardSkeleton, type Reminder } from '@/entities/reminder';
 import { UIcon, UButton } from '@/shared/ui';
 import { formatCurrency, COMPACT_FORMAT } from '@/shared/lib/format/currency';
 
@@ -131,8 +128,18 @@ function isOverdue(reminder: Reminder): boolean {
         </p>
 
         <!-- Amount -->
-        <p class="text-xs font-semibold text-text-primary-light dark:text-text-primary-dark">
-          {{ hidden ? '••••' : formatCurrency(reminder.amount, currency || 'UZS', COMPACT_FORMAT) }}
+        <p
+          class="text-xs font-semibold text-text-primary-light dark:text-text-primary-dark"
+        >
+          {{
+            hidden
+              ? '••••'
+              : formatCurrency(
+                  reminder.amount,
+                  currency || 'UZS',
+                  COMPACT_FORMAT,
+                )
+          }}
         </p>
       </button>
     </div>

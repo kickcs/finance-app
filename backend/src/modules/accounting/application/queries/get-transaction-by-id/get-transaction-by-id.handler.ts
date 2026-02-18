@@ -7,7 +7,9 @@ import {
 } from '../../../domain/repositories/transaction.repository.interface';
 
 @QueryHandler(GetTransactionByIdQuery)
-export class GetTransactionByIdHandler implements IQueryHandler<GetTransactionByIdQuery> {
+export class GetTransactionByIdHandler
+  implements IQueryHandler<GetTransactionByIdQuery>
+{
   constructor(
     @Inject(TRANSACTION_REPOSITORY)
     private readonly transactionRepository: ITransactionRepository,

@@ -2,7 +2,10 @@ import { ref } from 'vue';
 import { transactionsApi } from '@/entities/transaction';
 import { debtsApi, debtQueryKeys } from '@/entities/debt';
 import { queryClient } from '@/shared/api/queryClient';
-import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
+import {
+  invalidateTransactionRelated,
+  invalidateAccountRelated,
+} from '@/shared/api/invalidation';
 import type { Debt } from '@/shared/api/database.types';
 
 export function useCloseDebt() {
@@ -43,7 +46,9 @@ export function useCloseDebt() {
       // (either a direct debt transaction or a linked source expense)
       // If created with "Не списывать с баланса", no transaction existed, so the return
       // should not offset expenses in stats calculations
-      const hadBalanceEffect = !!(debt.transaction_id || debt.source_transaction_id);
+      const hadBalanceEffect = !!(
+        debt.transaction_id || debt.source_transaction_id
+      );
 
       // 1. Create closing transaction (backend handles balance)
       const transaction = await transactionsApi.create({

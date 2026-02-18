@@ -1,8 +1,5 @@
 import { ref, computed, watch } from 'vue';
-import {
-  ACCOUNT_ICONS,
-  ACCOUNT_COLORS,
-} from '@/entities/account';
+import { ACCOUNT_ICONS, ACCOUNT_COLORS } from '@/entities/account';
 import type { AccountType } from '@/entities/account';
 import { accountsApi } from '@/entities/account';
 import { queryClient } from '@/shared/api/queryClient';

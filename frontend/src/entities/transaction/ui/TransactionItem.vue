@@ -183,11 +183,7 @@ const formattedDate = computed(() =>
         class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark line-through"
       >
         -{{
-          formatCurrency(
-            transaction.amount,
-            displayCurrency,
-            COMPACT_FORMAT,
-          )
+          formatCurrency(transaction.amount, displayCurrency, COMPACT_FORMAT)
         }}
       </p>
       <!-- Balance after transaction -->
