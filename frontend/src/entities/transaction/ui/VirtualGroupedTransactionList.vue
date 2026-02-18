@@ -27,6 +27,7 @@ const props = withDefaults(
     height?: string;
     /** Enable swipe actions on transaction items */
     swipeEnabled?: boolean;
+    getBalanceAfter?: (txId: string) => number | undefined;
   }>(),
   {
     currency: 'UZS',
@@ -68,8 +69,13 @@ const flatItems = computed<FlatItem[]>(() => {
 
 // Heights
 const HEADER_HEIGHT = 44;
-const TRANSACTION_HEIGHT = 72;
 const LOADING_HEIGHT = 48;
+const TRANSACTION_HEIGHT = 72;
+const TRANSACTION_HEIGHT_WITH_BALANCE = 84; // +12px for balance-after row
+
+const transactionHeight = computed(() =>
+  props.getBalanceAfter ? TRANSACTION_HEIGHT_WITH_BALANCE : TRANSACTION_HEIGHT,
+);
 
 const rowCount = computed(() =>
   props.hasNextPage ? flatItems.value.length + 1 : flatItems.value.length,
@@ -80,7 +86,7 @@ const getItemSize = (index: number) => {
   if (index >= flatItems.value.length) return LOADING_HEIGHT;
   return flatItems.value[index].type === 'header'
     ? HEADER_HEIGHT
-    : TRANSACTION_HEIGHT;
+    : transactionHeight.value;
 };
 
 const virtualizer = useVirtualizer(
@@ -152,6 +158,17 @@ function isLastInGroup(index: number): boolean {
   // Check if next item is a header or end
   const nextItem = getItem(index + 1);
   return !nextItem || nextItem.type === 'header';
+}
+
+function getTransactionItemProps(index: number) {
+  const tx = getTransactionData(index)!;
+  return {
+    transaction: tx,
+    currency: props.currency,
+    accountName: props.getAccountName?.(tx.account_id),
+    toAccountName: props.getAccountName?.(tx.to_account_id ?? null),
+    balanceAfter: props.getBalanceAfter?.(tx.id),
+  };
 }
 </script>
 
@@ -242,18 +259,7 @@ function isLastInGroup(index: number): boolean {
             "
           >
             <TransactionItem
-              :transaction="getTransactionData(virtualRow.index)!"
-              :currency="currency"
-              :account-name="
-                getAccountName?.(
-                  getTransactionData(virtualRow.index)!.account_id,
-                )
-              "
-              :to-account-name="
-                getAccountName?.(
-                  getTransactionData(virtualRow.index)?.to_account_id ?? null,
-                )
-              "
+              v-bind="getTransactionItemProps(virtualRow.index)"
               @click="
                 emit('transactionClick', getTransactionData(virtualRow.index)!)
               "
@@ -264,18 +270,7 @@ function isLastInGroup(index: number): boolean {
             class="bg-card-light dark:bg-card-dark"
           >
             <TransactionItem
-              :transaction="getTransactionData(virtualRow.index)!"
-              :currency="currency"
-              :account-name="
-                getAccountName?.(
-                  getTransactionData(virtualRow.index)!.account_id,
-                )
-              "
-              :to-account-name="
-                getAccountName?.(
-                  getTransactionData(virtualRow.index)?.to_account_id ?? null,
-                )
-              "
+              v-bind="getTransactionItemProps(virtualRow.index)"
               @click="
                 emit('transactionClick', getTransactionData(virtualRow.index)!)
               "
