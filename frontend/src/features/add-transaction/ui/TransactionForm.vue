@@ -20,6 +20,7 @@ const props = defineProps<{
   incomeCategories: Category[];
   userCurrency?: string;
   isSubmitting?: boolean;
+  isValid?: boolean;
   error?: string | null;
   splitData?: SplitExpenseData;
   splitValidationError?: string | null;
@@ -59,25 +60,6 @@ function applyTypeChange(newType: string) {
 
 const { scrollContainer, handleTabClick, handleScrollEnd, handleScroll } =
   useScrollableTabs(type, applyTypeChange);
-
-const isTransfer = computed(() => props.formData.type === 'transfer');
-
-const isSubmitDisabled = computed(() => {
-  if (isTransfer.value) {
-    return (
-      !props.formData.accountId ||
-      !props.formData.toAccountId ||
-      props.formData.amount <= 0 ||
-      !props.formData.toAmount ||
-      props.formData.toAmount <= 0
-    );
-  }
-  return (
-    !props.formData.accountId ||
-    !props.formData.categoryId ||
-    props.formData.amount <= 0
-  );
-});
 
 const submitLabel = computed(() => {
   if (props.formData.type === 'transfer') return 'Перевести';
@@ -189,7 +171,7 @@ const submitLabel = computed(() => {
       size="lg"
       full-width
       :loading="isSubmitting"
-      :disabled="isSubmitDisabled"
+      :disabled="!isValid"
     >
       {{ submitLabel }}
     </UButton>

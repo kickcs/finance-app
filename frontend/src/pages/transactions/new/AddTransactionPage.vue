@@ -37,7 +37,7 @@ const _isLoading = computed(
 );
 
 // Use the add transaction feature
-const { formData, setType, updateField } = useTransactionForm();
+const { formData, isValid, setType, updateField } = useTransactionForm();
 const { isSubmitting, error, submit } = useSubmitTransaction();
   
 
@@ -239,6 +239,7 @@ function goBack() {
         :income-categories="incomeCategories"
         :user-currency="userCurrency"
         :is-submitting="isSubmitting"
+        :is-valid="isValid"
         :error="error"
         :split-data="splitData"
         :split-validation-error="splitValidationError"
