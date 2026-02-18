@@ -4,7 +4,11 @@ import { useRouter, useRoute } from 'vue-router';
 import type { Ref } from 'vue';
 import type { User } from '@/shared/api/composables/useAuth';
 import { UButton, UIcon } from '@/shared/ui';
-import { TransactionForm, useAddTransaction } from '@/features/add-transaction';
+import {
+  TransactionForm,
+  useTransactionForm,
+  useSubmitTransaction,
+} from '@/features/add-transaction';
 import { useAccounts, accountQueryKeys } from '@/entities/account';
 import { useCategories } from '@/entities/category';
 import { useProfile, queryClient } from '@/shared/api';
@@ -33,8 +37,9 @@ const _isLoading = computed(
 );
 
 // Use the add transaction feature
-const { formData, isSubmitting, error, addTransaction, setType, updateField } =
-  useAddTransaction();
+const { formData, setType, updateField } = useTransactionForm();
+const { isSubmitting, error, submit } = useSubmitTransaction();
+  
 
 // Use split expense feature
 const {
@@ -114,7 +119,7 @@ async function handleSubmit() {
     return;
   }
 
-  const transactionId = await addTransaction(userId.value);
+  const transactionId = await submit(userId.value, formData.value);
 
   if (transactionId) {
     // Create debts for split expense if enabled
