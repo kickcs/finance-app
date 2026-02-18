@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import { TabsRoot, TabsList, TabsTrigger } from 'reka-ui';
 import { cn } from '@/shared/lib/utils';
 
@@ -28,6 +28,47 @@ const sizeClasses = computed(() => ({
   container: props.size === 'sm' ? 'gap-0.5' : 'gap-1',
   button: props.size === 'sm' ? 'py-1.5 px-3 text-xs' : 'py-2 px-4 text-sm',
 }));
+
+// --- Sliding indicator (pills variant) ---
+const pillsList = ref<InstanceType<typeof TabsList> | null>(null);
+const indicatorStyle = ref({ left: '0px', width: '0px' });
+
+function updateIndicator() {
+  const el = pillsList.value?.$el as HTMLElement | undefined;
+  if (!el) return;
+  const active = el.querySelector<HTMLElement>('[data-state=active]');
+  if (!active) return;
+  // Use getBoundingClientRect for reliable positioning regardless of offsetParent
+  const containerRect = el.getBoundingClientRect();
+  const activeRect = active.getBoundingClientRect();
+  indicatorStyle.value = {
+    left: `${activeRect.left - containerRect.left + el.scrollLeft}px`,
+    width: `${activeRect.width}px`,
+  };
+}
+
+let resizeObserver: ResizeObserver | null = null;
+
+onMounted(() => {
+  if (props.variant !== 'pills') return;
+  nextTick(updateIndicator);
+  const el = pillsList.value?.$el as HTMLElement | undefined;
+  if (el) {
+    resizeObserver = new ResizeObserver(updateIndicator);
+    resizeObserver.observe(el);
+  }
+});
+
+onUnmounted(() => {
+  resizeObserver?.disconnect();
+});
+
+watch(() => props.modelValue, () => {
+  if (props.variant === 'pills') nextTick(updateIndicator);
+});
+watch(() => props.items, () => {
+  if (props.variant === 'pills') nextTick(updateIndicator);
+});
 </script>
 
 <template>
@@ -38,25 +79,28 @@ const sizeClasses = computed(() => ({
     <!-- Pills variant -->
     <TabsList
       v-if="variant === 'pills'"
+      ref="pillsList"
       :class="
         cn(
-          'bg-surface-light dark:bg-surface-dark rounded-lg p-1 flex items-center w-full overflow-x-auto no-scrollbar',
-          sizeClasses.container,
+          'relative bg-surface-light dark:bg-surface-dark rounded-lg p-1 flex items-center w-full overflow-x-auto no-scrollbar',
         )
       "
     >
+      <!-- Sliding indicator -->
+      <span
+        class="absolute top-1 bottom-1 rounded-md bg-card-light dark:bg-card-dark shadow-sm pointer-events-none transition-all duration-250 ease-out"
+        :style="indicatorStyle"
+      />
       <TabsTrigger
         v-for="tab in items"
         :key="tab.id"
         :value="tab.id"
         :class="
           cn(
-            'flex-1 min-w-fit flex-shrink-0 font-medium rounded-md transition-all duration-150 border-none outline-none whitespace-nowrap',
+            'relative z-10 flex-1 min-w-fit flex-shrink-0 font-medium rounded-md transition-colors duration-200 border-none outline-none whitespace-nowrap text-center',
             sizeClasses.button,
-            'data-[state=active]:bg-card-light dark:data-[state=active]:bg-card-dark',
             'data-[state=active]:text-text-primary-light dark:data-[state=active]:text-text-primary-dark',
             'data-[state=inactive]:text-text-secondary-light dark:data-[state=inactive]:text-text-secondary-dark',
-            'data-[state=inactive]:bg-transparent',
             'hover:text-text-primary-light dark:hover:text-text-primary-dark',
             'focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-0',
           )
