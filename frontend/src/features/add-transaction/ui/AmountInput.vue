@@ -49,11 +49,7 @@ onMounted(() => {
             emit('update:currency', ($event.target as HTMLSelectElement).value)
           "
         >
-          <option
-            v-for="cur in availableCurrencies"
-            :key="cur"
-            :value="cur"
-          >
+          <option v-for="cur in availableCurrencies" :key="cur" :value="cur">
             {{ getCurrencyByCode(cur)?.flag }} {{ cur }}
           </option>
         </select>
@@ -76,10 +72,7 @@ onMounted(() => {
         />
       </div>
     </div>
-    <p
-      v-if="showInsufficientFunds && amount > 0"
-      class="text-xs text-warning"
-    >
+    <p v-if="showInsufficientFunds && amount > 0" class="text-xs text-warning">
       Недостаточно средств. Баланс:
       {{ formatCurrency(currentBalance ?? 0, currency) }}
     </p>

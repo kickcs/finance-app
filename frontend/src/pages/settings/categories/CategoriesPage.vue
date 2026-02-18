@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, inject, watch, defineAsyncComponent } from 'vue';
-import type { Ref } from 'vue';
-import type { User } from '@/shared/api/composables/useAuth';
-import { UButton, UIcon, UCard, UTabs, UModal } from '@/shared/ui';
+import { ref, computed, watch, defineAsyncComponent } from 'vue';
+import { UButton, UIcon, UCard, UTabs, UModal, Skeleton } from '@/shared/ui';
+import { AppHeader } from '@/widgets/header';
 
 const draggable = defineAsyncComponent(() => import('vuedraggable'));
 import { useCategories } from '@/entities/category';
@@ -12,10 +11,9 @@ import {
   useManageCategories,
 } from '@/features/manage-categories';
 import { navigateBack } from '@/app/router';
+import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 
-// Get user from provide/inject
-const user = inject<Ref<User | null>>('user');
-const userId = computed(() => user?.value?.id ?? null);
+const { userId } = useCurrentUser();
 
 // Categories composable - now all categories come from DB
 const {
@@ -158,23 +156,13 @@ async function confirmDelete() {
     class="h-dvh flex flex-col overflow-hidden bg-background-light dark:bg-background-dark"
   >
     <!-- Header -->
-    <header
-      class="shrink-0 pt-[var(--safe-area-inset-top)] bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-xl z-30"
-    >
-      <div class="flex items-center justify-between px-4 py-4">
-        <UButton variant="ghost" size="sm" @click="goBack">
-          <UIcon name="arrow_back" size="md" />
+    <AppHeader blur show-back title="Категории" class="shrink-0" @back="goBack">
+      <template #actions>
+        <UButton variant="ghost" size="sm" class="!p-2" @click="openAddModal">
+          <UIcon name="add" size="sm" />
         </UButton>
-        <h1
-          class="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark"
-        >
-          Категории
-        </h1>
-        <UButton variant="ghost" size="sm" @click="openAddModal">
-          <UIcon name="add" size="md" />
-        </UButton>
-      </div>
-    </header>
+      </template>
+    </AppHeader>
 
     <!-- Content -->
     <main class="flex-1 overflow-y-auto px-5 pt-8 pb-10 space-y-4">
@@ -183,9 +171,7 @@ async function confirmDelete() {
 
       <!-- Loading state -->
       <div v-if="isLoading" class="flex justify-center py-8">
-        <div
-          class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"
-        />
+        <Skeleton class="h-8 w-8 rounded-full" />
       </div>
 
       <!-- Categories List with Drag and Drop -->

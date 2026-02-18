@@ -2,7 +2,10 @@ import { ref } from 'vue';
 import { transactionsApi } from '@/entities/transaction';
 import { debtsApi, debtQueryKeys } from '@/entities/debt';
 import { queryClient } from '@/shared/api/queryClient';
-import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
+import {
+  invalidateTransactionRelated,
+  invalidateAccountRelated,
+} from '@/shared/api/invalidation';
 import type { Debt } from '@/shared/api/database.types';
 
 export function usePartialPayment() {

@@ -49,7 +49,10 @@
       "Skill(review)",
       "Bash(find:*)",
       "Bash(VITE_API_URL=http://localhost:3000 bun run build:*)",
-      "Bash(kill:*)"
+      "Bash(kill:*)",
+      "Bash(git checkout:*)",
+      "Bash(gh pr merge:*)",
+      "Bash(npx prettier:*)"
     ]
   }
 }

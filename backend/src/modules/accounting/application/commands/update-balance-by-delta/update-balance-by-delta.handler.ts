@@ -7,7 +7,9 @@ import {
 } from '../../../domain/repositories/account-balance.repository.interface';
 
 @CommandHandler(UpdateBalanceByDeltaCommand)
-export class UpdateBalanceByDeltaHandler implements ICommandHandler<UpdateBalanceByDeltaCommand> {
+export class UpdateBalanceByDeltaHandler
+  implements ICommandHandler<UpdateBalanceByDeltaCommand>
+{
   constructor(
     @Inject(ACCOUNT_BALANCE_REPOSITORY)
     private readonly accountBalanceRepository: IAccountBalanceRepository,

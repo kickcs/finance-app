@@ -1,24 +1,18 @@
 <script setup lang="ts">
-import { computed, inject } from 'vue';
-import type { Ref } from 'vue';
-import type { User } from '@/shared/api/composables/useAuth';
+import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { BottomNav } from '@/widgets/bottom-nav';
+import { AppHeader } from '@/widgets/header';
 import { ReminderCard, useReminders, type Reminder } from '@/entities/reminder';
 import { UButton, UIcon, UCard } from '@/shared/ui';
-
 import { navigateBack } from '@/app/router';
+import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
+import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 
 const router = useRouter();
 
-// Get user from provide/inject
-const user = inject<Ref<User | null>>('user');
-const userId = computed(() => user?.value?.id ?? '');
-
-// Get user currency from localStorage
-const currency = computed(
-  () => localStorage.getItem('selectedCurrency') || 'UZS',
-);
+const { userId } = useCurrentUser();
+const { currency } = useUserCurrency();
 
 // Use real data from API
 const { reminders } = useReminders(userId);
@@ -82,23 +76,18 @@ function handleAddTransaction() {
 <template>
   <div class="min-h-screen bg-background-light dark:bg-background-dark pb-28">
     <!-- Header -->
-    <header
-      class="sticky top-0 z-30 pt-[var(--safe-area-inset-top)] bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-xl"
-    >
-      <div class="flex items-center justify-between px-4 py-4">
-        <UButton variant="ghost" size="sm" @click="goBack">
-          <UIcon name="arrow_back" size="md" />
-        </UButton>
-        <h1
-          class="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark"
+    <AppHeader blur show-back title="Напоминания" @back="goBack">
+      <template #actions>
+        <UButton
+          variant="ghost"
+          size="sm"
+          class="!p-2"
+          @click="handleAddReminder"
         >
-          Подписки
-        </h1>
-        <UButton variant="ghost" icon-only @click="handleAddReminder">
-          <UIcon name="add" size="md" />
+          <UIcon name="add" size="sm" />
         </UButton>
-      </div>
-    </header>
+      </template>
+    </AppHeader>
 
     <!-- Content -->
     <main class="px-5 pt-8 space-y-6">

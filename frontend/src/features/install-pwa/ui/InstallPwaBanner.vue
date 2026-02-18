@@ -2,11 +2,11 @@
 import { UCard, UIcon } from '@/shared/ui';
 import { usePwaInstall } from '../model/usePwaInstall';
 
-const { showBanner, dismissBanner } = usePwaInstall();
-
 const emit = defineEmits<{
   install: [];
 }>();
+
+const { showBanner, dismissBanner } = usePwaInstall();
 
 function handleClick() {
   emit('install');

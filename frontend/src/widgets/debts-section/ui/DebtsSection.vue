@@ -5,8 +5,14 @@ import {
   type Debt,
   DEBT_DIRECTION_COLORS,
 } from '@/entities/debt';
-import { UIcon, UButton, UTabs } from '@/shared/ui';
-import { formatCurrency } from '@/shared/lib/format/currency';
+import {
+  UBadge,
+  UTabs,
+  SectionHeader,
+  IconBadge,
+  EmptyState,
+} from '@/shared/ui';
+import { formatMasked } from '@/shared/lib/format/currency';
 import { formatDate } from '@/shared/lib/format/date';
 import { useExchangeRates } from '@/shared/api';
 
@@ -120,35 +126,19 @@ function isOverdue(date: string | null): boolean {
 <template>
   <div class="space-y-3">
     <!-- Header -->
-    <div class="flex items-center justify-between">
-      <div class="flex items-center gap-2">
-        <h2
-          class="text-base font-semibold text-text-primary-light dark:text-text-primary-dark"
+    <SectionHeader
+      title="Долги"
+      :count="activeDebts.length"
+      :show-view-all="activeDebts.length > 0"
+      @add-click="$emit('add-click')"
+      @view-all="$emit('view-all')"
+    >
+      <template #badge>
+        <UBadge v-if="overdueCount > 0" variant="danger" size="xs"
+          >{{ overdueCount }} просрочено</UBadge
         >
-          Долги
-        </h2>
-        <span
-          v-if="overdueCount > 0"
-          class="px-1.5 py-0.5 text-xs font-semibold rounded-md bg-danger text-white"
-        >
-          {{ overdueCount }}
-        </span>
-      </div>
-      <div class="flex items-center gap-1">
-        <UButton variant="ghost" size="xs" @click="$emit('add-click')">
-          <UIcon name="add" size="xs" />
-        </UButton>
-        <UButton
-          v-if="activeDebts.length > 0"
-          variant="ghost"
-          size="xs"
-          @click="$emit('view-all')"
-        >
-          Все
-          <UIcon name="chevron_right" size="xs" />
-        </UButton>
-      </div>
-    </div>
+      </template>
+    </SectionHeader>
 
     <!-- Tabs -->
     <UTabs
@@ -171,27 +161,20 @@ function isOverdue(date: string | null): boolean {
       class="space-y-2"
     >
       <button
-        v-for="(group, index) in filteredDebts.slice(0, 4)"
+        v-for="group in filteredDebts.slice(0, 4)"
         :key="`${group.personName}_${group.debtType}`"
         class="w-full p-3 rounded-xl text-left bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark hover:bg-surface-light dark:hover:bg-surface-dark active:opacity-80 transition-all duration-150"
         @click="handleGroupClick(group)"
       >
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-3 min-w-0">
-            <div
-              class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-              :style="{
-                backgroundColor: `${DEBT_DIRECTION_COLORS[group.debtType]}12`,
-              }"
-            >
-              <UIcon
-                :name="
-                  group.debtType === 'given' ? 'arrow_upward' : 'arrow_downward'
-                "
-                size="xs"
-                :style="{ color: DEBT_DIRECTION_COLORS[group.debtType] }"
-              />
-            </div>
+            <IconBadge
+              :icon="
+                group.debtType === 'given' ? 'arrow_upward' : 'arrow_downward'
+              "
+              size="sm"
+              :color="DEBT_DIRECTION_COLORS[group.debtType]"
+            />
             <div class="min-w-0">
               <p
                 class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark truncate"
@@ -217,7 +200,11 @@ function isOverdue(date: string | null): boolean {
                 v-else
                 class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
               >
-                {{ group.debts.length > 1 ? `${group.debts.length} долга` : 'Без срока' }}
+                {{
+                  group.debts.length > 1
+                    ? `${group.debts.length} долга`
+                    : 'Без срока'
+                }}
               </p>
             </div>
           </div>
@@ -226,37 +213,32 @@ function isOverdue(date: string | null): boolean {
             class="text-sm font-semibold shrink-0"
             :style="{ color: DEBT_DIRECTION_COLORS[group.debtType] }"
           >
-            {{ hidden ? '••••' : formatCurrency(group.totalRemaining, currency) }}
+            {{ formatMasked(group.totalRemaining, currency, hidden ?? false) }}
           </p>
         </div>
       </button>
     </TransitionGroup>
 
     <!-- Empty state for current tab -->
-    <div
-      v-else-if="activeDebts.length > 0"
-      class="py-6 text-center"
-    >
+    <div v-else-if="activeDebts.length > 0" class="py-6 text-center">
       <p class="text-sm text-text-tertiary-light dark:text-text-tertiary-dark">
-        {{ activeTab === 'given' ? 'Нет долгов «вам должны»' : 'Нет долгов «вы должны»' }}
+        {{
+          activeTab === 'given'
+            ? 'Нет долгов «вам должны»'
+            : 'Нет долгов «вы должны»'
+        }}
       </p>
     </div>
 
     <!-- Empty state — no debts at all -->
-    <div
+    <EmptyState
       v-else-if="!loading"
-      class="py-8 text-center rounded-xl border border-border-light dark:border-border-dark border-dashed"
-    >
-      <div
-        class="w-10 h-10 mx-auto mb-2 rounded-lg bg-success-light flex items-center justify-center"
-      >
-        <UIcon name="check_circle" size="md" class="text-success" />
-      </div>
-      <p class="text-sm font-medium text-success mb-0.5">Вы без долгов!</p>
-      <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
-        Отличная финансовая дисциплина
-      </p>
-    </div>
+      variant="inline"
+      icon="check_circle"
+      title="Вы без долгов!"
+      description="Отличная финансовая дисциплина"
+      icon-bg-class="bg-success-light"
+    />
   </div>
 </template>
 

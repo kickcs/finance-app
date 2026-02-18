@@ -115,3 +115,17 @@ export function formatNumberWithSpaces(value: number | string): string {
 export function parseFormattedNumber(value: string): string {
   return value.replace(/\s/g, '');
 }
+
+/**
+ * Format currency with optional masking for hidden balances
+ * Replaces the repeated pattern: hidden ? '••••' : formatCurrency(...)
+ */
+export function formatMasked(
+  amount: number,
+  currencyCode: string,
+  hidden: boolean,
+  options?: Parameters<typeof formatCurrency>[2],
+): string {
+  if (hidden) return '••••';
+  return formatCurrency(amount, currencyCode, options);
+}

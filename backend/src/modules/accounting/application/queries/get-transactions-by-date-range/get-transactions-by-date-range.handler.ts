@@ -7,7 +7,9 @@ import {
 } from '../../../domain/repositories/transaction.repository.interface';
 
 @QueryHandler(GetTransactionsByDateRangeQuery)
-export class GetTransactionsByDateRangeHandler implements IQueryHandler<GetTransactionsByDateRangeQuery> {
+export class GetTransactionsByDateRangeHandler
+  implements IQueryHandler<GetTransactionsByDateRangeQuery>
+{
   constructor(
     @Inject(TRANSACTION_REPOSITORY)
     private readonly transactionRepository: ITransactionRepository,

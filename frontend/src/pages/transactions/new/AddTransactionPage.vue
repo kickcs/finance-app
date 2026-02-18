@@ -4,7 +4,11 @@ import { useRouter, useRoute } from 'vue-router';
 import type { Ref } from 'vue';
 import type { User } from '@/shared/api/composables/useAuth';
 import { UButton, UIcon } from '@/shared/ui';
-import { TransactionForm, useAddTransaction } from '@/features/add-transaction';
+import {
+  TransactionForm,
+  useTransactionForm,
+  useSubmitTransaction,
+} from '@/features/add-transaction';
 import { useAccounts, accountQueryKeys } from '@/entities/account';
 import { useCategories } from '@/entities/category';
 import { useProfile, queryClient } from '@/shared/api';
@@ -33,8 +37,8 @@ const _isLoading = computed(
 );
 
 // Use the add transaction feature
-const { formData, isSubmitting, error, addTransaction, setType, updateField } =
-  useAddTransaction();
+const { formData, isValid, setType, updateField } = useTransactionForm();
+const { isSubmitting, error, submit } = useSubmitTransaction();
 
 // Use split expense feature
 const {
@@ -58,7 +62,11 @@ onMounted(() => {
   resetSplit();
 
   const typeParam = route.query.type as string;
-  if (typeParam === 'income' || typeParam === 'expense' || typeParam === 'transfer') {
+  if (
+    typeParam === 'income' ||
+    typeParam === 'expense' ||
+    typeParam === 'transfer'
+  ) {
     setType(typeParam);
   }
 
@@ -110,7 +118,7 @@ async function handleSubmit() {
     return;
   }
 
-  const transactionId = await addTransaction(userId.value);
+  const transactionId = await submit(userId.value, formData.value);
 
   if (transactionId) {
     // Create debts for split expense if enabled
@@ -230,6 +238,7 @@ function goBack() {
         :income-categories="incomeCategories"
         :user-currency="userCurrency"
         :is-submitting="isSubmitting"
+        :is-valid="isValid"
         :error="error"
         :split-data="splitData"
         :split-validation-error="splitValidationError"

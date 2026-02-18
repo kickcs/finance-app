@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { computed, inject } from 'vue';
-import type { Ref } from 'vue';
-import type { User } from '@/shared/api/composables/useAuth';
+import { computed } from 'vue';
+import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useRouter } from 'vue-router';
 import { AppHeader } from '@/widgets/header';
 import { navigateBack } from '@/app/router';
@@ -17,9 +16,7 @@ import { useProfile, useExchangeRates } from '@/shared/api';
 
 const router = useRouter();
 
-// Get user from provide/inject
-const user = inject<Ref<User | null>>('user');
-const userId = computed(() => user?.value?.id ?? '');
+const { userId } = useCurrentUser();
 
 // Get user currency from profile
 const { profile } = useProfile(userId);

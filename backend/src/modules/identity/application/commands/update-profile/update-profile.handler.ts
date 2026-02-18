@@ -10,7 +10,9 @@ import { DomainEventPublisher } from '../../../../../shared';
 import { ProfileResponse } from '../../types';
 
 @CommandHandler(UpdateProfileCommand)
-export class UpdateProfileHandler implements ICommandHandler<UpdateProfileCommand> {
+export class UpdateProfileHandler
+  implements ICommandHandler<UpdateProfileCommand>
+{
   constructor(
     @Inject(PROFILE_REPOSITORY)
     private readonly profileRepository: IProfileRepository,

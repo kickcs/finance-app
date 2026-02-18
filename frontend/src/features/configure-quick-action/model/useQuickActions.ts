@@ -18,10 +18,7 @@ export function useQuickActions() {
 
   function addAction(action: Omit<QuickAction, 'id'>) {
     if (actions.value.length >= MAX_SLOTS) return;
-    actions.value = [
-      ...actions.value,
-      { ...action, id: crypto.randomUUID() },
-    ];
+    actions.value = [...actions.value, { ...action, id: crypto.randomUUID() }];
   }
 
   function updateAction(id: string, updates: Partial<Omit<QuickAction, 'id'>>) {
@@ -38,5 +35,13 @@ export function useQuickActions() {
     hidden.value = !hidden.value;
   }
 
-  return { slots, actions, hidden, addAction, updateAction, removeAction, toggleHidden };
+  return {
+    slots,
+    actions,
+    hidden,
+    addAction,
+    updateAction,
+    removeAction,
+    toggleHidden,
+  };
 }

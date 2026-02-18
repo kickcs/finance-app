@@ -115,9 +115,7 @@ async function handleNativeInstall() {
       </div>
 
       <div v-else class="space-y-3">
-        <InstallStep :step="1">
-          Откройте меню браузера
-        </InstallStep>
+        <InstallStep :step="1"> Откройте меню браузера </InstallStep>
 
         <InstallStep :step="2">
           Нажмите

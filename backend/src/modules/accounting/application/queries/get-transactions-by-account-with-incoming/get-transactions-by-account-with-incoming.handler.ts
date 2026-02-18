@@ -11,7 +11,9 @@ import {
 } from '../../../domain/repositories/account.repository.interface';
 
 @QueryHandler(GetTransactionsByAccountWithIncomingQuery)
-export class GetTransactionsByAccountWithIncomingHandler implements IQueryHandler<GetTransactionsByAccountWithIncomingQuery> {
+export class GetTransactionsByAccountWithIncomingHandler
+  implements IQueryHandler<GetTransactionsByAccountWithIncomingQuery>
+{
   constructor(
     @Inject(TRANSACTION_REPOSITORY)
     private readonly transactionRepository: ITransactionRepository,

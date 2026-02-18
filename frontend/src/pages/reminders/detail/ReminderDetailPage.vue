@@ -1,8 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, inject } from 'vue';
+import { ref, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import type { Ref } from 'vue';
-import type { User } from '@/shared/api/composables/useAuth';
 import { UButton, UIcon, UCard } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { formatDate } from '@/shared/lib/format/date';
@@ -17,16 +15,14 @@ import {
   useEditReminder,
 } from '@/features/edit-reminder';
 import { navigateBack } from '@/app/router';
+import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
+import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 
 const router = useRouter();
 const route = useRoute();
-const user = inject<Ref<User | null>>('user');
-
-const userId = computed(() => user?.value?.id ?? '');
+const { userId } = useCurrentUser();
+const { currency } = useUserCurrency();
 const reminderId = computed(() => route.params.id as string);
-
-// Get currency from localStorage
-const currency = localStorage.getItem('selectedCurrency') || 'UZS';
 
 // Get reminders
 const { reminders, isLoading } = useReminders(userId);

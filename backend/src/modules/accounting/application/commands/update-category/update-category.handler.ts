@@ -7,7 +7,9 @@ import {
 } from '../../../domain/repositories/category.repository.interface';
 
 @CommandHandler(UpdateCategoryCommand)
-export class UpdateCategoryHandler implements ICommandHandler<UpdateCategoryCommand> {
+export class UpdateCategoryHandler
+  implements ICommandHandler<UpdateCategoryCommand>
+{
   constructor(
     @Inject(CATEGORY_REPOSITORY)
     private readonly categoryRepository: ICategoryRepository,

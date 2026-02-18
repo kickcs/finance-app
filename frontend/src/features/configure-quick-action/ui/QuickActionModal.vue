@@ -44,7 +44,9 @@ watch(
 
 function handleSave() {
   if (!canSave.value) return;
-  const cat = props.expenseCategories.find((c) => c.id === selectedCategoryId.value);
+  const cat = props.expenseCategories.find(
+    (c) => c.id === selectedCategoryId.value,
+  );
   emit('save', {
     label: cat?.name || 'Расход',
     categoryId: selectedCategoryId.value,
@@ -68,7 +70,9 @@ function handleDelete() {
     <div class="space-y-4">
       <!-- Category grid -->
       <div>
-        <p class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
+        <p
+          class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2"
+        >
           Категория
         </p>
         <div class="grid grid-cols-4 gap-2">
@@ -105,7 +109,9 @@ function handleDelete() {
 
       <!-- Account selector -->
       <div>
-        <p class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
+        <p
+          class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2"
+        >
           Счёт
         </p>
         <div class="flex gap-2 flex-wrap">
@@ -123,7 +129,11 @@ function handleDelete() {
             <UIcon
               name="account_balance_wallet"
               size="xs"
-              :class="selectedAccountId === account.id ? 'text-primary' : 'text-text-tertiary-light dark:text-text-tertiary-dark'"
+              :class="
+                selectedAccountId === account.id
+                  ? 'text-primary'
+                  : 'text-text-tertiary-light dark:text-text-tertiary-dark'
+              "
             />
             {{ account.name }}
           </button>

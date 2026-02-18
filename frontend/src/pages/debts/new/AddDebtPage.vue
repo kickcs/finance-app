@@ -1,17 +1,13 @@
 <script setup lang="ts">
-import { computed, inject } from 'vue';
 import { useRouter } from 'vue-router';
-import type { Ref } from 'vue';
-import type { User } from '@/shared/api/composables/useAuth';
 import { UButton, UIcon } from '@/shared/ui';
 import { DebtForm, useCreateDebt } from '@/features/create-debt';
 import { useAccounts } from '@/entities/account';
 import { navigateBack } from '@/app/router';
+import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 
 const router = useRouter();
-const user = inject<Ref<User | null>>('user');
-
-const userId = computed(() => user?.value?.id ?? '');
+const { userId } = useCurrentUser();
 
 // Get accounts for selection (with balances)
 const { accounts, isLoading: accountsLoading } = useAccounts(userId);

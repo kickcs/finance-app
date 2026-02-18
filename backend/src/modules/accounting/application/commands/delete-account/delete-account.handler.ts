@@ -17,7 +17,9 @@ import {
 import { DomainEventPublisher } from '../../../../../shared';
 
 @CommandHandler(DeleteAccountCommand)
-export class DeleteAccountHandler implements ICommandHandler<DeleteAccountCommand> {
+export class DeleteAccountHandler
+  implements ICommandHandler<DeleteAccountCommand>
+{
   constructor(
     @Inject(ACCOUNT_REPOSITORY)
     private readonly accountRepository: IAccountRepository,

@@ -7,7 +7,9 @@ import {
 } from '../../../domain/repositories/category.repository.interface';
 
 @CommandHandler(ReorderCategoriesCommand)
-export class ReorderCategoriesHandler implements ICommandHandler<ReorderCategoriesCommand> {
+export class ReorderCategoriesHandler
+  implements ICommandHandler<ReorderCategoriesCommand>
+{
   constructor(
     @Inject(CATEGORY_REPOSITORY)
     private readonly categoryRepository: ICategoryRepository,

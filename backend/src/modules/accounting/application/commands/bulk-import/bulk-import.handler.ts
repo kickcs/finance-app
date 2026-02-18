@@ -20,9 +20,7 @@ import {
 import { DomainEventPublisher } from '../../../../../shared';
 
 @CommandHandler(BulkImportCommand)
-export class BulkImportHandler
-  implements ICommandHandler<BulkImportCommand>
-{
+export class BulkImportHandler implements ICommandHandler<BulkImportCommand> {
   constructor(
     @Inject(TRANSACTION_REPOSITORY)
     private readonly transactionRepository: ITransactionRepository,

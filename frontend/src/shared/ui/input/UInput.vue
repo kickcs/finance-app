@@ -72,7 +72,9 @@ const inputValue = computed({
   },
   set: (value) => {
     if (props.variant === 'currency') {
-      const cleaned = String(value).replace(/,/g, '.').replace(/[^\d.]/g, '');
+      const cleaned = String(value)
+        .replace(/,/g, '.')
+        .replace(/[^\d.]/g, '');
       const parts = cleaned.split('.');
       const sanitized =
         parts.length > 2 ? `${parts[0]}.${parts.slice(1).join('')}` : cleaned;
@@ -145,8 +147,8 @@ defineExpose({
 
       <!-- Input -->
       <input
-        ref="inputRef"
         :id="inputId"
+        ref="inputRef"
         v-model="inputValue"
         :type="inputType"
         :inputmode="inputMode"

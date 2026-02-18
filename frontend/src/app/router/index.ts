@@ -223,7 +223,8 @@ export const router = createRouter({
     {
       path: '/settings/quick-actions',
       name: 'settings-quick-actions',
-      component: () => import('@/pages/settings/quick-actions/QuickActionsSettingsPage.vue'),
+      component: () =>
+        import('@/pages/settings/quick-actions/QuickActionsSettingsPage.vue'),
       meta: { requiresAuth: true, requiresOnboarding: true },
     },
     // Catch-all redirect
@@ -261,8 +262,7 @@ function hasSeenOnboarding(): boolean {
 function checkDemoExpiryFast(user: User): boolean {
   if (!user.isDemo) return false;
 
-  const expiresAt =
-    user.demoExpiresAt || localStorage.getItem('demoExpiresAt');
+  const expiresAt = user.demoExpiresAt || localStorage.getItem('demoExpiresAt');
   if (!expiresAt) return false;
 
   return new Date(expiresAt) < new Date();

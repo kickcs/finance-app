@@ -7,7 +7,9 @@ import {
 } from '../../../domain/repositories/account-balance.repository.interface';
 
 @QueryHandler(GetBalancesByAccountQuery)
-export class GetBalancesByAccountHandler implements IQueryHandler<GetBalancesByAccountQuery> {
+export class GetBalancesByAccountHandler
+  implements IQueryHandler<GetBalancesByAccountQuery>
+{
   constructor(
     @Inject(ACCOUNT_BALANCE_REPOSITORY)
     private readonly accountBalanceRepository: IAccountBalanceRepository,

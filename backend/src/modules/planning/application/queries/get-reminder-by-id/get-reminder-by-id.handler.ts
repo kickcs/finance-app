@@ -8,7 +8,9 @@ import {
 import { ReminderResponseMapper } from '../../mappers';
 
 @QueryHandler(GetReminderByIdQuery)
-export class GetReminderByIdHandler implements IQueryHandler<GetReminderByIdQuery> {
+export class GetReminderByIdHandler
+  implements IQueryHandler<GetReminderByIdQuery>
+{
   constructor(
     @Inject(REMINDER_REPOSITORY)
     private readonly reminderRepository: IReminderRepository,

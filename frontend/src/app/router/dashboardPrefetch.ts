@@ -50,7 +50,11 @@ export function prefetchDashboardData(userId: string) {
         queryFn: () => transactionsApi.getMonthlyStats(userId, year, month),
       });
       queryClient.prefetchQuery({
-        queryKey: transactionQueryKeys.monthlyStats(userId, lastYear, lastMonthNum),
+        queryKey: transactionQueryKeys.monthlyStats(
+          userId,
+          lastYear,
+          lastMonthNum,
+        ),
         queryFn: () =>
           transactionsApi.getMonthlyStats(userId, lastYear, lastMonthNum),
       });

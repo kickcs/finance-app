@@ -133,7 +133,7 @@ const progressOffset = computed(() => {
             fill="none"
             :stroke-width="strokeWidth"
             stroke-linecap="round"
-            class="stroke-gray-100 dark:stroke-gray-800"
+            class="stroke-surface-light dark:stroke-surface-dark"
           />
 
           <!-- Progress arc -->
@@ -172,7 +172,9 @@ const progressOffset = computed(() => {
     </div>
 
     <!-- Stats breakdown - 3 rows layout -->
-    <div class="space-y-3 py-3 border-t border-gray-100 dark:border-gray-800">
+    <div
+      class="space-y-3 py-3 border-t border-border-light dark:border-border-dark"
+    >
       <!-- Income row -->
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-2">
@@ -213,7 +215,7 @@ const progressOffset = computed(() => {
 
       <!-- Savings row -->
       <div
-        class="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-800"
+        class="flex items-center justify-between pt-2 border-t border-border-light dark:border-border-dark"
       >
         <div class="flex items-center gap-2">
           <div

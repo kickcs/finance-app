@@ -7,7 +7,9 @@ import {
 } from '../../../domain/repositories/account-balance.repository.interface';
 
 @CommandHandler(DeleteBalancesByAccountCommand)
-export class DeleteBalancesByAccountHandler implements ICommandHandler<DeleteBalancesByAccountCommand> {
+export class DeleteBalancesByAccountHandler
+  implements ICommandHandler<DeleteBalancesByAccountCommand>
+{
   constructor(
     @Inject(ACCOUNT_BALANCE_REPOSITORY)
     private readonly accountBalanceRepository: IAccountBalanceRepository,

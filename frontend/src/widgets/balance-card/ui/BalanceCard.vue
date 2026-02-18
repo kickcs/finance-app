@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { UIcon } from '@/shared/ui';
-import { formatCurrency, COMPACT_FORMAT } from '@/shared/lib/format/currency';
+import { UIcon, Skeleton } from '@/shared/ui';
+import { formatMasked, COMPACT_FORMAT } from '@/shared/lib/format/currency';
 
 defineProps<{
   totalBalance: number;
@@ -31,18 +31,12 @@ defineEmits<{
         class="p-1 rounded-md text-text-tertiary-light dark:text-text-tertiary-dark hover:text-text-secondary-light dark:hover:text-text-secondary-dark transition-colors"
         @click="$emit('toggle-hidden')"
       >
-        <UIcon
-          :name="hidden ? 'visibility_off' : 'visibility'"
-          size="xs"
-        />
+        <UIcon :name="hidden ? 'visibility_off' : 'visibility'" size="xs" />
       </button>
     </div>
 
     <!-- Loading skeleton -->
-    <div
-      v-if="loading"
-      class="h-12 w-48 mx-auto rounded-lg bg-surface-light dark:bg-surface-dark animate-shimmer mb-3"
-    />
+    <Skeleton v-if="loading" class="h-12 w-48 mx-auto rounded-lg mb-3" />
 
     <!-- Balance amount -->
     <Transition
@@ -54,7 +48,9 @@ defineEmits<{
         v-if="!loading"
         class="text-4xl sm:text-5xl font-bold tracking-tight text-text-primary-light dark:text-text-primary-dark"
       >
-        {{ hidden ? '••••••' : formatCurrency(totalBalance, currency, COMPACT_FORMAT) }}
+        {{
+          formatMasked(totalBalance, currency, hidden ?? false, COMPACT_FORMAT)
+        }}
       </h1>
     </Transition>
 
@@ -72,7 +68,10 @@ defineEmits<{
         :name="percentChange >= 0 ? 'trending_up' : 'trending_down'"
         size="xs"
       />
-      <span>{{ percentChange >= 0 ? '+' : '' }}{{ percentChange.toFixed(1) }}% за месяц</span>
+      <span
+        >{{ percentChange >= 0 ? '+' : '' }}{{ percentChange.toFixed(1) }}% за
+        месяц</span
+      >
     </div>
 
     <!-- Quick Action Buttons -->

@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, inject } from 'vue';
+import { ref, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import type { Ref } from 'vue';
-import type { User } from '@/shared/api/composables/useAuth';
+import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { UButton, UIcon, UCard, EmptyState } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { formatDateGroup } from '@/shared/lib/format/date';
@@ -38,9 +37,7 @@ import { debtsApi } from '@/entities/debt';
 
 const router = useRouter();
 const route = useRoute();
-const user = inject<Ref<User | null>>('user');
-
-const userId = computed(() => user?.value?.id ?? '');
+const { userId } = useCurrentUser();
 const accountId = computed(() => route.params.id as string);
 
 // Get user currency and default account from profile

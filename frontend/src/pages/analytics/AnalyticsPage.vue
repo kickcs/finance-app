@@ -5,6 +5,7 @@ import type { User } from '@/shared/api/composables/useAuth';
 import { useRouter, useRoute } from 'vue-router';
 import { AppHeader } from '@/widgets/header';
 import { BottomNav } from '@/widgets/bottom-nav';
+import { StatCard } from '@/widgets/analytics';
 import { UTabs, UCard, UIcon, UProgressBar, Skeleton } from '@/shared/ui';
 import {
   useAnalyticsStats,
@@ -215,51 +216,22 @@ onMounted(() => {
 
       <!-- Summary Cards - Horizontal Layout -->
       <div class="space-y-3">
-        <UCard class="p-4">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-3">
-              <div
-                class="w-10 h-10 rounded-xl bg-danger/10 flex items-center justify-center"
-              >
-                <UIcon name="trending_down" size="md" class="text-danger" />
-              </div>
-              <span
-                class="text-text-secondary-light dark:text-text-secondary-dark"
-                >Расходы</span
-              >
-            </div>
-            <Skeleton v-if="analyticsLoading" class="h-7 w-32 rounded" />
-            <span
-              v-else
-              class="text-xl font-bold text-text-primary-light dark:text-text-primary-dark"
-            >
-              {{ formatCurrency(totalExpense, currency, COMPACT_FORMAT) }}
-            </span>
-          </div>
-        </UCard>
-
-        <UCard class="p-4">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-3">
-              <div
-                class="w-10 h-10 rounded-xl bg-success/10 flex items-center justify-center"
-              >
-                <UIcon name="trending_up" size="md" class="text-success" />
-              </div>
-              <span
-                class="text-text-secondary-light dark:text-text-secondary-dark"
-                >Доходы</span
-              >
-            </div>
-            <Skeleton v-if="analyticsLoading" class="h-7 w-32 rounded" />
-            <span
-              v-else
-              class="text-xl font-bold text-text-primary-light dark:text-text-primary-dark"
-            >
-              {{ formatCurrency(totalIncome, currency, COMPACT_FORMAT) }}
-            </span>
-          </div>
-        </UCard>
+        <StatCard
+          icon="trending_down"
+          label="Расходы"
+          :value="formatCurrency(totalExpense, currency, COMPACT_FORMAT)"
+          :loading="analyticsLoading"
+          icon-bg-class="bg-danger/10"
+          icon-class="text-danger"
+        />
+        <StatCard
+          icon="trending_up"
+          label="Доходы"
+          :value="formatCurrency(totalIncome, currency, COMPACT_FORMAT)"
+          :loading="analyticsLoading"
+          icon-bg-class="bg-success/10"
+          icon-class="text-success"
+        />
       </div>
 
       <!-- Debt Summary Cards -->
@@ -287,55 +259,22 @@ onMounted(() => {
         </template>
 
         <template v-else>
-          <UCard v-if="totalOwedToMe > 0" class="p-4">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-3">
-                <div
-                  class="w-10 h-10 rounded-xl bg-debt-given-light flex items-center justify-center"
-                >
-                  <UIcon
-                    name="arrow_upward"
-                    size="md"
-                    class="text-debt-given"
-                  />
-                </div>
-                <span
-                  class="text-text-secondary-light dark:text-text-secondary-dark"
-                  >Мне должны</span
-                >
-              </div>
-              <span
-                class="text-xl font-bold text-text-primary-light dark:text-text-primary-dark"
-              >
-                {{ formatCurrency(totalOwedToMe, currency, COMPACT_FORMAT) }}
-              </span>
-            </div>
-          </UCard>
-
-          <UCard v-if="totalIOwe > 0" class="p-4">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-3">
-                <div
-                  class="w-10 h-10 rounded-xl bg-debt-received-light flex items-center justify-center"
-                >
-                  <UIcon
-                    name="arrow_downward"
-                    size="md"
-                    class="text-debt-received"
-                  />
-                </div>
-                <span
-                  class="text-text-secondary-light dark:text-text-secondary-dark"
-                  >Я должен</span
-                >
-              </div>
-              <span
-                class="text-xl font-bold text-text-primary-light dark:text-text-primary-dark"
-              >
-                {{ formatCurrency(totalIOwe, currency, COMPACT_FORMAT) }}
-              </span>
-            </div>
-          </UCard>
+          <StatCard
+            v-if="totalOwedToMe > 0"
+            icon="arrow_upward"
+            label="Мне должны"
+            :value="formatCurrency(totalOwedToMe, currency, COMPACT_FORMAT)"
+            icon-bg-class="bg-debt-given-light"
+            icon-class="text-debt-given"
+          />
+          <StatCard
+            v-if="totalIOwe > 0"
+            icon="arrow_downward"
+            label="Я должен"
+            :value="formatCurrency(totalIOwe, currency, COMPACT_FORMAT)"
+            icon-bg-class="bg-debt-received-light"
+            icon-class="text-debt-received"
+          />
         </template>
       </div>
 
