@@ -8,20 +8,41 @@ export const TRANSACTION_TYPE_ORDER = [
 ] as const;
 export type TransactionType = (typeof TRANSACTION_TYPE_ORDER)[number];
 
+// Generated from TRANSACTION_TYPE_ORDER: [last_clone, ...real, first_clone]
+export const CYCLIC_PANEL_ORDER: TransactionType[] = [
+  TRANSACTION_TYPE_ORDER[TRANSACTION_TYPE_ORDER.length - 1],
+  ...TRANSACTION_TYPE_ORDER,
+  TRANSACTION_TYPE_ORDER[0],
+];
+
+const REAL_START = 1;
+const REAL_END = CYCLIC_PANEL_ORDER.length - 2;
+const PANEL_COUNT = CYCLIC_PANEL_ORDER.length;
+
 export function useScrollableTabs(
   type: Ref<TransactionType>,
   onTypeChange: (type: TransactionType) => void,
 ) {
   const scrollContainer = ref<HTMLElement | null>(null);
   let isScrollingProgrammatically = false;
+  let isWrapping = false;
   let scrollDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+  let scrollendCleanup: (() => void) | null = null;
 
   function resetProgrammaticFlag() {
     isScrollingProgrammatically = false;
+    scrollendCleanup = null;
   }
 
-  function scrollToPanel(index: number, smooth = true) {
+  function getRealIndex(t: TransactionType): number {
+    return REAL_START + TRANSACTION_TYPE_ORDER.indexOf(t);
+  }
+
+  function scrollToIndex(index: number, smooth = true) {
     if (!scrollContainer.value) return;
+
+    // Clean up previous listener if any
+    scrollendCleanup?.();
 
     isScrollingProgrammatically = true;
     const panelWidth = scrollContainer.value.offsetWidth;
@@ -30,40 +51,83 @@ export function useScrollableTabs(
       behavior: smooth ? 'smooth' : 'instant',
     });
 
-    scrollContainer.value.addEventListener('scrollend', resetProgrammaticFlag, {
-      once: true,
-    });
+    const handler = () => resetProgrammaticFlag();
+    scrollContainer.value.addEventListener('scrollend', handler, { once: true });
+    scrollendCleanup = () => {
+      scrollContainer.value?.removeEventListener('scrollend', handler);
+      scrollendCleanup = null;
+    };
+    // Fallback for browsers without scrollend support
     setTimeout(resetProgrammaticFlag, 600);
+  }
+
+  function jumpToIndex(index: number) {
+    if (!scrollContainer.value) return;
+    const panelWidth = scrollContainer.value.offsetWidth;
+    scrollContainer.value.scrollTo({
+      left: panelWidth * index,
+      behavior: 'instant',
+    });
+  }
+
+  function getCurrentIndex(): number {
+    if (!scrollContainer.value) return REAL_START;
+    const panelWidth = scrollContainer.value.offsetWidth;
+    return Math.round(scrollContainer.value.scrollLeft / panelWidth);
+  }
+
+  function handleCyclicWrap() {
+    const index = getCurrentIndex();
+
+    // Scrolled to the left clone → jump to real last panel
+    if (index <= 0) {
+      isWrapping = true;
+      jumpToIndex(REAL_END);
+      onTypeChange(CYCLIC_PANEL_ORDER[REAL_END]);
+      isWrapping = false;
+      return true;
+    }
+
+    // Scrolled to the right clone → jump to real first panel
+    if (index >= PANEL_COUNT - 1) {
+      isWrapping = true;
+      jumpToIndex(REAL_START);
+      onTypeChange(CYCLIC_PANEL_ORDER[REAL_START]);
+      isWrapping = false;
+      return true;
+    }
+
+    return false;
   }
 
   function detectPanelFromScroll() {
     if (isScrollingProgrammatically || !scrollContainer.value) return;
 
-    const container = scrollContainer.value;
-    const panelWidth = container.offsetWidth;
-    const scrollLeft = container.scrollLeft;
-    const index = Math.round(scrollLeft / panelWidth);
+    if (handleCyclicWrap()) return;
+
+    const index = getCurrentIndex();
     const clampedIndex = Math.max(
-      0,
-      Math.min(index, TRANSACTION_TYPE_ORDER.length - 1),
+      REAL_START,
+      Math.min(index, REAL_END),
     );
-    const newType = TRANSACTION_TYPE_ORDER[clampedIndex];
+    const newType = CYCLIC_PANEL_ORDER[clampedIndex];
 
     if (newType !== type.value) {
       onTypeChange(newType);
     }
   }
 
-  function handleTabClick(clickedType: string) {
-    const index = TRANSACTION_TYPE_ORDER.indexOf(
-      clickedType as TransactionType,
-    );
-    if (index === -1) return;
-    onTypeChange(clickedType as TransactionType);
-    scrollToPanel(index);
+  function handleTabClick(clickedType: TransactionType) {
+    const rawIndex = TRANSACTION_TYPE_ORDER.indexOf(clickedType);
+    if (rawIndex === -1) return;
+    const index = REAL_START + rawIndex;
+    onTypeChange(clickedType);
+    scrollToIndex(index);
   }
 
   function handleScrollEnd() {
+    if (isScrollingProgrammatically) return;
+    if (scrollDebounceTimer) clearTimeout(scrollDebounceTimer);
     detectPanelFromScroll();
   }
 
@@ -76,28 +140,24 @@ export function useScrollableTabs(
 
   onMounted(() => {
     nextTick(() => {
-      const index = TRANSACTION_TYPE_ORDER.indexOf(type.value);
-      if (index > 0) {
-        scrollToPanel(index, false);
-      }
+      const index = getRealIndex(type.value);
+      scrollToIndex(index, false);
     });
   });
 
   onUnmounted(() => {
     if (scrollDebounceTimer) clearTimeout(scrollDebounceTimer);
+    scrollendCleanup?.();
   });
 
   watch(type, (newType) => {
-    const index = TRANSACTION_TYPE_ORDER.indexOf(newType);
-    if (index === -1 || !scrollContainer.value) return;
+    if (isWrapping) return;
+    const index = getRealIndex(newType);
+    if (!scrollContainer.value) return;
 
-    const panelWidth = scrollContainer.value.offsetWidth;
-    const currentIndex = Math.round(
-      scrollContainer.value.scrollLeft / panelWidth,
-    );
-
+    const currentIndex = getCurrentIndex();
     if (currentIndex !== index) {
-      scrollToPanel(index);
+      scrollToIndex(index);
     }
   });
 

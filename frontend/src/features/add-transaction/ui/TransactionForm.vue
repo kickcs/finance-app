@@ -7,7 +7,9 @@ import type { SplitExpenseData, SplitMethod } from '@/features/split-expense';
 import type { TransactionFormData } from '../model/useTransactionForm';
 import {
   useScrollableTabs,
+  CYCLIC_PANEL_ORDER,
   TRANSACTION_TYPE_ORDER,
+  type TransactionType,
 } from '../model/useScrollableTabs';
 import ExpensePanel from './ExpensePanel.vue';
 import IncomePanel from './IncomePanel.vue';
@@ -61,6 +63,11 @@ function applyTypeChange(newType: string) {
 const { scrollContainer, handleTabClick, handleScrollEnd, handleScroll } =
   useScrollableTabs(type, applyTypeChange);
 
+// Only real panels (not clones) get autofocus — clones are at index 0 and last
+const realPanelIndices = new Set(
+  TRANSACTION_TYPE_ORDER.map((_, i) => i + 1),
+);
+
 const submitLabel = computed(() => {
   if (props.formData.type === 'transfer') return 'Перевести';
   if (props.formData.type === 'income') return 'Добавить доход';
@@ -78,7 +85,7 @@ const submitLabel = computed(() => {
     <UTabs
       :model-value="formData.type"
       :items="tabItems"
-      @update:model-value="handleTabClick"
+      @update:model-value="(v: string) => handleTabClick(v as TransactionType)"
     />
 
     <!-- Swipeable panels -->
@@ -89,8 +96,8 @@ const submitLabel = computed(() => {
       @scroll="handleScroll"
     >
       <div
-        v-for="panelType in TRANSACTION_TYPE_ORDER"
-        :key="panelType"
+        v-for="(panelType, idx) in CYCLIC_PANEL_ORDER"
+        :key="`${panelType}-${idx}`"
         class="min-w-full snap-start px-4"
       >
         <ExpensePanel
@@ -100,7 +107,7 @@ const submitLabel = computed(() => {
           :categories="expenseCategories"
           :split-data="splitData"
           :split-validation-error="splitValidationError"
-          :autofocus-amount="autofocusAmount"
+          :autofocus-amount="autofocusAmount && realPanelIndices.has(idx)"
           @update:form-data="$emit('update:formData', $event)"
           @add-participant="$emit('addParticipant', $event)"
           @remove-participant="$emit('removeParticipant', $event)"
