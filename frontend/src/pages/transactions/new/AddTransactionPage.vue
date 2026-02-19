@@ -185,12 +185,12 @@ function goBack() {
 </script>
 
 <template>
-  <div class="min-h-screen bg-background-light dark:bg-background-dark pb-24">
+  <div class="h-dvh flex flex-col bg-background-light dark:bg-background-dark overflow-hidden">
     <!-- Header -->
     <AppHeader title="Новая транзакция" show-back blur @back="goBack" />
 
     <!-- Content -->
-    <main class="px-4 pt-4 pb-4">
+    <main class="flex-1 flex flex-col overflow-hidden px-4 pt-2">
       <div v-if="accountsLoading" class="flex items-center justify-center py-8">
         <USpinner size="sm" />
       </div>
@@ -217,6 +217,7 @@ function goBack() {
 
       <TransactionForm
         v-else
+        class="flex-1 flex flex-col overflow-hidden"
         v-model:form-data="formData"
         :accounts="accounts"
         :expense-categories="expenseCategories"

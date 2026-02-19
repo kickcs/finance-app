@@ -93,7 +93,7 @@ function insertHashtag(tag: string) {
 
 <template>
   <form
-    class="space-y-4 transition-opacity duration-200"
+    class="flex-1 flex flex-col gap-3 transition-opacity duration-200 overflow-hidden"
     :class="isSubmitting && 'opacity-60 pointer-events-none'"
     @submit.prevent="$emit('submit')"
   >
@@ -154,79 +154,82 @@ function insertHashtag(tag: string) {
       </div>
     </div>
 
-    <!-- Description & Date -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-      <div
-        class="space-y-2"
-        @focusin="descriptionFocused = true"
-        @focusout="descriptionFocused = false"
-      >
-        <UInput
-          :model-value="formData.description"
-          label="Комментарий"
-          placeholder="Добавьте описание..."
-          @update:model-value="
-            $emit('update:formData', {
-              ...formData,
-              description: $event as string,
-            })
-          "
-          @keydown.enter.prevent
-        />
+    <!-- Bottom section -->
+    <div class="mt-auto space-y-3">
+      <!-- Description & Date -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div
+          class="space-y-2"
+          @focusin="descriptionFocused = true"
+          @focusout="descriptionFocused = false"
+        >
+          <UInput
+            :model-value="formData.description"
+            label="Комментарий"
+            placeholder="Добавьте описание..."
+            @update:model-value="
+              $emit('update:formData', {
+                ...formData,
+                description: $event as string,
+              })
+            "
+            @keydown.enter.prevent
+          />
 
-        <!-- Hashtag suggestions -->
-        <Transition name="hashtags">
-          <div
-            v-if="descriptionFocused && hashtags.length > 0"
-            class="flex gap-1.5 overflow-x-auto no-scrollbar py-0.5"
-          >
-            <button
-              v-for="h in hashtags"
-              :key="h.tag"
-              type="button"
-              class="shrink-0 px-2.5 py-1 rounded-full text-xs font-medium
-                bg-surface-light dark:bg-surface-dark
-                text-text-secondary-light dark:text-text-secondary-dark
-                hover:bg-primary-light hover:text-primary
-                active:scale-95
-                transition-all duration-150"
-              @mousedown.prevent="insertHashtag(h.tag)"
+          <!-- Hashtag suggestions -->
+          <Transition name="hashtags">
+            <div
+              v-if="descriptionFocused && hashtags.length > 0"
+              class="flex gap-1.5 overflow-x-auto no-scrollbar py-0.5"
             >
-              {{ h.tag }}
-            </button>
-          </div>
-        </Transition>
+              <button
+                v-for="h in hashtags"
+                :key="h.tag"
+                type="button"
+                class="shrink-0 px-2.5 py-1 rounded-full text-xs font-medium
+                  bg-surface-light dark:bg-surface-dark
+                  text-text-secondary-light dark:text-text-secondary-dark
+                  hover:bg-primary-light hover:text-primary
+                  active:scale-95
+                  transition-all duration-150"
+                @mousedown.prevent="insertHashtag(h.tag)"
+              >
+                {{ h.tag }}
+              </button>
+            </div>
+          </Transition>
+        </div>
+        <UInput
+          :model-value="new Date(formData.date).toISOString().split('T')[0]"
+          label="Дата"
+          type="date"
+          @update:model-value="
+            (v: string | number) => {
+              const p = String(v).split('-');
+              $emit('update:formData', {
+                ...formData,
+                date: new Date(+p[0], +p[1] - 1, +p[2]).getTime(),
+              });
+            }
+          "
+        />
       </div>
-      <UInput
-        :model-value="new Date(formData.date).toISOString().split('T')[0]"
-        label="Дата"
-        type="date"
-        @update:model-value="
-          (v: string | number) => {
-            const p = String(v).split('-');
-            $emit('update:formData', {
-              ...formData,
-              date: new Date(+p[0], +p[1] - 1, +p[2]).getTime(),
-            });
-          }
-        "
-      />
+
+      <!-- Error -->
+      <p v-if="error" class="text-xs text-danger">{{ error }}</p>
+
+      <!-- Submit -->
+      <UButton
+        type="submit"
+        variant="primary"
+        size="lg"
+        full-width
+        :loading="isSubmitting"
+        :disabled="!isValid"
+      >
+        {{ submitLabel }}
+      </UButton>
     </div>
-
-    <!-- Error -->
-    <p v-if="error" class="text-xs text-danger">{{ error }}</p>
-
-    <!-- Submit -->
-    <UButton
-      type="submit"
-      variant="primary"
-      size="lg"
-      full-width
-      :loading="isSubmitting"
-      :disabled="!isValid"
-    >
-      {{ submitLabel }}
-    </UButton>
   </form>
 </template>
 
