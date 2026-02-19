@@ -112,7 +112,7 @@ function handleAddTransaction() {
           >
             На этой неделе
           </p>
-          <p class="text-lg font-bold text-blue-500">
+          <p class="text-lg font-bold text-primary">
             {{ thisWeekReminders.length }}
           </p>
         </UCard>
