@@ -119,12 +119,114 @@ shared/     # UI components, HTTP client, hooks
 
 ### Frontend UI Components (`shared/ui/`)
 
-Custom component library wrapping Reka UI headless primitives (CVA-based variants):
-- `UButton` — variants: `primary`, `secondary`, `ghost`, `icon`, `danger`, `outline`; sizes: `xs`, `sm`, `md`, `lg`, `xl`; props: `fullWidth`, `loading`, `disabled`
-- `UBadge` — variants: `primary`, `success`, `danger`, `warning`, `neutral`, `debt-given`, `debt-received`, `goal`, `reminder`; sizes: `xs`, `sm`, `md`; shapes: `rounded`, `pill`
-- `UInput` — variants: `default`, `search`, `currency`; sizes: `md`, `lg`; supports `icon`, `suffix`, `showPasswordToggle`
-- `UCard` — variants: `default`, `bordered`, `flat`; padding: `none`, `sm`, `md`, `lg`; `hoverable`, `clickable`
-- `UModal`, `UTabs`, `UIcon`, `UProgressBar`, `Skeleton`, `SwipeableItem`, `EmptyState`, `PullToRefresh`, `Toast`
+Custom component library wrapping Reka UI headless primitives (CVA-based variants). All exported from `shared/ui/index.ts`.
+
+**Core Components:**
+- `UButton` — variants: `primary`, `secondary`, `ghost`, `icon`, `danger`, `outline`; sizes: `xs`, `sm`, `md`, `lg`, `xl`; props: `fullWidth`, `loading`, `disabled`. Heights: xs=h-7, sm=h-8, md=h-10, lg=h-11, xl=h-12. `icon` variant renders square button
+- `UBadge` — variants: `primary`, `success`, `danger`, `warning`, `neutral`, `debt-given`, `debt-received`, `goal`, `reminder`; sizes: `xs`, `sm`, `md`; shapes: `rounded`, `pill`. Domain variants use semantic tokens
+- `UInput` — variants: `default`, `search`, `currency`; sizes: `md`, `lg`; props: `icon`, `suffix`, `showPasswordToggle`, `label`, `error` (with shake animation). `currency` variant formats numbers with spaces and emits raw numeric string. Exposes `focus()` method
+- `UCard` — variants: `default`, `bordered`, `flat`; padding: `none`, `sm`, `md`, `lg`; `hoverable`, `clickable` (adds `role="button"` + `tabindex`)
+- `UModal` — props: `modelValue`, `title`, `closeable`; slots: `default` (body), `#actions` (footer). Auto scroll-lock
+- `UTabs` — props: `items: {id, label}[]`, `modelValue`, `size: 'sm'|'md'`, `variant: 'pills'|'underline'`. `pills` has animated sliding indicator. Only renders tab bar — manage content via `v-if` on modelValue
+- `UIcon` — props: `name` (Material Symbol name), `size: 'xs'|'sm'|'md'|'lg'|'xl'|'2xl'`, `filled`, `color`. Sizes: xs=12, sm=16, md=20, lg=24, xl=28, 2xl=32px. Maps via `shared/ui/icon/iconMap.ts`
+- `UProgressBar` — props: `value`, `max`, `color` (named: `primary`/`success`/`danger`/`warning` or hex), `size`, `showLabel`
+
+**Composite Components:**
+- `EmptyState` — props: `icon`, `title`, `description`, `variant: 'default'|'inline'`, `action: {label, onClick}`. `inline` variant has dashed border — use inside cards/lists
+- `SwipeableItem` — props: `leftAction`, `rightAction` (`{icon, color, label}`), `disabled`. Emits: `action-left`, `action-right`. Exposes `resetSwipe()`
+- `PullToRefresh` — props: `onRefresh: () => Promise<void>`. **Important:** breaks flex chains, wrap in separate `flex-1 overflow-y-auto` div
+- `Skeleton` / `SkeletonListItem` — `Skeleton`: `class` for shape, `variant: 'shimmer'|'pulse'`. `SkeletonListItem`: `showTrailing`, `avatarClass`
+- `IconBadge` — props: `icon`, `size`, `color` (hex — auto-generates `bg: color+'15'`), `bgClass`, `iconClass`
+- `SectionHeader` — props: `title`, `count`, `showAdd`, `showViewAll`, `viewAllText`, `badgeVariant`. Emits: `add-click`, `view-all`
+- `ConfirmDeleteModal` — props: `modelValue`, `title`, `warningText`, `confirmLabel`, `isDeleting`, `error`. Emits: `confirm`, `cancel`
+- `UColorPicker` — props: `modelValue`, `colors: string[]`, `label`. Grid of color swatches
+- `UIconSelector` — props: `modelValue`, `icons: string[]`, `color`, `label`, `maxHeight`
+- `NotFoundState` — full-page 404 with `message`, `icon`, `actionLabel`, `actionRoute` (named route)
+- `ViewAllButton` — full-width text button with chevron. Props: `label`. Emits: `click`
+
+**Toast System:** `import { useToast } from '@/shared/ui'`. Call `toast({ title, description, variant })`. Add `<Toaster />` to app root once.
+
+### Frontend Shared Utilities (`shared/lib/`)
+
+**Format utilities** (`shared/lib/format/`):
+- `formatCurrency(amount, code, {showSymbol?, compact?, showSign?})` — `formatMasked(amount, code, hidden)` returns `••••` when hidden
+- `formatNumberWithSpaces(value)` / `parseFormattedNumber(value)` — for input display (`1 000 000`)
+- `getCurrencySymbol(code)` — `'UZS'` → `'сўм'`
+- `formatPercentage(value, decimals?, showSign?)` — `COMPACT_FORMAT` reusable option
+- `formatDate(timestamp, {format: 'full'|'short'|'relative'|'time'})` — default locale `ru-RU`
+- `formatRelativeDate(date)` — `'Сегодня'`, `'Вчера'`, `'3 дн. назад'`
+- `formatDateGroup(timestamp)` — for grouping headers: `"19 февраля"` or `"19 февраля 2025"`
+
+**Utility functions** (`shared/lib/utils.ts`):
+- `cn(...inputs)` — `clsx` + `tailwind-merge`. Always use for dynamic class composition
+- `cleanUndefined(obj)` — strips undefined/null/empty string for API payloads
+
+**Transitions** (`shared/lib/transitions.ts`):
+- `listTransition` — preset for `<TransitionGroup v-bind="listTransition">` with 150ms fade+translate
+
+### Frontend Shared Composables (`shared/lib/hooks/`)
+
+- `useCurrentUser()` → `{ user: Ref<User|null>, userId: ComputedRef<string> }`. Injected from `App.vue`
+- `useLocalStorage<T>(key, default)` → `Ref<T>`. Reactive localStorage with auto-persist
+- `useAsyncOperation(asyncFn, {errorMessage?})` → `{ isLoading, error, execute }`. Returns `false` on failure
+- `useUserCurrency()` → `{ currency: ComputedRef<string> }`. Reads from profile → localStorage → `'UZS'`
+
+### Frontend Shared API Composables (`shared/api/composables/`)
+
+- `useAuth()` → singleton: `{ user, isAuthenticated, isAnonymous, signUp, signIn, signInAnonymously, signOut, refreshUser }`
+- `useProfile(userId)` → `{ profile, updateProfile, setCurrency, completeOnboarding, defaultAccountId, setDefaultAccount }`
+- `useExchangeRates(baseCurrency)` → `{ rates, convert(amount, from), convertBetween(amount, from, to), getRate(target) }`. Cached 24h
+
+**Cache invalidation helpers** (`shared/api/invalidation.ts`):
+- `invalidateTransactionRelated(queryClient, userId)` — clears all transaction-related caches
+- `invalidateAccountRelated(queryClient, userId)` — clears all account-related caches
+
+### Frontend Entity API Composables
+
+All accept `userId: MaybeRefOrGetter<string|null>`, auto-disable when falsy, include optimistic updates.
+
+- **`useAccounts(userId)`** → `{ accounts, totalBalancesByCurrency, createAccount, createAccountWithBalances, updateAccount, deleteAccount, getAccountById }`
+- **`useTransactions(userId)`** → `{ transactions (last 50), createTransaction(tx, updateBalanceFn), deleteTransaction(id, updateBalanceFn), getMonthlySummary, getCategoryBreakdown }`
+- **`useInfiniteTransactions(userId, filters?)`** → `{ transactions (flattened), totalCount, fetchNextPage, hasNextPage, isFetchingNextPage, prependTransaction, removeTransaction }`. PAGE_SIZE=20
+- **`useInfiniteAccountTransactions(userId, accountId)`** — same as above, scoped to one account
+- **`useRecentTransactions(userId, limit=5)`** → `{ transactions, isLoading }` — read-only for dashboard
+- **`useMonthlyStats(userId, {year?, month?})`** → `{ totalIncome, totalExpense, incomeByCurrency, expenseByCurrency }`. Month is 1-12
+- **`useAnalyticsStats({startDate, endDate, accountIds?})`** → `{ totalIncome, totalExpense, categoryBreakdown }`
+- **`useDebts(userId)`** → `{ debts, totalDebt, totalPaid, overallProgress, debtsByPerson, createDebt, makePayment, deleteDebt }`
+- **`useGoals(userId)`** → `{ goals, totalSaved, totalTarget, overallProgress, createGoal, addToGoal, deleteGoal }`
+- **`useReminders(userId)`** → `{ reminders, activeReminders, upcomingReminders, overdueReminders, createReminder, toggleReminder, completeReminder, deleteReminder }`
+- **`useCategories(userId)`** → `{ categories, expenseCategories, incomeCategories, allCategories, getCategoryById, createCategory, reorderCategories }`
+
+### Frontend Entity Constants
+
+- **Categories** (`entities/category/model/constants.ts`): `EXPENSE_CATEGORIES` (12), `INCOME_CATEGORIES` (6), `DEBT_CATEGORIES` (4), `TRANSFER_CATEGORY`, `ALL_CATEGORIES`, `getCategoryById(id)`
+- **Currencies** (`entities/currency/model/constants.ts`): `CURRENCIES` array (USD, EUR, RUB, UZS, GBP, CNY), `getCurrencyByCode(code)` → `{code, name, symbol, flag}`
+- **Account Types** (`entities/account/model/account-types.ts`): `ACCOUNT_TYPES`, `VISIBLE_ACCOUNT_TYPES` (basic, savings, credit_card), `ACCOUNT_TYPE_LABELS`, `getAccountTypeLabel(type)`
+- **Colors** (`shared/config/colors.ts`): `ENTITY_COLORS` — standard palette for color pickers
+- **Transaction grouping** (`entities/transaction/model/useGroupedTransactions.ts`): `useGroupedTransactions(transactions, options?)` → `ComputedRef<TransactionGroup[]>` for `VirtualGroupedTransactionList`
+
+### Frontend Entity UI Components
+
+- **`AccountCard`** (`entities/account/ui/`) — props: `account`, `showBalance`, `compact`, `hidden`. Multi-currency shows up to 2 balances + "+N ещё"
+- **`TransactionItem`** (`entities/transaction/ui/`) — props: `transaction`, `currency`, `accountName`, `toAccountName`, `viewingAccountId` (controls transfer direction display)
+- **`VirtualGroupedTransactionList`** (`entities/transaction/ui/`) — virtualized list via `@tanstack/vue-virtual`. Props: `groups`, `currency`, `hasNextPage`, `isFetchingNextPage`, `getAccountName`, `height` (must set correctly with `calc()`), `swipeEnabled`. Emits: `loadMore`, `transactionClick`, `transactionEdit`, `transactionDelete`
+
+### Frontend Widget Components (`widgets/`)
+
+- **`AppHeader`** — props: `title`, `showBack`, `showNotifications`, `transparent`, `blur`. Slots: `#left`, `#logo`, `#actions`. Sticky with safe-area padding
+- **`BalanceCard`** — props: `totalBalance`, `currency`, `percentChange`, `loading`, `hidden`. Dashboard hero with trend indicator
+- **`AccountStack`** — props: `accounts`, `loading`, `hidden`. Displays accounts list with SectionHeader and EmptyState
+- **`SaveSpendSection`** — props: `savedAmount`, `spentAmount`, `currency`, `period`, `loading`, `hidden`. Side-by-side income/expense cards
+- **`RecentTransactions`** — props: `transactions`, `userId`, `loading`, `hidden`. Self-fetches account names
+- **`StatCard`** (`widgets/analytics/ui/`) — props: `icon`, `label`, `value`, `loading`, `color`. Analytics metric card
+
+### Reusable Feature Components
+
+- **`FilterChips`** (`features/analytics-filters/ui/`) — props: `items: {id, name, icon?, color?}[]`, `selectedIds`, `label`. Horizontal scrollable multi-select pills
+- **`AccountSelector`** (`features/add-transaction/ui/`) — props: `accounts`, `selectedId`, `label`, `activeColor`. Horizontal scrollable account chips
+- **`AmountInput`** (`features/add-transaction/ui/`) — props: `amount`, `currency`, `currencySymbol`, `availableCurrencies`, `isMultiCurrency`, `label`, `autofocus`. Large currency input with optional currency selector
+- **`ThemeToggle`** (`features/toggle-theme/ui/`) — props: `showLabel`. Ghost button toggling dark/light mode
+- **`CurrencyItem`** (`features/select-currency/ui/`) — props: `currency`, `selected`. Full-row currency option with flag
 
 Full design system documentation (tokens, typography, spacing, components, patterns): see `frontend/DESIGN_SYSTEM.md`
 
@@ -166,7 +268,7 @@ Both `backend/CLAUDE.md` and `frontend/CLAUDE.md` contain more detailed architec
 ## Changelog
 
 When adding user-facing features, fixes, or improvements, update `frontend/src/features/changelog/model/changelogData.ts`:
-- Bump `CURRENT_VERSION` (semver: patch for fixes, minor for features)
+- **Always bump minor version** (e.g. `1.3.0` → `1.4.0`) unless the user explicitly requests a patch or major bump. A PostToolUse hook (`.claude/hooks/check-changelog-version.sh`) enforces this — it blocks edits with non-zero patch
 - Add a new entry at the **top** of `CHANGELOG_ENTRIES` array
 - Write descriptions **на русском**, простым языком для обычных пользователей (не разработчиков). Например: «Добавлен учёт долгов» вместо «Implement debt tracking module with CQRS handlers»
 - Each item has a `type`: `feature` (новая функция), `fix` (исправление), `improvement` (улучшение)
