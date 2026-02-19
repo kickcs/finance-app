@@ -5,7 +5,6 @@ defineProps<{
   accounts: AccountWithBalances[];
   selectedId: string | null;
   label: string;
-  activeColor?: string;
 }>();
 
 const emit = defineEmits<{
@@ -29,10 +28,8 @@ const emit = defineEmits<{
           'flex items-center gap-1.5 px-3 py-1.5 rounded-lg whitespace-nowrap transition-all text-sm',
           'border',
           selectedId === account.id
-            ? activeColor === 'indigo'
-              ? 'border-indigo-500 bg-indigo-500/10 text-indigo-500'
-              : 'border-primary bg-primary/10 text-primary'
-            : 'border-gray-200 dark:border-gray-700 text-text-secondary-light dark:text-text-secondary-dark',
+            ? 'border-primary bg-primary/10 text-primary'
+            : 'border-border-light dark:border-border-dark text-text-secondary-light dark:text-text-secondary-dark',
         ]"
         @click="emit('select', account.id)"
       >

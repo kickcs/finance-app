@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { UInput, UButton, UTabs } from '@/shared/ui';
+import { UInput, UButton, UTabs, UIcon } from '@/shared/ui';
 import type { Category } from '@/entities/category';
 import type { AccountWithBalances } from '@/entities/account';
 import type { SplitExpenseData, SplitMethod } from '@/features/split-expense';
@@ -13,6 +13,16 @@ import {
 } from '../model/useScrollableTabs';
 import { useHashtags } from '@/entities/transaction';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from '@/shared/ui/primitives/popover';
+import { Calendar } from '@/shared/ui/primitives/calendar';
+import {
+  CalendarDate,
+  type DateValue,
+} from '@internationalized/date';
 import ExpensePanel from './ExpensePanel.vue';
 import IncomePanel from './IncomePanel.vue';
 import TransferPanel from './TransferPanel.vue';
@@ -76,6 +86,12 @@ const submitLabel = computed(() => {
   return 'Добавить расход';
 });
 
+const descriptionPlaceholder = computed(() => {
+  if (props.formData.type === 'income') return '#зарплата, #фриланс...';
+  if (props.formData.type === 'transfer') return '#накопления, #перевод...';
+  return '#продукты, #кафе, #такси...';
+});
+
 // Hashtag suggestions
 const { userId } = useCurrentUser();
 const { hashtags } = useHashtags(userId);
@@ -89,11 +105,37 @@ function insertHashtag(tag: string) {
     description: current + separator + tag,
   });
 }
+
+// Calendar date picker
+const calendarOpen = ref(false);
+
+const calendarValue = computed(() => {
+  const d = new Date(props.formData.date);
+  return new CalendarDate(d.getFullYear(), d.getMonth() + 1, d.getDate());
+});
+
+const displayDate = computed(() => {
+  const d = new Date(props.formData.date);
+  return d.toLocaleDateString('ru-RU', {
+    day: 'numeric',
+    month: 'short',
+  });
+});
+
+function onCalendarSelect(value: DateValue | undefined) {
+  if (!value) return;
+  const date = new Date(value.year, value.month - 1, value.day);
+  emit('update:formData', {
+    ...props.formData,
+    date: date.getTime(),
+  });
+  calendarOpen.value = false;
+}
 </script>
 
 <template>
   <form
-    class="flex-1 flex flex-col gap-3 transition-opacity duration-200 overflow-hidden"
+    class="space-y-2 transition-opacity duration-200"
     :class="isSubmitting && 'opacity-60 pointer-events-none'"
     @submit.prevent="$emit('submit')"
   >
@@ -155,65 +197,83 @@ function insertHashtag(tag: string) {
     </div>
 
     <!-- Bottom section -->
-    <div class="mt-auto space-y-3">
-      <!-- Description & Date -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div
-          class="space-y-2"
-          @focusin="descriptionFocused = true"
-          @focusout="descriptionFocused = false"
-        >
-          <UInput
-            :model-value="formData.description"
-            label="Комментарий"
-            placeholder="Добавьте описание..."
-            @update:model-value="
-              $emit('update:formData', {
-                ...formData,
-                description: $event as string,
-              })
-            "
-            @keydown.enter.prevent
-          />
-
-          <!-- Hashtag suggestions -->
-          <Transition name="hashtags">
-            <div
-              v-if="descriptionFocused && hashtags.length > 0"
-              class="flex gap-1.5 overflow-x-auto no-scrollbar py-0.5"
-            >
-              <button
-                v-for="h in hashtags"
-                :key="h.tag"
-                type="button"
-                class="shrink-0 px-2.5 py-1 rounded-full text-xs font-medium
-                  bg-surface-light dark:bg-surface-dark
-                  text-text-secondary-light dark:text-text-secondary-dark
-                  hover:bg-primary-light hover:text-primary
-                  active:scale-95
-                  transition-all duration-150"
-                @mousedown.prevent="insertHashtag(h.tag)"
-              >
-                {{ h.tag }}
-              </button>
-            </div>
-          </Transition>
-        </div>
+    <div class="space-y-2">
+      <!-- Description & Date row -->
+      <div
+        class="grid grid-cols-2 gap-2"
+        @focusin="descriptionFocused = true"
+        @focusout="descriptionFocused = false"
+      >
         <UInput
-          :model-value="new Date(formData.date).toISOString().split('T')[0]"
-          label="Дата"
-          type="date"
+          :model-value="formData.description"
+          label="Комментарий"
+          :placeholder="descriptionPlaceholder"
           @update:model-value="
-            (v: string | number) => {
-              const p = String(v).split('-');
-              $emit('update:formData', {
-                ...formData,
-                date: new Date(+p[0], +p[1] - 1, +p[2]).getTime(),
-              });
-            }
+            $emit('update:formData', {
+              ...formData,
+              description: $event as string,
+            })
           "
+          @keydown.enter.prevent
         />
+
+        <div class="flex flex-col gap-1.5 w-full">
+          <label
+            class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark ml-0.5"
+          >
+            Дата
+          </label>
+          <Popover v-model:open="calendarOpen">
+            <PopoverTrigger as-child>
+              <button
+                type="button"
+                class="flex items-center justify-between w-full px-3 py-3 rounded-lg text-sm
+                  bg-card-light dark:bg-card-dark
+                  border border-border-light dark:border-border-dark
+                  text-text-primary-light dark:text-text-primary-dark
+                  transition-all duration-150"
+              >
+                <span>{{ displayDate }}</span>
+                <UIcon
+                  name="calendar_today"
+                  size="sm"
+                  class="text-text-tertiary-light dark:text-text-tertiary-dark"
+                />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="end" :side-offset="8" class="w-auto p-0">
+              <Calendar
+                :model-value="calendarValue"
+                locale="ru-RU"
+                @update:model-value="onCalendarSelect"
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
       </div>
+
+      <!-- Hashtag suggestions (full width, outside grid) -->
+      <Transition name="hashtags">
+        <div
+          v-if="descriptionFocused && hashtags.length > 0"
+          class="flex gap-1.5 overflow-x-auto no-scrollbar py-0.5"
+        >
+          <button
+            v-for="h in hashtags"
+            :key="h.tag"
+            type="button"
+            class="shrink-0 px-2.5 py-1 rounded-full text-xs font-medium
+              bg-surface-light dark:bg-surface-dark
+              text-text-secondary-light dark:text-text-secondary-dark
+              hover:bg-primary-light hover:text-primary
+              active:scale-95
+              transition-all duration-150"
+            @mousedown.prevent="insertHashtag(h.tag)"
+          >
+            {{ h.tag }}
+          </button>
+        </div>
+      </Transition>
 
       <!-- Error -->
       <p v-if="error" class="text-xs text-danger">{{ error }}</p>

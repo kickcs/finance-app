@@ -6,6 +6,11 @@ import {
   formatNumberWithSpaces,
   formatCurrency,
 } from '@/shared/lib/format/currency';
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from '@/shared/ui/primitives/popover';
 
 const props = defineProps<{
   amount: number;
@@ -25,6 +30,8 @@ const emit = defineEmits<{
 }>();
 
 const hiddenInputRef = ref<HTMLInputElement | null>(null);
+const currencyOpen = ref(false);
+const amountBounce = ref(false);
 
 const displayAmount = computed(() => {
   if (!props.amount) return '0';
@@ -37,11 +44,18 @@ function focusInput() {
 
 function onInput(event: Event) {
   const value = (event.target as HTMLInputElement).value;
-  emit('update:amount', Number(value) || 0);
+  const num = Number(value) || 0;
+  // Bounce animation on first digit
+  if (!props.amount && num > 0) {
+    amountBounce.value = true;
+    setTimeout(() => (amountBounce.value = false), 200);
+  }
+  emit('update:amount', num);
 }
 
-function onCurrencyChange(event: Event) {
-  emit('update:currency', (event.target as HTMLSelectElement).value);
+function selectCurrency(cur: string) {
+  emit('update:currency', cur);
+  currencyOpen.value = false;
 }
 
 onMounted(() => {
@@ -54,7 +68,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="flex flex-col items-center gap-1" @click="focusInput">
+  <div class="flex flex-col items-center gap-1">
     <label
       v-if="label"
       class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark"
@@ -62,48 +76,78 @@ onMounted(() => {
       {{ label }}
     </label>
 
-    <!-- Hidden native input for keyboard -->
-    <input
-      ref="hiddenInputRef"
-      type="number"
-      inputmode="numeric"
-      :value="amount || ''"
-      class="sr-only"
-      @input="onInput"
-      @keydown.enter.prevent
-    />
-
-    <!-- Amount display with currency badge -->
-    <div class="flex items-center gap-2">
-      <span
-        class="text-4xl font-semibold text-text-primary-light dark:text-text-primary-dark tabular-nums"
-      >
-        {{ displayAmount }}
-      </span>
-
-      <!-- Multi-currency select -->
-      <div v-if="isMultiCurrency" class="relative">
-        <select
-          :value="currency"
-          class="appearance-none bg-surface-light dark:bg-surface-dark rounded-lg px-2 pr-6 py-1 text-sm font-medium border border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-primary"
-          @click.stop
-          @change="onCurrencyChange"
-        >
-          <option v-for="cur in availableCurrencies" :key="cur" :value="cur">
-            {{ getCurrencyByCode(cur)?.flag }} {{ cur }}
-          </option>
-        </select>
-        <UIcon
-          name="expand_more"
-          size="sm"
-          class="absolute right-1 top-1/2 -translate-y-1/2 pointer-events-none text-text-tertiary-light dark:text-text-tertiary-dark"
+    <!-- Amount row: amount dead-center, currency absolutely positioned right -->
+    <div class="relative w-full">
+      <!-- Amount display + hidden input (true center) -->
+      <div class="relative cursor-text text-center py-1" @click="focusInput">
+        <input
+          ref="hiddenInputRef"
+          type="number"
+          inputmode="numeric"
+          :value="amount || ''"
+          class="absolute inset-0 w-full h-full opacity-0"
+          @input="onInput"
+          @keydown.enter.prevent
         />
+        <span
+          class="text-4xl font-semibold tabular-nums transition-all duration-200"
+          :class="[
+            amount ? 'text-text-primary-light dark:text-text-primary-dark' : 'text-text-tertiary-light dark:text-text-tertiary-dark',
+            amountBounce && 'scale-105',
+          ]"
+        >
+          {{ displayAmount }}
+        </span>
       </div>
 
-      <!-- Static currency symbol -->
+      <!-- Currency selector (absolute right) -->
+      <Popover v-if="isMultiCurrency" v-model:open="currencyOpen">
+        <PopoverTrigger as-child>
+          <button
+            type="button"
+            class="absolute right-2 top-1/2 -translate-y-1/2
+              flex items-center gap-1 px-2.5 py-1 rounded-lg text-sm font-medium
+              bg-surface-light dark:bg-surface-dark
+              border border-border-light dark:border-border-dark
+              text-text-primary-light dark:text-text-primary-dark
+              hover:bg-primary-light transition-colors"
+          >
+            {{ getCurrencyByCode(currency)?.flag }}
+            {{ currency }}
+            <UIcon
+              name="expand_more"
+              size="xs"
+              class="text-text-tertiary-light dark:text-text-tertiary-dark"
+            />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent align="end" :side-offset="8" class="w-auto min-w-[140px] p-1">
+          <button
+            v-for="cur in availableCurrencies"
+            :key="cur"
+            type="button"
+            :class="[
+              'flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors',
+              cur === currency
+                ? 'bg-primary/10 text-primary font-medium'
+                : 'text-text-primary-light dark:text-text-primary-dark hover:bg-surface-light dark:hover:bg-surface-dark',
+            ]"
+            @click="selectCurrency(cur)"
+          >
+            <span>{{ getCurrencyByCode(cur)?.flag }}</span>
+            <span>{{ cur }}</span>
+            <span class="text-text-tertiary-light dark:text-text-tertiary-dark text-xs">
+              {{ getCurrencyByCode(cur)?.name }}
+            </span>
+          </button>
+        </PopoverContent>
+      </Popover>
+
+      <!-- Static currency symbol (absolute right) -->
       <span
         v-else
-        class="text-lg font-medium text-text-secondary-light dark:text-text-secondary-dark"
+        class="absolute right-2 top-1/2 -translate-y-1/2
+          text-lg font-medium text-text-secondary-light dark:text-text-secondary-dark"
       >
         {{ currencySymbol }}
       </span>

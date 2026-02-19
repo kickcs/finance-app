@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { UIcon } from '@/shared/ui';
 import { getCurrencyByCode } from '@/entities/currency';
 import { formatCurrency } from '@/shared/lib/format/currency';
@@ -33,6 +33,9 @@ const {
   hasSufficientFunds,
   updateField,
 } = usePanelState(props, emit);
+
+const sourceOpen = ref(false);
+const targetOpen = ref(false);
 
 const baseCurrency = computed(() => props.userCurrency || 'UZS');
 const { convertBetween } = useExchangeRates(baseCurrency);
@@ -113,6 +116,7 @@ function handleSourceSelect(accountId: string) {
   }
 
   emit('update:formData', { ...props.formData, ...updates });
+  sourceOpen.value = false;
 }
 
 function handleTargetSelect(accountId: string) {
@@ -141,6 +145,7 @@ function handleTargetSelect(accountId: string) {
     toCurrency: firstCurrency,
     toAmount,
   });
+  targetOpen.value = false;
 }
 
 function handleSwap() {
@@ -179,6 +184,39 @@ function handleToCurrencyChange(currency: string) {
   });
 }
 
+function handleSourceCurrencyChange(newCurrency: string) {
+  const updates: Partial<TransactionFormData> = { currency: newCurrency };
+
+  // Auto-correct toCurrency when same-account conversion
+  if (
+    props.formData.toAccountId === props.formData.accountId &&
+    props.formData.toCurrency === newCurrency
+  ) {
+    const account = props.accounts.find(
+      (a) => a.id === props.formData.accountId,
+    );
+    const otherCurrency = account?.balances.find(
+      (b) => b.currency !== newCurrency,
+    )?.currency;
+    if (otherCurrency) {
+      updates.toCurrency = otherCurrency;
+      updates.toAmount = calculateConvertedAmount(
+        props.formData.amount,
+        newCurrency,
+        otherCurrency,
+      );
+    }
+  } else if (props.formData.toCurrency && props.formData.toCurrency !== newCurrency) {
+    updates.toAmount = calculateConvertedAmount(
+      props.formData.amount,
+      newCurrency,
+      props.formData.toCurrency,
+    );
+  }
+
+  emit('update:formData', { ...props.formData, ...updates });
+}
+
 // Auto-recalculate toAmount when amount or currencies change
 watch(
   () =>
@@ -214,147 +252,166 @@ watch(
       :current-balance="currentBalance"
       label="Сумма перевода"
       @update:amount="updateField('amount', $event)"
-      @update:currency="updateField('currency', $event)"
+      @update:currency="handleSourceCurrencyChange"
     />
 
-    <!-- Source account card -->
-    <Popover>
-      <PopoverTrigger as-child>
+    <!-- Transfer flow: source → swap → target -->
+    <div class="relative">
+      <!-- Source account card -->
+      <Popover v-model:open="sourceOpen">
+        <PopoverTrigger as-child>
+          <button
+            type="button"
+            class="w-full flex items-center gap-3 p-3.5 rounded-xl
+              bg-card-light dark:bg-card-dark
+              border border-border-light dark:border-border-dark
+              transition-colors hover:bg-surface-light/50 dark:hover:bg-surface-dark/50
+              overflow-hidden"
+          >
+            <!-- Color accent bar -->
+            <span
+              class="absolute left-0 top-2 bottom-2 w-1 rounded-r-full"
+              :style="{ backgroundColor: selectedAccount?.color || 'var(--color-border-light)' }"
+            />
+            <div class="flex-1 text-left pl-1.5">
+              <p class="text-caption text-text-tertiary-light dark:text-text-tertiary-dark uppercase tracking-wider">
+                Откуда
+              </p>
+              <p class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark">
+                {{ selectedAccount?.name || 'Выберите счёт' }}
+              </p>
+            </div>
+            <div v-if="selectedAccount" class="text-right">
+              <p class="text-sm font-medium tabular-nums text-text-primary-light dark:text-text-primary-dark">
+                {{ formatCurrency(currentBalance, formData.currency) }}
+              </p>
+            </div>
+            <UIcon
+              name="expand_more"
+              size="sm"
+              class="text-text-tertiary-light dark:text-text-tertiary-dark shrink-0"
+            />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent align="start" :side-offset="4" class="w-[var(--reka-popover-trigger-width)] p-1">
+          <button
+            v-for="account in accounts"
+            :key="account.id"
+            type="button"
+            :class="[
+              'flex items-center gap-2.5 w-full px-3 py-2.5 rounded-lg text-sm transition-colors',
+              account.id === formData.accountId
+                ? 'bg-primary/10 text-primary font-medium'
+                : 'text-text-primary-light dark:text-text-primary-dark hover:bg-surface-light dark:hover:bg-surface-dark',
+            ]"
+            @click="handleSourceSelect(account.id)"
+          >
+            <span
+              class="w-3 h-3 rounded-full shrink-0"
+              :style="{ backgroundColor: account.color }"
+            />
+            <span class="flex-1 text-left">{{ account.name }}</span>
+            <span class="text-xs tabular-nums text-text-tertiary-light dark:text-text-tertiary-dark">
+              {{ formatCurrency(account.balances[0]?.balance ?? 0, account.balances[0]?.currency ?? '') }}
+            </span>
+          </button>
+        </PopoverContent>
+      </Popover>
+
+      <!-- Swap button — centered between cards -->
+      <div class="flex justify-center -my-2 relative z-10">
         <button
           type="button"
-          class="w-full flex items-center gap-3 p-3 rounded-xl
+          class="w-10 h-10 rounded-full flex items-center justify-center
             bg-card-light dark:bg-card-dark
             border border-border-light dark:border-border-dark
-            transition-colors hover:bg-surface-light dark:hover:bg-surface-dark"
+            shadow-sm
+            hover:bg-primary/10 active:scale-90
+            transition-all duration-150
+            disabled:opacity-40"
+          :disabled="!formData.toAccountId"
+          @click="handleSwap"
         >
-          <span
-            v-if="selectedAccount"
-            class="w-3 h-3 rounded-full shrink-0"
-            :style="{ backgroundColor: selectedAccount.color }"
-          />
-          <div class="flex-1 text-left">
-            <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
-              Откуда
-            </p>
-            <p class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
-              {{ selectedAccount?.name || 'Выберите счёт' }}
-            </p>
-          </div>
-          <span
-            v-if="selectedAccount"
-            class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
-          >
-            {{ formatCurrency(currentBalance, formData.currency) }}
-          </span>
-          <UIcon
-            name="expand_more"
-            size="sm"
-            class="text-text-tertiary-light dark:text-text-tertiary-dark"
-          />
+          <UIcon name="swap_vert" size="md" class="text-primary" />
         </button>
-      </PopoverTrigger>
-      <PopoverContent align="start" :side-offset="4" class="w-[var(--reka-popover-trigger-width)] p-1">
-        <button
-          v-for="account in accounts"
-          :key="account.id"
-          type="button"
-          :class="[
-            'flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors',
-            account.id === formData.accountId
-              ? 'bg-primary/10 text-primary font-medium'
-              : 'text-text-primary-light dark:text-text-primary-dark hover:bg-surface-light dark:hover:bg-surface-dark',
-          ]"
-          @click="handleSourceSelect(account.id)"
-        >
-          <span
-            class="w-2.5 h-2.5 rounded-full shrink-0"
-            :style="{ backgroundColor: account.color }"
-          />
-          <span class="flex-1 text-left">{{ account.name }}</span>
-          <span class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
-            {{ formatCurrency(account.balances[0]?.balance ?? 0, account.balances[0]?.currency ?? '') }}
-          </span>
-        </button>
-      </PopoverContent>
-    </Popover>
+      </div>
 
-    <!-- Swap button -->
-    <div class="flex justify-center -my-1">
-      <button
-        type="button"
-        class="w-8 h-8 rounded-full flex items-center justify-center
-          bg-primary/10 hover:bg-primary/20 active:scale-90
-          transition-all duration-150"
-        :disabled="!formData.toAccountId"
-        @click="handleSwap"
-      >
-        <UIcon name="swap_vert" size="sm" class="text-primary" />
-      </button>
+      <!-- Target account card -->
+      <Popover v-model:open="targetOpen">
+        <PopoverTrigger as-child>
+          <button
+            type="button"
+            :class="[
+              'w-full flex items-center gap-3 p-3.5 rounded-xl transition-colors overflow-hidden',
+              targetAccount
+                ? 'bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark hover:bg-surface-light/50 dark:hover:bg-surface-dark/50'
+                : 'bg-transparent border-2 border-dashed border-border-light dark:border-border-dark hover:border-primary/40',
+            ]"
+          >
+            <!-- Color accent bar (only when account selected) -->
+            <span
+              v-if="targetAccount"
+              class="absolute left-0 top-2 bottom-2 w-1 rounded-r-full"
+              :style="{ backgroundColor: targetAccount.color }"
+            />
+            <div class="flex-1 text-left" :class="targetAccount ? 'pl-1.5' : ''">
+              <p class="text-caption text-text-tertiary-light dark:text-text-tertiary-dark uppercase tracking-wider">
+                Куда
+              </p>
+              <p
+                :class="[
+                  'text-sm font-semibold',
+                  targetAccount
+                    ? 'text-text-primary-light dark:text-text-primary-dark'
+                    : 'text-text-tertiary-light dark:text-text-tertiary-dark',
+                ]"
+              >
+                {{ targetAccount?.name || 'Выберите счёт' }}
+              </p>
+            </div>
+            <div v-if="targetAccount && targetBalance !== undefined" class="text-right">
+              <p class="text-sm font-medium tabular-nums text-text-primary-light dark:text-text-primary-dark">
+                {{ formatCurrency(targetBalance, formData.toCurrency ?? '') }}
+              </p>
+            </div>
+            <UIcon
+              :name="targetAccount ? 'expand_more' : 'add'"
+              size="sm"
+              :class="targetAccount
+                ? 'text-text-tertiary-light dark:text-text-tertiary-dark'
+                : 'text-primary'"
+              class="shrink-0"
+            />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent align="start" :side-offset="4" class="w-[var(--reka-popover-trigger-width)] p-1">
+          <button
+            v-for="account in availableTargetAccounts"
+            :key="account.id"
+            type="button"
+            :class="[
+              'flex items-center gap-2.5 w-full px-3 py-2.5 rounded-lg text-sm transition-colors',
+              account.id === formData.toAccountId
+                ? 'bg-primary/10 text-primary font-medium'
+                : 'text-text-primary-light dark:text-text-primary-dark hover:bg-surface-light dark:hover:bg-surface-dark',
+            ]"
+            @click="handleTargetSelect(account.id)"
+          >
+            <span
+              class="w-3 h-3 rounded-full shrink-0"
+              :style="{ backgroundColor: account.color }"
+            />
+            <span class="flex-1 text-left">{{ account.name }}</span>
+            <span
+              v-if="account.id === formData.accountId"
+              class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
+            >
+              конвертация
+            </span>
+          </button>
+        </PopoverContent>
+      </Popover>
     </div>
-
-    <!-- Target account card -->
-    <Popover>
-      <PopoverTrigger as-child>
-        <button
-          type="button"
-          class="w-full flex items-center gap-3 p-3 rounded-xl
-            bg-card-light dark:bg-card-dark
-            border border-border-light dark:border-border-dark
-            transition-colors hover:bg-surface-light dark:hover:bg-surface-dark"
-        >
-          <span
-            v-if="targetAccount"
-            class="w-3 h-3 rounded-full shrink-0"
-            :style="{ backgroundColor: targetAccount.color }"
-          />
-          <div class="flex-1 text-left">
-            <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
-              Куда
-            </p>
-            <p class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
-              {{ targetAccount?.name || 'Выберите счёт' }}
-            </p>
-          </div>
-          <span
-            v-if="targetAccount && targetBalance !== undefined"
-            class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
-          >
-            {{ formatCurrency(targetBalance, formData.toCurrency ?? '') }}
-          </span>
-          <UIcon
-            name="expand_more"
-            size="sm"
-            class="text-text-tertiary-light dark:text-text-tertiary-dark"
-          />
-        </button>
-      </PopoverTrigger>
-      <PopoverContent align="start" :side-offset="4" class="w-[var(--reka-popover-trigger-width)] p-1">
-        <button
-          v-for="account in availableTargetAccounts"
-          :key="account.id"
-          type="button"
-          :class="[
-            'flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors',
-            account.id === formData.toAccountId
-              ? 'bg-primary/10 text-primary font-medium'
-              : 'text-text-primary-light dark:text-text-primary-dark hover:bg-surface-light dark:hover:bg-surface-dark',
-          ]"
-          @click="handleTargetSelect(account.id)"
-        >
-          <span
-            class="w-2.5 h-2.5 rounded-full shrink-0"
-            :style="{ backgroundColor: account.color }"
-          />
-          <span class="flex-1 text-left">{{ account.name }}</span>
-          <span
-            v-if="account.id === formData.accountId"
-            class="text-xs opacity-60"
-          >
-            (конв.)
-          </span>
-        </button>
-      </PopoverContent>
-    </Popover>
 
     <!-- Target currency selector (when target has multiple currencies) -->
     <div v-if="targetAccount && targetAccountCurrencies.length > 1" class="flex gap-1.5 flex-wrap">
@@ -363,10 +420,10 @@ watch(
         :key="cur"
         type="button"
         :class="[
-          'px-2.5 py-1 rounded-md text-sm font-medium transition-all',
+          'px-3 py-1.5 rounded-lg text-sm font-medium transition-all',
           formData.toCurrency === cur
-            ? 'bg-primary text-white'
-            : 'bg-surface-light dark:bg-surface-dark text-text-secondary-light dark:text-text-secondary-dark',
+            ? 'bg-primary text-white shadow-sm'
+            : 'bg-surface-light dark:bg-surface-dark text-text-secondary-light dark:text-text-secondary-dark hover:bg-primary/10',
         ]"
         @click="handleToCurrencyChange(cur)"
       >
@@ -374,18 +431,18 @@ watch(
       </button>
     </div>
 
-    <!-- Conversion info -->
-    <div v-if="showConversion && formData.toAmount" class="text-center">
-      <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
-        Получит:
-        <span class="font-medium text-text-primary-light dark:text-text-primary-dark">
-          {{ formatCurrency(formData.toAmount, formData.toCurrency ?? '') }}
-        </span>
-      </p>
-      <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
-        {{ formatCurrency(formData.amount, formData.currency) }} →
+    <!-- Conversion info — pill badge -->
+    <div
+      v-if="showConversion && formData.toAmount"
+      class="flex justify-center"
+    >
+      <div
+        class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl
+          bg-success-light text-success text-sm font-medium"
+      >
+        <UIcon name="arrow_forward" size="xs" />
         {{ formatCurrency(formData.toAmount, formData.toCurrency ?? '') }}
-      </p>
+      </div>
     </div>
   </div>
 </template>

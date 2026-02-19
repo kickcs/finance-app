@@ -35,12 +35,19 @@ function getChipStyle(category: Category) {
 
 <template>
   <div>
-    <span
-      v-if="label"
-      class="block mb-2 text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark"
-    >
-      {{ label }}
-    </span>
+    <div v-if="label" class="flex items-center gap-1.5 mb-2">
+      <span
+        class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark"
+      >
+        {{ label }}
+      </span>
+      <span
+        v-if="!selectedId"
+        class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
+      >
+        — выберите
+      </span>
+    </div>
 
     <div class="overflow-x-auto no-scrollbar -mx-4 px-4">
       <div class="flex flex-col gap-1.5 w-max">
@@ -57,7 +64,7 @@ function getChipStyle(category: Category) {
             :style="getChipStyle(category)"
             @click="emit('select', category.id)"
           >
-            <UIcon :name="category.icon" size="sm" />
+            <UIcon :name="category.icon" size="sm" :style="{ color: category.color }" />
             {{ category.name }}
           </button>
         </div>
@@ -75,7 +82,7 @@ function getChipStyle(category: Category) {
             :style="getChipStyle(category)"
             @click="emit('select', category.id)"
           >
-            <UIcon :name="category.icon" size="sm" />
+            <UIcon :name="category.icon" size="sm" :style="{ color: category.color }" />
             {{ category.name }}
           </button>
         </div>

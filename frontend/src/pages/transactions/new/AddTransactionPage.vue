@@ -1,8 +1,6 @@
 <script setup lang="ts">
-import { computed, inject, onMounted, watch } from 'vue';
+import { computed, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import type { Ref } from 'vue';
-import type { User } from '@/shared/api/composables/useAuth';
 import { UButton, UIcon, USpinner } from '@/shared/ui';
 import { AppHeader } from '@/widgets/header';
 import {
@@ -17,25 +15,22 @@ import { transactionsApi } from '@/entities/transaction';
 import { navigateBack } from '@/app/router';
 import { useSplitExpense } from '@/features/split-expense';
 import { transactionQueryKeys } from '@/entities/transaction';
+import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
+import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 
 const router = useRouter();
 const route = useRoute();
-const user = inject<Ref<User | null>>('user');
+const { userId } = useCurrentUser();
 
 // Get accounts and categories for the current user
-const userId = computed(() => user?.value?.id ?? null);
 const { accounts, isLoading: accountsLoading } = useAccounts(userId);
 const {
   expenseCategories,
   incomeCategories,
-  isLoading: categoriesLoading,
 } = useCategories(userId);
-const { profile, defaultAccountId } = useProfile(userId);
-const userCurrency = computed(() => profile.value?.currency || 'UZS');
+const { defaultAccountId } = useProfile(userId);
+const { currency: userCurrency } = useUserCurrency();
 const isQuickAction = computed(() => !!route.query.categoryId);
-const _isLoading = computed(
-  () => accountsLoading.value || categoriesLoading.value,
-);
 
 // Use the add transaction feature
 const { formData, isValid, setType, updateField } = useTransactionForm();
@@ -190,7 +185,7 @@ function goBack() {
     <AppHeader title="Новая транзакция" show-back blur @back="goBack" />
 
     <!-- Content -->
-    <main class="flex-1 flex flex-col overflow-hidden px-4 pt-2">
+    <main class="flex-1 overflow-y-auto px-4 pt-2 pb-4">
       <div v-if="accountsLoading" class="flex items-center justify-center py-8">
         <USpinner size="sm" />
       </div>
@@ -217,7 +212,7 @@ function goBack() {
 
       <TransactionForm
         v-else
-        class="flex-1 flex flex-col overflow-hidden"
+        class="space-y-2"
         v-model:form-data="formData"
         :accounts="accounts"
         :expense-categories="expenseCategories"

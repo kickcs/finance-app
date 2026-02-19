@@ -113,6 +113,7 @@ export function useScrollableTabs(
     const newType = CYCLIC_PANEL_ORDER[clampedIndex];
 
     if (newType !== type.value) {
+      navigator.vibrate?.(10);
       onTypeChange(newType);
     }
   }
