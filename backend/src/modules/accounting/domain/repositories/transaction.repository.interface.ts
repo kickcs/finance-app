@@ -49,6 +49,11 @@ export interface AnalyticsOptions {
   accountIds?: string[];
 }
 
+export interface HashtagResult {
+  tag: string;
+  count: number;
+}
+
 export interface TransactionWithReturns extends Transaction {
   returnedAmount: number;
 }
@@ -100,4 +105,6 @@ export interface ITransactionRepository {
     userId: string,
     options: AnalyticsOptions,
   ): Promise<AnalyticsStats>;
+
+  getHashtags(userId: string): Promise<HashtagResult[]>;
 }

@@ -21,3 +21,6 @@ export { useInfiniteAccountTransactions } from './api/useInfiniteAccountTransact
 
 // Recent Transactions
 export { useRecentTransactions } from './api/useRecentTransactions';
+
+// Hashtags
+export { useHashtags } from './api/useHashtags';

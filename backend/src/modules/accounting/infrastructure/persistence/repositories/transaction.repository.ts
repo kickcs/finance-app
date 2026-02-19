@@ -11,6 +11,7 @@ import {
   AnalyticsOptions,
   CategoryBreakdown,
   TransactionWithReturns,
+  HashtagResult,
 } from '../../../domain/repositories/transaction.repository.interface';
 import { TransactionOrmEntity } from '../typeorm/transaction.orm-entity';
 import { CategoryOrmEntity } from '../typeorm/category.orm-entity';
@@ -911,5 +912,30 @@ export class TransactionRepository implements ITransactionRepository {
       expenseByCurrency,
       categoryBreakdown: Array.from(categoryMap.values()),
     };
+  }
+
+  async getHashtags(userId: string): Promise<HashtagResult[]> {
+    const rows = await this.ormRepository
+      .createQueryBuilder('t')
+      .select('t.description', 'description')
+      .where('t.user_id = :userId', { userId })
+      .andWhere('t.description IS NOT NULL')
+      .andWhere("t.description LIKE '%#%'")
+      .getRawMany<{ description: string }>();
+
+    const tagCounts = new Map<string, number>();
+
+    for (const row of rows) {
+      const tags = row.description.match(/#[\p{L}\p{N}_]+/gu);
+      if (!tags) continue;
+      for (const tag of tags) {
+        const normalized = tag.toLowerCase();
+        tagCounts.set(normalized, (tagCounts.get(normalized) ?? 0) + 1);
+      }
+    }
+
+    return Array.from(tagCounts.entries())
+      .map(([tag, count]) => ({ tag, count }))
+      .sort((a, b) => b.count - a.count);
   }
 }

@@ -36,6 +36,9 @@ export async function invalidateTransactionRelated(
     queryClient.invalidateQueries({
       queryKey: transactionQueryKeys.analyticsStatsPrefix(),
     }),
+    queryClient.invalidateQueries({
+      queryKey: transactionQueryKeys.hashtags(userId),
+    }),
   ]);
 }
 

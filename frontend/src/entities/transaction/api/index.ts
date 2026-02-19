@@ -13,4 +13,5 @@ export { useInfiniteAccountTransactions } from './useInfiniteAccountTransactions
 export { useMonthlyStats } from './useMonthlyStats';
 export { useAnalyticsStats } from './useAnalyticsStats';
 export { useRecentTransactions } from './useRecentTransactions';
+export { useHashtags } from './useHashtags';
 export { transactionQueryKeys, type TransactionQueryKeys } from './queryKeys';

@@ -35,6 +35,7 @@ import {
   GetTransactionsByAccountWithIncomingQuery,
   GetTransactionsByAccountPaginatedQuery,
   CountTransactionsByAccountQuery,
+  GetHashtagsQuery,
 } from '../../application/queries';
 
 @Controller('transactions')
@@ -61,6 +62,11 @@ export class TransactionsController {
         pagination.search,
       ),
     );
+  }
+
+  @Get('hashtags')
+  async getHashtags(@CurrentUser('sub') userId: string): Promise<unknown> {
+    return this.queryBus.execute(new GetHashtagsQuery(userId));
   }
 
   @Get('stats/monthly')

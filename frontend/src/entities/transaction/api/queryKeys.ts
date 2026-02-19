@@ -60,6 +60,8 @@ export const transactionQueryKeys = {
     ] as const,
   analyticsStatsPrefix: () =>
     [...transactionQueryKeys.all, 'analytics-stats'] as const,
+  hashtags: (userId: string) =>
+    [...transactionQueryKeys.all, 'hashtags', userId] as const,
 };
 
 export type TransactionQueryKeys = typeof transactionQueryKeys;
