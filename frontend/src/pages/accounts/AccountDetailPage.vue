@@ -29,11 +29,11 @@ import {
   EditTransactionModal,
   DeleteTransactionModal,
   useEditTransaction,
+  useTransactionSelection,
 } from '@/features/edit-transaction';
 import type { Account } from '@/shared/api/database.types';
 import { navigateBack } from '@/app/router';
 import { useProfile } from '@/shared/api';
-import { debtsApi } from '@/entities/debt';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 
 const router = useRouter();
@@ -148,10 +148,16 @@ async function handleDeleteAccount() {
 }
 
 // Edit transaction
-const showEditTransactionModal = ref(false);
 const showDeleteTransactionModal = ref(false);
-const selectedTransaction = ref<Transaction | null>(null);
-const selectedTransactionHasSplitDebts = ref(false);
+
+const {
+  selectedTransaction,
+  hasSplitDebts,
+  showEditModal: showEditTransactionModal,
+  select: handleTransactionClick,
+  close: closeEditTransactionModal,
+} = useTransactionSelection(userId);
+
 const {
   isUpdating: isUpdatingTransaction,
   isDeleting: isDeletingTransaction,
@@ -160,37 +166,17 @@ const {
   remove: removeTransactionFn,
 } = useEditTransaction(userId.value);
 
-async function handleTransactionClick(transaction: Transaction) {
-  selectedTransaction.value = transaction;
-  selectedTransactionHasSplitDebts.value = false;
-
-  // Check if this transaction has OPEN split debts (closed debts don't block editing)
-  if (!transaction.is_debt_related && userId.value) {
-    try {
-      const allDebts = await debtsApi.getAll(userId.value);
-      const linkedDebts = allDebts.filter(
-        (d) => d.source_transaction_id === transaction.id && !d.is_closed,
-      );
-      selectedTransactionHasSplitDebts.value = linkedDebts.length > 0;
-    } catch {
-      selectedTransactionHasSplitDebts.value = false;
-    }
-  }
-
-  showEditTransactionModal.value = true;
-}
-
 async function handleUpdateTransaction(updates: Partial<Transaction>) {
   if (!selectedTransaction.value) return;
   const success = await updateTransactionFn(selectedTransaction.value, updates);
   if (success) {
-    showEditTransactionModal.value = false;
+    closeEditTransactionModal();
     // Query cache will be automatically invalidated
   }
 }
 
 function handleDeleteTransactionClick() {
-  showEditTransactionModal.value = false;
+  closeEditTransactionModal();
   showDeleteTransactionModal.value = true;
 }
 
@@ -702,7 +688,7 @@ async function handleSetAsDefault() {
       :currency="currency"
       :is-updating="isUpdatingTransaction"
       :error="transactionError"
-      :has-split-debts="selectedTransactionHasSplitDebts"
+      :has-split-debts="hasSplitDebts"
       @confirm="handleUpdateTransaction"
       @delete="handleDeleteTransactionClick"
     />

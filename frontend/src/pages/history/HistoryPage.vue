@@ -19,12 +19,12 @@ import {
   EditTransactionModal,
   DeleteTransactionModal,
   useEditTransaction,
+  useTransactionSelection,
 } from '@/features/edit-transaction';
 import { useAccounts } from '@/entities/account';
 import { ALL_CATEGORIES, useCategories } from '@/entities/category';
 import { UTabs, UIcon, UButton, UModal } from '@/shared/ui';
 import { useExchangeRates } from '@/shared/api';
-import { debtsApi } from '@/entities/debt';
 
 const router = useRouter();
 
@@ -187,10 +187,15 @@ const isEmpty = computed(() => {
 });
 
 // Edit transaction modal state
-const showEditModal = ref(false);
 const showDeleteModal = ref(false);
-const selectedTransaction = ref<Transaction | null>(null);
-const selectedTransactionHasSplitDebts = ref(false);
+
+const {
+  selectedTransaction,
+  hasSplitDebts,
+  showEditModal,
+  select: handleTransactionClick,
+  close: closeEditModal,
+} = useTransactionSelection(userId);
 
 const {
   isUpdating,
@@ -204,7 +209,7 @@ async function handleUpdateTransaction(updates: Partial<Transaction>) {
   if (!selectedTransaction.value) return;
   const success = await updateTransactionFn(selectedTransaction.value, updates);
   if (success) {
-    showEditModal.value = false;
+    closeEditModal();
   }
 }
 
@@ -213,33 +218,13 @@ async function handleDeleteTransaction() {
   const success = await removeTransactionFn(selectedTransaction.value);
   if (success) {
     showDeleteModal.value = false;
-    showEditModal.value = false;
+    closeEditModal();
     selectedTransaction.value = null;
   }
 }
 
-async function handleTransactionClick(transaction: Transaction) {
-  selectedTransaction.value = transaction;
-  selectedTransactionHasSplitDebts.value = false;
-
-  // Check if this transaction has OPEN split debts (closed debts don't block editing)
-  if (!transaction.is_debt_related && userId.value) {
-    try {
-      const allDebts = await debtsApi.getAll(userId.value);
-      const linkedDebts = allDebts.filter(
-        (d) => d.source_transaction_id === transaction.id && !d.is_closed,
-      );
-      selectedTransactionHasSplitDebts.value = linkedDebts.length > 0;
-    } catch {
-      selectedTransactionHasSplitDebts.value = false;
-    }
-  }
-
-  showEditModal.value = true;
-}
-
 function handleDeleteClick() {
-  showEditModal.value = false;
+  closeEditModal();
   showDeleteModal.value = true;
 }
 
@@ -594,9 +579,9 @@ async function handleRefresh() {
       :currency="currency"
       :is-updating="isUpdating"
       :error="editError"
-      :has-split-debts="selectedTransactionHasSplitDebts"
+      :has-split-debts="hasSplitDebts"
       @confirm="handleUpdateTransaction"
-      @cancel="showEditModal = false"
+      @cancel="closeEditModal"
       @delete="handleDeleteClick"
     />
 
