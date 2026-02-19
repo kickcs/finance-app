@@ -8,6 +8,10 @@ export { default as VirtualGroupedTransactionList } from './ui/VirtualGroupedTra
 // Model/Types
 export * from './model/types';
 
+// Composables
+export { useGroupedTransactions } from './model/useGroupedTransactions';
+export type { UseGroupedTransactionsOptions } from './model/useGroupedTransactions';
+
 // API
 export * from './api';
 

@@ -10,8 +10,8 @@ import {
   VirtualGroupedTransactionList,
   TransactionGroupSkeleton,
   useInfiniteTransactions,
+  useGroupedTransactions,
   type Transaction,
-  type TransactionGroup,
   type TransactionFilters,
 } from '@/entities/transaction';
 import { SearchInput, useServerSearch } from '@/features/search-transactions';
@@ -23,7 +23,6 @@ import {
 import { useAccounts } from '@/entities/account';
 import { ALL_CATEGORIES, useCategories } from '@/entities/category';
 import { UTabs, UIcon, UButton, UModal } from '@/shared/ui';
-import { formatDateGroup } from '@/shared/lib/format/date';
 import { useExchangeRates } from '@/shared/api';
 import { debtsApi } from '@/entities/debt';
 
@@ -98,79 +97,60 @@ const displayedTransactions = computed(() =>
 );
 
 // Group transactions by date (client-side grouping of loaded data)
-const groupedTransactions = computed<TransactionGroup[]>(() => {
-  const groups: Record<string, Transaction[]> = {};
+// Uses currency conversion and debt-aware logic for the daily total.
+const groupedTransactions = useGroupedTransactions(displayedTransactions, {
+  sortGroups: true,
+  // Within group: sort by created_at descending for consistent ordering
+  sortTransactions: (a, b) =>
+    new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+  // Multi-currency, debt-aware total computation
+  computeTotal: (txs) =>
+    txs.reduce((sum, tx) => {
+      // Исключаем долговые транзакции, КРОМЕ выдачи/взятия долгов и возвратов
+      // debt_given и debt_taken влияют на реальный money flow (деньги уходят/приходят)
+      // Возвраты долгов также влияют на реальный money flow
+      const isDebtGivenOrTaken =
+        tx.category_id === 'debt_given' || tx.category_id === 'debt_taken';
+      const isDebtReturn =
+        tx.category_id === 'debt_return_to_me' ||
+        tx.category_id === 'debt_return_from_me';
+      if (tx.is_debt_related && !isDebtGivenOrTaken && !isDebtReturn)
+        return sum;
 
-  for (const tx of displayedTransactions.value) {
-    const dateKey = formatDateGroup(tx.date);
-    if (!groups[dateKey]) {
-      groups[dateKey] = [];
-    }
-    groups[dateKey].push(tx);
-  }
+      // Для расходов используем net_amount (с учётом возвратов)
+      // Это учитывает частичные возвраты долгов
+      const baseAmount =
+        tx.type === 'expense' && tx.net_amount !== undefined
+          ? tx.net_amount
+          : tx.amount;
 
-  return Object.entries(groups)
-    .sort((a, b) => {
-      // Sort groups by date (descending) - newer groups first
-      const dateA = new Date(a[1][0].date).getTime();
-      const dateB = new Date(b[1][0].date).getTime();
-      return dateB - dateA;
-    })
-    .map(([date, txs]) => ({
-      date,
-      // Sort transactions within group by created_at (descending) for consistent ordering
-      transactions: txs.sort((a, b) => {
-        return (
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        );
-      }),
-      total: txs.reduce((sum, tx) => {
-        // Исключаем долговые транзакции, КРОМЕ выдачи/взятия долгов и возвратов
-        // debt_given и debt_taken влияют на реальный money flow (деньги уходят/приходят)
-        // Возвраты долгов также влияют на реальный money flow
-        const isDebtGivenOrTaken =
-          tx.category_id === 'debt_given' || tx.category_id === 'debt_taken';
-        const isDebtReturn =
-          tx.category_id === 'debt_return_to_me' ||
-          tx.category_id === 'debt_return_from_me';
-        if (tx.is_debt_related && !isDebtGivenOrTaken && !isDebtReturn)
-          return sum;
+      // Конвертируем в базовую валюту, если другая
+      const amount =
+        tx.currency !== currency.value
+          ? convert(baseAmount, tx.currency)
+          : baseAmount;
 
-        // Для расходов используем net_amount (с учётом возвратов)
-        // Это учитывает частичные возвраты долгов
-        const baseAmount =
-          tx.type === 'expense' && tx.net_amount !== undefined
-            ? tx.net_amount
-            : tx.amount;
+      // Долговые операции обрабатываем явно по category_id
+      // debt_given: дал в долг -> деньги ушли -> минус
+      if (tx.category_id === 'debt_given') {
+        return sum - amount;
+      }
+      // debt_taken: взял в долг -> деньги пришли -> плюс
+      if (tx.category_id === 'debt_taken') {
+        return sum + amount;
+      }
+      // debt_return_to_me и debt_return_from_me: НЕ учитываем в дневной сумме,
+      // т.к. их эффект уже отражён в net_amount связанных транзакций
+      if (
+        tx.category_id === 'debt_return_to_me' ||
+        tx.category_id === 'debt_return_from_me'
+      ) {
+        return sum;
+      }
 
-        // Конвертируем в базовую валюту, если другая
-        const amount =
-          tx.currency !== currency.value
-            ? convert(baseAmount, tx.currency)
-            : baseAmount;
-
-        // Долговые операции обрабатываем явно по category_id
-        // debt_given: дал в долг -> деньги ушли -> минус
-        if (tx.category_id === 'debt_given') {
-          return sum - amount;
-        }
-        // debt_taken: взял в долг -> деньги пришли -> плюс
-        if (tx.category_id === 'debt_taken') {
-          return sum + amount;
-        }
-        // debt_return_to_me и debt_return_from_me: НЕ учитываем в дневной сумме,
-        // т.к. их эффект уже отражён в net_amount связанных транзакций
-        if (
-          tx.category_id === 'debt_return_to_me' ||
-          tx.category_id === 'debt_return_from_me'
-        ) {
-          return sum;
-        }
-
-        if (tx.type === 'transfer') return sum;
-        return sum + (tx.type === 'income' ? amount : -amount);
-      }, 0),
-    }));
+      if (tx.type === 'transfer') return sum;
+      return sum + (tx.type === 'income' ? amount : -amount);
+    }, 0),
 });
 
 // Loading and pagination state

@@ -5,7 +5,6 @@ import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { UButton, UIcon, UCard, EmptyState, USpinner, NotFoundState } from '@/shared/ui';
 import { AppHeader } from '@/widgets/header';
 import { formatCurrency } from '@/shared/lib/format/currency';
-import { formatDateGroup } from '@/shared/lib/format/date';
 import {
   useAccounts,
   getAccountTypeLabel,
@@ -15,10 +14,10 @@ import {
   VirtualGroupedTransactionList,
   TransactionGroupSkeleton,
   useInfiniteAccountTransactions,
+  useGroupedTransactions,
   transactionsApi,
   transactionQueryKeys,
   type Transaction,
-  type TransactionGroup,
 } from '@/entities/transaction';
 import { useQuery } from '@tanstack/vue-query';
 import {
@@ -71,41 +70,29 @@ function getAccountName(id: string | null): string {
 }
 
 // Group transactions by date
-const groupedTransactions = computed<TransactionGroup[]>(() => {
-  const groups: Record<string, Transaction[]> = {};
-  const currentAccountId = accountId.value;
-
-  for (const tx of accountTransactions.value) {
-    const dateKey = formatDateGroup(tx.date);
-    if (!groups[dateKey]) {
-      groups[dateKey] = [];
-    }
-    groups[dateKey].push(tx);
-  }
-
-  return Object.entries(groups).map(([date, txs]) => ({
-    date,
-    // Sort transactions within group by time (descending)
-    transactions: txs.sort((a, b) => {
-      const timeA = new Date(a.date).getTime();
-      const timeB = new Date(b.date).getTime();
-      if (timeA !== timeB) return timeB - timeA;
-      return (
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      );
-    }),
-    total: txs.reduce((sum, tx) => {
+const groupedTransactions = useGroupedTransactions(accountTransactions, {
+  // API already returns transactions newest-first; preserve server order for groups
+  sortGroups: false,
+  // Within each group: sort by transaction time desc, then by created_at desc
+  sortTransactions: (a, b) => {
+    const timeA = new Date(a.date).getTime();
+    const timeB = new Date(b.date).getTime();
+    if (timeA !== timeB) return timeB - timeA;
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  },
+  // Transfer totals are account-specific: incoming transfers add, outgoing subtract
+  computeTotal: (txs) => {
+    const currentAccountId = accountId.value;
+    return txs.reduce((sum, tx) => {
       if (tx.type === 'transfer') {
-        // Входящий перевод на этот счёт
         if (tx.to_account_id === currentAccountId) {
           return sum + (tx.to_amount ?? 0);
         }
-        // Исходящий перевод с этого счёта
         return sum - tx.amount;
       }
       return sum + (tx.type === 'income' ? tx.amount : -tx.amount);
-    }, 0),
-  }));
+    }, 0);
+  },
 });
 
 // Edit account
