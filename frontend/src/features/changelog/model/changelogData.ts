@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.3.1';
+export const CURRENT_VERSION = '1.3.2';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,17 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.3.2',
+    date: '2026-02-19',
+    title: 'Подсказки хэштегов',
+    items: [
+      {
+        type: 'feature',
+        text: 'При вводе комментария к транзакции появляются подсказки хэштегов из прошлых записей — самые частые показываются первыми',
+      },
+    ],
+  },
   {
     version: '1.3.1',
     date: '2026-02-18',

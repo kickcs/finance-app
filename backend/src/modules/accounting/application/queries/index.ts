@@ -28,6 +28,10 @@ export * from './count-transactions-by-account/count-transactions-by-account.han
 export * from './get-categories/get-categories.query';
 export * from './get-categories/get-categories.handler';
 
+// Hashtag queries
+export * from './get-hashtags/get-hashtags.query';
+export * from './get-hashtags/get-hashtags.handler';
+
 // Account Balance queries
 export * from './get-balances-by-account/get-balances-by-account.query';
 export * from './get-balances-by-account/get-balances-by-account.handler';
@@ -49,6 +53,7 @@ import { GetTransactionsByAccountPaginatedHandler } from './get-transactions-by-
 import { GetBalancesByAccountHandler } from './get-balances-by-account/get-balances-by-account.handler';
 import { GetBalancesByAccountsHandler } from './get-balances-by-accounts/get-balances-by-accounts.handler';
 import { CountTransactionsByAccountHandler } from './count-transactions-by-account/count-transactions-by-account.handler';
+import { GetHashtagsHandler } from './get-hashtags/get-hashtags.handler';
 
 export const QueryHandlers = [
   GetAccountsHandler,
@@ -65,4 +70,5 @@ export const QueryHandlers = [
   GetBalancesByAccountHandler,
   GetBalancesByAccountsHandler,
   CountTransactionsByAccountHandler,
+  GetHashtagsHandler,
 ];

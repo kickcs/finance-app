@@ -104,6 +104,11 @@ function transformTransaction(tx: TransactionResponse): Transaction {
   };
 }
 
+export interface Hashtag {
+  tag: string;
+  count: number;
+}
+
 export const transactionsApi = {
   async getAll(_userId: string, limit?: number): Promise<Transaction[]> {
     // Backend gets userId from JWT token
@@ -304,6 +309,10 @@ export const transactionsApi = {
     return http.get<AnalyticsStats>('/transactions/stats/analytics', {
       params,
     });
+  },
+
+  async getHashtags(): Promise<Hashtag[]> {
+    return http.get<Hashtag[]>('/transactions/hashtags');
   },
 
   async countByAccount(accountId: string): Promise<number> {
