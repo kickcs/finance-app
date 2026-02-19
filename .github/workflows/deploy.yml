@@ -223,6 +223,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           envs: GITHUB_REPOSITORY,GHCR_IMAGE_TAG,DATABASE_PASSWORD,JWT_SECRET,CORS_ORIGIN,GHCR_TOKEN,GHCR_USER
           script: |
+            set -e
             cd ~/finance-app
 
             # Create/update environment file
@@ -244,60 +245,49 @@ jobs:
             # Login to GitHub Container Registry
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
 
-            # Pull latest images
-            docker pull "ghcr.io/$GITHUB_REPOSITORY/backend:$GHCR_IMAGE_TAG"
-            docker pull "ghcr.io/$GITHUB_REPOSITORY/frontend:$GHCR_IMAGE_TAG"
+            # Pull new images in parallel (postgres stays untouched)
+            docker compose -f docker-compose.prod.yml pull backend frontend
 
-            # Stop and remove old containers
-            docker compose -f docker-compose.prod.yml down --remove-orphans || true
-
-            # Start only postgres first, then run migrations before backend starts
+            # Ensure postgres is running (no-op if already up)
             docker compose -f docker-compose.prod.yml up -d postgres
-
-            # Wait for postgres to be healthy
             echo "Waiting for postgres..."
-            POSTGRES_READY=false
             for i in $(seq 1 15); do
               if docker compose -f docker-compose.prod.yml exec -T postgres pg_isready -U postgres > /dev/null 2>&1; then
                 echo "Postgres ready"
-                POSTGRES_READY=true
                 break
               fi
-              sleep 2
+              if [ "$i" -eq 15 ]; then
+                echo "Postgres failed to become ready"
+                docker compose -f docker-compose.prod.yml logs postgres --tail=30
+                exit 1
+              fi
+              sleep 1
             done
 
-            if [ "$POSTGRES_READY" != "true" ]; then
-              echo "Postgres failed to start after 30 seconds"
-              docker compose -f docker-compose.prod.yml logs postgres --tail=30
-              exit 1
-            fi
-
-            # Run database migrations using backend image
+            # Run database migrations on already-running postgres
             echo "Running database migrations..."
             docker compose -f docker-compose.prod.yml run --rm --no-deps -T backend npx typeorm migration:run -d dist/config/data-source.js
 
-            # Now start all containers
-            docker compose -f docker-compose.prod.yml up -d
+            # Recreate only backend and frontend with new images (postgres keeps running)
+            docker compose -f docker-compose.prod.yml up -d --no-deps --force-recreate backend frontend
 
-            # Clean up old images
-            docker image prune -f
-            docker images "ghcr.io/$GITHUB_REPOSITORY/backend" --format "{{.ID}} {{.Tag}}" | grep -v latest | tail -n +4 | awk '{print $1}' | xargs -r docker rmi -f || true
-            docker images "ghcr.io/$GITHUB_REPOSITORY/frontend" --format "{{.ID}} {{.Tag}}" | grep -v latest | tail -n +4 | awk '{print $1}' | xargs -r docker rmi -f || true
-
-            # Wait for services to be healthy with polling
+            # Wait for health check
             echo "Waiting for services to be healthy..."
             for i in $(seq 1 30); do
               if curl -sf http://localhost:8080/api/health > /dev/null 2>&1; then
-                echo "Health check passed after ${i} attempts"
+                echo "Health check passed after ${i}s"
                 break
               fi
               if [ "$i" -eq 30 ]; then
-                echo "Health check failed after 30 attempts"
+                echo "Health check failed after 30s"
                 docker compose -f docker-compose.prod.yml logs --tail=50
                 exit 1
               fi
-              sleep 2
+              sleep 1
             done
+
+            # Clean up old images in background (non-blocking)
+            docker image prune -f > /dev/null 2>&1 &
 
       - name: Deployment notification
         if: always()
