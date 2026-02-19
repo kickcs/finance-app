@@ -6,14 +6,10 @@ FROM oven/bun:1 AS deps
 WORKDIR /app
 
 # Copy package files
-COPY frontend/package.json frontend/bun.lock* frontend/yarn.lock* ./
+COPY frontend/package.json frontend/bun.lock* ./
 
-# Install dependencies (prefer bun, fallback to yarn if yarn.lock exists)
-RUN if [ -f yarn.lock ]; then \
-        bun install --frozen-lockfile; \
-    else \
-        bun install; \
-    fi
+# Install dependencies
+RUN bun install --frozen-lockfile
 
 # ================================
 # Stage 2: Build application

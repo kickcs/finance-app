@@ -7,17 +7,22 @@ on:
     branches: [master]
   workflow_dispatch:
 
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 env:
-  BUN_VERSION: 'latest'
+  BUN_VERSION: '1.2.4'
   REGISTRY: ghcr.io
 
 jobs:
   # ===================
-  # Validate (lint + test + type-check)
+  # Validate Backend (lint + test)
   # ===================
-  validate:
-    name: Validate
+  validate-backend:
+    name: Validate Backend
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     services:
       postgres:
         image: postgres:16-alpine
@@ -52,9 +57,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.bun/install/cache
-          key: bun-${{ runner.os }}-${{ hashFiles('backend/bun.lockb', 'frontend/bun.lockb') }}
+          key: bun-backend-${{ runner.os }}-${{ hashFiles('backend/bun.lockb') }}
           restore-keys: |
-            bun-${{ runner.os }}-
+            bun-backend-${{ runner.os }}-
 
       - name: Install backend dependencies
         working-directory: backend
@@ -68,6 +73,30 @@ jobs:
         working-directory: backend
         run: bun run test
 
+  # ===================
+  # Validate Frontend (type-check + build)
+  # ===================
+  validate-frontend:
+    name: Validate Frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: Cache bun dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-frontend-${{ runner.os }}-${{ hashFiles('frontend/bun.lockb') }}
+          restore-keys: |
+            bun-frontend-${{ runner.os }}-
+
       - name: Install frontend dependencies
         working-directory: frontend
         run: bun install --frozen-lockfile
@@ -79,12 +108,13 @@ jobs:
         run: bun run build
 
   # ===================
-  # Build and Push Docker Images
+  # Build and Push Backend Docker Image
   # ===================
-  build-and-push:
-    name: Build and Push Images
+  build-backend:
+    name: Build Backend Image
     runs-on: ubuntu-latest
-    needs: validate
+    timeout-minutes: 15
+    needs: validate-backend
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     permissions:
       contents: read
@@ -112,8 +142,34 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/${{ github.repository }}/backend:${{ github.sha }}
             ${{ env.REGISTRY }}/${{ github.repository }}/backend:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
+
+  # ===================
+  # Build and Push Frontend Docker Image
+  # ===================
+  build-frontend:
+    name: Build Frontend Image
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: validate-frontend
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push frontend
         uses: docker/build-push-action@v6
@@ -126,8 +182,8 @@ jobs:
             ${{ env.REGISTRY }}/${{ github.repository }}/frontend:latest
           build-args: |
             VITE_API_URL=
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
 
   # ===================
   # Deploy to Server
@@ -135,7 +191,8 @@ jobs:
   deploy:
     name: Deploy to Server
     runs-on: ubuntu-latest
-    needs: build-and-push
+    timeout-minutes: 10
+    needs: [build-backend, build-frontend]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -199,13 +256,21 @@ jobs:
 
             # Wait for postgres to be healthy
             echo "Waiting for postgres..."
+            POSTGRES_READY=false
             for i in $(seq 1 15); do
               if docker compose -f docker-compose.prod.yml exec -T postgres pg_isready -U postgres > /dev/null 2>&1; then
                 echo "Postgres ready"
+                POSTGRES_READY=true
                 break
               fi
               sleep 2
             done
+
+            if [ "$POSTGRES_READY" != "true" ]; then
+              echo "Postgres failed to start after 30 seconds"
+              docker compose -f docker-compose.prod.yml logs postgres --tail=30
+              exit 1
+            fi
 
             # Run database migrations using backend image
             echo "Running database migrations..."
