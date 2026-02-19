@@ -2,6 +2,7 @@
 import { computed, ref, defineAsyncComponent } from 'vue';
 import { useLocalStorage } from '@/shared/lib/hooks/useLocalStorage';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
+import { useMountAnimation } from '@/shared/lib/hooks/useMountAnimation';
 import { useRouter } from 'vue-router';
 import { queryClient } from '@/shared/api/queryClient';
 import { PullToRefresh, UIcon } from '@/shared/ui';
@@ -57,6 +58,7 @@ import { useReminders, type Reminder } from '@/entities/reminder';
 import { useCategories } from '@/entities/category';
 import { useProfile, useExchangeRates } from '@/shared/api';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
+import { formatMasked, COMPACT_FORMAT } from '@/shared/lib/format/currency';
 
 const router = useRouter();
 
@@ -325,6 +327,24 @@ const quickActionsHintDismissed = useLocalStorage(
 );
 
 const scrollContainerRef = ref<HTMLElement>();
+const isScrolledPastBalance = ref(false);
+
+const BALANCE_SCROLL_THRESHOLD = 80;
+
+function onScroll(e: Event) {
+  const target = e.target as HTMLElement;
+  isScrolledPastBalance.value = target.scrollTop > BALANCE_SCROLL_THRESHOLD;
+}
+
+const { isMounted } = useMountAnimation();
+
+function sectionAnim(delay: string) {
+  return [
+    'transform transition-all duration-700 ease-out',
+    delay,
+    isMounted.value ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0',
+  ];
+}
 
 async function handleRefresh() {
   await queryClient.invalidateQueries();
@@ -339,27 +359,53 @@ async function handleRefresh() {
     <AppHeader>
       <template #logo>
         <div
-          class="flex items-center gap-2.5 group cursor-pointer"
+          class="relative w-[200px] h-10 cursor-pointer overflow-hidden"
           @click="router.push('/profile')"
         >
-          <div
-            class="w-9 h-9 rounded-xl flex items-center justify-center bg-gradient-to-br from-primary to-primary-hover shadow-lg shadow-primary/25 group-hover:shadow-xl group-hover:shadow-primary/30 group-hover:scale-105 transition-all duration-200"
+          <!-- Default Greeting State -->
+          <div 
+            class="absolute inset-0 flex items-center gap-2.5 group transition-all duration-300 ease-out"
+            :class="isScrolledPastBalance ? '-translate-y-full opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'"
           >
-            <span class="text-white font-bold text-base">
-              {{ userName ? userName[0].toUpperCase() : 'O' }}
-            </span>
+            <div
+              class="w-9 h-9 rounded-xl flex items-center justify-center bg-gradient-to-br from-primary to-primary-hover shadow-sm shadow-primary/25 group-hover:shadow-md group-hover:shadow-primary/30 group-hover:scale-105 transition-all duration-200 shrink-0"
+            >
+              <span class="text-white font-bold text-base">
+                {{ userName ? userName[0].toUpperCase() : 'O' }}
+              </span>
+            </div>
+            <div class="flex flex-col">
+              <span
+                class="text-xs text-text-secondary-light dark:text-text-secondary-dark leading-tight"
+              >
+                {{ greeting }}
+              </span>
+              <span
+                class="font-bold text-base text-text-primary-light dark:text-text-primary-dark group-hover:text-primary transition-colors leading-tight truncate max-w-[140px]"
+              >
+                {{ userName || 'Ouro' }}
+              </span>
+            </div>
           </div>
-          <div class="flex flex-col">
-            <span
-              class="text-xs text-text-secondary-light dark:text-text-secondary-dark leading-tight"
+
+          <!-- Sticky Balance State -->
+          <div 
+            class="absolute inset-0 flex items-center gap-2.5 transition-all duration-300 ease-out"
+            :class="isScrolledPastBalance ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'"
+          >
+            <div
+              class="w-9 h-9 rounded-xl flex items-center justify-center bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark shrink-0"
             >
-              {{ greeting }}
-            </span>
-            <span
-              class="font-bold text-base text-text-primary-light dark:text-text-primary-dark group-hover:text-primary transition-colors leading-tight"
-            >
-              {{ userName || 'Ouro' }}
-            </span>
+              <UIcon name="account_balance_wallet" size="sm" class="text-primary" />
+            </div>
+            <div class="flex flex-col justify-center">
+              <span class="text-caption-sm uppercase font-semibold tracking-wider text-text-tertiary-light dark:text-text-tertiary-dark leading-none mb-1">
+                Общий баланс
+              </span>
+              <span class="font-bold text-sm text-text-primary-light dark:text-text-primary-dark leading-none tracking-tight">
+                {{ formatMasked(totalBalance, currency, isHidden, COMPACT_FORMAT) }}
+              </span>
+            </div>
           </div>
         </div>
       </template>
@@ -369,7 +415,7 @@ async function handleRefresh() {
     </AppHeader>
 
     <!-- Scrollable content -->
-    <div ref="scrollContainerRef" class="flex-1 overflow-y-auto">
+    <div ref="scrollContainerRef" class="flex-1 overflow-y-auto" @scroll="onScroll">
       <PullToRefresh
         :on-refresh="handleRefresh"
         :container-ref="scrollContainerRef"
@@ -379,7 +425,7 @@ async function handleRefresh() {
           <InstallPwaBanner @install="showInstallModal = true" />
 
           <!-- Hero Section — balance + stats -->
-          <section class="space-y-6">
+          <section :class="['space-y-6', sectionAnim('delay-75')]">
             <BalanceCard
               :total-balance="totalBalance"
               :currency="currency"
@@ -403,18 +449,18 @@ async function handleRefresh() {
           </section>
 
           <!-- Quick Actions -->
-          <section v-if="!quickActionsHidden">
+          <section v-if="!quickActionsHidden" :class="sectionAnim('delay-150')">
             <div class="grid grid-cols-4 gap-3">
               <button
                 v-for="(action, index) in quickActionSlots"
                 :key="action?.id ?? `empty-${index}`"
-                class="flex flex-col items-center gap-1.5 py-3 rounded-xl bg-surface-light dark:bg-surface-dark hover:opacity-80 active:scale-95 transition-all duration-150"
+                class="flex flex-col items-center gap-1.5 py-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:bg-card-light dark:hover:bg-card-dark active:scale-95 active:translate-y-0 active:shadow-sm transition-all duration-200 group"
                 @click="handleQuickActionClick(action)"
                 @contextmenu.prevent="handleQuickActionLongPress(action)"
               >
                 <template v-if="action">
                   <div
-                    class="w-10 h-10 rounded-xl flex items-center justify-center"
+                    class="w-10 h-10 rounded-xl flex items-center justify-center transition-transform duration-200 group-hover:scale-110"
                     :style="{
                       backgroundColor:
                         (categoryMap.get(action.categoryId)?.color ??
@@ -442,7 +488,7 @@ async function handleRefresh() {
                 </template>
                 <template v-else>
                   <div
-                    class="w-10 h-10 rounded-xl flex items-center justify-center bg-border-light dark:bg-border-dark"
+                    class="w-10 h-10 rounded-xl flex items-center justify-center bg-border-light/50 dark:bg-border-dark/50 group-hover:bg-border-light dark:group-hover:bg-border-dark transition-colors duration-200"
                   >
                     <UIcon
                       name="add"
@@ -484,7 +530,7 @@ async function handleRefresh() {
           </section>
 
           <!-- Accounts -->
-          <section>
+          <section :class="sectionAnim('delay-200')">
             <AccountStack
               :accounts="accounts"
               :loading="accountsLoading"
@@ -496,7 +542,7 @@ async function handleRefresh() {
           </section>
 
           <!-- Recent Transactions -->
-          <section>
+          <section :class="sectionAnim('delay-300')">
             <Suspense>
               <RecentTransactions
                 :transactions="recentTransactions"
@@ -514,7 +560,7 @@ async function handleRefresh() {
           </section>
 
           <!-- Debts -->
-          <section>
+          <section :class="sectionAnim('delay-500')">
             <Suspense>
               <DebtsSection
                 :debts="debts"
@@ -533,7 +579,7 @@ async function handleRefresh() {
           </section>
 
           <!-- Subscriptions -->
-          <section>
+          <section :class="sectionAnim('delay-[600ms]')">
             <Suspense>
               <RemindersSection
                 :reminders="reminders"

@@ -77,18 +77,18 @@ defineEmits<{
     <!-- Quick Action Buttons -->
     <div class="flex gap-3 mt-6">
       <button
-        class="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-primary text-white font-medium text-body-sm hover:bg-primary-hover active:bg-primary-pressed focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 transition-all duration-150 shadow-sm"
+        class="group flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-primary to-primary-hover text-white font-medium text-body-sm shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 hover:-translate-y-0.5 active:translate-y-0 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 transition-all duration-300"
         @click="$emit('income-click')"
       >
-        <UIcon name="add" size="sm" />
+        <UIcon name="add" size="sm" class="transition-transform group-hover:scale-110" />
         Доход
       </button>
 
       <button
-        class="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark font-medium text-body-sm hover:bg-card-light dark:hover:bg-card-dark active:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 transition-all duration-150"
+        class="group flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark font-medium text-body-sm shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:bg-card-light dark:hover:bg-card-dark active:translate-y-0 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 transition-all duration-300"
         @click="$emit('expense-click')"
       >
-        <UIcon name="remove" size="sm" />
+        <UIcon name="remove" size="sm" class="transition-transform group-hover:scale-110" />
         Расход
       </button>
     </div>
