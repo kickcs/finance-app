@@ -1,4 +1,3 @@
-// frontend/src/features/add-transaction/model/useTransactionForm.ts
 import { ref, computed } from 'vue';
 
 export interface TransactionFormData {
@@ -14,18 +13,22 @@ export interface TransactionFormData {
   toCurrency: string | null;
 }
 
+const DEFAULT_FORM_DATA: Omit<TransactionFormData, 'date'> = {
+  accountId: null,
+  categoryId: '',
+  amount: 0,
+  currency: 'UZS',
+  type: 'expense',
+  description: '',
+  toAccountId: null,
+  toAmount: null,
+  toCurrency: null,
+};
+
 export function useTransactionForm() {
   const formData = ref<TransactionFormData>({
-    accountId: null,
-    categoryId: '',
-    amount: 0,
-    currency: 'UZS',
-    type: 'expense',
-    description: '',
+    ...DEFAULT_FORM_DATA,
     date: Date.now(),
-    toAccountId: null,
-    toAmount: null,
-    toCurrency: null,
   });
 
   const isValid = computed(() => {
@@ -66,10 +69,6 @@ export function useTransactionForm() {
     }
   }
 
-  function setCurrency(currency: string) {
-    formData.value.currency = currency;
-  }
-
   function setTransferTarget(toAccountId: string, toCurrency: string) {
     formData.value.toAccountId = toAccountId;
     formData.value.toCurrency = toCurrency;
@@ -78,22 +77,10 @@ export function useTransactionForm() {
     }
   }
 
-  function setToAmount(amount: number) {
-    formData.value.toAmount = amount;
-  }
-
   function resetForm() {
     formData.value = {
-      accountId: null,
-      categoryId: '',
-      amount: 0,
-      currency: 'UZS',
-      type: 'expense',
-      description: '',
+      ...DEFAULT_FORM_DATA,
       date: Date.now(),
-      toAccountId: null,
-      toAmount: null,
-      toCurrency: null,
     };
   }
 
@@ -102,9 +89,7 @@ export function useTransactionForm() {
     isValid,
     updateField,
     setType,
-    setCurrency,
     setTransferTarget,
-    setToAmount,
     resetForm,
   };
 }
