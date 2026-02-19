@@ -2,18 +2,11 @@
 import { UModal, UButton, UIcon } from '@/shared/ui';
 import { CHANGELOG_TYPE_CONFIG } from '../model/changelogData';
 import { useChangelog } from '../model/useChangelog';
+import { formatLocalDate } from '@/shared/lib/format/date';
 
 const modelValue = defineModel<boolean>({ required: true });
 
 const { latestEntry, markAsSeen } = useChangelog();
-
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString('ru-RU', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
-}
 
 function handleClose() {
   markAsSeen();
@@ -34,7 +27,7 @@ function handleClose() {
         <span
           class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
         >
-          {{ formatDate(latestEntry.date) }}
+          {{ formatLocalDate(latestEntry.date) }}
         </span>
       </div>
 

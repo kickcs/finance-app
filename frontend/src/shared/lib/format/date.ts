@@ -87,6 +87,17 @@ export function formatDateGroup(timestamp: number | string | Date): string {
 }
 
 /**
+ * Format date for display in locale format (e.g. "19 февраля 2026")
+ */
+export function formatLocalDate(dateStr: string, locale = 'ru-RU'): string {
+  return new Date(dateStr).toLocaleDateString(locale, {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+}
+
+/**
  * Get start of day timestamp
  */
 export function getStartOfDay(date: Date = new Date()): number {

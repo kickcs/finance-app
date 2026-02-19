@@ -6,20 +6,13 @@ import { navigateBack } from '@/app/router';
 import { useChangelog } from '@/features/changelog';
 import { CHANGELOG_TYPE_CONFIG } from '@/features/changelog/model/changelogData';
 import { useRouter } from 'vue-router';
+import { formatLocalDate } from '@/shared/lib/format/date';
 
 const router = useRouter();
 const { allEntries, markAsSeen } = useChangelog();
 
 // Mark as seen when visiting the page
 markAsSeen();
-
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString('ru-RU', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
-}
 
 function handleAddTransaction() {
   router.push('/transactions/new');
@@ -42,7 +35,7 @@ function handleAddTransaction() {
           <span
             class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
           >
-            {{ formatDate(entry.date) }}
+            {{ formatLocalDate(entry.date) }}
           </span>
         </div>
 
