@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import { UButton, UIcon, UCard, UProgressBar, USpinner } from '@/shared/ui';
+import { UButton, UIcon, UCard, UProgressBar, USpinner, NotFoundState } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { formatDate } from '@/shared/lib/format/date';
 import {
@@ -130,23 +130,7 @@ function goBack() {
       </div>
 
       <!-- Not Found State -->
-      <div v-else-if="!debt" class="text-center py-12">
-        <div
-          class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-surface-light dark:bg-surface-dark flex items-center justify-center"
-        >
-          <UIcon
-            name="error"
-            size="xl"
-            class="text-text-tertiary-light dark:text-text-tertiary-dark"
-          />
-        </div>
-        <p class="text-text-secondary-light dark:text-text-secondary-dark mb-4">
-          Долг не найден
-        </p>
-        <UButton variant="primary" @click="router.push({ name: 'dashboard' })">
-          На главную
-        </UButton>
-      </div>
+      <NotFoundState v-else-if="!debt" message="Долг не найден" />
 
       <!-- Debt Details -->
       <div v-else class="space-y-6">

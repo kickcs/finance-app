@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
-import { UButton, UIcon, UCard, EmptyState, USpinner } from '@/shared/ui';
+import { UButton, UIcon, UCard, EmptyState, USpinner, NotFoundState } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { formatDateGroup } from '@/shared/lib/format/date';
 import {
@@ -262,23 +262,7 @@ async function handleSetAsDefault() {
       </div>
 
       <!-- Not Found State -->
-      <div v-else-if="!account" class="text-center py-12">
-        <div
-          class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-surface-light dark:bg-surface-dark flex items-center justify-center"
-        >
-          <UIcon
-            name="error"
-            size="xl"
-            class="text-text-tertiary-light dark:text-text-tertiary-dark"
-          />
-        </div>
-        <p class="text-text-secondary-light dark:text-text-secondary-dark mb-4">
-          Счёт не найден
-        </p>
-        <UButton variant="primary" @click="router.push({ name: 'dashboard' })">
-          На главную
-        </UButton>
-      </div>
+      <NotFoundState v-else-if="!account" message="Счёт не найден" />
 
       <!-- Account Details -->
       <div v-else class="space-y-6">
