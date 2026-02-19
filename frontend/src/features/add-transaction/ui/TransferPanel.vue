@@ -78,6 +78,12 @@ const showConversion = computed(
     props.formData.currency !== props.formData.toCurrency,
 );
 
+const isIntraAccount = computed(
+  () =>
+    props.formData.accountId === props.formData.toAccountId &&
+    !!props.formData.accountId
+);
+
 function calculateConvertedAmount(
   amount: number,
   fromCurrency: string,
@@ -217,6 +223,24 @@ function handleSourceCurrencyChange(newCurrency: string) {
   emit('update:formData', { ...props.formData, ...updates });
 }
 
+function handleTargetAmountChange(newToAmount: number) {
+  if (!props.formData.currency || !props.formData.toCurrency) return;
+
+  const newSourceAmount = calculateConvertedAmount(
+    newToAmount,
+    props.formData.toCurrency,
+    props.formData.currency
+  );
+
+  emit('update:formData', {
+    ...props.formData,
+    amount: newSourceAmount,
+    toAmount: newToAmount,
+  });
+}
+
+let isWatcherRecalculating = false;
+
 // Auto-recalculate toAmount when amount or currencies change
 watch(
   () =>
@@ -225,14 +249,16 @@ watch(
       props.formData.currency,
       props.formData.toCurrency,
     ] as const,
-  ([newAmount, fromCurrency, toCurrency]) => {
-    if (fromCurrency && toCurrency && newAmount > 0) {
+  ([newAmount, fromCurrency, toCurrency], [oldAmount]) => {
+    if (fromCurrency && toCurrency && newAmount >= 0) {
       const converted = calculateConvertedAmount(
         newAmount,
         fromCurrency,
         toCurrency,
       );
-      if (converted !== props.formData.toAmount) {
+      
+      // Add a small threshold to avoid precision bouncing
+      if (Math.abs((props.formData.toAmount || 0) - converted) > 0.01) {
         emit('update:formData', { ...props.formData, toAmount: converted });
       }
     }
@@ -241,7 +267,7 @@ watch(
 </script>
 
 <template>
-  <div class="space-y-2">
+  <div class="space-y-4">
     <HeroAmount
       :amount="formData.amount"
       :currency="formData.currency"
@@ -250,13 +276,19 @@ watch(
       :is-multi-currency="isMultiCurrency"
       :show-insufficient-funds="!hasSufficientFunds"
       :current-balance="currentBalance"
-      label="Сумма перевода"
+      label="Сумма списания"
       @update:amount="updateField('amount', $event)"
       @update:currency="handleSourceCurrencyChange"
     />
 
     <!-- Transfer flow: source → swap → target -->
     <div class="relative">
+      <!-- Timeline connector -->
+      <div
+        v-if="targetAccount"
+        class="absolute left-[1px] top-6 bottom-6 w-px border-l-2 border-dashed border-border-light dark:border-border-dark opacity-40 z-0"
+      />
+      
       <!-- Source account card -->
       <Popover v-model:open="sourceOpen">
         <PopoverTrigger as-child>
@@ -266,7 +298,7 @@ watch(
               bg-card-light dark:bg-card-dark
               border border-border-light dark:border-border-dark
               transition-colors hover:bg-surface-light/50 dark:hover:bg-surface-dark/50
-              overflow-hidden"
+              overflow-hidden relative z-10"
           >
             <!-- Color accent bar -->
             <span
@@ -319,20 +351,20 @@ watch(
       </Popover>
 
       <!-- Swap button — centered between cards -->
-      <div class="flex justify-center -my-2 relative z-10">
+      <div class="flex justify-center -my-2 relative z-20">
         <button
           type="button"
           class="w-10 h-10 rounded-full flex items-center justify-center
-            bg-card-light dark:bg-card-dark
+            bg-surface-light dark:bg-surface-dark
             border border-border-light dark:border-border-dark
             shadow-sm
-            hover:bg-primary/10 active:scale-90
-            transition-all duration-150
+            hover:bg-primary/10 active:scale-90 active:rotate-180
+            transition-all duration-300
             disabled:opacity-40"
           :disabled="!formData.toAccountId"
           @click="handleSwap"
         >
-          <UIcon name="swap_vert" size="md" class="text-primary" />
+          <UIcon :name="isIntraAccount ? 'currency_exchange' : 'swap_vert'" size="md" class="text-primary" />
         </button>
       </div>
 
@@ -342,7 +374,7 @@ watch(
           <button
             type="button"
             :class="[
-              'w-full flex items-center gap-3 p-3.5 rounded-xl transition-colors overflow-hidden',
+              'w-full flex items-center gap-3 p-3.5 rounded-xl transition-colors overflow-hidden relative z-10',
               targetAccount
                 ? 'bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark hover:bg-surface-light/50 dark:hover:bg-surface-dark/50'
                 : 'bg-transparent border-2 border-dashed border-border-light dark:border-border-dark hover:border-primary/40',
@@ -356,7 +388,7 @@ watch(
             />
             <div class="flex-1 text-left" :class="targetAccount ? 'pl-1.5' : ''">
               <p class="text-caption text-text-tertiary-light dark:text-text-tertiary-dark uppercase tracking-wider">
-                Куда
+                {{ isIntraAccount ? 'В валюту' : 'Куда' }}
               </p>
               <p
                 :class="[
@@ -413,36 +445,18 @@ watch(
       </Popover>
     </div>
 
-    <!-- Target currency selector (when target has multiple currencies) -->
-    <div v-if="targetAccount && targetAccountCurrencies.length > 1" class="flex gap-1.5 flex-wrap">
-      <button
-        v-for="cur in targetAccountCurrencies"
-        :key="cur"
-        type="button"
-        :class="[
-          'px-3 py-1.5 rounded-lg text-sm font-medium transition-all',
-          formData.toCurrency === cur
-            ? 'bg-primary text-white shadow-sm'
-            : 'bg-surface-light dark:bg-surface-dark text-text-secondary-light dark:text-text-secondary-dark hover:bg-primary/10',
-        ]"
-        @click="handleToCurrencyChange(cur)"
-      >
-        {{ getCurrencyByCode(cur)?.flag }} {{ cur }}
-      </button>
-    </div>
-
-    <!-- Conversion info — pill badge -->
-    <div
-      v-if="showConversion && formData.toAmount"
-      class="flex justify-center"
-    >
-      <div
-        class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl
-          bg-success-light text-success text-sm font-medium"
-      >
-        <UIcon name="arrow_forward" size="xs" />
-        {{ formatCurrency(formData.toAmount, formData.toCurrency ?? '') }}
-      </div>
+    <!-- Secondary amount input for target account when currencies differ -->
+    <div v-if="showConversion" class="pt-2 border-t border-border-light dark:border-border-dark border-dashed">
+      <HeroAmount
+        :amount="formData.toAmount || 0"
+        :currency="formData.toCurrency || ''"
+        :currency-symbol="getCurrencyByCode(formData.toCurrency || '')?.symbol || ''"
+        :available-currencies="targetAccountCurrencies"
+        :is-multi-currency="targetAccountCurrencies.length > 1"
+        label="Сумма зачисления"
+        @update:amount="handleTargetAmountChange"
+        @update:currency="handleToCurrencyChange"
+      />
     </div>
   </div>
 </template>

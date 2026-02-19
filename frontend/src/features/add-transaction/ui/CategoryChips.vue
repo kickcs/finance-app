@@ -22,17 +22,23 @@ const secondRow = computed(() =>
 );
 
 const containerRef = ref<HTMLElement | null>(null);
-const indicatorStyle = ref({ 
-  left: '0px', 
-  top: '0px', 
-  width: '0px', 
+const chipRefs = new Map<string, HTMLElement>();
+const indicatorStyle = ref({
+  left: '0px',
+  top: '0px',
+  width: '0px',
   height: '0px',
   backgroundColor: 'transparent',
   borderColor: 'transparent',
-  opacity: 0 
+  opacity: 0
 });
 
 let resizeObserver: ResizeObserver | null = null;
+
+function setChipRef(id: string, el: HTMLElement | null) {
+  if (el) chipRefs.set(id, el);
+  else chipRefs.delete(id);
+}
 
 function updateIndicator() {
   const el = containerRef.value;
@@ -40,17 +46,17 @@ function updateIndicator() {
     indicatorStyle.value.opacity = 0;
     return;
   }
-  
-  const active = el.querySelector<HTMLElement>(`[data-id="${props.selectedId}"]`);
+
+  const active = chipRefs.get(props.selectedId);
   if (!active) {
     indicatorStyle.value.opacity = 0;
     return;
   }
-  
+
   const containerRect = el.getBoundingClientRect();
   const activeRect = active.getBoundingClientRect();
   const category = props.categories.find((c) => c.id === props.selectedId);
-  
+
   indicatorStyle.value = {
     left: `${activeRect.left - containerRect.left + el.scrollLeft}px`,
     top: `${activeRect.top - containerRect.top + el.scrollTop}px`,
@@ -119,7 +125,7 @@ function getChipStyle(category: Category) {
           <button
             v-for="category in firstRow"
             :key="category.id"
-            :data-id="category.id"
+            :ref="(el) => setChipRef(category.id, el as HTMLElement)"
             type="button"
             class="relative z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm border active:scale-95 transition-colors duration-300 whitespace-nowrap"
             :class="
@@ -139,7 +145,7 @@ function getChipStyle(category: Category) {
           <button
             v-for="category in secondRow"
             :key="category.id"
-            :data-id="category.id"
+            :ref="(el) => setChipRef(category.id, el as HTMLElement)"
             type="button"
             class="relative z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm border active:scale-95 transition-colors duration-300 whitespace-nowrap"
             :class="

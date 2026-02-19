@@ -13,8 +13,14 @@ const emit = defineEmits<{
 }>();
 
 const containerRef = ref<HTMLElement | null>(null);
+const chipRefs = new Map<string, HTMLElement>();
 const indicatorStyle = ref({ left: '0px', width: '0px', opacity: 0 });
 let resizeObserver: ResizeObserver | null = null;
+
+function setChipRef(id: string, el: HTMLElement | null) {
+  if (el) chipRefs.set(id, el);
+  else chipRefs.delete(id);
+}
 
 function updateIndicator() {
   const el = containerRef.value;
@@ -22,16 +28,16 @@ function updateIndicator() {
     indicatorStyle.value.opacity = 0;
     return;
   }
-  
-  const active = el.querySelector<HTMLElement>(`[data-id="${props.selectedId}"]`);
+
+  const active = chipRefs.get(props.selectedId);
   if (!active) {
     indicatorStyle.value.opacity = 0;
     return;
   }
-  
+
   const containerRect = el.getBoundingClientRect();
   const activeRect = active.getBoundingClientRect();
-  
+
   indicatorStyle.value = {
     left: `${activeRect.left - containerRect.left + el.scrollLeft}px`,
     width: `${activeRect.width}px`,
@@ -79,14 +85,13 @@ watch(() => props.accounts, () => nextTick(updateIndicator), { deep: true });
       <button
         v-for="account in accounts"
         :key="account.id"
-        :data-id="account.id"
+        :ref="(el) => setChipRef(account.id, el as HTMLElement)"
         type="button"
         :class="[
           'relative z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors duration-300 text-sm',
           selectedId === account.id
-            ? 'text-primary'
-            : 'border border-border-light dark:border-border-dark text-text-secondary-light dark:text-text-secondary-dark hover:text-text-primary-light dark:hover:text-text-primary-dark',
-          selectedId === account.id ? 'border-transparent' : ''
+            ? 'border border-transparent text-primary'
+            : 'border border-border-light dark:border-border-dark text-text-secondary-light dark:text-text-secondary-dark hover:text-text-primary-light dark:hover:text-text-primary-dark'
         ]"
         @click="emit('select', account.id)"
       >
