@@ -212,7 +212,6 @@ function goBack() {
 
       <TransactionForm
         v-else
-        class="space-y-2"
         v-model:form-data="formData"
         :accounts="accounts"
         :expense-categories="expenseCategories"

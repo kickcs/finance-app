@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue';
+import { ref, watch, nextTick } from 'vue';
 import type { AccountWithBalances } from '@/entities/account';
+import { useSlidingIndicator } from '../model/useSlidingIndicator';
 
 const props = defineProps<{
   accounts: AccountWithBalances[];
@@ -13,51 +14,16 @@ const emit = defineEmits<{
 }>();
 
 const containerRef = ref<HTMLElement | null>(null);
-const chipRefs = new Map<string, HTMLElement>();
-const indicatorStyle = ref({ left: '0px', width: '0px', opacity: 0 });
-let resizeObserver: ResizeObserver | null = null;
 
-function setChipRef(id: string, el: HTMLElement | null) {
-  if (el) chipRefs.set(id, el);
-  else chipRefs.delete(id);
-}
-
-function updateIndicator() {
-  const el = containerRef.value;
-  if (!el || !props.selectedId) {
-    indicatorStyle.value.opacity = 0;
-    return;
-  }
-
-  const active = chipRefs.get(props.selectedId);
-  if (!active) {
-    indicatorStyle.value.opacity = 0;
-    return;
-  }
-
-  const containerRect = el.getBoundingClientRect();
-  const activeRect = active.getBoundingClientRect();
-
-  indicatorStyle.value = {
-    left: `${activeRect.left - containerRect.left + el.scrollLeft}px`,
+const { setChipRef, indicatorStyle, updateIndicator } = useSlidingIndicator(
+  containerRef,
+  () => props.selectedId,
+  (containerRect, activeRect, scrollLeft) => ({
+    left: `${activeRect.left - containerRect.left + scrollLeft}px`,
     width: `${activeRect.width}px`,
-    opacity: 1,
-  };
-}
+  }),
+);
 
-onMounted(() => {
-  nextTick(updateIndicator);
-  if (containerRef.value) {
-    resizeObserver = new ResizeObserver(updateIndicator);
-    resizeObserver.observe(containerRef.value);
-  }
-});
-
-onUnmounted(() => {
-  resizeObserver?.disconnect();
-});
-
-watch(() => props.selectedId, () => nextTick(updateIndicator));
 watch(() => props.accounts, () => nextTick(updateIndicator), { deep: true });
 </script>
 
@@ -68,7 +34,7 @@ watch(() => props.accounts, () => nextTick(updateIndicator), { deep: true });
     >
       {{ label }}
     </label>
-    <div 
+    <div
       ref="containerRef"
       class="relative flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1 no-scrollbar"
     >
@@ -81,7 +47,7 @@ watch(() => props.accounts, () => nextTick(updateIndicator), { deep: true });
           opacity: indicatorStyle.opacity
         }"
       />
-      
+
       <button
         v-for="account in accounts"
         :key="account.id"

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, onMounted, onUnmounted, nextTick, watch } from 'vue';
 import { UInput, UButton, UTabs, UIcon } from '@/shared/ui';
 import type { Category } from '@/entities/category';
 import type { AccountWithBalances } from '@/entities/account';
@@ -75,6 +75,52 @@ function applyTypeChange(newType: string) {
 const { scrollContainer, handleTabClick, handleScrollEnd, handleScroll } =
   useScrollableTabs(type, applyTypeChange);
 
+// --- Smooth Height Auto-adjust ---
+const containerHeight = ref<string>('auto');
+let resizeObserver: ResizeObserver | null = null;
+
+function updateContainerHeight() {
+  if (!scrollContainer.value) return;
+  
+  // Find the currently active panel (based on scroll position)
+  const panelWidth = scrollContainer.value.offsetWidth;
+  const currentIndex = Math.round(scrollContainer.value.scrollLeft / panelWidth);
+  const panels = scrollContainer.value.children;
+  
+  if (panels[currentIndex]) {
+    const activePanel = panels[currentIndex] as HTMLElement;
+    containerHeight.value = `${activePanel.offsetHeight}px`;
+  }
+}
+
+// Observe scrollContainer and its children once available
+watch(scrollContainer, (el) => {
+  resizeObserver?.disconnect();
+  if (!el) return;
+
+  resizeObserver = new ResizeObserver(updateContainerHeight);
+  resizeObserver.observe(el);
+  Array.from(el.children).forEach(child => {
+    resizeObserver?.observe(child);
+  });
+  nextTick(updateContainerHeight);
+});
+
+onUnmounted(() => {
+  resizeObserver?.disconnect();
+});
+
+// Update height on scroll and type change
+function enhancedHandleScroll() {
+  handleScroll();
+  updateContainerHeight();
+}
+function enhancedHandleScrollEnd() {
+  handleScrollEnd();
+  updateContainerHeight();
+}
+// ---
+
 // Only real panels (not clones) get autofocus — clones are at index 0 and last
 const realPanelIndices = new Set(
   TRANSACTION_TYPE_ORDER.map((_, i) => i + 1),
@@ -131,73 +177,91 @@ function onCalendarSelect(value: DateValue | undefined) {
   });
   calendarOpen.value = false;
 }
+
+// Staggered entrance animation control
+const isMounted = ref(false);
+onMounted(() => requestAnimationFrame(() => { isMounted.value = true; }));
 </script>
 
 <template>
   <form
-    class="space-y-2 transition-opacity duration-200"
+    class="space-y-4 transition-opacity duration-200"
     :class="isSubmitting && 'opacity-60 pointer-events-none'"
     @submit.prevent="$emit('submit')"
   >
     <!-- Type Tabs -->
-    <UTabs
-      :model-value="formData.type"
-      :items="tabItems"
-      @update:model-value="(v: string) => handleTabClick(v as TransactionType)"
-    />
-
-    <!-- Swipeable panels -->
     <div
-      ref="scrollContainer"
-      class="flex overflow-x-auto snap-x snap-mandatory no-scrollbar -mx-4"
-      @scrollend="handleScrollEnd"
-      @scroll="handleScroll"
+      class="stagger-1 transform transition-all duration-500 ease-out"
+      :class="isMounted ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'"
+    >
+      <UTabs
+        :model-value="formData.type"
+        :items="tabItems"
+        @update:model-value="(v: string) => handleTabClick(v as TransactionType)"
+      />
+    </div>
+
+    <!-- Swipeable panels with smooth height -->
+    <div
+      class="stagger-2 transform transition-all duration-500 ease-out delay-75 overflow-hidden"
+      :class="isMounted ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'"
+      :style="{ height: containerHeight, transition: 'height 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }"
     >
       <div
-        v-for="(panelType, idx) in CYCLIC_PANEL_ORDER"
-        :key="`${panelType}-${idx}`"
-        class="min-w-full snap-start px-4"
+        ref="scrollContainer"
+        class="flex items-start overflow-x-auto snap-x snap-mandatory no-scrollbar -mx-4 h-full"
+        @scrollend="enhancedHandleScrollEnd"
+        @scroll="enhancedHandleScroll"
       >
-        <ExpensePanel
-          v-if="panelType === 'expense'"
-          :form-data="formData"
-          :accounts="accounts"
-          :categories="expenseCategories"
-          :split-data="splitData"
-          :split-validation-error="splitValidationError"
-          :autofocus-amount="autofocusAmount && realPanelIndices.has(idx)"
-          @update:form-data="$emit('update:formData', $event)"
-          @add-participant="$emit('addParticipant', $event)"
-          @remove-participant="$emit('removeParticipant', $event)"
-          @update-participant-amount="
-            (id, amount) => $emit('updateParticipantAmount', id, amount)
-          "
-          @update-participant-name="
-            (id, name) => $emit('updateParticipantName', id, name)
-          "
-          @set-split-method="$emit('setSplitMethod', $event)"
-          @set-my-share="$emit('setMyShare', $event)"
-          @set-split-enabled="$emit('setSplitEnabled', $event)"
-        />
-        <IncomePanel
-          v-else-if="panelType === 'income'"
-          :form-data="formData"
-          :accounts="accounts"
-          :categories="incomeCategories"
-          @update:form-data="$emit('update:formData', $event)"
-        />
-        <TransferPanel
-          v-else-if="panelType === 'transfer'"
-          :form-data="formData"
-          :accounts="accounts"
-          :user-currency="userCurrency"
-          @update:form-data="$emit('update:formData', $event)"
-        />
+        <div
+          v-for="(panelType, idx) in CYCLIC_PANEL_ORDER"
+          :key="`${panelType}-${idx}`"
+          class="min-w-full snap-start px-4"
+        >
+          <ExpensePanel
+            v-if="panelType === 'expense'"
+            :form-data="formData"
+            :accounts="accounts"
+            :categories="expenseCategories"
+            :split-data="splitData"
+            :split-validation-error="splitValidationError"
+            :autofocus-amount="autofocusAmount && realPanelIndices.has(idx)"
+            @update:form-data="$emit('update:formData', $event)"
+            @add-participant="$emit('addParticipant', $event)"
+            @remove-participant="$emit('removeParticipant', $event)"
+            @update-participant-amount="
+              (id, amount) => $emit('updateParticipantAmount', id, amount)
+            "
+            @update-participant-name="
+              (id, name) => $emit('updateParticipantName', id, name)
+            "
+            @set-split-method="$emit('setSplitMethod', $event)"
+            @set-my-share="$emit('setMyShare', $event)"
+            @set-split-enabled="$emit('setSplitEnabled', $event)"
+          />
+          <IncomePanel
+            v-else-if="panelType === 'income'"
+            :form-data="formData"
+            :accounts="accounts"
+            :categories="incomeCategories"
+            @update:form-data="$emit('update:formData', $event)"
+          />
+          <TransferPanel
+            v-else-if="panelType === 'transfer'"
+            :form-data="formData"
+            :accounts="accounts"
+            :user-currency="userCurrency"
+            @update:form-data="$emit('update:formData', $event)"
+          />
+        </div>
       </div>
     </div>
 
     <!-- Bottom section -->
-    <div class="space-y-2">
+    <div
+      class="space-y-3 stagger-3 transform transition-all duration-500 ease-out delay-150"
+      :class="isMounted ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'"
+    >
       <!-- Description & Date row -->
       <div
         class="grid grid-cols-2 gap-2"
@@ -252,22 +316,24 @@ function onCalendarSelect(value: DateValue | undefined) {
         </div>
       </div>
 
-      <!-- Hashtag suggestions (full width, outside grid) -->
-      <Transition name="hashtags">
+      <!-- Hashtag suggestions (full width, outside grid) with staggered chips -->
+      <Transition name="hashtags-container">
         <div
           v-if="descriptionFocused && hashtags.length > 0"
-          class="flex gap-1.5 overflow-x-auto no-scrollbar py-0.5"
+          class="flex gap-1.5 overflow-x-auto no-scrollbar py-1"
         >
           <button
-            v-for="h in hashtags"
+            v-for="(h, i) in hashtags"
             :key="h.tag"
             type="button"
-            class="shrink-0 px-2.5 py-1 rounded-full text-xs font-medium
+            class="hashtag-chip shrink-0 px-3 py-1.5 rounded-full text-xs font-medium
               bg-surface-light dark:bg-surface-dark
               text-text-secondary-light dark:text-text-secondary-dark
-              hover:bg-primary-light hover:text-primary
+              border border-border-light dark:border-border-dark
+              hover:bg-primary-light hover:text-primary hover:border-primary/30
               active:scale-95
-              transition-all duration-150"
+              transition-all duration-200"
+            :style="{ transitionDelay: `${i * 30}ms` }"
             @mousedown.prevent="insertHashtag(h.tag)"
           >
             {{ h.tag }}
@@ -278,29 +344,39 @@ function onCalendarSelect(value: DateValue | undefined) {
       <!-- Error -->
       <p v-if="error" class="text-xs text-danger">{{ error }}</p>
 
-      <!-- Submit -->
-      <UButton
-        type="submit"
-        variant="primary"
-        size="lg"
-        full-width
-        :loading="isSubmitting"
-        :disabled="!isValid"
-      >
-        {{ submitLabel }}
-      </UButton>
+      <!-- Submit (Sticky on mobile if needed, but safe padding) -->
+      <div class="pt-2 pb-safe">
+        <UButton
+          type="submit"
+          variant="primary"
+          size="lg"
+          full-width
+          :loading="isSubmitting"
+          :disabled="!isValid"
+        >
+          {{ submitLabel }}
+        </UButton>
+      </div>
     </div>
   </form>
 </template>
 
 <style scoped>
-.hashtags-enter-active,
-.hashtags-leave-active {
-  transition: all 0.15s ease;
+.hashtags-container-enter-active,
+.hashtags-container-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.hashtags-enter-from,
-.hashtags-leave-to {
+.hashtags-container-enter-from,
+.hashtags-container-leave-to {
   opacity: 0;
-  transform: translateY(-4px);
+  transform: translateY(-8px);
+}
+.hashtags-container-enter-from .hashtag-chip,
+.hashtags-container-leave-to .hashtag-chip {
+  opacity: 0;
+  transform: translateY(-4px) scale(0.95);
+}
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 16px);
 }
 </style>

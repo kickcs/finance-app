@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, ref, watch, nextTick } from 'vue';
 import { UIcon } from '@/shared/ui';
 import { getCurrencyByCode } from '@/entities/currency';
 import { formatCurrency } from '@/shared/lib/format/currency';
@@ -232,14 +232,18 @@ function handleTargetAmountChange(newToAmount: number) {
     props.formData.currency
   );
 
+  skipWatcherRecalc = true;
   emit('update:formData', {
     ...props.formData,
     amount: newSourceAmount,
     toAmount: newToAmount,
   });
+  nextTick(() => {
+    skipWatcherRecalc = false;
+  });
 }
 
-let isWatcherRecalculating = false;
+let skipWatcherRecalc = false;
 
 // Auto-recalculate toAmount when amount or currencies change
 watch(
@@ -249,15 +253,15 @@ watch(
       props.formData.currency,
       props.formData.toCurrency,
     ] as const,
-  ([newAmount, fromCurrency, toCurrency], [oldAmount]) => {
+  ([newAmount, fromCurrency, toCurrency]) => {
+    if (skipWatcherRecalc) return;
     if (fromCurrency && toCurrency && newAmount >= 0) {
       const converted = calculateConvertedAmount(
         newAmount,
         fromCurrency,
         toCurrency,
       );
-      
-      // Add a small threshold to avoid precision bouncing
+
       if (Math.abs((props.formData.toAmount || 0) - converted) > 0.01) {
         emit('update:formData', { ...props.formData, toAmount: converted });
       }

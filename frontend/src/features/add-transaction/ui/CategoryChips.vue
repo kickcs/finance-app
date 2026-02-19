@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, ref, watch, onMounted, onUnmounted, nextTick } from 'vue';
+import { computed, ref, watch, nextTick } from 'vue';
 import { UIcon } from '@/shared/ui';
 import type { Category } from '@/entities/category';
+import { useSlidingIndicator } from '../model/useSlidingIndicator';
 
 const props = defineProps<{
   categories: Category[];
@@ -22,65 +23,23 @@ const secondRow = computed(() =>
 );
 
 const containerRef = ref<HTMLElement | null>(null);
-const chipRefs = new Map<string, HTMLElement>();
-const indicatorStyle = ref({
-  left: '0px',
-  top: '0px',
-  width: '0px',
-  height: '0px',
-  backgroundColor: 'transparent',
-  borderColor: 'transparent',
-  opacity: 0
-});
 
-let resizeObserver: ResizeObserver | null = null;
+const { setChipRef, indicatorStyle, updateIndicator } = useSlidingIndicator(
+  containerRef,
+  () => props.selectedId,
+  (containerRect, activeRect, scrollLeft, scrollTop) => {
+    const category = props.categories.find((c) => c.id === props.selectedId);
+    return {
+      left: `${activeRect.left - containerRect.left + scrollLeft}px`,
+      top: `${activeRect.top - containerRect.top + scrollTop}px`,
+      width: `${activeRect.width}px`,
+      height: `${activeRect.height}px`,
+      backgroundColor: category ? `${category.color}15` : 'transparent',
+      borderColor: category ? category.color : 'transparent',
+    };
+  },
+);
 
-function setChipRef(id: string, el: HTMLElement | null) {
-  if (el) chipRefs.set(id, el);
-  else chipRefs.delete(id);
-}
-
-function updateIndicator() {
-  const el = containerRef.value;
-  if (!el || !props.selectedId) {
-    indicatorStyle.value.opacity = 0;
-    return;
-  }
-
-  const active = chipRefs.get(props.selectedId);
-  if (!active) {
-    indicatorStyle.value.opacity = 0;
-    return;
-  }
-
-  const containerRect = el.getBoundingClientRect();
-  const activeRect = active.getBoundingClientRect();
-  const category = props.categories.find((c) => c.id === props.selectedId);
-
-  indicatorStyle.value = {
-    left: `${activeRect.left - containerRect.left + el.scrollLeft}px`,
-    top: `${activeRect.top - containerRect.top + el.scrollTop}px`,
-    width: `${activeRect.width}px`,
-    height: `${activeRect.height}px`,
-    backgroundColor: category ? `${category.color}15` : 'transparent',
-    borderColor: category ? category.color : 'transparent',
-    opacity: 1,
-  };
-}
-
-onMounted(() => {
-  nextTick(updateIndicator);
-  if (containerRef.value) {
-    resizeObserver = new ResizeObserver(updateIndicator);
-    resizeObserver.observe(containerRef.value);
-  }
-});
-
-onUnmounted(() => {
-  resizeObserver?.disconnect();
-});
-
-watch(() => props.selectedId, () => nextTick(updateIndicator));
 watch(() => props.categories, () => nextTick(updateIndicator), { deep: true });
 
 function getChipStyle(category: Category) {
@@ -110,7 +69,7 @@ function getChipStyle(category: Category) {
       </span>
     </div>
 
-    <div 
+    <div
       ref="containerRef"
       class="relative overflow-x-auto no-scrollbar -mx-4 px-4 pb-1"
     >
