@@ -6,7 +6,7 @@ import { formatCurrency } from '@/shared/lib/format/currency';
 import { useExchangeRates } from '@/shared/api';
 import type { AccountWithBalances } from '@/entities/account';
 import type { TransactionFormData } from '../model/useTransactionForm';
-import AmountInput from './AmountInput.vue';
+import HeroAmount from './HeroAmount.vue';
 import AccountSelector from './AccountSelector.vue';
 
 const props = defineProps<{
@@ -197,7 +197,7 @@ watch(
 
 <template>
   <div class="space-y-4">
-    <AmountInput
+    <HeroAmount
       :amount="formData.amount"
       :currency="formData.currency"
       :currency-symbol="currencySymbol"
