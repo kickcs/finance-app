@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue';
 import { CurrencyList } from '@/widgets/currency-list';
 import { UButton, UIcon } from '@/shared/ui';
+import { AppHeader } from '@/widgets/header';
 import {
   getCurrencyByCode,
   CURRENCIES,
@@ -79,18 +80,8 @@ function goBack() {
     class="min-h-screen bg-background-light dark:bg-background-dark flex flex-col pb-28"
   >
     <!-- Header -->
-    <header
-      class="sticky top-0 z-30 pt-[var(--safe-area-inset-top)] bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-xl"
-    >
-      <div class="flex items-center justify-between px-4 py-4">
-        <UButton variant="ghost" size="sm" @click="goBack">
-          <UIcon name="arrow_back" size="md" />
-        </UButton>
-        <h1
-          class="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark"
-        >
-          Валюта
-        </h1>
+    <AppHeader title="Валюта" show-back blur @back="goBack">
+      <template #actions>
         <UButton
           variant="ghost"
           size="sm"
@@ -99,8 +90,8 @@ function goBack() {
         >
           <span class="text-primary font-medium">Сохранить</span>
         </UButton>
-      </div>
-    </header>
+      </template>
+    </AppHeader>
 
     <!-- Content -->
     <main class="flex-1 px-5 pt-8 pb-10 space-y-8">

@@ -3,9 +3,9 @@ import { computed, inject } from 'vue';
 import { useRouter } from 'vue-router';
 import type { Ref } from 'vue';
 import type { User } from '@/shared/api/composables/useAuth';
-import { UButton, UIcon } from '@/shared/ui';
 import { ReminderForm, useCreateReminder } from '@/features/create-reminder';
 import { navigateBack } from '@/app/router';
+import { AppHeader } from '@/widgets/header';
 
 const router = useRouter();
 const user = inject<Ref<User | null>>('user');
@@ -39,21 +39,7 @@ function goBack() {
 <template>
   <div class="min-h-screen bg-background-light dark:bg-background-dark pb-28">
     <!-- Header -->
-    <header
-      class="sticky top-0 z-30 pt-[var(--safe-area-inset-top)] bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-xl"
-    >
-      <div class="flex items-center justify-between px-4 py-4">
-        <UButton variant="ghost" size="sm" @click="goBack">
-          <UIcon name="arrow_back" size="md" />
-        </UButton>
-        <h1
-          class="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark"
-        >
-          Новая подписка
-        </h1>
-        <div class="w-10" />
-      </div>
-    </header>
+    <AppHeader title="Новая подписка" show-back blur @back="goBack" />
 
     <!-- Content -->
     <main class="px-5 pt-8 pb-6">
