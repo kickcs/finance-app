@@ -26,6 +26,7 @@ const emit = defineEmits<{
   updateParticipantName: [id: string, name: string];
   setSplitMethod: [method: SplitMethod];
   setMyShare: [amount: number];
+  setIsIncluded: [included: boolean];
   setSplitEnabled: [enabled: boolean];
 }>();
 
@@ -85,6 +86,7 @@ const {
       "
       @set-method="$emit('setSplitMethod', $event)"
       @set-my-share="$emit('setMyShare', $event)"
+      @set-is-included="$emit('setIsIncluded', $event)"
       @set-enabled="$emit('setSplitEnabled', $event)"
     />
   </div>

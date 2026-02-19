@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
-import { UInput, UIcon } from '@/shared/ui';
+import { ref, computed, nextTick } from 'vue';
+import { UInput, UIcon, UProgressBar } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
+import { listTransition } from '@/shared/lib/transitions';
 import { getCurrencyByCode } from '@/entities/currency';
 import type { SplitExpenseData, SplitMethod } from '../model/types';
 
@@ -20,10 +21,12 @@ const emit = defineEmits<{
   updateParticipantName: [id: string, name: string];
   setMethod: [method: SplitMethod];
   setMyShare: [amount: number];
+  setIsIncluded: [included: boolean];
   setEnabled: [enabled: boolean];
 }>();
 
 const newParticipantName = ref('');
+const newParticipantInput = ref<HTMLInputElement | null>(null);
 
 const currencySymbol = computed(() => {
   const currency = getCurrencyByCode(props.currency);
@@ -34,10 +37,19 @@ const totalToReturn = computed(() => {
   return props.splitData.participants.reduce((sum, p) => sum + p.amount, 0);
 });
 
-function handleAddParticipant() {
+const progressColor = computed(() => {
+  const totalSplit = props.splitData.myShare + totalToReturn.value;
+  if (totalSplit > props.totalAmount + 1) return 'danger';
+  if (totalSplit >= props.totalAmount - 1) return 'success';
+  return 'primary';
+});
+
+async function handleAddParticipant() {
   if (newParticipantName.value.trim()) {
     emit('addParticipant', newParticipantName.value.trim());
     newParticipantName.value = '';
+    await nextTick();
+    newParticipantInput.value?.focus();
   }
 }
 
@@ -130,24 +142,53 @@ function handleToggle() {
         </button>
       </div>
 
-      <!-- My share -->
-      <div class="space-y-1.5">
-        <label
-          class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark"
-        >
-          Моя доля
+      <!-- My share & Toggle participation -->
+      <div class="space-y-3">
+        <label class="flex items-center gap-2 cursor-pointer group relative">
+          <div
+            class="w-5 h-5 rounded border flex items-center justify-center transition-colors"
+            :class="
+              splitData.isIncluded
+                ? 'bg-primary border-primary text-white'
+                : 'border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark group-hover:border-primary'
+            "
+          >
+            <UIcon v-if="splitData.isIncluded" name="check" size="xs" />
+          </div>
+          <span
+            class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
+          >
+            Я тоже участвую в расходе
+          </span>
+          <input
+            type="checkbox"
+            class="absolute opacity-0 w-0 h-0 overflow-hidden"
+            :checked="splitData.isIncluded"
+            @change="$emit('setIsIncluded', !splitData.isIncluded)"
+          />
         </label>
-        <UInput
-          :model-value="String(splitData.myShare || '')"
-          placeholder="0"
-          variant="currency"
-          :suffix="currencySymbol"
-          :disabled="splitData.method === 'equal'"
-          @update:model-value="$emit('setMyShare', Number($event) || 0)"
-          @keydown="
-            (e: KeyboardEvent) => e.key === 'Enter' && e.preventDefault()
-          "
-        />
+
+        <div
+          v-if="splitData.isIncluded"
+          class="space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-200"
+        >
+          <label
+            class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark"
+          >
+            Моя доля
+          </label>
+          <UInput
+            :model-value="String(splitData.myShare || '')"
+            placeholder="0"
+            variant="currency"
+            :suffix="currencySymbol"
+            :disabled="splitData.method === 'equal'"
+            @update:model-value="$emit('setMyShare', Number($event) || 0)"
+            @keydown="
+              (e: KeyboardEvent) => e.key === 'Enter' && e.preventDefault()
+            "
+          />
+        </div>
       </div>
 
       <!-- Participants -->
@@ -159,7 +200,12 @@ function handleToggle() {
         </label>
 
         <!-- Participant list -->
-        <div v-if="splitData.participants.length > 0" class="space-y-2">
+        <TransitionGroup
+          v-if="splitData.participants.length > 0"
+          v-bind="listTransition"
+          tag="div"
+          class="space-y-2 relative"
+        >
           <div
             v-for="participant in splitData.participants"
             :key="participant.id"
@@ -183,48 +229,65 @@ function handleToggle() {
                   ($event.target as HTMLInputElement).value,
                 )
               "
-              @keydown.enter.prevent
+              @keydown.enter.prevent="
+                ($event.target as HTMLInputElement).nextElementSibling
+                  ?.querySelector('input')
+                  ?.focus()
+              "
             />
-            <div class="flex items-center gap-1">
-              <input
-                :value="participant.amount"
-                type="number"
-                inputmode="decimal"
-                class="w-24 text-right bg-transparent border-none outline-none text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
-                :disabled="splitData.method === 'equal'"
-                @input="
-                  $emit(
-                    'updateParticipantAmount',
-                    participant.id,
-                    Number(($event.target as HTMLInputElement).value) || 0,
-                  )
-                "
-                @keydown.enter.prevent
-              />
-              <span
-                class="text-xs text-text-secondary-light dark:text-text-secondary-dark"
-              >
-                {{ currencySymbol }}
-              </span>
+            <div
+              class="flex items-center gap-1 justify-end"
+              :class="splitData.method === 'custom' ? 'w-28' : 'w-auto'"
+            >
+              <template v-if="splitData.method === 'equal'">
+                <span
+                  class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark whitespace-nowrap"
+                >
+                  {{ formatCurrency(participant.amount, currency) }}
+                </span>
+              </template>
+              <template v-else>
+                <input
+                  :value="participant.amount || ''"
+                  type="number"
+                  inputmode="decimal"
+                  placeholder="0"
+                  class="w-full text-right bg-transparent border-b border-border-light dark:border-border-dark focus:border-primary outline-none text-sm font-medium text-text-primary-light dark:text-text-primary-dark transition-colors pb-0.5"
+                  @input="
+                    $emit(
+                      'updateParticipantAmount',
+                      participant.id,
+                      Number(($event.target as HTMLInputElement).value) || 0,
+                    )
+                  "
+                  @keydown.enter.prevent
+                />
+                <span
+                  class="text-xs text-text-secondary-light dark:text-text-secondary-dark flex-shrink-0"
+                >
+                  {{ currencySymbol }}
+                </span>
+              </template>
             </div>
             <button
               type="button"
-              class="p-1 text-text-tertiary-light dark:text-text-tertiary-dark hover:text-danger transition-colors"
+              class="p-1 ml-1 text-text-tertiary-light dark:text-text-tertiary-dark hover:text-danger transition-colors"
               @click="$emit('removeParticipant', participant.id)"
             >
               <UIcon name="close" size="sm" />
             </button>
           </div>
-        </div>
+        </TransitionGroup>
 
         <!-- Add participant -->
-        <div class="flex gap-2">
+        <div class="flex gap-2 mt-2">
           <input
+            ref="newParticipantInput"
             v-model="newParticipantName"
             type="text"
             placeholder="Имя участника"
             class="flex-1 px-3 py-2.5 rounded-lg bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark text-sm text-text-primary-light dark:text-text-primary-dark placeholder:text-text-tertiary-light dark:placeholder:text-text-tertiary-dark focus:outline-none focus:ring-2 focus:ring-primary"
-            @keydown.enter.prevent
+            @keydown.enter.prevent="handleAddParticipant"
           />
           <button
             type="button"
@@ -239,18 +302,28 @@ function handleToggle() {
 
       <!-- Summary -->
       <div
-        class="p-3 rounded-xl bg-surface-light dark:bg-surface-dark space-y-2"
+        class="p-3 rounded-xl bg-surface-light dark:bg-surface-dark space-y-3"
       >
-        <div class="flex justify-between text-sm">
-          <span class="text-text-secondary-light dark:text-text-secondary-dark"
-            >Общая сумма</span
-          >
-          <span
-            class="font-medium text-text-primary-light dark:text-text-primary-dark"
-          >
-            {{ formatCurrency(totalAmount, currency) }}
-          </span>
+        <div class="space-y-2">
+          <div class="flex justify-between text-sm">
+            <span
+              class="text-text-secondary-light dark:text-text-secondary-dark"
+              >Общая сумма</span
+            >
+            <span
+              class="font-medium text-text-primary-light dark:text-text-primary-dark"
+            >
+              {{ formatCurrency(totalAmount, currency) }}
+            </span>
+          </div>
+          <UProgressBar
+            :value="splitData.myShare + totalToReturn"
+            :max="totalAmount"
+            :color="progressColor"
+            size="sm"
+          />
         </div>
+
         <div class="flex justify-between text-sm">
           <span class="text-text-secondary-light dark:text-text-secondary-dark"
             >Моя доля</span
@@ -272,13 +345,20 @@ function handleToggle() {
         </div>
       </div>
 
-      <!-- Validation error -->
+      <!-- Validation error or Info -->
       <p
         v-if="validationError"
         class="text-xs text-danger flex items-center gap-1"
       >
         <UIcon name="error" size="xs" />
         {{ validationError }}
+      </p>
+      <p
+        v-else-if="splitData.participants.length === 0"
+        class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark flex items-center gap-1"
+      >
+        <UIcon name="info" size="xs" />
+        Добавьте участников для разделения расхода
       </p>
     </div>
   </div>

@@ -20,6 +20,7 @@ const props = withDefaults(defineProps<ProgressBarProps>(), {
 });
 
 const percentage = computed(() => {
+  if (!props.max || props.max <= 0) return 0;
   return Math.min(100, Math.max(0, (props.value / props.max) * 100));
 });
 

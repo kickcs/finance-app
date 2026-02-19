@@ -19,10 +19,7 @@ import {
   PopoverContent,
 } from '@/shared/ui/primitives/popover';
 import { Calendar } from '@/shared/ui/primitives/calendar';
-import {
-  CalendarDate,
-  type DateValue,
-} from '@internationalized/date';
+import { CalendarDate, type DateValue } from '@internationalized/date';
 import ExpensePanel from './ExpensePanel.vue';
 import IncomePanel from './IncomePanel.vue';
 import TransferPanel from './TransferPanel.vue';
@@ -50,6 +47,7 @@ const emit = defineEmits<{
   updateParticipantName: [id: string, name: string];
   setSplitMethod: [method: SplitMethod];
   setMyShare: [amount: number];
+  setIsIncluded: [included: boolean];
   setSplitEnabled: [enabled: boolean];
 }>();
 
@@ -81,15 +79,23 @@ let resizeObserver: ResizeObserver | null = null;
 
 function updateContainerHeight() {
   if (!scrollContainer.value) return;
-  
-  // Find the currently active panel (based on scroll position)
-  const panelWidth = scrollContainer.value.offsetWidth;
-  const currentIndex = Math.round(scrollContainer.value.scrollLeft / panelWidth);
+
+  // Use bounding rect width to prevent 0-width collapse issues
+  const rect = scrollContainer.value.getBoundingClientRect();
+  const panelWidth = rect.width;
+  if (panelWidth === 0) return;
+
+  const currentIndex = Math.round(
+    scrollContainer.value.scrollLeft / panelWidth,
+  );
   const panels = scrollContainer.value.children;
-  
+
   if (panels[currentIndex]) {
     const activePanel = panels[currentIndex] as HTMLElement;
-    containerHeight.value = `${activePanel.offsetHeight}px`;
+    // Fix: check if height is greater than 0 before updating to prevent snapping to 0 when element remounts
+    if (activePanel.offsetHeight > 0) {
+      containerHeight.value = `${activePanel.offsetHeight}px`;
+    }
   }
 }
 
@@ -100,7 +106,7 @@ watch(scrollContainer, (el) => {
 
   resizeObserver = new ResizeObserver(updateContainerHeight);
   resizeObserver.observe(el);
-  Array.from(el.children).forEach(child => {
+  Array.from(el.children).forEach((child) => {
     resizeObserver?.observe(child);
   });
   nextTick(updateContainerHeight);
@@ -122,9 +128,7 @@ function enhancedHandleScrollEnd() {
 // ---
 
 // Only real panels (not clones) get autofocus — clones are at index 0 and last
-const realPanelIndices = new Set(
-  TRANSACTION_TYPE_ORDER.map((_, i) => i + 1),
-);
+const realPanelIndices = new Set(TRANSACTION_TYPE_ORDER.map((_, i) => i + 1));
 
 const submitLabel = computed(() => {
   if (props.formData.type === 'transfer') return 'Перевести';
@@ -180,7 +184,11 @@ function onCalendarSelect(value: DateValue | undefined) {
 
 // Staggered entrance animation control
 const isMounted = ref(false);
-onMounted(() => requestAnimationFrame(() => { isMounted.value = true; }));
+onMounted(() =>
+  requestAnimationFrame(() => {
+    isMounted.value = true;
+  }),
+);
 </script>
 
 <template>
@@ -192,20 +200,29 @@ onMounted(() => requestAnimationFrame(() => { isMounted.value = true; }));
     <!-- Type Tabs -->
     <div
       class="stagger-1 transform transition-all duration-500 ease-out"
-      :class="isMounted ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'"
+      :class="
+        isMounted ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
+      "
     >
       <UTabs
         :model-value="formData.type"
         :items="tabItems"
-        @update:model-value="(v: string) => handleTabClick(v as TransactionType)"
+        @update:model-value="
+          (v: string) => handleTabClick(v as TransactionType)
+        "
       />
     </div>
 
     <!-- Swipeable panels with smooth height -->
     <div
       class="stagger-2 transform transition-all duration-500 ease-out delay-75 overflow-hidden"
-      :class="isMounted ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'"
-      :style="{ height: containerHeight, transition: 'height 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }"
+      :class="
+        isMounted ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
+      "
+      :style="{
+        height: containerHeight,
+        transition: 'height 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+      }"
     >
       <div
         ref="scrollContainer"
@@ -237,6 +254,7 @@ onMounted(() => requestAnimationFrame(() => { isMounted.value = true; }));
             "
             @set-split-method="$emit('setSplitMethod', $event)"
             @set-my-share="$emit('setMyShare', $event)"
+            @set-is-included="$emit('setIsIncluded', $event)"
             @set-split-enabled="$emit('setSplitEnabled', $event)"
           />
           <IncomePanel
@@ -260,7 +278,9 @@ onMounted(() => requestAnimationFrame(() => { isMounted.value = true; }));
     <!-- Bottom section -->
     <div
       class="space-y-3 stagger-3 transform transition-all duration-500 ease-out delay-150"
-      :class="isMounted ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'"
+      :class="
+        isMounted ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
+      "
     >
       <!-- Description & Date row -->
       <div
@@ -291,11 +311,7 @@ onMounted(() => requestAnimationFrame(() => { isMounted.value = true; }));
             <PopoverTrigger as-child>
               <button
                 type="button"
-                class="flex items-center justify-between w-full px-3 py-3 rounded-lg text-sm
-                  bg-card-light dark:bg-card-dark
-                  border border-border-light dark:border-border-dark
-                  text-text-primary-light dark:text-text-primary-dark
-                  transition-all duration-150"
+                class="flex items-center justify-between w-full px-3 py-3 rounded-lg text-sm bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark transition-all duration-150"
               >
                 <span>{{ displayDate }}</span>
                 <UIcon
@@ -326,13 +342,7 @@ onMounted(() => requestAnimationFrame(() => { isMounted.value = true; }));
             v-for="(h, i) in hashtags"
             :key="h.tag"
             type="button"
-            class="hashtag-chip shrink-0 px-3 py-1.5 rounded-full text-xs font-medium
-              bg-surface-light dark:bg-surface-dark
-              text-text-secondary-light dark:text-text-secondary-dark
-              border border-border-light dark:border-border-dark
-              hover:bg-primary-light hover:text-primary hover:border-primary/30
-              active:scale-95
-              transition-all duration-200"
+            class="hashtag-chip shrink-0 px-3 py-1.5 rounded-full text-xs font-medium bg-surface-light dark:bg-surface-dark text-text-secondary-light dark:text-text-secondary-dark border border-border-light dark:border-border-dark hover:bg-primary-light hover:text-primary hover:border-primary/30 active:scale-95 transition-all duration-200"
             :style="{ transitionDelay: `${i * 30}ms` }"
             @mousedown.prevent="insertHashtag(h.tag)"
           >

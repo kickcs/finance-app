@@ -33,15 +33,13 @@ export function useSplitExpense(totalAmountRef: () => number) {
 
   const validationError = computed(() => {
     if (!splitData.value.enabled) return null;
-    if (splitData.value.participants.length === 0) {
-      return 'Добавьте хотя бы одного участника';
-    }
+    // Removing the immediate error for 0 participants, it will be handled as a warning in UI
 
     const totalAmount = totalAmountRef();
     const totalSplit = splitData.value.myShare + totalToReturn.value;
     const diff = totalAmount - totalSplit;
 
-    if (Math.abs(diff) > 1) {
+    if (splitData.value.participants.length > 0 && Math.abs(diff) > 1) {
       if (diff > 0) {
         return `Не распределено: ${Math.round(diff).toLocaleString()}`;
       } else {
@@ -56,14 +54,32 @@ export function useSplitExpense(totalAmountRef: () => number) {
     const totalAmount = totalAmountRef();
     if (totalAmount <= 0 || splitData.value.method !== 'equal') return;
 
-    const participantCount = splitData.value.participants.length + 1; // +1 for "me"
+    if (!splitData.value.isIncluded) {
+      splitData.value.myShare = 0;
+    }
+
+    const participantCount =
+      splitData.value.participants.length +
+      (splitData.value.isIncluded ? 1 : 0);
+
     if (participantCount <= 0) return;
 
     const sharePerPerson = Math.floor(totalAmount / participantCount);
     const remainder = totalAmount - sharePerPerson * participantCount;
 
-    // Set my share (give remainder to me to avoid rounding issues)
-    splitData.value.myShare = sharePerPerson + remainder;
+    if (splitData.value.isIncluded) {
+      // Set my share (give remainder to me to avoid rounding issues)
+      splitData.value.myShare = sharePerPerson + remainder;
+    } else {
+      // Give remainder to the first participant if I am not included
+      if (splitData.value.participants.length > 0) {
+        splitData.value.participants[0].amount = sharePerPerson + remainder;
+        for (let i = 1; i < splitData.value.participants.length; i++) {
+          splitData.value.participants[i].amount = sharePerPerson;
+        }
+        return;
+      }
+    }
 
     // Set participants' shares
     splitData.value.participants.forEach((p) => {
@@ -85,6 +101,24 @@ export function useSplitExpense(totalAmountRef: () => number) {
     }
   }
 
+  function autoCalcMyShareInCustom() {
+    if (splitData.value.method !== 'custom') return;
+
+    if (!splitData.value.isIncluded) {
+      splitData.value.myShare = 0;
+      return;
+    }
+
+    const totalAmount = totalAmountRef();
+    const friendsTotal = splitData.value.participants.reduce(
+      (sum, p) => sum + p.amount,
+      0,
+    );
+    const newMyShare = totalAmount - friendsTotal;
+    // Set myShare to the remainder, even if it's negative (will show as error in validation)
+    splitData.value.myShare = newMyShare >= 0 ? newMyShare : 0;
+  }
+
   function removeParticipant(id: string) {
     const index = splitData.value.participants.findIndex((p) => p.id === id);
     if (index > -1) {
@@ -92,6 +126,8 @@ export function useSplitExpense(totalAmountRef: () => number) {
 
       if (splitData.value.method === 'equal') {
         recalculateShares();
+      } else {
+        autoCalcMyShareInCustom();
       }
     }
   }
@@ -100,6 +136,18 @@ export function useSplitExpense(totalAmountRef: () => number) {
     const participant = splitData.value.participants.find((p) => p.id === id);
     if (participant) {
       participant.amount = Math.max(0, amount);
+      if (splitData.value.method === 'custom') {
+        autoCalcMyShareInCustom();
+      }
+    }
+  }
+
+  function setIsIncluded(included: boolean) {
+    splitData.value.isIncluded = included;
+    if (splitData.value.method === 'equal') {
+      recalculateShares();
+    } else {
+      autoCalcMyShareInCustom();
     }
   }
 
@@ -204,6 +252,7 @@ export function useSplitExpense(totalAmountRef: () => number) {
     updateParticipantName,
     setMethod,
     setMyShare,
+    setIsIncluded,
     setEnabled,
     recalculateShares,
     createDebtsForSplit,

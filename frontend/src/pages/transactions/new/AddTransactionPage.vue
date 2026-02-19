@@ -24,10 +24,7 @@ const { userId } = useCurrentUser();
 
 // Get accounts and categories for the current user
 const { accounts, isLoading: accountsLoading } = useAccounts(userId);
-const {
-  expenseCategories,
-  incomeCategories,
-} = useCategories(userId);
+const { expenseCategories, incomeCategories } = useCategories(userId);
 const { defaultAccountId } = useProfile(userId);
 const { currency: userCurrency } = useUserCurrency();
 const isQuickAction = computed(() => !!route.query.categoryId);
@@ -47,6 +44,7 @@ const {
   updateParticipantName,
   setMethod: setSplitMethod,
   setMyShare,
+  setIsIncluded,
   setEnabled: setSplitEnabled,
   createDebtsForSplit,
   reset: resetSplit,
@@ -180,7 +178,9 @@ function goBack() {
 </script>
 
 <template>
-  <div class="h-dvh flex flex-col bg-background-light dark:bg-background-dark overflow-hidden">
+  <div
+    class="h-dvh flex flex-col bg-background-light dark:bg-background-dark overflow-hidden"
+  >
     <!-- Header -->
     <AppHeader title="Новая транзакция" show-back blur @back="goBack" />
 
@@ -230,6 +230,7 @@ function goBack() {
         @update-participant-name="updateParticipantName"
         @set-split-method="setSplitMethod"
         @set-my-share="setMyShare"
+        @set-is-included="setIsIncluded"
         @set-split-enabled="setSplitEnabled"
       />
     </main>
