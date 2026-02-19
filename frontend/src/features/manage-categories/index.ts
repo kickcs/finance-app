@@ -4,5 +4,3 @@ export {
 } from './model/useManageCategories';
 export { CATEGORY_COLORS, CATEGORY_ICONS } from './model/constants';
 export { default as CategoryForm } from './ui/CategoryForm.vue';
-export { default as CategoryColorPicker } from './ui/CategoryColorPicker.vue';
-export { default as CategoryIconPicker } from './ui/CategoryIconPicker.vue';

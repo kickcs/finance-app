@@ -1,5 +1,3 @@
 export { default as AccountForm } from './ui/AccountForm.vue';
-export { default as IconSelector } from './ui/IconSelector.vue';
-export { default as ColorPicker } from './ui/ColorPicker.vue';
 export { useCreateAccount } from './model/useCreateAccount';
 export type { AccountFormData } from './model/useCreateAccount';

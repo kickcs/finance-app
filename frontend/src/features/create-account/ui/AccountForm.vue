@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { UInput, UButton } from '@/shared/ui';
-import IconSelector from './IconSelector.vue';
-import ColorPicker from './ColorPicker.vue';
+import { UInput, UButton, UColorPicker, UIconSelector } from '@/shared/ui';
 import CurrencyBalanceList from './CurrencyBalanceList.vue';
 import type { AccountFormData } from '../model/useCreateAccount';
 import {
   VISIBLE_ACCOUNT_TYPES,
   ACCOUNT_TYPE_LABELS,
   AccountTypeFields,
+  ACCOUNT_COLORS,
+  ACCOUNT_ICONS,
 } from '@/entities/account';
 import type { AccountType } from '@/entities/account';
 
@@ -106,15 +106,19 @@ function updateField<K extends keyof AccountFormData>(
     />
 
     <!-- Icon Selector -->
-    <IconSelector
+    <UIconSelector
       :model-value="formData.icon"
+      :icons="ACCOUNT_ICONS"
       :color="formData.color"
+      label="Иконка"
       @update:model-value="updateField('icon', $event)"
     />
 
     <!-- Color Picker -->
-    <ColorPicker
+    <UColorPicker
       :model-value="formData.color"
+      :colors="ACCOUNT_COLORS"
+      label="Цвет"
       @update:model-value="updateField('color', $event)"
     />
 
