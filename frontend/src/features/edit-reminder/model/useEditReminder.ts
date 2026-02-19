@@ -1,52 +1,37 @@
-import { ref } from 'vue';
+import { computed } from 'vue';
+import { useAsyncOperation } from '@/shared/lib/hooks/useAsyncOperation';
 import { useReminders } from '@/entities/reminder';
 import type { Reminder } from '@/shared/api/database.types';
 
 export function useEditReminder(userId: string) {
   const { updateReminder, deleteReminder } = useReminders(userId);
 
-  const isUpdating = ref(false);
-  const isDeleting = ref(false);
-  const error = ref<string | null>(null);
-
-  async function update(reminderId: string, updates: Partial<Reminder>) {
-    isUpdating.value = true;
-    error.value = null;
-
-    try {
+  const {
+    isLoading: isUpdating,
+    error: updateError,
+    execute: update,
+  } = useAsyncOperation(
+    async (reminderId: string, updates: Partial<Reminder>) => {
       await updateReminder(reminderId, updates);
       return true;
-    } catch (e) {
-      error.value = 'Не удалось обновить подписку';
-      console.error('Failed to update reminder:', e);
-      return false;
-    } finally {
-      isUpdating.value = false;
-    }
-  }
+    },
+    { errorMessage: 'Не удалось обновить подписку' },
+  );
 
-  async function remove(reminderId: string) {
-    isDeleting.value = true;
-    error.value = null;
-
-    try {
+  const {
+    isLoading: isDeleting,
+    error: deleteError,
+    execute: remove,
+  } = useAsyncOperation(
+    async (reminderId: string) => {
       // useReminders.deleteReminder already handles cache invalidation via onSettled
       await deleteReminder(reminderId);
       return true;
-    } catch (e) {
-      error.value = 'Не удалось удалить подписку';
-      console.error('Failed to delete reminder:', e);
-      return false;
-    } finally {
-      isDeleting.value = false;
-    }
-  }
+    },
+    { errorMessage: 'Не удалось удалить подписку' },
+  );
 
-  return {
-    isUpdating,
-    isDeleting,
-    error,
-    update,
-    remove,
-  };
+  const error = computed(() => updateError.value || deleteError.value);
+
+  return { isUpdating, isDeleting, error, update, remove };
 }
