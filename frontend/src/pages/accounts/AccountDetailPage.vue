@@ -2,9 +2,9 @@
 import { ref, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
-import { UButton, UIcon, UCard, EmptyState } from '@/shared/ui';
+import { UButton, UIcon, UCard, EmptyState, USpinner, NotFoundState } from '@/shared/ui';
+import { AppHeader } from '@/widgets/header';
 import { formatCurrency } from '@/shared/lib/format/currency';
-import { formatDateGroup } from '@/shared/lib/format/date';
 import {
   useAccounts,
   getAccountTypeLabel,
@@ -14,10 +14,10 @@ import {
   VirtualGroupedTransactionList,
   TransactionGroupSkeleton,
   useInfiniteAccountTransactions,
+  useGroupedTransactions,
   transactionsApi,
   transactionQueryKeys,
   type Transaction,
-  type TransactionGroup,
 } from '@/entities/transaction';
 import { useQuery } from '@tanstack/vue-query';
 import {
@@ -29,25 +29,23 @@ import {
   EditTransactionModal,
   DeleteTransactionModal,
   useEditTransaction,
+  useTransactionSelection,
 } from '@/features/edit-transaction';
 import type { Account } from '@/shared/api/database.types';
 import { navigateBack } from '@/app/router';
 import { useProfile } from '@/shared/api';
-import { debtsApi } from '@/entities/debt';
+import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 
 const router = useRouter();
 const route = useRoute();
 const { userId } = useCurrentUser();
 const accountId = computed(() => route.params.id as string);
 
-// Get user currency and default account from profile
+// Get user currency (profile-first, falls back to localStorage)
+const { currency } = useUserCurrency();
+
+// Profile for default account management
 const { profile, setDefaultAccount } = useProfile(userId);
-const currency = computed(
-  () =>
-    profile.value?.currency ||
-    localStorage.getItem('selectedCurrency') ||
-    'UZS',
-);
 
 const { accounts, isLoading } = useAccounts(userId);
 
@@ -72,41 +70,29 @@ function getAccountName(id: string | null): string {
 }
 
 // Group transactions by date
-const groupedTransactions = computed<TransactionGroup[]>(() => {
-  const groups: Record<string, Transaction[]> = {};
-  const currentAccountId = accountId.value;
-
-  for (const tx of accountTransactions.value) {
-    const dateKey = formatDateGroup(tx.date);
-    if (!groups[dateKey]) {
-      groups[dateKey] = [];
-    }
-    groups[dateKey].push(tx);
-  }
-
-  return Object.entries(groups).map(([date, txs]) => ({
-    date,
-    // Sort transactions within group by time (descending)
-    transactions: txs.sort((a, b) => {
-      const timeA = new Date(a.date).getTime();
-      const timeB = new Date(b.date).getTime();
-      if (timeA !== timeB) return timeB - timeA;
-      return (
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      );
-    }),
-    total: txs.reduce((sum, tx) => {
+const groupedTransactions = useGroupedTransactions(accountTransactions, {
+  // API already returns transactions newest-first; preserve server order for groups
+  sortGroups: false,
+  // Within each group: sort by transaction time desc, then by created_at desc
+  sortTransactions: (a, b) => {
+    const timeA = new Date(a.date).getTime();
+    const timeB = new Date(b.date).getTime();
+    if (timeA !== timeB) return timeB - timeA;
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  },
+  // Transfer totals are account-specific: incoming transfers add, outgoing subtract
+  computeTotal: (txs) => {
+    const currentAccountId = accountId.value;
+    return txs.reduce((sum, tx) => {
       if (tx.type === 'transfer') {
-        // Входящий перевод на этот счёт
         if (tx.to_account_id === currentAccountId) {
           return sum + (tx.to_amount ?? 0);
         }
-        // Исходящий перевод с этого счёта
         return sum - tx.amount;
       }
       return sum + (tx.type === 'income' ? tx.amount : -tx.amount);
-    }, 0),
-  }));
+    }, 0);
+  },
 });
 
 // Edit account
@@ -162,10 +148,16 @@ async function handleDeleteAccount() {
 }
 
 // Edit transaction
-const showEditTransactionModal = ref(false);
 const showDeleteTransactionModal = ref(false);
-const selectedTransaction = ref<Transaction | null>(null);
-const selectedTransactionHasSplitDebts = ref(false);
+
+const {
+  selectedTransaction,
+  hasSplitDebts,
+  showEditModal: showEditTransactionModal,
+  select: handleTransactionClick,
+  close: closeEditTransactionModal,
+} = useTransactionSelection(userId);
+
 const {
   isUpdating: isUpdatingTransaction,
   isDeleting: isDeletingTransaction,
@@ -174,37 +166,17 @@ const {
   remove: removeTransactionFn,
 } = useEditTransaction(userId.value);
 
-async function handleTransactionClick(transaction: Transaction) {
-  selectedTransaction.value = transaction;
-  selectedTransactionHasSplitDebts.value = false;
-
-  // Check if this transaction has OPEN split debts (closed debts don't block editing)
-  if (!transaction.is_debt_related && userId.value) {
-    try {
-      const allDebts = await debtsApi.getAll(userId.value);
-      const linkedDebts = allDebts.filter(
-        (d) => d.source_transaction_id === transaction.id && !d.is_closed,
-      );
-      selectedTransactionHasSplitDebts.value = linkedDebts.length > 0;
-    } catch {
-      selectedTransactionHasSplitDebts.value = false;
-    }
-  }
-
-  showEditTransactionModal.value = true;
-}
-
 async function handleUpdateTransaction(updates: Partial<Transaction>) {
   if (!selectedTransaction.value) return;
   const success = await updateTransactionFn(selectedTransaction.value, updates);
   if (success) {
-    showEditTransactionModal.value = false;
+    closeEditTransactionModal();
     // Query cache will be automatically invalidated
   }
 }
 
 function handleDeleteTransactionClick() {
-  showEditTransactionModal.value = false;
+  closeEditTransactionModal();
   showDeleteTransactionModal.value = true;
 }
 
@@ -238,49 +210,17 @@ async function handleSetAsDefault() {
 <template>
   <div class="min-h-screen bg-background-light dark:bg-background-dark pb-28">
     <!-- Header -->
-    <header
-      class="sticky top-0 z-30 pt-[var(--safe-area-inset-top)] bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-xl"
-    >
-      <div class="flex items-center justify-between px-4 py-4">
-        <UButton variant="ghost" size="sm" @click="goBack">
-          <UIcon name="arrow_back" size="md" />
-        </UButton>
-        <h1
-          class="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark"
-        >
-          Счёт
-        </h1>
-        <div class="w-10" />
-      </div>
-    </header>
+    <AppHeader :title="account?.name ?? 'Счёт'" show-back blur @back="goBack" />
 
     <!-- Content -->
     <main class="px-5 pt-8 pb-6">
       <!-- Loading State -->
       <div v-if="isLoading" class="flex items-center justify-center py-12">
-        <div
-          class="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"
-        />
+        <USpinner />
       </div>
 
       <!-- Not Found State -->
-      <div v-else-if="!account" class="text-center py-12">
-        <div
-          class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-surface-light dark:bg-surface-dark flex items-center justify-center"
-        >
-          <UIcon
-            name="error"
-            size="xl"
-            class="text-text-tertiary-light dark:text-text-tertiary-dark"
-          />
-        </div>
-        <p class="text-text-secondary-light dark:text-text-secondary-dark mb-4">
-          Счёт не найден
-        </p>
-        <UButton variant="primary" @click="router.push({ name: 'dashboard' })">
-          На главную
-        </UButton>
-      </div>
+      <NotFoundState v-else-if="!account" message="Счёт не найден" />
 
       <!-- Account Details -->
       <div v-else class="space-y-6">
@@ -748,7 +688,7 @@ async function handleSetAsDefault() {
       :currency="currency"
       :is-updating="isUpdatingTransaction"
       :error="transactionError"
-      :has-split-debts="selectedTransactionHasSplitDebts"
+      :has-split-debts="hasSplitDebts"
       @confirm="handleUpdateTransaction"
       @delete="handleDeleteTransactionClick"
     />

@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router';
 import { BottomNav } from '@/widgets/bottom-nav';
 import { AppHeader } from '@/widgets/header';
 import { ReminderCard, useReminders, type Reminder } from '@/entities/reminder';
-import { UButton, UIcon, UCard } from '@/shared/ui';
+import { UButton, UIcon, UCard, EmptyState } from '@/shared/ui';
 import { navigateBack } from '@/app/router';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
@@ -112,7 +112,7 @@ function handleAddTransaction() {
           >
             На этой неделе
           </p>
-          <p class="text-lg font-bold text-blue-500">
+          <p class="text-lg font-bold text-primary">
             {{ thisWeekReminders.length }}
           </p>
         </UCard>
@@ -149,27 +149,15 @@ function handleAddTransaction() {
         <!-- Empty State -->
         <div
           v-else
-          class="py-12 text-center bg-card-light dark:bg-card-dark rounded-2xl"
+          class="bg-card-light dark:bg-card-dark rounded-2xl"
         >
-          <div
-            class="w-16 h-16 mx-auto mb-4 rounded-full bg-reminder-light flex items-center justify-center"
-          >
-            <UIcon name="notifications" size="lg" class="text-reminder" />
-          </div>
-          <p
-            class="text-text-secondary-light dark:text-text-secondary-dark mb-4 font-semibold"
-          >
-            Нет подписок
-          </p>
-          <p
-            class="text-text-tertiary-light dark:text-text-tertiary-dark mb-4 text-sm"
-          >
-            Добавьте подписки для отслеживания регулярных платежей
-          </p>
-          <UButton variant="primary" @click="handleAddReminder">
-            <UIcon name="add" size="sm" class="mr-1" />
-            Добавить подписку
-          </UButton>
+          <EmptyState
+            icon="notifications"
+            title="Нет подписок"
+            description="Добавьте подписки для отслеживания регулярных платежей"
+            icon-bg-class="bg-reminder-light"
+            :action="{ label: 'Добавить подписку', onClick: handleAddReminder }"
+          />
         </div>
       </div>
     </main>

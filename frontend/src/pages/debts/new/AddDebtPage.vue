@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
-import { UButton, UIcon } from '@/shared/ui';
+import { UButton, UIcon, USpinner } from '@/shared/ui';
 import { DebtForm, useCreateDebt } from '@/features/create-debt';
 import { useAccounts } from '@/entities/account';
 import { navigateBack } from '@/app/router';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
+import { AppHeader } from '@/widgets/header';
 
 const router = useRouter();
 const { userId } = useCurrentUser();
@@ -36,21 +37,7 @@ function goBack() {
 <template>
   <div class="min-h-screen bg-background-light dark:bg-background-dark pb-28">
     <!-- Header -->
-    <header
-      class="sticky top-0 z-30 pt-[var(--safe-area-inset-top)] bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-xl"
-    >
-      <div class="flex items-center justify-between px-4 py-4">
-        <UButton variant="ghost" size="sm" @click="goBack">
-          <UIcon name="arrow_back" size="md" />
-        </UButton>
-        <h1
-          class="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark"
-        >
-          Новый долг
-        </h1>
-        <div class="w-10" />
-      </div>
-    </header>
+    <AppHeader title="Новый долг" show-back blur @back="goBack" />
 
     <!-- Content -->
     <main class="px-5 pt-8 pb-6">
@@ -59,9 +46,7 @@ function goBack() {
         v-if="accountsLoading"
         class="flex items-center justify-center py-12"
       >
-        <div
-          class="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"
-        />
+        <USpinner />
       </div>
 
       <!-- No Accounts State -->

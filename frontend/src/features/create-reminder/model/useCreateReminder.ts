@@ -4,7 +4,7 @@ import {
   remindersApi,
   reminderQueryKeys,
 } from '@/entities/reminder';
-import { ACCOUNT_COLORS } from '@/entities/account';
+import { ENTITY_COLORS } from '@/shared/config/colors';
 import { queryClient } from '@/shared/api/queryClient';
 import { useToast } from '@/shared/ui';
 
@@ -31,7 +31,7 @@ export function useCreateReminder() {
     frequency: 'monthly',
     next_date: getDefaultNextDate(),
     icon: REMINDER_ICONS[0],
-    color: ACCOUNT_COLORS[0],
+    color: ENTITY_COLORS[0],
   });
 
   const isValid = computed(() => {
@@ -104,7 +104,7 @@ export function useCreateReminder() {
       frequency: 'monthly',
       next_date: getDefaultNextDate(),
       icon: REMINDER_ICONS[0],
-      color: ACCOUNT_COLORS[0],
+      color: ENTITY_COLORS[0],
     };
     error.value = null;
   }

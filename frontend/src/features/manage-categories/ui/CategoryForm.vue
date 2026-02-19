@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { UInput } from '@/shared/ui';
-import CategoryColorPicker from './CategoryColorPicker.vue';
-import CategoryIconPicker from './CategoryIconPicker.vue';
+import { UInput, UColorPicker, UIconSelector } from '@/shared/ui';
+import { CATEGORY_COLORS, CATEGORY_ICONS } from '../model/constants';
 import type { CategoryFormData } from '../model/useManageCategories';
 
 defineProps<{
@@ -26,14 +25,20 @@ const emit = defineEmits<{
       @update:model-value="emit('update:name', String($event))"
     />
 
-    <CategoryColorPicker
+    <UColorPicker
       :model-value="formData.color"
+      :colors="CATEGORY_COLORS"
+      label="Цвет"
       @update:model-value="emit('update:color', $event)"
     />
 
-    <CategoryIconPicker
+    <UIconSelector
       :model-value="formData.icon"
+      :icons="CATEGORY_ICONS"
       :color="formData.color"
+      label="Иконка"
+      max-height="12rem"
+      item-size="w-11 h-11"
       @update:model-value="emit('update:icon', $event)"
     />
   </div>

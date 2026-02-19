@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
-import { UModal, UInput, UButton } from '@/shared/ui';
-import { IconSelector, ColorPicker } from '@/features/create-account';
+import { UModal, UInput, UButton, UColorPicker, UIconSelector } from '@/shared/ui';
 import {
   VISIBLE_ACCOUNT_TYPES,
   ACCOUNT_TYPE_LABELS,
   AccountTypeFields,
+  ACCOUNT_COLORS,
+  ACCOUNT_ICONS,
 } from '@/entities/account';
 import type { AccountType, AccountTypeFieldValues } from '@/entities/account';
 import type { Account, AccountWithBalances } from '@/shared/api/database.types';
@@ -194,10 +195,10 @@ function confirm() {
       />
 
       <!-- Icon -->
-      <IconSelector v-model="icon" :color="color" />
+      <UIconSelector v-model="icon" :icons="ACCOUNT_ICONS" :color="color" label="Иконка" />
 
       <!-- Color -->
-      <ColorPicker v-model="color" />
+      <UColorPicker v-model="color" :colors="ACCOUNT_COLORS" label="Цвет" />
     </div>
 
     <template #actions>

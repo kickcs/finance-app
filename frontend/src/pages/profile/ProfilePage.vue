@@ -11,6 +11,7 @@ import { useAuth, useProfile } from '@/shared/api';
 import { EditProfileModal } from '@/features/edit-profile';
 import { useChangelog } from '@/features/changelog';
 import { InstallPwaModal, usePwaInstall } from '@/features/install-pwa';
+import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 
 const router = useRouter();
 const { signOut } = useAuth();
@@ -27,10 +28,8 @@ const userName = computed(
 );
 const userEmail = computed(() => user?.value?.email || 'user@example.com');
 
-// Get user currency from localStorage
-const currencyCode = computed(
-  () => localStorage.getItem('selectedCurrency') || 'UZS',
-);
+// Get user currency (profile-first, falls back to localStorage)
+const { currency: currencyCode } = useUserCurrency();
 const currency = computed(() => getCurrencyByCode(currencyCode.value));
 
 // Changelog

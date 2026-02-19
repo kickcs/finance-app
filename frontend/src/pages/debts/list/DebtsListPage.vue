@@ -4,7 +4,7 @@ import { useRouter, useRoute } from 'vue-router';
 import { BottomNav } from '@/widgets/bottom-nav';
 import { AppHeader } from '@/widgets/header';
 import { DebtCard, useDebts, type Debt } from '@/entities/debt';
-import { UButton, UIcon, UCard, Skeleton } from '@/shared/ui';
+import { UButton, UIcon, UCard, Skeleton, EmptyState } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { useExchangeRates } from '@/shared/api';
 import { navigateBack } from '@/app/router';
@@ -315,27 +315,15 @@ function handleAddTransaction() {
           <!-- Empty State -->
           <div
             v-else
-            class="py-12 text-center bg-card-light dark:bg-card-dark rounded-2xl"
+            class="bg-card-light dark:bg-card-dark rounded-2xl"
           >
-            <div
-              class="w-16 h-16 mx-auto mb-4 rounded-full bg-success/10 flex items-center justify-center"
-            >
-              <UIcon name="celebration" size="lg" class="text-success" />
-            </div>
-            <p
-              class="text-text-secondary-light dark:text-text-secondary-dark mb-4 font-semibold"
-            >
-              Вы без долгов!
-            </p>
-            <p
-              class="text-text-tertiary-light dark:text-text-tertiary-dark mb-4 text-sm"
-            >
-              Отличная финансовая дисциплина
-            </p>
-            <UButton variant="primary" @click="handleAddDebt">
-              <UIcon name="add" size="sm" class="mr-1" />
-              Создать долг
-            </UButton>
+            <EmptyState
+              icon="celebration"
+              title="Вы без долгов!"
+              description="Отличная финансовая дисциплина"
+              icon-bg-class="bg-success/10"
+              :action="{ label: 'Создать долг', onClick: handleAddDebt }"
+            />
           </div>
         </div>
       </template>

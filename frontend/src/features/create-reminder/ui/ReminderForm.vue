@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { UInput, UButton, UTabs } from '@/shared/ui';
-import { FREQUENCY_LABELS } from '@/entities/reminder';
+import { UInput, UButton, UTabs, UColorPicker, UIconSelector } from '@/shared/ui';
+import { FREQUENCY_LABELS, REMINDER_ICONS } from '@/entities/reminder';
+import { ACCOUNT_COLORS } from '@/entities/account';
 import { getTodayISO, isPastDate } from '@/shared/lib/date';
-import IconSelector from './IconSelector.vue';
-import ColorPicker from './ColorPicker.vue';
 import type { ReminderFormData } from '../model/useCreateReminder';
 
 const props = defineProps<{
@@ -96,15 +95,19 @@ const _isFormValid =
     />
 
     <!-- Icon Selector -->
-    <IconSelector
+    <UIconSelector
       :model-value="formData.icon"
+      :icons="REMINDER_ICONS"
       :color="formData.color"
+      label="Иконка"
       @update:model-value="updateField('icon', $event)"
     />
 
     <!-- Color Picker -->
-    <ColorPicker
+    <UColorPicker
       :model-value="formData.color"
+      :colors="ACCOUNT_COLORS"
+      label="Цвет"
       @update:model-value="updateField('color', $event)"
     />
 

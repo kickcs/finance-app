@@ -6,6 +6,7 @@ import { initializeAuth, useAuth, useProfile } from '@/shared/api';
 import { transitionName } from '@/app/router';
 import { useCategories } from '@/entities/category';
 import { ToastProvider, Toaster } from '@/shared/ui/primitives/toast';
+import { USpinner } from '@/shared/ui';
 import { DemoBanner, useDemoMode } from '@/features/demo-mode';
 import { useChangelog, ChangelogModal } from '@/features/changelog';
 import { NavigationProgress } from '@/shared/ui/navigation-progress';
@@ -63,9 +64,7 @@ provide('getCategoryById', getCategoryById);
         v-if="!isAppReady"
         class="min-h-screen flex items-center justify-center"
       >
-        <div
-          class="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"
-        />
+        <USpinner />
       </div>
 
       <!-- Demo Banner - shown globally when in demo mode -->

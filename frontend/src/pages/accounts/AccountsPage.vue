@@ -10,22 +10,17 @@ import {
   useAccounts,
   type AccountWithBalances,
 } from '@/entities/account';
-import { UButton, UIcon, UCard } from '@/shared/ui';
+import { UButton, UIcon, UCard, EmptyState } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
-import { useProfile, useExchangeRates } from '@/shared/api';
+import { useExchangeRates } from '@/shared/api';
+import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 
 const router = useRouter();
 
 const { userId } = useCurrentUser();
 
-// Get user currency from profile
-const { profile } = useProfile(userId);
-const currency = computed(
-  () =>
-    profile.value?.currency ||
-    localStorage.getItem('selectedCurrency') ||
-    'UZS',
-);
+// Get user currency (profile-first, falls back to localStorage)
+const { currency } = useUserCurrency();
 
 // Exchange rates for currency conversion
 const { convert } = useExchangeRates(currency);
@@ -108,26 +103,13 @@ function handleAddTransaction() {
         <!-- Empty State -->
         <div
           v-else
-          class="py-12 text-center bg-card-light dark:bg-card-dark rounded-2xl"
+          class="bg-card-light dark:bg-card-dark rounded-2xl"
         >
-          <div
-            class="w-16 h-16 mx-auto mb-4 rounded-full bg-surface-light dark:bg-surface-dark flex items-center justify-center"
-          >
-            <UIcon
-              name="account_balance_wallet"
-              size="lg"
-              class="text-text-tertiary-light dark:text-text-tertiary-dark"
-            />
-          </div>
-          <p
-            class="text-text-secondary-light dark:text-text-secondary-dark mb-4"
-          >
-            У вас пока нет счетов
-          </p>
-          <UButton variant="primary" @click="handleAddAccount">
-            <UIcon name="add" size="sm" class="mr-1" />
-            Создать счёт
-          </UButton>
+          <EmptyState
+            icon="account_balance_wallet"
+            title="У вас пока нет счетов"
+            :action="{ label: 'Создать счёт', onClick: handleAddAccount }"
+          />
         </div>
       </div>
     </main>

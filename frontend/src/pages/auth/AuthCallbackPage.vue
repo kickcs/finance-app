@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import { UCard, UIcon } from '@/shared/ui';
+import { UCard, UIcon, USpinner } from '@/shared/ui';
 
 const router = useRouter();
 const route = useRoute();
@@ -48,9 +48,7 @@ function goToLogin() {
     <UCard class="p-8 text-center max-w-sm w-full">
       <!-- Processing state -->
       <template v-if="isProcessing">
-        <div
-          class="animate-spin w-12 h-12 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"
-        />
+        <USpinner size="lg" class="mx-auto mb-4" />
         <p class="text-text-secondary-light dark:text-text-secondary-dark">
           Подтверждение аккаунта...
         </p>

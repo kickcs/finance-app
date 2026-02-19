@@ -3,7 +3,8 @@ import { computed, inject, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import type { Ref } from 'vue';
 import type { User } from '@/shared/api/composables/useAuth';
-import { UButton, UIcon } from '@/shared/ui';
+import { UButton, UIcon, USpinner } from '@/shared/ui';
+import { AppHeader } from '@/widgets/header';
 import {
   TransactionForm,
   useTransactionForm,
@@ -186,28 +187,12 @@ function goBack() {
 <template>
   <div class="min-h-screen bg-background-light dark:bg-background-dark pb-24">
     <!-- Header -->
-    <header
-      class="sticky top-0 z-30 pt-[var(--safe-area-inset-top)] bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-xl"
-    >
-      <div class="flex items-center justify-between px-4 py-3">
-        <UButton variant="ghost" size="sm" @click="goBack">
-          <UIcon name="arrow_back" size="md" />
-        </UButton>
-        <h1
-          class="text-base font-semibold text-text-primary-light dark:text-text-primary-dark"
-        >
-          Новая транзакция
-        </h1>
-        <div class="w-10" />
-      </div>
-    </header>
+    <AppHeader title="Новая транзакция" show-back blur @back="goBack" />
 
     <!-- Content -->
     <main class="px-4 pt-4 pb-4">
       <div v-if="accountsLoading" class="flex items-center justify-center py-8">
-        <div
-          class="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"
-        />
+        <USpinner size="sm" />
       </div>
 
       <div v-else-if="accounts.length === 0" class="text-center py-8">
