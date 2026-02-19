@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.3.2';
+export const CURRENT_VERSION = '1.4.0';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,29 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.4.0',
+    date: '2026-02-20',
+    title: 'Новый экран добавления транзакции',
+    items: [
+      {
+        type: 'feature',
+        text: 'Полностью обновлённый экран добавления транзакции — крупный ввод суммы, удобный выбор категорий в два ряда с прокруткой',
+      },
+      {
+        type: 'feature',
+        text: 'Новый дизайн переводов между счетами — карточки с балансами и кнопка быстрой смены направления',
+      },
+      {
+        type: 'improvement',
+        text: 'Плавные анимации на главном экране и закреплённый баланс при прокрутке',
+      },
+      {
+        type: 'improvement',
+        text: 'Анимированный индикатор при переключении между счетами и категориями',
+      },
+    ],
+  },
   {
     version: '1.3.2',
     date: '2026-02-19',
