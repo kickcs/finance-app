@@ -56,19 +56,17 @@ import { useDebts, type Debt } from '@/entities/debt';
 import { useReminders, type Reminder } from '@/entities/reminder';
 import { useCategories } from '@/entities/category';
 import { useProfile, useExchangeRates } from '@/shared/api';
+import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 
 const router = useRouter();
 
 const { user, userId } = useCurrentUser();
 
-// Get user currency from profile (fallback to localStorage for backward compatibility)
+// Get user currency (profile-first, falls back to localStorage)
+const { currency } = useUserCurrency();
+
+// Profile for user name
 const { profile } = useProfile(userId);
-const currency = computed(
-  () =>
-    profile.value?.currency ||
-    localStorage.getItem('selectedCurrency') ||
-    'UZS',
-);
 
 // Time-based greeting
 const greeting = computed(() => {

@@ -35,20 +35,18 @@ import type { Account } from '@/shared/api/database.types';
 import { navigateBack } from '@/app/router';
 import { useProfile } from '@/shared/api';
 import { debtsApi } from '@/entities/debt';
+import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 
 const router = useRouter();
 const route = useRoute();
 const { userId } = useCurrentUser();
 const accountId = computed(() => route.params.id as string);
 
-// Get user currency and default account from profile
+// Get user currency (profile-first, falls back to localStorage)
+const { currency } = useUserCurrency();
+
+// Profile for default account management
 const { profile, setDefaultAccount } = useProfile(userId);
-const currency = computed(
-  () =>
-    profile.value?.currency ||
-    localStorage.getItem('selectedCurrency') ||
-    'UZS',
-);
 
 const { accounts, isLoading } = useAccounts(userId);
 

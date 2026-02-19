@@ -12,20 +12,15 @@ import {
 } from '@/entities/account';
 import { UButton, UIcon, UCard } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
-import { useProfile, useExchangeRates } from '@/shared/api';
+import { useExchangeRates } from '@/shared/api';
+import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 
 const router = useRouter();
 
 const { userId } = useCurrentUser();
 
-// Get user currency from profile
-const { profile } = useProfile(userId);
-const currency = computed(
-  () =>
-    profile.value?.currency ||
-    localStorage.getItem('selectedCurrency') ||
-    'UZS',
-);
+// Get user currency (profile-first, falls back to localStorage)
+const { currency } = useUserCurrency();
 
 // Exchange rates for currency conversion
 const { convert } = useExchangeRates(currency);

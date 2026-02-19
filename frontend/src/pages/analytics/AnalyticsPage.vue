@@ -1,7 +1,5 @@
 <script setup lang="ts">
-import { computed, inject, onMounted } from 'vue';
-import type { Ref } from 'vue';
-import type { User } from '@/shared/api/composables/useAuth';
+import { computed, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { AppHeader } from '@/widgets/header';
 import { BottomNav } from '@/widgets/bottom-nav';
@@ -23,18 +21,16 @@ import {
   type TransactionType,
   type CategoryStat,
 } from '@/features/analytics-filters';
+import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
+import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 
 const router = useRouter();
 const route = useRoute();
 
-// Get user from provide/inject
-const user = inject<Ref<User | null>>('user');
-const userId = computed(() => user?.value?.id ?? '');
+const { userId } = useCurrentUser();
 
-// Get user currency from localStorage
-const currency = computed(
-  () => localStorage.getItem('selectedCurrency') || 'UZS',
-);
+// Get user currency (profile-first, falls back to localStorage)
+const { currency } = useUserCurrency();
 
 // Analytics filters
 const {

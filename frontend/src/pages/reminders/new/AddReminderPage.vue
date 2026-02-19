@@ -1,19 +1,16 @@
 <script setup lang="ts">
-import { computed, inject } from 'vue';
 import { useRouter } from 'vue-router';
-import type { Ref } from 'vue';
-import type { User } from '@/shared/api/composables/useAuth';
 import { ReminderForm, useCreateReminder } from '@/features/create-reminder';
 import { navigateBack } from '@/app/router';
 import { AppHeader } from '@/widgets/header';
+import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
+import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 
 const router = useRouter();
-const user = inject<Ref<User | null>>('user');
+const { userId } = useCurrentUser();
 
-const userId = computed(() => user?.value?.id ?? '');
-
-// Get currency from localStorage
-const currency = localStorage.getItem('selectedCurrency') || 'UZS';
+// Get user currency (profile-first, falls back to localStorage)
+const { currency } = useUserCurrency();
 
 // Use the create reminder feature
 const { formData, isSubmitting, error, createReminder } = useCreateReminder();
