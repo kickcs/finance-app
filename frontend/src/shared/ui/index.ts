@@ -32,3 +32,4 @@ export { SectionHeader } from './section-header';
 export { IconBadge } from './icon-badge';
 export { USpinner } from './spinner';
 export { NotFoundState } from './not-found-state';
+export { ConfirmDeleteModal } from './confirm-delete-modal';
