@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
-import { UButton, UIcon, UCard, EmptyState } from '@/shared/ui';
+import { UButton, UIcon, UCard, EmptyState, USpinner } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { formatDateGroup } from '@/shared/lib/format/date';
 import {
@@ -258,9 +258,7 @@ async function handleSetAsDefault() {
     <main class="px-5 pt-8 pb-6">
       <!-- Loading State -->
       <div v-if="isLoading" class="flex items-center justify-center py-12">
-        <div
-          class="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"
-        />
+        <USpinner />
       </div>
 
       <!-- Not Found State -->

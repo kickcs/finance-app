@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import { UButton, UIcon, UCard } from '@/shared/ui';
+import { UButton, UIcon, UCard, USpinner } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { formatDate } from '@/shared/lib/format/date';
 import {
@@ -101,9 +101,7 @@ function goBack() {
     <main class="px-5 pt-8 pb-6">
       <!-- Loading State -->
       <div v-if="isLoading" class="flex items-center justify-center py-12">
-        <div
-          class="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"
-        />
+        <USpinner />
       </div>
 
       <!-- Not Found State -->
