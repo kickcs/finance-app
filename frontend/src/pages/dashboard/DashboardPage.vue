@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { computed, ref, defineAsyncComponent } from 'vue';
+import { computed, ref, defineAsyncComponent, onMounted } from 'vue';
 import { useLocalStorage } from '@/shared/lib/hooks/useLocalStorage';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
-import { useMountAnimation } from '@/shared/lib/hooks/useMountAnimation';
 import { useRouter } from 'vue-router';
 import { queryClient } from '@/shared/api/queryClient';
 import { PullToRefresh, UIcon } from '@/shared/ui';
@@ -336,15 +335,12 @@ function onScroll(e: Event) {
   isScrolledPastBalance.value = target.scrollTop > BALANCE_SCROLL_THRESHOLD;
 }
 
-const { isMounted } = useMountAnimation();
-
-function sectionAnim(delay: string) {
-  return [
-    'transform transition-all duration-700 ease-out',
-    delay,
-    isMounted.value ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0',
-  ];
-}
+const isMounted = ref(false);
+onMounted(() => {
+  requestAnimationFrame(() => {
+    isMounted.value = true;
+  });
+});
 
 async function handleRefresh() {
   await queryClient.invalidateQueries();
@@ -425,7 +421,7 @@ async function handleRefresh() {
           <InstallPwaBanner @install="showInstallModal = true" />
 
           <!-- Hero Section — balance + stats -->
-          <section :class="['space-y-6', sectionAnim('delay-75')]">
+          <section class="space-y-6 transform transition-all duration-700 ease-out delay-75" :class="isMounted ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'">
             <BalanceCard
               :total-balance="totalBalance"
               :currency="currency"
@@ -449,7 +445,7 @@ async function handleRefresh() {
           </section>
 
           <!-- Quick Actions -->
-          <section v-if="!quickActionsHidden" :class="sectionAnim('delay-150')">
+          <section v-if="!quickActionsHidden" class="transform transition-all duration-700 ease-out delay-150" :class="isMounted ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'">
             <div class="grid grid-cols-4 gap-3">
               <button
                 v-for="(action, index) in quickActionSlots"
@@ -530,7 +526,7 @@ async function handleRefresh() {
           </section>
 
           <!-- Accounts -->
-          <section :class="sectionAnim('delay-200')">
+          <section class="transform transition-all duration-700 ease-out delay-200" :class="isMounted ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'">
             <AccountStack
               :accounts="accounts"
               :loading="accountsLoading"
@@ -542,7 +538,7 @@ async function handleRefresh() {
           </section>
 
           <!-- Recent Transactions -->
-          <section :class="sectionAnim('delay-300')">
+          <section class="transform transition-all duration-700 ease-out delay-300" :class="isMounted ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'">
             <Suspense>
               <RecentTransactions
                 :transactions="recentTransactions"
@@ -560,7 +556,7 @@ async function handleRefresh() {
           </section>
 
           <!-- Debts -->
-          <section :class="sectionAnim('delay-500')">
+          <section class="transform transition-all duration-700 ease-out delay-500" :class="isMounted ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'">
             <Suspense>
               <DebtsSection
                 :debts="debts"
@@ -579,7 +575,7 @@ async function handleRefresh() {
           </section>
 
           <!-- Subscriptions -->
-          <section :class="sectionAnim('delay-[600ms]')">
+          <section class="transform transition-all duration-700 ease-out delay-[600ms]" :class="isMounted ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'">
             <Suspense>
               <RemindersSection
                 :reminders="reminders"
