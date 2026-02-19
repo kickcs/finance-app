@@ -3,7 +3,7 @@ import { computed, inject, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import type { Ref } from 'vue';
 import type { User } from '@/shared/api/composables/useAuth';
-import { UButton, UIcon } from '@/shared/ui';
+import { UButton, UIcon, USpinner } from '@/shared/ui';
 import {
   TransactionForm,
   useTransactionForm,
@@ -205,9 +205,7 @@ function goBack() {
     <!-- Content -->
     <main class="px-4 pt-4 pb-4">
       <div v-if="accountsLoading" class="flex items-center justify-center py-8">
-        <div
-          class="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"
-        />
+        <USpinner size="sm" />
       </div>
 
       <div v-else-if="accounts.length === 0" class="text-center py-8">
