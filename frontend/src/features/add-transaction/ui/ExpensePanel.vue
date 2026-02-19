@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue';
-import { CategoryCard } from '@/entities/category';
 import type { Category } from '@/entities/category';
 import { getCurrencyByCode } from '@/entities/currency';
 import { SplitExpenseSection } from '@/features/split-expense';
 import type { SplitExpenseData, SplitMethod } from '@/features/split-expense';
 import type { AccountWithBalances } from '@/entities/account';
 import type { TransactionFormData } from '../model/useTransactionForm';
-import AmountInput from './AmountInput.vue';
+import HeroAmount from './HeroAmount.vue';
+import CategoryChips from './CategoryChips.vue';
 import AccountSelector from './AccountSelector.vue';
 
 const props = defineProps<{
@@ -94,7 +94,7 @@ watch(
 
 <template>
   <div class="space-y-4">
-    <AmountInput
+    <HeroAmount
       :amount="formData.amount"
       :currency="formData.currency"
       :currency-symbol="currencySymbol"
@@ -114,25 +114,12 @@ watch(
       @select="handleAccountChange"
     />
 
-    <div class="space-y-2">
-      <label
-        class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark"
-      >
-        Категория
-      </label>
-      <div
-        class="grid grid-cols-4 sm:grid-cols-5 gap-2 max-h-[168px] overflow-y-auto"
-      >
-        <CategoryCard
-          v-for="category in categories"
-          :key="category.id"
-          :category="category"
-          :selected="formData.categoryId === category.id"
-          size="medium"
-          @click="updateField('categoryId', category.id)"
-        />
-      </div>
-    </div>
+    <CategoryChips
+      :categories="categories"
+      :selected-id="formData.categoryId"
+      label="Категория"
+      @select="updateField('categoryId', $event)"
+    />
 
     <SplitExpenseSection
       v-if="splitData"
