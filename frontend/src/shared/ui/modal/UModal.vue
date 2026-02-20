@@ -82,7 +82,7 @@ function handleOpenChange(open: boolean) {
         </div>
 
         <!-- Content -->
-        <div class="p-5">
+        <div class="p-5 overflow-y-auto max-h-[60vh]">
           <slot />
         </div>
 
