@@ -12,7 +12,6 @@ import {
   useInfiniteTransactions,
   useGroupedTransactions,
   type Transaction,
-  type TransactionFilters,
 } from '@/entities/transaction';
 import { SearchInput, useServerSearch } from '@/features/search-transactions';
 import {
@@ -22,61 +21,35 @@ import {
   useTransactionSelection,
 } from '@/features/edit-transaction';
 import { useAccounts, AccountSelector } from '@/entities/account';
-import {
-  ALL_CATEGORIES,
-  EXPENSE_CATEGORIES,
-  INCOME_CATEGORIES,
-  DEBT_CATEGORIES,
-  TRANSFER_CATEGORY,
-  useCategories,
-  CategoryChips,
-} from '@/entities/category';
+import { CategoryChips } from '@/entities/category';
 import { UTabs, UIcon, UButton } from '@/shared/ui';
 import { useExchangeRates } from '@/shared/api';
+
+// Page composables
+import { useHistoryFilters, TYPE_FILTER_ITEMS } from './model/useHistoryFilters';
+import { useBalanceAfter } from './model/useBalanceAfter';
+import { computeDayTotal } from './lib/computeDayTotal';
 
 const router = useRouter();
 
 const { userId } = useCurrentUser();
 const { currency } = useUserCurrency();
-
-// Exchange rates for currency conversion
 const { convert } = useExchangeRates(currency);
-
-// Accounts for filtering
 const { accounts } = useAccounts(userId);
 
-// Type filter
-const typeFilterItems = [
-  { id: 'all', label: 'Все' },
-  { id: 'expense', label: 'Расходы' },
-  { id: 'income', label: 'Доходы' },
-  { id: 'transfer', label: 'Переводы' },
-  { id: 'debt', label: 'Долги' },
-];
-const activeTypeFilter = ref<
-  'all' | 'income' | 'expense' | 'transfer' | 'debt'
->('all');
-
-// Collapse state
-const isFiltersCollapsed = ref(false);
-
-function handleTypeFilterChange(val: string) {
-  activeTypeFilter.value = val as typeof activeTypeFilter.value;
-  selectedCategoryId.value = null;
-}
-
-// Additional filters
-
-const selectedAccountId = ref<string | null>(null);
-const selectedCategoryId = ref<string | null>(null);
-
-// Count of active additional filters
-const activeFiltersCount = computed(() => {
-  let count = 0;
-  if (selectedAccountId.value) count++;
-  if (selectedCategoryId.value) count++;
-  return count;
-});
+// Filters
+const {
+  activeTypeFilter,
+  selectedAccountId,
+  selectedCategoryId,
+  isFiltersCollapsed,
+  activeFiltersCount,
+  serverFilters,
+  usedCategories,
+  handleTypeFilterChange,
+  clearAdditionalFilters,
+  resetAll,
+} = useHistoryFilters(userId);
 
 // Server-side search
 const {
@@ -91,13 +64,6 @@ const {
   setQuery,
   clearSearch,
 } = useServerSearch(userId);
-
-// Build filters for server-side query
-const serverFilters = computed<TransactionFilters>(() => ({
-  type: activeTypeFilter.value !== 'all' ? activeTypeFilter.value : undefined,
-  accountId: selectedAccountId.value ?? undefined,
-  categoryId: selectedCategoryId.value ?? undefined,
-}));
 
 // Main transactions query with infinite scroll
 const {
@@ -114,61 +80,12 @@ const displayedTransactions = computed(() =>
   isSearchActive.value ? searchResults.value : transactions.value,
 );
 
-// Group transactions by date (client-side grouping of loaded data)
-// Uses currency conversion and debt-aware logic for the daily total.
+// Group transactions by date
 const groupedTransactions = useGroupedTransactions(displayedTransactions, {
   sortGroups: true,
-  // Within group: sort by created_at descending for consistent ordering
   sortTransactions: (a, b) =>
     new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-  // Multi-currency, debt-aware total computation
-  computeTotal: (txs) =>
-    txs.reduce((sum, tx) => {
-      // Исключаем долговые транзакции, КРОМЕ выдачи/взятия долгов и возвратов
-      // debt_given и debt_taken влияют на реальный money flow (деньги уходят/приходят)
-      // Возвраты долгов также влияют на реальный money flow
-      const isDebtGivenOrTaken =
-        tx.category_id === 'debt_given' || tx.category_id === 'debt_taken';
-      const isDebtReturn =
-        tx.category_id === 'debt_return_to_me' ||
-        tx.category_id === 'debt_return_from_me';
-      if (tx.is_debt_related && !isDebtGivenOrTaken && !isDebtReturn)
-        return sum;
-
-      // Для расходов используем net_amount (с учётом возвратов)
-      // Это учитывает частичные возвраты долгов
-      const baseAmount =
-        tx.type === 'expense' && tx.net_amount !== undefined
-          ? tx.net_amount
-          : tx.amount;
-
-      // Конвертируем в базовую валюту, если другая
-      const amount =
-        tx.currency !== currency.value
-          ? convert(baseAmount, tx.currency)
-          : baseAmount;
-
-      // Долговые операции обрабатываем явно по category_id
-      // debt_given: дал в долг -> деньги ушли -> минус
-      if (tx.category_id === 'debt_given') {
-        return sum - amount;
-      }
-      // debt_taken: взял в долг -> деньги пришли -> плюс
-      if (tx.category_id === 'debt_taken') {
-        return sum + amount;
-      }
-      // debt_return_to_me и debt_return_from_me: НЕ учитываем в дневной сумме,
-      // т.к. их эффект уже отражён в net_amount связанных транзакций
-      if (
-        tx.category_id === 'debt_return_to_me' ||
-        tx.category_id === 'debt_return_from_me'
-      ) {
-        return sum;
-      }
-
-      if (tx.type === 'transfer') return sum;
-      return sum + (tx.type === 'income' ? amount : -amount);
-    }, 0),
+  computeTotal: (txs) => computeDayTotal(txs, currency.value, convert),
 });
 
 // Loading and pagination state
@@ -183,7 +100,6 @@ const currentIsFetchingNextPage = computed(() =>
     ? searchIsFetchingNextPage.value
     : isFetchingNextPage.value,
 );
-
 const currentIsFetching = computed(() =>
   isSearchActive.value ? searchIsFetching.value : isFetching.value,
 );
@@ -207,6 +123,20 @@ const isEmpty = computed(() => {
     !currentIsLoading.value
   );
 });
+
+// Balance after
+const isFilterActive = computed(
+  () =>
+    isSearchActive.value ||
+    activeTypeFilter.value !== 'all' ||
+    activeFiltersCount.value > 0,
+);
+const { getBalanceAfter } = useBalanceAfter(
+  accounts,
+  displayedTransactions,
+  currency,
+  isFilterActive,
+);
 
 // Edit transaction modal state
 const showDeleteModal = ref(false);
@@ -254,105 +184,17 @@ function handleAddTransaction() {
   router.push('/transactions/new');
 }
 
-// Clear additional filters
-function clearAdditionalFilters() {
-  selectedAccountId.value = null;
-  selectedCategoryId.value = null;
-}
-
-// User categories from API + fallback to static
-const {
-  allCategories: userCategories,
-  expenseCategories: userExpenseCategories,
-  incomeCategories: userIncomeCategories,
-  isLoading: isLoadingCategories,
-} = useCategories(userId);
-
-const usedCategories = computed(() => {
-  const useDefaults = isLoadingCategories.value || (!userId.value && userCategories.value.length === 0);
-
-  switch (activeTypeFilter.value) {
-    case 'expense':
-      return useDefaults ? EXPENSE_CATEGORIES : userExpenseCategories.value;
-    case 'income':
-      return useDefaults ? INCOME_CATEGORIES : userIncomeCategories.value;
-    case 'debt':
-      return DEBT_CATEGORIES;
-    case 'transfer':
-      return [TRANSFER_CATEGORY];
-    case 'all':
-    default:
-      return useDefaults ? ALL_CATEGORIES : userCategories.value;
-  }
-});
-
-// Helper to get account name by id
 function getAccountName(accountId: string | null): string {
   if (!accountId) return '';
   const account = accounts.value.find((a) => a.id === accountId);
   return account?.name ?? '';
 }
 
-// Compute balance_after for each transaction by walking backwards from current balance.
-// Key: `${accountId}_${currency}` to handle multi-currency accounts.
-const balanceAfterMap = computed(() => {
-  const map = new Map<string, number>();
-  const running = new Map<string, number>();
-
-  for (const acc of accounts.value) {
-    for (const b of acc.balances) {
-      running.set(`${acc.id}_${b.currency}`, b.balance);
-    }
-  }
-
-  for (const tx of displayedTransactions.value) {
-    const txCurrency = tx.currency || currency.value;
-    const srcKey = `${tx.account_id}_${txCurrency}`;
-    const current = running.get(srcKey);
-    if (current !== undefined) {
-      map.set(tx.id, current);
-      if (tx.type === 'income') {
-        running.set(srcKey, current - tx.amount);
-      } else if (tx.type === 'expense') {
-        running.set(srcKey, current + tx.amount);
-      } else if (tx.type === 'transfer') {
-        running.set(srcKey, current + tx.amount);
-        if (tx.to_account_id) {
-          const toCurrency = tx.to_currency || txCurrency;
-          const destKey = `${tx.to_account_id}_${toCurrency}`;
-          const dest = running.get(destKey);
-          if (dest !== undefined) {
-            running.set(destKey, dest - (tx.to_amount ?? tx.amount));
-          }
-        }
-      }
-    }
-  }
-
-  return map;
-});
-
-// Balance is only meaningful when all transactions are displayed without filters.
-// With filters active, the algorithm walks an incomplete set and produces wrong results.
-const balanceAfterEnabled = computed(
-  () =>
-    !isSearchActive.value &&
-    activeTypeFilter.value === 'all' &&
-    activeFiltersCount.value === 0,
-);
-
-function getBalanceAfter(txId: string): number | undefined {
-  if (!balanceAfterEnabled.value) return undefined;
-  return balanceAfterMap.value.get(txId);
-}
-
-// Handle swipe delete action
 function handleSwipeDelete(transaction: Transaction) {
   selectedTransaction.value = transaction;
   showDeleteModal.value = true;
 }
 
-// Refresh all data
 const isRefreshing = ref(false);
 async function handleRefresh() {
   isRefreshing.value = true;
@@ -421,7 +263,7 @@ async function handleRefresh() {
       <!-- Type Filter Tabs (Always Visible) -->
       <UTabs
         :model-value="activeTypeFilter"
-        :items="typeFilterItems"
+        :items="TYPE_FILTER_ITEMS"
         size="sm"
         @update:model-value="handleTypeFilterChange"
       />
@@ -528,8 +370,7 @@ async function handleRefresh() {
           @click="
             () => {
               clearSearch();
-              clearAdditionalFilters();
-              activeTypeFilter = 'all';
+              resetAll();
             }
           "
         >

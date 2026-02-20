@@ -85,7 +85,7 @@ onMounted(() => {
           type="number"
           inputmode="numeric"
           :value="amount || ''"
-          class="absolute inset-0 w-full h-full opacity-0"
+          class="absolute inset-0 w-full h-full opacity-0 caret-transparent"
           @input="onInput"
           @keydown.enter.prevent
         />

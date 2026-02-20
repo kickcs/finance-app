@@ -1,12 +1,16 @@
 <script setup lang="ts">
-import { computed, ref, defineAsyncComponent, onMounted } from 'vue';
+import { ref, defineAsyncComponent, onMounted } from 'vue';
 import { useLocalStorage } from '@/shared/lib/hooks/useLocalStorage';
-import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useRouter } from 'vue-router';
 import { queryClient } from '@/shared/api/queryClient';
 import { PullToRefresh, UIcon } from '@/shared/ui';
+import { formatMasked, COMPACT_FORMAT } from '@/shared/lib/format/currency';
+import type { AccountWithBalances } from '@/entities/account';
+import type { Transaction } from '@/entities/transaction';
+import type { Debt } from '@/entities/debt';
+import type { Reminder } from '@/entities/reminder';
 
-// Critical components - load immediately
+// Components
 import { AppHeader } from '@/widgets/header';
 import { BottomNav } from '@/widgets/bottom-nav';
 import { ThemeToggle } from '@/features/toggle-theme';
@@ -15,319 +19,127 @@ import {
   InstallPwaModal,
   usePwaInstall,
 } from '@/features/install-pwa';
-import {
-  QuickActionModal,
-  useQuickActions,
-  type QuickAction,
-} from '@/features/configure-quick-action';
-
-// Above-the-fold widgets — eager load (no extra chunk downloads)
+import { QuickActionModal } from '@/features/configure-quick-action';
 import BalanceCard from '@/widgets/balance-card/ui/BalanceCard.vue';
 import SaveSpendSection from '@/widgets/save-spend-section/ui/SaveSpendSection.vue';
 import AccountStack from '@/widgets/account-stack/ui/AccountStack.vue';
-
-// Below-fold skeleton fallbacks
 import { DebtsSectionSkeleton } from '@/widgets/debts-section';
 import { RemindersSectionSkeleton } from '@/widgets/reminders-section';
 import { RecentTransactionsSkeleton } from '@/widgets/recent-transactions';
 
-// Below-fold widgets — lazy load
 const DebtsSection = defineAsyncComponent({
   loader: () => import('@/widgets/debts-section/ui/DebtsSection.vue'),
   delay: 0,
 });
-
 const RemindersSection = defineAsyncComponent({
   loader: () => import('@/widgets/reminders-section/ui/RemindersSection.vue'),
   delay: 0,
 });
-
 const RecentTransactions = defineAsyncComponent({
   loader: () =>
     import('@/widgets/recent-transactions/ui/RecentTransactions.vue'),
   delay: 0,
 });
 
-// API composables
-import { useAccounts, type AccountWithBalances } from '@/entities/account';
-import { useMonthlyStats, useRecentTransactions } from '@/entities/transaction';
-import type { Transaction } from '@/entities/transaction';
-import { useDebts, type Debt } from '@/entities/debt';
-import { useReminders, type Reminder } from '@/entities/reminder';
-import { useCategories } from '@/entities/category';
-import { useProfile, useExchangeRates } from '@/shared/api';
-import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
-import { formatMasked, COMPACT_FORMAT } from '@/shared/lib/format/currency';
+// Composables
+import { useDashboardData } from './model/useDashboardData';
+import { useDashboardQuickActions } from './model/useDashboardQuickActions';
 
 const router = useRouter();
 
-const { user, userId } = useCurrentUser();
-
-// Get user currency (profile-first, falls back to localStorage)
-const { currency } = useUserCurrency();
-
-// Profile for user name
-const { profile } = useProfile(userId);
-
-// Time-based greeting
-const greeting = computed(() => {
-  const hour = new Date().getHours();
-  if (hour >= 5 && hour < 12) return 'Доброе утро';
-  if (hour >= 12 && hour < 17) return 'Добрый день';
-  if (hour >= 17 && hour < 23) return 'Добрый вечер';
-  return 'Доброй ночи';
-});
-
-const userName = computed(() => {
-  const fullName = profile.value?.name || user?.value?.name;
-  if (!fullName) return '';
-  return fullName.split(' ')[0];
-});
-
-// Exchange rates for currency conversion
-const { convert, isLoading: ratesLoading } = useExchangeRates(currency);
-
-// Use real data from API (pass reactive userId, not .value)
 const {
+  userId,
+  currency,
+  greeting,
+  userName,
   accounts,
-  totalBalancesByCurrency,
-  isLoading: accountsLoading,
-} = useAccounts(userId);
-const { debts, isLoading: debtsLoading } = useDebts(userId);
-const { reminders, isLoading: remindersLoading } = useReminders(userId);
-const { expenseCategories, allCategories } = useCategories(userId);
-const categoryMap = computed(() => {
-  const map = new Map<string, { icon: string; color: string }>();
-  for (const cat of allCategories.value) {
-    map.set(cat.id, { icon: cat.icon, color: cat.color });
-  }
-  return map;
-});
-const { transactions: recentTransactions, isLoading: recentTxLoading } =
-  useRecentTransactions(userId, 5);
+  debts,
+  reminders,
+  expenseCategories,
+  allCategories,
+  recentTransactions,
+  totalBalance,
+  savedThisMonth,
+  spentThisMonth,
+  percentChange,
+  accountsLoading,
+  debtsLoading,
+  remindersLoading,
+  recentTxLoading,
+  statsLoading,
+  ratesLoading,
+} = useDashboardData();
 
-// Monthly statistics from server (accurate, no limit issues)
-const now = new Date();
 const {
-  incomeByCurrency,
-  expenseByCurrency,
-  isLoading: statsLoading,
-} = useMonthlyStats(userId, {
-  year: now.getFullYear(),
-  month: now.getMonth() + 1,
-});
+  quickActionSlots,
+  quickActionsHidden,
+  showQuickActionModal,
+  editingAction,
+  categoryMap,
+  handleClick: handleQuickActionClick,
+  handleLongPress: handleQuickActionLongPress,
+  handleSave: handleQuickActionSave,
+  handleDelete: handleQuickActionDelete,
+} = useDashboardQuickActions(allCategories);
 
-// Last month stats for percent change calculation
-const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-const {
-  incomeByCurrency: lastMonthIncomeByCurrency,
-  expenseByCurrency: lastMonthExpenseByCurrency,
-} = useMonthlyStats(userId, {
-  year: lastMonth.getFullYear(),
-  month: lastMonth.getMonth() + 1,
-});
-
-// Total balance converted to user's main currency
-const totalBalance = computed(() => {
-  const balances = totalBalancesByCurrency.value;
-  let total = 0;
-  for (const [curr, amount] of Object.entries(balances)) {
-    total += convert(amount, curr);
-  }
-  return total;
-});
-
-// Calculate saved/spent this month from server stats
-// Convert each currency amount to user's main currency
-const savedThisMonth = computed(() => {
-  let total = 0;
-  for (const [curr, amount] of Object.entries(incomeByCurrency.value)) {
-    total += convert(amount, curr);
-  }
-  return total;
-});
-
-const spentThisMonth = computed(() => {
-  let total = 0;
-  for (const [curr, amount] of Object.entries(expenseByCurrency.value)) {
-    total += convert(amount, curr);
-  }
-  return total;
-});
-
-// Calculate percent change compared to last month
-// Compares savings rate (income - expenses) between months
-const percentChange = computed(() => {
-  // This month totals (converted to main currency)
-  let thisMonthIncome = 0;
-  for (const [curr, amount] of Object.entries(incomeByCurrency.value)) {
-    thisMonthIncome += convert(amount, curr);
-  }
-  let thisMonthExpense = 0;
-  for (const [curr, amount] of Object.entries(expenseByCurrency.value)) {
-    thisMonthExpense += convert(amount, curr);
-  }
-
-  // Last month totals (converted to main currency)
-  let lastMonthIncome = 0;
-  for (const [curr, amount] of Object.entries(
-    lastMonthIncomeByCurrency.value,
-  )) {
-    lastMonthIncome += convert(amount, curr);
-  }
-  let lastMonthExpense = 0;
-  for (const [curr, amount] of Object.entries(
-    lastMonthExpenseByCurrency.value,
-  )) {
-    lastMonthExpense += convert(amount, curr);
-  }
-
-  // If no data for last month, return undefined to hide the indicator
-  if (lastMonthIncome === 0 && lastMonthExpense === 0) {
-    return undefined;
-  }
-
-  // Calculate savings rates for both months
-  const thisMonthSavings = thisMonthIncome - thisMonthExpense;
-  const lastMonthSavings = lastMonthIncome - lastMonthExpense;
-
-  // If no savings last month, show simple change indicator
-  if (lastMonthSavings === 0) {
-    return thisMonthSavings > 0 ? 100 : thisMonthSavings < 0 ? -100 : 0;
-  }
-
-  // Percentage change in savings
-  return (
-    ((thisMonthSavings - lastMonthSavings) / Math.abs(lastMonthSavings)) * 100
-  );
-});
-
+// Navigation handlers
 function handleAccountClick(account: AccountWithBalances) {
   router.push(`/accounts/${account.id}`);
 }
-
 function handleAddAccount() {
   router.push('/accounts/new');
 }
-
 function handleViewAllAccounts() {
   router.push('/accounts');
 }
-
 function handleAddTransaction() {
   router.push('/transactions/new');
 }
-
 function handleIncomeClick() {
   router.push('/transactions/new?type=income');
 }
-
 function handleExpenseClick() {
   router.push('/transactions/new?type=expense');
 }
-
-const {
-  slots: quickActionSlots,
-  addAction,
-  updateAction,
-  removeAction,
-  hidden: quickActionsHidden,
-} = useQuickActions();
-
-const showQuickActionModal = ref(false);
-const editingAction = ref<QuickAction | null>(null);
-
-function handleQuickActionClick(action: QuickAction | null) {
-  if (!action) {
-    editingAction.value = null;
-    showQuickActionModal.value = true;
-    return;
-  }
-  router.push(
-    `/transactions/new?type=expense&categoryId=${action.categoryId}&accountId=${action.accountId}`,
-  );
-}
-
-function handleQuickActionLongPress(action: QuickAction | null) {
-  if (!action) {
-    editingAction.value = null;
-    showQuickActionModal.value = true;
-    return;
-  }
-  editingAction.value = action;
-  showQuickActionModal.value = true;
-}
-
-function handleQuickActionSave(data: {
-  label: string;
-  categoryId: string;
-  accountId: string;
-}) {
-  if (editingAction.value) {
-    updateAction(editingAction.value.id, data);
-  } else {
-    addAction(data);
-  }
-  editingAction.value = null;
-}
-
-function handleQuickActionDelete() {
-  if (editingAction.value) {
-    removeAction(editingAction.value.id);
-  }
-  editingAction.value = null;
-}
-
 function handleTransactionClick(_tx: Transaction) {
   router.push('/history');
 }
-
 function handleViewAllTransactions() {
   router.push('/history');
 }
-
 function handleAddReminder() {
   router.push({ name: 'new-reminder' });
 }
-
 function handleAddDebt() {
   router.push({ name: 'new-debt' });
 }
-
 function handleDebtClick(debt: Debt) {
   router.push({ name: 'debt-detail', params: { id: debt.id } });
 }
-
 function handlePersonClick(personName: string, debtType: 'given' | 'taken') {
-  router.push({
-    path: '/debts',
-    query: { person: personName, type: debtType },
-  });
+  router.push({ path: '/debts', query: { person: personName, type: debtType } });
 }
-
 function handleViewAllDebts() {
   router.push('/debts');
 }
-
 function handleReminderClick(reminder: Reminder) {
   router.push({ name: 'reminder-detail', params: { id: reminder.id } });
 }
-
 function handleViewAllReminders() {
   router.push('/reminders');
 }
 
+// UI state
 const { showModal: showInstallModal } = usePwaInstall();
-
 const isHidden = useLocalStorage('balance_hidden', false);
 const quickActionsHintDismissed = useLocalStorage(
   'quick_actions_hint_dismissed',
   false,
 );
 
+// Scroll tracking
 const scrollContainerRef = ref<HTMLElement>();
 const isScrolledPastBalance = ref(false);
-
 const BALANCE_SCROLL_THRESHOLD = 80;
 
 function onScroll(e: Event) {
@@ -335,6 +147,7 @@ function onScroll(e: Event) {
   isScrolledPastBalance.value = target.scrollTop > BALANCE_SCROLL_THRESHOLD;
 }
 
+// Mount animation
 const isMounted = ref(false);
 onMounted(() => {
   requestAnimationFrame(() => {

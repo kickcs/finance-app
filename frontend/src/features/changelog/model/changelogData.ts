@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.5.0';
+export const CURRENT_VERSION = '1.6.0';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,17 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.6.0',
+    date: '2026-02-20',
+    title: 'Улучшения и исправления',
+    items: [
+      {
+        type: 'fix',
+        text: 'Исправлен ввод суммы при добавлении транзакции — курсор больше не появляется слева от числа.',
+      },
+    ],
+  },
   {
     version: '1.5.0',
     date: '2026-02-20',

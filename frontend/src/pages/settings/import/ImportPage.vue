@@ -1,60 +1,27 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { AppHeader } from '@/widgets/header';
 import { UButton, UIcon, UCard } from '@/shared/ui';
 import { navigateBack } from '@/app/router';
-import { parseMoneyLoverCsv } from '@/shared/lib/csv/parseMoneyLoverCsv';
-import type { ParseResult } from '@/shared/lib/csv/parseMoneyLoverCsv';
-import { useImportData } from '@/features/import-data';
-import type { ImportResult } from '@/features/import-data';
+import { useImportWizard } from './model/useImportWizard';
 
 const router = useRouter();
 
-// State
-const step = ref<'select' | 'preview' | 'result'>('select');
-const parseResult = ref<ParseResult | null>(null);
-const importResult = ref<ImportResult | null>(null);
-const parseError = ref<string | null>(null);
-
-const { importMutation } = useImportData();
-
-const fileInput = ref<HTMLInputElement | null>(null);
-
-function openFilePicker() {
-  fileInput.value?.click();
-}
-
-async function handleFileChange(event: Event) {
-  const target = event.target as HTMLInputElement;
-  const file = target.files?.[0];
-  if (!file) return;
-
-  parseError.value = null;
-
-  try {
-    const result = await parseMoneyLoverCsv(file);
-    if (result.data.length === 0) {
-      parseError.value = 'Файл не содержит транзакций';
-      return;
-    }
-    parseResult.value = result;
-    step.value = 'preview';
-  } catch {
-    parseError.value = 'Не удалось прочитать файл';
-  }
-
-  // Reset input so same file can be re-selected
-  target.value = '';
-}
-
-const previewTransactions = computed(
-  () => parseResult.value?.data.slice(0, 20) ?? [],
-);
+const {
+  step,
+  parseResult,
+  importResult,
+  parseError,
+  importMutation,
+  fileInput,
+  previewTransactions,
+  openFilePicker,
+  handleFileChange,
+  handleImport,
+} = useImportWizard();
 
 function formatDate(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleDateString('ru-RU', {
+  return new Date(iso).toLocaleDateString('ru-RU', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
@@ -68,18 +35,6 @@ function formatDateRange(from: string, to: string): string {
 function formatAmount(amount: number): string {
   const sign = amount >= 0 ? '+' : '';
   return `${sign}${amount.toLocaleString('ru-RU')}`;
-}
-
-async function handleImport() {
-  if (!parseResult.value) return;
-
-  try {
-    const result = await importMutation.mutateAsync(parseResult.value.data);
-    importResult.value = result;
-    step.value = 'result';
-  } catch {
-    // Error handled by mutation state
-  }
 }
 
 function goToTransactions() {
