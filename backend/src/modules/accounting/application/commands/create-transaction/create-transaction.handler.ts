@@ -20,9 +20,7 @@ import {
 import { DomainEventPublisher } from '../../../../../shared';
 
 @CommandHandler(CreateTransactionCommand)
-export class CreateTransactionHandler
-  implements ICommandHandler<CreateTransactionCommand>
-{
+export class CreateTransactionHandler implements ICommandHandler<CreateTransactionCommand> {
   constructor(
     @Inject(TRANSACTION_REPOSITORY)
     private readonly transactionRepository: ITransactionRepository,

@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
-import { UModal, UInput, UButton, UColorPicker, UIconSelector } from '@/shared/ui';
+import {
+  UModal,
+  UInput,
+  UButton,
+  UColorPicker,
+  UIconSelector,
+} from '@/shared/ui';
 import {
   VISIBLE_ACCOUNT_TYPES,
   ACCOUNT_TYPE_LABELS,
@@ -195,7 +201,12 @@ function confirm() {
       />
 
       <!-- Icon -->
-      <UIconSelector v-model="icon" :icons="ACCOUNT_ICONS" :color="color" label="Иконка" />
+      <UIconSelector
+        v-model="icon"
+        :icons="ACCOUNT_ICONS"
+        :color="color"
+        label="Иконка"
+      />
 
       <!-- Color -->
       <UColorPicker v-model="color" :colors="ACCOUNT_COLORS" label="Цвет" />

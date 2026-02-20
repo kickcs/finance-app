@@ -12,7 +12,9 @@ defineProps<{ entry: ChangelogEntry; showTitle?: boolean }>();
   <!-- Version badge + date -->
   <div class="flex items-center gap-3" :class="showTitle ? 'mb-4' : ''">
     <VersionBadge :version="entry.version" />
-    <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
+    <span
+      class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
+    >
       {{ formatLocalDate(entry.date) }}
     </span>
   </div>
@@ -40,7 +42,9 @@ defineProps<{ entry: ChangelogEntry; showTitle?: boolean }>();
       >
         <UIcon :name="CHANGELOG_TYPE_CONFIG[item.type].icon" size="sm" />
       </div>
-      <span class="text-sm text-text-primary-light dark:text-text-primary-dark pt-1">
+      <span
+        class="text-sm text-text-primary-light dark:text-text-primary-dark pt-1"
+      >
         {{ item.text }}
       </span>
     </li>

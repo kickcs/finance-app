@@ -101,10 +101,7 @@ function handleAddTransaction() {
         </div>
 
         <!-- Empty State -->
-        <div
-          v-else
-          class="bg-card-light dark:bg-card-dark rounded-2xl"
-        >
+        <div v-else class="bg-card-light dark:bg-card-dark rounded-2xl">
           <EmptyState
             icon="account_balance_wallet"
             title="У вас пока нет счетов"

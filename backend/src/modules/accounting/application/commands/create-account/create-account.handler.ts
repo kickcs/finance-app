@@ -10,9 +10,7 @@ import { DomainEventPublisher } from '../../../../../shared';
 import { toAccountResponse } from '../../shared/account-response.helper';
 
 @CommandHandler(CreateAccountCommand)
-export class CreateAccountHandler
-  implements ICommandHandler<CreateAccountCommand>
-{
+export class CreateAccountHandler implements ICommandHandler<CreateAccountCommand> {
   constructor(
     @Inject(ACCOUNT_REPOSITORY)
     private readonly accountRepository: IAccountRepository,

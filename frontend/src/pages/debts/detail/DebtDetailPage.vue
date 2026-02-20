@@ -1,7 +1,14 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import { UButton, UIcon, UCard, UProgressBar, USpinner, NotFoundState } from '@/shared/ui';
+import {
+  UButton,
+  UIcon,
+  UCard,
+  UProgressBar,
+  USpinner,
+  NotFoundState,
+} from '@/shared/ui';
 import { AppHeader } from '@/widgets/header';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { formatDate } from '@/shared/lib/format/date';
@@ -107,7 +114,12 @@ function goBack() {
 <template>
   <div class="min-h-screen bg-background-light dark:bg-background-dark pb-28">
     <!-- Header -->
-    <AppHeader :title="debt?.person_name || debt?.name || 'Долг'" show-back blur @back="goBack" />
+    <AppHeader
+      :title="debt?.person_name || debt?.name || 'Долг'"
+      show-back
+      blur
+      @back="goBack"
+    />
 
     <!-- Content -->
     <main class="px-5 pt-8 pb-6">

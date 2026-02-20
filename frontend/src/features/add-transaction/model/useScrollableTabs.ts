@@ -18,6 +18,8 @@ export const CYCLIC_PANEL_ORDER: TransactionType[] = [
 const REAL_START = 1;
 const REAL_END = CYCLIC_PANEL_ORDER.length - 2;
 const PANEL_COUNT = CYCLIC_PANEL_ORDER.length;
+// Must be > one Vue reactivity tick but short enough to not block user swipe detection
+const WATCHER_GUARD_MS = 100;
 
 export function useScrollableTabs(
   type: Ref<TransactionType>,
@@ -52,7 +54,9 @@ export function useScrollableTabs(
     });
 
     const handler = () => resetProgrammaticFlag();
-    scrollContainer.value.addEventListener('scrollend', handler, { once: true });
+    scrollContainer.value.addEventListener('scrollend', handler, {
+      once: true,
+    });
     scrollendCleanup = () => {
       scrollContainer.value?.removeEventListener('scrollend', handler);
       scrollendCleanup = null;
@@ -76,6 +80,13 @@ export function useScrollableTabs(
     return Math.round(scrollContainer.value.scrollLeft / panelWidth);
   }
 
+  // Called after cyclic wrap to force height recalculation on the new panel
+  let onWrapCallback: (() => void) | null = null;
+
+  function onCyclicWrap(callback: () => void) {
+    onWrapCallback = callback;
+  }
+
   function handleCyclicWrap() {
     const index = getCurrentIndex();
 
@@ -85,6 +96,7 @@ export function useScrollableTabs(
       jumpToIndex(REAL_END);
       onTypeChange(CYCLIC_PANEL_ORDER[REAL_END]);
       isWrapping = false;
+      nextTick(() => onWrapCallback?.());
       return true;
     }
 
@@ -94,6 +106,7 @@ export function useScrollableTabs(
       jumpToIndex(REAL_START);
       onTypeChange(CYCLIC_PANEL_ORDER[REAL_START]);
       isWrapping = false;
+      nextTick(() => onWrapCallback?.());
       return true;
     }
 
@@ -106,15 +119,14 @@ export function useScrollableTabs(
     if (handleCyclicWrap()) return;
 
     const index = getCurrentIndex();
-    const clampedIndex = Math.max(
-      REAL_START,
-      Math.min(index, REAL_END),
-    );
+    const clampedIndex = Math.max(REAL_START, Math.min(index, REAL_END));
     const newType = CYCLIC_PANEL_ORDER[clampedIndex];
 
     if (newType !== type.value) {
       navigator.vibrate?.(10);
+      isScrollingProgrammatically = true; // Prevent watch from triggering another scroll
       onTypeChange(newType);
+      setTimeout(() => { isScrollingProgrammatically = false; }, WATCHER_GUARD_MS);
     }
   }
 
@@ -152,7 +164,7 @@ export function useScrollableTabs(
   });
 
   watch(type, (newType) => {
-    if (isWrapping) return;
+    if (isWrapping || isScrollingProgrammatically) return;
     const index = getRealIndex(newType);
     if (!scrollContainer.value) return;
 
@@ -167,5 +179,6 @@ export function useScrollableTabs(
     handleTabClick,
     handleScrollEnd,
     handleScroll,
+    onCyclicWrap,
   };
 }

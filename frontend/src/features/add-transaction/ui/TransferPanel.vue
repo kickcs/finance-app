@@ -81,7 +81,7 @@ const showConversion = computed(
 const isIntraAccount = computed(
   () =>
     props.formData.accountId === props.formData.toAccountId &&
-    !!props.formData.accountId
+    !!props.formData.accountId,
 );
 
 function calculateConvertedAmount(
@@ -212,7 +212,10 @@ function handleSourceCurrencyChange(newCurrency: string) {
         otherCurrency,
       );
     }
-  } else if (props.formData.toCurrency && props.formData.toCurrency !== newCurrency) {
+  } else if (
+    props.formData.toCurrency &&
+    props.formData.toCurrency !== newCurrency
+  ) {
     updates.toAmount = calculateConvertedAmount(
       props.formData.amount,
       newCurrency,
@@ -229,7 +232,7 @@ function handleTargetAmountChange(newToAmount: number) {
   const newSourceAmount = calculateConvertedAmount(
     newToAmount,
     props.formData.toCurrency,
-    props.formData.currency
+    props.formData.currency,
   );
 
   skipWatcherRecalc = true;
@@ -292,33 +295,38 @@ watch(
         v-if="targetAccount"
         class="absolute left-[1px] top-6 bottom-6 w-px border-l-2 border-dashed border-border-light dark:border-border-dark opacity-40 z-0"
       />
-      
+
       <!-- Source account card -->
       <Popover v-model:open="sourceOpen">
         <PopoverTrigger as-child>
           <button
             type="button"
-            class="w-full flex items-center gap-3 p-3.5 rounded-xl
-              bg-card-light dark:bg-card-dark
-              border border-border-light dark:border-border-dark
-              transition-colors hover:bg-surface-light/50 dark:hover:bg-surface-dark/50
-              overflow-hidden relative z-10"
+            class="w-full flex items-center gap-3 p-3.5 rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark transition-colors hover:bg-surface-light/50 dark:hover:bg-surface-dark/50 overflow-hidden relative z-10"
           >
             <!-- Color accent bar -->
             <span
               class="absolute left-0 top-2 bottom-2 w-1 rounded-r-full"
-              :style="{ backgroundColor: selectedAccount?.color || 'var(--color-border-light)' }"
+              :style="{
+                backgroundColor:
+                  selectedAccount?.color || 'var(--color-border-light)',
+              }"
             />
             <div class="flex-1 text-left pl-1.5">
-              <p class="text-caption text-text-tertiary-light dark:text-text-tertiary-dark uppercase tracking-wider">
+              <p
+                class="text-caption text-text-tertiary-light dark:text-text-tertiary-dark uppercase tracking-wider"
+              >
                 Откуда
               </p>
-              <p class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark">
+              <p
+                class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark"
+              >
                 {{ selectedAccount?.name || 'Выберите счёт' }}
               </p>
             </div>
             <div v-if="selectedAccount" class="text-right">
-              <p class="text-sm font-medium tabular-nums text-text-primary-light dark:text-text-primary-dark">
+              <p
+                class="text-sm font-medium tabular-nums text-text-primary-light dark:text-text-primary-dark"
+              >
                 {{ formatCurrency(currentBalance, formData.currency) }}
               </p>
             </div>
@@ -329,7 +337,11 @@ watch(
             />
           </button>
         </PopoverTrigger>
-        <PopoverContent align="start" :side-offset="4" class="w-[var(--reka-popover-trigger-width)] p-1">
+        <PopoverContent
+          align="start"
+          :side-offset="4"
+          class="w-[var(--reka-popover-trigger-width)] p-1"
+        >
           <button
             v-for="account in accounts"
             :key="account.id"
@@ -347,8 +359,15 @@ watch(
               :style="{ backgroundColor: account.color }"
             />
             <span class="flex-1 text-left">{{ account.name }}</span>
-            <span class="text-xs tabular-nums text-text-tertiary-light dark:text-text-tertiary-dark">
-              {{ formatCurrency(account.balances[0]?.balance ?? 0, account.balances[0]?.currency ?? '') }}
+            <span
+              class="text-xs tabular-nums text-text-tertiary-light dark:text-text-tertiary-dark"
+            >
+              {{
+                formatCurrency(
+                  account.balances[0]?.balance ?? 0,
+                  account.balances[0]?.currency ?? '',
+                )
+              }}
             </span>
           </button>
         </PopoverContent>
@@ -358,17 +377,15 @@ watch(
       <div class="flex justify-center -my-2 relative z-20">
         <button
           type="button"
-          class="w-10 h-10 rounded-full flex items-center justify-center
-            bg-surface-light dark:bg-surface-dark
-            border border-border-light dark:border-border-dark
-            shadow-sm
-            hover:bg-primary/10 active:scale-90 active:rotate-180
-            transition-all duration-300
-            disabled:opacity-40"
+          class="w-10 h-10 rounded-full flex items-center justify-center bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark shadow-sm hover:bg-primary/10 active:scale-90 active:rotate-180 transition-all duration-300 disabled:opacity-40"
           :disabled="!formData.toAccountId"
           @click="handleSwap"
         >
-          <UIcon :name="isIntraAccount ? 'currency_exchange' : 'swap_vert'" size="md" class="text-primary" />
+          <UIcon
+            :name="isIntraAccount ? 'currency_exchange' : 'swap_vert'"
+            size="md"
+            class="text-primary"
+          />
         </button>
       </div>
 
@@ -390,8 +407,13 @@ watch(
               class="absolute left-0 top-2 bottom-2 w-1 rounded-r-full"
               :style="{ backgroundColor: targetAccount.color }"
             />
-            <div class="flex-1 text-left" :class="targetAccount ? 'pl-1.5' : ''">
-              <p class="text-caption text-text-tertiary-light dark:text-text-tertiary-dark uppercase tracking-wider">
+            <div
+              class="flex-1 text-left"
+              :class="targetAccount ? 'pl-1.5' : ''"
+            >
+              <p
+                class="text-caption text-text-tertiary-light dark:text-text-tertiary-dark uppercase tracking-wider"
+              >
                 {{ isIntraAccount ? 'В валюту' : 'Куда' }}
               </p>
               <p
@@ -405,22 +427,33 @@ watch(
                 {{ targetAccount?.name || 'Выберите счёт' }}
               </p>
             </div>
-            <div v-if="targetAccount && targetBalance !== undefined" class="text-right">
-              <p class="text-sm font-medium tabular-nums text-text-primary-light dark:text-text-primary-dark">
+            <div
+              v-if="targetAccount && targetBalance !== undefined"
+              class="text-right"
+            >
+              <p
+                class="text-sm font-medium tabular-nums text-text-primary-light dark:text-text-primary-dark"
+              >
                 {{ formatCurrency(targetBalance, formData.toCurrency ?? '') }}
               </p>
             </div>
             <UIcon
               :name="targetAccount ? 'expand_more' : 'add'"
               size="sm"
-              :class="targetAccount
-                ? 'text-text-tertiary-light dark:text-text-tertiary-dark'
-                : 'text-primary'"
+              :class="
+                targetAccount
+                  ? 'text-text-tertiary-light dark:text-text-tertiary-dark'
+                  : 'text-primary'
+              "
               class="shrink-0"
             />
           </button>
         </PopoverTrigger>
-        <PopoverContent align="start" :side-offset="4" class="w-[var(--reka-popover-trigger-width)] p-1">
+        <PopoverContent
+          align="start"
+          :side-offset="4"
+          class="w-[var(--reka-popover-trigger-width)] p-1"
+        >
           <button
             v-for="account in availableTargetAccounts"
             :key="account.id"
@@ -450,11 +483,16 @@ watch(
     </div>
 
     <!-- Secondary amount input for target account when currencies differ -->
-    <div v-if="showConversion" class="pt-2 border-t border-border-light dark:border-border-dark border-dashed">
+    <div
+      v-if="showConversion"
+      class="pt-2 border-t border-border-light dark:border-border-dark border-dashed"
+    >
       <HeroAmount
         :amount="formData.toAmount || 0"
         :currency="formData.toCurrency || ''"
-        :currency-symbol="getCurrencyByCode(formData.toCurrency || '')?.symbol || ''"
+        :currency-symbol="
+          getCurrencyByCode(formData.toCurrency || '')?.symbol || ''
+        "
         :available-currencies="targetAccountCurrencies"
         :is-multi-currency="targetAccountCurrencies.length > 1"
         label="Сумма зачисления"

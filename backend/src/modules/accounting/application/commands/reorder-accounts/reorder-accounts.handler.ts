@@ -7,9 +7,7 @@ import {
 } from '../../../domain/repositories/account.repository.interface';
 
 @CommandHandler(ReorderAccountsCommand)
-export class ReorderAccountsHandler
-  implements ICommandHandler<ReorderAccountsCommand>
-{
+export class ReorderAccountsHandler implements ICommandHandler<ReorderAccountsCommand> {
   constructor(
     @Inject(ACCOUNT_REPOSITORY)
     private readonly accountRepository: IAccountRepository,

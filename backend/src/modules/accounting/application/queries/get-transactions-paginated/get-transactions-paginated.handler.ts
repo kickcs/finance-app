@@ -7,9 +7,7 @@ import {
 } from '../../../domain/repositories/transaction.repository.interface';
 
 @QueryHandler(GetTransactionsPaginatedQuery)
-export class GetTransactionsPaginatedHandler
-  implements IQueryHandler<GetTransactionsPaginatedQuery>
-{
+export class GetTransactionsPaginatedHandler implements IQueryHandler<GetTransactionsPaginatedQuery> {
   constructor(
     @Inject(TRANSACTION_REPOSITORY)
     private readonly transactionRepository: ITransactionRepository,

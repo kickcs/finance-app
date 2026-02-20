@@ -7,9 +7,7 @@ import {
 } from '../../../domain/repositories/category.repository.interface';
 
 @CommandHandler(DeleteCategoryCommand)
-export class DeleteCategoryHandler
-  implements ICommandHandler<DeleteCategoryCommand>
-{
+export class DeleteCategoryHandler implements ICommandHandler<DeleteCategoryCommand> {
   constructor(
     @Inject(CATEGORY_REPOSITORY)
     private readonly categoryRepository: ICategoryRepository,

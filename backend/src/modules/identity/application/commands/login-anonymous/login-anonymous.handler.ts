@@ -18,9 +18,7 @@ import {
 const DEMO_DURATION_MS = 60 * 60 * 1000;
 
 @CommandHandler(LoginAnonymousCommand)
-export class LoginAnonymousHandler
-  implements ICommandHandler<LoginAnonymousCommand>
-{
+export class LoginAnonymousHandler implements ICommandHandler<LoginAnonymousCommand> {
   private readonly logger = new Logger(LoginAnonymousHandler.name);
 
   constructor(

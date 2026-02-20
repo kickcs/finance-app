@@ -8,9 +8,7 @@ import {
 import { ReminderResponseMapper } from '../../mappers';
 
 @CommandHandler(UpdateReminderCommand)
-export class UpdateReminderHandler
-  implements ICommandHandler<UpdateReminderCommand>
-{
+export class UpdateReminderHandler implements ICommandHandler<UpdateReminderCommand> {
   constructor(
     @Inject(REMINDER_REPOSITORY)
     private readonly reminderRepository: IReminderRepository,

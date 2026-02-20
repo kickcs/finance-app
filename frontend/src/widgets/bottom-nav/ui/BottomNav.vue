@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { UIcon } from '@/shared/ui';
+import { haptics } from '@/shared/lib/haptics/haptics';
 
-defineEmits<{
+const emit = defineEmits<{
   'add-click': [];
 }>();
 
 const route = useRoute();
+const router = useRouter();
 
 const navItems = [
   { id: 'home', icon: 'home', path: '/', label: 'Главная' },
@@ -31,6 +33,17 @@ const activeItem = computed(() => {
     })?.id || 'home'
   );
 });
+
+function handleAddClick() {
+  haptics.tap();
+  emit('add-click');
+}
+
+function handleNavClick(item: (typeof navItems)[0]) {
+  if (item.path === '' || item.id === activeItem.value) return;
+  haptics.tap();
+  router.push(item.path);
+}
 </script>
 
 <template>
@@ -43,27 +56,28 @@ const activeItem = computed(() => {
         <button
           v-if="item.id === 'add'"
           :aria-label="item.label"
-          class="w-10 h-10 rounded-lg flex items-center justify-center bg-primary text-white hover:bg-primary-hover active:opacity-80 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-none transition-all duration-150"
-          @click="$emit('add-click')"
+          class="w-10 h-10 rounded-lg flex items-center justify-center bg-primary text-white hover:bg-primary-hover active:scale-[0.92] shadow-sm active:shadow-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-none transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
+          @click="handleAddClick"
         >
           <UIcon name="add" size="md" />
         </button>
 
         <!-- Nav Item -->
-        <router-link
+        <button
           v-else
-          :to="item.path"
+          type="button"
           :aria-label="item.label"
-          class="relative flex flex-col items-center justify-center w-12 h-12 rounded-lg transition-all duration-150 active:opacity-80 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-none"
+          class="relative flex flex-col items-center justify-center w-12 h-12 rounded-lg transition-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] active:scale-95 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-none"
+          @click="handleNavClick(item)"
         >
           <UIcon
             :name="item.icon"
             size="md"
             :filled="activeItem === item.id"
             :class="[
-              'transition-colors duration-150',
+              'transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]',
               activeItem === item.id
-                ? 'text-primary'
+                ? 'text-primary -translate-y-1 scale-110'
                 : 'text-text-tertiary-light dark:text-text-tertiary-dark hover:text-text-secondary-light dark:hover:text-text-secondary-dark',
             ]"
           />
@@ -71,11 +85,13 @@ const activeItem = computed(() => {
           <!-- Active indicator - simple line -->
           <div
             :class="[
-              'absolute bottom-0.5 w-4 h-0.5 rounded-full bg-primary transition-all duration-150',
-              activeItem === item.id ? 'opacity-100' : 'opacity-0',
+              'absolute bottom-1 w-4 h-0.5 rounded-full bg-primary transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]',
+              activeItem === item.id
+                ? 'opacity-100 scale-100 translate-y-0'
+                : 'opacity-0 scale-50 translate-y-1',
             ]"
           />
-        </router-link>
+        </button>
       </template>
     </div>
   </nav>

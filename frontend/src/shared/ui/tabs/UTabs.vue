@@ -63,12 +63,18 @@ onUnmounted(() => {
   resizeObserver?.disconnect();
 });
 
-watch(() => props.modelValue, () => {
-  if (props.variant === 'pills') nextTick(updateIndicator);
-});
-watch(() => props.items, () => {
-  if (props.variant === 'pills') nextTick(updateIndicator);
-});
+watch(
+  () => props.modelValue,
+  () => {
+    if (props.variant === 'pills') nextTick(updateIndicator);
+  },
+);
+watch(
+  () => props.items,
+  () => {
+    if (props.variant === 'pills') nextTick(updateIndicator);
+  },
+);
 </script>
 
 <template>

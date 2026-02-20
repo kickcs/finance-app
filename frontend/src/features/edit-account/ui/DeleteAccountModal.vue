@@ -72,13 +72,21 @@ const warningText = computed(() => {
         class="w-12 h-12 rounded-xl flex items-center justify-center"
         :style="{ backgroundColor: `${account.color}20` }"
       >
-        <UIcon :name="account.icon" size="md" :style="{ color: account.color }" />
+        <UIcon
+          :name="account.icon"
+          size="md"
+          :style="{ color: account.color }"
+        />
       </div>
       <div class="flex-1 min-w-0">
-        <p class="font-semibold text-text-primary-light dark:text-text-primary-dark truncate">
+        <p
+          class="font-semibold text-text-primary-light dark:text-text-primary-dark truncate"
+        >
           {{ account.name }}
         </p>
-        <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
+        <p
+          class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
+        >
           {{ formattedBalances }}
         </p>
       </div>
