@@ -4,7 +4,7 @@ import { useRouter, useRoute } from 'vue-router';
 import { BottomNav } from '@/widgets/bottom-nav';
 import { AppHeader } from '@/widgets/header';
 import { DebtCard, useDebts, type Debt } from '@/entities/debt';
-import { UButton, UIcon, UCard, Skeleton, EmptyState } from '@/shared/ui';
+import { UButton, UIcon, UCard, Skeleton, EmptyState, SectionHeader } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { useExchangeRates } from '@/shared/api';
 import { navigateBack } from '@/app/router';
@@ -137,25 +137,23 @@ function handleAddTransaction() {
         <!-- Debt Summary Cards (converted to main currency) -->
         <div v-if="activeDebts.length > 0" class="grid grid-cols-2 gap-3">
           <!-- Given debts (people owe you) -->
-          <UCard class="p-4">
-            <p
-              class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark mb-1"
-            >
+          <UCard class="p-4 relative overflow-hidden" variant="bordered">
+            <div class="absolute -right-4 -top-4 w-16 h-16 bg-debt-given/10 rounded-full blur-xl pointer-events-none" />
+            <p class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-1">
               Вам должны
             </p>
-            <p class="text-lg font-bold text-debt-given">
+            <p class="text-lg font-bold text-debt-given tracking-tight">
               {{ formatCurrency(totalGivenDebts, currency) }}
             </p>
           </UCard>
 
           <!-- Taken debts (you owe others) -->
-          <UCard class="p-4">
-            <p
-              class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark mb-1"
-            >
+          <UCard class="p-4 relative overflow-hidden" variant="bordered">
+            <div class="absolute -right-4 -top-4 w-16 h-16 bg-debt-received/10 rounded-full blur-xl pointer-events-none" />
+            <p class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-1">
               Вы должны
             </p>
-            <p class="text-lg font-bold text-debt-received">
+            <p class="text-lg font-bold text-debt-received tracking-tight">
               {{ formatCurrency(totalTakenDebts, currency) }}
             </p>
           </UCard>
@@ -179,12 +177,12 @@ function handleAddTransaction() {
             </div>
           </div>
 
-          <div class="flex items-center justify-between px-1">
-            <h2
-              class="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark"
-            >
-              {{ personFilter ? `Долги: ${personFilter}` : 'Активные долги' }}
-            </h2>
+          <div class="flex items-center justify-between">
+            <SectionHeader
+              :title="personFilter ? `Долги: ${personFilter}` : 'Активные долги'"
+              :show-add="false"
+              :show-view-all="false"
+            />
             <!-- View Mode Toggle (hidden when filtering by person) -->
             <div
               v-if="activeDebts.length > 0 && !personFilter"
@@ -313,15 +311,15 @@ function handleAddTransaction() {
           </TransitionGroup>
 
           <!-- Empty State -->
-          <div v-else class="bg-card-light dark:bg-card-dark rounded-2xl">
+          <UCard v-else class="py-4">
             <EmptyState
               icon="celebration"
               title="Вы без долгов!"
               description="Отличная финансовая дисциплина"
-              icon-bg-class="bg-success/10"
+              icon-bg-class="bg-success/10 text-success"
               :action="{ label: 'Создать долг', onClick: handleAddDebt }"
             />
-          </div>
+          </UCard>
         </div>
       </template>
     </main>

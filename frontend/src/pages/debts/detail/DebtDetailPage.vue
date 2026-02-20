@@ -8,6 +8,8 @@ import {
   UProgressBar,
   USpinner,
   NotFoundState,
+  IconBadge,
+  UBadge
 } from '@/shared/ui';
 import { AppHeader } from '@/widgets/header';
 import { formatCurrency } from '@/shared/lib/format/currency';
@@ -134,45 +136,43 @@ function goBack() {
       <!-- Debt Details -->
       <div v-else class="space-y-6">
         <!-- Main Card -->
-        <UCard class="p-5">
-          <div class="flex items-start gap-4">
+        <UCard class="p-5" variant="bordered">
+          <div class="flex items-start gap-4 mb-6">
             <!-- Icon -->
-            <div
-              class="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0"
-              :style="{
-                backgroundColor: `${DEBT_DIRECTION_COLORS[debt.debt_type]}20`,
-              }"
-            >
-              <UIcon
-                :name="
-                  debt.debt_type === 'given' ? 'arrow_upward' : 'arrow_downward'
-                "
-                size="lg"
-                :style="{ color: DEBT_DIRECTION_COLORS[debt.debt_type] }"
-              />
-            </div>
+            <IconBadge
+              :icon="debt.debt_type === 'given' ? 'arrow_upward' : 'arrow_downward'"
+              size="lg"
+              :color="DEBT_DIRECTION_COLORS[debt.debt_type]"
+              class="shrink-0 shadow-sm"
+            />
 
             <!-- Info -->
-            <div class="flex-1 min-w-0">
-              <p
-                class="text-xl font-bold text-text-primary-light dark:text-text-primary-dark truncate"
-              >
+            <div class="flex-1 min-w-0 pt-1">
+              <p class="text-xl font-bold text-text-primary-light dark:text-text-primary-dark truncate">
                 {{ debt.person_name || debt.name }}
               </p>
-              <p
-                class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
-              >
+              <p class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mt-0.5">
                 {{ DEBT_DIRECTION_LABELS[debt.debt_type] }}
               </p>
             </div>
 
-            <!-- Closed Badge -->
-            <span
+            <!-- Closed Badge or Delete Action -->
+            <UBadge
               v-if="debt.is_closed"
-              class="px-3 py-1 rounded-full text-xs font-medium bg-success/10 text-success"
+              variant="success"
+              shape="pill"
+              class="mt-1"
             >
               Погашен
-            </span>
+            </UBadge>
+            <button
+              v-else
+              class="shrink-0 w-10 h-10 -mt-1 -mr-1 rounded-xl flex items-center justify-center text-text-tertiary-light dark:text-text-tertiary-dark hover:bg-danger/10 hover:text-danger transition-colors"
+              @click="showDeleteModal = true"
+              aria-label="Удалить долг"
+            >
+              <UIcon name="delete" size="md" />
+            </button>
           </div>
 
           <!-- Amount -->
@@ -237,7 +237,7 @@ function goBack() {
         </UCard>
 
         <!-- Details Card -->
-        <UCard variant="default" class="p-5 space-y-4">
+        <UCard variant="bordered" class="p-5 space-y-4 shadow-sm">
           <!-- Linked Account -->
           <div v-if="linkedAccount" class="flex items-center justify-between">
             <span
@@ -347,36 +347,25 @@ function goBack() {
         </UCard>
 
         <!-- Actions (only if not closed) -->
-        <div v-if="!debt.is_closed" class="space-y-3">
+        <div v-if="!debt.is_closed" class="flex gap-2">
           <UButton
             variant="secondary"
             size="lg"
-            full-width
+            class="flex-1"
             @click="showPartialPaymentModal = true"
           >
-            <UIcon name="payments" size="sm" class="mr-2" />
-            Внести платёж
+            <UIcon name="payments" size="sm" class="mr-1.5" />
+            Платёж
           </UButton>
 
           <UButton
             variant="primary"
-            size="xl"
-            full-width
+            size="lg"
+            class="flex-1"
             @click="showCloseModal = true"
           >
-            <UIcon name="check_circle" size="sm" class="mr-2" />
-            Закрыть долг
-          </UButton>
-
-          <UButton
-            variant="ghost"
-            size="lg"
-            full-width
-            class="text-danger"
-            @click="showDeleteModal = true"
-          >
-            <UIcon name="delete" size="sm" class="mr-2" />
-            Удалить долг
+            <UIcon name="check_circle" size="sm" class="mr-1.5" />
+            Закрыть
           </UButton>
         </div>
 

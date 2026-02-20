@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, defineAsyncComponent } from 'vue';
-import { UButton, UIcon, UCard, UTabs, UModal, Skeleton } from '@/shared/ui';
+import { UButton, UIcon, UCard, UTabs, UModal, Skeleton, EmptyState, IconBadge } from '@/shared/ui';
 import { AppHeader } from '@/widgets/header';
 
 const draggable = defineAsyncComponent(() => import('vuedraggable'));
@@ -175,62 +175,37 @@ async function confirmDelete() {
       </div>
 
       <!-- Categories List with Drag and Drop -->
-      <UCard v-else-if="localCategories.length > 0" class="overflow-hidden">
+      <UCard v-else-if="localCategories.length > 0" variant="bordered" class="overflow-hidden">
         <draggable
           v-model="localCategories"
           item-key="id"
           handle=".drag-handle"
           ghost-class="opacity-50"
           animation="200"
-          class="divide-y divide-gray-100 dark:divide-gray-800"
+          class="divide-y divide-border-light dark:divide-border-dark"
           @end="handleDragEnd"
         >
           <template #item="{ element: category }">
-            <div
-              class="flex items-center gap-3 p-4 bg-card-light dark:bg-card-dark"
-            >
+            <div class="flex items-center gap-3 p-4 bg-surface-light dark:bg-surface-dark transition-colors hover:bg-surface-light dark:hover:bg-surface-dark">
               <!-- Drag Handle -->
-              <div
-                class="drag-handle cursor-grab active:cursor-grabbing text-text-tertiary-light dark:text-text-tertiary-dark"
-              >
-                <UIcon name="drag_indicator" size="md" />
+              <div class="drag-handle cursor-grab active:cursor-grabbing text-text-tertiary-light dark:text-text-tertiary-dark hover:text-text-secondary-light dark:hover:text-text-secondary-dark transition-colors">
+                <UIcon name="drag_indicator" size="sm" />
               </div>
 
               <!-- Category Icon -->
-              <div
-                class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                :style="{ backgroundColor: `${category.color}15` }"
-              >
-                <UIcon
-                  :name="category.icon"
-                  size="md"
-                  :style="{ color: category.color }"
-                />
-              </div>
+              <IconBadge :icon="category.icon" size="sm" :color="category.color" class="shrink-0" />
 
               <!-- Category Name -->
-              <span
-                class="flex-1 font-medium text-text-primary-light dark:text-text-primary-dark truncate"
-              >
+              <span class="flex-1 font-medium text-text-primary-light dark:text-text-primary-dark truncate">
                 {{ category.name }}
               </span>
 
               <!-- Action Buttons -->
-              <div class="flex shrink-0 -mr-2">
-                <UButton
-                  variant="ghost"
-                  size="xs"
-                  class="text-text-secondary-light dark:text-text-secondary-dark"
-                  @click="openEditModal(category)"
-                >
+              <div class="flex shrink-0 gap-1 -mr-2">
+                <UButton variant="ghost" icon-only class="text-text-secondary-light dark:text-text-secondary-dark hover:bg-border-light dark:hover:bg-border-dark rounded-xl" @click="openEditModal(category)">
                   <UIcon name="edit" size="sm" />
                 </UButton>
-                <UButton
-                  variant="ghost"
-                  size="xs"
-                  class="text-danger"
-                  @click="openDeleteModal(category)"
-                >
+                <UButton variant="ghost" icon-only class="text-danger hover:bg-danger/10 rounded-xl" @click="openDeleteModal(category)">
                   <UIcon name="delete" size="sm" />
                 </UButton>
               </div>
@@ -240,11 +215,14 @@ async function confirmDelete() {
       </UCard>
 
       <!-- Empty state -->
-      <div v-else class="text-center py-8">
-        <p class="text-text-secondary-light dark:text-text-secondary-dark">
-          Нет категорий. Нажмите "+" чтобы добавить.
-        </p>
-      </div>
+      <UCard v-else variant="bordered" class="py-4">
+        <EmptyState
+          icon="category"
+          title="Нет категорий"
+          description="Добавьте свои категории для лучшего учета финансов"
+          :action="{ label: 'Добавить', onClick: openAddModal }"
+        />
+      </UCard>
 
       <!-- Add Category Button -->
       <UButton

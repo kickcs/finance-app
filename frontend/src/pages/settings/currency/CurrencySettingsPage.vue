@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { CurrencyList } from '@/widgets/currency-list';
-import { UButton, UIcon } from '@/shared/ui';
+import { UButton, UIcon, UCard, SectionHeader } from '@/shared/ui';
 import { AppHeader } from '@/widgets/header';
 import {
   getCurrencyByCode,
@@ -94,76 +94,71 @@ function goBack() {
     </AppHeader>
 
     <!-- Content -->
-    <main class="flex-1 px-5 pt-8 pb-10 space-y-8">
+    <main class="flex-1 px-5 pt-6 pb-10 space-y-8">
       <!-- Main Currency Section -->
       <section>
-        <p
-          class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark mb-2"
-        >
-          Основная валюта
-        </p>
-        <p
-          class="text-sm text-text-secondary-light dark:text-text-secondary-dark mb-4"
-        >
+        <SectionHeader
+          title="Основная валюта"
+          :show-add="false"
+          :show-view-all="false"
+          class="mb-2"
+        />
+        <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark mb-4 pl-1">
           Отображается во всём приложении, все суммы конвертируются в эту валюту
         </p>
-        <CurrencyList
-          :selected-code="selectedCurrency?.code"
-          @select="handleSelect"
-        />
+        <UCard variant="bordered" class="p-2">
+          <CurrencyList
+            :selected-code="selectedCurrency?.code"
+            @select="handleSelect"
+          />
+        </UCard>
       </section>
 
       <!-- Account Currencies Section -->
       <section>
-        <p
-          class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark mb-2"
-        >
-          Валюты для счетов
-        </p>
-        <p
-          class="text-sm text-text-secondary-light dark:text-text-secondary-dark mb-4"
-        >
+        <SectionHeader
+          title="Валюты для счетов"
+          :show-add="false"
+          :show-view-all="false"
+          class="mb-2"
+        />
+        <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark mb-4 pl-1">
           Эти валюты будут предлагаться при создании нового счёта
         </p>
 
-        <div class="space-y-2">
+        <UCard variant="bordered" class="overflow-hidden divide-y divide-border-light dark:divide-border-dark">
           <button
             v-for="curr in CURRENCIES"
             :key="curr.code"
             type="button"
-            class="w-full flex items-center gap-4 p-4 rounded-2xl transition-all hover:bg-surface-light dark:hover:bg-surface-dark"
+            class="w-full flex items-center gap-4 p-4 bg-surface-light dark:bg-surface-dark transition-all hover:bg-border-light dark:hover:bg-border-dark active:bg-border-light dark:active:bg-border-dark"
             @click="toggleAccountCurrency(curr.code)"
           >
-            <span class="text-2xl">{{ curr.flag }}</span>
-            <div class="flex-1 text-left">
-              <p
-                class="font-semibold text-text-primary-light dark:text-text-primary-dark"
-              >
+            <span class="text-2xl shrink-0">{{ curr.flag }}</span>
+            <div class="flex-1 text-left min-w-0">
+              <p class="font-semibold text-text-primary-light dark:text-text-primary-dark truncate">
                 {{ curr.code }}
               </p>
-              <p
-                class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
-              >
+              <p class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark truncate">
                 {{ curr.name }}
               </p>
             </div>
             <div
               :class="[
-                'w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all',
+                'w-6 h-6 rounded-full flex items-center justify-center transition-colors shrink-0',
                 accountCurrencies.includes(curr.code)
-                  ? 'bg-primary border-primary'
-                  : 'border-gray-300 dark:border-gray-600',
+                  ? 'bg-primary text-white'
+                  : 'bg-transparent border-2 border-border-light dark:border-border-dark',
               ]"
             >
               <UIcon
                 v-if="accountCurrencies.includes(curr.code)"
                 name="check"
                 size="sm"
-                class="text-white"
               />
             </div>
           </button>
-        </div>
+        </UCard>
       </section>
     </main>
   </div>

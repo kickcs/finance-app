@@ -4,7 +4,7 @@ import { useRouter, useRoute } from 'vue-router';
 import { AppHeader } from '@/widgets/header';
 import { BottomNav } from '@/widgets/bottom-nav';
 import { StatCard } from '@/widgets/analytics';
-import { UTabs, UCard, UIcon, UProgressBar, Skeleton } from '@/shared/ui';
+import { UTabs, UCard, UIcon, UProgressBar, Skeleton, SectionHeader, EmptyState, IconBadge } from '@/shared/ui';
 import {
   useAnalyticsStats,
   type CategoryBreakdown,
@@ -235,11 +235,11 @@ onMounted(() => {
         v-if="debtsLoading || totalOwedToMe > 0 || totalIOwe > 0"
         class="space-y-3"
       >
-        <h2
-          class="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark"
-        >
-          Долги
-        </h2>
+        <SectionHeader
+          title="Долги"
+          :show-add="false"
+          :show-view-all="false"
+        />
 
         <!-- Debt Loading Skeleton -->
         <template v-if="debtsLoading">
@@ -277,11 +277,11 @@ onMounted(() => {
       <!-- Category Breakdown -->
       <div class="space-y-3">
         <div class="flex items-center justify-between">
-          <h2
-            class="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark"
-          >
-            По категориям
-          </h2>
+          <SectionHeader
+            title="По категориям"
+            :show-add="false"
+            :show-view-all="false"
+          />
           <UTabs
             :model-value="filters.type"
             :items="typeItems"
@@ -309,31 +309,21 @@ onMounted(() => {
           <div v-if="categoryStats.length > 0" class="space-y-3">
             <UCard v-for="stat in categoryStats" :key="stat.id" class="p-4">
               <div class="flex items-center gap-3 mb-3">
-                <div
-                  class="w-10 h-10 rounded-xl flex items-center justify-center"
-                  :style="{ backgroundColor: `${stat.color}15` }"
-                >
-                  <UIcon
-                    :name="stat.icon"
-                    size="md"
-                    :style="{ color: stat.color }"
-                  />
-                </div>
+                <IconBadge
+                  :icon="stat.icon"
+                  size="md"
+                  :color="stat.color"
+                  class="shrink-0"
+                />
                 <div class="flex-1">
-                  <p
-                    class="font-medium text-text-primary-light dark:text-text-primary-dark"
-                  >
+                  <p class="font-medium text-text-primary-light dark:text-text-primary-dark">
                     {{ stat.name }}
                   </p>
-                  <p
-                    class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
-                  >
+                  <p class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">
                     {{ stat.percent.toFixed(1) }}%
                   </p>
                 </div>
-                <p
-                  class="font-semibold text-text-primary-light dark:text-text-primary-dark"
-                >
+                <p class="font-semibold text-text-primary-light dark:text-text-primary-dark">
                   {{ formatCurrency(stat.amount, currency, COMPACT_FORMAT) }}
                 </p>
               </div>
@@ -346,20 +336,13 @@ onMounted(() => {
           </div>
 
           <!-- Empty State -->
-          <div v-else class="py-12 text-center">
-            <div
-              class="w-16 h-16 mx-auto mb-4 rounded-full bg-surface-light dark:bg-surface-dark flex items-center justify-center"
-            >
-              <UIcon
-                name="pie_chart"
-                size="lg"
-                class="text-text-tertiary-light dark:text-text-tertiary-dark"
-              />
-            </div>
-            <p class="text-text-secondary-light dark:text-text-secondary-dark">
-              Нет данных для анализа
-            </p>
-          </div>
+          <UCard v-else variant="bordered" class="py-4">
+            <EmptyState
+              icon="pie_chart"
+              title="Нет данных"
+              description="Нет транзакций для анализа за выбранный период"
+            />
+          </UCard>
         </template>
       </div>
     </main>

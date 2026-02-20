@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.4.1';
+export const CURRENT_VERSION = '1.5.0';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,25 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.5.0',
+    date: '2026-02-20',
+    title: 'Унификация дизайна: Долги, Настройки и Аналитика',
+    items: [
+      {
+        type: 'improvement',
+        text: 'Полностью обновлен раздел "Долги": новые карточки сводки, удобные кнопки действий и красивые пустые состояния.',
+      },
+      {
+        type: 'improvement',
+        text: 'Раздел "Настройки" (Категории и Валюта) переведен на единый iOS-стиль с использованием карточек и улучшенными списками.',
+      },
+      {
+        type: 'improvement',
+        text: 'В разделе "Аналитика" обновлены заголовки и улучшено отображение, когда данных для графиков пока нет.',
+      }
+    ],
+  },
   {
     version: '1.4.1',
     date: '2026-02-20',
