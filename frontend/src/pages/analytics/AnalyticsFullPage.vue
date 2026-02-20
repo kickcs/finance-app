@@ -177,7 +177,7 @@ function handleAddTransaction() {
     <!-- Content -->
     <main class="px-5 pt-6 space-y-5">
       <!-- Sticky Filters -->
-      <div class="sticky top-14 z-20 -mx-5 px-5 py-2 space-y-3 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-border-light/50 dark:border-border-dark/50 shadow-sm">
+      <div class="sticky z-20 -mx-5 px-5 py-2 space-y-3 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-border-light/50 dark:border-border-dark/50 shadow-sm" :style="{ top: 'calc(3rem + var(--safe-area-inset-top, 0px))' }">
         <!-- Period Tabs -->
         <UTabs
           :model-value="filters.period"
@@ -212,40 +212,43 @@ function handleAddTransaction() {
         />
       </div>
 
-      <!-- Donut Chart -->
-      <div class="pt-2 transition-opacity duration-300" :class="{ 'opacity-50 pointer-events-none': analyticsFetching }"><SectionHeader title="Анализ расходов" :show-add="false" :show-view-all="false" class="mb-4" /></div>
-      <DonutChart
-        :segments="donutSegments"
-        :total="totalExpense"
-        :currency="currency"
-        title="Расходы по категориям"
-      />
+      <!-- Analytics Content (dims during refetch) -->
+      <div class="space-y-5 transition-opacity duration-300" :class="{ 'opacity-50 pointer-events-none': analyticsFetching }">
+        <!-- Donut Chart -->
+        <div class="pt-2">
+          <SectionHeader title="Анализ расходов" :show-add="false" :show-view-all="false" class="mb-4" />
+        </div>
+        <DonutChart
+          :segments="donutSegments"
+          :total="totalExpense"
+          :currency="currency"
+          title="Расходы по категориям"
+        />
 
-      <!-- Daily Stats Cards -->
-      <DailyStatsCards
-        class="transition-opacity duration-300"
-        :class="{ 'opacity-50 pointer-events-none': analyticsFetching }"
-        :total-expense="totalExpense"
-        :total-income="totalIncome"
-        :days-in-period="daysInPeriod"
-        :days-remaining-in-month="daysRemainingInMonth"
-        :currency="currency"
-      />
+        <!-- Daily Stats Cards -->
+        <DailyStatsCards
+          :total-expense="totalExpense"
+          :total-income="totalIncome"
+          :days-in-period="daysInPeriod"
+          :days-remaining-in-month="daysRemainingInMonth"
+          :currency="currency"
+        />
 
-      <!-- Top Categories -->
-      <TopCategories
-        :categories="expenseCategoryStats"
-        :currency="currency"
-        :limit="3"
-      />
+        <!-- Top Categories -->
+        <TopCategories
+          :categories="expenseCategoryStats"
+          :currency="currency"
+          :limit="3"
+        />
 
-      <!-- Savings Gauge -->
-      <SavingsGauge
-        :total-income="totalIncome"
-        :total-expense="totalExpense"
-        :currency="currency"
-        :total-balance="totalBalance"
-      />
+        <!-- Savings Gauge -->
+        <SavingsGauge
+          :total-income="totalIncome"
+          :total-expense="totalExpense"
+          :currency="currency"
+          :total-balance="totalBalance"
+        />
+      </div>
 
       <!-- Debt Summary Cards -->
       <div v-if="totalOwedToMe > 0 || totalIOwe > 0" class="space-y-3">

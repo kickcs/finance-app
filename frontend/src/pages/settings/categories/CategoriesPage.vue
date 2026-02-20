@@ -202,10 +202,10 @@ async function confirmDelete() {
 
               <!-- Action Buttons -->
               <div class="flex shrink-0 gap-1 -mr-2">
-                <UButton variant="ghost" icon-only class="text-text-secondary-light dark:text-text-secondary-dark hover:bg-border-light dark:hover:bg-border-dark rounded-xl" @click="openEditModal(category)">
+                <UButton variant="icon" class="text-text-secondary-light dark:text-text-secondary-dark hover:bg-border-light dark:hover:bg-border-dark rounded-xl" @click="openEditModal(category)">
                   <UIcon name="edit" size="sm" />
                 </UButton>
-                <UButton variant="ghost" icon-only class="text-danger hover:bg-danger/10 rounded-xl" @click="openDeleteModal(category)">
+                <UButton variant="icon" class="text-danger hover:bg-danger/10 rounded-xl" @click="openDeleteModal(category)">
                   <UIcon name="delete" size="sm" />
                 </UButton>
               </div>
@@ -229,7 +229,7 @@ async function confirmDelete() {
         v-if="!isLoading"
         variant="ghost"
         full-width
-        class="!justify-center !gap-2 !p-4 !rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700 text-text-secondary-light dark:text-text-secondary-dark hover:border-primary hover:text-primary"
+        class="!justify-center !gap-2 !p-4 !rounded-2xl border-2 border-dashed border-border-light dark:border-border-dark text-text-secondary-light dark:text-text-secondary-dark hover:border-primary hover:text-primary"
         @click="openAddModal"
       >
         <UIcon name="add" size="md" />

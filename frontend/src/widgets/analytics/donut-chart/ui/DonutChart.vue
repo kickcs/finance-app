@@ -2,6 +2,7 @@
 import { computed, ref, onMounted } from 'vue';
 import { UCard, UIcon, EmptyState } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
+import { cn } from '@/shared/lib/utils';
 import type { DonutSegment } from '../types';
 
 const props = defineProps<{
@@ -118,12 +119,10 @@ const centerInfo = computed(() => {
             :stroke-width="strokeWidth"
             stroke-linecap="round"
             class="cursor-pointer transition-opacity duration-150"
-            :class="[
+            :class="cn(
               isAnimated ? 'opacity-100' : 'opacity-0',
-              selectedSegment && selectedSegment !== segment.id
-                ? 'opacity-40'
-                : '',
-            ]"
+              selectedSegment && selectedSegment !== segment.id && 'opacity-40',
+            )"
             :style="{
               transitionDelay: `${index * 50}ms`,
             }"

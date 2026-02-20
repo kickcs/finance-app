@@ -144,8 +144,7 @@ function handleAddTransaction() {
             </p>
           </div>
           <UButton
-            variant="ghost"
-            icon-only
+            variant="icon"
             class="shrink-0 bg-surface-light dark:bg-surface-dark hover:bg-border-light dark:hover:bg-border-dark rounded-xl"
             @click="showEditProfileModal = true"
           >

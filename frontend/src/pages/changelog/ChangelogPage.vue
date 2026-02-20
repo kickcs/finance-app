@@ -13,6 +13,10 @@ const { allEntries, markAsSeen } = useChangelog();
 // Mark as seen when visiting the page
 markAsSeen();
 
+function goBack() {
+  navigateBack();
+}
+
 function handleAddTransaction() {
   router.push('/transactions/new');
 }
@@ -20,7 +24,7 @@ function handleAddTransaction() {
 
 <template>
   <div class="min-h-screen bg-background-light dark:bg-background-dark pb-28">
-    <AppHeader title="Что нового" show-back @back="navigateBack" />
+    <AppHeader title="Что нового" show-back @back="goBack" />
 
     <main class="px-5 pt-4 pb-10">
       <!-- Hero -->

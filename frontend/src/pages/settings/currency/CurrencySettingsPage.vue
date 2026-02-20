@@ -147,7 +147,7 @@ function goBack() {
               :class="[
                 'w-6 h-6 rounded-full flex items-center justify-center transition-colors shrink-0',
                 accountCurrencies.includes(curr.code)
-                  ? 'bg-primary text-white'
+                  ? 'bg-primary text-primary-foreground'
                   : 'bg-transparent border-2 border-border-light dark:border-border-dark',
               ]"
             >

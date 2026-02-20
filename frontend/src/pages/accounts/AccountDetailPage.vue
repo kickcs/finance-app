@@ -126,14 +126,8 @@ const {
   enabled: computed(() => showDeleteAccountModal.value && !!accountId.value),
 });
 
-// Check before opening delete modal
+// Open delete modal (validation happens in useEditAccount.remove())
 function openDeleteModal() {
-  // Pre-check if this is the default account
-  if (account.value && isDefaultAccount(account.value.id)) {
-    // Set error manually so it shows in modal
-    accountError.value =
-      'Нельзя удалить счёт по умолчанию. Сначала назначьте другой счёт по умолчанию.';
-  }
   showDeleteAccountModal.value = true;
 }
 
@@ -413,9 +407,8 @@ async function handleSetAsDefault() {
               Изменить
             </UButton>
             <UButton
-              variant="ghost"
-              class="!text-danger w-11 shrink-0"
-              icon-only
+              variant="icon"
+              class="!text-danger w-11 shrink-0 hover:bg-danger/10"
               @click="openDeleteModal"
             >
               <UIcon name="delete" size="sm" />
