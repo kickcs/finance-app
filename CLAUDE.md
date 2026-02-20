@@ -143,6 +143,8 @@ Custom component library wrapping Reka UI headless primitives (CVA-based variant
 - `UIconSelector` — props: `modelValue`, `icons: string[]`, `color`, `label`, `maxHeight`
 - `NotFoundState` — full-page 404 with `message`, `icon`, `actionLabel`, `actionRoute` (named route)
 - `ViewAllButton` — full-width text button with chevron. Props: `label`. Emits: `click`
+- `USpinner` — loading spinner. Props: `size: 'sm'|'md'|'lg'`. Accessible with `role="status"`
+- `NavigationProgress` — route transition progress bar. Auto-hooks into Vue Router `beforeEach`/`afterEach`. Place once in app root
 
 **Toast System:** `import { useToast } from '@/shared/ui'`. Call `toast({ title, description, variant })`. Add `<Toaster />` to app root once.
 
@@ -170,6 +172,23 @@ Custom component library wrapping Reka UI headless primitives (CVA-based variant
 - `useLocalStorage<T>(key, default)` → `Ref<T>`. Reactive localStorage with auto-persist
 - `useAsyncOperation(asyncFn, {errorMessage?})` → `{ isLoading, error, execute }`. Returns `false` on failure
 - `useUserCurrency()` → `{ currency: ComputedRef<string> }`. Reads from profile → localStorage → `'UZS'`
+- `usePullToRefresh({ onRefresh, threshold?, maxPull?, containerRef? })` → `{ pullDistance, isRefreshing, isPulling, isThresholdReached, resetPull }`. iOS-like pull with exponential resistance and haptic feedback. Used internally by `PullToRefresh` component
+- `useSwipe({ threshold?, maxSwipe?, leftEnabled?, rightEnabled? })` → `{ translateX, isDragging, swipeState, resetSwipe, handlers }`. Touch swipe with haptics. Used internally by `SwipeableItem`
+- `useSlidingIndicator(containerRef, selectedId, buildStyle)` → `{ chipRefs, setChipRef, indicatorStyle, updateIndicator }`. Animated indicator that follows active element — used by `UTabs`, `CategoryChips`, `AccountSelector`
+
+### Frontend Shared Services (`shared/lib/`)
+
+**Haptics** (`shared/lib/haptics/`):
+- `haptics.tap()` — 10ms single tap
+- `haptics.success()` — 10-50-10ms pattern
+- `haptics.error()` — 50-25-50ms pattern
+- `haptics.warning()` — 25ms
+- `haptics.swipeThreshold()` / `haptics.pullThreshold()` — 15ms. Uses Navigator Vibration API with graceful fallback
+
+**Date helpers** (`shared/lib/date/`):
+- `isToday(dateString)`, `isPastDate(dateString)`, `isFutureDate(dateString)`, `getTodayISO()` — simple date comparison utilities
+- `getStartOfDay()`, `getEndOfDay()`, `getStartOfMonth()`, `getEndOfMonth()` — timestamp boundaries (in `format/date.ts`)
+- `formatLocalDate(dateStr, locale?)` — e.g. `"19 февраля 2026"` (in `format/date.ts`)
 
 ### Frontend Shared API Composables (`shared/api/composables/`)
 
@@ -208,23 +227,40 @@ All accept `userId: MaybeRefOrGetter<string|null>`, auto-disable when falsy, inc
 ### Frontend Entity UI Components
 
 - **`AccountCard`** (`entities/account/ui/`) — props: `account`, `showBalance`, `compact`, `hidden`. Multi-currency shows up to 2 balances + "+N ещё"
+- **`AccountSelector`** (`entities/account/ui/`) — props: `accounts`, `selectedId`, `label`. Horizontal scrollable chips with sliding indicator via `useSlidingIndicator`
 - **`TransactionItem`** (`entities/transaction/ui/`) — props: `transaction`, `currency`, `accountName`, `toAccountName`, `viewingAccountId` (controls transfer direction display)
 - **`VirtualGroupedTransactionList`** (`entities/transaction/ui/`) — virtualized list via `@tanstack/vue-virtual`. Props: `groups`, `currency`, `hasNextPage`, `isFetchingNextPage`, `getAccountName`, `height` (must set correctly with `calc()`), `swipeEnabled`. Emits: `loadMore`, `transactionClick`, `transactionEdit`, `transactionDelete`
+- **`DebtCard`** (`entities/debt/ui/`) — props: `debt`, `compact`. Shows progress bar, due date, direction colors via `DEBT_DIRECTION_COLORS`
+- **`GoalCard`** (`entities/goal/ui/`) — props: `goal`, `currency`, `compact`. Progress bar with days-left countdown
+- **`ReminderCard`** (`entities/reminder/ui/`) — props: `reminder`, `currency`, `compact`. Shows next date, frequency label, upcoming indicator
+- **`CategoryCard`** (`entities/category/ui/`) — props: `category`, `selected`, `size: 'compact'|'medium'|'large'`. Icon + label with selectable state
+- **`CategoryChips`** (`entities/category/ui/`) — props: `categories`, `selectedId`, `label`. Two-row scrollable grid with sliding indicator
+- **`CurrencyBadge`** (`entities/currency/ui/`) — props: `code`, `showName`. Displays flag + currency code
 
 ### Frontend Widget Components (`widgets/`)
 
 - **`AppHeader`** — props: `title`, `showBack`, `showNotifications`, `transparent`, `blur`. Slots: `#left`, `#logo`, `#actions`. Sticky with safe-area padding
+- **`BottomNav`** — fixed bottom navigation bar with haptic feedback. Emits: `add-click` (center FAB). Routes: home, analytics, add, history, profile
 - **`BalanceCard`** — props: `totalBalance`, `currency`, `percentChange`, `loading`, `hidden`. Dashboard hero with trend indicator
 - **`AccountStack`** — props: `accounts`, `loading`, `hidden`. Displays accounts list with SectionHeader and EmptyState
 - **`SaveSpendSection`** — props: `savedAmount`, `spentAmount`, `currency`, `period`, `loading`, `hidden`. Side-by-side income/expense cards
 - **`RecentTransactions`** — props: `transactions`, `userId`, `loading`, `hidden`. Self-fetches account names
+- **`DebtsSection`** — props: `debts`, `currency`, `loading`, `hidden`. Grouped by person with given/taken tabs
+- **`GoalsSection`** — props: `goals`, `currency`, `loading`. Overall progress + goal list with near-completion highlight
+- **`RemindersSection`** — props: `reminders`, `currency`, `loading`, `hidden`. Shows today count badge, upcoming/overdue indicators
+- **`CurrencyList`** — props: `selectedCode`. Searchable currency list with `CurrencyItem`. Emits: `select`
 - **`StatCard`** (`widgets/analytics/ui/`) — props: `icon`, `label`, `value`, `loading`, `color`. Analytics metric card
+
+Each widget with `loading` prop has a matching `*Skeleton.vue` companion (e.g. `BalanceCardSkeleton`, `DebtsSectionSkeleton`).
 
 ### Reusable Feature Components
 
 - **`FilterChips`** (`features/analytics-filters/ui/`) — props: `items: {id, name, icon?, color?}[]`, `selectedIds`, `label`. Horizontal scrollable multi-select pills
-- **`AccountSelector`** (`features/add-transaction/ui/`) — props: `accounts`, `selectedId`, `label`, `activeColor`. Horizontal scrollable account chips
+- **`DateRangePicker`** (`features/analytics-filters/ui/`) — props: `modelValue: DateRange`. Calendar-based date range selector using Reka UI Popover + RangeCalendar
+- **`ModeToggle`** (`features/analytics-filters/ui/`) — props: `mode: 'lite'|'full'`. Navigates between analytics views
+- **`HeroAmount`** (`features/add-transaction/ui/`) — props: `amount`, `currency`, `currencySymbol`, `availableCurrencies`, `isMultiCurrency`, `label`, `showInsufficientFunds`, `currentBalance`, `autofocus`. Large currency input with formatted display and optional currency popover
 - **`AmountInput`** (`features/add-transaction/ui/`) — props: `amount`, `currency`, `currencySymbol`, `availableCurrencies`, `isMultiCurrency`, `label`, `autofocus`. Large currency input with optional currency selector
+- **`SearchInput`** (`features/search-transactions/ui/`) — props: `modelValue`, `placeholder`. Wraps `UInput` variant="search". Emits: `update:modelValue`, `clear`
 - **`ThemeToggle`** (`features/toggle-theme/ui/`) — props: `showLabel`. Ghost button toggling dark/light mode
 - **`CurrencyItem`** (`features/select-currency/ui/`) — props: `currency`, `selected`. Full-row currency option with flag
 
