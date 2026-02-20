@@ -2,7 +2,7 @@
 import { computed, ref, watch, nextTick } from 'vue';
 import { UIcon } from '@/shared/ui';
 import type { Category } from '@/entities/category';
-import { useSlidingIndicator } from '../model/useSlidingIndicator';
+import { useSlidingIndicator } from '@/shared/lib/hooks/useSlidingIndicator';
 
 const props = defineProps<{
   categories: Category[];

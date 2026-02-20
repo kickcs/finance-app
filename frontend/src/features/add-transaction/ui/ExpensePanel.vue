@@ -6,8 +6,8 @@ import type { AccountWithBalances } from '@/entities/account';
 import type { TransactionFormData } from '../model/useTransactionForm';
 import { usePanelState } from '../model/usePanelState';
 import HeroAmount from './HeroAmount.vue';
-import CategoryChips from './CategoryChips.vue';
-import AccountSelector from './AccountSelector.vue';
+import { CategoryChips } from '@/entities/category';
+import { AccountSelector } from '@/entities/account';
 
 const props = defineProps<{
   formData: TransactionFormData;

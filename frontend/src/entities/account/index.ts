@@ -9,3 +9,4 @@ export * from './model/account-types';
 
 // API
 export * from './api';
+export { default as AccountSelector } from './ui/AccountSelector.vue';

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, nextTick } from 'vue';
 import type { AccountWithBalances } from '@/entities/account';
-import { useSlidingIndicator } from '../model/useSlidingIndicator';
+import { useSlidingIndicator } from '@/shared/lib/hooks/useSlidingIndicator';
 
 const props = defineProps<{
   accounts: AccountWithBalances[];

@@ -21,9 +21,13 @@ import {
   useEditTransaction,
   useTransactionSelection,
 } from '@/features/edit-transaction';
-import { useAccounts } from '@/entities/account';
-import { ALL_CATEGORIES, useCategories } from '@/entities/category';
-import { UTabs, UIcon, UButton, UModal } from '@/shared/ui';
+import { useAccounts, AccountSelector } from '@/entities/account';
+import {
+  ALL_CATEGORIES,
+  useCategories,
+  CategoryChips,
+} from '@/entities/category';
+import { UTabs, UIcon, UButton } from '@/shared/ui';
 import { useExchangeRates } from '@/shared/api';
 
 const router = useRouter();
@@ -50,7 +54,7 @@ const activeTypeFilter = ref<
 >('all');
 
 // Additional filters
-const showFiltersModal = ref(false);
+
 const selectedAccountId = ref<string | null>(null);
 const selectedCategoryId = ref<string | null>(null);
 
@@ -348,66 +352,39 @@ async function handleRefresh() {
 
     <!-- Fixed Controls -->
     <div class="px-5 pt-4 space-y-4 shrink-0">
-      <!-- Search + Filter Button -->
-      <div class="flex gap-2">
-        <div class="flex-1">
-          <SearchInput
-            :model-value="searchTerm"
-            placeholder="Поиск транзакций..."
-            @update:model-value="setQuery"
-            @clear="clearSearch"
-          />
-        </div>
-        <button
-          class="relative shrink-0 w-12 h-12 rounded-xl bg-surface-light dark:bg-surface-dark flex items-center justify-center transition-colors hover:bg-border-light dark:hover:bg-border-dark"
-          @click="showFiltersModal = true"
-        >
-          <UIcon
-            name="tune"
-            size="md"
-            class="text-text-secondary-light dark:text-text-secondary-dark"
-          />
-          <!-- Active filters badge -->
-          <span
-            v-if="activeFiltersCount > 0"
-            class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-primary text-white text-xs font-semibold flex items-center justify-center"
-          >
-            {{ activeFiltersCount }}
-          </span>
-        </button>
+      <!-- Search -->
+      <div>
+        <SearchInput
+          :model-value="searchTerm"
+          placeholder="Поиск транзакций..."
+          @update:model-value="setQuery"
+          @clear="clearSearch"
+        />
       </div>
 
       <!-- Type Filter Tabs -->
       <UTabs v-model="activeTypeFilter" :items="typeFilterItems" size="sm" />
 
-      <!-- Active Filters Chips -->
-      <div v-if="activeFiltersCount > 0" class="flex flex-wrap gap-2">
-        <button
-          v-if="selectedAccountId"
-          class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium"
-          @click="selectedAccountId = null"
-        >
-          {{ accounts.find((a) => a.id === selectedAccountId)?.name || 'Счёт' }}
-          <UIcon name="close" size="xs" />
-        </button>
-        <button
-          v-if="selectedCategoryId"
-          class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium"
-          @click="selectedCategoryId = null"
-        >
-          {{
-            usedCategories.find((c) => c.id === selectedCategoryId)?.name ||
-            'Категория'
-          }}
-          <UIcon name="close" size="xs" />
-        </button>
-        <button
-          v-if="activeFiltersCount > 1"
-          class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-surface-light dark:bg-surface-dark text-text-secondary-light dark:text-text-secondary-dark text-sm font-medium"
-          @click="clearAdditionalFilters"
-        >
-          Сбросить все
-        </button>
+      <!-- Quick Filters -->
+      <div class="space-y-3">
+        <AccountSelector
+          v-if="accounts.length > 0"
+          :accounts="accounts"
+          :selected-id="selectedAccountId"
+          label="Счета"
+          @select="
+            selectedAccountId = $event === selectedAccountId ? null : $event
+          "
+        />
+        <CategoryChips
+          v-if="usedCategories.length > 0"
+          :categories="usedCategories"
+          :selected-id="selectedCategoryId ?? ''"
+          label="Категории"
+          @select="
+            selectedCategoryId = $event === selectedCategoryId ? null : $event
+          "
+        />
       </div>
     </div>
 
@@ -430,7 +407,7 @@ async function handleRefresh() {
           :is-fetching-next-page="currentIsFetchingNextPage"
           :get-account-name="getAccountName"
           :get-balance-after="getBalanceAfter"
-          :swipe-enabled="true"
+          swipe-enabled
           height="100%"
           @load-more="handleLoadMore"
           @transaction-click="handleTransactionClick"
@@ -440,9 +417,9 @@ async function handleRefresh() {
       </div>
 
       <!-- Empty State -->
-      <div v-else class="py-16 text-center">
+      <div v-else class="py-16 text-center flex flex-col items-center">
         <div
-          class="w-16 h-16 mx-auto mb-4 rounded-full bg-surface-light dark:bg-surface-dark flex items-center justify-center"
+          class="w-16 h-16 mb-4 rounded-full bg-surface-light dark:bg-surface-dark flex items-center justify-center"
         >
           <UIcon
             name="receipt_long"
@@ -450,127 +427,41 @@ async function handleRefresh() {
             class="text-text-tertiary-light dark:text-text-tertiary-dark"
           />
         </div>
-        <p class="text-text-secondary-light dark:text-text-secondary-dark mb-2">
+        <p
+          class="text-text-secondary-light dark:text-text-secondary-dark mb-2 font-medium"
+        >
           {{ isEmpty ? 'Ничего не найдено' : 'Нет транзакций' }}
         </p>
         <p
-          class="text-sm text-text-tertiary-light dark:text-text-tertiary-dark"
+          class="text-sm text-text-tertiary-light dark:text-text-tertiary-dark mb-6"
         >
           {{
             isEmpty
-              ? 'Попробуйте изменить фильтры'
-              : 'Добавьте первую транзакцию'
+              ? 'Попробуйте изменить параметры поиска'
+              : 'Добавьте свою первую транзакцию, чтобы начать вести учет'
           }}
         </p>
+        <UButton
+          v-if="isEmpty"
+          variant="secondary"
+          @click="
+            () => {
+              clearSearch();
+              clearAdditionalFilters();
+              activeTypeFilter = 'all';
+            }
+          "
+        >
+          Сбросить фильтры
+        </UButton>
+        <UButton v-else variant="primary" @click="handleAddTransaction">
+          Добавить транзакцию
+        </UButton>
       </div>
 
       <!-- Spacer for fixed BottomNav — sits outside the flex-1 blocks so the virtualizer height excludes it -->
       <div class="shrink-0 h-20" />
     </div>
-
-    <!-- Filters Modal -->
-    <UModal v-model="showFiltersModal" title="Фильтры">
-      <div class="space-y-5">
-        <!-- Account Filter -->
-        <div class="space-y-2">
-          <label
-            class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark"
-          >
-            Счёт
-          </label>
-          <div class="flex flex-wrap gap-2">
-            <button
-              class="px-3 py-2 rounded-xl text-sm font-medium transition-colors"
-              :class="
-                selectedAccountId === null
-                  ? 'bg-primary text-white'
-                  : 'bg-surface-light dark:bg-surface-dark text-text-primary-light dark:text-text-primary-dark'
-              "
-              @click="selectedAccountId = null"
-            >
-              Все счета
-            </button>
-            <button
-              v-for="account in accounts"
-              :key="account.id"
-              class="px-3 py-2 rounded-xl text-sm font-medium transition-colors"
-              :class="
-                selectedAccountId === account.id
-                  ? 'bg-primary text-white'
-                  : 'bg-surface-light dark:bg-surface-dark text-text-primary-light dark:text-text-primary-dark'
-              "
-              @click="selectedAccountId = account.id"
-            >
-              {{ account.name }}
-            </button>
-          </div>
-        </div>
-
-        <!-- Category Filter -->
-        <div class="space-y-2">
-          <label
-            class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark"
-          >
-            Категория
-          </label>
-          <div class="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
-            <button
-              class="px-3 py-2 rounded-xl text-sm font-medium transition-colors"
-              :class="
-                selectedCategoryId === null
-                  ? 'bg-primary text-white'
-                  : 'bg-surface-light dark:bg-surface-dark text-text-primary-light dark:text-text-primary-dark'
-              "
-              @click="selectedCategoryId = null"
-            >
-              Все категории
-            </button>
-            <button
-              v-for="category in usedCategories"
-              :key="category.id"
-              class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors"
-              :class="
-                selectedCategoryId === category.id
-                  ? 'bg-primary text-white'
-                  : 'bg-surface-light dark:bg-surface-dark text-text-primary-light dark:text-text-primary-dark'
-              "
-              @click="selectedCategoryId = category.id"
-            >
-              <UIcon
-                :name="category.icon"
-                size="sm"
-                :style="{
-                  color:
-                    selectedCategoryId === category.id
-                      ? 'white'
-                      : category.color,
-                }"
-              />
-              {{ category.name }}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <template #actions>
-        <div class="flex gap-3 w-full">
-          <UButton
-            v-if="activeFiltersCount > 0"
-            variant="secondary"
-            @click="clearAdditionalFilters"
-          >
-            Сбросить
-          </UButton>
-          <UButton
-            variant="primary"
-            full-width
-            @click="showFiltersModal = false"
-          >
-            Применить
-          </UButton>
-        </div>
-      </template>
-    </UModal>
 
     <!-- Edit Transaction Modal -->
     <EditTransactionModal
