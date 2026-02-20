@@ -24,6 +24,10 @@ import {
 import { useAccounts, AccountSelector } from '@/entities/account';
 import {
   ALL_CATEGORIES,
+  EXPENSE_CATEGORIES,
+  INCOME_CATEGORIES,
+  DEBT_CATEGORIES,
+  TRANSFER_CATEGORY,
   useCategories,
   CategoryChips,
 } from '@/entities/category';
@@ -52,6 +56,14 @@ const typeFilterItems = [
 const activeTypeFilter = ref<
   'all' | 'income' | 'expense' | 'transfer' | 'debt'
 >('all');
+
+// Collapse state
+const isFiltersCollapsed = ref(false);
+
+function handleTypeFilterChange(val: string) {
+  activeTypeFilter.value = val as typeof activeTypeFilter.value;
+  selectedCategoryId.value = null;
+}
 
 // Additional filters
 
@@ -249,10 +261,30 @@ function clearAdditionalFilters() {
 }
 
 // User categories from API + fallback to static
-const { allCategories: userCategories } = useCategories(userId);
-const usedCategories = computed(() =>
-  userCategories.value.length > 0 ? userCategories.value : ALL_CATEGORIES,
-);
+const {
+  allCategories: userCategories,
+  expenseCategories: userExpenseCategories,
+  incomeCategories: userIncomeCategories,
+  isLoading: isLoadingCategories,
+} = useCategories(userId);
+
+const usedCategories = computed(() => {
+  const useDefaults = isLoadingCategories.value || (!userId.value && userCategories.value.length === 0);
+
+  switch (activeTypeFilter.value) {
+    case 'expense':
+      return useDefaults ? EXPENSE_CATEGORIES : userExpenseCategories.value;
+    case 'income':
+      return useDefaults ? INCOME_CATEGORIES : userIncomeCategories.value;
+    case 'debt':
+      return DEBT_CATEGORIES;
+    case 'transfer':
+      return [TRANSFER_CATEGORY];
+    case 'all':
+    default:
+      return useDefaults ? ALL_CATEGORIES : userCategories.value;
+  }
+});
 
 // Helper to get account name by id
 function getAccountName(accountId: string | null): string {
@@ -339,58 +371,101 @@ async function handleRefresh() {
     <!-- Header -->
     <AppHeader title="История">
       <template #actions>
-        <UButton
-          variant="ghost"
-          size="sm"
-          class="!p-2"
-          :disabled="isRefreshing"
-          aria-label="Обновить"
-          @click="handleRefresh"
-        >
-          <UIcon
-            name="refresh"
+        <div class="flex items-center gap-1">
+          <!-- Toggle Filters Button -->
+          <div class="relative">
+            <UButton
+              variant="ghost"
+              size="sm"
+              class="!p-2"
+              :aria-label="isFiltersCollapsed ? 'Показать фильтры' : 'Скрыть фильтры'"
+              :aria-expanded="!isFiltersCollapsed"
+              aria-controls="filters-container"
+              @click="isFiltersCollapsed = !isFiltersCollapsed"
+            >
+              <UIcon
+                :name="isFiltersCollapsed ? 'tune' : 'filter_list'"
+                size="sm"
+                :class="!isFiltersCollapsed ? 'text-primary' : ''"
+              />
+            </UButton>
+            <!-- Active filters indicator dot -->
+            <span
+              v-if="isFiltersCollapsed && (searchTerm || selectedAccountId || selectedCategoryId)"
+              aria-hidden="true"
+              class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-primary ring-2 ring-background-light dark:ring-background-dark"
+            />
+          </div>
+
+          <!-- Refresh Button -->
+          <UButton
+            variant="ghost"
             size="sm"
-            :class="{ 'animate-spin': isRefreshing }"
-          />
-        </UButton>
+            class="!p-2"
+            :disabled="isRefreshing"
+            aria-label="Обновить"
+            @click="handleRefresh"
+          >
+            <UIcon
+              name="refresh"
+              size="sm"
+              :class="{ 'animate-spin': isRefreshing }"
+            />
+          </UButton>
+        </div>
       </template>
     </AppHeader>
 
     <!-- Fixed Controls -->
-    <div class="px-5 pt-4 space-y-4 shrink-0">
-      <!-- Search -->
-      <div>
-        <SearchInput
-          :model-value="searchTerm"
-          placeholder="Поиск транзакций..."
-          @update:model-value="setQuery"
-          @clear="clearSearch"
-        />
-      </div>
+    <div class="px-5 pt-4 shrink-0">
+      <!-- Type Filter Tabs (Always Visible) -->
+      <UTabs
+        :model-value="activeTypeFilter"
+        :items="typeFilterItems"
+        size="sm"
+        @update:model-value="handleTypeFilterChange"
+      />
+    </div>
 
-      <!-- Type Filter Tabs -->
-      <UTabs v-model="activeTypeFilter" :items="typeFilterItems" size="sm" />
+    <!-- Collapsible Filters -->
+    <div
+      id="filters-container"
+      class="px-5 shrink-0"
+      :class="isFiltersCollapsed ? 'hidden' : 'block'"
+      :inert="isFiltersCollapsed || undefined"
+    >
+      <div class="space-y-4 pt-4 pb-2">
+        <!-- Search -->
+        <div>
+          <SearchInput
+            :model-value="searchTerm"
+            placeholder="Поиск транзакций..."
+            @update:model-value="setQuery"
+            @clear="clearSearch"
+          />
+        </div>
 
-      <!-- Quick Filters -->
-      <div class="space-y-3">
-        <AccountSelector
-          v-if="accounts.length > 0"
-          :accounts="accounts"
-          :selected-id="selectedAccountId"
-          label="Счета"
-          @select="
-            selectedAccountId = $event === selectedAccountId ? null : $event
-          "
-        />
-        <CategoryChips
-          v-if="usedCategories.length > 0"
-          :categories="usedCategories"
-          :selected-id="selectedCategoryId ?? ''"
-          label="Категории"
-          @select="
-            selectedCategoryId = $event === selectedCategoryId ? null : $event
-          "
-        />
+        <!-- Quick Filters -->
+        <div class="space-y-3">
+          <AccountSelector
+            v-if="accounts.length > 0"
+            :accounts="accounts"
+            :selected-id="selectedAccountId"
+            label="Счета"
+            @select="
+              selectedAccountId = $event === selectedAccountId ? null : $event
+            "
+          />
+          <CategoryChips
+            v-if="usedCategories.length > 0"
+            :categories="usedCategories"
+            :selected-id="selectedCategoryId ?? ''"
+            label="Категории"
+            @select="
+              selectedCategoryId = $event === selectedCategoryId ? null : $event
+            "
+          />
+        </div>
       </div>
     </div>
 
