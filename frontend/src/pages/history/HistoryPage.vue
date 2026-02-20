@@ -74,6 +74,7 @@ const {
   isLoading: isSearchLoading,
   hasNextPage: searchHasNextPage,
   isFetchingNextPage: searchIsFetchingNextPage,
+  isFetching: searchIsFetching,
   fetchNextPage: fetchNextSearchPage,
   setQuery,
   clearSearch,
@@ -92,6 +93,7 @@ const {
   isLoading,
   hasNextPage,
   isFetchingNextPage,
+  isFetching,
   fetchNextPage,
 } = useInfiniteTransactions(userId, serverFilters);
 
@@ -168,6 +170,10 @@ const currentIsFetchingNextPage = computed(() =>
   isSearchActive.value
     ? searchIsFetchingNextPage.value
     : isFetchingNextPage.value,
+);
+
+const currentIsFetching = computed(() =>
+  isSearchActive.value ? searchIsFetching.value : isFetching.value,
 );
 
 function handleLoadMore() {
@@ -399,7 +405,7 @@ async function handleRefresh() {
       </div>
 
       <!-- Virtualized Transaction Groups: flex-1 wrapper ensures virtualizer gets definite height from flex, not from % -->
-      <div v-else-if="groupedTransactions.length > 0" class="flex-1 min-h-0">
+      <div v-else-if="groupedTransactions.length > 0" :class="['flex-1 min-h-0 transition-opacity duration-300', { 'opacity-50 pointer-events-none': currentIsFetching && displayedTransactions.length > 0 }]">
         <VirtualGroupedTransactionList
           :groups="groupedTransactions"
           :currency="currency"

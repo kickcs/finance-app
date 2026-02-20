@@ -1,5 +1,5 @@
 import { ref, computed, watch, toValue, type MaybeRefOrGetter } from 'vue';
-import { useInfiniteQuery } from '@tanstack/vue-query';
+import { useInfiniteQuery, keepPreviousData } from '@tanstack/vue-query';
 import { useDebounceFn } from '@vueuse/core';
 import {
   transactionsApi,
@@ -45,6 +45,7 @@ export function useServerSearch(userId: MaybeRefOrGetter<string | null>) {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
+    isFetching,
     refetch,
   } = useInfiniteQuery({
     queryKey: queryKey,
@@ -64,6 +65,7 @@ export function useServerSearch(userId: MaybeRefOrGetter<string | null>) {
     getNextPageParam: (lastPage) =>
       lastPage.hasMore ? lastPage.nextCursor : undefined,
     enabled: computed(() => !!toValue(userId) && isSearchActive.value),
+    placeholderData: keepPreviousData,
   });
 
   // Flatten all pages into single array
@@ -96,6 +98,7 @@ export function useServerSearch(userId: MaybeRefOrGetter<string | null>) {
     fetchNextPage,
     hasNextPage: computed(() => hasNextPage.value ?? false),
     isFetchingNextPage: computed(() => isFetchingNextPage.value),
+    isFetching: computed(() => isFetching.value),
     setQuery,
     clearSearch,
     refetch,

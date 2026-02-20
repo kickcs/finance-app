@@ -1,5 +1,5 @@
 import { computed, toValue, type MaybeRefOrGetter } from 'vue';
-import { useInfiniteQuery, useQueryClient } from '@tanstack/vue-query';
+import { useInfiniteQuery, useQueryClient, keepPreviousData } from '@tanstack/vue-query';
 import { transactionQueryKeys } from './queryKeys';
 import {
   transactionsApi,
@@ -32,6 +32,7 @@ export function useInfiniteTransactions(
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
+    isFetching,
     refetch,
   } = useInfiniteQuery({
     queryKey: queryKey,
@@ -46,6 +47,7 @@ export function useInfiniteTransactions(
     getNextPageParam: (lastPage) =>
       lastPage.hasMore ? lastPage.nextCursor : undefined,
     enabled: computed(() => !!toValue(userId)),
+    placeholderData: keepPreviousData,
   });
 
   // Flatten all pages into single array
@@ -105,6 +107,7 @@ export function useInfiniteTransactions(
     fetchNextPage,
     hasNextPage: computed(() => hasNextPage.value ?? false),
     isFetchingNextPage: computed(() => isFetchingNextPage.value),
+    isFetching: computed(() => isFetching.value),
     refetch,
     // Cache manipulation helpers
     prependTransaction,
