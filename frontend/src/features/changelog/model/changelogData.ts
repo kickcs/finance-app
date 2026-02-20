@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.5.0';
+export const CURRENT_VERSION = '1.4.2';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -28,7 +28,7 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
-    version: '1.5.0',
+    version: '1.4.2',
     date: '2026-02-20',
     title: 'Унификация дизайна: Долги, Настройки и Аналитика',
     items: [
