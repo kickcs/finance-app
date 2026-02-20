@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.4.0';
+export const CURRENT_VERSION = '1.5.0';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,33 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.5.0',
+    date: '2026-02-20',
+    title: 'Улучшение интерфейса и стабильности',
+    items: [
+      {
+        type: 'improvement',
+        text: 'Переработан дизайн страницы профиля: настройки разбиты по удобным блокам, добавлена новая карточка пользователя.',
+      },
+      {
+        type: 'improvement',
+        text: 'Обновлена страница счетов: добавлен счетчик, улучшена карточка общего баланса и экраны пустых списков.',
+      },
+      {
+        type: 'improvement',
+        text: 'Новый дизайн для экрана "Что нового" в виде элегантного таймлайна (истории версий).',
+      },
+      {
+        type: 'improvement',
+        text: 'Добавлены скелетоны загрузки для более плавного отображения данных.',
+      },
+      {
+        type: 'improvement',
+        text: 'Раздел транзакций теперь не мерцает при переключении фильтров — переходы стали мгновенными.',
+      }
+    ],
+  },
   {
     version: '1.4.0',
     date: '2026-02-20',

@@ -5,7 +5,7 @@ import type { User } from '@/shared/api/composables/useAuth';
 import { useRouter } from 'vue-router';
 import { AppHeader } from '@/widgets/header';
 import { BottomNav } from '@/widgets/bottom-nav';
-import { UButton, UIcon, UCard, UModal } from '@/shared/ui';
+import { UButton, UIcon, UCard, UModal, IconBadge } from '@/shared/ui';
 import { getCurrencyByCode } from '@/entities/currency';
 import { useAuth, useProfile } from '@/shared/api';
 import { EditProfileModal } from '@/features/edit-profile';
@@ -43,23 +43,32 @@ const { showModal: showInstallModal, openModal: openInstallModal } =
 const showLogoutModal = ref(false);
 const showEditProfileModal = ref(false);
 
-const menuItems = [
+// Menu Groups
+const settingsGroup = [
+  {
+    id: 'currency',
+    icon: 'currency_exchange',
+    label: 'Главная валюта',
+    value: () => currency.value?.code,
+    color: '#10b981', // success
+  },
+  { id: 'categories', icon: 'category', label: 'Категории', color: '#f59e0b' }, // warning
+  { id: 'quick-actions', icon: 'bolt', label: 'Быстрые действия', color: '#8b5cf6' }, // purple
+];
+
+const dataGroup = [
+  { id: 'import', icon: 'download', label: 'Импорт данных', color: '#3b82f6' }, // primary
+];
+
+const appGroup = [
   {
     id: 'whats-new',
     icon: 'new_releases',
     label: 'Что нового',
     badge: hasUnseenChanges,
+    color: '#ec4899', // pink
   },
-  { id: 'import', icon: 'download', label: 'Импорт данных' },
-  {
-    id: 'currency',
-    icon: 'currency_exchange',
-    label: 'Валюта',
-    value: () => currency.value?.code,
-  },
-  { id: 'categories', icon: 'category', label: 'Категории' },
-  { id: 'quick-actions', icon: 'bolt', label: 'Быстрые действия' },
-  { id: 'about', icon: 'info', label: 'О приложении' },
+  { id: 'about', icon: 'info', label: 'О приложении', color: '#64748b' }, // slate
 ];
 
 function handleMenuClick(itemId: string) {
@@ -118,86 +127,112 @@ function handleAddTransaction() {
     <!-- Content -->
     <main class="px-5 pt-8 space-y-6">
       <!-- User Card -->
-      <UCard class="p-5">
+      <UCard class="p-5" variant="bordered">
         <div class="flex items-center gap-4">
-          <div
-            class="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center"
-          >
-            <UIcon name="person" size="lg" class="text-primary" />
-          </div>
-          <div class="flex-1">
-            <p
-              class="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark"
-            >
+          <IconBadge
+            icon="person"
+            size="lg"
+            color="#3b82f6"
+            class="shrink-0"
+          />
+          <div class="flex-1 min-w-0">
+            <p class="text-lg font-bold text-text-primary-light dark:text-text-primary-dark truncate">
               {{ userName }}
             </p>
-            <p
-              class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
-            >
+            <p class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark truncate">
               {{ userEmail }}
             </p>
           </div>
           <UButton
             variant="ghost"
             icon-only
+            class="shrink-0 bg-surface-light dark:bg-surface-dark hover:bg-border-light dark:hover:bg-border-dark rounded-xl"
             @click="showEditProfileModal = true"
           >
-            <UIcon name="edit" size="md" />
+            <UIcon name="edit" size="sm" />
           </UButton>
         </div>
       </UCard>
 
-      <!-- Menu Items -->
-      <UCard class="divide-y divide-border-light dark:divide-border-dark">
-        <button
-          v-for="item in menuItems"
-          :key="item.id"
-          class="w-full flex items-center gap-4 p-4 transition-colors hover:bg-surface-light dark:hover:bg-surface-dark"
-          @click="handleMenuClick(item.id)"
-        >
-          <div
-            class="w-10 h-10 rounded-xl bg-surface-light dark:bg-surface-dark flex items-center justify-center"
+      <!-- Settings Group -->
+      <div>
+        <h2 class="text-sm font-semibold text-text-secondary-light dark:text-text-secondary-dark px-2 mb-2 uppercase tracking-wider">
+          Настройки
+        </h2>
+        <UCard class="divide-y divide-border-light dark:divide-border-dark overflow-hidden">
+          <button
+            v-for="item in settingsGroup"
+            :key="item.id"
+            class="w-full flex items-center gap-4 p-4 transition-colors hover:bg-surface-light dark:hover:bg-surface-dark active:bg-surface-light dark:active:bg-surface-dark"
+            @click="handleMenuClick(item.id)"
           >
-            <UIcon
-              :name="item.icon"
-              size="md"
-              class="text-text-secondary-light dark:text-text-secondary-dark"
-            />
-          </div>
-          <span
-            class="flex-1 text-left font-medium text-text-primary-light dark:text-text-primary-dark"
+            <IconBadge :icon="item.icon" size="sm" :color="item.color" />
+            <span class="flex-1 text-left font-medium text-text-primary-light dark:text-text-primary-dark">
+              {{ item.label }}
+            </span>
+            <span v-if="item.value" class="text-sm font-semibold text-text-secondary-light dark:text-text-secondary-dark mr-2">
+              {{ item.value() }}
+            </span>
+            <UIcon name="chevron_right" size="sm" class="text-text-tertiary-light dark:text-text-tertiary-dark" />
+          </button>
+        </UCard>
+      </div>
+
+      <!-- Data Group -->
+      <div>
+        <h2 class="text-sm font-semibold text-text-secondary-light dark:text-text-secondary-dark px-2 mb-2 uppercase tracking-wider">
+          Данные
+        </h2>
+        <UCard class="divide-y divide-border-light dark:divide-border-dark overflow-hidden">
+          <button
+            v-for="item in dataGroup"
+            :key="item.id"
+            class="w-full flex items-center gap-4 p-4 transition-colors hover:bg-surface-light dark:hover:bg-surface-dark active:bg-surface-light dark:active:bg-surface-dark"
+            @click="handleMenuClick(item.id)"
           >
-            {{ item.label }}
-          </span>
-          <span
-            v-if="item.value"
-            class="text-sm text-text-secondary-light dark:text-text-secondary-dark mr-2"
+            <IconBadge :icon="item.icon" size="sm" :color="item.color" />
+            <span class="flex-1 text-left font-medium text-text-primary-light dark:text-text-primary-dark">
+              {{ item.label }}
+            </span>
+            <UIcon name="chevron_right" size="sm" class="text-text-tertiary-light dark:text-text-tertiary-dark" />
+          </button>
+        </UCard>
+      </div>
+
+      <!-- App Group -->
+      <div>
+        <h2 class="text-sm font-semibold text-text-secondary-light dark:text-text-secondary-dark px-2 mb-2 uppercase tracking-wider">
+          Приложение
+        </h2>
+        <UCard class="divide-y divide-border-light dark:divide-border-dark overflow-hidden">
+          <button
+            v-for="item in appGroup"
+            :key="item.id"
+            class="w-full flex items-center gap-4 p-4 transition-colors hover:bg-surface-light dark:hover:bg-surface-dark active:bg-surface-light dark:active:bg-surface-dark relative"
+            @click="handleMenuClick(item.id)"
           >
-            {{ item.value() }}
-          </span>
-          <span
-            v-if="item.badge?.value"
-            class="w-2.5 h-2.5 rounded-full bg-danger mr-1"
-          />
-          <UIcon
-            name="chevron_right"
-            size="sm"
-            class="text-text-tertiary-light dark:text-text-tertiary-dark"
-          />
-        </button>
-      </UCard>
+            <div class="relative">
+              <IconBadge :icon="item.icon" size="sm" :color="item.color" />
+              <span v-if="item.badge?.value" class="absolute -top-0.5 -right-0.5 w-3 h-3 border-2 border-card-light dark:border-card-dark rounded-full bg-danger" />
+            </div>
+            <span class="flex-1 text-left font-medium text-text-primary-light dark:text-text-primary-dark">
+              {{ item.label }}
+            </span>
+            <UIcon name="chevron_right" size="sm" class="text-text-tertiary-light dark:text-text-tertiary-dark" />
+          </button>
+        </UCard>
+      </div>
 
       <!-- Logout Button -->
-      <UButton
-        variant="ghost"
-        size="lg"
-        full-width
-        class="text-danger"
-        @click="handleLogout"
-      >
-        <UIcon name="logout" size="sm" class="mr-2" />
-        Выйти
-      </UButton>
+      <UCard variant="bordered" class="overflow-hidden border-danger/20 dark:border-danger/20 hover:border-danger/40 transition-colors">
+        <button
+          class="w-full flex items-center justify-center gap-2 p-4 text-danger font-semibold active:bg-danger/5"
+          @click="handleLogout"
+        >
+          <UIcon name="logout" size="sm" />
+          Выйти из аккаунта
+        </button>
+      </UCard>
     </main>
 
     <!-- Bottom Navigation -->

@@ -232,12 +232,12 @@ async function handleSetAsDefault() {
       <!-- Account Details -->
       <div v-else class="space-y-6">
         <!-- Main Card -->
-        <UCard class="p-5">
-          <div class="flex items-start gap-4">
+        <UCard class="p-5" variant="bordered">
+          <div class="flex items-start gap-4 mb-6">
             <!-- Icon -->
             <div
-              class="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0"
-              :style="{ backgroundColor: `${account.color}20` }"
+              class="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-sm"
+              :style="{ backgroundColor: `${account.color}15` }"
             >
               <UIcon
                 :name="account.icon"
@@ -247,25 +247,31 @@ async function handleSetAsDefault() {
             </div>
 
             <!-- Info -->
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-2">
-                <p
-                  class="text-xl font-bold text-text-primary-light dark:text-text-primary-dark truncate"
-                >
-                  {{ account.name }}
-                </p>
-                <span
-                  v-if="isDefaultAccount(account.id)"
-                  class="shrink-0 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium"
-                >
-                  По умолчанию
-                </span>
-              </div>
-              <p
-                class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
-              >
+            <div class="flex-1 min-w-0 pt-1">
+              <p class="text-xl font-bold text-text-primary-light dark:text-text-primary-dark truncate">
+                {{ account.name }}
+              </p>
+              <p class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mt-0.5">
                 {{ getAccountTypeLabel(account.type) }}
               </p>
+            </div>
+
+            <!-- Default Account Star Action -->
+            <button
+              v-if="!isDefaultAccount(account.id)"
+              class="shrink-0 w-10 h-10 -mt-1 -mr-1 rounded-xl flex items-center justify-center text-text-tertiary-light dark:text-text-tertiary-dark hover:bg-surface-light dark:hover:bg-surface-dark transition-colors"
+              :disabled="isSettingDefault"
+              @click="handleSetAsDefault"
+              aria-label="Сделать по умолчанию"
+            >
+              <UIcon name="star" size="md" :class="{'animate-pulse': isSettingDefault}" />
+            </button>
+            <div
+              v-else
+              class="shrink-0 w-10 h-10 -mt-1 -mr-1 rounded-xl flex items-center justify-center text-warning bg-warning/10"
+              title="Счёт по умолчанию"
+            >
+              <UIcon name="star" size="md" filled />
             </div>
           </div>
 
@@ -396,40 +402,24 @@ async function handleSetAsDefault() {
             </div>
           </div>
 
-          <!-- Actions -->
-          <div
-            class="mt-6 pt-6 border-t border-border-light dark:border-border-dark space-y-3"
-          >
-            <!-- Set as default -->
+          <!-- Inline Actions -->
+          <div class="flex gap-2 mt-4">
             <UButton
-              v-if="!isDefaultAccount(account.id)"
               variant="secondary"
-              full-width
-              :disabled="isSettingDefault"
-              @click="handleSetAsDefault"
+              class="flex-1"
+              @click="showEditAccountModal = true"
             >
-              <UIcon name="star" size="sm" class="mr-2" />
-              {{ isSettingDefault ? 'Сохранение...' : 'Сделать по умолчанию' }}
+              <UIcon name="edit" size="sm" class="mr-1.5" />
+              Изменить
             </UButton>
-
-            <!-- Edit/Delete row -->
-            <div class="flex gap-3">
-              <UButton
-                variant="primary"
-                full-width
-                @click="showEditAccountModal = true"
-              >
-                <UIcon name="edit" size="sm" class="mr-2" />
-                Редактировать
-              </UButton>
-              <UButton
-                variant="ghost"
-                class="!text-danger shrink-0"
-                @click="openDeleteModal"
-              >
-                <UIcon name="delete" size="md" />
-              </UButton>
-            </div>
+            <UButton
+              variant="ghost"
+              class="!text-danger w-11 shrink-0"
+              icon-only
+              @click="openDeleteModal"
+            >
+              <UIcon name="delete" size="sm" />
+            </UButton>
           </div>
         </UCard>
 
@@ -646,11 +636,14 @@ async function handleSetAsDefault() {
           </div>
 
           <!-- Empty State -->
-          <EmptyState
-            v-else-if="accountTransactions.length === 0"
-            icon="receipt_long"
-            title="Нет транзакций по этому счёту"
-          />
+          <UCard v-else-if="accountTransactions.length === 0" variant="bordered" class="py-6">
+            <EmptyState
+              icon="receipt_long"
+              title="Здесь пока пусто"
+              description="Добавьте первую транзакцию по этому счету"
+              :action="{ label: 'Добавить', onClick: () => router.push('/transactions/new') }"
+            />
+          </UCard>
 
           <!-- Virtualized Transaction Groups -->
           <VirtualGroupedTransactionList

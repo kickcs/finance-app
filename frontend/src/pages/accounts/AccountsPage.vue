@@ -10,7 +10,7 @@ import {
   useAccounts,
   type AccountWithBalances,
 } from '@/entities/account';
-import { UButton, UIcon, UCard, EmptyState } from '@/shared/ui';
+import { UButton, UIcon, UCard, EmptyState, IconBadge, SectionHeader, Skeleton } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { useExchangeRates } from '@/shared/api';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
@@ -26,7 +26,7 @@ const { currency } = useUserCurrency();
 const { convert } = useExchangeRates(currency);
 
 // Use real data from API
-const { accounts, totalBalancesByCurrency } = useAccounts(userId);
+const { accounts, totalBalancesByCurrency, isLoading } = useAccounts(userId);
 
 // Total balance converted to user's main currency
 const totalBalance = computed(() => {
@@ -70,44 +70,62 @@ function handleAddTransaction() {
     <!-- Content -->
     <main class="px-5 pt-8 space-y-6">
       <!-- Total Balance Card -->
-      <UCard class="p-5">
-        <p
-          class="text-sm text-text-secondary-light dark:text-text-secondary-dark mb-1"
-        >
-          Общий баланс
-        </p>
-        <p
-          class="text-2xl font-bold text-text-primary-light dark:text-text-primary-dark"
-        >
-          {{ formatCurrency(totalBalance, currency) }}
-        </p>
+      <UCard class="p-6 overflow-hidden relative" variant="bordered">
+        <!-- Background decoration -->
+        <div class="absolute -right-6 -top-6 w-32 h-32 bg-primary/5 rounded-full blur-2xl pointer-events-none" />
+        <div class="absolute -left-6 -bottom-6 w-24 h-24 bg-primary/5 rounded-full blur-xl pointer-events-none" />
+        
+        <div class="relative flex items-center justify-between">
+          <div class="space-y-1">
+            <p class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">
+              Общий баланс
+            </p>
+            <Skeleton v-if="isLoading" class="h-8 w-32 mt-1 rounded-lg" />
+            <p v-else class="text-3xl font-bold text-text-primary-light dark:text-text-primary-dark tracking-tight">
+              {{ formatCurrency(totalBalance, currency) }}
+            </p>
+          </div>
+          <IconBadge
+            icon="account_balance_wallet"
+            size="lg"
+            color="#3b82f6"
+            class="shrink-0"
+          />
+        </div>
       </UCard>
 
       <!-- Accounts List -->
-      <div class="space-y-3">
-        <h2
-          class="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark px-1"
-        >
-          Мои счета
-        </h2>
+      <div class="space-y-4">
+        <SectionHeader
+          title="Мои счета"
+          :count="!isLoading ? accounts.length : undefined"
+          show-add
+          @add-click="handleAddAccount"
+        />
 
-        <div v-if="accounts.length > 0" class="space-y-2">
+        <div v-if="isLoading" class="space-y-3">
+          <Skeleton v-for="i in 3" :key="i" class="h-[88px] w-full rounded-2xl" />
+        </div>
+
+        <div v-else-if="accounts.length > 0" class="space-y-3">
           <AccountCard
             v-for="account in accounts"
             :key="account.id"
             :account="account"
+            class="transition-transform active:scale-[0.98]"
             @click="handleAccountClick(account)"
           />
         </div>
 
         <!-- Empty State -->
-        <div v-else class="bg-card-light dark:bg-card-dark rounded-2xl">
+        <UCard v-else class="py-4">
           <EmptyState
             icon="account_balance_wallet"
             title="У вас пока нет счетов"
+            description="Добавьте свой первый счет для учета финансов"
             :action="{ label: 'Создать счёт', onClick: handleAddAccount }"
           />
-        </div>
+        </UCard>
       </div>
     </main>
 
