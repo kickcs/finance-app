@@ -61,8 +61,8 @@ const {
   totalExpense,
   totalIncome,
   categoryBreakdown,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  isLoading,
+  isLoading: analyticsLoading,
+  isFetching: analyticsFetching,
 } = useAnalyticsStats({
   startDate: startDateStr,
   endDate: endDateStr,
@@ -220,7 +220,7 @@ function handleCategoryClick(category: CategoryStat | DonutSegment) {
       </div>
 
       <!-- Donut Chart -->
-      <div class="pt-2"><SectionHeader title="Анализ расходов" :show-add="false" :show-view-all="false" class="mb-4" /></div>
+      <div class="pt-2 transition-opacity duration-300" :class="{ 'opacity-50 pointer-events-none': analyticsFetching }"><SectionHeader title="Анализ расходов" :show-add="false" :show-view-all="false" class="mb-4" /></div>
       <DonutChart
         @segment-click="handleCategoryClick"
         :segments="donutSegments"
@@ -231,6 +231,8 @@ function handleCategoryClick(category: CategoryStat | DonutSegment) {
 
       <!-- Daily Stats Cards -->
       <DailyStatsCards
+        class="transition-opacity duration-300"
+        :class="{ 'opacity-50 pointer-events-none': analyticsFetching }"
         :total-expense="totalExpense"
         :total-income="totalIncome"
         :days-in-period="daysInPeriod"

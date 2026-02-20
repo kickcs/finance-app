@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { watch, onUnmounted } from 'vue';
+import { watch } from 'vue';
 import {
   DialogRoot,
   DialogPortal,
@@ -34,26 +34,7 @@ function handleOpenChange(open: boolean) {
   }
 }
 
-// Body scroll lock
-watch(
-  () => props.modelValue,
-  (isOpen) => {
-    if (isOpen) {
-      const scrollbarWidth =
-        window.innerWidth - document.documentElement.clientWidth;
-      document.body.style.overflow = 'hidden';
-      document.body.style.paddingRight = `${scrollbarWidth}px`;
-    } else {
-      document.body.style.overflow = '';
-      document.body.style.paddingRight = '';
-    }
-  },
-);
 
-onUnmounted(() => {
-  document.body.style.overflow = '';
-  document.body.style.paddingRight = '';
-});
 </script>
 
 <template>

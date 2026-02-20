@@ -60,6 +60,7 @@ const {
   totalIncome,
   categoryBreakdown,
   isLoading: analyticsLoading,
+  isFetching: analyticsFetching,
 } = useAnalyticsStats({
   startDate: startDateStr,
   endDate: endDateStr,
@@ -221,8 +222,8 @@ onMounted(() => {
         />
       </div>
 
-      <!-- Summary Cards - 2 Column Grid -->
-      <div class="grid grid-cols-2 gap-3 pt-2">
+      <!-- Summary Cards - 2 Rows -->
+      <div class="space-y-3 pt-2 transition-opacity duration-300" :class="{ 'opacity-50 pointer-events-none': analyticsFetching }">
         <StatCard
           icon="trending_down"
           label="Расходы"
@@ -286,7 +287,7 @@ onMounted(() => {
       </div>
 
       <!-- Category Breakdown -->
-      <div class="space-y-3">
+      <div class="space-y-3 transition-opacity duration-300" :class="{ 'opacity-50 pointer-events-none': analyticsFetching && categoryStats.length > 0 }">
         <div class="flex items-center justify-between">
           <SectionHeader
             title="По категориям"

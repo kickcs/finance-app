@@ -1,5 +1,5 @@
 import { computed, toValue, type MaybeRefOrGetter } from 'vue';
-import { useQuery } from '@tanstack/vue-query';
+import { useQuery, keepPreviousData } from '@tanstack/vue-query';
 import { transactionsApi, type AnalyticsStats } from './transactionsApi';
 import { transactionQueryKeys } from './queryKeys';
 
@@ -31,7 +31,7 @@ export function useAnalyticsStats(options: UseAnalyticsStatsOptions) {
     return !!start && !!end;
   });
 
-  const { data, isLoading, error, refetch } = useQuery({
+  const { data, isLoading, isFetching, error, refetch } = useQuery({
     queryKey: queryKey,
     queryFn: async (): Promise<AnalyticsStats> => {
       const start = toValue(options.startDate);
@@ -50,6 +50,7 @@ export function useAnalyticsStats(options: UseAnalyticsStatsOptions) {
     },
     enabled: enabled,
     staleTime: 30 * 1000, // Consider data stale after 30 seconds
+    placeholderData: keepPreviousData,
   });
 
   const stats = computed<AnalyticsStats>(() => data.value ?? emptyStats);
@@ -68,6 +69,7 @@ export function useAnalyticsStats(options: UseAnalyticsStatsOptions) {
     expenseByCurrency,
     categoryBreakdown,
     isLoading,
+    isFetching,
     error,
     refetch,
   };
