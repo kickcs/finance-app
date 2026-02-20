@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { UCard, UIcon } from '@/shared/ui';
+import { UCard, EmptyState, IconBadge } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import type { CategoryStat } from '@/features/analytics-filters';
 
@@ -32,13 +32,7 @@ function getBarWidth(amount: number): string {
 </script>
 
 <template>
-  <UCard padding="lg">
-    <h3
-      class="text-base font-semibold text-text-primary-light dark:text-text-primary-dark mb-5"
-    >
-      Топ категории расходов
-    </h3>
-
+  <UCard padding="lg" variant="bordered" class="shadow-sm">
     <div v-if="topCategories.length > 0" class="space-y-4">
       <button
         v-for="(category, index) in topCategories"
@@ -60,16 +54,12 @@ function getBarWidth(amount: number): string {
           </span>
 
           <!-- Category icon -->
-          <div
-            class="w-7 h-7 rounded-lg flex items-center justify-center"
-            :style="{ backgroundColor: `${category.color}15` }"
-          >
-            <UIcon
-              :name="category.icon"
-              size="xs"
-              :style="{ color: category.color }"
-            />
-          </div>
+          <IconBadge
+            :icon="category.icon"
+            size="sm"
+            :color="category.color"
+            class="shrink-0"
+          />
 
           <!-- Category name -->
           <span
@@ -109,17 +99,11 @@ function getBarWidth(amount: number): string {
     </div>
 
     <!-- Empty state -->
-    <div v-else class="py-8 text-center">
-      <UIcon
-        name="category"
-        size="xl"
-        class="text-text-tertiary-light dark:text-text-tertiary-dark mb-2"
-      />
-      <p
-        class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
-      >
-        Нет данных о расходах
-      </p>
-    </div>
+    <EmptyState
+      v-else
+      icon="category"
+      title="Нет данных"
+      description="В этом периоде нет транзакций по категориям"
+    />
   </UCard>
 </template>

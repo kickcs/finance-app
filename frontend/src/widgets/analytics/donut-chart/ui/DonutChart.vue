@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, onMounted } from 'vue';
-import { UCard, UIcon } from '@/shared/ui';
+import { UCard, UIcon, EmptyState } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import type { DonutSegment } from '../types';
 
@@ -93,14 +93,7 @@ const centerInfo = computed(() => {
 </script>
 
 <template>
-  <UCard padding="lg">
-    <h3
-      v-if="title"
-      class="text-base font-semibold text-text-primary-light dark:text-text-primary-dark mb-5"
-    >
-      {{ title }}
-    </h3>
-
+  <UCard padding="lg" variant="bordered" class="shadow-sm">
     <!-- Donut Chart SVG -->
     <div class="flex justify-center mb-5">
       <div class="relative">
@@ -195,17 +188,11 @@ const centerInfo = computed(() => {
     </div>
 
     <!-- Empty state -->
-    <div v-if="segments.length === 0" class="py-8 text-center">
-      <UIcon
-        name="pie_chart"
-        size="xl"
-        class="text-text-tertiary-light dark:text-text-tertiary-dark mb-2"
-      />
-      <p
-        class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
-      >
-        Нет данных для отображения
-      </p>
-    </div>
+    <EmptyState
+      v-if="segments.length === 0"
+      icon="pie_chart"
+      title="Нет данных"
+      description="Нет транзакций для построения графика"
+    />
   </UCard>
 </template>

@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.4.2';
+export const CURRENT_VERSION = '1.5.0';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,29 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.5.0',
+    date: '2026-02-20',
+    title: 'Интерактивная аналитика',
+    items: [
+      {
+        type: 'feature',
+        text: 'Графики и категории в Аналитике стали кликабельными — теперь можно провалиться в историю операций по конкретной категории.',
+      },
+      {
+        type: 'improvement',
+        text: 'Фильтры дат и счетов в Аналитике теперь "прилипают" к верху экрана при прокрутке — менять период стало удобнее.',
+      },
+      {
+        type: 'improvement',
+        text: 'В базовой аналитике карточки доходов и расходов теперь отображаются компактно (в один ряд).',
+      },
+      {
+        type: 'improvement',
+        text: 'Обновлен дизайн графиков: закругленные рамки, стандартизированные пустые экраны.',
+      }
+    ],
+  },
   {
     version: '1.4.2',
     date: '2026-02-20',

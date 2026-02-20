@@ -5,7 +5,7 @@ import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 import { AppHeader } from '@/widgets/header';
 import { BottomNav } from '@/widgets/bottom-nav';
-import { UTabs, SectionHeader, EmptyState, UCard } from '@/shared/ui';
+import { UTabs, SectionHeader, EmptyState, UCard, ViewAllButton } from '@/shared/ui';
 import { formatCurrency, COMPACT_FORMAT } from '@/shared/lib/format/currency';
 import { useExchangeRates } from '@/shared/api';
 import { useAnalyticsStats } from '@/entities/transaction';
@@ -162,6 +162,14 @@ function handlePeriodChange(value: string | number) {
 function handleAddTransaction() {
   router.push('/transactions/new');
 }
+
+function handleCategoryClick(category: CategoryStat | DonutSegment) {
+  router.push({
+    path: '/history',
+    query: { category: category.id }
+  });
+}
+
 </script>
 
 <template>
@@ -175,41 +183,46 @@ function handleAddTransaction() {
 
     <!-- Content -->
     <main class="px-5 pt-6 space-y-5">
-      <!-- Period Tabs -->
-      <UTabs
-        :model-value="filters.period"
-        :items="periodItems"
-        @update:model-value="handlePeriodChange"
-      />
-
-      <!-- Custom Date Range Picker -->
-      <Transition
-        enter-active-class="transition-all duration-300 ease-out"
-        enter-from-class="opacity-0 -translate-y-2"
-        enter-to-class="opacity-100 translate-y-0"
-        leave-active-class="transition-all duration-200 ease-in"
-        leave-from-class="opacity-100 translate-y-0"
-        leave-to-class="opacity-0 -translate-y-2"
-      >
-        <DateRangePicker
-          v-if="showCustomDatePicker"
-          :model-value="filters.customDateRange"
-          @update:model-value="setCustomDateRange"
+      <!-- Sticky Filters -->
+      <div class="sticky top-14 z-20 -mx-5 px-5 py-2 space-y-3 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-border-light/50 dark:border-border-dark/50 shadow-sm">
+        <!-- Period Tabs -->
+        <UTabs
+          :model-value="filters.period"
+          :items="periodItems"
+          @update:model-value="handlePeriodChange"
         />
-      </Transition>
 
-      <!-- Account Filter Chips -->
-      <FilterChips
-        v-if="accountChips.length > 0"
-        :items="accountChips"
-        :selected-ids="filters.selectedAccountIds"
-        label="Счета"
-        @toggle="toggleAccount"
-        @clear="clearAccountFilters"
-      />
+        <!-- Custom Date Range Picker -->
+        <Transition
+          enter-active-class="transition-all duration-300 ease-out"
+          enter-from-class="opacity-0 -translate-y-2"
+          enter-to-class="opacity-100 translate-y-0"
+          leave-active-class="transition-all duration-200 ease-in"
+          leave-from-class="opacity-100 translate-y-0"
+          leave-to-class="opacity-0 -translate-y-2"
+        >
+          <DateRangePicker
+            v-if="showCustomDatePicker"
+            :model-value="filters.customDateRange"
+            @update:model-value="setCustomDateRange"
+          />
+        </Transition>
+
+        <!-- Account Filter Chips -->
+        <FilterChips
+          v-if="accountChips.length > 0"
+          :items="accountChips"
+          :selected-ids="filters.selectedAccountIds"
+          label="Счета"
+          @toggle="toggleAccount"
+          @clear="clearAccountFilters"
+        />
+      </div>
 
       <!-- Donut Chart -->
+      <div class="pt-2"><SectionHeader title="Анализ расходов" :show-add="false" :show-view-all="false" class="mb-4" /></div>
       <DonutChart
+        @segment-click="handleCategoryClick"
         :segments="donutSegments"
         :total="totalExpense"
         :currency="currency"
