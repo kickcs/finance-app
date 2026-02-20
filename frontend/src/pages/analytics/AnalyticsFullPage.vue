@@ -163,13 +163,6 @@ function handleAddTransaction() {
   router.push('/transactions/new');
 }
 
-function handleCategoryClick(category: CategoryStat | DonutSegment) {
-  router.push({
-    path: '/history',
-    query: { category: category.id }
-  });
-}
-
 </script>
 
 <template>
@@ -222,7 +215,6 @@ function handleCategoryClick(category: CategoryStat | DonutSegment) {
       <!-- Donut Chart -->
       <div class="pt-2 transition-opacity duration-300" :class="{ 'opacity-50 pointer-events-none': analyticsFetching }"><SectionHeader title="Анализ расходов" :show-add="false" :show-view-all="false" class="mb-4" /></div>
       <DonutChart
-        @segment-click="handleCategoryClick"
         :segments="donutSegments"
         :total="totalExpense"
         :currency="currency"

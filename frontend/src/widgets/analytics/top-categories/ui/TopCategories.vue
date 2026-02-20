@@ -34,11 +34,10 @@ function getBarWidth(amount: number): string {
 <template>
   <UCard padding="lg" variant="bordered" class="shadow-sm">
     <div v-if="topCategories.length > 0" class="space-y-4">
-      <button
+      <div
         v-for="(category, index) in topCategories"
         :key="category.id"
-        class="w-full text-left group"
-        @click="emit('category-click', category)"
+        class="w-full text-left"
       >
         <div class="flex items-center gap-3 mb-2">
           <!-- Rank -->
@@ -95,7 +94,7 @@ function getBarWidth(amount: number): string {
             }"
           />
         </div>
-      </button>
+      </div>
     </div>
 
     <!-- Empty state -->

@@ -155,13 +155,6 @@ function handleAddTransaction() {
   router.push('/transactions/new');
 }
 
-function handleCategoryClick(categoryId: string) {
-  router.push({
-    path: '/history',
-    query: { category: categoryId }
-  });
-}
-
 
 // Read initial type filter from query param
 onMounted(() => {
@@ -319,7 +312,7 @@ onMounted(() => {
 
         <template v-else>
           <div v-if="categoryStats.length > 0" class="space-y-3">
-            <UCard v-for="stat in categoryStats" :key="stat.id" class="p-4 transition-transform active:scale-[0.98] cursor-pointer" hoverable @click="handleCategoryClick(stat.id)">
+            <UCard v-for="stat in categoryStats" :key="stat.id" class="p-4">
               <div class="flex items-center gap-3 mb-3">
                 <IconBadge
                   :icon="stat.icon"
