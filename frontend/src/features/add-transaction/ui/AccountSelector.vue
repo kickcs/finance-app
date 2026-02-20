@@ -24,7 +24,11 @@ const { setChipRef, indicatorStyle, updateIndicator } = useSlidingIndicator(
   }),
 );
 
-watch(() => props.accounts, () => nextTick(updateIndicator), { deep: true });
+watch(
+  () => props.accounts,
+  () => nextTick(updateIndicator),
+  { deep: true },
+);
 </script>
 
 <template>
@@ -44,7 +48,7 @@ watch(() => props.accounts, () => nextTick(updateIndicator), { deep: true });
         :style="{
           left: indicatorStyle.left,
           width: indicatorStyle.width,
-          opacity: indicatorStyle.opacity
+          opacity: indicatorStyle.opacity,
         }"
       />
 
@@ -57,7 +61,7 @@ watch(() => props.accounts, () => nextTick(updateIndicator), { deep: true });
           'relative z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors duration-300 text-sm',
           selectedId === account.id
             ? 'border border-transparent text-primary'
-            : 'border border-border-light dark:border-border-dark text-text-secondary-light dark:text-text-secondary-dark hover:text-text-primary-light dark:hover:text-text-primary-dark'
+            : 'border border-border-light dark:border-border-dark text-text-secondary-light dark:text-text-secondary-dark hover:text-text-primary-light dark:hover:text-text-primary-dark',
         ]"
         @click="emit('select', account.id)"
       >

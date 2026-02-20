@@ -8,9 +8,7 @@ import {
 import { toAccountResponse } from '../../shared/account-response.helper';
 
 @QueryHandler(GetAccountByIdQuery)
-export class GetAccountByIdHandler
-  implements IQueryHandler<GetAccountByIdQuery>
-{
+export class GetAccountByIdHandler implements IQueryHandler<GetAccountByIdQuery> {
   constructor(
     @Inject(ACCOUNT_REPOSITORY)
     private readonly accountRepository: IAccountRepository,

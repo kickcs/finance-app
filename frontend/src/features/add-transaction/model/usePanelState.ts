@@ -12,10 +12,7 @@ interface PanelEmit {
   (e: 'update:formData', value: TransactionFormData): void;
 }
 
-export function usePanelState(
-  props: PanelProps,
-  emit: PanelEmit,
-) {
+export function usePanelState(props: PanelProps, emit: PanelEmit) {
   const selectedAccount = computed(() =>
     props.accounts.find((a) => a.id === props.formData.accountId),
   );

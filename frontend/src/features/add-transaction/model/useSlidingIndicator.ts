@@ -62,7 +62,10 @@ export function useSlidingIndicator(
     resizeObserver?.disconnect();
   });
 
-  watch(() => toValue(selectedId), () => nextTick(updateIndicator));
+  watch(
+    () => toValue(selectedId),
+    () => nextTick(updateIndicator),
+  );
 
   return { chipRefs, setChipRef, indicatorStyle, updateIndicator };
 }

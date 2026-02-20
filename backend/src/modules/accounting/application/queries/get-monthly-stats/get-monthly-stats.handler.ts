@@ -7,9 +7,7 @@ import {
 } from '../../../domain/repositories/transaction.repository.interface';
 
 @QueryHandler(GetMonthlyStatsQuery)
-export class GetMonthlyStatsHandler
-  implements IQueryHandler<GetMonthlyStatsQuery>
-{
+export class GetMonthlyStatsHandler implements IQueryHandler<GetMonthlyStatsQuery> {
   constructor(
     @Inject(TRANSACTION_REPOSITORY)
     private readonly transactionRepository: ITransactionRepository,

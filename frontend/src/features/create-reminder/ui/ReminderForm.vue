@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { UInput, UButton, UTabs, UColorPicker, UIconSelector } from '@/shared/ui';
+import {
+  UInput,
+  UButton,
+  UTabs,
+  UColorPicker,
+  UIconSelector,
+} from '@/shared/ui';
 import { FREQUENCY_LABELS, REMINDER_ICONS } from '@/entities/reminder';
 import { ACCOUNT_COLORS } from '@/entities/account';
 import { getTodayISO, isPastDate } from '@/shared/lib/date';

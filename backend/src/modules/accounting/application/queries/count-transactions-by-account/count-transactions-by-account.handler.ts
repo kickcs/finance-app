@@ -11,9 +11,7 @@ import {
 } from '../../../domain/repositories/account.repository.interface';
 
 @QueryHandler(CountTransactionsByAccountQuery)
-export class CountTransactionsByAccountHandler
-  implements IQueryHandler<CountTransactionsByAccountQuery>
-{
+export class CountTransactionsByAccountHandler implements IQueryHandler<CountTransactionsByAccountQuery> {
   constructor(
     @Inject(TRANSACTION_REPOSITORY)
     private readonly transactionRepository: ITransactionRepository,

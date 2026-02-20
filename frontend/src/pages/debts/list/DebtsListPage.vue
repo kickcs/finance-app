@@ -313,10 +313,7 @@ function handleAddTransaction() {
           </TransitionGroup>
 
           <!-- Empty State -->
-          <div
-            v-else
-            class="bg-card-light dark:bg-card-dark rounded-2xl"
-          >
+          <div v-else class="bg-card-light dark:bg-card-dark rounded-2xl">
             <EmptyState
               icon="celebration"
               title="Вы без долгов!"

@@ -40,13 +40,17 @@ const { setChipRef, indicatorStyle, updateIndicator } = useSlidingIndicator(
   },
 );
 
-watch(() => props.categories, () => nextTick(updateIndicator), { deep: true });
+watch(
+  () => props.categories,
+  () => nextTick(updateIndicator),
+  { deep: true },
+);
 
 function getChipStyle(category: Category) {
   if (category.id === props.selectedId) {
     return {
       color: category.color,
-      borderColor: 'transparent' // Border handled by indicator
+      borderColor: 'transparent', // Border handled by indicator
     };
   }
   return {};
@@ -95,7 +99,11 @@ function getChipStyle(category: Category) {
             :style="getChipStyle(category)"
             @click="emit('select', category.id)"
           >
-            <UIcon :name="category.icon" size="sm" :style="{ color: category.color }" />
+            <UIcon
+              :name="category.icon"
+              size="sm"
+              :style="{ color: category.color }"
+            />
             {{ category.name }}
           </button>
         </div>
@@ -115,7 +123,11 @@ function getChipStyle(category: Category) {
             :style="getChipStyle(category)"
             @click="emit('select', category.id)"
           >
-            <UIcon :name="category.icon" size="sm" :style="{ color: category.color }" />
+            <UIcon
+              :name="category.icon"
+              size="sm"
+              :style="{ color: category.color }"
+            />
             {{ category.name }}
           </button>
         </div>

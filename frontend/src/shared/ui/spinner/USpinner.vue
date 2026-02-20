@@ -15,7 +15,10 @@ const sizeClasses = {
 
 <template>
   <div
-    :class="[sizeClasses[size], 'border-primary border-t-transparent rounded-full animate-spin']"
+    :class="[
+      sizeClasses[size],
+      'border-primary border-t-transparent rounded-full animate-spin',
+    ]"
     role="status"
     aria-label="Загрузка"
   />

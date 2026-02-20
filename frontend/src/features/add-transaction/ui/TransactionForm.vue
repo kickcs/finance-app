@@ -70,14 +70,20 @@ function applyTypeChange(newType: string) {
   });
 }
 
-const { scrollContainer, handleTabClick, handleScrollEnd, handleScroll } =
-  useScrollableTabs(type, applyTypeChange);
+const {
+  scrollContainer,
+  handleTabClick,
+  handleScrollEnd,
+  handleScroll,
+  onCyclicWrap,
+} = useScrollableTabs(type, applyTypeChange);
 
 // --- Smooth Height Auto-adjust ---
 const containerHeight = ref<string>('auto');
 let resizeObserver: ResizeObserver | null = null;
+let lastCalculatedIndex = -1;
 
-function updateContainerHeight() {
+function updateContainerHeight(force = false) {
   if (!scrollContainer.value) return;
 
   // Use bounding rect width to prevent 0-width collapse issues
@@ -88,6 +94,10 @@ function updateContainerHeight() {
   const currentIndex = Math.round(
     scrollContainer.value.scrollLeft / panelWidth,
   );
+
+  if (!force && currentIndex === lastCalculatedIndex) return;
+  lastCalculatedIndex = currentIndex;
+
   const panels = scrollContainer.value.children;
 
   if (panels[currentIndex]) {
@@ -104,27 +114,28 @@ watch(scrollContainer, (el) => {
   resizeObserver?.disconnect();
   if (!el) return;
 
-  resizeObserver = new ResizeObserver(updateContainerHeight);
+  resizeObserver = new ResizeObserver(() => updateContainerHeight(true));
   resizeObserver.observe(el);
   Array.from(el.children).forEach((child) => {
     resizeObserver?.observe(child);
   });
-  nextTick(updateContainerHeight);
+  nextTick(() => updateContainerHeight(true));
 });
 
 onUnmounted(() => {
   resizeObserver?.disconnect();
 });
 
-// Update height on scroll and type change
-function enhancedHandleScroll() {
+// Update height on scroll, type change, and cyclic wrap
+function onScroll() {
   handleScroll();
   updateContainerHeight();
 }
-function enhancedHandleScrollEnd() {
+function onScrollEnd() {
   handleScrollEnd();
   updateContainerHeight();
 }
+onCyclicWrap(() => updateContainerHeight(true));
 // ---
 
 // Only real panels (not clones) get autofocus — clones are at index 0 and last
@@ -226,9 +237,9 @@ onMounted(() =>
     >
       <div
         ref="scrollContainer"
-        class="flex items-start overflow-x-auto snap-x snap-mandatory no-scrollbar -mx-4 h-full"
-        @scrollend="enhancedHandleScrollEnd"
-        @scroll="enhancedHandleScroll"
+        class="flex items-start overflow-x-auto overflow-y-hidden snap-x snap-mandatory no-scrollbar -mx-4 h-full"
+        @scrollend="onScrollEnd"
+        @scroll="onScroll"
       >
         <div
           v-for="(panelType, idx) in CYCLIC_PANEL_ORDER"

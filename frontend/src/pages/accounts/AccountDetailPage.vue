@@ -2,7 +2,14 @@
 import { ref, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
-import { UButton, UIcon, UCard, EmptyState, USpinner, NotFoundState } from '@/shared/ui';
+import {
+  UButton,
+  UIcon,
+  UCard,
+  EmptyState,
+  USpinner,
+  NotFoundState,
+} from '@/shared/ui';
 import { AppHeader } from '@/widgets/header';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import {
@@ -45,7 +52,7 @@ const accountId = computed(() => route.params.id as string);
 const { currency } = useUserCurrency();
 
 // Profile for default account management
-const { profile, setDefaultAccount } = useProfile(userId);
+const { setDefaultAccount } = useProfile(userId);
 
 const { accounts, isLoading } = useAccounts(userId);
 

@@ -7,9 +7,7 @@ import {
 } from '../../../domain/repositories/account-balance.repository.interface';
 
 @CommandHandler(UpsertBalanceCommand)
-export class UpsertBalanceHandler
-  implements ICommandHandler<UpsertBalanceCommand>
-{
+export class UpsertBalanceHandler implements ICommandHandler<UpsertBalanceCommand> {
   constructor(
     @Inject(ACCOUNT_BALANCE_REPOSITORY)
     private readonly accountBalanceRepository: IAccountBalanceRepository,

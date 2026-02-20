@@ -92,7 +92,9 @@ onMounted(() => {
         <span
           class="text-4xl font-semibold tabular-nums transition-all duration-200"
           :class="[
-            amount ? 'text-text-primary-light dark:text-text-primary-dark' : 'text-text-tertiary-light dark:text-text-tertiary-dark',
+            amount
+              ? 'text-text-primary-light dark:text-text-primary-dark'
+              : 'text-text-tertiary-light dark:text-text-tertiary-dark',
             amountBounce && 'scale-105',
           ]"
         >
@@ -105,12 +107,7 @@ onMounted(() => {
         <PopoverTrigger as-child>
           <button
             type="button"
-            class="absolute right-2 top-1/2 -translate-y-1/2
-              flex items-center gap-1 px-2.5 py-1 rounded-lg text-sm font-medium
-              bg-surface-light dark:bg-surface-dark
-              border border-border-light dark:border-border-dark
-              text-text-primary-light dark:text-text-primary-dark
-              hover:bg-primary-light transition-colors"
+            class="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 px-2.5 py-1 rounded-lg text-sm font-medium bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark hover:bg-primary-light transition-colors"
           >
             {{ getCurrencyByCode(currency)?.flag }}
             {{ currency }}
@@ -121,7 +118,11 @@ onMounted(() => {
             />
           </button>
         </PopoverTrigger>
-        <PopoverContent align="end" :side-offset="8" class="w-auto min-w-[140px] p-1">
+        <PopoverContent
+          align="end"
+          :side-offset="8"
+          class="w-auto min-w-[140px] p-1"
+        >
           <button
             v-for="cur in availableCurrencies"
             :key="cur"
@@ -136,7 +137,9 @@ onMounted(() => {
           >
             <span>{{ getCurrencyByCode(cur)?.flag }}</span>
             <span>{{ cur }}</span>
-            <span class="text-text-tertiary-light dark:text-text-tertiary-dark text-xs">
+            <span
+              class="text-text-tertiary-light dark:text-text-tertiary-dark text-xs"
+            >
               {{ getCurrencyByCode(cur)?.name }}
             </span>
           </button>
@@ -146,8 +149,7 @@ onMounted(() => {
       <!-- Static currency symbol (absolute right) -->
       <span
         v-else
-        class="absolute right-2 top-1/2 -translate-y-1/2
-          text-lg font-medium text-text-secondary-light dark:text-text-secondary-dark"
+        class="absolute right-2 top-1/2 -translate-y-1/2 text-lg font-medium text-text-secondary-light dark:text-text-secondary-dark"
       >
         {{ currencySymbol }}
       </span>

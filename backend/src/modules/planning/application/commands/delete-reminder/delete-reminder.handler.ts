@@ -7,9 +7,7 @@ import {
 } from '../../../domain/repositories';
 
 @CommandHandler(DeleteReminderCommand)
-export class DeleteReminderHandler
-  implements ICommandHandler<DeleteReminderCommand>
-{
+export class DeleteReminderHandler implements ICommandHandler<DeleteReminderCommand> {
   constructor(
     @Inject(REMINDER_REPOSITORY)
     private readonly reminderRepository: IReminderRepository,

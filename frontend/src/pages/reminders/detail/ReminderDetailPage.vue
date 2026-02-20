@@ -82,7 +82,12 @@ function goBack() {
 <template>
   <div class="min-h-screen bg-background-light dark:bg-background-dark pb-28">
     <!-- Header -->
-    <AppHeader :title="reminder?.name ?? 'Подписка'" show-back blur @back="goBack" />
+    <AppHeader
+      :title="reminder?.name ?? 'Подписка'"
+      show-back
+      blur
+      @back="goBack"
+    />
 
     <!-- Content -->
     <main class="px-5 pt-8 pb-6">
