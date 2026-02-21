@@ -9,12 +9,14 @@ import { readFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 
 const SCREENS = [
-  { name: '1290x2796', width: 1290, height: 2796, ratio: 3 }, // iPhone 15 Pro Max / 16 Plus
-  { name: '1179x2556', width: 1179, height: 2556, ratio: 3 }, // iPhone 15 Pro / 16
-  { name: '1170x2532', width: 1170, height: 2532, ratio: 3 }, // iPhone 14 / 15
-  { name: '750x1334', width: 750, height: 1334, ratio: 2 },   // iPhone SE 3rd
-  { name: '1125x2436', width: 1125, height: 2436, ratio: 3 }, // iPhone 12/13 mini
-  { name: '1242x2208', width: 1242, height: 2208, ratio: 3 }, // iPhone 8 Plus
+  { name: '1320x2868', width: 1320, height: 2868 }, // iPhone 16 Pro Max
+  { name: '1206x2622', width: 1206, height: 2622 }, // iPhone 16 Pro
+  { name: '1290x2796', width: 1290, height: 2796 }, // iPhone 15 Pro Max / 16 Plus / 14 Pro Max
+  { name: '1179x2556', width: 1179, height: 2556 }, // iPhone 15 Pro / 16
+  { name: '1170x2532', width: 1170, height: 2532 }, // iPhone 14 / 15
+  { name: '750x1334', width: 750, height: 1334 },   // iPhone SE 3rd
+  { name: '1125x2436', width: 1125, height: 2436 }, // iPhone 12/13 mini / X / XS
+  { name: '1242x2208', width: 1242, height: 2208 }, // iPhone 8 Plus
 ];
 
 const THEMES = [

@@ -1,6 +1,7 @@
 import { QueryClient } from '@tanstack/vue-query';
 import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
 import { persistQueryClient } from '@tanstack/query-persist-client-core';
+import { getAccessToken } from './http';
 
 const PERSIST_STORAGE_KEY = 'ouro-query-cache';
 const MAX_AGE = 1000 * 60 * 60 * 24; // 24 hours
@@ -26,6 +27,18 @@ function shouldPersistQuery(queryKey: readonly unknown[]): boolean {
   return PERSISTED_KEY_PREFIXES.includes(prefix);
 }
 
+/** Extract user ID from JWT access token for cache scoping */
+function getCurrentUserId(): string {
+  const token = getAccessToken();
+  if (!token) return '';
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload.sub ?? '';
+  } catch {
+    return '';
+  }
+}
+
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -47,10 +60,14 @@ const persister = createSyncStoragePersister({
 });
 
 // Setup persistence — restores cache on load, saves on changes
-const [unsubscribePersistence] = persistQueryClient({
+// Buster scopes cache per user: switching users discards stale data
+// vue-query's QueryClient is structurally compatible but nominally different
+// from @tanstack/query-core's QueryClient, requiring this cast
+persistQueryClient({
   queryClient: queryClient as any,
   persister,
   maxAge: MAX_AGE,
+  buster: getCurrentUserId(),
   dehydrateOptions: {
     shouldDehydrateQuery: (query) => {
       // Only persist successful queries that match our whitelist
@@ -59,8 +76,7 @@ const [unsubscribePersistence] = persistQueryClient({
   },
 });
 
-/** Clear persisted cache (call on logout) */
+/** Clear persisted cache (call on logout). Does NOT unsubscribe — persistence stays active for next sign-in. */
 export function clearPersistedCache() {
-  unsubscribePersistence();
   localStorage.removeItem(PERSIST_STORAGE_KEY);
 }
