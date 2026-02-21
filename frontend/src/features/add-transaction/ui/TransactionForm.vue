@@ -332,13 +332,7 @@ onMounted(() =>
                 />
               </button>
             </PopoverTrigger>
-            <PopoverContent
-              align="end"
-              side="top"
-              :side-offset="8"
-              :collision-padding="16"
-              class="w-auto p-0"
-            >
+            <PopoverContent align="end" side="top" :side-offset="8" :collision-padding="16" class="w-auto p-0">
               <Calendar
                 :model-value="calendarValue"
                 locale="ru-RU"

@@ -119,14 +119,10 @@ const centerInfo = computed(() => {
             :stroke-width="strokeWidth"
             stroke-linecap="round"
             class="cursor-pointer transition-opacity duration-150"
-            :class="
-              cn(
-                isAnimated ? 'opacity-100' : 'opacity-0',
-                selectedSegment &&
-                  selectedSegment !== segment.id &&
-                  'opacity-40',
-              )
-            "
+            :class="cn(
+              isAnimated ? 'opacity-100' : 'opacity-0',
+              selectedSegment && selectedSegment !== segment.id && 'opacity-40',
+            )"
             :style="{
               transitionDelay: `${index * 50}ms`,
             }"

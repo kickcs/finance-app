@@ -10,15 +10,7 @@ import {
   useAccounts,
   type AccountWithBalances,
 } from '@/entities/account';
-import {
-  UButton,
-  UIcon,
-  UCard,
-  EmptyState,
-  IconBadge,
-  SectionHeader,
-  Skeleton,
-} from '@/shared/ui';
+import { UButton, UIcon, UCard, EmptyState, IconBadge, SectionHeader, Skeleton } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { useExchangeRates } from '@/shared/api';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
@@ -80,25 +72,16 @@ function handleAddTransaction() {
       <!-- Total Balance Card -->
       <UCard class="p-6 overflow-hidden relative" variant="bordered">
         <!-- Background decoration -->
-        <div
-          class="absolute -right-6 -top-6 w-32 h-32 bg-primary/5 rounded-full blur-2xl pointer-events-none"
-        />
-        <div
-          class="absolute -left-6 -bottom-6 w-24 h-24 bg-primary/5 rounded-full blur-xl pointer-events-none"
-        />
-
+        <div class="absolute -right-6 -top-6 w-32 h-32 bg-primary/5 rounded-full blur-2xl pointer-events-none" />
+        <div class="absolute -left-6 -bottom-6 w-24 h-24 bg-primary/5 rounded-full blur-xl pointer-events-none" />
+        
         <div class="relative flex items-center justify-between">
           <div class="space-y-1">
-            <p
-              class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark"
-            >
+            <p class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">
               Общий баланс
             </p>
             <Skeleton v-if="isLoading" class="h-8 w-32 mt-1 rounded-lg" />
-            <p
-              v-else
-              class="text-3xl font-bold text-text-primary-light dark:text-text-primary-dark tracking-tight"
-            >
+            <p v-else class="text-3xl font-bold text-text-primary-light dark:text-text-primary-dark tracking-tight">
               {{ formatCurrency(totalBalance, currency) }}
             </p>
           </div>
@@ -121,11 +104,7 @@ function handleAddTransaction() {
         />
 
         <div v-if="isLoading" class="space-y-3">
-          <Skeleton
-            v-for="i in 3"
-            :key="i"
-            class="h-[88px] w-full rounded-2xl"
-          />
+          <Skeleton v-for="i in 3" :key="i" class="h-[88px] w-full rounded-2xl" />
         </div>
 
         <div v-else-if="accounts.length > 0" class="space-y-3">

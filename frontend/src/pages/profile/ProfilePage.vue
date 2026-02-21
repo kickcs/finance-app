@@ -53,12 +53,7 @@ const settingsGroup = [
     color: '#10b981', // success
   },
   { id: 'categories', icon: 'category', label: 'Категории', color: '#f59e0b' }, // warning
-  {
-    id: 'quick-actions',
-    icon: 'bolt',
-    label: 'Быстрые действия',
-    color: '#8b5cf6',
-  }, // purple
+  { id: 'quick-actions', icon: 'bolt', label: 'Быстрые действия', color: '#8b5cf6' }, // purple
 ];
 
 const dataGroup = [
@@ -134,16 +129,17 @@ function handleAddTransaction() {
       <!-- User Card -->
       <UCard class="p-5" variant="bordered">
         <div class="flex items-center gap-4">
-          <IconBadge icon="person" size="lg" color="#3b82f6" class="shrink-0" />
+          <IconBadge
+            icon="person"
+            size="lg"
+            color="#3b82f6"
+            class="shrink-0"
+          />
           <div class="flex-1 min-w-0">
-            <p
-              class="text-lg font-bold text-text-primary-light dark:text-text-primary-dark truncate"
-            >
+            <p class="text-lg font-bold text-text-primary-light dark:text-text-primary-dark truncate">
               {{ userName }}
             </p>
-            <p
-              class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark truncate"
-            >
+            <p class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark truncate">
               {{ userEmail }}
             </p>
           </div>
@@ -159,14 +155,10 @@ function handleAddTransaction() {
 
       <!-- Settings Group -->
       <div>
-        <h2
-          class="text-sm font-semibold text-text-secondary-light dark:text-text-secondary-dark px-2 mb-2 uppercase tracking-wider"
-        >
+        <h2 class="text-sm font-semibold text-text-secondary-light dark:text-text-secondary-dark px-2 mb-2 uppercase tracking-wider">
           Настройки
         </h2>
-        <UCard
-          class="divide-y divide-border-light dark:divide-border-dark overflow-hidden"
-        >
+        <UCard class="divide-y divide-border-light dark:divide-border-dark overflow-hidden">
           <button
             v-for="item in settingsGroup"
             :key="item.id"
@@ -174,36 +166,23 @@ function handleAddTransaction() {
             @click="handleMenuClick(item.id)"
           >
             <IconBadge :icon="item.icon" size="sm" :color="item.color" />
-            <span
-              class="flex-1 text-left font-medium text-text-primary-light dark:text-text-primary-dark"
-            >
+            <span class="flex-1 text-left font-medium text-text-primary-light dark:text-text-primary-dark">
               {{ item.label }}
             </span>
-            <span
-              v-if="item.value"
-              class="text-sm font-semibold text-text-secondary-light dark:text-text-secondary-dark mr-2"
-            >
+            <span v-if="item.value" class="text-sm font-semibold text-text-secondary-light dark:text-text-secondary-dark mr-2">
               {{ item.value() }}
             </span>
-            <UIcon
-              name="chevron_right"
-              size="sm"
-              class="text-text-tertiary-light dark:text-text-tertiary-dark"
-            />
+            <UIcon name="chevron_right" size="sm" class="text-text-tertiary-light dark:text-text-tertiary-dark" />
           </button>
         </UCard>
       </div>
 
       <!-- Data Group -->
       <div>
-        <h2
-          class="text-sm font-semibold text-text-secondary-light dark:text-text-secondary-dark px-2 mb-2 uppercase tracking-wider"
-        >
+        <h2 class="text-sm font-semibold text-text-secondary-light dark:text-text-secondary-dark px-2 mb-2 uppercase tracking-wider">
           Данные
         </h2>
-        <UCard
-          class="divide-y divide-border-light dark:divide-border-dark overflow-hidden"
-        >
+        <UCard class="divide-y divide-border-light dark:divide-border-dark overflow-hidden">
           <button
             v-for="item in dataGroup"
             :key="item.id"
@@ -211,30 +190,20 @@ function handleAddTransaction() {
             @click="handleMenuClick(item.id)"
           >
             <IconBadge :icon="item.icon" size="sm" :color="item.color" />
-            <span
-              class="flex-1 text-left font-medium text-text-primary-light dark:text-text-primary-dark"
-            >
+            <span class="flex-1 text-left font-medium text-text-primary-light dark:text-text-primary-dark">
               {{ item.label }}
             </span>
-            <UIcon
-              name="chevron_right"
-              size="sm"
-              class="text-text-tertiary-light dark:text-text-tertiary-dark"
-            />
+            <UIcon name="chevron_right" size="sm" class="text-text-tertiary-light dark:text-text-tertiary-dark" />
           </button>
         </UCard>
       </div>
 
       <!-- App Group -->
       <div>
-        <h2
-          class="text-sm font-semibold text-text-secondary-light dark:text-text-secondary-dark px-2 mb-2 uppercase tracking-wider"
-        >
+        <h2 class="text-sm font-semibold text-text-secondary-light dark:text-text-secondary-dark px-2 mb-2 uppercase tracking-wider">
           Приложение
         </h2>
-        <UCard
-          class="divide-y divide-border-light dark:divide-border-dark overflow-hidden"
-        >
+        <UCard class="divide-y divide-border-light dark:divide-border-dark overflow-hidden">
           <button
             v-for="item in appGroup"
             :key="item.id"
@@ -243,30 +212,18 @@ function handleAddTransaction() {
           >
             <div class="relative">
               <IconBadge :icon="item.icon" size="sm" :color="item.color" />
-              <span
-                v-if="item.badge?.value"
-                class="absolute -top-0.5 -right-0.5 w-3 h-3 border-2 border-card-light dark:border-card-dark rounded-full bg-danger"
-              />
+              <span v-if="item.badge?.value" class="absolute -top-0.5 -right-0.5 w-3 h-3 border-2 border-card-light dark:border-card-dark rounded-full bg-danger" />
             </div>
-            <span
-              class="flex-1 text-left font-medium text-text-primary-light dark:text-text-primary-dark"
-            >
+            <span class="flex-1 text-left font-medium text-text-primary-light dark:text-text-primary-dark">
               {{ item.label }}
             </span>
-            <UIcon
-              name="chevron_right"
-              size="sm"
-              class="text-text-tertiary-light dark:text-text-tertiary-dark"
-            />
+            <UIcon name="chevron_right" size="sm" class="text-text-tertiary-light dark:text-text-tertiary-dark" />
           </button>
         </UCard>
       </div>
 
       <!-- Logout Button -->
-      <UCard
-        variant="bordered"
-        class="overflow-hidden border-danger/20 dark:border-danger/20 hover:border-danger/40 transition-colors"
-      >
+      <UCard variant="bordered" class="overflow-hidden border-danger/20 dark:border-danger/20 hover:border-danger/40 transition-colors">
         <button
           class="w-full flex items-center justify-center gap-2 p-4 text-danger font-semibold active:bg-danger/5"
           @click="handleLogout"

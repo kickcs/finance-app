@@ -23,7 +23,6 @@ import { QuickActionModal } from '@/features/configure-quick-action';
 import BalanceCard from '@/widgets/balance-card/ui/BalanceCard.vue';
 import SaveSpendSection from '@/widgets/save-spend-section/ui/SaveSpendSection.vue';
 import AccountStack from '@/widgets/account-stack/ui/AccountStack.vue';
-import { OnboardingProgress } from '@/widgets/onboarding-progress';
 import { DebtsSectionSkeleton } from '@/widgets/debts-section';
 import { RemindersSectionSkeleton } from '@/widgets/reminders-section';
 import { RecentTransactionsSkeleton } from '@/widgets/recent-transactions';
@@ -118,10 +117,7 @@ function handleDebtClick(debt: Debt) {
   router.push({ name: 'debt-detail', params: { id: debt.id } });
 }
 function handlePersonClick(personName: string, debtType: 'given' | 'taken') {
-  router.push({
-    path: '/debts',
-    query: { person: personName, type: debtType },
-  });
+  router.push({ path: '/debts', query: { person: personName, type: debtType } });
 }
 function handleViewAllDebts() {
   router.push('/debts');
@@ -288,18 +284,6 @@ async function handleRefresh() {
               @income-click="router.push('/analytics?type=income')"
               @expense-click="router.push('/analytics?type=expense')"
             />
-          </section>
-
-          <!-- Onboarding Progress -->
-          <section
-            class="transform transition-all duration-700 ease-out delay-100"
-            :class="
-              isMounted
-                ? 'translate-y-0 opacity-100'
-                : 'translate-y-8 opacity-0'
-            "
-          >
-            <OnboardingProgress :user-id="userId" />
           </section>
 
           <!-- Quick Actions -->

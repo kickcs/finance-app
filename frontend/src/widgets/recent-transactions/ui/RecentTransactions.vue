@@ -56,7 +56,6 @@ function getToAccountName(toAccountId: string | null): string {
       icon="receipt_long"
       title="Нет операций"
       description="Добавьте первую транзакцию"
-      pulse-action
       :action="{ label: 'Добавить', onClick: () => $emit('add-click') }"
     />
 

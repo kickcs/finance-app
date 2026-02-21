@@ -1,11 +1,9 @@
 // frontend/src/features/add-transaction/model/useSubmitTransaction.ts
+import { useMutation, useQueryClient, type InfiniteData, type QueryClient } from '@tanstack/vue-query';
 import {
-  useMutation,
-  useQueryClient,
-  type InfiniteData,
-  type QueryClient,
-} from '@tanstack/vue-query';
-import { transactionsApi, transactionQueryKeys } from '@/entities/transaction';
+  transactionsApi,
+  transactionQueryKeys,
+} from '@/entities/transaction';
 import { accountQueryKeys } from '@/entities/account';
 import {
   invalidateTransactionRelated,
@@ -45,10 +43,7 @@ interface OptimisticSnapshots {
   previousList: Transaction[] | undefined;
   previousAccounts: AccountWithBalances[] | undefined;
   previousMonthlyStats: MonthlyStats | undefined;
-  previousInfinite: [
-    readonly unknown[],
-    InfiniteData<PaginatedResult<Transaction>> | undefined,
-  ][];
+  previousInfinite: [readonly unknown[], InfiniteData<PaginatedResult<Transaction>> | undefined][];
 }
 
 function buildApiPayload(userId: string, formData: TransactionFormData) {
@@ -87,14 +82,7 @@ function getCacheKeys(userId: string, formData: TransactionFormData) {
 
 async function cancelRelatedQueries(
   queryClient: QueryClient,
-  keys: Pick<
-    OptimisticSnapshots,
-    | 'recentKey'
-    | 'listKey'
-    | 'accountsKey'
-    | 'monthlyStatsKey'
-    | 'infinitePrefix'
-  >,
+  keys: Pick<OptimisticSnapshots, 'recentKey' | 'listKey' | 'accountsKey' | 'monthlyStatsKey' | 'infinitePrefix'>,
 ) {
   await Promise.all([
     queryClient.cancelQueries({ queryKey: keys.recentKey }),
@@ -130,16 +118,10 @@ function snapshotAndApplyOptimistic(
   const keys = getCacheKeys(userId, formData);
 
   // Snapshot previous values (sync)
-  const previousRecent = queryClient.getQueryData<Transaction[]>(
-    keys.recentKey,
-  );
+  const previousRecent = queryClient.getQueryData<Transaction[]>(keys.recentKey);
   const previousList = queryClient.getQueryData<Transaction[]>(keys.listKey);
-  const previousAccounts = queryClient.getQueryData<AccountWithBalances[]>(
-    keys.accountsKey,
-  );
-  const previousMonthlyStats = queryClient.getQueryData<MonthlyStats>(
-    keys.monthlyStatsKey,
-  );
+  const previousAccounts = queryClient.getQueryData<AccountWithBalances[]>(keys.accountsKey);
+  const previousMonthlyStats = queryClient.getQueryData<MonthlyStats>(keys.monthlyStatsKey);
   const previousInfinite = queryClient.getQueriesData<
     InfiniteData<PaginatedResult<Transaction>>
   >({ queryKey: keys.infinitePrefix });
@@ -219,8 +201,7 @@ function snapshotAndApplyOptimistic(
           income_by_currency: {
             ...old.income_by_currency,
             [formData.currency]:
-              (old.income_by_currency[formData.currency] ?? 0) +
-              formData.amount,
+              (old.income_by_currency[formData.currency] ?? 0) + formData.amount,
           },
         };
       }
@@ -246,10 +227,7 @@ function snapshotAndApplyOptimistic(
   };
 }
 
-function rollbackFromSnapshots(
-  queryClient: QueryClient,
-  snapshots: OptimisticSnapshots,
-) {
+function rollbackFromSnapshots(queryClient: QueryClient, snapshots: OptimisticSnapshots) {
   if (snapshots.previousRecent !== undefined) {
     queryClient.setQueryData(snapshots.recentKey, snapshots.previousRecent);
   }
@@ -260,10 +238,7 @@ function rollbackFromSnapshots(
     queryClient.setQueryData(snapshots.accountsKey, snapshots.previousAccounts);
   }
   if (snapshots.previousMonthlyStats !== undefined) {
-    queryClient.setQueryData(
-      snapshots.monthlyStatsKey,
-      snapshots.previousMonthlyStats,
-    );
+    queryClient.setQueryData(snapshots.monthlyStatsKey, snapshots.previousMonthlyStats);
   }
   for (const [key, data] of snapshots.previousInfinite) {
     queryClient.setQueryData(key, data);
@@ -279,9 +254,7 @@ export function useSubmitTransaction() {
       return transactionsApi.create(buildApiPayload(userId, formData));
     },
 
-    onMutate: async (
-      variables: SubmitPayload,
-    ): Promise<OptimisticSnapshots> => {
+    onMutate: async (variables: SubmitPayload): Promise<OptimisticSnapshots> => {
       const { userId, formData, precomputedSnapshots } = variables;
 
       // Fire-and-forget path: snapshots already applied synchronously by submit()
@@ -328,11 +301,7 @@ export function useSubmitTransaction() {
    * then fires API call in background. Safe to navigate immediately after.
    */
   function submit(userId: string, formData: TransactionFormData) {
-    const precomputedSnapshots = snapshotAndApplyOptimistic(
-      queryClient,
-      userId,
-      formData,
-    );
+    const precomputedSnapshots = snapshotAndApplyOptimistic(queryClient, userId, formData);
     mutation.mutate({ userId, formData, precomputedSnapshots });
   }
 

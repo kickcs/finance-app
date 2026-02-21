@@ -4,14 +4,7 @@ import { useRouter, useRoute } from 'vue-router';
 import { BottomNav } from '@/widgets/bottom-nav';
 import { AppHeader } from '@/widgets/header';
 import { DebtCard, useDebts, type Debt } from '@/entities/debt';
-import {
-  UButton,
-  UIcon,
-  UCard,
-  Skeleton,
-  EmptyState,
-  SectionHeader,
-} from '@/shared/ui';
+import { UButton, UIcon, UCard, Skeleton, EmptyState, SectionHeader } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { useExchangeRates } from '@/shared/api';
 import { navigateBack } from '@/app/router';
@@ -145,12 +138,8 @@ function handleAddTransaction() {
         <div v-if="activeDebts.length > 0" class="grid grid-cols-2 gap-3">
           <!-- Given debts (people owe you) -->
           <UCard class="p-4 relative overflow-hidden" variant="bordered">
-            <div
-              class="absolute -right-4 -top-4 w-16 h-16 bg-debt-given/10 rounded-full blur-xl pointer-events-none"
-            />
-            <p
-              class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-1"
-            >
+            <div class="absolute -right-4 -top-4 w-16 h-16 bg-debt-given/10 rounded-full blur-xl pointer-events-none" />
+            <p class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-1">
               Вам должны
             </p>
             <p class="text-lg font-bold text-debt-given tracking-tight">
@@ -160,12 +149,8 @@ function handleAddTransaction() {
 
           <!-- Taken debts (you owe others) -->
           <UCard class="p-4 relative overflow-hidden" variant="bordered">
-            <div
-              class="absolute -right-4 -top-4 w-16 h-16 bg-debt-received/10 rounded-full blur-xl pointer-events-none"
-            />
-            <p
-              class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-1"
-            >
+            <div class="absolute -right-4 -top-4 w-16 h-16 bg-debt-received/10 rounded-full blur-xl pointer-events-none" />
+            <p class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-1">
               Вы должны
             </p>
             <p class="text-lg font-bold text-debt-received tracking-tight">
@@ -194,9 +179,7 @@ function handleAddTransaction() {
 
           <div class="flex items-center justify-between">
             <SectionHeader
-              :title="
-                personFilter ? `Долги: ${personFilter}` : 'Активные долги'
-              "
+              :title="personFilter ? `Долги: ${personFilter}` : 'Активные долги'"
               :show-add="false"
               :show-view-all="false"
             />

@@ -15,13 +15,11 @@ interface Props {
   action?: Action;
   variant?: 'default' | 'inline';
   iconBgClass?: string;
-  pulseAction?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   iconSize: 'lg',
   variant: 'default',
-  pulseAction: false,
 });
 
 const emit = defineEmits<{
@@ -87,10 +85,7 @@ function handleAction() {
       v-if="action"
       variant="primary"
       size="sm"
-      :class="[
-        { 'mt-4': variant === 'default' },
-        { 'animate-pulse': pulseAction },
-      ]"
+      :class="{ 'mt-4': variant === 'default' }"
       @click="handleAction"
     >
       {{ action.label }}

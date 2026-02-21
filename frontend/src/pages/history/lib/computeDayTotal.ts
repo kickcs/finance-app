@@ -25,16 +25,11 @@ export function computeDayTotal(
         : tx.amount;
 
     const amount =
-      tx.currency !== userCurrency
-        ? convert(baseAmount, tx.currency)
-        : baseAmount;
+      tx.currency !== userCurrency ? convert(baseAmount, tx.currency) : baseAmount;
 
     if (tx.category_id === 'debt_given') return sum - amount;
     if (tx.category_id === 'debt_taken') return sum + amount;
-    if (
-      tx.category_id === 'debt_return_to_me' ||
-      tx.category_id === 'debt_return_from_me'
-    ) {
+    if (tx.category_id === 'debt_return_to_me' || tx.category_id === 'debt_return_from_me') {
       return sum;
     }
 

@@ -5,13 +5,7 @@ import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 import { AppHeader } from '@/widgets/header';
 import { BottomNav } from '@/widgets/bottom-nav';
-import {
-  UTabs,
-  SectionHeader,
-  EmptyState,
-  UCard,
-  ViewAllButton,
-} from '@/shared/ui';
+import { UTabs, SectionHeader, EmptyState, UCard, ViewAllButton } from '@/shared/ui';
 import { formatCurrency, COMPACT_FORMAT } from '@/shared/lib/format/currency';
 import { useExchangeRates } from '@/shared/api';
 import { useAnalyticsStats } from '@/entities/transaction';
@@ -168,6 +162,7 @@ function handlePeriodChange(value: string | number) {
 function handleAddTransaction() {
   router.push('/transactions/new');
 }
+
 </script>
 
 <template>
@@ -182,10 +177,7 @@ function handleAddTransaction() {
     <!-- Content -->
     <main class="px-5 pt-6 space-y-5">
       <!-- Sticky Filters -->
-      <div
-        class="sticky z-20 -mx-5 px-5 py-2 space-y-3 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-border-light/50 dark:border-border-dark/50 shadow-sm"
-        :style="{ top: 'calc(3rem + var(--safe-area-inset-top, 0px))' }"
-      >
+      <div class="sticky z-20 -mx-5 px-5 py-2 space-y-3 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-border-light/50 dark:border-border-dark/50 shadow-sm" :style="{ top: 'calc(3rem + var(--safe-area-inset-top, 0px))' }">
         <!-- Period Tabs -->
         <UTabs
           :model-value="filters.period"
@@ -221,18 +213,10 @@ function handleAddTransaction() {
       </div>
 
       <!-- Analytics Content (dims during refetch) -->
-      <div
-        class="space-y-5 transition-opacity duration-300"
-        :class="{ 'opacity-50 pointer-events-none': analyticsFetching }"
-      >
+      <div class="space-y-5 transition-opacity duration-300" :class="{ 'opacity-50 pointer-events-none': analyticsFetching }">
         <!-- Donut Chart -->
         <div class="pt-2">
-          <SectionHeader
-            title="Анализ расходов"
-            :show-add="false"
-            :show-view-all="false"
-            class="mb-4"
-          />
+          <SectionHeader title="Анализ расходов" :show-add="false" :show-view-all="false" class="mb-4" />
         </div>
         <DonutChart
           :segments="donutSegments"

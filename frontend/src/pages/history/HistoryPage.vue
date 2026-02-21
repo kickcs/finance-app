@@ -26,10 +26,7 @@ import { UTabs, UIcon, UButton } from '@/shared/ui';
 import { useExchangeRates } from '@/shared/api';
 
 // Page composables
-import {
-  useHistoryFilters,
-  TYPE_FILTER_ITEMS,
-} from './model/useHistoryFilters';
+import { useHistoryFilters, TYPE_FILTER_ITEMS } from './model/useHistoryFilters';
 import { useBalanceAfter } from './model/useBalanceAfter';
 import { computeDayTotal } from './lib/computeDayTotal';
 
@@ -223,9 +220,7 @@ async function handleRefresh() {
               variant="ghost"
               size="sm"
               class="!p-2"
-              :aria-label="
-                isFiltersCollapsed ? 'Показать фильтры' : 'Скрыть фильтры'
-              "
+              :aria-label="isFiltersCollapsed ? 'Показать фильтры' : 'Скрыть фильтры'"
               :aria-expanded="!isFiltersCollapsed"
               aria-controls="filters-container"
               @click="isFiltersCollapsed = !isFiltersCollapsed"
@@ -238,10 +233,7 @@ async function handleRefresh() {
             </UButton>
             <!-- Active filters indicator dot -->
             <span
-              v-if="
-                isFiltersCollapsed &&
-                (searchTerm || selectedAccountId || selectedCategoryId)
-              "
+              v-if="isFiltersCollapsed && (searchTerm || selectedAccountId || selectedCategoryId)"
               aria-hidden="true"
               class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-primary ring-2 ring-background-light dark:ring-background-dark"
             />
@@ -330,16 +322,7 @@ async function handleRefresh() {
       </div>
 
       <!-- Virtualized Transaction Groups: flex-1 wrapper ensures virtualizer gets definite height from flex, not from % -->
-      <div
-        v-else-if="groupedTransactions.length > 0"
-        :class="[
-          'flex-1 min-h-0 transition-opacity duration-300',
-          {
-            'opacity-50 pointer-events-none':
-              currentIsFetching && displayedTransactions.length > 0,
-          },
-        ]"
-      >
+      <div v-else-if="groupedTransactions.length > 0" :class="['flex-1 min-h-0 transition-opacity duration-300', { 'opacity-50 pointer-events-none': currentIsFetching && displayedTransactions.length > 0 }]">
         <VirtualGroupedTransactionList
           :groups="groupedTransactions"
           :currency="currency"

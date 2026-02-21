@@ -74,9 +74,13 @@ export function useDashboardData() {
     sumConverted(totalBalancesByCurrency.value),
   );
 
-  const savedThisMonth = computed(() => sumConverted(incomeByCurrency.value));
+  const savedThisMonth = computed(() =>
+    sumConverted(incomeByCurrency.value),
+  );
 
-  const spentThisMonth = computed(() => sumConverted(expenseByCurrency.value));
+  const spentThisMonth = computed(() =>
+    sumConverted(expenseByCurrency.value),
+  );
 
   const percentChange = computed(() => {
     const thisIncome = sumConverted(incomeByCurrency.value);
