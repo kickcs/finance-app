@@ -89,7 +89,7 @@ function handleAction() {
       size="sm"
       :class="[
         { 'mt-4': variant === 'default' },
-        { 'animate-pulse': pulseAction }
+        { 'animate-pulse': pulseAction },
       ]"
       @click="handleAction"
     >

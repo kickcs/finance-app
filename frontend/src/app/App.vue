@@ -6,7 +6,6 @@ import { initializeAuth, useAuth, useProfile } from '@/shared/api';
 import { transitionName } from '@/app/router';
 import { useCategories } from '@/entities/category';
 import { ToastProvider, Toaster } from '@/shared/ui/primitives/toast';
-import { USpinner } from '@/shared/ui';
 import { DemoBanner, useDemoMode } from '@/features/demo-mode';
 import { useChangelog, ChangelogModal } from '@/features/changelog';
 import { NavigationProgress } from '@/shared/ui/navigation-progress';
@@ -41,7 +40,15 @@ const showChangelogModal = ref(false);
 onMounted(async () => {
   // Start auth initialization immediately
   await initializeAuth();
-  isAppReady.value = true;
+
+  // Wait for router to be ready before removing skeleton
+  import('@/app/router').then(async ({ router }) => {
+    await router.isReady();
+    isAppReady.value = true;
+
+    // Add class to body to trigger CSS transition for skeleton hiding
+    document.body.classList.add('app-ready');
+  });
 
   // Show changelog modal if there are unseen changes
   if (isAuthenticated.value && hasUnseenChanges.value) {
@@ -63,13 +70,9 @@ provide('getCategoryById', getCategoryById);
       <!-- Navigation progress bar -->
       <NavigationProgress />
 
-      <!-- Loading state while auth initializes -->
-      <div
-        v-if="!isAppReady"
-        class="min-h-screen flex items-center justify-center"
-      >
-        <USpinner />
-      </div>
+      <!-- Loading state while auth/router initializes -->
+      <!-- We don't need USpinner anymore, the HTML skeleton will show -->
+      <div v-if="!isAppReady" class="min-h-screen opacity-0"></div>
 
       <!-- Demo Banner - shown globally when in demo mode -->
       <DemoBanner v-if="isDemo" :formatted-remaining="formattedRemaining" />

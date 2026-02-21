@@ -6,10 +6,6 @@ import { UIcon } from '@/shared/ui/icon';
 import { UBadge } from '@/shared/ui/badge';
 import type { SwipeAction } from './types';
 
-const PEEK_START_DELAY_MS = 500;
-const PEEK_DURATION_MS = 1200;
-const HINT_DISMISS_DELAY_MS = 1000;
-
 const props = withDefaults(
   defineProps<{
     /** Left swipe action (delete) - revealed when swiping left */
@@ -28,11 +24,13 @@ const props = withDefaults(
     autoPeek: false,
   },
 );
-
 const emit = defineEmits<{
   'action-left': [];
   'action-right': [];
 }>();
+const PEEK_START_DELAY_MS = 500;
+const PEEK_DURATION_MS = 1200;
+const HINT_DISMISS_DELAY_MS = 1000;
 
 const { translateX, isDragging, resetSwipe, handlers } = useSwipe({
   leftEnabled: !!props.leftAction && !props.disabled,
@@ -41,14 +39,19 @@ const { translateX, isDragging, resetSwipe, handlers } = useSwipe({
 
 // Peek animation for onboarding
 const hasSeenSwipeHint = useLocalStorage('hasSeenSwipeHint', false);
-const peekDirection = computed(() => props.leftAction ? -60 : props.rightAction ? 60 : 0);
+const peekDirection = computed(() =>
+  props.leftAction ? -60 : props.rightAction ? 60 : 0,
+);
 
 const showPeekBadge = computed(() => {
-  if (isDragging.value || !props.autoPeek || hasSeenSwipeHint.value) return false;
+  if (isDragging.value || !props.autoPeek || hasSeenSwipeHint.value)
+    return false;
   return peekDirection.value < 0 ? translateX.value < 0 : translateX.value > 0;
 });
 
-const peekIcon = computed(() => peekDirection.value < 0 ? 'swipe_left' : 'swipe_right');
+const peekIcon = computed(() =>
+  peekDirection.value < 0 ? 'swipe_left' : 'swipe_right',
+);
 
 // Timers for cleanup
 let startTimer: ReturnType<typeof setTimeout>;
@@ -62,12 +65,12 @@ onMounted(() => {
         if (!isDragging.value) {
           translateX.value = peekDirection.value;
         }
-        
+
         endTimer = setTimeout(() => {
           if (!isDragging.value) {
             translateX.value = 0;
           }
-          
+
           dismissTimer = setTimeout(() => {
             hasSeenSwipeHint.value = true;
           }, HINT_DISMISS_DELAY_MS);
@@ -119,7 +122,7 @@ function onTouchMove(e: TouchEvent) {
 function onTouchEnd() {
   if (props.disabled) return;
   handlers.onTouchEnd();
-  
+
   if (Math.abs(translateX.value) > 20 && !hasSeenSwipeHint.value) {
     hasSeenSwipeHint.value = true;
   }
@@ -178,23 +181,28 @@ defineExpose({ resetSwipe });
       :class="isDragging && 'shadow-lg'"
       :style="{
         transform: `translateX(${translateX}px)`,
-        transition: isDragging ? 'none' : 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
+        transition: isDragging
+          ? 'none'
+          : 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
       }"
       role="group"
       :aria-label="isDragging ? 'Смахните для действия' : undefined"
     >
       <!-- Peek Badge Overlay -->
-      <div 
-        v-if="showPeekBadge" 
+      <div
+        v-if="showPeekBadge"
         class="absolute pointer-events-none transition-opacity duration-300 z-10 top-1/2 -translate-y-1/2"
         :class="peekDirection < 0 ? 'right-4' : 'left-4'"
       >
-        <UBadge variant="neutral" class="shadow-sm flex items-center gap-1 opacity-90 animate-pulse">
+        <UBadge
+          variant="neutral"
+          class="shadow-sm flex items-center gap-1 opacity-90 animate-pulse"
+        >
           <UIcon :name="peekIcon" size="sm" />
           Смахните
         </UBadge>
       </div>
-      
+
       <slot />
     </div>
   </div>

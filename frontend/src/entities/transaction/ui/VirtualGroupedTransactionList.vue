@@ -68,7 +68,7 @@ const flatItems = computed<FlatItem[]>(() => {
 });
 
 const firstTransactionIndex = computed(() => {
-  return flatItems.value.findIndex(item => item.type === 'transaction');
+  return flatItems.value.findIndex((item) => item.type === 'transaction');
 });
 
 // Heights
