@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.5.1';
+export const CURRENT_VERSION = '1.6.0';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,25 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.6.0',
+    date: '2026-02-22',
+    title: 'Мгновенная загрузка и нативный запуск',
+    items: [
+      {
+        type: 'feature',
+        text: 'Мгновенные данные при повторном входе — баланс, счета и транзакции показываются сразу из кэша, а свежие данные подгружаются в фоне.',
+      },
+      {
+        type: 'improvement',
+        text: 'Шрифты загружаются параллельно с HTML — текст появляется сразу в правильном начертании без задержки.',
+      },
+      {
+        type: 'feature',
+        text: 'Фирменная заставка при запуске с рабочего стола iPhone — с поддержкой тёмной темы для всех моделей.',
+      },
+    ],
+  },
   {
     version: '1.5.1',
     date: '2026-02-20',
