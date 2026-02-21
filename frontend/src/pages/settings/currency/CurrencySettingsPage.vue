@@ -103,7 +103,9 @@ function goBack() {
           :show-view-all="false"
           class="mb-2"
         />
-        <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark mb-4 pl-1">
+        <p
+          class="text-sm text-text-secondary-light dark:text-text-secondary-dark mb-4 pl-1"
+        >
           Отображается во всём приложении, все суммы конвертируются в эту валюту
         </p>
         <UCard variant="bordered" class="p-2">
@@ -122,11 +124,16 @@ function goBack() {
           :show-view-all="false"
           class="mb-2"
         />
-        <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark mb-4 pl-1">
+        <p
+          class="text-sm text-text-secondary-light dark:text-text-secondary-dark mb-4 pl-1"
+        >
           Эти валюты будут предлагаться при создании нового счёта
         </p>
 
-        <UCard variant="bordered" class="overflow-hidden divide-y divide-border-light dark:divide-border-dark">
+        <UCard
+          variant="bordered"
+          class="overflow-hidden divide-y divide-border-light dark:divide-border-dark"
+        >
           <button
             v-for="curr in CURRENCIES"
             :key="curr.code"
@@ -136,10 +143,14 @@ function goBack() {
           >
             <span class="text-2xl shrink-0">{{ curr.flag }}</span>
             <div class="flex-1 text-left min-w-0">
-              <p class="font-semibold text-text-primary-light dark:text-text-primary-dark truncate">
+              <p
+                class="font-semibold text-text-primary-light dark:text-text-primary-dark truncate"
+              >
                 {{ curr.code }}
               </p>
-              <p class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark truncate">
+              <p
+                class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark truncate"
+              >
                 {{ curr.name }}
               </p>
             </div>

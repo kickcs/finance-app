@@ -242,10 +242,14 @@ async function handleSetAsDefault() {
 
             <!-- Info -->
             <div class="flex-1 min-w-0 pt-1">
-              <p class="text-xl font-bold text-text-primary-light dark:text-text-primary-dark truncate">
+              <p
+                class="text-xl font-bold text-text-primary-light dark:text-text-primary-dark truncate"
+              >
                 {{ account.name }}
               </p>
-              <p class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mt-0.5">
+              <p
+                class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mt-0.5"
+              >
                 {{ getAccountTypeLabel(account.type) }}
               </p>
             </div>
@@ -255,10 +259,14 @@ async function handleSetAsDefault() {
               v-if="!isDefaultAccount(account.id)"
               class="shrink-0 w-10 h-10 -mt-1 -mr-1 rounded-xl flex items-center justify-center text-text-tertiary-light dark:text-text-tertiary-dark hover:bg-surface-light dark:hover:bg-surface-dark transition-colors"
               :disabled="isSettingDefault"
-              @click="handleSetAsDefault"
               aria-label="Сделать по умолчанию"
+              @click="handleSetAsDefault"
             >
-              <UIcon name="star" size="md" :class="{'animate-pulse': isSettingDefault}" />
+              <UIcon
+                name="star"
+                size="md"
+                :class="{ 'animate-pulse': isSettingDefault }"
+              />
             </button>
             <div
               v-else
@@ -629,12 +637,19 @@ async function handleSetAsDefault() {
           </div>
 
           <!-- Empty State -->
-          <UCard v-else-if="accountTransactions.length === 0" variant="bordered" class="py-6">
+          <UCard
+            v-else-if="accountTransactions.length === 0"
+            variant="bordered"
+            class="py-6"
+          >
             <EmptyState
               icon="receipt_long"
               title="Здесь пока пусто"
               description="Добавьте первую транзакцию по этому счету"
-              :action="{ label: 'Добавить', onClick: () => router.push('/transactions/new') }"
+              :action="{
+                label: 'Добавить',
+                onClick: () => router.push('/transactions/new'),
+              }"
             />
           </UCard>
 

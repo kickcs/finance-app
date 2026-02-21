@@ -1,6 +1,15 @@
 <script setup lang="ts">
 import { ref, computed, watch, defineAsyncComponent } from 'vue';
-import { UButton, UIcon, UCard, UTabs, UModal, Skeleton, EmptyState, IconBadge } from '@/shared/ui';
+import {
+  UButton,
+  UIcon,
+  UCard,
+  UTabs,
+  UModal,
+  Skeleton,
+  EmptyState,
+  IconBadge,
+} from '@/shared/ui';
 import { AppHeader } from '@/widgets/header';
 
 const draggable = defineAsyncComponent(() => import('vuedraggable'));
@@ -175,7 +184,11 @@ async function confirmDelete() {
       </div>
 
       <!-- Categories List with Drag and Drop -->
-      <UCard v-else-if="localCategories.length > 0" variant="bordered" class="overflow-hidden">
+      <UCard
+        v-else-if="localCategories.length > 0"
+        variant="bordered"
+        class="overflow-hidden"
+      >
         <draggable
           v-model="localCategories"
           item-key="id"
@@ -186,26 +199,45 @@ async function confirmDelete() {
           @end="handleDragEnd"
         >
           <template #item="{ element: category }">
-            <div class="flex items-center gap-3 p-4 bg-surface-light dark:bg-surface-dark transition-colors hover:bg-surface-light dark:hover:bg-surface-dark">
+            <div
+              class="flex items-center gap-3 p-4 bg-surface-light dark:bg-surface-dark transition-colors hover:bg-surface-light dark:hover:bg-surface-dark"
+            >
               <!-- Drag Handle -->
-              <div class="drag-handle cursor-grab active:cursor-grabbing text-text-tertiary-light dark:text-text-tertiary-dark hover:text-text-secondary-light dark:hover:text-text-secondary-dark transition-colors">
+              <div
+                class="drag-handle cursor-grab active:cursor-grabbing text-text-tertiary-light dark:text-text-tertiary-dark hover:text-text-secondary-light dark:hover:text-text-secondary-dark transition-colors"
+              >
                 <UIcon name="drag_indicator" size="sm" />
               </div>
 
               <!-- Category Icon -->
-              <IconBadge :icon="category.icon" size="sm" :color="category.color" class="shrink-0" />
+              <IconBadge
+                :icon="category.icon"
+                size="sm"
+                :color="category.color"
+                class="shrink-0"
+              />
 
               <!-- Category Name -->
-              <span class="flex-1 font-medium text-text-primary-light dark:text-text-primary-dark truncate">
+              <span
+                class="flex-1 font-medium text-text-primary-light dark:text-text-primary-dark truncate"
+              >
                 {{ category.name }}
               </span>
 
               <!-- Action Buttons -->
               <div class="flex shrink-0 gap-1 -mr-2">
-                <UButton variant="icon" class="text-text-secondary-light dark:text-text-secondary-dark hover:bg-border-light dark:hover:bg-border-dark rounded-xl" @click="openEditModal(category)">
+                <UButton
+                  variant="icon"
+                  class="text-text-secondary-light dark:text-text-secondary-dark hover:bg-border-light dark:hover:bg-border-dark rounded-xl"
+                  @click="openEditModal(category)"
+                >
                   <UIcon name="edit" size="sm" />
                 </UButton>
-                <UButton variant="icon" class="text-danger hover:bg-danger/10 rounded-xl" @click="openDeleteModal(category)">
+                <UButton
+                  variant="icon"
+                  class="text-danger hover:bg-danger/10 rounded-xl"
+                  @click="openDeleteModal(category)"
+                >
                   <UIcon name="delete" size="sm" />
                 </UButton>
               </div>

@@ -4,7 +4,15 @@ import { useRouter, useRoute } from 'vue-router';
 import { AppHeader } from '@/widgets/header';
 import { BottomNav } from '@/widgets/bottom-nav';
 import { StatCard } from '@/widgets/analytics';
-import { UTabs, UCard, UProgressBar, Skeleton, SectionHeader, EmptyState, IconBadge } from '@/shared/ui';
+import {
+  UTabs,
+  UCard,
+  UProgressBar,
+  Skeleton,
+  SectionHeader,
+  EmptyState,
+  IconBadge,
+} from '@/shared/ui';
 import {
   useAnalyticsStats,
   type CategoryBreakdown,
@@ -155,7 +163,6 @@ function handleAddTransaction() {
   router.push('/transactions/new');
 }
 
-
 // Read initial type filter from query param
 onMounted(() => {
   const queryType = route.query.type as string | undefined;
@@ -180,7 +187,10 @@ onMounted(() => {
     <!-- Content -->
     <main class="px-5 pt-6 space-y-5">
       <!-- Sticky Filters -->
-      <div class="sticky z-20 -mx-5 px-5 py-2 space-y-3 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-border-light/50 dark:border-border-dark/50 shadow-sm" :style="{ top: 'calc(3rem + var(--safe-area-inset-top, 0px))' }">
+      <div
+        class="sticky z-20 -mx-5 px-5 py-2 space-y-3 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-border-light/50 dark:border-border-dark/50 shadow-sm"
+        :style="{ top: 'calc(3rem + var(--safe-area-inset-top, 0px))' }"
+      >
         <!-- Period Tabs -->
         <UTabs
           :model-value="filters.period"
@@ -216,7 +226,10 @@ onMounted(() => {
       </div>
 
       <!-- Summary Cards - 2 Rows -->
-      <div class="space-y-3 pt-2 transition-opacity duration-300" :class="{ 'opacity-50 pointer-events-none': analyticsFetching }">
+      <div
+        class="space-y-3 pt-2 transition-opacity duration-300"
+        :class="{ 'opacity-50 pointer-events-none': analyticsFetching }"
+      >
         <StatCard
           icon="trending_down"
           label="Расходы"
@@ -240,11 +253,7 @@ onMounted(() => {
         v-if="debtsLoading || totalOwedToMe > 0 || totalIOwe > 0"
         class="space-y-3"
       >
-        <SectionHeader
-          title="Долги"
-          :show-add="false"
-          :show-view-all="false"
-        />
+        <SectionHeader title="Долги" :show-add="false" :show-view-all="false" />
 
         <!-- Debt Loading Skeleton -->
         <template v-if="debtsLoading">
@@ -280,7 +289,13 @@ onMounted(() => {
       </div>
 
       <!-- Category Breakdown -->
-      <div class="space-y-3 transition-opacity duration-300" :class="{ 'opacity-50 pointer-events-none': analyticsFetching && categoryStats.length > 0 }">
+      <div
+        class="space-y-3 transition-opacity duration-300"
+        :class="{
+          'opacity-50 pointer-events-none':
+            analyticsFetching && categoryStats.length > 0,
+        }"
+      >
         <div class="flex items-center justify-between">
           <SectionHeader
             title="По категориям"
@@ -321,14 +336,20 @@ onMounted(() => {
                   class="shrink-0"
                 />
                 <div class="flex-1">
-                  <p class="font-medium text-text-primary-light dark:text-text-primary-dark">
+                  <p
+                    class="font-medium text-text-primary-light dark:text-text-primary-dark"
+                  >
                     {{ stat.name }}
                   </p>
-                  <p class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">
+                  <p
+                    class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark"
+                  >
                     {{ stat.percent.toFixed(1) }}%
                   </p>
                 </div>
-                <p class="font-semibold text-text-primary-light dark:text-text-primary-dark">
+                <p
+                  class="font-semibold text-text-primary-light dark:text-text-primary-dark"
+                >
                   {{ formatCurrency(stat.amount, currency, COMPACT_FORMAT) }}
                 </p>
               </div>

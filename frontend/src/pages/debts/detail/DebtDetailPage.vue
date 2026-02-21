@@ -9,7 +9,7 @@ import {
   USpinner,
   NotFoundState,
   IconBadge,
-  UBadge
+  UBadge,
 } from '@/shared/ui';
 import { AppHeader } from '@/widgets/header';
 import { formatCurrency } from '@/shared/lib/format/currency';
@@ -140,7 +140,9 @@ function goBack() {
           <div class="flex items-start gap-4 mb-6">
             <!-- Icon -->
             <IconBadge
-              :icon="debt.debt_type === 'given' ? 'arrow_upward' : 'arrow_downward'"
+              :icon="
+                debt.debt_type === 'given' ? 'arrow_upward' : 'arrow_downward'
+              "
               size="lg"
               :color="DEBT_DIRECTION_COLORS[debt.debt_type]"
               class="shrink-0 shadow-sm"
@@ -148,10 +150,14 @@ function goBack() {
 
             <!-- Info -->
             <div class="flex-1 min-w-0 pt-1">
-              <p class="text-xl font-bold text-text-primary-light dark:text-text-primary-dark truncate">
+              <p
+                class="text-xl font-bold text-text-primary-light dark:text-text-primary-dark truncate"
+              >
                 {{ debt.person_name || debt.name }}
               </p>
-              <p class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mt-0.5">
+              <p
+                class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mt-0.5"
+              >
                 {{ DEBT_DIRECTION_LABELS[debt.debt_type] }}
               </p>
             </div>
@@ -168,8 +174,8 @@ function goBack() {
             <button
               v-else
               class="shrink-0 w-10 h-10 -mt-1 -mr-1 rounded-xl flex items-center justify-center text-text-tertiary-light dark:text-text-tertiary-dark hover:bg-danger/10 hover:text-danger transition-colors"
-              @click="showDeleteModal = true"
               aria-label="Удалить долг"
+              @click="showDeleteModal = true"
             >
               <UIcon name="delete" size="md" />
             </button>

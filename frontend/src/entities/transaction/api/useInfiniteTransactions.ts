@@ -1,5 +1,9 @@
 import { computed, toValue, type MaybeRefOrGetter } from 'vue';
-import { useInfiniteQuery, useQueryClient, keepPreviousData } from '@tanstack/vue-query';
+import {
+  useInfiniteQuery,
+  useQueryClient,
+  keepPreviousData,
+} from '@tanstack/vue-query';
 import { transactionQueryKeys } from './queryKeys';
 import {
   transactionsApi,

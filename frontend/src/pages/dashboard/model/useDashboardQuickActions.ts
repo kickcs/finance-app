@@ -6,7 +6,9 @@ import {
 } from '@/features/configure-quick-action';
 
 export function useDashboardQuickActions(
-  allCategories: ComputedRef<Array<{ id: string; icon: string; color: string }>>,
+  allCategories: ComputedRef<
+    Array<{ id: string; icon: string; color: string }>
+  >,
 ) {
   const router = useRouter();
 

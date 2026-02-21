@@ -67,6 +67,10 @@ const flatItems = computed<FlatItem[]>(() => {
   return items;
 });
 
+const firstTransactionIndex = computed(() => {
+  return flatItems.value.findIndex(item => item.type === 'transaction');
+});
+
 // Heights
 const HEADER_HEIGHT = 44;
 const LOADING_HEIGHT = 48;
@@ -256,6 +260,7 @@ function getTransactionItemProps(index: number) {
         >
           <SwipeableItem
             v-if="getTransactionData(virtualRow.index) && swipeEnabled"
+            :auto-peek="virtualRow.index === firstTransactionIndex"
             @action-left="
               emit('transactionDelete', getTransactionData(virtualRow.index)!)
             "

@@ -126,7 +126,9 @@ export function useScrollableTabs(
       navigator.vibrate?.(10);
       isScrollingProgrammatically = true; // Prevent watch from triggering another scroll
       onTypeChange(newType);
-      setTimeout(() => { isScrollingProgrammatically = false; }, WATCHER_GUARD_MS);
+      setTimeout(() => {
+        isScrollingProgrammatically = false;
+      }, WATCHER_GUARD_MS);
     }
   }
 

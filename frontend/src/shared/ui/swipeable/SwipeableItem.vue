@@ -1,8 +1,14 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, onMounted, onUnmounted } from 'vue';
 import { useSwipe } from '@/shared/lib/hooks/useSwipe';
-import { UIcon } from '@/shared/ui';
+import { useLocalStorage } from '@/shared/lib/hooks/useLocalStorage';
+import { UIcon } from '@/shared/ui/icon';
+import { UBadge } from '@/shared/ui/badge';
 import type { SwipeAction } from './types';
+
+const PEEK_START_DELAY_MS = 500;
+const PEEK_DURATION_MS = 1200;
+const HINT_DISMISS_DELAY_MS = 1000;
 
 const props = withDefaults(
   defineProps<{
@@ -12,11 +18,14 @@ const props = withDefaults(
     rightAction?: SwipeAction;
     /** Disable swipe functionality */
     disabled?: boolean;
+    /** Whether to play a "peek" animation on mount to teach the user they can swipe */
+    autoPeek?: boolean;
   }>(),
   {
     leftAction: () => ({ icon: 'delete', color: '#ef4444', label: 'Удалить' }),
     rightAction: () => ({ icon: 'edit', color: '#3b82f6', label: 'Изменить' }),
     disabled: false,
+    autoPeek: false,
   },
 );
 
@@ -28,6 +37,50 @@ const emit = defineEmits<{
 const { translateX, isDragging, resetSwipe, handlers } = useSwipe({
   leftEnabled: !!props.leftAction && !props.disabled,
   rightEnabled: !!props.rightAction && !props.disabled,
+});
+
+// Peek animation for onboarding
+const hasSeenSwipeHint = useLocalStorage('hasSeenSwipeHint', false);
+const peekDirection = computed(() => props.leftAction ? -60 : props.rightAction ? 60 : 0);
+
+const showPeekBadge = computed(() => {
+  if (isDragging.value || !props.autoPeek || hasSeenSwipeHint.value) return false;
+  return peekDirection.value < 0 ? translateX.value < 0 : translateX.value > 0;
+});
+
+const peekIcon = computed(() => peekDirection.value < 0 ? 'swipe_left' : 'swipe_right');
+
+// Timers for cleanup
+let startTimer: ReturnType<typeof setTimeout>;
+let endTimer: ReturnType<typeof setTimeout>;
+let dismissTimer: ReturnType<typeof setTimeout>;
+
+onMounted(() => {
+  if (props.autoPeek && !hasSeenSwipeHint.value && !props.disabled) {
+    if (peekDirection.value !== 0) {
+      startTimer = setTimeout(() => {
+        if (!isDragging.value) {
+          translateX.value = peekDirection.value;
+        }
+        
+        endTimer = setTimeout(() => {
+          if (!isDragging.value) {
+            translateX.value = 0;
+          }
+          
+          dismissTimer = setTimeout(() => {
+            hasSeenSwipeHint.value = true;
+          }, HINT_DISMISS_DELAY_MS);
+        }, PEEK_DURATION_MS);
+      }, PEEK_START_DELAY_MS);
+    }
+  }
+});
+
+onUnmounted(() => {
+  clearTimeout(startTimer);
+  clearTimeout(endTimer);
+  clearTimeout(dismissTimer);
 });
 
 // Calculate action button opacity based on swipe distance
@@ -66,6 +119,10 @@ function onTouchMove(e: TouchEvent) {
 function onTouchEnd() {
   if (props.disabled) return;
   handlers.onTouchEnd();
+  
+  if (Math.abs(translateX.value) > 20 && !hasSeenSwipeHint.value) {
+    hasSeenSwipeHint.value = true;
+  }
 }
 
 // Expose resetSwipe for parent components
@@ -121,11 +178,23 @@ defineExpose({ resetSwipe });
       :class="isDragging && 'shadow-lg'"
       :style="{
         transform: `translateX(${translateX}px)`,
-        transition: isDragging ? 'none' : 'transform 0.2s ease-out',
+        transition: isDragging ? 'none' : 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
       }"
       role="group"
       :aria-label="isDragging ? 'Смахните для действия' : undefined"
     >
+      <!-- Peek Badge Overlay -->
+      <div 
+        v-if="showPeekBadge" 
+        class="absolute pointer-events-none transition-opacity duration-300 z-10 top-1/2 -translate-y-1/2"
+        :class="peekDirection < 0 ? 'right-4' : 'left-4'"
+      >
+        <UBadge variant="neutral" class="shadow-sm flex items-center gap-1 opacity-90 animate-pulse">
+          <UIcon :name="peekIcon" size="sm" />
+          Смахните
+        </UBadge>
+      </div>
+      
       <slot />
     </div>
   </div>
