@@ -12,7 +12,7 @@ export default defineConfig({
     tailwindcss(),
     VueDevTools(),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
         navigateFallback: '/index.html',

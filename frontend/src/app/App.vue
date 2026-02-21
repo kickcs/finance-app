@@ -10,10 +10,14 @@ import { USpinner } from '@/shared/ui';
 import { DemoBanner, useDemoMode } from '@/features/demo-mode';
 import { useChangelog, ChangelogModal } from '@/features/changelog';
 import { NavigationProgress } from '@/shared/ui/navigation-progress';
+import { usePwaUpdate } from '@/shared/lib/composables/usePwaUpdate';
 
 // Initialize theme synchronously on script setup (before mount)
 const { initTheme } = useTheme();
 initTheme();
+
+// Initialize PWA updates watcher
+usePwaUpdate();
 
 // Auth state
 const { user, isLoading: _authLoading, isAuthenticated } = useAuth();
