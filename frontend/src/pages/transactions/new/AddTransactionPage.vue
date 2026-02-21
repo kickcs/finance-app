@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, watch } from 'vue';
+import { computed, ref, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { UButton, UIcon, USpinner } from '@/shared/ui';
 import { AppHeader } from '@/widgets/header';
@@ -8,13 +8,11 @@ import {
   useTransactionForm,
   useSubmitTransaction,
 } from '@/features/add-transaction';
-import { useAccounts, accountQueryKeys } from '@/entities/account';
+import { useAccounts } from '@/entities/account';
 import { useCategories } from '@/entities/category';
-import { useProfile, queryClient } from '@/shared/api';
-import { transactionsApi } from '@/entities/transaction';
+import { useProfile } from '@/shared/api';
 import { navigateBack } from '@/app/router';
 import { useSplitExpense } from '@/features/split-expense';
-import { transactionQueryKeys } from '@/entities/transaction';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 
@@ -31,7 +29,11 @@ const isQuickAction = computed(() => !!route.query.categoryId);
 
 // Use the add transaction feature
 const { formData, isValid, setType, updateField } = useTransactionForm();
-const { isSubmitting, error, submit } = useSubmitTransaction();
+const { isSubmitting, submit, submitAndWait, rollbackTransaction } =
+  useSubmitTransaction();
+
+// Local validation error (separate from mutation error which is handled via toast)
+const validationError = ref<string | null>(null);
 
 // Use split expense feature
 const {
@@ -100,80 +102,59 @@ watch(
 );
 
 async function handleSubmit() {
+  validationError.value = null;
+
   if (!userId.value) {
-    error.value = 'Пользователь не авторизован';
+    validationError.value = 'Пользователь не авторизован';
     return;
   }
 
   // Validate split expense if enabled
   if (splitData.value.enabled && !splitIsValid.value) {
-    error.value =
+    validationError.value =
       splitValidationError.value || 'Проверьте данные разделения расхода';
     return;
   }
 
-  const transactionId = await submit(userId.value, formData.value);
+  const isSplit =
+    splitData.value.enabled && splitData.value.participants.length > 0;
 
-  if (transactionId) {
-    // Create debts for split expense if enabled
-    if (
-      splitData.value.enabled &&
-      splitData.value.participants.length > 0 &&
-      formData.value.accountId
-    ) {
-      const success = await createDebtsForSplit(
-        transactionId,
-        userId.value,
-        formData.value.accountId,
-        formData.value.currency,
-      );
+  if (isSplit) {
+    if (!formData.value.accountId) {
+      validationError.value = 'Выберите счёт для транзакции';
+      return;
+    }
 
-      // Rollback transaction if debt creation failed
-      if (!success) {
-        await rollbackTransaction(
-          transactionId,
-          userId.value,
-          formData.value.accountId,
-          formData.value.currency,
-        );
-        error.value =
-          'Не удалось создать долги для раздельного счёта. Операция отменена.';
-        return;
-      }
+    // Split expense: must wait for transactionId to create debts
+    const transactionId = await submitAndWait(userId.value, formData.value);
+
+    if (!transactionId) {
+      // submitAndWait failed — error toast already shown by mutation
+      return;
+    }
+
+    const success = await createDebtsForSplit(
+      transactionId,
+      userId.value,
+      formData.value.accountId,
+      formData.value.currency,
+    );
+
+    if (!success) {
+      await rollbackTransaction(transactionId, userId.value);
+      validationError.value =
+        'Не удалось создать долги для раздельного счёта. Операция отменена.';
+      return;
     }
 
     resetSplit();
     router.push({ name: 'dashboard' });
+  } else {
+    // Regular transaction: fire-and-forget with optimistic update
+    submit(userId.value, formData.value);
+    resetSplit();
+    router.push({ name: 'dashboard' });
   }
-}
-
-// Rollback a transaction if split debt creation fails
-async function rollbackTransaction(
-  transactionId: string,
-  userId: string,
-  _accountId: string,
-  _currency: string,
-) {
-  try {
-    // Delete the transaction (backend automatically reverses balance)
-    await transactionsApi.delete(transactionId);
-
-    // Invalidate caches
-    await Promise.all([
-      queryClient.invalidateQueries({
-        queryKey: transactionQueryKeys.list(userId),
-      }),
-      queryClient.invalidateQueries({
-        queryKey: accountQueryKeys.list(userId),
-      }),
-    ]);
-  } catch (e) {
-    console.error('Failed to rollback transaction:', e);
-  }
-}
-
-function goBack() {
-  navigateBack();
 }
 </script>
 
@@ -182,7 +163,7 @@ function goBack() {
     class="h-dvh flex flex-col bg-background-light dark:bg-background-dark overflow-hidden"
   >
     <!-- Header -->
-    <AppHeader title="Новая транзакция" show-back blur @back="goBack" />
+    <AppHeader title="Новая транзакция" show-back blur @back="navigateBack" />
 
     <!-- Content -->
     <main class="flex-1 overflow-y-auto px-4 pt-2 pb-4">
@@ -219,7 +200,7 @@ function goBack() {
         :user-currency="userCurrency"
         :is-submitting="isSubmitting"
         :is-valid="isValid"
-        :error="error"
+        :error="validationError"
         :split-data="splitData"
         :split-validation-error="splitValidationError"
         :autofocus-amount="isQuickAction"

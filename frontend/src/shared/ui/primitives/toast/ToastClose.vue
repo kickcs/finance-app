@@ -14,16 +14,16 @@ const props = defineProps<
   <ToastClose
     :class="
       cn(
-        'absolute right-2 top-2 rounded-md p-1 opacity-0 transition-opacity',
-        'text-text-secondary-light dark:text-text-secondary-dark',
+        'flex-shrink-0 rounded-full p-1 opacity-0 transition-opacity',
+        'text-text-tertiary-light dark:text-text-tertiary-dark',
         'hover:text-text-primary-light dark:hover:text-text-primary-dark',
-        'focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-primary',
+        'focus:opacity-100 focus:outline-none',
         'group-hover:opacity-100',
         props.class,
       )
     "
     v-bind="props"
   >
-    <Cross2Icon class="h-4 w-4" />
+    <Cross2Icon class="h-3.5 w-3.5" />
   </ToastClose>
 </template>

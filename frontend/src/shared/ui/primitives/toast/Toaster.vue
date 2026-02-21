@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useToast } from '@/shared/lib/composables/useToast';
-import { UIcon } from '@/shared/ui';
+import { UIcon } from '@/shared/ui/icon';
 import Toast from './Toast.vue';
 import ToastClose from './ToastClose.vue';
 import ToastDescription from './ToastDescription.vue';
@@ -26,36 +26,36 @@ const variantIcons: Record<string, string> = {
       :variant="toast.variant"
       :open="toast.open"
       :duration="toast.duration"
-      :class="toast.variant"
       @update:open="(open) => !open && dismiss(toast.id)"
     >
-      <div class="flex gap-3">
-        <!-- Icon -->
-        <div
-          v-if="toast.variant && toast.variant !== 'default'"
-          class="flex-shrink-0 mt-0.5"
-        >
-          <UIcon
-            :name="variantIcons[toast.variant || 'default']"
-            size="sm"
-            :class="{
-              'text-success': toast.variant === 'success',
-              'text-danger': toast.variant === 'error',
-              'text-warning': toast.variant === 'warning',
-            }"
-          />
-        </div>
-
-        <div class="grid gap-1 flex-1">
-          <ToastTitle v-if="toast.title">
-            {{ toast.title }}
-          </ToastTitle>
-          <ToastDescription v-if="toast.description">
-            {{ toast.description }}
-          </ToastDescription>
-        </div>
+      <!-- Icon -->
+      <div
+        v-if="toast.variant && toast.variant !== 'default'"
+        class="flex-shrink-0"
+      >
+        <UIcon
+          :name="variantIcons[toast.variant || 'default']"
+          size="sm"
+          filled
+          :class="{
+            'text-success': toast.variant === 'success',
+            'text-danger': toast.variant === 'error',
+            'text-warning': toast.variant === 'warning',
+          }"
+        />
       </div>
 
+      <!-- Content -->
+      <div class="flex-1 min-w-0">
+        <ToastTitle v-if="toast.title">
+          {{ toast.title }}
+        </ToastTitle>
+        <ToastDescription v-if="toast.description">
+          {{ toast.description }}
+        </ToastDescription>
+      </div>
+
+      <!-- Action -->
       <ToastAction
         v-if="toast.action"
         :alt-text="toast.action.label"
