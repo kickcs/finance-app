@@ -4,11 +4,13 @@ import tailwindcss from '@tailwindcss/vite'
 import { compression } from 'vite-plugin-compression2'
 import VueDevTools from 'vite-plugin-vue-devtools'
 import { VitePWA } from 'vite-plugin-pwa'
+import { fontPreloadPlugin } from './src/app/plugins/fontPreloadPlugin'
 import { fileURLToPath, URL } from 'node:url'
 
 export default defineConfig({
   plugins: [
     vue(),
+    fontPreloadPlugin(),
     tailwindcss(),
     VueDevTools(),
     VitePWA({
