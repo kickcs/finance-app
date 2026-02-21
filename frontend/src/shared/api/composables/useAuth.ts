@@ -1,6 +1,6 @@
 import { ref, computed, readonly } from 'vue';
 import { http, setTokens, clearTokens, getAccessToken } from '../http';
-import { queryClient } from '../queryClient';
+import { queryClient, clearPersistedCache } from '../queryClient';
 import { resetOnboardingVerified } from '@/app/router';
 
 // User type matching Profile entity from backend
@@ -261,6 +261,9 @@ export function useAuth() {
 
       // Clear all cached queries
       queryClient.clear();
+
+      // Clear persisted query cache from localStorage
+      clearPersistedCache();
 
       // Clear localStorage
       localStorage.removeItem('onboardingComplete');
