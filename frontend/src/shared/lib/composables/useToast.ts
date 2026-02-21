@@ -1,4 +1,5 @@
 import { ref, computed } from 'vue';
+import { haptics } from '../haptics';
 
 export type ToastVariant = 'default' | 'success' | 'error' | 'warning';
 
@@ -32,6 +33,18 @@ function genId() {
   return count.toString();
 }
 
+function triggerHaptics(variant?: ToastVariant) {
+  if (variant === 'success') {
+    haptics.success();
+  } else if (variant === 'error') {
+    haptics.error();
+  } else if (variant === 'warning') {
+    haptics.warning();
+  } else {
+    haptics.tap();
+  }
+}
+
 function addToast(toast: Toast) {
   const id = toast.id || genId();
 
@@ -40,6 +53,8 @@ function addToast(toast: Toast) {
     id,
     open: true,
   };
+
+  triggerHaptics(toast.variant);
 
   toasts.value = [newToast, ...toasts.value].slice(0, TOAST_LIMIT);
 

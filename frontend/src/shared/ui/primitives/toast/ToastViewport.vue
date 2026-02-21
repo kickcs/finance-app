@@ -13,7 +13,7 @@ const props = defineProps<
   <ToastViewport
     :class="
       cn(
-        'fixed top-0 left-1/2 -translate-x-1/2 z-[100] flex max-h-screen w-full flex-col p-4 pt-[calc(env(safe-area-inset-top,0px)+12px)] items-center md:max-w-[420px]',
+        'fixed bottom-0 left-1/2 -translate-x-1/2 z-[100] flex max-h-screen w-full flex-col-reverse p-4 pb-[calc(env(safe-area-inset-bottom,0px)+100px)] items-center md:max-w-[420px]',
         props.class,
       )
     "

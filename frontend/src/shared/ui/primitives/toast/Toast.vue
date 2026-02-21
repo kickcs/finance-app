@@ -16,18 +16,18 @@ const props = defineProps<
 const emits = defineEmits<ToastRootEmits>();
 
 const toastVariants = cva(
-  'group pointer-events-auto relative flex w-full items-center gap-3 overflow-hidden rounded-2xl border px-4 py-3 shadow-xl backdrop-blur-sm transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--reka-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--reka-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-top-full data-[state=open]:slide-in-from-top-full',
+  'group pointer-events-auto relative flex w-full items-center gap-3 overflow-hidden rounded-[1.25rem] border px-4 py-3.5 shadow-xl backdrop-blur-md transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--reka-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--reka-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-bottom-full data-[state=closed]:zoom-out-95 data-[state=open]:slide-in-from-bottom-full data-[state=open]:zoom-in-95 data-[state=open]:duration-300 data-[state=closed]:duration-200 mt-2',
   {
     variants: {
       variant: {
         default:
-          'border-border-light/50 dark:border-border-dark/50 bg-card-light/95 dark:bg-card-dark/95 text-text-primary-light dark:text-text-primary-dark',
+          'border-border-light/40 dark:border-border-dark/50 bg-card-light/80 dark:bg-card-dark/80 text-text-primary-light dark:text-text-primary-dark shadow-black/5 dark:shadow-black/20',
         success:
-          'border-success/20 bg-success/10 dark:bg-success/15 text-text-primary-light dark:text-text-primary-dark',
+          'border-success/30 bg-success/15 dark:bg-success/20 text-text-primary-light dark:text-text-primary-dark shadow-success/5',
         error:
-          'border-danger/20 bg-danger/10 dark:bg-danger/15 text-text-primary-light dark:text-text-primary-dark',
+          'border-danger/30 bg-danger/15 dark:bg-danger/20 text-text-primary-light dark:text-text-primary-dark shadow-danger/5',
         warning:
-          'border-warning/20 bg-warning/10 dark:bg-warning/15 text-text-primary-light dark:text-text-primary-dark',
+          'border-warning/30 bg-warning/15 dark:bg-warning/20 text-text-primary-light dark:text-text-primary-dark shadow-warning/5',
       },
     },
     defaultVariants: {
