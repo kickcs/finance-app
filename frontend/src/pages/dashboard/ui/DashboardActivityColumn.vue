@@ -55,7 +55,7 @@ const RemindersSection = defineAsyncComponent({
           :user-id="userId ?? ''"
           :loading="recentTxLoading"
           :hidden="isHidden"
-          class="h-full md:bg-surface-light md:dark:bg-surface-dark md:rounded-3xl md:p-6 md:border md:border-border-light md:dark:border-border-dark md:shadow-sm"
+          class="h-full"
           @transaction-click="emit('transaction-click', $event)"
           @add-click="emit('add-transaction')"
           @view-all="emit('view-all-transactions')"
@@ -67,7 +67,7 @@ const RemindersSection = defineAsyncComponent({
     </section>
 
     <!-- Secondary Grid: Debts & Reminders -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+    <div class="grid grid-cols-1 md:hidden gap-6">
       <section>
         <Suspense>
           <DebtsSection
