@@ -4,7 +4,7 @@ import { UIcon, Skeleton } from '@/shared/ui';
 
 <template>
   <div
-    class="space-y-3 md:bg-surface-light md:dark:bg-surface-dark md:border md:border-border-light md:dark:border-border-dark md:rounded-3xl md:p-6 md:shadow-sm"
+    class="space-y-3"
   >
     <!-- Header -->
     <div class="flex items-center justify-between px-1 md:px-0 md:mb-2">

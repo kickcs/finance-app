@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useRoute, RouterLink } from 'vue-router';
-import { UIcon } from '@/shared/ui';
+import { UIcon, Skeleton } from '@/shared/ui';
 import { haptics } from '@/shared/lib/haptics/haptics';
 import { formatMasked, COMPACT_FORMAT } from '@/shared/lib/format/currency';
 import { ThemeToggle } from '@/features/toggle-theme';
@@ -13,6 +13,7 @@ defineProps<{
   totalBalance?: number;
   currency?: string;
   isHidden?: boolean;
+  loading?: boolean;
 }>();
 
 defineEmits<{
@@ -44,7 +45,16 @@ function handleNavClick(item: (typeof MAIN_NAV_ITEMS)[number]) {
   >
     <!-- User Profile & Theme -->
     <div class="flex items-center justify-between mb-8 px-2">
+      <!-- Loading skeleton -->
+      <div v-if="loading" class="flex items-center gap-3">
+        <Skeleton class="w-10 h-10 rounded-xl shrink-0" />
+        <div class="flex flex-col gap-1.5">
+          <Skeleton class="h-3 w-20 rounded" />
+          <Skeleton class="h-4 w-24 rounded" />
+        </div>
+      </div>
       <RouterLink
+        v-else
         to="/profile"
         class="flex items-center gap-3 group"
         aria-label="Перейти в профиль"
@@ -88,7 +98,9 @@ function handleNavClick(item: (typeof MAIN_NAV_ITEMS)[number]) {
             <UIcon :name="isHidden ? 'visibility_off' : 'visibility'" size="xs" />
           </button>
         </div>
+        <Skeleton v-if="loading" class="h-7 w-32 rounded" />
         <div
+          v-else
           class="font-bold text-2xl text-text-primary-light dark:text-text-primary-dark tracking-tight"
         >
           {{

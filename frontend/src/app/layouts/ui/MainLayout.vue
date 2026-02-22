@@ -6,7 +6,8 @@ import { transitionName } from '@/app/router';
 import { useLayoutData } from '../model/useLayoutData';
 
 const router = useRouter();
-const { userName, greeting, totalBalance, currency, isHidden, toggleHidden } = useLayoutData();
+const { userName, greeting, totalBalance, currency, isHidden, toggleHidden, isLoading } =
+  useLayoutData();
 
 function handleAddTransaction() {
   router.push('/transactions/new');
@@ -30,6 +31,7 @@ function handleAddTransaction() {
       :total-balance="totalBalance"
       :currency="currency"
       :is-hidden="isHidden"
+      :loading="isLoading"
       @toggle-hidden="toggleHidden"
       @add-click="handleAddTransaction"
     />

@@ -45,7 +45,8 @@ function getToAccountName(toAccountId: string | null): string {
       v-if="loading"
       class="rounded-xl border border-border-light dark:border-border-dark overflow-hidden"
     >
-      <TransactionItemSkeleton v-for="i in 3" :key="i" />
+      <TransactionItemSkeleton v-for="i in 5" :key="i" />
+      <TransactionItemSkeleton v-for="i in 5" :key="'d' + i" class="hidden md:block" />
     </div>
 
     <EmptyState

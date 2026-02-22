@@ -21,7 +21,7 @@ export function useDashboardData() {
   const { expenseCategories, allCategories } = useCategories(userId);
   const { transactions: recentTransactions, isLoading: recentTxLoading } = useRecentTransactions(
     userId,
-    5,
+    10,
   );
 
   // Monthly statistics

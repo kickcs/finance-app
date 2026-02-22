@@ -21,7 +21,8 @@ export const transactionQueryKeys = {
   countPrefix: () => [...transactionQueryKeys.all, 'count'] as const,
   countByAccount: (accountId: string) =>
     [...transactionQueryKeys.all, 'count', 'account', accountId] as const,
-  recent: (userId: string) => [...transactionQueryKeys.all, 'recent', userId] as const,
+  recent: (userId: string, limit?: number) =>
+    [...transactionQueryKeys.all, 'recent', userId, ...(limit ? [limit] : [])] as const,
   monthlyStats: (userId: string, year: number, month: number) =>
     [...transactionQueryKeys.all, 'monthly-stats', userId, year, month] as const,
   monthlyStatsPrefix: () => [...transactionQueryKeys.all, 'monthly-stats'] as const,

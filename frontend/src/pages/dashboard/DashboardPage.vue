@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useLocalStorage } from '@/shared/lib/hooks/useLocalStorage';
 import { queryClient } from '@/shared/api/queryClient';
 import { PullToRefresh } from '@/shared/ui';
@@ -59,6 +59,8 @@ const { staggerClass } = useStaggerAnimation();
 const { showModal: showInstallModal } = usePwaInstall();
 const isHidden = useLocalStorage('balance_hidden', false);
 const quickActionsHintDismissed = useLocalStorage('quick_actions_hint_dismissed', false);
+
+const mobileTransactions = computed(() => recentTransactions.value.slice(0, 5));
 
 // Scroll tracking
 const scrollContainerRef = ref<HTMLElement>();
@@ -146,7 +148,7 @@ async function handleRefresh() {
 
             <section :class="staggerClass('delay-300')">
               <DashboardActivityColumn
-                :transactions="recentTransactions"
+                :transactions="mobileTransactions"
                 :debts="debts"
                 :reminders="reminders"
                 :user-id="userId"
@@ -218,7 +220,7 @@ async function handleRefresh() {
             </div>
 
             <!-- Right Column: Quick Actions + Accounts + Debts + Reminders -->
-            <div class="md:col-span-4">
+            <div class="md:col-span-4 self-start md:sticky md:top-0">
               <section :class="staggerClass('delay-200')">
                 <DashboardSidePanel
                   :quick-action-slots="quickActionSlots"

@@ -4,7 +4,7 @@ import { UIcon, Skeleton, SkeletonListItem } from '@/shared/ui';
 
 <template>
   <div
-    class="space-y-2 md:rounded-3xl md:bg-surface-light md:dark:bg-surface-dark md:border md:border-border-light md:dark:border-border-dark md:p-6 md:shadow-sm"
+    class="space-y-2"
   >
     <!-- Header -->
     <div class="flex items-center justify-between mb-2 md:mb-5">

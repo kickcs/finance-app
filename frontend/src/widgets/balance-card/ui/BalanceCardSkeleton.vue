@@ -12,14 +12,14 @@ import { UCard, Skeleton } from '@/shared/ui';
 
     <div class="relative z-10 p-6">
       <!-- Balance Section Skeleton -->
-      <div class="text-center mb-8">
-        <Skeleton class="h-4 w-24 mx-auto rounded mb-3" />
-        <Skeleton class="h-12 w-56 mx-auto rounded-xl mb-3" />
-        <Skeleton class="h-7 w-36 mx-auto rounded-full" />
+      <div class="text-center md:text-left mb-8">
+        <Skeleton class="h-4 w-24 mx-auto md:mx-0 rounded mb-3" />
+        <Skeleton class="h-12 w-56 mx-auto md:mx-0 rounded-xl mb-3" />
+        <Skeleton class="h-7 w-36 mx-auto md:mx-0 rounded-full" />
       </div>
 
-      <!-- Quick Actions Skeleton -->
-      <div class="flex gap-3">
+      <!-- Quick Actions Skeleton (hidden on desktop — sidebar has them) -->
+      <div class="flex gap-3 md:hidden">
         <Skeleton class="flex-1 h-16 rounded-2xl" />
         <Skeleton class="flex-1 h-16 rounded-2xl" />
       </div>

@@ -6,7 +6,7 @@ import { transactionsApi } from './transactionsApi';
 export function useRecentTransactions(userId: MaybeRefOrGetter<string | null>, limit: number = 5) {
   const queryKey = computed(() => {
     const uid = toValue(userId);
-    return uid ? transactionQueryKeys.recent(uid) : transactionQueryKeys.all;
+    return uid ? transactionQueryKeys.recent(uid, limit) : transactionQueryKeys.all;
   });
 
   const { data, isLoading } = useQuery({
