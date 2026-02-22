@@ -3,9 +3,9 @@ import { usePreferredDark, useLocalStorage } from '@vueuse/core';
 
 export type Theme = 'light' | 'dark' | 'system';
 
-// Migrate legacy plain-string value to JSON format for VueUse compatibility
-// Old code: localStorage.setItem('theme', 'dark') → stored as: dark
-// VueUse:   localStorage.setItem('theme', '"dark"') → stored as: "dark"
+// TODO: remove migration after v1.1 — converts legacy plain-string to JSON for VueUse
+// Old: localStorage.setItem('theme', 'dark') → stored as: dark
+// New: useLocalStorage stores as: "dark" (JSON-wrapped)
 const VALID_THEMES: Theme[] = ['light', 'dark', 'system'];
 const raw = localStorage.getItem('theme');
 if (raw && VALID_THEMES.includes(raw as Theme) && !raw.startsWith('"')) {

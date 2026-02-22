@@ -103,7 +103,7 @@ function updateContainerHeight(force = false) {
 // Observe scrollContainer for resize
 useResizeObserver(scrollContainer, () => updateContainerHeight(true));
 
-// Also observe children panels for individual height changes
+// Observe children panels individually — useResizeObserver doesn't support dynamic child lists
 let childObserver: ResizeObserver | null = null;
 
 watch(scrollContainer, (el) => {

@@ -47,11 +47,11 @@ function updateIndicator() {
   };
 }
 
-const pillsEl = computed(() => pillsList.value?.$el as HTMLElement | undefined);
+const pillsEl = computed(() =>
+  props.variant === 'pills' ? (pillsList.value?.$el as HTMLElement | undefined) : undefined,
+);
 
-useResizeObserver(pillsEl, () => {
-  if (props.variant === 'pills') updateIndicator();
-});
+useResizeObserver(pillsEl, updateIndicator);
 
 onMounted(() => {
   if (props.variant !== 'pills') return;
