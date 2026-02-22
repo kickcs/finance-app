@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.18';
+export const CURRENT_VERSION = '1.0.19';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,17 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.19',
+    date: '2026-02-22',
+    title: 'Premium подписка',
+    items: [
+      {
+        type: 'feature',
+        text: 'Добавлена подписка Premium с расширенной аналитикой, экспортом данных и другими возможностями',
+      },
+    ],
+  },
   {
     version: '1.0.18',
     date: '2026-02-22',
