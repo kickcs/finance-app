@@ -6,6 +6,7 @@ export {
   type MonthlyStats,
   type AnalyticsStats,
   type CategoryBreakdown,
+  type Hashtag,
 } from './transactionsApi';
 export { useTransactions } from './useTransactions';
 export { useInfiniteTransactions } from './useInfiniteTransactions';

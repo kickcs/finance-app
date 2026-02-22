@@ -1,11 +1,16 @@
 <script setup lang="ts">
-defineProps<{ version: string }>();
+defineProps<{ version: string; current?: boolean }>();
 </script>
 
 <template>
   <span
-    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gradient-to-r from-primary to-primary/80 text-white"
+    class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-mono font-medium tracking-tight"
+    :class="
+      current
+        ? 'bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-hover'
+        : 'bg-surface-light dark:bg-surface-dark text-text-tertiary-light dark:text-text-tertiary-dark'
+    "
   >
-    v{{ version }}
+    {{ version }}
   </span>
 </template>

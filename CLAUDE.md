@@ -172,7 +172,7 @@ VITE_API_URL=http://localhost:3000
 ## Changelog
 
 Update `frontend/src/features/changelog/model/changelogData.ts`:
-- **Always bump minor version** (e.g. `1.3.0` → `1.4.0`). A PostToolUse hook (`.claude/hooks/check-changelog-version.sh`) blocks non-zero patch
+- **Always bump patch version** (e.g. `1.0.15` → `1.0.16`). Only bump minor/major when the user explicitly requests it
 - Add entry at **top** of `CHANGELOG_ENTRIES` array
 - Descriptions **на русском**, простым языком для пользователей
 - Types: `feature`, `fix`, `improvement`

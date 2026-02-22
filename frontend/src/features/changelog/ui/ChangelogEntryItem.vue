@@ -9,36 +9,44 @@ defineProps<{ entry: ChangelogEntry; showTitle?: boolean }>();
 </script>
 
 <template>
-  <!-- Version badge + date -->
-  <div class="flex items-center gap-3" :class="showTitle ? 'mb-4' : ''">
-    <VersionBadge :version="entry.version" />
-    <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
-      {{ formatLocalDate(entry.date) }}
-    </span>
-  </div>
-
-  <!-- Title (optional) -->
-  <h2
-    v-if="showTitle && entry.title"
-    class="text-base font-semibold text-text-primary-light dark:text-text-primary-dark mb-3"
-  >
-    {{ entry.title }}
-  </h2>
-
-  <!-- Items list -->
-  <ul class="space-y-3">
-    <li v-for="(item, index) in entry.items" :key="index" class="flex items-start gap-3">
-      <div
-        :class="[
-          'w-8 h-8 rounded-lg flex items-center justify-center shrink-0',
-          CHANGELOG_TYPE_CONFIG[item.type].colorClass,
-        ]"
-      >
-        <UIcon :name="CHANGELOG_TYPE_CONFIG[item.type].icon" size="sm" />
-      </div>
-      <span class="text-sm text-text-primary-light dark:text-text-primary-dark pt-1">
-        {{ item.text }}
+  <div>
+    <!-- Header row: version + date -->
+    <div class="flex items-center gap-2.5" :class="showTitle ? 'mb-2.5' : ''">
+      <VersionBadge :version="entry.version" />
+      <span class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark tracking-wide">
+        {{ formatLocalDate(entry.date) }}
       </span>
-    </li>
-  </ul>
+    </div>
+
+    <!-- Title -->
+    <h2
+      v-if="showTitle && entry.title"
+      class="text-[15px] font-semibold text-text-primary-light dark:text-text-primary-dark mb-3 leading-snug"
+    >
+      {{ entry.title }}
+    </h2>
+
+    <!-- Items -->
+    <ul class="space-y-2.5">
+      <li
+        v-for="(item, index) in entry.items"
+        :key="index"
+        class="flex items-start gap-2.5 group"
+      >
+        <div
+          :class="[
+            'w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-110',
+            CHANGELOG_TYPE_CONFIG[item.type].colorClass,
+          ]"
+        >
+          <UIcon :name="CHANGELOG_TYPE_CONFIG[item.type].icon" size="sm" />
+        </div>
+        <span
+          class="text-[13px] leading-relaxed text-text-secondary-light dark:text-text-secondary-dark pt-0.5"
+        >
+          {{ item.text }}
+        </span>
+      </li>
+    </ul>
+  </div>
 </template>

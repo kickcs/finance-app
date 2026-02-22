@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted, nextTick, watch } from 'vue';
+import { computed, ref, onUnmounted, nextTick, watch } from 'vue';
+import { useMountedAnimation } from '@/shared/lib/hooks/useMountedAnimation';
 import { UInput, UButton, UTabs, UIcon } from '@/shared/ui';
 import type { Category } from '@/entities/category';
 import type { AccountWithBalances } from '@/entities/account';
@@ -13,6 +14,7 @@ import {
 } from '../model/useScrollableTabs';
 import { useHashtags } from '@/entities/transaction';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
+import { useHashtagSuggestions } from '../model/useHashtagSuggestions';
 import { Popover, PopoverTrigger, PopoverContent } from '@/shared/ui/primitives/popover';
 import { Calendar } from '@/shared/ui/primitives/calendar';
 import { CalendarDate, type DateValue } from '@internationalized/date';
@@ -147,12 +149,15 @@ const { userId } = useCurrentUser();
 const { hashtags } = useHashtags(userId);
 const descriptionFocused = ref(false);
 
+const { filtered: filteredHashtags, buildInsertedDescription } = useHashtagSuggestions(
+  () => props.formData.description || '',
+  hashtags,
+);
+
 function insertHashtag(tag: string) {
-  const current = props.formData.description || '';
-  const separator = current && !current.endsWith(' ') ? ' ' : '';
   emit('update:formData', {
     ...props.formData,
-    description: current + separator + tag,
+    description: buildInsertedDescription(tag),
   });
 }
 
@@ -183,12 +188,7 @@ function onCalendarSelect(value: DateValue | undefined) {
 }
 
 // Staggered entrance animation control
-const isMounted = ref(false);
-onMounted(() =>
-  requestAnimationFrame(() => {
-    isMounted.value = true;
-  }),
-);
+const { isMounted } = useMountedAnimation();
 </script>
 
 <template>
@@ -273,23 +273,21 @@ onMounted(() =>
       :class="isMounted ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'"
     >
       <!-- Description & Date row -->
-      <div
-        class="grid grid-cols-2 gap-2"
-        @focusin="descriptionFocused = true"
-        @focusout="descriptionFocused = false"
-      >
-        <UInput
-          :model-value="formData.description"
-          label="Комментарий"
-          :placeholder="descriptionPlaceholder"
-          @update:model-value="
-            $emit('update:formData', {
-              ...formData,
-              description: $event as string,
-            })
-          "
-          @keydown.enter.prevent
-        />
+      <div class="grid grid-cols-2 gap-2">
+        <div @focusin="descriptionFocused = true" @focusout="descriptionFocused = false">
+          <UInput
+            :model-value="formData.description"
+            label="Комментарий"
+            :placeholder="descriptionPlaceholder"
+            @update:model-value="
+              $emit('update:formData', {
+                ...formData,
+                description: $event as string,
+              })
+            "
+            @keydown.enter.prevent
+          />
+        </div>
 
         <div class="flex flex-col gap-1.5 w-full">
           <label
@@ -331,11 +329,11 @@ onMounted(() =>
       <!-- Hashtag suggestions (full width, outside grid) with staggered chips -->
       <Transition name="hashtags-container">
         <div
-          v-if="descriptionFocused && hashtags.length > 0"
+          v-if="descriptionFocused && filteredHashtags.length > 0"
           class="flex gap-1.5 overflow-x-auto no-scrollbar py-1"
         >
           <button
-            v-for="(h, i) in hashtags"
+            v-for="(h, i) in filteredHashtags"
             :key="h.tag"
             type="button"
             class="hashtag-chip shrink-0 px-3 py-1.5 rounded-full text-xs font-medium bg-surface-light dark:bg-surface-dark text-text-secondary-light dark:text-text-secondary-dark border border-border-light dark:border-border-dark hover:bg-primary-light hover:text-primary hover:border-primary/30 active:scale-95 transition-all duration-200"

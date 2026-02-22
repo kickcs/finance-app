@@ -101,10 +101,8 @@ function transformTransaction(tx: TransactionResponse): Transaction {
   };
 }
 
-export interface Hashtag {
-  tag: string;
-  count: number;
-}
+import type { Hashtag } from '../model/types';
+export type { Hashtag };
 
 export const transactionsApi = {
   async getAll(_userId: string, limit?: number): Promise<Transaction[]> {

@@ -9,3 +9,8 @@ export interface TransactionGroup {
   transactions: Transaction[];
   total: number;
 }
+
+export interface Hashtag {
+  tag: string;
+  count: number;
+}

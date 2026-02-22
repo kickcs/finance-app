@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.6.1';
+export const CURRENT_VERSION = '1.0.18';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -28,7 +28,22 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
-    version: '1.6.1',
+    version: '1.0.18',
+    date: '2026-02-22',
+    title: 'Поиск хэштегов',
+    items: [
+      {
+        type: 'feature',
+        text: 'Подсказки хэштегов теперь фильтруются по вводу — начните набирать и увидите подходящие варианты.',
+      },
+      {
+        type: 'fix',
+        text: 'Подсказки хэштегов больше не появляются при нажатии на выбор даты.',
+      },
+    ],
+  },
+  {
+    version: '1.0.17',
     date: '2026-02-22',
     title: 'Десктоп-версия и боковое меню',
     items: [
@@ -51,7 +66,7 @@ export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
     ],
   },
   {
-    version: '1.6.0',
+    version: '1.0.16',
     date: '2026-02-22',
     title: 'Мгновенная загрузка и нативный запуск',
     items: [
@@ -70,7 +85,7 @@ export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
     ],
   },
   {
-    version: '1.5.1',
+    version: '1.0.15',
     date: '2026-02-20',
     title: 'Улучшения и исправления',
     items: [
@@ -81,7 +96,7 @@ export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
     ],
   },
   {
-    version: '1.5.0',
+    version: '1.0.14',
     date: '2026-02-20',
     title: 'Обновлённый дизайн и улучшенная аналитика',
     items: [
@@ -128,7 +143,7 @@ export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
     ],
   },
   {
-    version: '1.4.0',
+    version: '1.0.13',
     date: '2026-02-20',
     title: 'Новый экран добавления транзакции',
     items: [
@@ -151,7 +166,7 @@ export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
     ],
   },
   {
-    version: '1.3.2',
+    version: '1.0.12',
     date: '2026-02-19',
     title: 'Подсказки хэштегов',
     items: [
@@ -162,7 +177,7 @@ export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
     ],
   },
   {
-    version: '1.3.1',
+    version: '1.0.11',
     date: '2026-02-18',
     title: 'Баланс после транзакции',
     items: [
@@ -173,7 +188,7 @@ export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
     ],
   },
   {
-    version: '1.3.0',
+    version: '1.0.10',
     date: '2026-02-17',
     title: 'Обновлённая главная страница',
     items: [
@@ -192,7 +207,7 @@ export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
     ],
   },
   {
-    version: '1.2.2',
+    version: '1.0.9',
     date: '2026-02-17',
     title: 'Автообновление приложения',
     items: [
@@ -207,7 +222,7 @@ export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
     ],
   },
   {
-    version: '1.2.1',
+    version: '1.0.8',
     date: '2026-02-16',
     title: 'Исправление статистики',
     items: [
@@ -218,7 +233,7 @@ export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
     ],
   },
   {
-    version: '1.2.0',
+    version: '1.0.7',
     date: '2026-02-16',
     title: 'Импорт данных',
     items: [
@@ -229,7 +244,7 @@ export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
     ],
   },
   {
-    version: '1.1.1',
+    version: '1.0.6',
     date: '2026-02-15',
     title: 'Приветственный экран',
     items: [
@@ -240,18 +255,45 @@ export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
     ],
   },
   {
-    version: '1.1.0',
+    version: '1.0.5',
     date: '2026-02-15',
-    title: 'Долги, напоминания и аналитика',
+    title: 'Поиск и исправления',
     items: [
-      {
-        type: 'feature',
-        text: 'Учёт долгов — кто кому должен, частичные выплаты',
-      },
-      { type: 'feature', text: 'Напоминания о платежах с гибким расписанием' },
-      { type: 'feature', text: 'Расширенная аналитика расходов и доходов' },
       { type: 'improvement', text: 'Поиск по истории транзакций' },
       { type: 'fix', text: 'Исправлена работа pull-to-refresh на iOS' },
+    ],
+  },
+  {
+    version: '1.0.4',
+    date: '2026-02-14',
+    title: 'Аналитика расходов',
+    items: [
+      { type: 'feature', text: 'Расширенная аналитика расходов и доходов с графиками по категориям' },
+    ],
+  },
+  {
+    version: '1.0.3',
+    date: '2026-02-12',
+    title: 'Напоминания о платежах',
+    items: [
+      { type: 'feature', text: 'Напоминания о платежах с гибким расписанием' },
+    ],
+  },
+  {
+    version: '1.0.2',
+    date: '2026-02-10',
+    title: 'Учёт долгов',
+    items: [
+      { type: 'feature', text: 'Учёт долгов — кто кому должен, частичные выплаты' },
+    ],
+  },
+  {
+    version: '1.0.1',
+    date: '2026-02-05',
+    title: 'Переводы между счетами',
+    items: [
+      { type: 'feature', text: 'Переводы между счетами с автоконвертацией валюты' },
+      { type: 'fix', text: 'Исправлено отображение баланса при нескольких валютах' },
     ],
   },
   {

@@ -71,7 +71,7 @@ function handleOpenChange(open: boolean) {
           <div v-else />
           <DialogClose
             v-if="closeable"
-            class="rounded-lg p-1.5 text-text-secondary-light dark:text-text-secondary-dark hover:bg-surface-light dark:hover:bg-surface-dark transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary active:opacity-80"
+            class="w-8 h-8 rounded-lg flex items-center justify-center text-text-secondary-light dark:text-text-secondary-dark hover:bg-surface-light dark:hover:bg-surface-dark transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary active:opacity-80"
           >
             <UIcon name="close" size="sm" />
             <span class="sr-only">Close</span>
