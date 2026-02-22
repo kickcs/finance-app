@@ -9,8 +9,14 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, { rawBody: true });
 
   // Increase JSON body size limit for bulk import (preserve rawBody for webhook signature verification)
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-  app.use(express.json({ limit: '5mb', verify: (req: any, _res, buf) => { req.rawBody = buf; } }));
+  app.use(
+    express.json({
+      limit: '5mb',
+      verify: (req: express.Request, _res, buf) => {
+        (req as express.Request & { rawBody: Buffer }).rawBody = buf;
+      },
+    }),
+  );
 
   // Enable cookie parsing
   app.use(cookieParser());
