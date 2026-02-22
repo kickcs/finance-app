@@ -1,20 +1,36 @@
-import { ref } from 'vue';
-import { useSubscription } from '@/entities/subscription';
-import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
+import { ref, type Ref, type ComputedRef } from 'vue';
+import type { SubscriptionStatus } from '@/entities/subscription';
 
 const showUpgradeModal = ref(false);
 const upgradeFeatureName = ref('');
 
+// Singleton refs set by the component that calls init()
+let isPremiumRef: ComputedRef<boolean> | null = null;
+let subscriptionRef: Ref<SubscriptionStatus> | ComputedRef<SubscriptionStatus> | null = null;
+
+/**
+ * Must be called inside setup() context (e.g. in App.vue) to initialize
+ * the subscription-aware refs. Other callers get only modal controls.
+ */
 export function usePremiumFeature() {
-  const { userId } = useCurrentUser();
-  const { isPremium, subscription } = useSubscription(userId);
+  function init(deps: { isPremium: ComputedRef<boolean>; subscription: Ref<SubscriptionStatus> | ComputedRef<SubscriptionStatus> }) {
+    isPremiumRef = deps.isPremium;
+    subscriptionRef = deps.subscription;
+  }
 
   function requirePremium(featureName: string): boolean {
-    if (isPremium.value) return true;
+    if (isPremiumRef?.value) return true;
     upgradeFeatureName.value = featureName;
     showUpgradeModal.value = true;
     return false;
   }
 
-  return { isPremium, subscription, showUpgradeModal, upgradeFeatureName, requirePremium };
+  return {
+    showUpgradeModal,
+    upgradeFeatureName,
+    requirePremium,
+    init,
+    get isPremium() { return isPremiumRef?.value ?? false; },
+    get subscription() { return subscriptionRef?.value ?? null; },
+  };
 }

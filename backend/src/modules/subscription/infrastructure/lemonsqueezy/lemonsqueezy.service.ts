@@ -14,11 +14,8 @@ export class LemonSqueezyService {
   private readonly yearlyVariantId: string;
 
   constructor(private readonly configService: ConfigService) {
-    const apiKey =
-      this.configService.getOrThrow<string>('LEMONSQUEEZY_API_KEY');
-    this.storeId = this.configService.getOrThrow<string>(
-      'LEMONSQUEEZY_STORE_ID',
-    );
+    const apiKey = this.configService.getOrThrow<string>('LEMONSQUEEZY_API_KEY');
+    this.storeId = this.configService.getOrThrow<string>('LEMONSQUEEZY_STORE_ID');
     this.monthlyVariantId = this.configService.getOrThrow<string>(
       'LEMONSQUEEZY_PREMIUM_MONTHLY_VARIANT_ID',
     );
@@ -30,19 +27,15 @@ export class LemonSqueezyService {
 
   async createCheckoutUrl(params: {
     userId: string;
-    userEmail: string;
-    userName: string;
+    userEmail?: string;
     plan: 'premium_monthly' | 'premium_yearly';
   }): Promise<string> {
     const variantId =
-      params.plan === 'premium_monthly'
-        ? this.monthlyVariantId
-        : this.yearlyVariantId;
+      params.plan === 'premium_monthly' ? this.monthlyVariantId : this.yearlyVariantId;
 
     const { data, error } = await createCheckout(this.storeId, variantId, {
       checkoutData: {
-        email: params.userEmail,
-        name: params.userName,
+        ...(params.userEmail ? { email: params.userEmail } : {}),
         custom: { user_id: params.userId },
       },
       productOptions: {

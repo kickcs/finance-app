@@ -1,7 +1,7 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
 import {
   GetSubscriptionStatusHandler,
-  SubscriptionStatusResponse,
+  type SubscriptionStatusResponse,
 } from './get-subscription-status.handler';
 import { GetSubscriptionStatusQuery } from './get-subscription-status.query';
 import { USER_SUBSCRIPTION_REPOSITORY } from '../../../domain/repositories';
@@ -28,9 +28,7 @@ describe('GetSubscriptionStatusHandler', () => {
       ],
     }).compile();
 
-    handler = module.get<GetSubscriptionStatusHandler>(
-      GetSubscriptionStatusHandler,
-    );
+    handler = module.get<GetSubscriptionStatusHandler>(GetSubscriptionStatusHandler);
 
     jest.clearAllMocks();
   });
@@ -75,9 +73,7 @@ describe('GetSubscriptionStatusHandler', () => {
 
     mockRepository.findByUserId.mockResolvedValue(subscription);
 
-    const result = await handler.execute(
-      new GetSubscriptionStatusQuery('user-1'),
-    );
+    const result = await handler.execute(new GetSubscriptionStatusQuery('user-1'));
 
     expect(result).toEqual({
       plan: 'premium_monthly',
@@ -112,9 +108,7 @@ describe('GetSubscriptionStatusHandler', () => {
 
     mockRepository.findByUserId.mockResolvedValue(subscription);
 
-    const result = await handler.execute(
-      new GetSubscriptionStatusQuery('user-2'),
-    );
+    const result = await handler.execute(new GetSubscriptionStatusQuery('user-2'));
 
     expect(result).toEqual({
       plan: 'premium_yearly',

@@ -23,9 +23,7 @@ export class UserSubscriptionRepository implements IUserSubscriptionRepository {
     return orm ? UserSubscriptionMapper.toDomain(orm) : null;
   }
 
-  async findByLemonSubscriptionId(
-    lemonSubscriptionId: string,
-  ): Promise<UserSubscription | null> {
+  async findByLemonSubscriptionId(lemonSubscriptionId: string): Promise<UserSubscription | null> {
     const orm = await this.ormRepository.findOne({
       where: { lemonSubscriptionId },
     });

@@ -44,7 +44,7 @@ GitHub Actions (`deploy.yml`): validate-backend (lint + test with PostgreSQL) + 
 ### Backend (NestJS + DDD + CQRS)
 
 - **Tech**: NestJS 11, TypeORM, PostgreSQL, JWT + Passport, @nestjs/cqrs
-- **Bounded Contexts** (`backend/src/modules/`): `identity` (auth, profiles), `accounting` (accounts, transactions, categories), `debt`, `planning` (goals, reminders), `exchange` (currency conversion)
+- **Bounded Contexts** (`backend/src/modules/`): `identity` (auth, profiles), `accounting` (accounts, transactions, categories), `debt`, `planning` (goals, reminders), `exchange` (currency conversion), `subscription` (premium plans, LemonSqueezy payments)
 
 **Module Structure**: `domain/` → `application/` (commands + queries) → `infrastructure/` (TypeORM, mappers) → `presentation/` (controllers, DTOs)
 
@@ -75,6 +75,29 @@ GitHub Actions (`deploy.yml`): validate-backend (lint + test with PostgreSQL) + 
 
 **Cursor Pagination**: `{ date, createdAt }` cursor format (camelCase from backend)
 
+### Subscription & Monetization
+
+**Model**: Soft Paywall — all current features free, new premium features behind subscription. LemonSqueezy as Merchant of Record (handles taxes/VAT globally).
+
+**Backend** (`modules/subscription/`):
+- `GET /api/subscription/status` (JWT) — returns plan, status, isPremium, trialEnd, currentPeriodEnd, cancelAtPeriodEnd
+- `POST /api/subscription/checkout` (JWT) — body `{ plan: 'premium_monthly' | 'premium_yearly' }`, returns `{ checkoutUrl }`
+- `POST /api/subscription/webhooks/lemonsqueezy` (`@Public()`, HMAC) — handles subscription lifecycle events
+- `PremiumGuard` — use `@UseGuards(PremiumGuard)` on endpoints that require premium subscription
+
+**Frontend**:
+- `useSubscription(userId)` — Vue Query composable: `subscription`, `isPremium`, `refreshSubscription`
+- `usePremiumFeature()` — singleton composable initialized in `App.vue` via `init()`. Use `requirePremium('Feature Name')` to gate features — returns `true` if premium, otherwise opens upgrade modal
+- `PremiumBadge` — `<PremiumBadge />` component to mark locked features
+- `PremiumUpgradeModal` — global modal wired in `App.vue`, shows plans and opens LemonSqueezy checkout overlay
+- `SubscriptionSection` — profile page section, emits `@upgrade` event (handled by parent page)
+- Constants: `PLAN_LABELS`, `PLAN_PRICES`, `PREMIUM_FEATURES` in `entities/subscription/model/constants.ts`
+
+**Adding a premium-gated feature**:
+1. Backend: `@UseGuards(PremiumGuard)` on the endpoint
+2. Frontend: `const { requirePremium } = usePremiumFeature()` then `if (!requirePremium('Feature Name')) return;`
+3. Optionally add `<PremiumBadge />` next to the feature in UI
+
 ### Frontend UI Components (`shared/ui/`)
 
 Custom component library wrapping Reka UI headless primitives (CVA-based variants). All exported from `shared/ui/index.ts`. Read component source for props — see `frontend/DESIGN_SYSTEM.md` for full docs.
@@ -104,6 +127,7 @@ Custom component library wrapping Reka UI headless primitives (CVA-based variant
 **Composables** (`shared/lib/composables/`):
 - `useToast()` — custom reactive toast store with haptics (re-exported via `shared/ui`)
 - `usePwaUpdate()` — auto-detects SW updates, shows persistent toast with "Обновить" action
+- `usePremiumFeature()` — singleton for soft paywall: `requirePremium(name)`, `isPremium`, `showUpgradeModal`. Must call `init()` in `App.vue`
 
 **API composables** (`shared/api/composables/`):
 - `useAuth()` — singleton: signUp, signIn, signInAnonymously, signOut, refreshUser
@@ -128,10 +152,11 @@ All accept `userId: MaybeRefOrGetter<string|null>`, auto-disable when falsy, inc
 - `useReminders` — CRUD, active/upcoming/overdue filters
 - `useCategories` — expense/income categories, reorder
 - `useHashtags` — transaction hashtag suggestions
+- `useSubscription(userId)` — subscription status, isPremium, refreshSubscription
 
 ### Frontend Entities
 
-`account`, `account-balance` (multi-currency balances), `category`, `currency`, `debt`, `goal`, `reminder`, `transaction`
+`account`, `account-balance` (multi-currency balances), `category`, `currency`, `debt`, `goal`, `reminder`, `subscription`, `transaction`
 
 **Key constants**: `EXPENSE_CATEGORIES` (12), `INCOME_CATEGORIES` (6), `DEBT_CATEGORIES` (4), `TRANSFER_CATEGORY` in `entities/category/model/constants.ts`. `CURRENCIES` (USD, EUR, RUB, UZS, GBP, CNY). `VISIBLE_ACCOUNT_TYPES` (basic, savings, credit_card). `ENTITY_COLORS` in `shared/config/colors.ts`.
 
@@ -143,7 +168,7 @@ All accept `userId: MaybeRefOrGetter<string|null>`, auto-disable when falsy, inc
 
 ### Frontend Features (`features/`)
 
-`add-transaction` (HeroAmount, TransactionForm, panels), `analytics-filters` (FilterChips, DateRangePicker, ModeToggle), `changelog`, `close-debt`, `configure-quick-action`, `create-account`, `create-debt`, `create-reminder`, `demo-mode`, `edit-account`, `edit-profile`, `edit-reminder`, `edit-transaction`, `import-data`, `install-pwa`, `manage-categories`, `partial-payment`, `search-transactions` (SearchInput), `select-currency` (CurrencyItem), `split-expense`, `toggle-theme` (ThemeToggle)
+`add-transaction` (HeroAmount, TransactionForm, panels), `analytics-filters` (FilterChips, DateRangePicker, ModeToggle), `changelog`, `close-debt`, `configure-quick-action`, `create-account`, `create-debt`, `create-reminder`, `demo-mode`, `edit-account`, `edit-profile`, `edit-reminder`, `edit-transaction`, `import-data`, `install-pwa`, `manage-categories`, `manage-subscription` (SubscriptionSection), `partial-payment`, `search-transactions` (SearchInput), `select-currency` (CurrencyItem), `split-expense`, `toggle-theme` (ThemeToggle), `upgrade-to-premium` (PremiumBadge, PremiumUpgradeModal, useUpgrade)
 
 ### Page Layout Pattern
 
@@ -155,6 +180,8 @@ Standard pages: `min-h-screen bg-background-light dark:bg-background-dark pb-28`
 # Backend (.env) — copy from backend/.env.example
 DATABASE_HOST, DATABASE_PORT, DATABASE_NAME, DATABASE_USERNAME, DATABASE_PASSWORD
 JWT_SECRET, JWT_EXPIRES_IN, PORT
+LEMONSQUEEZY_API_KEY, LEMONSQUEEZY_WEBHOOK_SECRET, LEMONSQUEEZY_STORE_ID
+LEMONSQUEEZY_PREMIUM_MONTHLY_VARIANT_ID, LEMONSQUEEZY_PREMIUM_YEARLY_VARIANT_ID
 
 # Frontend (.env)
 VITE_API_URL=http://localhost:3000
@@ -191,3 +218,5 @@ Update `frontend/src/features/changelog/model/changelogData.ts`:
 - **Design tokens**: Always use semantic tokens (`bg-surface-light dark:bg-surface-dark`) not raw Tailwind colors. See `frontend/DESIGN_SYSTEM.md` § Anti-Patterns
 - **Multi-currency**: Account balances stored in separate `account_balances` table
 - **VueUse first**: For localStorage, event listeners, media queries, resize observers, timers — use `@vueuse/core` composables instead of manual implementations. Check https://vueuse.org before writing custom hooks
+- **Premium features**: Gate with `@UseGuards(PremiumGuard)` on backend + `requirePremium()` on frontend. Webhook endpoint must be `@Public()` with raw body parsing (`rawBody: true` in `main.ts`)
+- **LemonSqueezy SDK**: Loaded via `<script>` in `index.html`. Window type declared in `vite-env.d.ts`. Use `window.LemonSqueezy?.Url.Open(url)` with fallback to `window.open`

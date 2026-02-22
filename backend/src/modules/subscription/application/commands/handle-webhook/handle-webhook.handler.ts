@@ -13,9 +13,7 @@ import {
 } from '../../../infrastructure/lemonsqueezy';
 
 @CommandHandler(HandleWebhookCommand)
-export class HandleWebhookHandler
-  implements ICommandHandler<HandleWebhookCommand>
-{
+export class HandleWebhookHandler implements ICommandHandler<HandleWebhookCommand> {
   private readonly logger = new Logger(HandleWebhookHandler.name);
   private readonly monthlyVariantId: string;
   private readonly yearlyVariantId: string;
@@ -35,10 +33,7 @@ export class HandleWebhookHandler
   }
 
   async execute(command: HandleWebhookCommand): Promise<void> {
-    const isValid = this.webhookService.verifySignature(
-      command.rawBody,
-      command.signature,
-    );
+    const isValid = this.webhookService.verifySignature(command.rawBody, command.signature);
 
     if (!isValid) {
       throw new UnauthorizedException('Invalid webhook signature');
@@ -68,9 +63,7 @@ export class HandleWebhookHandler
     }
   }
 
-  private async handleSubscriptionCreatedOrUpdated(
-    event: LemonSqueezyWebhookEvent,
-  ): Promise<void> {
+  private async handleSubscriptionCreatedOrUpdated(event: LemonSqueezyWebhookEvent): Promise<void> {
     const userId = event.meta.custom_data?.user_id;
     if (!userId) {
       this.logger.warn('Webhook event missing user_id in custom_data');
@@ -87,26 +80,25 @@ export class HandleWebhookHandler
     const plan = this.variantToPlan(String(attrs.variant_id));
     const status = this.mapLemonStatus(attrs.status);
 
+    const periodEnd = new Date(attrs.renews_at || attrs.ends_at || attrs.created_at);
+    const periodStart = new Date(attrs.updated_at);
+
     subscription.activate({
       plan,
       lemonCustomerId: String(attrs.customer_id),
       lemonSubscriptionId: event.data.id,
       variantId: String(attrs.variant_id),
-      currentPeriodStart: new Date(attrs.created_at),
-      currentPeriodEnd: new Date(attrs.renews_at || attrs.ends_at || attrs.created_at),
+      currentPeriodStart: periodStart,
+      currentPeriodEnd: periodEnd,
       trialStart: attrs.trial_ends_at ? new Date(attrs.created_at) : undefined,
-      trialEnd: attrs.trial_ends_at
-        ? new Date(attrs.trial_ends_at)
-        : undefined,
+      trialEnd: attrs.trial_ends_at ? new Date(attrs.trial_ends_at) : undefined,
       status,
     });
 
     await this.subscriptionRepository.save(subscription);
   }
 
-  private async handleSubscriptionCancelled(
-    event: LemonSqueezyWebhookEvent,
-  ): Promise<void> {
+  private async handleSubscriptionCancelled(event: LemonSqueezyWebhookEvent): Promise<void> {
     const subscription = await this.findSubscriptionByEvent(event);
     if (!subscription) return;
 
@@ -114,9 +106,7 @@ export class HandleWebhookHandler
     await this.subscriptionRepository.save(subscription);
   }
 
-  private async handleSubscriptionExpired(
-    event: LemonSqueezyWebhookEvent,
-  ): Promise<void> {
+  private async handleSubscriptionExpired(event: LemonSqueezyWebhookEvent): Promise<void> {
     const subscription = await this.findSubscriptionByEvent(event);
     if (!subscription) return;
 
@@ -124,9 +114,7 @@ export class HandleWebhookHandler
     await this.subscriptionRepository.save(subscription);
   }
 
-  private async handlePaymentFailed(
-    event: LemonSqueezyWebhookEvent,
-  ): Promise<void> {
+  private async handlePaymentFailed(event: LemonSqueezyWebhookEvent): Promise<void> {
     const subscription = await this.findSubscriptionByEvent(event);
     if (!subscription) return;
 
@@ -144,9 +132,7 @@ export class HandleWebhookHandler
       if (sub) return sub;
     }
 
-    const sub = await this.subscriptionRepository.findByLemonSubscriptionId(
-      event.data.id,
-    );
+    const sub = await this.subscriptionRepository.findByLemonSubscriptionId(event.data.id);
 
     if (!sub) {
       this.logger.warn(
@@ -160,7 +146,8 @@ export class HandleWebhookHandler
   private variantToPlan(variantId: string): string {
     if (variantId === this.monthlyVariantId) return 'premium_monthly';
     if (variantId === this.yearlyVariantId) return 'premium_yearly';
-    return 'premium_monthly'; // fallback
+    this.logger.warn(`Unknown variant ID: ${variantId}, defaulting to premium_monthly`);
+    return 'premium_monthly';
   }
 
   private mapLemonStatus(status: string): string {

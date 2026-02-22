@@ -22,11 +22,7 @@ import { SubscriptionController } from './presentation/controllers';
 import { PremiumGuard } from './guards';
 
 @Module({
-  imports: [
-    CqrsModule,
-    ConfigModule,
-    TypeOrmModule.forFeature([UserSubscriptionOrmEntity]),
-  ],
+  imports: [CqrsModule, ConfigModule, TypeOrmModule.forFeature([UserSubscriptionOrmEntity])],
   controllers: [SubscriptionController],
   providers: [
     // Repository

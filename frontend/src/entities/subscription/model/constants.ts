@@ -1,10 +1,12 @@
-export const PLAN_LABELS: Record<string, string> = {
+import type { SubscriptionPlan } from './types';
+
+export const PLAN_LABELS: Record<SubscriptionPlan, string> = {
   free: 'Бесплатный',
   premium_monthly: 'Premium (месяц)',
   premium_yearly: 'Premium (год)',
 };
 
-export const PLAN_PRICES: Record<string, string> = {
+export const PLAN_PRICES: Record<'premium_monthly' | 'premium_yearly', string> = {
   premium_monthly: '$2.99/мес',
   premium_yearly: '$16.99/год',
 };

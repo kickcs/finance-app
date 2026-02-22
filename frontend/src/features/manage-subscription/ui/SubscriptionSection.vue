@@ -2,14 +2,13 @@
 import { computed, ref } from 'vue';
 import { UCard, UButton, UBadge, UIcon } from '@/shared/ui';
 import { useSubscription, PLAN_LABELS } from '@/entities/subscription';
-import { PremiumUpgradeModal } from '@/features/upgrade-to-premium';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { formatDate } from '@/shared/lib/format/date';
 
+const emit = defineEmits<{ upgrade: [] }>();
+
 const { userId } = useCurrentUser();
 const { subscription, isPremium } = useSubscription(userId);
-
-const showUpgrade = ref(false);
 
 const statusBadgeVariant = computed(() => isPremium.value ? 'success' : 'neutral');
 
@@ -42,11 +41,9 @@ const statusLabel = computed(() => {
         {{ formatDate(subscription.current_period_end) }}
       </p>
 
-      <UButton v-if="!isPremium" variant="primary" full-width @click="showUpgrade = true">
+      <UButton v-if="!isPremium" variant="primary" full-width @click="emit('upgrade')">
         Перейти на Premium
       </UButton>
     </UCard>
-
-    <PremiumUpgradeModal v-model="showUpgrade" />
   </div>
 </template>

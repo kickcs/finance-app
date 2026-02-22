@@ -16,20 +16,14 @@ export interface SubscriptionStatusResponse {
 }
 
 @QueryHandler(GetSubscriptionStatusQuery)
-export class GetSubscriptionStatusHandler
-  implements IQueryHandler<GetSubscriptionStatusQuery>
-{
+export class GetSubscriptionStatusHandler implements IQueryHandler<GetSubscriptionStatusQuery> {
   constructor(
     @Inject(USER_SUBSCRIPTION_REPOSITORY)
     private readonly subscriptionRepository: IUserSubscriptionRepository,
   ) {}
 
-  async execute(
-    query: GetSubscriptionStatusQuery,
-  ): Promise<SubscriptionStatusResponse> {
-    const subscription = await this.subscriptionRepository.findByUserId(
-      query.userId,
-    );
+  async execute(query: GetSubscriptionStatusQuery): Promise<SubscriptionStatusResponse> {
+    const subscription = await this.subscriptionRepository.findByUserId(query.userId);
 
     if (!subscription) {
       return {

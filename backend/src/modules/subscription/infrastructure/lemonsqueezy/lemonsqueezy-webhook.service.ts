@@ -34,8 +34,10 @@ export class LemonSqueezyWebhookService {
 
   verifySignature(rawBody: Buffer, signature: string): boolean {
     const hmac = crypto.createHmac('sha256', this.webhookSecret);
-    const digest = hmac.update(rawBody).digest('hex');
-    return crypto.timingSafeEqual(Buffer.from(digest), Buffer.from(signature));
+    const digestBuffer = Buffer.from(hmac.update(rawBody).digest('hex'));
+    const signatureBuffer = Buffer.from(signature);
+    if (digestBuffer.length !== signatureBuffer.length) return false;
+    return crypto.timingSafeEqual(digestBuffer, signatureBuffer);
   }
 
   parseEvent(rawBody: Buffer): LemonSqueezyWebhookEvent {

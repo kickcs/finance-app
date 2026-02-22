@@ -17,11 +17,20 @@ export class SubscriptionStatus extends ValueObject<SubscriptionStatusProps> {
     super(props);
   }
 
+  private static readonly INSTANCES: Record<string, SubscriptionStatus> = {
+    active: SubscriptionStatus.ACTIVE,
+    trialing: SubscriptionStatus.TRIALING,
+    canceled: SubscriptionStatus.CANCELED,
+    past_due: SubscriptionStatus.PAST_DUE,
+    expired: SubscriptionStatus.EXPIRED,
+  };
+
   static create(value: string): SubscriptionStatus {
-    if (!['active', 'trialing', 'canceled', 'past_due', 'expired'].includes(value)) {
+    const instance = SubscriptionStatus.INSTANCES[value];
+    if (!instance) {
       throw new Error(`Invalid subscription status: ${value}`);
     }
-    return new SubscriptionStatus({ value: value as SubscriptionStatusValue });
+    return instance;
   }
 
   get value(): SubscriptionStatusValue {

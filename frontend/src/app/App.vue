@@ -11,6 +11,7 @@ import { useChangelog, ChangelogModal } from '@/features/changelog';
 import { NavigationProgress } from '@/shared/ui/navigation-progress';
 import { usePwaUpdate } from '@/shared/lib/composables/usePwaUpdate';
 import { usePremiumFeature } from '@/shared/lib/composables/usePremiumFeature';
+import { useSubscription } from '@/entities/subscription';
 import { PremiumUpgradeModal } from '@/features/upgrade-to-premium';
 
 // Initialize theme synchronously on script setup (before mount)
@@ -20,9 +21,6 @@ initTheme();
 // Initialize PWA updates watcher
 usePwaUpdate();
 
-// Premium upgrade modal (global singleton)
-const { showUpgradeModal, upgradeFeatureName } = usePremiumFeature();
-
 // Auth state
 const { user, isLoading: _authLoading, isAuthenticated } = useAuth();
 const isAppReady = ref(false);
@@ -30,6 +28,11 @@ const isAppReady = ref(false);
 // Categories - get getCategoryById for global use
 const userId = computed(() => user.value?.id ?? null);
 const { getCategoryById } = useCategories(userId);
+
+// Premium subscription (global singleton)
+const { isPremium, subscription } = useSubscription(userId);
+const { showUpgradeModal, upgradeFeatureName, init: initPremium } = usePremiumFeature();
+initPremium({ isPremium, subscription });
 
 // Get user profile for demo mode
 const { profile } = useProfile(userId);

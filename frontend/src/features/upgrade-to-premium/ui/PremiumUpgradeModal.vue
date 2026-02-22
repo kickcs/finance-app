@@ -11,9 +11,11 @@ const emit = defineEmits<{ 'update:modelValue': [value: boolean] }>();
 
 const { isLoading, startCheckout } = useUpgrade();
 
-function handlePurchase(plan: 'premium_monthly' | 'premium_yearly') {
-  startCheckout(plan);
-  emit('update:modelValue', false);
+async function handlePurchase(plan: 'premium_monthly' | 'premium_yearly') {
+  const success = await startCheckout(plan);
+  if (success) {
+    emit('update:modelValue', false);
+  }
 }
 </script>
 

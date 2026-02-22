@@ -151,9 +151,7 @@ export class UserSubscription extends AggregateRoot<string> {
     status?: string;
   }): void {
     this._plan = SubscriptionPlan.create(data.plan);
-    this._status = data.status
-      ? SubscriptionStatus.create(data.status)
-      : SubscriptionStatus.ACTIVE;
+    this._status = data.status ? SubscriptionStatus.create(data.status) : SubscriptionStatus.ACTIVE;
     this._lemonCustomerId = data.lemonCustomerId;
     this._lemonSubscriptionId = data.lemonSubscriptionId;
     this._variantId = data.variantId ?? this._variantId;

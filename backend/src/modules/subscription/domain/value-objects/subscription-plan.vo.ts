@@ -15,11 +15,18 @@ export class SubscriptionPlan extends ValueObject<SubscriptionPlanProps> {
     super(props);
   }
 
+  private static readonly INSTANCES: Record<string, SubscriptionPlan> = {
+    free: SubscriptionPlan.FREE,
+    premium_monthly: SubscriptionPlan.PREMIUM_MONTHLY,
+    premium_yearly: SubscriptionPlan.PREMIUM_YEARLY,
+  };
+
   static create(value: string): SubscriptionPlan {
-    if (!['free', 'premium_monthly', 'premium_yearly'].includes(value)) {
+    const instance = SubscriptionPlan.INSTANCES[value];
+    if (!instance) {
       throw new Error(`Invalid subscription plan: ${value}`);
     }
-    return new SubscriptionPlan({ value: value as SubscriptionPlanValue });
+    return instance;
   }
 
   get value(): SubscriptionPlanValue {

@@ -1,4 +1,4 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
 import { CreateCheckoutHandler } from './create-checkout.handler';
 import { CreateCheckoutCommand } from './create-checkout.command';
 import { USER_SUBSCRIPTION_REPOSITORY } from '../../../domain/repositories';
@@ -44,12 +44,7 @@ describe('CreateCheckoutHandler', () => {
       'https://checkout.lemonsqueezy.com/test',
     );
 
-    const command = new CreateCheckoutCommand(
-      'user-1',
-      'user@test.com',
-      'Test User',
-      'premium_monthly',
-    );
+    const command = new CreateCheckoutCommand('user-1', 'user@test.com', 'premium_monthly');
 
     const result = await handler.execute(command);
 
@@ -57,33 +52,22 @@ describe('CreateCheckoutHandler', () => {
       checkoutUrl: 'https://checkout.lemonsqueezy.com/test',
     });
     expect(mockRepository.findByUserId).toHaveBeenCalledWith('user-1');
-    expect(mockRepository.save).toHaveBeenCalledWith(
-      expect.objectContaining({ userId: 'user-1' }),
-    );
+    expect(mockRepository.save).toHaveBeenCalledWith(expect.objectContaining({ userId: 'user-1' }));
     expect(mockLemonSqueezyService.createCheckoutUrl).toHaveBeenCalledWith({
       userId: 'user-1',
       userEmail: 'user@test.com',
-      userName: 'Test User',
       plan: 'premium_monthly',
     });
   });
 
   it('should return checkout URL for existing user with subscription record', async () => {
-    const existingSubscription = UserSubscription.createFree(
-      'sub-1',
-      'user-1',
-    );
+    const existingSubscription = UserSubscription.createFree('sub-1', 'user-1');
     mockRepository.findByUserId.mockResolvedValue(existingSubscription);
     mockLemonSqueezyService.createCheckoutUrl.mockResolvedValue(
       'https://checkout.lemonsqueezy.com/existing',
     );
 
-    const command = new CreateCheckoutCommand(
-      'user-1',
-      'user@test.com',
-      'Test User',
-      'premium_yearly',
-    );
+    const command = new CreateCheckoutCommand('user-1', 'user@test.com', 'premium_yearly');
 
     const result = await handler.execute(command);
 
@@ -95,7 +79,6 @@ describe('CreateCheckoutHandler', () => {
     expect(mockLemonSqueezyService.createCheckoutUrl).toHaveBeenCalledWith({
       userId: 'user-1',
       userEmail: 'user@test.com',
-      userName: 'Test User',
       plan: 'premium_yearly',
     });
   });
