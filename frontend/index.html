@@ -215,7 +215,9 @@
     <!-- Theme detection script - runs before render -->
     <script>
       (function() {
-        var t = localStorage.getItem('theme') || 'system';
+        var raw = localStorage.getItem('theme') || 'system';
+        try { raw = JSON.parse(raw); } catch(e) {}
+        var t = raw || 'system';
         var d = window.matchMedia('(prefers-color-scheme: dark)').matches;
         var isDark = t === 'dark' || (t === 'system' && d);
         if (isDark) {
