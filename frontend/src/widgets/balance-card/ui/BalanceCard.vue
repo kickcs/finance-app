@@ -18,9 +18,9 @@ defineEmits<{
 </script>
 
 <template>
-  <div class="text-center">
+  <div class="text-center md:text-left">
     <!-- Balance Label -->
-    <div class="flex items-center justify-center gap-1 mb-2">
+    <div class="flex items-center justify-center md:justify-start gap-1 mb-2">
       <p
         class="text-body-sm font-medium tracking-wide text-text-secondary-light dark:text-text-secondary-dark"
       >
@@ -65,7 +65,7 @@ defineEmits<{
     </div>
 
     <!-- Quick Action Buttons -->
-    <div class="flex gap-3 mt-6">
+    <div class="flex gap-3 mt-6 md:hidden">
       <button
         class="group flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-primary to-primary-hover text-white font-medium text-body-sm shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 hover:-translate-y-0.5 active:translate-y-0 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 transition-all duration-300"
         @click="$emit('income-click')"
