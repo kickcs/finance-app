@@ -10,7 +10,7 @@ export class UserSubscriptionMapper {
       userId: orm.userId,
       lemonCustomerId: orm.lemonCustomerId,
       lemonSubscriptionId: orm.lemonSubscriptionId,
-      lemonOrderId: orm.variantId,
+      variantId: orm.variantId,
       plan: SubscriptionPlan.create(orm.plan),
       status: SubscriptionStatus.create(orm.status),
       trialStart: orm.trialStart,
@@ -29,7 +29,7 @@ export class UserSubscriptionMapper {
     orm.userId = sub.userId;
     orm.lemonCustomerId = sub.lemonCustomerId;
     orm.lemonSubscriptionId = sub.lemonSubscriptionId;
-    orm.variantId = sub.lemonOrderId;
+    orm.variantId = sub.variantId;
     orm.plan = sub.planValue;
     orm.status = sub.statusValue;
     orm.trialStart = sub.trialStart;

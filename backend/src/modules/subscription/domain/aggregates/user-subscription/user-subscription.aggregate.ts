@@ -8,7 +8,7 @@ export interface UserSubscriptionProps {
   status: SubscriptionStatus;
   lemonCustomerId: string | null;
   lemonSubscriptionId: string | null;
-  lemonOrderId: string | null;
+  variantId: string | null;
   trialStart: Date | null;
   trialEnd: Date | null;
   currentPeriodStart: Date | null;
@@ -24,7 +24,7 @@ export class UserSubscription extends AggregateRoot<string> {
   private _status: SubscriptionStatus;
   private _lemonCustomerId: string | null;
   private _lemonSubscriptionId: string | null;
-  private _lemonOrderId: string | null;
+  private _variantId: string | null;
   private _trialStart: Date | null;
   private _trialEnd: Date | null;
   private _currentPeriodStart: Date | null;
@@ -40,7 +40,7 @@ export class UserSubscription extends AggregateRoot<string> {
     this._status = props.status;
     this._lemonCustomerId = props.lemonCustomerId;
     this._lemonSubscriptionId = props.lemonSubscriptionId;
-    this._lemonOrderId = props.lemonOrderId;
+    this._variantId = props.variantId;
     this._trialStart = props.trialStart;
     this._trialEnd = props.trialEnd;
     this._currentPeriodStart = props.currentPeriodStart;
@@ -58,7 +58,7 @@ export class UserSubscription extends AggregateRoot<string> {
       status: SubscriptionStatus.ACTIVE,
       lemonCustomerId: null,
       lemonSubscriptionId: null,
-      lemonOrderId: null,
+      variantId: null,
       trialStart: null,
       trialEnd: null,
       currentPeriodStart: null,
@@ -102,8 +102,8 @@ export class UserSubscription extends AggregateRoot<string> {
     return this._lemonSubscriptionId;
   }
 
-  get lemonOrderId(): string | null {
-    return this._lemonOrderId;
+  get variantId(): string | null {
+    return this._variantId;
   }
 
   get trialStart(): Date | null {
@@ -143,7 +143,7 @@ export class UserSubscription extends AggregateRoot<string> {
     plan: string;
     lemonCustomerId: string;
     lemonSubscriptionId: string;
-    lemonOrderId?: string;
+    variantId?: string;
     currentPeriodStart: Date;
     currentPeriodEnd: Date;
     trialStart?: Date;
@@ -156,7 +156,7 @@ export class UserSubscription extends AggregateRoot<string> {
       : SubscriptionStatus.ACTIVE;
     this._lemonCustomerId = data.lemonCustomerId;
     this._lemonSubscriptionId = data.lemonSubscriptionId;
-    this._lemonOrderId = data.lemonOrderId ?? this._lemonOrderId;
+    this._variantId = data.variantId ?? this._variantId;
     this._currentPeriodStart = data.currentPeriodStart;
     this._currentPeriodEnd = data.currentPeriodEnd;
     this._trialStart = data.trialStart ?? this._trialStart;
