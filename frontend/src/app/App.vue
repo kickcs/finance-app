@@ -10,6 +10,8 @@ import { DemoBanner, useDemoMode } from '@/features/demo-mode';
 import { useChangelog, ChangelogModal } from '@/features/changelog';
 import { NavigationProgress } from '@/shared/ui/navigation-progress';
 import { usePwaUpdate } from '@/shared/lib/composables/usePwaUpdate';
+import { usePremiumFeature } from '@/shared/lib/composables/usePremiumFeature';
+import { PremiumUpgradeModal } from '@/features/upgrade-to-premium';
 
 // Initialize theme synchronously on script setup (before mount)
 const { initTheme } = useTheme();
@@ -17,6 +19,9 @@ initTheme();
 
 // Initialize PWA updates watcher
 usePwaUpdate();
+
+// Premium upgrade modal (global singleton)
+const { showUpgradeModal, upgradeFeatureName } = usePremiumFeature();
 
 // Auth state
 const { user, isLoading: _authLoading, isAuthenticated } = useAuth();
@@ -93,6 +98,9 @@ provide('getCategoryById', getCategoryById);
 
     <!-- Changelog modal -->
     <ChangelogModal v-model="showChangelogModal" />
+
+    <!-- Premium upgrade modal (global) -->
+    <PremiumUpgradeModal v-model="showUpgradeModal" :feature-name="upgradeFeatureName" />
 
     <!-- Toast notifications -->
     <Toaster />

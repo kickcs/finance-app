@@ -11,6 +11,7 @@ import { EditProfileModal } from '@/features/edit-profile';
 import { useChangelog } from '@/features/changelog';
 import { InstallPwaModal, usePwaInstall } from '@/features/install-pwa';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
+import { SubscriptionSection } from '@/features/manage-subscription';
 
 const router = useRouter();
 const { signOut } = useAuth();
@@ -183,6 +184,9 @@ async function confirmLogout() {
           </button>
         </UCard>
       </div>
+
+      <!-- Subscription Section -->
+      <SubscriptionSection />
 
       <!-- Data Group -->
       <div>
