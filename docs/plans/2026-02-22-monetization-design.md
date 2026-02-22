@@ -13,8 +13,8 @@ Ouro — PWA для личных финансов (Vue 3 + NestJS). Сейчас
 | Plan | Price | Features |
 |------|-------|----------|
 | **Free** | $0 | Всё текущее: безлимитные счета, транзакции, долги, цели, напоминания, базовая аналитика (текущий месяц), 6 валют, кастомизация категорий, CSV импорт, PWA |
-| **Premium Monthly** | $1.99/мес | Все Free + premium-фичи |
-| **Premium Yearly** | $14.99/год (~37% скидка) | Все Free + premium-фичи |
+| **Premium Monthly** | $2.99/мес | Все Free + premium-фичи |
+| **Premium Yearly** | $16.99/год (~53% скидка) | Все Free + premium-фичи |
 
 - 7-дневный бесплатный trial при первой активации
 - LemonSqueezy Checkout для оплаты
@@ -226,8 +226,8 @@ LEMONSQUEEZY_PREMIUM_YEARLY_VARIANT_ID=...
 1. Создать аккаунт на lemonsqueezy.com
 2. Создать Store
 3. Создать Product «Ouro Premium» с двумя вариантами:
-   - Monthly: $1.99/мес с 7-day free trial
-   - Yearly: $14.99/год с 7-day free trial
+   - Monthly: $2.99/мес с 7-day free trial
+   - Yearly: $16.99/год с 7-day free trial
 4. Настроить Webhook URL: `https://your-domain.com/api/webhooks/lemonsqueezy`
 5. Скопировать API Key, Webhook Secret, Store ID, Variant IDs в .env
 
