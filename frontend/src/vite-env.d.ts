@@ -13,3 +13,9 @@ declare module '*.vue' {
   const component: DefineComponent<object, object, unknown>;
   export default component;
 }
+
+interface Window {
+  LemonSqueezy?: {
+    Url: { Open(url: string): void };
+  };
+}

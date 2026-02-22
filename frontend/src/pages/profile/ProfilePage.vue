@@ -11,6 +11,8 @@ import { EditProfileModal } from '@/features/edit-profile';
 import { useChangelog } from '@/features/changelog';
 import { InstallPwaModal, usePwaInstall } from '@/features/install-pwa';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
+import { SubscriptionSection } from '@/features/manage-subscription';
+import { usePremiumFeature } from '@/shared/lib/composables/usePremiumFeature';
 
 const router = useRouter();
 const { signOut } = useAuth();
@@ -34,6 +36,9 @@ const { hasUnseenChanges, markAsSeen } = useChangelog();
 
 // PWA install
 const { showModal: showInstallModal, openModal: openInstallModal } = usePwaInstall();
+
+// Premium
+const { requirePremium } = usePremiumFeature();
 
 // Modal states
 const showLogoutModal = ref(false);
@@ -183,6 +188,9 @@ async function confirmLogout() {
           </button>
         </UCard>
       </div>
+
+      <!-- Subscription Section -->
+      <SubscriptionSection @upgrade="requirePremium('Premium подписка')" />
 
       <!-- Data Group -->
       <div>

@@ -13,11 +13,11 @@ Ouro — PWA для личных финансов (Vue 3 + NestJS). Сейчас
 | Plan | Price | Features |
 |------|-------|----------|
 | **Free** | $0 | Всё текущее: безлимитные счета, транзакции, долги, цели, напоминания, базовая аналитика (текущий месяц), 6 валют, кастомизация категорий, CSV импорт, PWA |
-| **Premium Monthly** | $1.99/мес | Все Free + premium-фичи |
-| **Premium Yearly** | $14.99/год (~37% скидка) | Все Free + premium-фичи |
+| **Premium Monthly** | $2.99/мес | Все Free + premium-фичи |
+| **Premium Yearly** | $16.99/год (~53% скидка) | Все Free + premium-фичи |
 
 - 7-дневный бесплатный trial при первой активации
-- Stripe Checkout для оплаты
+- LemonSqueezy Checkout для оплаты
 
 ## Premium Features
 
@@ -30,11 +30,19 @@ Ouro — PWA для личных финансов (Vue 3 + NestJS). Сейчас
 
 ## Payment System
 
-**Stripe** via `@golevelup/nestjs-stripe` plugin:
-- Stripe Checkout (hosted payment page)
+**LemonSqueezy** (Merchant of Record):
+- LemonSqueezy Checkout Overlay (JS SDK встраивается в приложение)
 - Webhook-и для синхронизации статуса подписки
-- Stripe Customer Portal для управления подпиской (отмена, смена плана)
-- Комиссия: 2.9% + $0.30 за транзакцию
+- LemonSqueezy Customer Portal для управления подпиской (отмена, смена плана)
+- Берёт на себя налоги/VAT по всему миру — не нужно думать о tax compliance
+- Комиссия: 5% + $0.50 за транзакцию
+
+### Почему LemonSqueezy
+
+- **Merchant of Record** — LemonSqueezy является продавцом, сами решают вопросы с налогами, VAT, invoicing
+- **Проще для indie** — не нужно регистрировать бизнес, не нужно думать о tax compliance
+- **Checkout Overlay** — встраиваемый checkout прямо в приложение (без redirect на внешнюю страницу)
+- **Customer Portal** — готовый портал для управления подпиской
 
 ## Architecture
 
@@ -52,8 +60,8 @@ backend/src/modules/subscription/
 │       └── user-subscription.repository.ts   # Interface
 ├── application/
 │   ├── commands/
-│   │   ├── create-checkout-session/           # Создать Stripe Checkout session
-│   │   ├── handle-webhook/                    # Обработать Stripe webhook events
+│   │   ├── create-checkout/                   # Сгенерировать LemonSqueezy checkout URL
+│   │   ├── handle-webhook/                    # Обработать LemonSqueezy webhook events
 │   │   └── cancel-subscription/               # Отмена подписки
 │   └── queries/
 │       └── get-subscription-status/           # Текущий статус подписки
@@ -62,13 +70,14 @@ backend/src/modules/subscription/
 │   │   ├── entities/                          # TypeORM entity
 │   │   ├── mappers/                           # Domain ↔ ORM mapper
 │   │   └── repositories/                      # TypeORM repository impl
-│   └── stripe/
-│       └── stripe-webhook.handler.ts          # @StripeWebhookHandler decorators
+│   └── lemonsqueezy/
+│       ├── lemonsqueezy.service.ts            # LemonSqueezy API client
+│       └── lemonsqueezy-webhook.service.ts    # Webhook signature verification + routing
 ├── presentation/
 │   ├── controllers/
 │   │   └── subscription.controller.ts         # REST endpoints
 │   └── dtos/
-│       ├── create-checkout-session.dto.ts
+│       ├── create-checkout.dto.ts
 │       └── subscription-status.response.ts
 ├── guards/
 │   └── premium.guard.ts                       # @RequiresPremium() decorator + guard
@@ -81,10 +90,11 @@ backend/src/modules/subscription/
 CREATE TABLE user_subscriptions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-    stripe_customer_id VARCHAR(255),
-    stripe_subscription_id VARCHAR(255),
+    lemon_customer_id VARCHAR(255),
+    lemon_subscription_id VARCHAR(255),
     plan VARCHAR(50) NOT NULL DEFAULT 'free',        -- free, premium_monthly, premium_yearly
     status VARCHAR(50) NOT NULL DEFAULT 'active',    -- active, trialing, canceled, past_due, expired
+    variant_id VARCHAR(255),                         -- LemonSqueezy variant ID
     trial_start TIMESTAMP,
     trial_end TIMESTAMP,
     current_period_start TIMESTAMP,
@@ -101,17 +111,26 @@ CREATE TABLE user_subscriptions (
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | GET | `/api/subscription/status` | JWT | Текущий статус подписки |
-| POST | `/api/subscription/checkout` | JWT | Создать Stripe Checkout Session |
-| POST | `/api/subscription/portal` | JWT | Получить URL Stripe Customer Portal |
-| POST | `/api/stripe/webhook` | Stripe Signature | Webhook handler (via @golevelup/nestjs-stripe) |
+| POST | `/api/subscription/checkout` | JWT | Сгенерировать LemonSqueezy checkout URL |
+| POST | `/api/subscription/portal` | JWT | Получить URL Customer Portal |
+| POST | `/api/webhooks/lemonsqueezy` | HMAC Signature | Webhook handler |
 
-#### Stripe Webhook Events
+#### LemonSqueezy Webhook Events
 
-- `checkout.session.completed` → Активировать подписку
-- `invoice.paid` → Продлить подписку
-- `invoice.payment_failed` → Пометить как `past_due`
-- `customer.subscription.updated` → Обновить план/статус
-- `customer.subscription.deleted` → Деактивировать подписку
+- `subscription_created` → Создать/активировать подписку
+- `subscription_updated` → Обновить план/статус (renewal, plan change)
+- `subscription_cancelled` → Пометить `cancel_at_period_end: true`
+- `subscription_expired` → Деактивировать подписку
+- `subscription_payment_success` → Подтвердить оплату
+- `subscription_payment_failed` → Пометить как `past_due`
+
+#### Webhook Signature Verification
+
+```typescript
+// LemonSqueezy подписывает webhooks через HMAC SHA-256
+// Header: X-Signature
+// Верифицируем через crypto.createHmac('sha256', secret).update(rawBody).digest('hex')
+```
 
 #### Premium Guard
 
@@ -135,7 +154,7 @@ frontend/src/
 │   │   └── queryKeys.ts
 │   └── model/
 │       ├── types.ts                        # SubscriptionStatus, Plan types
-│       └── constants.ts                    # Plan details, prices
+│       └── constants.ts                    # Plan details, prices, variant IDs
 ├── features/
 │   ├── upgrade-to-premium/
 │   │   ├── ui/
@@ -143,7 +162,7 @@ frontend/src/
 │   │   │   ├── PricingCards.vue            # Карточки планов
 │   │   │   └── PremiumBadge.vue            # Badge "Premium" на locked фичах
 │   │   └── model/
-│   │       └── useUpgrade.ts               # Логика checkout
+│   │       └── useUpgrade.ts               # Логика checkout (LemonSqueezy JS SDK)
 │   └── manage-subscription/
 │       └── ui/
 │           └── SubscriptionSection.vue     # Секция в профиле
@@ -153,20 +172,34 @@ frontend/src/
 │           └── usePremiumFeature.ts         # Hook: isPremium, showUpgradeModal()
 ```
 
+#### LemonSqueezy JS SDK Integration
+
+```typescript
+// В index.html или загрузка через useHead()
+// <script src="https://app.lemonsqueezy.com/js/lemon.js" defer></script>
+
+// Открытие checkout overlay:
+window.createLemonSqueezy()
+window.LemonSqueezy.Url.Open(checkoutUrl)
+
+// checkoutUrl генерируется на backend через LemonSqueezy API
+// с custom data: { user_id: currentUser.id } для привязки к пользователю
+```
+
 #### UX Flow: Soft Paywall
 
 1. Пользователь видит premium-фичу в UI (например, «Тренды» в аналитике)
 2. Фича показана, но с `PremiumBadge` и заблокирована
 3. При клике → `PremiumUpgradeModal` с описанием + «Попробовать 7 дней бесплатно»
-4. Кнопка → redirect на Stripe Checkout (hosted page)
-5. После оплаты → Stripe redirect back + webhook активирует подписку
+4. Кнопка → backend генерирует checkout URL → LemonSqueezy Overlay opens in-app
+5. После оплаты → webhook активирует подписку
 6. `useSubscription()` обновляет кэш → фичи разблокируются
 
 #### Subscription Management (Profile)
 
 - В профиле: секция «Подписка» с текущим статусом
 - Free: «Перейти на Premium» с описанием преимуществ
-- Premium: текущий план, дата следующей оплаты, кнопка «Управление» → Stripe Customer Portal
+- Premium: текущий план, дата следующей оплаты, кнопка «Управление» → LemonSqueezy Customer Portal
 
 ## UX Principles
 
@@ -179,14 +212,24 @@ frontend/src/
 
 ```bash
 # Backend (.env)
-STRIPE_SECRET_KEY=sk_...
-STRIPE_WEBHOOK_SECRET=whsec_...
-STRIPE_PREMIUM_MONTHLY_PRICE_ID=price_...
-STRIPE_PREMIUM_YEARLY_PRICE_ID=price_...
+LEMONSQUEEZY_API_KEY=...
+LEMONSQUEEZY_WEBHOOK_SECRET=...
+LEMONSQUEEZY_STORE_ID=...
+LEMONSQUEEZY_PREMIUM_MONTHLY_VARIANT_ID=...
+LEMONSQUEEZY_PREMIUM_YEARLY_VARIANT_ID=...
 
-# Frontend (.env)
-VITE_STRIPE_PUBLISHABLE_KEY=pk_...
+# Frontend (.env) — не нужен API key, checkout открывается через URL от backend
 ```
+
+## LemonSqueezy Setup (Manual Steps)
+
+1. Создать аккаунт на lemonsqueezy.com
+2. Создать Store
+3. Создать Product «Ouro Premium» с двумя вариантами:
+   - Monthly: $2.99/мес с 7-day free trial
+   - Yearly: $16.99/год с 7-day free trial
+4. Настроить Webhook URL: `https://your-domain.com/api/webhooks/lemonsqueezy`
+5. Скопировать API Key, Webhook Secret, Store ID, Variant IDs в .env
 
 ## Migration Plan (Existing Users)
 
@@ -200,4 +243,4 @@ VITE_STRIPE_PUBLISHABLE_KEY=pk_...
 - Автоматическая категоризация транзакций
 - Push-уведомления о бюджетах
 - Referral программа
-- Промокоды и купоны
+- Промокоды и купоны (LemonSqueezy поддерживает из коробки — добавим позже)
