@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { useLocalStorage } from '@/shared/lib/hooks/useLocalStorage';
+import { useLocalStorage } from '@vueuse/core';
 import { queryClient } from '@/shared/api/queryClient';
 import { PullToRefresh } from '@/shared/ui';
 import { InstallPwaBanner, InstallPwaModal, usePwaInstall } from '@/features/install-pwa';

@@ -1,5 +1,5 @@
 import { computed } from 'vue';
-import { useLocalStorage } from '@/shared/lib/hooks/useLocalStorage';
+import { useLocalStorage } from '@vueuse/core';
 import type { QuickAction } from './types';
 
 const MAX_SLOTS = 4;

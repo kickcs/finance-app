@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, ref, watch, onMounted, onUnmounted, nextTick } from 'vue';
+import { computed, ref, watch, onMounted, nextTick } from 'vue';
 import { TabsRoot, TabsList, TabsTrigger } from 'reka-ui';
+import { useResizeObserver } from '@vueuse/core';
 import { cn } from '@/shared/lib/utils';
 
 export interface Tab {
@@ -38,7 +39,6 @@ function updateIndicator() {
   if (!el) return;
   const active = el.querySelector<HTMLElement>('[data-state=active]');
   if (!active) return;
-  // Use getBoundingClientRect for reliable positioning regardless of offsetParent
   const containerRect = el.getBoundingClientRect();
   const activeRect = active.getBoundingClientRect();
   indicatorStyle.value = {
@@ -47,20 +47,15 @@ function updateIndicator() {
   };
 }
 
-let resizeObserver: ResizeObserver | null = null;
+const pillsEl = computed(() => pillsList.value?.$el as HTMLElement | undefined);
+
+useResizeObserver(pillsEl, () => {
+  if (props.variant === 'pills') updateIndicator();
+});
 
 onMounted(() => {
   if (props.variant !== 'pills') return;
   nextTick(updateIndicator);
-  const el = pillsList.value?.$el as HTMLElement | undefined;
-  if (el) {
-    resizeObserver = new ResizeObserver(updateIndicator);
-    resizeObserver.observe(el);
-  }
-});
-
-onUnmounted(() => {
-  resizeObserver?.disconnect();
 });
 
 watch(

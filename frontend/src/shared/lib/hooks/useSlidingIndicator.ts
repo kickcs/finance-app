@@ -1,6 +1,7 @@
-import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue';
+import { ref, watch, onMounted, nextTick } from 'vue';
 import type { Ref, MaybeRefOrGetter } from 'vue';
 import { toValue } from 'vue';
+import { useResizeObserver } from '@vueuse/core';
 
 interface IndicatorStyle {
   [key: string]: string | number;
@@ -20,7 +21,6 @@ export function useSlidingIndicator(
 ) {
   const chipRefs = new Map<string, HTMLElement>();
   const indicatorStyle = ref<IndicatorStyle>({ opacity: 0 });
-  let resizeObserver: ResizeObserver | null = null;
 
   function setChipRef(id: string, el: HTMLElement | null) {
     if (el) chipRefs.set(id, el);
@@ -50,16 +50,10 @@ export function useSlidingIndicator(
     };
   }
 
+  useResizeObserver(containerRef, updateIndicator);
+
   onMounted(() => {
     nextTick(updateIndicator);
-    if (containerRef.value) {
-      resizeObserver = new ResizeObserver(updateIndicator);
-      resizeObserver.observe(containerRef.value);
-    }
-  });
-
-  onUnmounted(() => {
-    resizeObserver?.disconnect();
   });
 
   watch(

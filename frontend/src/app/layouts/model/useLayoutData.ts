@@ -2,7 +2,7 @@ import { computed } from 'vue';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useProfile, useExchangeRates } from '@/shared/api';
 import { useAccounts } from '@/entities/account';
-import { useLocalStorage } from '@/shared/lib/hooks/useLocalStorage';
+import { useLocalStorage } from '@vueuse/core';
 import { getGreeting } from '@/shared/lib/format/greeting';
 
 export function useLayoutData() {

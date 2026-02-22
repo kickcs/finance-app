@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue';
+import { computed, ref } from 'vue';
+import { useTimeoutFn } from '@vueuse/core';
 import { UCard, UIcon } from '@/shared/ui';
 import { formatCurrency, COMPACT_FORMAT } from '@/shared/lib/format/currency';
 
@@ -13,11 +14,9 @@ const props = defineProps<{
 // Animation state
 const isAnimated = ref(false);
 
-onMounted(() => {
-  setTimeout(() => {
-    isAnimated.value = true;
-  }, 100);
-});
+useTimeoutFn(() => {
+  isAnimated.value = true;
+}, 100);
 
 // Savings calculations
 const savings = computed(() =>

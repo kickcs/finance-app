@@ -1,22 +1,32 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
+import { useTimeoutFn } from '@vueuse/core';
 import { router } from '@/app/router';
 
 const isVisible = ref(false);
 const isFinishing = ref(false);
 
-let showTimeout: ReturnType<typeof setTimeout> | null = null;
-let hideTimeout: ReturnType<typeof setTimeout> | null = null;
-
 const SHOW_DELAY = 150; // Don't show for fast navigations
 const HIDE_DELAY = 300; // Keep visible briefly after navigation completes
+
+const { start: startShowTimer, stop: stopShowTimer } = useTimeoutFn(() => {
+  isVisible.value = true;
+}, SHOW_DELAY, { immediate: false });
+
+const { start: startHideTimer, stop: stopHideTimer } = useTimeoutFn(() => {
+  isVisible.value = false;
+  isFinishing.value = false;
+}, HIDE_DELAY, { immediate: false });
+
+function cleanup() {
+  stopShowTimer();
+  stopHideTimer();
+}
 
 function startProgress() {
   cleanup();
   isFinishing.value = false;
-  showTimeout = setTimeout(() => {
-    isVisible.value = true;
-  }, SHOW_DELAY);
+  startShowTimer();
 }
 
 function finishProgress() {
@@ -24,21 +34,7 @@ function finishProgress() {
   if (!isVisible.value) return;
 
   isFinishing.value = true;
-  hideTimeout = setTimeout(() => {
-    isVisible.value = false;
-    isFinishing.value = false;
-  }, HIDE_DELAY);
-}
-
-function cleanup() {
-  if (showTimeout) {
-    clearTimeout(showTimeout);
-    showTimeout = null;
-  }
-  if (hideTimeout) {
-    clearTimeout(hideTimeout);
-    hideTimeout = null;
-  }
+  startHideTimer();
 }
 
 let removeBeforeEach: (() => void) | null = null;

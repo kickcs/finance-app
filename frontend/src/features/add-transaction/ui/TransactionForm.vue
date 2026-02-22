@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, onUnmounted, nextTick, watch } from 'vue';
+import { useResizeObserver } from '@vueuse/core';
 import { useMountedAnimation } from '@/shared/lib/hooks/useMountedAnimation';
 import { UInput, UButton, UTabs, UIcon } from '@/shared/ui';
 import type { Category } from '@/entities/category';
@@ -73,7 +74,6 @@ const { scrollContainer, handleTabClick, handleScrollEnd, handleScroll, onCyclic
 
 // --- Smooth Height Auto-adjust ---
 const containerHeight = ref<string>('auto');
-let resizeObserver: ResizeObserver | null = null;
 let lastCalculatedIndex = -1;
 
 function updateContainerHeight(force = false) {
@@ -100,21 +100,25 @@ function updateContainerHeight(force = false) {
   }
 }
 
-// Observe scrollContainer and its children once available
+// Observe scrollContainer for resize
+useResizeObserver(scrollContainer, () => updateContainerHeight(true));
+
+// Also observe children panels for individual height changes
+let childObserver: ResizeObserver | null = null;
+
 watch(scrollContainer, (el) => {
-  resizeObserver?.disconnect();
+  childObserver?.disconnect();
   if (!el) return;
 
-  resizeObserver = new ResizeObserver(() => updateContainerHeight(true));
-  resizeObserver.observe(el);
+  childObserver = new ResizeObserver(() => updateContainerHeight(true));
   Array.from(el.children).forEach((child) => {
-    resizeObserver?.observe(child);
+    childObserver?.observe(child);
   });
   nextTick(() => updateContainerHeight(true));
 });
 
 onUnmounted(() => {
-  resizeObserver?.disconnect();
+  childObserver?.disconnect();
 });
 
 // Update height on scroll, type change, and cyclic wrap

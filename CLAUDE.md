@@ -62,7 +62,7 @@ GitHub Actions (`deploy.yml`): validate-backend (lint + test with PostgreSQL) + 
 
 ### Frontend (Vue 3 + FSD)
 
-- **Tech**: Vue 3, TypeScript, TanStack Vue Query, Tailwind CSS v4, Reka UI, Vue Router, PWA (vite-plugin-pwa)
+- **Tech**: Vue 3, TypeScript, TanStack Vue Query, Tailwind CSS v4, Reka UI, Vue Router, VueUse, PWA (vite-plugin-pwa)
 
 **FSD Layers** (`frontend/src/`): `app/` → `pages/` → `widgets/` → `features/` → `entities/` → `shared/`
 
@@ -96,8 +96,10 @@ Custom component library wrapping Reka UI headless primitives (CVA-based variant
 
 ### Frontend Composables
 
+**VueUse** (`@vueuse/core`): Prefer VueUse composables over custom implementations. Already used: `useLocalStorage`, `useResizeObserver`, `useTimeoutFn`, `useTimestamp`, `usePreferredDark`, `useMediaQuery`, `useEventListener`, `useDebounceFn`.
+
 **Hooks** (`shared/lib/hooks/`):
-`useCurrentUser`, `useLocalStorage`, `useAsyncOperation`, `useUserCurrency`, `usePullToRefresh`, `useSwipe`, `useSlidingIndicator`
+`useCurrentUser`, `useAsyncOperation`, `useUserCurrency`, `usePullToRefresh`, `useSwipe`, `useSlidingIndicator`
 
 **Composables** (`shared/lib/composables/`):
 - `useToast()` — custom reactive toast store with haptics (re-exported via `shared/ui`)
@@ -188,3 +190,4 @@ Update `frontend/src/features/changelog/model/changelogData.ts`:
 - **PullToRefresh**: Breaks flex chains — wrap in separate `flex-1 overflow-y-auto` div
 - **Design tokens**: Always use semantic tokens (`bg-surface-light dark:bg-surface-dark`) not raw Tailwind colors. See `frontend/DESIGN_SYSTEM.md` § Anti-Patterns
 - **Multi-currency**: Account balances stored in separate `account_balances` table
+- **VueUse first**: For localStorage, event listeners, media queries, resize observers, timers — use `@vueuse/core` composables instead of manual implementations. Check https://vueuse.org before writing custom hooks

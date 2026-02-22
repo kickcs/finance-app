@@ -1,9 +1,13 @@
-import { ref, computed, onMounted, onUnmounted, watch, type Ref } from 'vue';
+import { computed, watch, type Ref } from 'vue';
+import { useTimestamp } from '@vueuse/core';
 import type { Profile } from '@/shared/api';
 
 export function useDemoMode(profile: Ref<Profile | null | undefined>) {
-  const now = ref(Date.now());
-  let intervalId: ReturnType<typeof setInterval> | null = null;
+  const { timestamp: now, pause, resume } = useTimestamp({
+    controls: true,
+    interval: 1000,
+    immediate: false,
+  });
 
   const isDemo = computed(() => profile.value?.is_demo ?? false);
 
@@ -41,43 +45,18 @@ export function useDemoMode(profile: Ref<Profile | null | undefined>) {
     return remainingTime.value <= 0;
   });
 
-  function startTimer() {
-    if (intervalId) return;
-
-    intervalId = setInterval(() => {
-      now.value = Date.now();
-    }, 1000);
-  }
-
-  function stopTimer() {
-    if (intervalId) {
-      clearInterval(intervalId);
-      intervalId = null;
-    }
-  }
-
-  // Start timer when demo mode is detected
+  // Start/stop timer when demo mode changes
   watch(
     isDemo,
     (isDemoMode) => {
       if (isDemoMode) {
-        startTimer();
+        resume();
       } else {
-        stopTimer();
+        pause();
       }
     },
     { immediate: true },
   );
-
-  onMounted(() => {
-    if (isDemo.value) {
-      startTimer();
-    }
-  });
-
-  onUnmounted(() => {
-    stopTimer();
-  });
 
   return {
     isDemo,

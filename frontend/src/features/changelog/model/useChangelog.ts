@@ -1,5 +1,5 @@
 import { computed } from 'vue';
-import { useLocalStorage } from '@/shared/lib/hooks/useLocalStorage';
+import { useLocalStorage } from '@vueuse/core';
 import { CURRENT_VERSION, CHANGELOG_ENTRIES } from './changelogData';
 
 export function useChangelog() {

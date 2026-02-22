@@ -1,4 +1,5 @@
 import { ref, computed } from 'vue';
+import { useMediaQuery, useLocalStorage, useEventListener } from '@vueuse/core';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -14,28 +15,23 @@ function detectPlatform(): Platform {
   return 'desktop';
 }
 
-function isRunningStandalone(): boolean {
-  return (
-    window.matchMedia('(display-mode: standalone)').matches ||
-    (navigator as any).standalone === true
-  );
-}
+const isStandaloneMedia = useMediaQuery('(display-mode: standalone)');
 
-const DISMISS_KEY = 'pwa-install-dismissed';
+function isRunningStandalone(): boolean {
+  return isStandaloneMedia.value || (navigator as any).standalone === true;
+}
 
 // Module-level state — shared across all usePwaInstall() calls
 let deferredPrompt: BeforeInstallPromptEvent | null = null;
 const canUseNativePrompt = ref(false);
 const showModal = ref(false);
-const isDismissed = ref(localStorage.getItem(DISMISS_KEY) === 'true');
+const isDismissed = useLocalStorage('pwa-install-dismissed', false);
 
-if (typeof window !== 'undefined') {
-  window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e as BeforeInstallPromptEvent;
-    canUseNativePrompt.value = true;
-  });
-}
+useEventListener(window, 'beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e as BeforeInstallPromptEvent;
+  canUseNativePrompt.value = true;
+});
 
 export function usePwaInstall() {
   const platform = detectPlatform();
@@ -53,7 +49,6 @@ export function usePwaInstall() {
 
   function dismissBanner() {
     isDismissed.value = true;
-    localStorage.setItem(DISMISS_KEY, 'true');
   }
 
   async function triggerNativeInstall() {

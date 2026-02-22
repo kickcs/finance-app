@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue';
+import { computed, ref } from 'vue';
+import { useTimeoutFn } from '@vueuse/core';
 import { UCard, EmptyState } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { cn } from '@/shared/lib/utils';
@@ -20,11 +21,9 @@ const emit = defineEmits<{
 const isAnimated = ref(false);
 const selectedSegment = ref<string | null>(null);
 
-onMounted(() => {
-  setTimeout(() => {
-    isAnimated.value = true;
-  }, 50);
-});
+useTimeoutFn(() => {
+  isAnimated.value = true;
+}, 50);
 
 // SVG configuration
 const size = 180;
