@@ -19,6 +19,7 @@ import {
   ReminderOrmEntity,
 } from '../modules/planning/infrastructure/persistence/typeorm';
 import { ExchangeRateOrmEntity } from '../modules/exchange/infrastructure/persistence/typeorm';
+import { UserSubscriptionOrmEntity } from '../modules/subscription/infrastructure/persistence/typeorm';
 
 // Legacy entity
 import { Settings } from '../database/entities';
@@ -41,6 +42,7 @@ export const dataSourceOptions: DataSourceOptions = {
     GoalOrmEntity,
     ReminderOrmEntity,
     ExchangeRateOrmEntity,
+    UserSubscriptionOrmEntity,
     // Legacy
     Settings,
   ],
