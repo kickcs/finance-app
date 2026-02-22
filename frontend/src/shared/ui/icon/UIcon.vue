@@ -51,6 +51,7 @@ const pixelSize = computed(() => sizeMap[props.size]);
     :aria-hidden="!ariaLabel"
     :aria-label="ariaLabel"
     :role="ariaLabel ? 'img' : undefined"
-    >?</span
   >
+    ?
+  </span>
 </template>

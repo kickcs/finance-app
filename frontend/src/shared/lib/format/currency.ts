@@ -31,11 +31,7 @@ export function formatCurrency(
   },
 ): string {
   const config = CURRENCIES[currencyCode] ?? CURRENCIES.USD;
-  const {
-    showSymbol = true,
-    compact = false,
-    showSign = false,
-  } = options ?? {};
+  const { showSymbol = true, compact = false, showSign = false } = options ?? {};
 
   const formatter = new Intl.NumberFormat(config.locale, {
     style: showSymbol ? 'currency' : 'decimal',

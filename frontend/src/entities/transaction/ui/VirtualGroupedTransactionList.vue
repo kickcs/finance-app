@@ -88,9 +88,7 @@ const getItemSize = (index: number) => {
   if (flatItems.value[index].type === 'header') return HEADER_HEIGHT;
   const tx = flatItems.value[index].data as Transaction;
   const hasThreeRows =
-    props.getBalanceAfter !== undefined &&
-    tx.has_debt_returns &&
-    tx.type === 'expense';
+    props.getBalanceAfter !== undefined && tx.has_debt_returns && tx.type === 'expense';
   return hasThreeRows ? TRANSACTION_HEIGHT_TALL : TRANSACTION_HEIGHT;
 };
 
@@ -209,10 +207,7 @@ function getTransactionItemProps(index: number) {
           >
             <span class="inline-block animate-pulse">Загрузка...</span>
           </span>
-          <span
-            v-else
-            class="text-sm text-text-tertiary-light dark:text-text-tertiary-dark"
-          >
+          <span v-else class="text-sm text-text-tertiary-light dark:text-text-tertiary-dark">
             Все транзакции загружены
           </span>
         </div>
@@ -222,26 +217,18 @@ function getTransactionItemProps(index: number) {
           v-else-if="isHeaderItem(virtualRow.index)"
           class="flex items-center justify-between px-1 h-full pt-2"
         >
-          <span
-            class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark"
-          >
+          <span class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">
             {{ getHeaderData(virtualRow.index)?.date }}
           </span>
           <span
             class="text-sm font-medium"
             :class="
-              (getHeaderData(virtualRow.index)?.total ?? 0) >= 0
-                ? 'text-success'
-                : 'text-danger'
+              (getHeaderData(virtualRow.index)?.total ?? 0) >= 0 ? 'text-success' : 'text-danger'
             "
           >
             {{ (getHeaderData(virtualRow.index)?.total ?? 0) >= 0 ? '+' : ''
             }}{{
-              formatCurrency(
-                getHeaderData(virtualRow.index)?.total ?? 0,
-                currency,
-                COMPACT_FORMAT,
-              )
+              formatCurrency(getHeaderData(virtualRow.index)?.total ?? 0, currency, COMPACT_FORMAT)
             }}
           </span>
         </div>
@@ -256,18 +243,12 @@ function getTransactionItemProps(index: number) {
         >
           <SwipeableItem
             v-if="getTransactionData(virtualRow.index) && swipeEnabled"
-            @action-left="
-              emit('transactionDelete', getTransactionData(virtualRow.index)!)
-            "
-            @action-right="
-              emit('transactionEdit', getTransactionData(virtualRow.index)!)
-            "
+            @action-left="emit('transactionDelete', getTransactionData(virtualRow.index)!)"
+            @action-right="emit('transactionEdit', getTransactionData(virtualRow.index)!)"
           >
             <TransactionItem
               v-bind="getTransactionItemProps(virtualRow.index)"
-              @click="
-                emit('transactionClick', getTransactionData(virtualRow.index)!)
-              "
+              @click="emit('transactionClick', getTransactionData(virtualRow.index)!)"
             />
           </SwipeableItem>
           <div
@@ -276,9 +257,7 @@ function getTransactionItemProps(index: number) {
           >
             <TransactionItem
               v-bind="getTransactionItemProps(virtualRow.index)"
-              @click="
-                emit('transactionClick', getTransactionData(virtualRow.index)!)
-              "
+              @click="emit('transactionClick', getTransactionData(virtualRow.index)!)"
             />
           </div>
         </div>

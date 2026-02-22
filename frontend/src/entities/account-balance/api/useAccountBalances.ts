@@ -10,9 +10,7 @@ export function useAccountBalances(accountId: MaybeRefOrGetter<string | null>) {
 
   const queryKey = computed(() => {
     const id = toValue(accountId);
-    return id
-      ? accountBalanceQueryKeys.byAccount(id)
-      : accountBalanceQueryKeys.all;
+    return id ? accountBalanceQueryKeys.byAccount(id) : accountBalanceQueryKeys.all;
   });
 
   const { data, isLoading, error, refetch } = useQuery({
@@ -34,13 +32,7 @@ export function useAccountBalances(accountId: MaybeRefOrGetter<string | null>) {
   }
 
   const upsertMutation = useMutation({
-    mutationFn: ({
-      currency,
-      balance,
-    }: {
-      currency: string;
-      balance: number;
-    }) => {
+    mutationFn: ({ currency, balance }: { currency: string; balance: number }) => {
       const id = toValue(accountId);
       if (!id) throw new Error('Account ID is required');
       return accountBalancesApi.upsert(id, currency, balance);

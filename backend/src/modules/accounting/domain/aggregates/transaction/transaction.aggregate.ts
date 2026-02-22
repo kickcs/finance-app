@@ -84,15 +84,7 @@ export class Transaction extends AggregateRoot<string> {
     });
 
     transaction.addDomainEvent(
-      new TransactionCreatedEvent(
-        id,
-        userId,
-        accountId,
-        amount,
-        currency,
-        'income',
-        isDebtRelated,
-      ),
+      new TransactionCreatedEvent(id, userId, accountId, amount, currency, 'income', isDebtRelated),
     );
 
     return transaction;
@@ -361,12 +353,7 @@ export class Transaction extends AggregateRoot<string> {
 
     if (Object.keys(changes).length > 0) {
       this.addDomainEvent(
-        new TransactionUpdatedEvent(
-          this.id,
-          this._userId,
-          changes,
-          previousValues,
-        ),
+        new TransactionUpdatedEvent(this.id, this._userId, changes, previousValues),
       );
     }
   }

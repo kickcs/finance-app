@@ -26,9 +26,7 @@ export function useServerSearch(userId: MaybeRefOrGetter<string | null>) {
     updateDebounced(value.trim());
   });
 
-  const isSearchActive = computed(
-    () => debouncedTerm.value.length >= MIN_SEARCH_LENGTH,
-  );
+  const isSearchActive = computed(() => debouncedTerm.value.length >= MIN_SEARCH_LENGTH);
 
   const queryKey = computed(() => {
     const uid = toValue(userId);
@@ -54,29 +52,19 @@ export function useServerSearch(userId: MaybeRefOrGetter<string | null>) {
       if (!uid || !isSearchActive.value) {
         return { data: [], nextCursor: null, hasMore: false };
       }
-      return transactionsApi.searchPaginated(
-        uid,
-        debouncedTerm.value,
-        PAGE_SIZE,
-        pageParam,
-      );
+      return transactionsApi.searchPaginated(uid, debouncedTerm.value, PAGE_SIZE, pageParam);
     },
     initialPageParam: undefined as PaginatedCursor | undefined,
-    getNextPageParam: (lastPage) =>
-      lastPage.hasMore ? lastPage.nextCursor : undefined,
+    getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.nextCursor : undefined),
     enabled: computed(() => !!toValue(userId) && isSearchActive.value),
     placeholderData: keepPreviousData,
   });
 
   // Flatten all pages into single array
-  const results = computed(
-    () => data.value?.pages.flatMap((page) => page.data) ?? [],
-  );
+  const results = computed(() => data.value?.pages.flatMap((page) => page.data) ?? []);
 
   const hasResults = computed(() => results.value.length > 0);
-  const isEmpty = computed(
-    () => isSearchActive.value && !isLoading.value && !hasResults.value,
-  );
+  const isEmpty = computed(() => isSearchActive.value && !isLoading.value && !hasResults.value);
 
   function setQuery(newQuery: string) {
     searchTerm.value = newQuery;

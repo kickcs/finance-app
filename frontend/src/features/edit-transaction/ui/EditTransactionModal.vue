@@ -32,9 +32,7 @@ const { getCategoriesByType } = useCategories(userId);
 const isTransfer = computed(() => props.transaction?.type === 'transfer');
 
 // Check if transaction is debt-related (cannot be edited)
-const isDebtRelated = computed(
-  () => props.transaction?.is_debt_related === true,
-);
+const isDebtRelated = computed(() => props.transaction?.is_debt_related === true);
 
 // Check if transaction has split debts linked to it (cannot be edited)
 const hasSplitDebts = computed(() => props.hasSplitDebts === true);
@@ -74,12 +72,8 @@ const categories = computed(() => getCategoriesByType(type.value));
 function handleTypeChange(newType: string) {
   type.value = newType as 'expense' | 'income';
   // Reset category if switching types
-  const availableCategories = getCategoriesByType(
-    newType as 'expense' | 'income',
-  );
-  if (
-    !availableCategories.find((c: { id: string }) => c.id === categoryId.value)
-  ) {
+  const availableCategories = getCategoriesByType(newType as 'expense' | 'income');
+  if (!availableCategories.find((c: { id: string }) => c.id === categoryId.value)) {
     categoryId.value = '';
   }
 }
@@ -111,10 +105,7 @@ const isFormValid = computed(() => {
     @update:model-value="emit('update:modelValue', $event)"
   >
     <!-- Error Message -->
-    <div
-      v-if="error"
-      class="mb-4 p-3 rounded-lg bg-danger/10 border border-danger/20"
-    >
+    <div v-if="error" class="mb-4 p-3 rounded-lg bg-danger/10 border border-danger/20">
       <div class="flex gap-2">
         <UIcon name="error" size="sm" class="text-danger shrink-0" />
         <p class="text-sm text-danger">{{ error }}</p>
@@ -133,57 +124,34 @@ const isFormValid = computed(() => {
             class="text-warning"
           />
         </div>
-        <p
-          class="text-sm text-text-primary-light dark:text-text-primary-dark font-medium mb-0.5"
-        >
-          {{
-            hasSplitDebts
-              ? 'Транзакция с раздельным счётом'
-              : 'Транзакция связана с долгом'
-          }}
+        <p class="text-sm text-text-primary-light dark:text-text-primary-dark font-medium mb-0.5">
+          {{ hasSplitDebts ? 'Транзакция с раздельным счётом' : 'Транзакция связана с долгом' }}
         </p>
-        <p
-          class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
-        >
+        <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
           Управляйте долгом в разделе "Долги"
         </p>
       </div>
 
       <!-- Transaction Details -->
-      <div
-        class="space-y-2 p-3 rounded-lg bg-surface-light dark:bg-surface-dark"
-      >
+      <div class="space-y-2 p-3 rounded-lg bg-surface-light dark:bg-surface-dark">
         <div class="flex justify-between items-center">
-          <span
-            class="text-xs text-text-secondary-light dark:text-text-secondary-dark"
-            >Сумма</span
-          >
-          <span
-            class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
-          >
+          <span class="text-xs text-text-secondary-light dark:text-text-secondary-dark">Сумма</span>
+          <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
             {{ formatCurrency(transaction.amount, transaction.currency) }}
           </span>
         </div>
-        <div
-          v-if="transaction.description"
-          class="flex justify-between items-center"
-        >
-          <span
-            class="text-xs text-text-secondary-light dark:text-text-secondary-dark"
-            >Описание</span
-          >
-          <span
-            class="text-xs text-text-primary-light dark:text-text-primary-dark"
-          >
+        <div v-if="transaction.description" class="flex justify-between items-center">
+          <span class="text-xs text-text-secondary-light dark:text-text-secondary-dark">
+            Описание
+          </span>
+          <span class="text-xs text-text-primary-light dark:text-text-primary-dark">
             {{ transaction.description }}
           </span>
         </div>
       </div>
 
       <!-- Info -->
-      <div
-        class="mt-3 p-2.5 rounded-lg bg-warning-light border border-warning/20"
-      >
+      <div class="mt-3 p-2.5 rounded-lg bg-warning-light border border-warning/20">
         <div class="flex gap-1.5">
           <UIcon name="info" size="xs" class="text-warning shrink-0 mt-0.5" />
           <p class="text-xs text-warning">
@@ -205,30 +173,21 @@ const isFormValid = computed(() => {
         >
           <UIcon name="swap_horiz" size="md" class="text-indigo-500" />
         </div>
-        <p
-          class="text-sm text-text-primary-light dark:text-text-primary-dark font-medium mb-0.5"
-        >
+        <p class="text-sm text-text-primary-light dark:text-text-primary-dark font-medium mb-0.5">
           Это перевод между счетами
         </p>
-        <p
-          class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
-        >
+        <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
           Переводы можно только удалить
         </p>
       </div>
 
       <!-- Transfer Details -->
-      <div
-        class="space-y-2 p-3 rounded-lg bg-surface-light dark:bg-surface-dark"
-      >
+      <div class="space-y-2 p-3 rounded-lg bg-surface-light dark:bg-surface-dark">
         <div class="flex justify-between items-center">
-          <span
-            class="text-xs text-text-secondary-light dark:text-text-secondary-dark"
-            >Списание</span
-          >
-          <span
-            class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
-          >
+          <span class="text-xs text-text-secondary-light dark:text-text-secondary-dark">
+            Списание
+          </span>
+          <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
             {{ formatCurrency(transaction.amount, transaction.currency) }}
           </span>
         </div>
@@ -236,27 +195,18 @@ const isFormValid = computed(() => {
           v-if="transaction.to_amount && transaction.to_currency"
           class="flex justify-between items-center"
         >
-          <span
-            class="text-xs text-text-secondary-light dark:text-text-secondary-dark"
-            >Зачисление</span
-          >
-          <span
-            class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
-          >
+          <span class="text-xs text-text-secondary-light dark:text-text-secondary-dark">
+            Зачисление
+          </span>
+          <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
             {{ formatCurrency(transaction.to_amount, transaction.to_currency) }}
           </span>
         </div>
-        <div
-          v-if="transaction.description"
-          class="flex justify-between items-center"
-        >
-          <span
-            class="text-xs text-text-secondary-light dark:text-text-secondary-dark"
-            >Комментарий</span
-          >
-          <span
-            class="text-xs text-text-primary-light dark:text-text-primary-dark"
-          >
+        <div v-if="transaction.description" class="flex justify-between items-center">
+          <span class="text-xs text-text-secondary-light dark:text-text-secondary-dark">
+            Комментарий
+          </span>
+          <span class="text-xs text-text-primary-light dark:text-text-primary-dark">
             {{ transaction.description }}
           </span>
         </div>
@@ -266,9 +216,7 @@ const isFormValid = computed(() => {
       <div class="mt-3 p-2.5 rounded-lg bg-danger/10 border border-danger/20">
         <div class="flex gap-1.5">
           <UIcon name="warning" size="xs" class="text-danger shrink-0 mt-0.5" />
-          <p class="text-xs text-danger">
-            При удалении балансы счетов будут восстановлены
-          </p>
+          <p class="text-xs text-danger">При удалении балансы счетов будут восстановлены</p>
         </div>
       </div>
     </div>
@@ -276,11 +224,7 @@ const isFormValid = computed(() => {
     <!-- Regular Edit Mode (expense/income) -->
     <div v-else-if="transaction" class="space-y-4">
       <!-- Type Tabs -->
-      <UTabs
-        :model-value="type"
-        :items="tabItems"
-        @update:model-value="handleTypeChange"
-      />
+      <UTabs :model-value="type" :items="tabItems" @update:model-value="handleTypeChange" />
 
       <!-- Amount -->
       <UInput
@@ -295,9 +239,7 @@ const isFormValid = computed(() => {
 
       <!-- Category Grid -->
       <div class="space-y-2">
-        <label
-          class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark"
-        >
+        <label class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark">
           Категория
         </label>
         <div
@@ -320,11 +262,7 @@ const isFormValid = computed(() => {
 
       <!-- Description & Date Row -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <UInput
-          v-model="description"
-          label="Комментарий"
-          placeholder="Описание..."
-        />
+        <UInput v-model="description" label="Комментарий" placeholder="Описание..." />
         <UInput v-model="date" label="Дата" type="date" />
       </div>
     </div>
@@ -332,16 +270,12 @@ const isFormValid = computed(() => {
     <template #actions>
       <!-- Protected (debt-related OR split debts) Actions: Close Only -->
       <div v-if="isProtected" class="flex gap-2 w-full">
-        <UButton variant="secondary" size="sm" full-width @click="close">
-          Закрыть
-        </UButton>
+        <UButton variant="secondary" size="sm" full-width @click="close">Закрыть</UButton>
       </div>
 
       <!-- Transfer Actions: Cancel + Delete -->
       <div v-else-if="isTransfer" class="flex gap-2 w-full">
-        <UButton variant="secondary" size="sm" full-width @click="close">
-          Отмена
-        </UButton>
+        <UButton variant="secondary" size="sm" full-width @click="close">Отмена</UButton>
         <UButton
           variant="primary"
           size="sm"
@@ -356,17 +290,10 @@ const isFormValid = computed(() => {
 
       <!-- Regular Actions: Delete + Cancel + Save -->
       <div v-else class="flex gap-2 w-full">
-        <UButton
-          variant="ghost"
-          size="sm"
-          class="!text-danger shrink-0"
-          @click="emit('delete')"
-        >
+        <UButton variant="ghost" size="sm" class="!text-danger shrink-0" @click="emit('delete')">
           <UIcon name="delete" size="sm" />
         </UButton>
-        <UButton variant="secondary" size="sm" full-width @click="close">
-          Отмена
-        </UButton>
+        <UButton variant="secondary" size="sm" full-width @click="close">Отмена</UButton>
         <UButton
           variant="primary"
           size="sm"

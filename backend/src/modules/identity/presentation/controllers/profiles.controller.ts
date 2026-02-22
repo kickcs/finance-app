@@ -18,9 +18,7 @@ export class ProfilesController {
   }
 
   @Post('get-or-create')
-  async getOrCreateProfile(
-    @CurrentUser('sub') userId: string,
-  ): Promise<unknown> {
+  async getOrCreateProfile(@CurrentUser('sub') userId: string): Promise<unknown> {
     return this.queryBus.execute(new GetProfileQuery(userId));
   }
 

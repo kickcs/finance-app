@@ -32,18 +32,12 @@ export class DebtsController {
   }
 
   @Get(':id')
-  async findOne(
-    @CurrentUser('sub') userId: string,
-    @Param('id') id: string,
-  ): Promise<unknown> {
+  async findOne(@CurrentUser('sub') userId: string, @Param('id') id: string): Promise<unknown> {
     return this.queryBus.execute(new GetDebtByIdQuery(id, userId));
   }
 
   @Post()
-  async create(
-    @CurrentUser('sub') userId: string,
-    @Body() dto: CreateDebtDto,
-  ): Promise<unknown> {
+  async create(@CurrentUser('sub') userId: string, @Body() dto: CreateDebtDto): Promise<unknown> {
     return this.commandBus.execute(
       new CreateDebtCommand(
         userId,

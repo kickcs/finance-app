@@ -18,8 +18,6 @@ export class ImportController {
     categoriesCreated: string[];
     accountsCreated: string[];
   }> {
-    return this.commandBus.execute(
-      new BulkImportCommand(userId, dto.transactions),
-    );
+    return this.commandBus.execute(new BulkImportCommand(userId, dto.transactions));
   }
 }

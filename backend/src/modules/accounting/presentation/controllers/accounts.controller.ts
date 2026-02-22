@@ -18,10 +18,7 @@ import {
   DeleteAccountCommand,
   ReorderAccountsCommand,
 } from '../../application/commands';
-import {
-  GetAccountsQuery,
-  GetAccountByIdQuery,
-} from '../../application/queries';
+import { GetAccountsQuery, GetAccountByIdQuery } from '../../application/queries';
 
 @Controller('accounts')
 export class AccountsController {
@@ -36,10 +33,7 @@ export class AccountsController {
   }
 
   @Get(':id')
-  async findOne(
-    @CurrentUser('sub') userId: string,
-    @Param('id') id: string,
-  ): Promise<unknown> {
+  async findOne(@CurrentUser('sub') userId: string, @Param('id') id: string): Promise<unknown> {
     return this.queryBus.execute(new GetAccountByIdQuery(id, userId));
   }
 
@@ -92,24 +86,10 @@ export class AccountsController {
     return this.commandBus.execute(
       new UpdateAccountCommand(id, userId, {
         ...rest,
-        startDate:
-          startDate !== undefined
-            ? startDate
-              ? new Date(startDate)
-              : null
-            : undefined,
-        endDate:
-          endDate !== undefined
-            ? endDate
-              ? new Date(endDate)
-              : null
-            : undefined,
+        startDate: startDate !== undefined ? (startDate ? new Date(startDate) : null) : undefined,
+        endDate: endDate !== undefined ? (endDate ? new Date(endDate) : null) : undefined,
         maturityDate:
-          maturityDate !== undefined
-            ? maturityDate
-              ? new Date(maturityDate)
-              : null
-            : undefined,
+          maturityDate !== undefined ? (maturityDate ? new Date(maturityDate) : null) : undefined,
       }),
     );
   }
@@ -122,13 +102,8 @@ export class AccountsController {
 
   @Post('reorder')
   @HttpCode(HttpStatus.OK)
-  async reorder(
-    @CurrentUser('sub') userId: string,
-    @Body() dto: ReorderAccountsDto,
-  ) {
-    await this.commandBus.execute(
-      new ReorderAccountsCommand(dto.accountIds, userId),
-    );
+  async reorder(@CurrentUser('sub') userId: string, @Body() dto: ReorderAccountsDto) {
+    await this.commandBus.execute(new ReorderAccountsCommand(dto.accountIds, userId));
     return { success: true };
   }
 }

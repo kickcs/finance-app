@@ -6,10 +6,7 @@ export interface ExchangeRateData {
 }
 
 export interface IExchangeRateProvider {
-  fetchRates(
-    baseCurrency: string,
-    targetCurrencies: string[],
-  ): Promise<ExchangeRateData[]>;
+  fetchRates(baseCurrency: string, targetCurrencies: string[]): Promise<ExchangeRateData[]>;
 }
 
 export const EXCHANGE_RATE_PROVIDER = Symbol('EXCHANGE_RATE_PROVIDER');

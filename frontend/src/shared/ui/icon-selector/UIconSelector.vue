@@ -40,19 +40,14 @@ defineEmits<{
             ? 'ring-2 ring-offset-2 ring-primary dark:ring-offset-background-dark'
             : 'bg-surface-light dark:bg-surface-dark',
         ]"
-        :style="
-          modelValue === icon ? { backgroundColor: `${color}20` } : undefined
-        "
+        :style="modelValue === icon ? { backgroundColor: `${color}20` } : undefined"
         @click="$emit('update:modelValue', icon)"
       >
         <UIcon
           :name="icon"
           size="md"
           :style="modelValue === icon ? { color } : undefined"
-          :class="
-            modelValue !== icon &&
-            'text-text-secondary-light dark:text-text-secondary-dark'
-          "
+          :class="modelValue !== icon && 'text-text-secondary-light dark:text-text-secondary-dark'"
         />
       </button>
     </div>

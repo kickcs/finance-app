@@ -13,10 +13,7 @@ export class CategoryType extends ValueObject<CategoryTypeProps> {
   static readonly INCOME = new CategoryType({ value: 'income' });
   static readonly EXPENSE = new CategoryType({ value: 'expense' });
 
-  private static readonly VALID_TYPES: CategoryTypeValue[] = [
-    'income',
-    'expense',
-  ];
+  private static readonly VALID_TYPES: CategoryTypeValue[] = ['income', 'expense'];
 
   private constructor(props: CategoryTypeProps) {
     super(props);

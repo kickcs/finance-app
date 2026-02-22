@@ -27,30 +27,21 @@ defineEmits<{
 
     <!-- Content -->
     <div class="flex-1 text-left">
-      <p
-        class="font-semibold text-text-primary-light dark:text-text-primary-dark"
-      >
+      <p class="font-semibold text-text-primary-light dark:text-text-primary-dark">
         {{ currency.code }}
       </p>
-      <p
-        class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
-      >
+      <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
         {{ currency.name }}
       </p>
     </div>
 
     <!-- Symbol -->
-    <span
-      class="text-text-tertiary-light dark:text-text-tertiary-dark font-medium"
-    >
+    <span class="text-text-tertiary-light dark:text-text-tertiary-dark font-medium">
       {{ currency.symbol }}
     </span>
 
     <!-- Check mark -->
-    <div
-      v-if="selected"
-      class="w-6 h-6 rounded-full bg-primary flex items-center justify-center"
-    >
+    <div v-if="selected" class="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
       <UIcon name="check" size="sm" class="text-white" />
     </div>
   </button>

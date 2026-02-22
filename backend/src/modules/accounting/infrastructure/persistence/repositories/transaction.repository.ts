@@ -78,11 +78,7 @@ export class TransactionRepository implements ITransactionRepository {
     return all.map((entity) => TransactionMapper.toDomain(entity));
   }
 
-  async findByDateRange(
-    userId: string,
-    startDate: Date,
-    endDate: Date,
-  ): Promise<Transaction[]> {
+  async findByDateRange(userId: string, startDate: Date, endDate: Date): Promise<Transaction[]> {
     const ormEntities = await this.ormRepository.find({
       where: {
         userId,
@@ -198,9 +194,7 @@ export class TransactionRepository implements ITransactionRepository {
         .getRawMany<{ sourceTransactionId: string; returnedAmount: string }>();
 
       for (const row of returnedAmountsResult) {
-        returnedAmountsMap[row.sourceTransactionId] = Number(
-          row.returnedAmount,
-        );
+        returnedAmountsMap[row.sourceTransactionId] = Number(row.returnedAmount);
       }
     }
 
@@ -319,12 +313,9 @@ export class TransactionRepository implements ITransactionRepository {
     // Merge and sort, then take pageSize + 1 to check hasMore
     const merged = [...outgoing, ...incoming]
       .sort((a, b) => {
-        const dateCompare =
-          new Date(b.date).getTime() - new Date(a.date).getTime();
+        const dateCompare = new Date(b.date).getTime() - new Date(a.date).getTime();
         if (dateCompare !== 0) return dateCompare;
-        return (
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        );
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       })
       .slice(0, pageSize + 1);
 
@@ -345,11 +336,7 @@ export class TransactionRepository implements ITransactionRepository {
     };
   }
 
-  async getMonthlyStats(
-    userId: string,
-    year: number,
-    month: number,
-  ): Promise<MonthlyStats> {
+  async getMonthlyStats(userId: string, year: number, month: number): Promise<MonthlyStats> {
     const startDate = new Date(year, month - 1, 1);
     const endDate = new Date(year, month, 1);
 
@@ -416,15 +403,9 @@ export class TransactionRepository implements ITransactionRepository {
     const debtReturnsFromMe = Number(debtReturnsFromMeResult?.total ?? 0);
 
     // Income = regular + debt_taken - returns_from_me
-    const netIncome = Math.max(
-      0,
-      regularIncome + debtTaken - debtReturnsFromMe,
-    );
+    const netIncome = Math.max(0, regularIncome + debtTaken - debtReturnsFromMe);
     // Expense = regular + debt_given - returns_to_me
-    const netExpense = Math.max(
-      0,
-      regularExpense + debtGiven - debtReturnsToMe,
-    );
+    const netExpense = Math.max(0, regularExpense + debtGiven - debtReturnsToMe);
 
     // By currency calculations
     // 5. Regular income by currency
@@ -538,15 +519,9 @@ export class TransactionRepository implements ITransactionRepository {
       const returnsFromMe = debtReturnsFromMeByCurrency[currency] ?? 0;
 
       // Income = regular + debt_taken - returns_from_me
-      const netIncomeForCurrency = Math.max(
-        0,
-        incomeVal + takenVal - returnsFromMe,
-      );
+      const netIncomeForCurrency = Math.max(0, incomeVal + takenVal - returnsFromMe);
       // Expense = regular + debt_given - returns_to_me
-      const netExpenseForCurrency = Math.max(
-        0,
-        expenseVal + givenVal - returnsToMe,
-      );
+      const netExpenseForCurrency = Math.max(0, expenseVal + givenVal - returnsToMe);
 
       if (netIncomeForCurrency > 0) {
         incomeByCurrency[currency] = netIncomeForCurrency;
@@ -564,10 +539,7 @@ export class TransactionRepository implements ITransactionRepository {
     };
   }
 
-  async getAnalyticsStats(
-    userId: string,
-    options: AnalyticsOptions,
-  ): Promise<AnalyticsStats> {
+  async getAnalyticsStats(userId: string, options: AnalyticsOptions): Promise<AnalyticsStats> {
     const { startDate, endDate, accountIds } = options;
 
     // Base query builder helper (without debt filter)
@@ -642,15 +614,9 @@ export class TransactionRepository implements ITransactionRepository {
     const debtReturnsFromMe = Number(debtReturnsFromMeResult?.total ?? 0);
 
     // Income = regular + debt_taken - returns_from_me
-    const netIncome = Math.max(
-      0,
-      regularIncome + debtTaken - debtReturnsFromMe,
-    );
+    const netIncome = Math.max(0, regularIncome + debtTaken - debtReturnsFromMe);
     // Expense = regular + debt_given - returns_to_me
-    const netExpense = Math.max(
-      0,
-      regularExpense + debtGiven - debtReturnsToMe,
-    );
+    const netExpense = Math.max(0, regularExpense + debtGiven - debtReturnsToMe);
 
     // 7. Regular income by currency
     const regularIncomeByCurrencyResult = await createBaseQuery()
@@ -763,15 +729,9 @@ export class TransactionRepository implements ITransactionRepository {
       const returnsFromMe = debtReturnsFromMeByCurrency[currency] ?? 0;
 
       // Income = regular + debt_taken - returns_from_me
-      const netIncomeForCurrency = Math.max(
-        0,
-        incomeVal + takenVal - returnsFromMe,
-      );
+      const netIncomeForCurrency = Math.max(0, incomeVal + takenVal - returnsFromMe);
       // Expense = regular + debt_given - returns_to_me
-      const netExpenseForCurrency = Math.max(
-        0,
-        expenseVal + givenVal - returnsToMe,
-      );
+      const netExpenseForCurrency = Math.max(0, expenseVal + givenVal - returnsToMe);
 
       if (netIncomeForCurrency > 0) {
         incomeByCurrency[currency] = netIncomeForCurrency;
@@ -854,11 +814,7 @@ export class TransactionRepository implements ITransactionRepository {
     let categoryOffsetsQuery = this.ormRepository
       .createQueryBuilder('return_tx')
       .innerJoin(DebtOrmEntity, 'd', 'd.close_transaction_id = return_tx.id')
-      .innerJoin(
-        TransactionOrmEntity,
-        'source_tx',
-        'source_tx.id = d.source_transaction_id',
-      )
+      .innerJoin(TransactionOrmEntity, 'source_tx', 'source_tx.id = d.source_transaction_id')
       .where('return_tx.user_id = :userId', { userId })
       .andWhere('return_tx.date >= :startDate', { startDate })
       .andWhere('return_tx.date <= :endDate', { endDate })

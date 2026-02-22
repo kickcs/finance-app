@@ -47,9 +47,7 @@ function handleAction() {
     <div
       :class="[
         'mx-auto flex items-center justify-center',
-        variant === 'inline'
-          ? 'w-10 h-10 mb-2 rounded-lg'
-          : 'w-14 h-14 mb-4 rounded-xl',
+        variant === 'inline' ? 'w-10 h-10 mb-2 rounded-lg' : 'w-14 h-14 mb-4 rounded-xl',
         iconBgClass || 'bg-surface-light dark:bg-surface-dark',
       ]"
     >
@@ -61,11 +59,7 @@ function handleAction() {
     </div>
 
     <!-- Title -->
-    <p
-      :class="[
-        'text-sm font-medium text-text-primary-light dark:text-text-primary-dark mb-1',
-      ]"
-    >
+    <p :class="['text-sm font-medium text-text-primary-light dark:text-text-primary-dark mb-1']">
       {{ title }}
     </p>
 

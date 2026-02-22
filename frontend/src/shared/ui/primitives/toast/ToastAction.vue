@@ -4,9 +4,7 @@ import type { HTMLAttributes } from 'vue';
 import { ToastAction } from 'reka-ui';
 import { cn } from '@/shared/lib/utils';
 
-const props = defineProps<
-  ToastActionProps & { class?: HTMLAttributes['class'] }
->();
+const props = defineProps<ToastActionProps & { class?: HTMLAttributes['class'] }>();
 </script>
 
 <template>

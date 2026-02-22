@@ -4,16 +4,11 @@ import type { HTMLAttributes } from 'vue';
 import { ToastDescription } from 'reka-ui';
 import { cn } from '@/shared/lib/utils';
 
-const props = defineProps<
-  ToastDescriptionProps & { class?: HTMLAttributes['class'] }
->();
+const props = defineProps<ToastDescriptionProps & { class?: HTMLAttributes['class'] }>();
 </script>
 
 <template>
-  <ToastDescription
-    :class="cn('text-sm opacity-90', props.class)"
-    v-bind="props"
-  >
+  <ToastDescription :class="cn('text-sm opacity-90', props.class)" v-bind="props">
     <slot />
   </ToastDescription>
 </template>

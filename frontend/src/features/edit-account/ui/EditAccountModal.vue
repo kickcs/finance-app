@@ -1,12 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
-import {
-  UModal,
-  UInput,
-  UButton,
-  UColorPicker,
-  UIconSelector,
-} from '@/shared/ui';
+import { UModal, UInput, UButton, UColorPicker, UIconSelector } from '@/shared/ui';
 import {
   VISIBLE_ACCOUNT_TYPES,
   ACCOUNT_TYPE_LABELS,
@@ -162,17 +156,11 @@ function confirm() {
   >
     <div v-if="account" class="space-y-5">
       <!-- Name -->
-      <UInput
-        v-model="name"
-        label="Название"
-        placeholder="Наличные, Карта..."
-      />
+      <UInput v-model="name" label="Название" placeholder="Наличные, Карта..." />
 
       <!-- Type -->
       <div class="space-y-2">
-        <label
-          class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark"
-        >
+        <label class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">
           Тип счёта
         </label>
         <div class="grid grid-cols-3 gap-2">
@@ -194,26 +182,17 @@ function confirm() {
       </div>
 
       <!-- Type-specific Fields -->
-      <AccountTypeFields
-        :type="type"
-        :fields="typeFields"
-        @update:field="updateTypeField"
-      />
+      <AccountTypeFields :type="type" :fields="typeFields" @update:field="updateTypeField" />
 
       <!-- Icon -->
-      <UIconSelector
-        v-model="icon"
-        :icons="ACCOUNT_ICONS"
-        :color="color"
-        label="Иконка"
-      />
+      <UIconSelector v-model="icon" :icons="ACCOUNT_ICONS" :color="color" label="Иконка" />
 
       <!-- Color -->
       <UColorPicker v-model="color" :colors="ACCOUNT_COLORS" label="Цвет" />
     </div>
 
     <template #actions>
-      <UButton variant="secondary" full-width @click="close"> Отмена </UButton>
+      <UButton variant="secondary" full-width @click="close">Отмена</UButton>
       <UButton
         variant="primary"
         full-width

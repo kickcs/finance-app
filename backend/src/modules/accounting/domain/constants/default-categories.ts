@@ -189,8 +189,6 @@ export const DEFAULT_CATEGORIES_MAP = new Map<string, DefaultCategory>(
   ALL_DEFAULT_CATEGORIES.map((cat) => [cat.id, cat]),
 );
 
-export function getDefaultCategoryById(
-  id: string,
-): DefaultCategory | undefined {
+export function getDefaultCategoryById(id: string): DefaultCategory | undefined {
   return DEFAULT_CATEGORIES_MAP.get(id);
 }

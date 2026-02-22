@@ -15,12 +15,7 @@ export interface SwipeConfig {
 export type SwipeState = 'idle' | 'swiping' | 'left' | 'right';
 
 export function useSwipe(config?: SwipeConfig) {
-  const {
-    threshold = 80,
-    maxSwipe = 100,
-    leftEnabled = true,
-    rightEnabled = true,
-  } = config || {};
+  const { threshold = 80, maxSwipe = 100, leftEnabled = true, rightEnabled = true } = config || {};
 
   const translateX = ref(0);
   const isDragging = ref(false);
@@ -50,10 +45,7 @@ export function useSwipe(config?: SwipeConfig) {
     const diffY = currentY - startY;
 
     // Determine swipe direction in first 10px of movement
-    if (
-      isHorizontalSwipe === null &&
-      (Math.abs(diffX) > 10 || Math.abs(diffY) > 10)
-    ) {
+    if (isHorizontalSwipe === null && (Math.abs(diffX) > 10 || Math.abs(diffY) > 10)) {
       isHorizontalSwipe = Math.abs(diffX) > Math.abs(diffY);
     }
 

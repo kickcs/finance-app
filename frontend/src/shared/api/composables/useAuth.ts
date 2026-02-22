@@ -69,12 +69,11 @@ function createOptimisticUser(token: string): User | null {
     name: null,
     email: payload.email ?? null,
     currency: localStorage.getItem('selectedCurrency') || 'UZS',
-    hasCompletedOnboarding:
-      localStorage.getItem('onboardingComplete') === 'true',
+    hasCompletedOnboarding: localStorage.getItem('onboardingComplete') === 'true',
     defaultAccountId: null,
     createdAt: '',
     isDemo: payload.isDemo ?? false,
-    demoExpiresAt: localStorage.getItem('demoExpiresAt'),
+    demoExpiresAt: null,
   };
 }
 
@@ -285,11 +284,7 @@ export function useAuth() {
       isLoading.value = true;
       error.value = null;
 
-      const data = await http.post<AuthResponse>(
-        '/auth/login/anonymous',
-        {},
-        { skipAuth: true },
-      );
+      const data = await http.post<AuthResponse>('/auth/login/anonymous', {}, { skipAuth: true });
 
       // Only accessToken in response, refreshToken is in httpOnly cookie
       setTokens(data.accessToken);

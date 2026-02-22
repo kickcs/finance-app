@@ -27,10 +27,7 @@ const emit = defineEmits<{
   updateCurrency: [index: number, currency: string];
 }>();
 
-function updateField<K extends keyof AccountFormData>(
-  field: K,
-  value: AccountFormData[K],
-) {
+function updateField<K extends keyof AccountFormData>(field: K, value: AccountFormData[K]) {
   emit('update:formData', { ...props.formData, [field]: value });
 }
 </script>
@@ -52,9 +49,7 @@ function updateField<K extends keyof AccountFormData>(
 
     <!-- Account Type -->
     <div class="space-y-2">
-      <label
-        class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark"
-      >
+      <label class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">
         Тип счёта
       </label>
       <div class="grid grid-cols-3 gap-2">
@@ -79,30 +74,18 @@ function updateField<K extends keyof AccountFormData>(
     <AccountTypeFields
       :type="formData.type"
       :fields="formData"
-      @update:field="
-        (key, value) => updateField(key as keyof AccountFormData, value as any)
-      "
+      @update:field="(key, value) => updateField(key as keyof AccountFormData, value as any)"
     />
 
     <!-- Currency Balances -->
     <CurrencyBalanceList
       :balances="formData.balances"
-      :label="
-        formData.type === 'credit_card' ? 'Текущая задолженность' : undefined
-      "
-      :hint="
-        formData.type === 'credit_card'
-          ? 'Введите 0, если задолженности нет'
-          : undefined
-      "
+      :label="formData.type === 'credit_card' ? 'Текущая задолженность' : undefined"
+      :hint="formData.type === 'credit_card' ? 'Введите 0, если задолженности нет' : undefined"
       @add="$emit('addCurrency', $event)"
       @remove="$emit('removeCurrency', $event)"
-      @update-balance="
-        (index, balance) => $emit('updateBalance', index, balance)
-      "
-      @update-currency="
-        (index, currency) => $emit('updateCurrency', index, currency)
-      "
+      @update-balance="(index, balance) => $emit('updateBalance', index, balance)"
+      @update-currency="(index, currency) => $emit('updateCurrency', index, currency)"
     />
 
     <!-- Icon Selector -->

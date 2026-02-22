@@ -1,10 +1,5 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import {
-  Inject,
-  BadRequestException,
-  NotFoundException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Inject, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { CreateTransactionCommand } from './create-transaction.command';
 import { Transaction } from '../../../domain/aggregates/transaction';
@@ -50,8 +45,7 @@ export class CreateTransactionHandler implements ICommandHandler<CreateTransacti
     let transaction: Transaction;
 
     // Get source account
-    const account =
-      await this.accountRepository.findByIdWithBalances(accountId);
+    const account = await this.accountRepository.findByIdWithBalances(accountId);
     if (!account) {
       throw new NotFoundException('Account not found');
     }
@@ -64,15 +58,12 @@ export class CreateTransactionHandler implements ICommandHandler<CreateTransacti
         throw new BadRequestException('toAccountId is required for transfers');
       }
 
-      const toAccount =
-        await this.accountRepository.findByIdWithBalances(toAccountId);
+      const toAccount = await this.accountRepository.findByIdWithBalances(toAccountId);
       if (!toAccount) {
         throw new NotFoundException('Destination account not found');
       }
       if (toAccount.userId !== userId) {
-        throw new ForbiddenException(
-          'Destination account does not belong to user',
-        );
+        throw new ForbiddenException('Destination account does not belong to user');
       }
 
       // Use domain service for transfer

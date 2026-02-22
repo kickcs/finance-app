@@ -1,11 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useRouter } from 'vue-router';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 import { AppHeader } from '@/widgets/header';
-import { BottomNav } from '@/widgets/bottom-nav';
-import { UTabs, SectionHeader, EmptyState, UCard, ViewAllButton } from '@/shared/ui';
+import { UTabs, SectionHeader } from '@/shared/ui';
 import { formatCurrency, COMPACT_FORMAT } from '@/shared/lib/format/currency';
 import { useExchangeRates } from '@/shared/api';
 import { useAnalyticsStats } from '@/entities/transaction';
@@ -27,8 +25,6 @@ import {
   StatCard,
   type DonutSegment,
 } from '@/widgets/analytics';
-
-const router = useRouter();
 
 const { userId } = useCurrentUser();
 const { currency } = useUserCurrency();
@@ -61,7 +57,6 @@ const {
   totalExpense,
   totalIncome,
   categoryBreakdown,
-  isLoading: analyticsLoading,
   isFetching: analyticsFetching,
 } = useAnalyticsStats({
   startDate: startDateStr,
@@ -78,10 +73,7 @@ const { convert } = useExchangeRates(currency);
 // Total balance converted to user's main currency
 const totalBalance = computed((): number => {
   const balances: Record<string, number> = totalBalancesByCurrency.value;
-  return Object.entries(balances).reduce(
-    (sum, [curr, amount]) => sum + convert(amount, curr),
-    0,
-  );
+  return Object.entries(balances).reduce((sum, [curr, amount]) => sum + convert(amount, curr), 0);
 });
 
 // Load debts for debt summary
@@ -158,15 +150,12 @@ const accountChips = computed(() => {
 function handlePeriodChange(value: string | number) {
   setPeriod(value as LitePeriod);
 }
-
-function handleAddTransaction() {
-  router.push('/transactions/new');
-}
-
 </script>
 
 <template>
-  <div class="min-h-screen bg-background-light dark:bg-background-dark pb-28">
+  <div
+    class="h-full flex flex-col relative bg-background-light dark:bg-background-dark pb-28 md:pb-8 overflow-y-auto"
+  >
     <!-- Header with Mode Toggle -->
     <AppHeader title="Аналитика">
       <template #actions>
@@ -177,7 +166,10 @@ function handleAddTransaction() {
     <!-- Content -->
     <main class="px-5 pt-6 space-y-5">
       <!-- Sticky Filters -->
-      <div class="sticky z-20 -mx-5 px-5 py-2 space-y-3 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-border-light/50 dark:border-border-dark/50 shadow-sm" :style="{ top: 'calc(3rem + var(--safe-area-inset-top, 0px))' }">
+      <div
+        class="sticky z-20 -mx-5 px-5 py-2 space-y-3 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-border-light/50 dark:border-border-dark/50 shadow-sm"
+        :style="{ top: 'calc(3rem + env(safe-area-inset-top, 0px))' }"
+      >
         <!-- Period Tabs -->
         <UTabs
           :model-value="filters.period"
@@ -213,10 +205,18 @@ function handleAddTransaction() {
       </div>
 
       <!-- Analytics Content (dims during refetch) -->
-      <div class="space-y-5 transition-opacity duration-300" :class="{ 'opacity-50 pointer-events-none': analyticsFetching }">
+      <div
+        class="space-y-5 transition-opacity duration-300"
+        :class="{ 'opacity-50 pointer-events-none': analyticsFetching }"
+      >
         <!-- Donut Chart -->
         <div class="pt-2">
-          <SectionHeader title="Анализ расходов" :show-add="false" :show-view-all="false" class="mb-4" />
+          <SectionHeader
+            title="Анализ расходов"
+            :show-add="false"
+            :show-view-all="false"
+            class="mb-4"
+          />
         </div>
         <DonutChart
           :segments="donutSegments"
@@ -235,11 +235,7 @@ function handleAddTransaction() {
         />
 
         <!-- Top Categories -->
-        <TopCategories
-          :categories="expenseCategoryStats"
-          :currency="currency"
-          :limit="3"
-        />
+        <TopCategories :categories="expenseCategoryStats" :currency="currency" :limit="3" />
 
         <!-- Savings Gauge -->
         <SavingsGauge
@@ -252,9 +248,7 @@ function handleAddTransaction() {
 
       <!-- Debt Summary Cards -->
       <div v-if="totalOwedToMe > 0 || totalIOwe > 0" class="space-y-3">
-        <h2
-          class="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark"
-        >
+        <h2 class="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark">
           Долги
         </h2>
 
@@ -276,8 +270,5 @@ function handleAddTransaction() {
         />
       </div>
     </main>
-
-    <!-- Bottom Navigation -->
-    <BottomNav @add-click="handleAddTransaction" />
   </div>
 </template>

@@ -17,10 +17,7 @@ import {
   UpdateReminderCommand,
   DeleteReminderCommand,
 } from '../../application/commands';
-import {
-  GetRemindersQuery,
-  GetReminderByIdQuery,
-} from '../../application/queries';
+import { GetRemindersQuery, GetReminderByIdQuery } from '../../application/queries';
 
 @Controller('reminders')
 export class RemindersController {
@@ -35,10 +32,7 @@ export class RemindersController {
   }
 
   @Get(':id')
-  async findOne(
-    @CurrentUser('sub') userId: string,
-    @Param('id') id: string,
-  ): Promise<unknown> {
+  async findOne(@CurrentUser('sub') userId: string, @Param('id') id: string): Promise<unknown> {
     return this.queryBus.execute(new GetReminderByIdQuery(id, userId));
   }
 

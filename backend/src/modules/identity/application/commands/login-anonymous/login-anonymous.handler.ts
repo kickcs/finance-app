@@ -8,11 +8,7 @@ import {
   PROFILE_REPOSITORY,
 } from '../../../domain/repositories/profile.repository.interface';
 import { DomainEventPublisher } from '../../../../../shared';
-import {
-  AuthResponse,
-  TokenService,
-  DemoInitializationService,
-} from '../../services';
+import { AuthResponse, TokenService, DemoInitializationService } from '../../services';
 
 // Demo account duration: 1 hour
 const DEMO_DURATION_MS = 60 * 60 * 1000;
@@ -58,10 +54,7 @@ export class LoginAnonymousHandler implements ICommandHandler<LoginAnonymousComm
     try {
       await this.demoInitializationService.initializeDemoData(profile);
     } catch (error) {
-      this.logger.error(
-        `Failed to initialize demo data for user ${profile.id}`,
-        error,
-      );
+      this.logger.error(`Failed to initialize demo data for user ${profile.id}`, error);
       // Continue anyway - user can still use the app, just without demo data
     }
 

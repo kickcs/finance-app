@@ -28,9 +28,7 @@ export const exchangeRatesApi = {
     const rates: Record<string, number> = {};
 
     // Fetch rates for all common currencies in parallel
-    const targetCurrencies = COMMON_CURRENCIES.filter(
-      (c) => c !== baseCurrency,
-    );
+    const targetCurrencies = COMMON_CURRENCIES.filter((c) => c !== baseCurrency);
 
     const promises = targetCurrencies.map(async (targetCurrency) => {
       try {
@@ -58,10 +56,7 @@ export const exchangeRatesApi = {
   /**
    * Get single exchange rate
    */
-  async getRate(
-    baseCurrency: string,
-    targetCurrency: string,
-  ): Promise<number | null> {
+  async getRate(baseCurrency: string, targetCurrency: string): Promise<number | null> {
     try {
       const data = await http.get<RateResponse>(
         `/exchange-rates/${baseCurrency}/${targetCurrency}`,
@@ -75,11 +70,7 @@ export const exchangeRatesApi = {
   /**
    * Convert amount between currencies using backend
    */
-  async convert(
-    amount: number,
-    fromCurrency: string,
-    toCurrency: string,
-  ): Promise<number> {
+  async convert(amount: number, fromCurrency: string, toCurrency: string): Promise<number> {
     if (fromCurrency === toCurrency) return amount;
 
     try {
@@ -96,11 +87,7 @@ export const exchangeRatesApi = {
   /**
    * Upsert an exchange rate
    */
-  async upsertRate(
-    baseCurrency: string,
-    targetCurrency: string,
-    rate: number,
-  ): Promise<void> {
+  async upsertRate(baseCurrency: string, targetCurrency: string, rate: number): Promise<void> {
     await http.post('/exchange-rates', {
       baseCurrency,
       targetCurrency,

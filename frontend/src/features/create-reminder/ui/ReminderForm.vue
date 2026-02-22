@@ -1,12 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import {
-  UInput,
-  UButton,
-  UTabs,
-  UColorPicker,
-  UIconSelector,
-} from '@/shared/ui';
+import { UInput, UButton, UTabs, UColorPicker, UIconSelector } from '@/shared/ui';
 import { FREQUENCY_LABELS, REMINDER_ICONS } from '@/entities/reminder';
 import { ACCOUNT_COLORS } from '@/entities/account';
 import { getTodayISO, isPastDate } from '@/shared/lib/date';
@@ -29,10 +23,7 @@ const frequencyTabs = Object.entries(FREQUENCY_LABELS).map(([id, label]) => ({
   label,
 }));
 
-function updateField<K extends keyof ReminderFormData>(
-  field: K,
-  value: ReminderFormData[K],
-) {
+function updateField<K extends keyof ReminderFormData>(field: K, value: ReminderFormData[K]) {
   emit('update:formData', { ...props.formData, [field]: value });
 }
 
@@ -45,8 +36,7 @@ const dateError = computed(() => {
   return null;
 });
 
-const _isFormValid =
-  props.formData.name.trim().length > 0 && props.formData.amount > 0;
+const _isFormValid = props.formData.name.trim().length > 0 && props.formData.amount > 0;
 </script>
 
 <template>
@@ -76,17 +66,13 @@ const _isFormValid =
 
     <!-- Frequency -->
     <div class="space-y-3">
-      <label
-        class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark"
-      >
+      <label class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">
         Частота оплаты
       </label>
       <UTabs
         :items="frequencyTabs"
         :model-value="formData.frequency"
-        @update:model-value="
-          updateField('frequency', $event as ReminderFormData['frequency'])
-        "
+        @update:model-value="updateField('frequency', $event as ReminderFormData['frequency'])"
       />
     </div>
 

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import { BottomNav } from '@/widgets/bottom-nav';
 import { AppHeader } from '@/widgets/header';
 import { DebtCard, useDebts, type Debt } from '@/entities/debt';
 import { UButton, UIcon, UCard, Skeleton, EmptyState, SectionHeader } from '@/shared/ui';
@@ -26,14 +25,10 @@ const { debts, debtsByPerson, isLoading } = useDebts(userId);
 
 // Filter by person from query params
 const personFilter = ref<string | null>(route.query.person as string | null);
-const typeFilter = ref<'given' | 'taken' | null>(
-  route.query.type as 'given' | 'taken' | null,
-);
+const typeFilter = ref<'given' | 'taken' | null>(route.query.type as 'given' | 'taken' | null);
 
 // View mode toggle: grouped by person or flat list
-const viewMode = ref<'grouped' | 'flat'>(
-  personFilter.value ? 'flat' : 'grouped',
-);
+const viewMode = ref<'grouped' | 'flat'>(personFilter.value ? 'flat' : 'grouped');
 
 // Clear filter when route changes
 watch(
@@ -74,19 +69,13 @@ function clearFilter() {
 const totalGivenDebts = computed(() => {
   return activeDebts.value
     .filter((d) => d.debt_type === 'given')
-    .reduce(
-      (sum, d) => sum + convert(d.remaining_amount, d.currency || 'UZS'),
-      0,
-    );
+    .reduce((sum, d) => sum + convert(d.remaining_amount, d.currency || 'UZS'), 0);
 });
 
 const totalTakenDebts = computed(() => {
   return activeDebts.value
     .filter((d) => d.debt_type === 'taken')
-    .reduce(
-      (sum, d) => sum + convert(d.remaining_amount, d.currency || 'UZS'),
-      0,
-    );
+    .reduce((sum, d) => sum + convert(d.remaining_amount, d.currency || 'UZS'), 0);
 });
 
 function goBack() {
@@ -100,18 +89,22 @@ function handleDebtClick(debt: Debt) {
 function handleAddDebt() {
   router.push({ name: 'new-debt' });
 }
-
-function handleAddTransaction() {
-  router.push('/transactions/new');
-}
 </script>
 
 <template>
-  <div class="min-h-screen bg-background-light dark:bg-background-dark pb-28">
+  <div
+    class="h-full flex flex-col relative bg-background-light dark:bg-background-dark pb-28 md:pb-8 overflow-y-auto"
+  >
     <!-- Header -->
     <AppHeader blur show-back title="Долги" @back="goBack">
       <template #actions>
-        <UButton variant="ghost" size="sm" class="!p-2" @click="handleAddDebt">
+        <UButton
+          variant="ghost"
+          size="sm"
+          class="!p-2"
+          aria-label="Добавить долг"
+          @click="handleAddDebt"
+        >
           <UIcon name="add" size="sm" />
         </UButton>
       </template>
@@ -138,8 +131,12 @@ function handleAddTransaction() {
         <div v-if="activeDebts.length > 0" class="grid grid-cols-2 gap-3">
           <!-- Given debts (people owe you) -->
           <UCard class="p-4 relative overflow-hidden" variant="bordered">
-            <div class="absolute -right-4 -top-4 w-16 h-16 bg-debt-given/10 rounded-full blur-xl pointer-events-none" />
-            <p class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-1">
+            <div
+              class="absolute -right-4 -top-4 w-16 h-16 bg-debt-given/10 rounded-full blur-xl pointer-events-none"
+            />
+            <p
+              class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-1"
+            >
               Вам должны
             </p>
             <p class="text-lg font-bold text-debt-given tracking-tight">
@@ -149,8 +146,12 @@ function handleAddTransaction() {
 
           <!-- Taken debts (you owe others) -->
           <UCard class="p-4 relative overflow-hidden" variant="bordered">
-            <div class="absolute -right-4 -top-4 w-16 h-16 bg-debt-received/10 rounded-full blur-xl pointer-events-none" />
-            <p class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-1">
+            <div
+              class="absolute -right-4 -top-4 w-16 h-16 bg-debt-received/10 rounded-full blur-xl pointer-events-none"
+            />
+            <p
+              class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-1"
+            >
               Вы должны
             </p>
             <p class="text-lg font-bold text-debt-received tracking-tight">
@@ -169,7 +170,8 @@ function handleAddTransaction() {
               <span>{{ personFilter }}</span>
               <button
                 type="button"
-                class="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center hover:bg-primary/30"
+                class="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center hover:bg-primary/30"
+                :aria-label="`Сбросить фильтр по ${personFilter}`"
                 @click="clearFilter"
               >
                 <UIcon name="close" size="xs" />
@@ -186,10 +188,13 @@ function handleAddTransaction() {
             <!-- View Mode Toggle (hidden when filtering by person) -->
             <div
               v-if="activeDebts.length > 0 && !personFilter"
+              role="group"
+              aria-label="Режим отображения долгов"
               class="flex gap-1 bg-surface-light dark:bg-surface-dark rounded-lg p-1"
             >
               <button
                 type="button"
+                :aria-pressed="viewMode === 'grouped'"
                 class="px-3 py-1 text-sm font-medium rounded-md transition-colors"
                 :class="
                   viewMode === 'grouped'
@@ -202,6 +207,7 @@ function handleAddTransaction() {
               </button>
               <button
                 type="button"
+                :aria-pressed="viewMode === 'flat'"
                 class="px-3 py-1 text-sm font-medium rounded-md transition-colors"
                 :class="
                   viewMode === 'flat'
@@ -216,59 +222,36 @@ function handleAddTransaction() {
           </div>
 
           <!-- Grouped View (by person) -->
-          <div
-            v-if="activeDebts.length > 0 && viewMode === 'grouped'"
-            class="space-y-4"
-          >
-            <div
-              v-for="group in debtsByPerson"
-              :key="group.personName"
-              class="space-y-2"
-            >
+          <div v-if="activeDebts.length > 0 && viewMode === 'grouped'" class="space-y-4">
+            <div v-for="group in debtsByPerson" :key="group.personName" class="space-y-2">
               <!-- Person Header -->
               <div class="flex items-center justify-between px-1">
                 <div class="flex items-center gap-2">
                   <div
                     class="w-8 h-8 rounded-full flex items-center justify-center"
                     :class="
-                      group.debtType === 'given'
-                        ? 'bg-debt-given-light'
-                        : 'bg-debt-received-light'
+                      group.debtType === 'given' ? 'bg-debt-given-light' : 'bg-debt-received-light'
                     "
                   >
                     <UIcon
                       name="person"
                       size="sm"
-                      :class="
-                        group.debtType === 'given'
-                          ? 'text-debt-given'
-                          : 'text-debt-received'
-                      "
+                      :class="group.debtType === 'given' ? 'text-debt-given' : 'text-debt-received'"
                     />
                   </div>
                   <div>
-                    <p
-                      class="font-semibold text-text-primary-light dark:text-text-primary-dark"
-                    >
+                    <p class="font-semibold text-text-primary-light dark:text-text-primary-dark">
                       {{ group.personName }}
                     </p>
-                    <p
-                      class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
-                    >
-                      {{
-                        group.debtType === 'given' ? 'Вам должны' : 'Вы должны'
-                      }}
+                    <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
+                      {{ group.debtType === 'given' ? 'Вам должны' : 'Вы должны' }}
                     </p>
                   </div>
                 </div>
                 <div class="text-right">
                   <p
                     class="font-bold"
-                    :class="
-                      group.debtType === 'given'
-                        ? 'text-debt-given'
-                        : 'text-debt-received'
-                    "
+                    :class="group.debtType === 'given' ? 'text-debt-given' : 'text-debt-received'"
                   >
                     {{ formatCurrency(group.totalRemaining, currency) }}
                   </p>
@@ -323,8 +306,5 @@ function handleAddTransaction() {
         </div>
       </template>
     </main>
-
-    <!-- Bottom Navigation -->
-    <BottomNav @add-click="handleAddTransaction" />
   </div>
 </template>

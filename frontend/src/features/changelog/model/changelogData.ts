@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.6.0';
+export const CURRENT_VERSION = '1.6.1';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,29 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.6.1',
+    date: '2026-02-22',
+    title: 'Десктоп-версия и боковое меню',
+    items: [
+      {
+        type: 'feature',
+        text: 'Адаптивный интерфейс для больших экранов — на десктопе появляется боковая панель навигации с балансом и быстрым доступом ко всем разделам.',
+      },
+      {
+        type: 'improvement',
+        text: 'Главная страница переработана: виджеты расположены в два столбца на широких экранах для удобного обзора финансов.',
+      },
+      {
+        type: 'improvement',
+        text: 'Улучшена доступность — добавлена навигация с клавиатуры, корректные роли для экранных читалок и семантичные ссылки.',
+      },
+      {
+        type: 'fix',
+        text: 'Исправлено мерцание баланса при переключении между страницами.',
+      },
+    ],
+  },
   {
     version: '1.6.0',
     date: '2026-02-22',

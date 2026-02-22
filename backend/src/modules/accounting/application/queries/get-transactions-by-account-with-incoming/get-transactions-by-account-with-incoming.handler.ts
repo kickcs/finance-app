@@ -26,10 +26,9 @@ export class GetTransactionsByAccountWithIncomingHandler implements IQueryHandle
       throw new ForbiddenException('Access denied');
     }
 
-    const transactions =
-      await this.transactionRepository.findByAccountIdWithIncoming(
-        query.accountId,
-      );
+    const transactions = await this.transactionRepository.findByAccountIdWithIncoming(
+      query.accountId,
+    );
 
     return transactions.map((t) => ({
       id: t.id,

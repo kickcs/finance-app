@@ -14,9 +14,6 @@ export class DeleteBalanceHandler implements ICommandHandler<DeleteBalanceComman
   ) {}
 
   async execute(command: DeleteBalanceCommand): Promise<void> {
-    await this.accountBalanceRepository.delete(
-      command.accountId,
-      command.currency,
-    );
+    await this.accountBalanceRepository.delete(command.accountId, command.currency);
   }
 }

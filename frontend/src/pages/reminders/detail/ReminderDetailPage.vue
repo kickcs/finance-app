@@ -5,16 +5,8 @@ import { UButton, UIcon, UCard, USpinner, NotFoundState } from '@/shared/ui';
 import { AppHeader } from '@/widgets/header';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { formatDate } from '@/shared/lib/format/date';
-import {
-  useReminders,
-  FREQUENCY_LABELS,
-  type Reminder,
-} from '@/entities/reminder';
-import {
-  EditReminderModal,
-  DeleteReminderModal,
-  useEditReminder,
-} from '@/features/edit-reminder';
+import { useReminders, FREQUENCY_LABELS, type Reminder } from '@/entities/reminder';
+import { EditReminderModal, DeleteReminderModal, useEditReminder } from '@/features/edit-reminder';
 import { navigateBack } from '@/app/router';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
@@ -51,9 +43,7 @@ const showEditModal = ref(false);
 const showDeleteModal = ref(false);
 
 // Edit reminder logic
-const { isUpdating, isDeleting, update, remove } = useEditReminder(
-  userId.value,
-);
+const { isUpdating, isDeleting, update, remove } = useEditReminder(userId.value);
 
 async function handleUpdate(updates: Partial<Reminder>) {
   if (!reminder.value) return;
@@ -80,14 +70,11 @@ function goBack() {
 </script>
 
 <template>
-  <div class="min-h-screen bg-background-light dark:bg-background-dark pb-28">
+  <div
+    class="h-full flex flex-col relative bg-background-light dark:bg-background-dark pb-28 md:pb-8 overflow-y-auto"
+  >
     <!-- Header -->
-    <AppHeader
-      :title="reminder?.name ?? 'Подписка'"
-      show-back
-      blur
-      @back="goBack"
-    />
+    <AppHeader :title="reminder?.name ?? 'Подписка'" show-back blur @back="goBack" />
 
     <!-- Content -->
     <main class="px-5 pt-8 pb-6">
@@ -108,23 +95,13 @@ function goBack() {
             <div
               class="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0"
               :class="[
-                isOverdue
-                  ? 'bg-danger/10'
-                  : isUpcoming
-                    ? 'bg-warning/10'
-                    : 'bg-reminder-light',
+                isOverdue ? 'bg-danger/10' : isUpcoming ? 'bg-warning/10' : 'bg-reminder-light',
               ]"
             >
               <UIcon
                 :name="reminder.icon"
                 size="lg"
-                :class="[
-                  isOverdue
-                    ? 'text-danger'
-                    : isUpcoming
-                      ? 'text-warning'
-                      : 'text-reminder',
-                ]"
+                :class="[isOverdue ? 'text-danger' : isUpcoming ? 'text-warning' : 'text-reminder']"
               />
             </div>
 
@@ -135,9 +112,7 @@ function goBack() {
               >
                 {{ reminder.name }}
               </p>
-              <p
-                class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
-              >
+              <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
                 {{ FREQUENCY_LABELS[reminder.frequency] }}
               </p>
             </div>
@@ -145,18 +120,21 @@ function goBack() {
             <!-- Status Badge -->
             <span
               v-if="isOverdue"
+              role="alert"
               class="px-3 py-1 rounded-full text-xs font-medium bg-danger/10 text-danger"
             >
               Просрочено
             </span>
             <span
               v-else-if="isUpcoming"
+              role="status"
               class="px-3 py-1 rounded-full text-xs font-medium bg-warning/10 text-warning"
             >
               Скоро
             </span>
             <span
               v-else-if="!reminder.is_active"
+              role="status"
               class="px-3 py-1 rounded-full text-xs font-medium bg-neutral-light text-neutral"
             >
               Неактивна
@@ -164,18 +142,12 @@ function goBack() {
           </div>
 
           <!-- Amount -->
-          <div
-            class="mt-6 pt-6 border-t border-border-light dark:border-border-dark"
-          >
+          <div class="mt-6 pt-6 border-t border-border-light dark:border-border-dark">
             <div class="flex justify-between items-end">
-              <span
-                class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
-              >
+              <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
                 Сумма платежа
               </span>
-              <span
-                class="text-2xl font-bold text-text-primary-light dark:text-text-primary-dark"
-              >
+              <span class="text-2xl font-bold text-text-primary-light dark:text-text-primary-dark">
                 {{ formatCurrency(reminder.amount, currency) }}
               </span>
             </div>
@@ -186,9 +158,7 @@ function goBack() {
         <UCard variant="default" class="p-5 space-y-4">
           <!-- Next Date -->
           <div class="flex items-center justify-between">
-            <span
-              class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
-            >
+            <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
               Следующий платёж
             </span>
             <span
@@ -211,23 +181,17 @@ function goBack() {
 
           <!-- Frequency -->
           <div class="flex items-center justify-between">
-            <span
-              class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
-            >
+            <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
               Частота
             </span>
-            <span
-              class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
-            >
+            <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
               {{ FREQUENCY_LABELS[reminder.frequency] }}
             </span>
           </div>
 
           <!-- Status -->
           <div class="flex items-center justify-between">
-            <span
-              class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
-            >
+            <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
               Статус
             </span>
             <span
@@ -245,12 +209,7 @@ function goBack() {
 
         <!-- Actions -->
         <div class="space-y-3">
-          <UButton
-            variant="primary"
-            size="xl"
-            full-width
-            @click="showEditModal = true"
-          >
+          <UButton variant="primary" size="xl" full-width @click="showEditModal = true">
             <UIcon name="edit" size="sm" class="mr-2" />
             Редактировать
           </UButton>

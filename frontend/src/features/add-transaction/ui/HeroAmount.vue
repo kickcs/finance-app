@@ -2,15 +2,8 @@
 import { ref, onMounted, nextTick, computed } from 'vue';
 import { UIcon } from '@/shared/ui';
 import { getCurrencyByCode } from '@/entities/currency';
-import {
-  formatNumberWithSpaces,
-  formatCurrency,
-} from '@/shared/lib/format/currency';
-import {
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-} from '@/shared/ui/primitives/popover';
+import { formatNumberWithSpaces, formatCurrency } from '@/shared/lib/format/currency';
+import { Popover, PopoverTrigger, PopoverContent } from '@/shared/ui/primitives/popover';
 
 const props = defineProps<{
   amount: number;
@@ -71,6 +64,7 @@ onMounted(() => {
   <div class="flex flex-col items-center gap-1">
     <label
       v-if="label"
+      :for="`amount-input-${currency}`"
       class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark"
     >
       {{ label }}
@@ -79,18 +73,20 @@ onMounted(() => {
     <!-- Amount row: amount dead-center, currency absolutely positioned right -->
     <div class="relative w-full">
       <!-- Amount display + hidden input (true center) -->
-      <div class="relative cursor-text text-center py-1" @click="focusInput">
+      <div class="relative cursor-text text-center py-1 group" @click="focusInput">
         <input
+          :id="`amount-input-${currency}`"
           ref="hiddenInputRef"
           type="number"
           inputmode="numeric"
           :value="amount || ''"
-          class="absolute inset-0 w-full h-full opacity-0 caret-transparent"
+          :aria-label="label || 'Сумма'"
+          class="absolute inset-0 w-full h-full opacity-0 caret-transparent cursor-text"
           @input="onInput"
           @keydown.enter.prevent
         />
         <span
-          class="text-4xl font-semibold tabular-nums transition-all duration-200"
+          class="text-4xl font-semibold tabular-nums transition-[color,transform,opacity] duration-200 group-hover:opacity-80"
           :class="[
             amount
               ? 'text-text-primary-light dark:text-text-primary-dark'
@@ -118,11 +114,7 @@ onMounted(() => {
             />
           </button>
         </PopoverTrigger>
-        <PopoverContent
-          align="end"
-          :side-offset="8"
-          class="w-auto min-w-[140px] p-1"
-        >
+        <PopoverContent align="end" :side-offset="8" class="w-auto min-w-[140px] p-1">
           <button
             v-for="cur in availableCurrencies"
             :key="cur"
@@ -137,9 +129,7 @@ onMounted(() => {
           >
             <span>{{ getCurrencyByCode(cur)?.flag }}</span>
             <span>{{ cur }}</span>
-            <span
-              class="text-text-tertiary-light dark:text-text-tertiary-dark text-xs"
-            >
+            <span class="text-text-tertiary-light dark:text-text-tertiary-dark text-xs">
               {{ getCurrencyByCode(cur)?.name }}
             </span>
           </button>
@@ -157,10 +147,7 @@ onMounted(() => {
 
     <!-- Balance / insufficient funds -->
     <div class="h-5 text-center">
-      <p
-        v-if="showInsufficientFunds && amount > 0"
-        class="text-xs text-warning"
-      >
+      <p v-if="showInsufficientFunds && amount > 0" class="text-xs text-warning">
         Недостаточно средств.
         {{ formatCurrency(currentBalance ?? 0, currency) }}
       </p>

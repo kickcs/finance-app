@@ -38,9 +38,7 @@ export function useProfile(userId: MaybeRefOrGetter<string | null>) {
       if (!uid) return;
 
       await queryClient.cancelQueries({ queryKey: queryKey.value });
-      const previousProfile = queryClient.getQueryData<Profile | null>(
-        queryKey.value,
-      );
+      const previousProfile = queryClient.getQueryData<Profile | null>(queryKey.value);
 
       if (previousProfile) {
         queryClient.setQueryData<Profile>(queryKey.value, {
@@ -82,9 +80,7 @@ export function useProfile(userId: MaybeRefOrGetter<string | null>) {
   }
 
   // Default account
-  const defaultAccountId = computed(
-    () => profile.value?.default_account_id ?? null,
-  );
+  const defaultAccountId = computed(() => profile.value?.default_account_id ?? null);
 
   async function setDefaultAccount(accountId: string) {
     return updateProfile({ default_account_id: accountId });

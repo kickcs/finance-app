@@ -10,8 +10,7 @@ export function useImportData() {
   const queryClient = useQueryClient();
 
   const importMutation = useMutation({
-    mutationFn: (transactions: ParsedTransaction[]) =>
-      importApi.importTransactions(transactions),
+    mutationFn: (transactions: ParsedTransaction[]) => importApi.importTransactions(transactions),
     onSuccess() {
       // Invalidate all related queries so UI refreshes
       // Using .all prefix keys to cover all sub-queries

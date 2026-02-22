@@ -56,10 +56,7 @@ export class CurrencyPair extends ValueObject<CurrencyPairProps> {
    * Returns the inverse currency pair
    */
   inverse(): CurrencyPair {
-    return CurrencyPair.create(
-      this.props.targetCurrency,
-      this.props.baseCurrency,
-    );
+    return CurrencyPair.create(this.props.targetCurrency, this.props.baseCurrency);
   }
 
   toString(): string {

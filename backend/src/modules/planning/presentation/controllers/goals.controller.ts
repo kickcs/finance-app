@@ -32,18 +32,12 @@ export class GoalsController {
   }
 
   @Get(':id')
-  async findOne(
-    @CurrentUser('sub') userId: string,
-    @Param('id') id: string,
-  ): Promise<unknown> {
+  async findOne(@CurrentUser('sub') userId: string, @Param('id') id: string): Promise<unknown> {
     return this.queryBus.execute(new GetGoalByIdQuery(id, userId));
   }
 
   @Post()
-  async create(
-    @CurrentUser('sub') userId: string,
-    @Body() dto: CreateGoalDto,
-  ): Promise<unknown> {
+  async create(@CurrentUser('sub') userId: string, @Body() dto: CreateGoalDto): Promise<unknown> {
     return this.commandBus.execute(
       new CreateGoalCommand(
         userId,
@@ -67,11 +61,7 @@ export class GoalsController {
       new UpdateGoalCommand(id, userId, {
         ...dto,
         deadline:
-          dto.deadline !== undefined
-            ? dto.deadline
-              ? new Date(dto.deadline)
-              : null
-            : undefined,
+          dto.deadline !== undefined ? (dto.deadline ? new Date(dto.deadline) : null) : undefined,
       }),
     );
   }

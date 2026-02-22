@@ -20,9 +20,7 @@ export class InitializeDefaultCategoriesHandler implements ICommandHandler<Initi
 
   async execute(command: InitializeDefaultCategoriesCommand) {
     // Check if user already has categories
-    const existingCategories = await this.categoryRepository.findByUserId(
-      command.userId,
-    );
+    const existingCategories = await this.categoryRepository.findByUserId(command.userId);
 
     if (existingCategories.length > 0) {
       // Return existing categories
@@ -52,8 +50,7 @@ export class InitializeDefaultCategoriesHandler implements ICommandHandler<Initi
       ),
     );
 
-    const savedCategories =
-      await this.categoryRepository.saveMany(categoriesToCreate);
+    const savedCategories = await this.categoryRepository.saveMany(categoriesToCreate);
 
     return savedCategories.map((cat) => ({
       id: cat.id,

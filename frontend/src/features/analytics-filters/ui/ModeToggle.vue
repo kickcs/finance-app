@@ -24,10 +24,5 @@ function handleChange(value: string | number) {
 </script>
 
 <template>
-  <UTabs
-    :model-value="mode"
-    :items="items"
-    size="sm"
-    @update:model-value="handleChange"
-  />
+  <UTabs :model-value="mode" :items="items" size="sm" @update:model-value="handleChange" />
 </template>

@@ -37,10 +37,7 @@ export function useManageCategories() {
     };
   }
 
-  function updateField<K extends keyof CategoryFormData>(
-    field: K,
-    value: CategoryFormData[K],
-  ) {
+  function updateField<K extends keyof CategoryFormData>(field: K, value: CategoryFormData[K]) {
     formData.value[field] = value;
   }
 

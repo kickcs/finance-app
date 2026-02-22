@@ -6,28 +6,18 @@ import { AppHeader } from '@/widgets/header';
 const draggable = defineAsyncComponent(() => import('vuedraggable'));
 import { useCategories } from '@/entities/category';
 import type { UserCategory } from '@/shared/api/database.types';
-import {
-  CategoryForm,
-  useManageCategories,
-} from '@/features/manage-categories';
+import { CategoryForm, useManageCategories } from '@/features/manage-categories';
 import { navigateBack } from '@/app/router';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 
 const { userId } = useCurrentUser();
 
 // Categories composable - now all categories come from DB
-const {
-  categories,
-  createCategory,
-  updateCategory,
-  deleteCategory,
-  reorderCategories,
-  isLoading,
-} = useCategories(userId);
+const { categories, createCategory, updateCategory, deleteCategory, reorderCategories, isLoading } =
+  useCategories(userId);
 
 // Form state
-const { formData, isValid, isSubmitting, resetForm, updateField } =
-  useManageCategories();
+const { formData, isValid, isSubmitting, resetForm, updateField } = useManageCategories();
 
 const tabItems = [
   { id: 'expense', label: 'Расходы' },
@@ -152,9 +142,7 @@ async function confirmDelete() {
 </script>
 
 <template>
-  <div
-    class="h-dvh flex flex-col overflow-hidden bg-background-light dark:bg-background-dark"
-  >
+  <div class="h-dvh flex flex-col overflow-hidden bg-background-light dark:bg-background-dark">
     <!-- Header -->
     <AppHeader blur show-back title="Категории" class="shrink-0" @back="goBack">
       <template #actions>
@@ -186,9 +174,13 @@ async function confirmDelete() {
           @end="handleDragEnd"
         >
           <template #item="{ element: category }">
-            <div class="flex items-center gap-3 p-4 bg-surface-light dark:bg-surface-dark transition-colors hover:bg-surface-light dark:hover:bg-surface-dark">
+            <div
+              class="flex items-center gap-3 p-4 bg-surface-light dark:bg-surface-dark transition-colors hover:bg-surface-light dark:hover:bg-surface-dark"
+            >
               <!-- Drag Handle -->
-              <div class="drag-handle cursor-grab active:cursor-grabbing text-text-tertiary-light dark:text-text-tertiary-dark hover:text-text-secondary-light dark:hover:text-text-secondary-dark transition-colors">
+              <div
+                class="drag-handle cursor-grab active:cursor-grabbing text-text-tertiary-light dark:text-text-tertiary-dark hover:text-text-secondary-light dark:hover:text-text-secondary-dark transition-colors"
+              >
                 <UIcon name="drag_indicator" size="sm" />
               </div>
 
@@ -196,16 +188,26 @@ async function confirmDelete() {
               <IconBadge :icon="category.icon" size="sm" :color="category.color" class="shrink-0" />
 
               <!-- Category Name -->
-              <span class="flex-1 font-medium text-text-primary-light dark:text-text-primary-dark truncate">
+              <span
+                class="flex-1 font-medium text-text-primary-light dark:text-text-primary-dark truncate"
+              >
                 {{ category.name }}
               </span>
 
               <!-- Action Buttons -->
               <div class="flex shrink-0 gap-1 -mr-2">
-                <UButton variant="icon" class="text-text-secondary-light dark:text-text-secondary-dark hover:bg-border-light dark:hover:bg-border-dark rounded-xl" @click="openEditModal(category)">
+                <UButton
+                  variant="icon"
+                  class="text-text-secondary-light dark:text-text-secondary-dark hover:bg-border-light dark:hover:bg-border-dark rounded-xl"
+                  @click="openEditModal(category)"
+                >
                   <UIcon name="edit" size="sm" />
                 </UButton>
-                <UButton variant="icon" class="text-danger hover:bg-danger/10 rounded-xl" @click="openDeleteModal(category)">
+                <UButton
+                  variant="icon"
+                  class="text-danger hover:bg-danger/10 rounded-xl"
+                  @click="openDeleteModal(category)"
+                >
                   <UIcon name="delete" size="sm" />
                 </UButton>
               </div>
@@ -247,40 +249,26 @@ async function confirmDelete() {
       />
 
       <template #actions>
-        <UButton variant="secondary" full-width @click="closeFormModal">
-          Отмена
-        </UButton>
+        <UButton variant="secondary" full-width @click="closeFormModal">Отмена</UButton>
         <UButton
           variant="primary"
           full-width
           :disabled="!isValid || isSubmitting"
           @click="handleSave"
         >
-          {{
-            isSubmitting
-              ? 'Сохранение...'
-              : isEditMode
-                ? 'Сохранить'
-                : 'Создать'
-          }}
+          {{ isSubmitting ? 'Сохранение...' : isEditMode ? 'Сохранить' : 'Создать' }}
         </UButton>
       </template>
     </UModal>
 
     <!-- Delete Confirmation Modal -->
-    <UModal
-      v-model="showDeleteModal"
-      title="Удалить категорию"
-      @close="closeDeleteModal"
-    >
+    <UModal v-model="showDeleteModal" title="Удалить категорию" @close="closeDeleteModal">
       <p class="text-text-secondary-light dark:text-text-secondary-dark">
         Вы уверены, что хотите удалить категорию "{{ categoryToDelete?.name }}"?
       </p>
 
       <template #actions>
-        <UButton variant="secondary" full-width @click="closeDeleteModal">
-          Отмена
-        </UButton>
+        <UButton variant="secondary" full-width @click="closeDeleteModal">Отмена</UButton>
         <UButton
           variant="primary"
           full-width

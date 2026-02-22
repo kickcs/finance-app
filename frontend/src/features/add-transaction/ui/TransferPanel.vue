@@ -8,11 +8,7 @@ import type { AccountWithBalances } from '@/entities/account';
 import type { TransactionFormData } from '../model/useTransactionForm';
 import { usePanelState } from '../model/usePanelState';
 import HeroAmount from './HeroAmount.vue';
-import {
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-} from '@/shared/ui/primitives/popover';
+import { Popover, PopoverTrigger, PopoverContent } from '@/shared/ui/primitives/popover';
 
 const props = defineProps<{
   formData: TransactionFormData;
@@ -65,9 +61,7 @@ const targetAccountCurrencies = computed(() => {
 const targetBalance = computed(() => {
   if (!targetAccount.value || !props.formData.toCurrency) return undefined;
   return (
-    targetAccount.value.balances.find(
-      (b) => b.currency === props.formData.toCurrency,
-    )?.balance ?? 0
+    targetAccount.value.balances.find((b) => b.currency === props.formData.toCurrency)?.balance ?? 0
   );
 });
 
@@ -79,9 +73,7 @@ const showConversion = computed(
 );
 
 const isIntraAccount = computed(
-  () =>
-    props.formData.accountId === props.formData.toAccountId &&
-    !!props.formData.accountId,
+  () => props.formData.accountId === props.formData.toAccountId && !!props.formData.accountId,
 );
 
 function calculateConvertedAmount(
@@ -105,8 +97,7 @@ function handleSourceSelect(accountId: string) {
   };
 
   if (props.formData.toAccountId === accountId) {
-    const otherCurrencies =
-      account?.balances.filter((b) => b.currency !== firstCurrency) || [];
+    const otherCurrencies = account?.balances.filter((b) => b.currency !== firstCurrency) || [];
     if (otherCurrencies.length > 0) {
       updates.toCurrency = otherCurrencies[0].currency;
       updates.toAmount = calculateConvertedAmount(
@@ -131,10 +122,8 @@ function handleTargetSelect(accountId: string) {
   let firstCurrency: string;
   if (accountId === props.formData.accountId) {
     const otherCurrencies =
-      account?.balances.filter((b) => b.currency !== props.formData.currency) ||
-      [];
-    firstCurrency =
-      otherCurrencies[0]?.currency || account?.balances[0]?.currency || 'UZS';
+      account?.balances.filter((b) => b.currency !== props.formData.currency) || [];
+    firstCurrency = otherCurrencies[0]?.currency || account?.balances[0]?.currency || 'UZS';
   } else {
     firstCurrency = account?.balances[0]?.currency || 'UZS';
   }
@@ -198,12 +187,8 @@ function handleSourceCurrencyChange(newCurrency: string) {
     props.formData.toAccountId === props.formData.accountId &&
     props.formData.toCurrency === newCurrency
   ) {
-    const account = props.accounts.find(
-      (a) => a.id === props.formData.accountId,
-    );
-    const otherCurrency = account?.balances.find(
-      (b) => b.currency !== newCurrency,
-    )?.currency;
+    const account = props.accounts.find((a) => a.id === props.formData.accountId);
+    const otherCurrency = account?.balances.find((b) => b.currency !== newCurrency)?.currency;
     if (otherCurrency) {
       updates.toCurrency = otherCurrency;
       updates.toAmount = calculateConvertedAmount(
@@ -212,10 +197,7 @@ function handleSourceCurrencyChange(newCurrency: string) {
         otherCurrency,
       );
     }
-  } else if (
-    props.formData.toCurrency &&
-    props.formData.toCurrency !== newCurrency
-  ) {
+  } else if (props.formData.toCurrency && props.formData.toCurrency !== newCurrency) {
     updates.toAmount = calculateConvertedAmount(
       props.formData.amount,
       newCurrency,
@@ -250,20 +232,11 @@ let skipWatcherRecalc = false;
 
 // Auto-recalculate toAmount when amount or currencies change
 watch(
-  () =>
-    [
-      props.formData.amount,
-      props.formData.currency,
-      props.formData.toCurrency,
-    ] as const,
+  () => [props.formData.amount, props.formData.currency, props.formData.toCurrency] as const,
   ([newAmount, fromCurrency, toCurrency]) => {
     if (skipWatcherRecalc) return;
     if (fromCurrency && toCurrency && newAmount >= 0) {
-      const converted = calculateConvertedAmount(
-        newAmount,
-        fromCurrency,
-        toCurrency,
-      );
+      const converted = calculateConvertedAmount(newAmount, fromCurrency, toCurrency);
 
       if (Math.abs((props.formData.toAmount || 0) - converted) > 0.01) {
         emit('update:formData', { ...props.formData, toAmount: converted });
@@ -307,8 +280,7 @@ watch(
             <span
               class="absolute left-0 top-2 bottom-2 w-1 rounded-r-full"
               :style="{
-                backgroundColor:
-                  selectedAccount?.color || 'var(--color-border-light)',
+                backgroundColor: selectedAccount?.color || 'var(--color-border-light)',
               }"
             />
             <div class="flex-1 text-left pl-1.5">
@@ -317,9 +289,7 @@ watch(
               >
                 Откуда
               </p>
-              <p
-                class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark"
-              >
+              <p class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark">
                 {{ selectedAccount?.name || 'Выберите счёт' }}
               </p>
             </div>
@@ -407,10 +377,7 @@ watch(
               class="absolute left-0 top-2 bottom-2 w-1 rounded-r-full"
               :style="{ backgroundColor: targetAccount.color }"
             />
-            <div
-              class="flex-1 text-left"
-              :class="targetAccount ? 'pl-1.5' : ''"
-            >
+            <div class="flex-1 text-left" :class="targetAccount ? 'pl-1.5' : ''">
               <p
                 class="text-caption text-text-tertiary-light dark:text-text-tertiary-dark uppercase tracking-wider"
               >
@@ -427,10 +394,7 @@ watch(
                 {{ targetAccount?.name || 'Выберите счёт' }}
               </p>
             </div>
-            <div
-              v-if="targetAccount && targetBalance !== undefined"
-              class="text-right"
-            >
+            <div v-if="targetAccount && targetBalance !== undefined" class="text-right">
               <p
                 class="text-sm font-medium tabular-nums text-text-primary-light dark:text-text-primary-dark"
               >
@@ -490,9 +454,7 @@ watch(
       <HeroAmount
         :amount="formData.toAmount || 0"
         :currency="formData.toCurrency || ''"
-        :currency-symbol="
-          getCurrencyByCode(formData.toCurrency || '')?.symbol || ''
-        "
+        :currency-symbol="getCurrencyByCode(formData.toCurrency || '')?.symbol || ''"
         :available-currencies="targetAccountCurrencies"
         :is-multi-currency="targetAccountCurrencies.length > 1"
         label="Сумма зачисления"

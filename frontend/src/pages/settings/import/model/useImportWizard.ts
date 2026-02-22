@@ -16,9 +16,7 @@ export function useImportWizard() {
 
   const fileInput = ref<HTMLInputElement | null>(null);
 
-  const previewTransactions = computed(
-    () => parseResult.value?.data.slice(0, 20) ?? [],
-  );
+  const previewTransactions = computed(() => parseResult.value?.data.slice(0, 20) ?? []);
 
   function openFilePicker() {
     fileInput.value?.click();

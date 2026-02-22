@@ -15,8 +15,7 @@ function getSystemTheme(): boolean {
 }
 
 function applyTheme(newTheme: Theme) {
-  const shouldBeDark =
-    newTheme === 'dark' || (newTheme === 'system' && getSystemTheme());
+  const shouldBeDark = newTheme === 'dark' || (newTheme === 'system' && getSystemTheme());
   isDark.value = shouldBeDark;
 
   if (shouldBeDark) {

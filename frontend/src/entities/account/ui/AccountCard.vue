@@ -56,9 +56,7 @@ const formattedBalance = computed(() => {
     <!-- Content -->
     <div class="flex-1 text-left min-w-0">
       <div class="flex items-center gap-1.5">
-        <p
-          class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark truncate"
-        >
+        <p class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark truncate">
           {{ account.name }}
         </p>
         <span
@@ -91,9 +89,7 @@ const formattedBalance = computed(() => {
           class="text-xs font-medium text-text-primary-light dark:text-text-primary-dark whitespace-nowrap"
         >
           {{ getCurrencyByCode(balance.currency)?.flag ?? balance.currency }}
-          {{
-            formatCurrency(balance.balance, balance.currency, COMPACT_FORMAT)
-          }}
+          {{ formatCurrency(balance.balance, balance.currency, COMPACT_FORMAT) }}
         </div>
         <p
           v-if="account.balances.length > 2"

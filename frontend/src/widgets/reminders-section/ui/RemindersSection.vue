@@ -64,9 +64,7 @@ function iconClass(reminder: Reminder): string {
       @view-all="$emit('view-all')"
     >
       <template #badge>
-        <UBadge v-if="todayCount > 0" variant="primary" size="xs"
-          >{{ todayCount }} сегодня</UBadge
-        >
+        <UBadge v-if="todayCount > 0" variant="primary" size="xs">{{ todayCount }} сегодня</UBadge>
       </template>
     </SectionHeader>
 
@@ -108,17 +106,8 @@ function iconClass(reminder: Reminder): string {
         </p>
 
         <!-- Amount -->
-        <p
-          class="text-xs font-semibold text-text-primary-light dark:text-text-primary-dark"
-        >
-          {{
-            formatMasked(
-              reminder.amount,
-              currency || 'UZS',
-              hidden ?? false,
-              COMPACT_FORMAT,
-            )
-          }}
+        <p class="text-xs font-semibold text-text-primary-light dark:text-text-primary-dark">
+          {{ formatMasked(reminder.amount, currency || 'UZS', hidden ?? false, COMPACT_FORMAT) }}
         </p>
       </button>
     </div>

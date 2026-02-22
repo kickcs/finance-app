@@ -4,11 +4,10 @@ import { waitForAuth } from '@/shared/api/composables/useAuth';
 import type { User } from '@/shared/api/composables/useAuth';
 import { clearTokens } from '@/shared/api/http';
 import { queryClient } from '@/shared/api/queryClient';
+import { MAIN_NAV_ITEMS } from '@/shared/config/navigation';
 
 // Navigation direction state for page transitions
-export const transitionName = ref<
-  'slide-forward' | 'slide-back' | 'fade' | 'none'
->('fade');
+export const transitionName = ref<'slide-forward' | 'slide-back' | 'fade' | 'none'>('fade');
 
 // Prefetch all page components for instant navigation
 const prefetchPages = () => {
@@ -66,11 +65,113 @@ export const router = createRouter({
     return { top: 0 };
   },
   routes: [
+    // Main App Layout - wrap all internal pages
     {
       path: '/',
-      name: 'dashboard',
-      component: () => import('@/pages/dashboard/DashboardPage.vue'),
+      component: () => import('@/app/layouts').then((m) => m.MainLayout),
       meta: { requiresAuth: true, requiresOnboarding: true },
+      children: [
+        {
+          path: '',
+          name: 'dashboard',
+          component: () => import('@/pages/dashboard/DashboardPage.vue'),
+        },
+        {
+          path: 'history',
+          name: 'history',
+          component: () => import('@/pages/history/HistoryPage.vue'),
+        },
+        {
+          path: 'analytics',
+          name: 'analytics',
+          component: () => import('@/pages/analytics/AnalyticsPage.vue'),
+        },
+        {
+          path: 'analytics/full',
+          name: 'analytics-full',
+          component: () => import('@/pages/analytics/AnalyticsFullPage.vue'),
+        },
+        {
+          path: 'accounts',
+          name: 'accounts',
+          component: () => import('@/pages/accounts/AccountsPage.vue'),
+        },
+        {
+          path: 'accounts/new',
+          name: 'new-account',
+          component: () => import('@/pages/onboarding/first-account/FirstAccountPage.vue'),
+        },
+        {
+          path: 'accounts/:id',
+          name: 'account-detail',
+          component: () => import('@/pages/accounts/AccountDetailPage.vue'),
+        },
+        {
+          path: 'transactions/new',
+          name: 'new-transaction',
+          component: () => import('@/pages/transactions/new/AddTransactionPage.vue'),
+        },
+        {
+          path: 'reminders/new',
+          name: 'new-reminder',
+          component: () => import('@/pages/reminders/new/AddReminderPage.vue'),
+        },
+        {
+          path: 'reminders/:id',
+          name: 'reminder-detail',
+          component: () => import('@/pages/reminders/detail/ReminderDetailPage.vue'),
+        },
+        {
+          path: 'reminders',
+          name: 'reminders-list',
+          component: () => import('@/pages/reminders/list/RemindersListPage.vue'),
+        },
+        {
+          path: 'debts',
+          name: 'debts-list',
+          component: () => import('@/pages/debts/list/DebtsListPage.vue'),
+        },
+        {
+          path: 'debts/new',
+          name: 'new-debt',
+          component: () => import('@/pages/debts/new/AddDebtPage.vue'),
+        },
+        {
+          path: 'debts/:id',
+          name: 'debt-detail',
+          component: () => import('@/pages/debts/detail/DebtDetailPage.vue'),
+        },
+        {
+          path: 'profile',
+          name: 'profile',
+          component: () => import('@/pages/profile/ProfilePage.vue'),
+        },
+        {
+          path: 'changelog',
+          name: 'changelog',
+          component: () => import('@/pages/changelog/ChangelogPage.vue'),
+        },
+        {
+          path: 'settings/currency',
+          name: 'settings-currency',
+          component: () => import('@/pages/settings/currency/CurrencySettingsPage.vue'),
+        },
+        {
+          path: 'settings/import',
+          name: 'settings-import',
+          component: () => import('@/pages/settings/import/ImportPage.vue'),
+        },
+        {
+          path: 'settings/categories',
+          name: 'settings-categories',
+          component: () => import('@/pages/settings/categories/CategoriesPage.vue'),
+        },
+        {
+          path: 'settings/quick-actions',
+          name: 'settings-quick-actions',
+          component: () => import('@/pages/settings/quick-actions/QuickActionsSettingsPage.vue'),
+        },
+      ],
     },
     // Welcome onboarding (pre-auth)
     {
@@ -95,137 +196,13 @@ export const router = createRouter({
     {
       path: '/onboarding/first-account',
       name: 'first-account',
-      component: () =>
-        import('@/pages/onboarding/first-account/FirstAccountPage.vue'),
+      component: () => import('@/pages/onboarding/first-account/FirstAccountPage.vue'),
       meta: { requiresAuth: true },
     },
     // Legacy redirect for old currency selection route
     {
       path: '/onboarding/currency',
       redirect: '/onboarding/first-account',
-    },
-    // Main App
-    {
-      path: '/history',
-      name: 'history',
-      component: () => import('@/pages/history/HistoryPage.vue'),
-      meta: { requiresAuth: true, requiresOnboarding: true },
-    },
-    {
-      path: '/analytics',
-      name: 'analytics',
-      component: () => import('@/pages/analytics/AnalyticsPage.vue'),
-      meta: { requiresAuth: true, requiresOnboarding: true },
-    },
-    {
-      path: '/analytics/full',
-      name: 'analytics-full',
-      component: () => import('@/pages/analytics/AnalyticsFullPage.vue'),
-      meta: { requiresAuth: true, requiresOnboarding: true },
-    },
-    {
-      path: '/accounts',
-      name: 'accounts',
-      component: () => import('@/pages/accounts/AccountsPage.vue'),
-      meta: { requiresAuth: true, requiresOnboarding: true },
-    },
-    {
-      path: '/accounts/new',
-      name: 'new-account',
-      component: () =>
-        import('@/pages/onboarding/first-account/FirstAccountPage.vue'),
-      meta: { requiresAuth: true, requiresOnboarding: true },
-    },
-    {
-      path: '/accounts/:id',
-      name: 'account-detail',
-      component: () => import('@/pages/accounts/AccountDetailPage.vue'),
-      meta: { requiresAuth: true, requiresOnboarding: true },
-    },
-    {
-      path: '/transactions/new',
-      name: 'new-transaction',
-      component: () =>
-        import('@/pages/transactions/new/AddTransactionPage.vue'),
-      meta: { requiresAuth: true, requiresOnboarding: true },
-    },
-    {
-      path: '/reminders/new',
-      name: 'new-reminder',
-      component: () => import('@/pages/reminders/new/AddReminderPage.vue'),
-      meta: { requiresAuth: true, requiresOnboarding: true },
-    },
-    {
-      path: '/reminders/:id',
-      name: 'reminder-detail',
-      component: () =>
-        import('@/pages/reminders/detail/ReminderDetailPage.vue'),
-      meta: { requiresAuth: true, requiresOnboarding: true },
-    },
-    {
-      path: '/reminders',
-      name: 'reminders-list',
-      component: () => import('@/pages/reminders/list/RemindersListPage.vue'),
-      meta: { requiresAuth: true, requiresOnboarding: true },
-    },
-    // Debts
-    {
-      path: '/debts',
-      name: 'debts-list',
-      component: () => import('@/pages/debts/list/DebtsListPage.vue'),
-      meta: { requiresAuth: true, requiresOnboarding: true },
-    },
-    {
-      path: '/debts/new',
-      name: 'new-debt',
-      component: () => import('@/pages/debts/new/AddDebtPage.vue'),
-      meta: { requiresAuth: true, requiresOnboarding: true },
-    },
-    {
-      path: '/debts/:id',
-      name: 'debt-detail',
-      component: () => import('@/pages/debts/detail/DebtDetailPage.vue'),
-      meta: { requiresAuth: true, requiresOnboarding: true },
-    },
-    {
-      path: '/profile',
-      name: 'profile',
-      component: () => import('@/pages/profile/ProfilePage.vue'),
-      meta: { requiresAuth: true, requiresOnboarding: true },
-    },
-    // Changelog
-    {
-      path: '/changelog',
-      name: 'changelog',
-      component: () => import('@/pages/changelog/ChangelogPage.vue'),
-      meta: { requiresAuth: true, requiresOnboarding: true },
-    },
-    // Settings
-    {
-      path: '/settings/currency',
-      name: 'settings-currency',
-      component: () =>
-        import('@/pages/settings/currency/CurrencySettingsPage.vue'),
-      meta: { requiresAuth: true, requiresOnboarding: true },
-    },
-    {
-      path: '/settings/import',
-      name: 'settings-import',
-      component: () => import('@/pages/settings/import/ImportPage.vue'),
-      meta: { requiresAuth: true, requiresOnboarding: true },
-    },
-    {
-      path: '/settings/categories',
-      name: 'settings-categories',
-      component: () => import('@/pages/settings/categories/CategoriesPage.vue'),
-      meta: { requiresAuth: true, requiresOnboarding: true },
-    },
-    {
-      path: '/settings/quick-actions',
-      name: 'settings-quick-actions',
-      component: () =>
-        import('@/pages/settings/quick-actions/QuickActionsSettingsPage.vue'),
-      meta: { requiresAuth: true, requiresOnboarding: true },
     },
     // Catch-all redirect
     {
@@ -243,26 +220,30 @@ export function resetOnboardingVerified() {
   onboardingVerified = false;
 }
 
-// Synchronous onboarding check using user object + localStorage (no network)
-function checkOnboardingStatusFast(): boolean {
+// Synchronous onboarding check using verified user data with localStorage as optimistic cache
+function checkOnboardingStatusFast(user?: User | null): boolean {
   if (onboardingVerified) return true;
 
-  const localOnboarding = localStorage.getItem('onboardingComplete') === 'true';
-  if (localOnboarding) {
+  // Prefer verified server data when available
+  if (user?.hasCompletedOnboarding) {
     onboardingVerified = true;
+    return true;
   }
-  return localOnboarding;
+
+  // Fall back to localStorage only as optimistic UX cache (server will re-verify)
+  // Do NOT set onboardingVerified here — localStorage can be stale
+  return localStorage.getItem('onboardingComplete') === 'true';
 }
 
 function hasSeenOnboarding(): boolean {
   return localStorage.getItem('hasSeenOnboarding') === 'true';
 }
 
-// Synchronous demo expiry check using user object + localStorage (no network)
+// Synchronous demo expiry check using verified user data only
 function checkDemoExpiryFast(user: User): boolean {
   if (!user.isDemo) return false;
 
-  const expiresAt = user.demoExpiresAt || localStorage.getItem('demoExpiresAt');
+  const expiresAt = user.demoExpiresAt;
   if (!expiresAt) return false;
 
   return new Date(expiresAt) < new Date();
@@ -302,7 +283,7 @@ router.beforeEach(async (to, from, next) => {
 
   // Route is for guests only (login page)
   if (to.meta.guestOnly && isAuthenticated) {
-    if (!checkOnboardingStatusFast()) {
+    if (!checkOnboardingStatusFast(user)) {
       next({ name: 'first-account' });
     } else {
       next({ name: 'dashboard' });
@@ -312,7 +293,7 @@ router.beforeEach(async (to, from, next) => {
 
   // Route requires completed onboarding
   if (to.meta.requiresOnboarding && isAuthenticated) {
-    if (!checkOnboardingStatusFast()) {
+    if (!checkOnboardingStatusFast(user)) {
       next({ name: 'first-account' });
       return;
     }
@@ -320,7 +301,7 @@ router.beforeEach(async (to, from, next) => {
 
   // If onboarding is complete and trying to access onboarding pages
   if (isAuthenticated && to.path.startsWith('/onboarding')) {
-    if (checkOnboardingStatusFast()) {
+    if (checkOnboardingStatusFast(user)) {
       next({ name: 'dashboard' });
       return;
     }
@@ -355,9 +336,8 @@ router.beforeEach((to, from) => {
   }
 
   // Main bottom nav tabs - use fade for horizontal navigation
-  const mainTabs = ['/', '/analytics', '/history', '/profile'];
-  const isMainTabNavigation =
-    mainTabs.includes(to.path) && mainTabs.includes(from.path);
+  const mainTabs = MAIN_NAV_ITEMS.map((item) => item.path);
+  const isMainTabNavigation = mainTabs.includes(to.path) && mainTabs.includes(from.path);
 
   if (isMainTabNavigation) {
     transitionName.value = 'fade';

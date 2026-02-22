@@ -12,12 +12,7 @@ withDefaults(
 </script>
 
 <template>
-  <div
-    :class="[
-      'w-full flex items-center gap-2.5 rounded-lg',
-      compact ? 'p-2' : 'p-2.5',
-    ]"
-  >
+  <div :class="['w-full flex items-center gap-2.5 rounded-lg', compact ? 'p-2' : 'p-2.5']">
     <!-- Icon skeleton -->
     <Skeleton class="shrink-0 w-8 h-8 rounded-lg" />
 

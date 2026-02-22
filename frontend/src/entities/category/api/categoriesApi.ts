@@ -1,8 +1,5 @@
 import { http } from '@/shared/api/http';
-import type {
-  UserCategory,
-  UserCategoryInsert,
-} from '@/shared/api/database.types';
+import type { UserCategory, UserCategoryInsert } from '@/shared/api/database.types';
 
 // Response type from NestJS backend (camelCase)
 interface CategoryResponse {
@@ -39,16 +36,11 @@ export const categoriesApi = {
   async initializeDefaults(_userId: string): Promise<UserCategory[]> {
     // Single request to backend - it handles checking existing categories
     // and creating defaults if needed
-    const data = await http.post<CategoryResponse[]>(
-      '/categories/initialize-defaults',
-    );
+    const data = await http.post<CategoryResponse[]>('/categories/initialize-defaults');
     return data.map(transformCategory);
   },
 
-  async getByType(
-    _userId: string,
-    type: 'expense' | 'income',
-  ): Promise<UserCategory[]> {
+  async getByType(_userId: string, type: 'expense' | 'income'): Promise<UserCategory[]> {
     // Backend gets userId from JWT token
     const data = await http.get<CategoryResponse[]>('/categories', {
       params: { type },

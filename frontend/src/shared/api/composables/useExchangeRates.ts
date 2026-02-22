@@ -44,11 +44,7 @@ export function useExchangeRates(baseCurrency: MaybeRefOrGetter<string>) {
   /**
    * Convert amount from one currency to another
    */
-  function convertBetween(
-    amount: number,
-    fromCurrency: string,
-    toCurrency: string,
-  ): number {
+  function convertBetween(amount: number, fromCurrency: string, toCurrency: string): number {
     if (fromCurrency === toCurrency) return amount;
 
     const ratesData = rates.value;

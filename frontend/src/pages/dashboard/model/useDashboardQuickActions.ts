@@ -1,9 +1,6 @@
 import { ref, computed, type ComputedRef } from 'vue';
 import { useRouter } from 'vue-router';
-import {
-  useQuickActions,
-  type QuickAction,
-} from '@/features/configure-quick-action';
+import { useQuickActions, type QuickAction } from '@/features/configure-quick-action';
 
 export function useDashboardQuickActions(
   allCategories: ComputedRef<Array<{ id: string; icon: string; color: string }>>,
@@ -50,11 +47,7 @@ export function useDashboardQuickActions(
     showQuickActionModal.value = true;
   }
 
-  function handleSave(data: {
-    label: string;
-    categoryId: string;
-    accountId: string;
-  }) {
+  function handleSave(data: { label: string; categoryId: string; accountId: string }) {
     if (editingAction.value) {
       updateAction(editingAction.value.id, data);
     } else {

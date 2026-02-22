@@ -20,16 +20,14 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        primary:
-          'bg-primary text-white hover:bg-primary-hover active:bg-primary-pressed',
+        primary: 'bg-primary text-white hover:bg-primary-hover active:bg-primary-pressed',
         secondary:
           'bg-card-light dark:bg-card-dark text-text-primary-light dark:text-text-primary-dark border border-border-light dark:border-border-dark hover:bg-surface-light dark:hover:bg-surface-dark',
         ghost:
           'bg-transparent text-text-primary-light dark:text-text-primary-dark hover:bg-surface-light dark:hover:bg-surface-dark hover:scale-100 active:scale-100',
         icon: 'bg-transparent text-text-primary-light dark:text-text-primary-dark hover:bg-surface-light dark:hover:bg-surface-dark !rounded-lg hover:scale-100 active:scale-100',
         danger: 'bg-danger text-white hover:opacity-90 active:opacity-80',
-        outline:
-          'bg-transparent text-primary border border-primary hover:bg-primary-light',
+        outline: 'bg-transparent text-primary border border-primary hover:bg-primary-light',
       },
       size: {
         xs: 'h-7 px-2.5 text-xs',
@@ -84,20 +82,8 @@ const iconSizeClasses: Record<string, string> = {
     @click="emit('click', $event)"
   >
     <!-- Loading spinner -->
-    <svg
-      v-if="loading"
-      class="animate-spin h-4 w-4 flex-shrink-0"
-      fill="none"
-      viewBox="0 0 24 24"
-    >
-      <circle
-        class="opacity-25"
-        cx="12"
-        cy="12"
-        r="10"
-        stroke="currentColor"
-        stroke-width="4"
-      />
+    <svg v-if="loading" class="animate-spin h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
       <path
         class="opacity-75"
         fill="currentColor"

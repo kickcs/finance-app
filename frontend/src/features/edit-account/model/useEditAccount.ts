@@ -3,10 +3,7 @@ import { useAccounts } from '@/entities/account';
 import { useProfile } from '@/shared/api';
 import type { Account } from '@/shared/api/database.types';
 import { queryClient } from '@/shared/api/queryClient';
-import {
-  invalidateTransactionRelated,
-  invalidateAccountRelated,
-} from '@/shared/api/invalidation';
+import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
 
 export function useEditAccount(userId: string) {
   const { updateAccount, deleteAccount } = useAccounts(userId);
@@ -35,8 +32,7 @@ export function useEditAccount(userId: string) {
   async function remove(accountId: string) {
     // Check if this is the default account
     if (defaultAccountId.value === accountId) {
-      error.value =
-        'Нельзя удалить счёт по умолчанию. Сначала назначьте другой счёт по умолчанию.';
+      error.value = 'Нельзя удалить счёт по умолчанию. Сначала назначьте другой счёт по умолчанию.';
       return false;
     }
 

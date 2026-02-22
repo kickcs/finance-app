@@ -12,8 +12,9 @@ const emit = defineEmits<{
   'update:modelValue': [value: boolean];
 }>();
 
-const { formData, isValid, isSubmitting, initForm, saveProfile } =
-  useEditProfile(() => toValue(props.userId));
+const { formData, isValid, isSubmitting, initForm, saveProfile } = useEditProfile(() =>
+  toValue(props.userId),
+);
 
 watch(
   () => props.modelValue,
@@ -42,17 +43,11 @@ async function handleSave() {
     @close="closeModal"
   >
     <div class="space-y-4">
-      <UInput
-        v-model="formData.name"
-        label="Имя"
-        placeholder="Введите ваше имя"
-      />
+      <UInput v-model="formData.name" label="Имя" placeholder="Введите ваше имя" />
     </div>
 
     <template #actions>
-      <UButton variant="secondary" full-width @click="closeModal">
-        Отмена
-      </UButton>
+      <UButton variant="secondary" full-width @click="closeModal">Отмена</UButton>
       <UButton
         variant="primary"
         full-width

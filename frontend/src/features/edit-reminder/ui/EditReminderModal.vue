@@ -67,11 +67,7 @@ const _isFormValid = name.value.trim().length > 0 && amount.value > 0;
   >
     <div v-if="reminder" class="space-y-4">
       <!-- Name -->
-      <UInput
-        v-model="name"
-        label="Название"
-        placeholder="Netflix, Spotify..."
-      />
+      <UInput v-model="name" label="Название" placeholder="Netflix, Spotify..." />
 
       <!-- Amount -->
       <UInput
@@ -86,9 +82,7 @@ const _isFormValid = name.value.trim().length > 0 && amount.value > 0;
 
       <!-- Frequency -->
       <div class="space-y-2">
-        <label
-          class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark"
-        >
+        <label class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">
           Частота
         </label>
         <UTabs v-model="frequency" :items="frequencyTabs" />
@@ -99,7 +93,7 @@ const _isFormValid = name.value.trim().length > 0 && amount.value > 0;
     </div>
 
     <template #actions>
-      <UButton variant="secondary" full-width @click="close"> Отмена </UButton>
+      <UButton variant="secondary" full-width @click="close">Отмена</UButton>
       <UButton
         variant="primary"
         full-width

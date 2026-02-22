@@ -43,23 +43,16 @@ export function prefetchDashboardData(userId: string) {
     });
   });
 
-  import('@/entities/transaction/api/transactionsApi').then(
-    ({ transactionsApi }) => {
-      queryClient.prefetchQuery({
-        queryKey: transactionQueryKeys.monthlyStats(userId, year, month),
-        queryFn: () => transactionsApi.getMonthlyStats(userId, year, month),
-      });
-      queryClient.prefetchQuery({
-        queryKey: transactionQueryKeys.monthlyStats(
-          userId,
-          lastYear,
-          lastMonthNum,
-        ),
-        queryFn: () =>
-          transactionsApi.getMonthlyStats(userId, lastYear, lastMonthNum),
-      });
-    },
-  );
+  import('@/entities/transaction/api/transactionsApi').then(({ transactionsApi }) => {
+    queryClient.prefetchQuery({
+      queryKey: transactionQueryKeys.monthlyStats(userId, year, month),
+      queryFn: () => transactionsApi.getMonthlyStats(userId, year, month),
+    });
+    queryClient.prefetchQuery({
+      queryKey: transactionQueryKeys.monthlyStats(userId, lastYear, lastMonthNum),
+      queryFn: () => transactionsApi.getMonthlyStats(userId, lastYear, lastMonthNum),
+    });
+  });
 
   import('@/shared/api/services/profileApi').then(({ profileApi }) => {
     queryClient.prefetchQuery({
@@ -68,12 +61,10 @@ export function prefetchDashboardData(userId: string) {
     });
   });
 
-  import('@/shared/api/services/exchangeRatesApi').then(
-    ({ exchangeRatesApi }) => {
-      queryClient.prefetchQuery({
-        queryKey: ['exchangeRates', currency],
-        queryFn: () => exchangeRatesApi.getRates(currency),
-      });
-    },
-  );
+  import('@/shared/api/services/exchangeRatesApi').then(({ exchangeRatesApi }) => {
+    queryClient.prefetchQuery({
+      queryKey: ['exchangeRates', currency],
+      queryFn: () => exchangeRatesApi.getRates(currency),
+    });
+  });
 }

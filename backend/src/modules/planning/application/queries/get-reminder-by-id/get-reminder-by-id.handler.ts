@@ -1,10 +1,7 @@
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 import { Inject, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { GetReminderByIdQuery } from './get-reminder-by-id.query';
-import {
-  IReminderRepository,
-  REMINDER_REPOSITORY,
-} from '../../../domain/repositories';
+import { IReminderRepository, REMINDER_REPOSITORY } from '../../../domain/repositories';
 import { ReminderResponseMapper } from '../../mappers';
 
 @QueryHandler(GetReminderByIdQuery)

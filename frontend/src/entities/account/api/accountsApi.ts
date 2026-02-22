@@ -129,9 +129,7 @@ export const accountsApi = {
   async getAllWithBalances(_userId: string): Promise<AccountWithBalances[]> {
     // Backend gets userId from JWT token and returns accounts with balances
     const data =
-      await http.get<
-        (AccountResponse & { balances: AccountBalanceResponse[] })[]
-      >('/accounts');
+      await http.get<(AccountResponse & { balances: AccountBalanceResponse[] })[]>('/accounts');
     return data.map(transformAccountWithBalances);
   },
 
@@ -140,33 +138,21 @@ export const accountsApi = {
       const data = await http.get<AccountResponse>(`/accounts/${accountId}`);
       return transformAccount(data);
     } catch (e: unknown) {
-      if (
-        e &&
-        typeof e === 'object' &&
-        'status' in e &&
-        (e as { status: number }).status === 404
-      ) {
+      if (e && typeof e === 'object' && 'status' in e && (e as { status: number }).status === 404) {
         return null;
       }
       throw e;
     }
   },
 
-  async getByIdWithBalances(
-    accountId: string,
-  ): Promise<AccountWithBalances | null> {
+  async getByIdWithBalances(accountId: string): Promise<AccountWithBalances | null> {
     try {
-      const data = await http.get<
-        AccountResponse & { balances: AccountBalanceResponse[] }
-      >(`/accounts/${accountId}/with-balances`);
+      const data = await http.get<AccountResponse & { balances: AccountBalanceResponse[] }>(
+        `/accounts/${accountId}/with-balances`,
+      );
       return transformAccountWithBalances(data);
     } catch (e: unknown) {
-      if (
-        e &&
-        typeof e === 'object' &&
-        'status' in e &&
-        (e as { status: number }).status === 404
-      ) {
+      if (e && typeof e === 'object' && 'status' in e && (e as { status: number }).status === 404) {
         return null;
       }
       throw e;
@@ -196,17 +182,18 @@ export const accountsApi = {
     balances: Array<{ currency: string; balance: number }>,
   ): Promise<AccountWithBalances> {
     // Backend gets userId from JWT token
-    const data = await http.post<
-      AccountResponse & { balances: AccountBalanceResponse[] }
-    >('/accounts', {
-      name: account.name,
-      icon: account.icon,
-      color: account.color,
-      type: account.type ?? 'basic',
-      order: account.order ?? 0,
-      balances,
-      ...mapTypeFieldsToRequest(account),
-    });
+    const data = await http.post<AccountResponse & { balances: AccountBalanceResponse[] }>(
+      '/accounts',
+      {
+        name: account.name,
+        icon: account.icon,
+        color: account.color,
+        type: account.type ?? 'basic',
+        order: account.order ?? 0,
+        balances,
+        ...mapTypeFieldsToRequest(account),
+      },
+    );
     return transformAccountWithBalances(data);
   },
 

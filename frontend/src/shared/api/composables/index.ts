@@ -1,10 +1,5 @@
 // Auth and Profile stay in shared
-export {
-  useAuth,
-  initializeAuth,
-  getCurrentUser,
-  waitForAuth,
-} from './useAuth';
+export { useAuth, initializeAuth, getCurrentUser, waitForAuth } from './useAuth';
 export { useProfile } from './useProfile';
 export { useExchangeRates } from './useExchangeRates';
 

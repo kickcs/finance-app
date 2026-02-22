@@ -4,12 +4,7 @@ import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useRouter } from 'vue-router';
 import { AppHeader } from '@/widgets/header';
 import { navigateBack } from '@/app/router';
-import { BottomNav } from '@/widgets/bottom-nav';
-import {
-  AccountCard,
-  useAccounts,
-  type AccountWithBalances,
-} from '@/entities/account';
+import { AccountCard, useAccounts, type AccountWithBalances } from '@/entities/account';
 import { UButton, UIcon, UCard, EmptyState, IconBadge, SectionHeader, Skeleton } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { useExchangeRates } from '@/shared/api';
@@ -45,23 +40,21 @@ function handleAccountClick(account: AccountWithBalances) {
 function handleAddAccount() {
   router.push('/accounts/new');
 }
-
-function handleAddTransaction() {
-  router.push('/transactions/new');
-}
 </script>
 
 <template>
-  <div class="min-h-screen bg-background-light dark:bg-background-dark pb-28">
+  <div
+    class="h-full flex flex-col relative bg-background-light dark:bg-background-dark pb-28 md:pb-8 overflow-y-auto"
+  >
     <!-- Header -->
     <AppHeader title="Счета">
       <template #left>
-        <UButton variant="ghost" size="sm" @click="navigateBack">
+        <UButton variant="ghost" size="sm" aria-label="Назад" @click="navigateBack">
           <UIcon name="arrow_back" size="md" />
         </UButton>
       </template>
       <template #actions>
-        <UButton variant="ghost" icon-only @click="handleAddAccount">
+        <UButton variant="ghost" icon-only aria-label="Добавить счёт" @click="handleAddAccount">
           <UIcon name="add" size="md" />
         </UButton>
       </template>
@@ -72,25 +65,27 @@ function handleAddTransaction() {
       <!-- Total Balance Card -->
       <UCard class="p-6 overflow-hidden relative" variant="bordered">
         <!-- Background decoration -->
-        <div class="absolute -right-6 -top-6 w-32 h-32 bg-primary/5 rounded-full blur-2xl pointer-events-none" />
-        <div class="absolute -left-6 -bottom-6 w-24 h-24 bg-primary/5 rounded-full blur-xl pointer-events-none" />
-        
+        <div
+          class="absolute -right-6 -top-6 w-32 h-32 bg-primary/5 rounded-full blur-2xl pointer-events-none"
+        />
+        <div
+          class="absolute -left-6 -bottom-6 w-24 h-24 bg-primary/5 rounded-full blur-xl pointer-events-none"
+        />
+
         <div class="relative flex items-center justify-between">
           <div class="space-y-1">
             <p class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">
               Общий баланс
             </p>
             <Skeleton v-if="isLoading" class="h-8 w-32 mt-1 rounded-lg" />
-            <p v-else class="text-3xl font-bold text-text-primary-light dark:text-text-primary-dark tracking-tight">
+            <p
+              v-else
+              class="text-3xl font-bold text-text-primary-light dark:text-text-primary-dark tracking-tight"
+            >
               {{ formatCurrency(totalBalance, currency) }}
             </p>
           </div>
-          <IconBadge
-            icon="account_balance_wallet"
-            size="lg"
-            color="#3b82f6"
-            class="shrink-0"
-          />
+          <IconBadge icon="account_balance_wallet" size="lg" color="#3b82f6" class="shrink-0" />
         </div>
       </UCard>
 
@@ -128,8 +123,5 @@ function handleAddTransaction() {
         </UCard>
       </div>
     </main>
-
-    <!-- Bottom Navigation -->
-    <BottomNav @add-click="handleAddTransaction" />
   </div>
 </template>

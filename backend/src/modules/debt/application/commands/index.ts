@@ -9,8 +9,4 @@ import { CreateDebtHandler } from './create-debt/create-debt.handler';
 import { UpdateDebtHandler } from './update-debt/update-debt.handler';
 import { DeleteDebtHandler } from './delete-debt/delete-debt.handler';
 
-export const CommandHandlers = [
-  CreateDebtHandler,
-  UpdateDebtHandler,
-  DeleteDebtHandler,
-];
+export const CommandHandlers = [CreateDebtHandler, UpdateDebtHandler, DeleteDebtHandler];

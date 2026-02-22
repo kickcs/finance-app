@@ -11,10 +11,7 @@ export class DebtMapper {
       userId: ormEntity.userId,
       name: ormEntity.name,
       totalAmount: Money.create(Number(ormEntity.totalAmount), currency),
-      remainingAmount: Money.create(
-        Number(ormEntity.remainingAmount),
-        currency,
-      ),
+      remainingAmount: Money.create(Number(ormEntity.remainingAmount), currency),
       monthlyPayment:
         ormEntity.monthlyPayment !== null
           ? Money.create(Number(ormEntity.monthlyPayment), currency)

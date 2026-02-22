@@ -66,11 +66,7 @@ export interface ITransactionRepository {
   findByUserId(userId: string, limit?: number): Promise<Transaction[]>;
   findByAccountId(accountId: string): Promise<Transaction[]>;
   findByAccountIdWithIncoming(accountId: string): Promise<Transaction[]>;
-  findByDateRange(
-    userId: string,
-    startDate: Date,
-    endDate: Date,
-  ): Promise<Transaction[]>;
+  findByDateRange(userId: string, startDate: Date, endDate: Date): Promise<Transaction[]>;
   save(transaction: Transaction): Promise<Transaction>;
   delete(id: string): Promise<void>;
   deleteByAccountId(accountId: string): Promise<void>;
@@ -95,16 +91,9 @@ export interface ITransactionRepository {
   ): Promise<PaginatedResult<Transaction>>;
 
   // Statistics
-  getMonthlyStats(
-    userId: string,
-    year: number,
-    month: number,
-  ): Promise<MonthlyStats>;
+  getMonthlyStats(userId: string, year: number, month: number): Promise<MonthlyStats>;
 
-  getAnalyticsStats(
-    userId: string,
-    options: AnalyticsOptions,
-  ): Promise<AnalyticsStats>;
+  getAnalyticsStats(userId: string, options: AnalyticsOptions): Promise<AnalyticsStats>;
 
   getHashtags(userId: string): Promise<HashtagResult[]>;
 }

@@ -5,9 +5,7 @@ import { ToastClose } from 'reka-ui';
 import { Cross2Icon } from '@radix-icons/vue';
 import { cn } from '@/shared/lib/utils';
 
-const props = defineProps<
-  ToastCloseProps & { class?: HTMLAttributes['class'] }
->();
+const props = defineProps<ToastCloseProps & { class?: HTMLAttributes['class'] }>();
 </script>
 
 <template>

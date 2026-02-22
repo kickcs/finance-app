@@ -1,9 +1,5 @@
 import { ref, computed } from 'vue';
-import {
-  REMINDER_ICONS,
-  remindersApi,
-  reminderQueryKeys,
-} from '@/entities/reminder';
+import { REMINDER_ICONS, remindersApi, reminderQueryKeys } from '@/entities/reminder';
 import { ENTITY_COLORS } from '@/shared/config/colors';
 import { queryClient } from '@/shared/api/queryClient';
 import { useToast } from '@/shared/ui';
@@ -90,10 +86,7 @@ export function useCreateReminder() {
     }
   }
 
-  function updateField<K extends keyof ReminderFormData>(
-    field: K,
-    value: ReminderFormData[K],
-  ) {
+  function updateField<K extends keyof ReminderFormData>(field: K, value: ReminderFormData[K]) {
     formData.value[field] = value;
   }
 

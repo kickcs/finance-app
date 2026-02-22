@@ -48,10 +48,7 @@ export function useGoals(userId: MaybeRefOrGetter<string | null>) {
         ...newGoal,
       } as Goal;
 
-      queryClient.setQueryData<Goal[]>(queryKey.value, (old) => [
-        optimisticGoal,
-        ...(old ?? []),
-      ]);
+      queryClient.setQueryData<Goal[]>(queryKey.value, (old) => [optimisticGoal, ...(old ?? [])]);
 
       return { previousGoals };
     },
@@ -75,8 +72,7 @@ export function useGoals(userId: MaybeRefOrGetter<string | null>) {
 
       queryClient.setQueryData<Goal[]>(
         queryKey.value,
-        (old) =>
-          old?.map((g) => (g.id === id ? { ...g, ...updates } : g)) ?? [],
+        (old) => old?.map((g) => (g.id === id ? { ...g, ...updates } : g)) ?? [],
       );
 
       return { previousGoals };
@@ -116,13 +112,9 @@ export function useGoals(userId: MaybeRefOrGetter<string | null>) {
   });
 
   // Computed values
-  const totalSaved = computed(() =>
-    goals.value.reduce((sum, g) => sum + g.current_amount, 0),
-  );
+  const totalSaved = computed(() => goals.value.reduce((sum, g) => sum + g.current_amount, 0));
 
-  const totalTarget = computed(() =>
-    goals.value.reduce((sum, g) => sum + g.target_amount, 0),
-  );
+  const totalTarget = computed(() => goals.value.reduce((sum, g) => sum + g.target_amount, 0));
 
   const overallProgress = computed(() => {
     if (totalTarget.value === 0) return 0;
@@ -142,10 +134,7 @@ export function useGoals(userId: MaybeRefOrGetter<string | null>) {
     const goal = goals.value.find((g) => g.id === id);
     if (!goal) throw new Error('Goal not found');
 
-    const newAmount = Math.min(
-      goal.current_amount + amount,
-      goal.target_amount,
-    );
+    const newAmount = Math.min(goal.current_amount + amount, goal.target_amount);
     return updateGoal(id, { current_amount: newAmount });
   }
 

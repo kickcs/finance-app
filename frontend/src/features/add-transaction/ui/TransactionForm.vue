@@ -13,11 +13,7 @@ import {
 } from '../model/useScrollableTabs';
 import { useHashtags } from '@/entities/transaction';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
-import {
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-} from '@/shared/ui/primitives/popover';
+import { Popover, PopoverTrigger, PopoverContent } from '@/shared/ui/primitives/popover';
 import { Calendar } from '@/shared/ui/primitives/calendar';
 import { CalendarDate, type DateValue } from '@internationalized/date';
 import ExpensePanel from './ExpensePanel.vue';
@@ -70,13 +66,8 @@ function applyTypeChange(newType: string) {
   });
 }
 
-const {
-  scrollContainer,
-  handleTabClick,
-  handleScrollEnd,
-  handleScroll,
-  onCyclicWrap,
-} = useScrollableTabs(type, applyTypeChange);
+const { scrollContainer, handleTabClick, handleScrollEnd, handleScroll, onCyclicWrap } =
+  useScrollableTabs(type, applyTypeChange);
 
 // --- Smooth Height Auto-adjust ---
 const containerHeight = ref<string>('auto');
@@ -91,9 +82,7 @@ function updateContainerHeight(force = false) {
   const panelWidth = rect.width;
   if (panelWidth === 0) return;
 
-  const currentIndex = Math.round(
-    scrollContainer.value.scrollLeft / panelWidth,
-  );
+  const currentIndex = Math.round(scrollContainer.value.scrollLeft / panelWidth);
 
   if (!force && currentIndex === lastCalculatedIndex) return;
   lastCalculatedIndex = currentIndex;
@@ -211,25 +200,19 @@ onMounted(() =>
     <!-- Type Tabs -->
     <div
       class="stagger-1 transform transition-all duration-500 ease-out"
-      :class="
-        isMounted ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
-      "
+      :class="isMounted ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'"
     >
       <UTabs
         :model-value="formData.type"
         :items="tabItems"
-        @update:model-value="
-          (v: string) => handleTabClick(v as TransactionType)
-        "
+        @update:model-value="(v: string) => handleTabClick(v as TransactionType)"
       />
     </div>
 
     <!-- Swipeable panels with smooth height -->
     <div
       class="stagger-2 transform transition-all duration-500 ease-out delay-75 overflow-hidden"
-      :class="
-        isMounted ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
-      "
+      :class="isMounted ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'"
       :style="{
         height: containerHeight,
         transition: 'height 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -237,14 +220,14 @@ onMounted(() =>
     >
       <div
         ref="scrollContainer"
-        class="flex items-start overflow-x-auto overflow-y-hidden snap-x snap-mandatory no-scrollbar -mx-4 h-full"
+        class="flex items-start overflow-x-auto overflow-y-hidden snap-x snap-mandatory no-scrollbar -mx-4 md:-mx-0 h-full scroll-smooth"
         @scrollend="onScrollEnd"
         @scroll="onScroll"
       >
         <div
           v-for="(panelType, idx) in CYCLIC_PANEL_ORDER"
           :key="`${panelType}-${idx}`"
-          class="min-w-full snap-start px-4"
+          class="min-w-full snap-start px-4 md:px-0"
         >
           <ExpensePanel
             v-if="panelType === 'expense'"
@@ -260,9 +243,7 @@ onMounted(() =>
             @update-participant-amount="
               (id, amount) => $emit('updateParticipantAmount', id, amount)
             "
-            @update-participant-name="
-              (id, name) => $emit('updateParticipantName', id, name)
-            "
+            @update-participant-name="(id, name) => $emit('updateParticipantName', id, name)"
             @set-split-method="$emit('setSplitMethod', $event)"
             @set-my-share="$emit('setMyShare', $event)"
             @set-is-included="$emit('setIsIncluded', $event)"
@@ -289,9 +270,7 @@ onMounted(() =>
     <!-- Bottom section -->
     <div
       class="space-y-3 stagger-3 transform transition-all duration-500 ease-out delay-150"
-      :class="
-        isMounted ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
-      "
+      :class="isMounted ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'"
     >
       <!-- Description & Date row -->
       <div
@@ -332,7 +311,13 @@ onMounted(() =>
                 />
               </button>
             </PopoverTrigger>
-            <PopoverContent align="end" side="top" :side-offset="8" :collision-padding="16" class="w-auto p-0">
+            <PopoverContent
+              align="end"
+              side="top"
+              :side-offset="8"
+              :collision-padding="16"
+              class="w-auto p-0"
+            >
               <Calendar
                 :model-value="calendarValue"
                 locale="ru-RU"

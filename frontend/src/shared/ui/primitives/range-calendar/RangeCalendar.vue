@@ -43,9 +43,7 @@ const emit = defineEmits<{
     :class="cn('p-3', props.class)"
     @update:model-value="emit('update:modelValue', $event as DateRange)"
   >
-    <RangeCalendarHeader
-      class="relative flex w-full items-center justify-between pt-1"
-    >
+    <RangeCalendarHeader class="relative flex w-full items-center justify-between pt-1">
       <RangeCalendarPrev
         class="inline-flex size-7 items-center justify-center rounded-md hover:bg-surface-light dark:hover:bg-surface-dark transition-colors"
       >

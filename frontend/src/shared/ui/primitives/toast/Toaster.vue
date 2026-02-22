@@ -33,10 +33,7 @@ const getDuration = (duration?: number) => duration || 3000;
       @update:open="(open) => !open && dismiss(toast.id)"
     >
       <!-- Icon -->
-      <div
-        v-if="toast.variant && toast.variant !== 'default'"
-        class="flex-shrink-0"
-      >
+      <div v-if="toast.variant && toast.variant !== 'default'" class="flex-shrink-0">
         <UIcon
           :name="variantIcons[toast.variant || 'default']"
           size="md"
@@ -51,32 +48,20 @@ const getDuration = (duration?: number) => duration || 3000;
 
       <!-- Content -->
       <div class="flex-1 min-w-0">
-        <ToastTitle
-          v-if="toast.title"
-          class="text-[0.9375rem] font-medium leading-5"
-        >
+        <ToastTitle v-if="toast.title" class="text-[0.9375rem] font-medium leading-5">
           {{ toast.title }}
         </ToastTitle>
-        <ToastDescription
-          v-if="toast.description"
-          class="text-[0.8125rem] opacity-90 mt-0.5"
-        >
+        <ToastDescription v-if="toast.description" class="text-[0.8125rem] opacity-90 mt-0.5">
           {{ toast.description }}
         </ToastDescription>
       </div>
 
       <!-- Action -->
-      <ToastAction
-        v-if="toast.action"
-        :alt-text="toast.action.label"
-        @click="toast.action.onClick"
-      >
+      <ToastAction v-if="toast.action" :alt-text="toast.action.label" @click="toast.action.onClick">
         {{ toast.action.label }}
       </ToastAction>
 
-      <ToastClose
-        class="opacity-0 group-hover:opacity-100 transition-opacity"
-      />
+      <ToastClose class="opacity-0 group-hover:opacity-100 transition-opacity" />
 
       <!-- Progress bar -->
       <div

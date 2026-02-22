@@ -97,16 +97,12 @@ export function useAnalyticsFilters() {
 
     // Filter by categories
     if (filters.value.selectedCategoryIds.length > 0) {
-      result = result.filter((t) =>
-        filters.value.selectedCategoryIds.includes(t.category_id),
-      );
+      result = result.filter((t) => filters.value.selectedCategoryIds.includes(t.category_id));
     }
 
     // Filter by accounts
     if (filters.value.selectedAccountIds.length > 0) {
-      result = result.filter((t) =>
-        filters.value.selectedAccountIds.includes(t.account_id),
-      );
+      result = result.filter((t) => filters.value.selectedAccountIds.includes(t.account_id));
     }
 
     return result;
@@ -123,10 +119,7 @@ export function useAnalyticsFilters() {
     },
   ): CategoryStat[] {
     // Filter by type if not 'all'
-    const filtered =
-      type === 'all'
-        ? transactions
-        : transactions.filter((t) => t.type === type);
+    const filtered = type === 'all' ? transactions : transactions.filter((t) => t.type === type);
 
     // Group by category with optional currency conversion
     const categoryAmounts: Record<string, number> = {};
@@ -134,29 +127,20 @@ export function useAnalyticsFilters() {
       if (tx.category_id) {
         // Convert to base currency if converter provided
         let amount = tx.amount;
-        if (
-          options?.convertFn &&
-          options?.baseCurrency &&
-          tx.currency !== options.baseCurrency
-        ) {
+        if (options?.convertFn && options?.baseCurrency && tx.currency !== options.baseCurrency) {
           amount = options.convertFn(tx.amount, tx.currency);
         }
-        categoryAmounts[tx.category_id] =
-          (categoryAmounts[tx.category_id] || 0) + amount;
+        categoryAmounts[tx.category_id] = (categoryAmounts[tx.category_id] || 0) + amount;
       }
     }
 
-    const total = Object.values(categoryAmounts).reduce(
-      (sum, amount) => sum + amount,
-      0,
-    );
+    const total = Object.values(categoryAmounts).reduce((sum, amount) => sum + amount, 0);
 
     // Map to CategoryStat array
     return Object.entries(categoryAmounts)
       .map(([categoryId, amount]) => {
         const category =
-          options?.getCategoryById?.(categoryId) ??
-          getStaticCategoryById(categoryId);
+          options?.getCategoryById?.(categoryId) ?? getStaticCategoryById(categoryId);
         return {
           id: categoryId,
           name: category?.name || 'Другое',

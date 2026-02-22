@@ -75,9 +75,7 @@ export class TransactionsController {
     @Query('year') year: string,
     @Query('month') month: string,
   ): Promise<unknown> {
-    return this.queryBus.execute(
-      new GetMonthlyStatsQuery(userId, parseInt(year), parseInt(month)),
-    );
+    return this.queryBus.execute(new GetMonthlyStatsQuery(userId, parseInt(year), parseInt(month)));
   }
 
   @Get('stats/analytics')
@@ -114,9 +112,7 @@ export class TransactionsController {
     @CurrentUser('sub') userId: string,
     @Param('accountId') accountId: string,
   ): Promise<unknown> {
-    return this.queryBus.execute(
-      new GetTransactionsByAccountQuery(accountId, userId),
-    );
+    return this.queryBus.execute(new GetTransactionsByAccountQuery(accountId, userId));
   }
 
   @Get('by-account/:accountId/with-incoming')
@@ -124,9 +120,7 @@ export class TransactionsController {
     @CurrentUser('sub') userId: string,
     @Param('accountId') accountId: string,
   ): Promise<unknown> {
-    return this.queryBus.execute(
-      new GetTransactionsByAccountWithIncomingQuery(accountId, userId),
-    );
+    return this.queryBus.execute(new GetTransactionsByAccountWithIncomingQuery(accountId, userId));
   }
 
   @Get('by-account/:accountId/count')
@@ -134,9 +128,7 @@ export class TransactionsController {
     @CurrentUser('sub') userId: string,
     @Param('accountId') accountId: string,
   ): Promise<{ count: number }> {
-    return this.queryBus.execute(
-      new CountTransactionsByAccountQuery(accountId, userId),
-    );
+    return this.queryBus.execute(new CountTransactionsByAccountQuery(accountId, userId));
   }
 
   @Get('by-account/:accountId/paginated')
@@ -157,10 +149,7 @@ export class TransactionsController {
   }
 
   @Get(':id')
-  async findOne(
-    @CurrentUser('sub') userId: string,
-    @Param('id') id: string,
-  ): Promise<unknown> {
+  async findOne(@CurrentUser('sub') userId: string, @Param('id') id: string): Promise<unknown> {
     return this.queryBus.execute(new GetTransactionByIdQuery(id, userId));
   }
 

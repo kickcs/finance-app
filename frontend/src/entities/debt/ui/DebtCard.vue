@@ -47,12 +47,8 @@ const displayName = computed(() => {
 
 // Get debt type info
 const isGiven = computed(() => props.debt.debt_type === 'given');
-const debtColor = computed(
-  () => DEBT_DIRECTION_COLORS[props.debt.debt_type] || '#3b82f6',
-);
-const debtIcon = computed(() =>
-  isGiven.value ? 'arrow_upward' : 'arrow_downward',
-);
+const debtColor = computed(() => DEBT_DIRECTION_COLORS[props.debt.debt_type] || '#3b82f6');
+const debtIcon = computed(() => (isGiven.value ? 'arrow_upward' : 'arrow_downward'));
 const debtLabel = computed(() => (isGiven.value ? 'Вам должны' : 'Вы должны'));
 
 // Check if debt is from split expense
@@ -78,11 +74,7 @@ const isFromSplit = computed(() => !!props.debt.source_transaction_id);
         class="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center"
         :style="{ backgroundColor: `${isOverdue ? '#ef4444' : debtColor}15` }"
       >
-        <UIcon
-          :name="debtIcon"
-          size="sm"
-          :style="{ color: isOverdue ? '#ef4444' : debtColor }"
-        />
+        <UIcon :name="debtIcon" size="sm" :style="{ color: isOverdue ? '#ef4444' : debtColor }" />
       </div>
 
       <!-- Content -->
@@ -98,32 +90,23 @@ const isFromSplit = computed(() => !!props.debt.source_transaction_id);
               class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark flex items-center gap-1"
             >
               {{ debtLabel }}
-              <span
-                v-if="isFromSplit"
-                class="inline-flex items-center gap-0.5 text-primary"
-              >
+              <span v-if="isFromSplit" class="inline-flex items-center gap-0.5 text-primary">
                 <UIcon name="group" size="xs" />
               </span>
             </p>
           </div>
           <!-- Right side: amount + badge -->
           <div class="text-right shrink-0">
-            <p
-              class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark"
-            >
+            <p class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark">
               {{ formatCurrency(debt.remaining_amount, debtCurrency) }}
             </p>
             <!-- Closed badge or date -->
-            <span v-if="debt.is_closed" class="text-xs text-success">
-              Погашен
-            </span>
+            <span v-if="debt.is_closed" class="text-xs text-success">Погашен</span>
             <span
               v-else-if="nextPaymentFormatted"
               class="text-xs"
               :class="[
-                isOverdue
-                  ? 'text-danger'
-                  : 'text-text-tertiary-light dark:text-text-tertiary-dark',
+                isOverdue ? 'text-danger' : 'text-text-tertiary-light dark:text-text-tertiary-dark',
               ]"
             >
               {{ nextPaymentFormatted }}

@@ -2,10 +2,7 @@ import { ref, computed } from 'vue';
 import { transactionsApi } from '@/entities/transaction';
 import { debtsApi, debtQueryKeys } from '@/entities/debt';
 import { queryClient } from '@/shared/api/queryClient';
-import {
-  invalidateTransactionRelated,
-  invalidateAccountRelated,
-} from '@/shared/api/invalidation';
+import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
 import { useToast } from '@/shared/ui';
 import type { DebtDirection } from '@/entities/debt';
 
@@ -145,10 +142,7 @@ export function useCreateDebt() {
     }
   }
 
-  function updateField<K extends keyof DebtFormData>(
-    field: K,
-    value: DebtFormData[K],
-  ) {
+  function updateField<K extends keyof DebtFormData>(field: K, value: DebtFormData[K]) {
     formData.value[field] = value;
   }
 

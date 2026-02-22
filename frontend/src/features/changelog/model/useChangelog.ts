@@ -3,14 +3,9 @@ import { useLocalStorage } from '@/shared/lib/hooks/useLocalStorage';
 import { CURRENT_VERSION, CHANGELOG_ENTRIES } from './changelogData';
 
 export function useChangelog() {
-  const lastSeenVersion = useLocalStorage<string | null>(
-    'lastSeenChangelogVersion',
-    null,
-  );
+  const lastSeenVersion = useLocalStorage<string | null>('lastSeenChangelogVersion', null);
 
-  const hasUnseenChanges = computed(
-    () => lastSeenVersion.value !== CURRENT_VERSION,
-  );
+  const hasUnseenChanges = computed(() => lastSeenVersion.value !== CURRENT_VERSION);
 
   const latestEntry = computed(() => CHANGELOG_ENTRIES[0]);
 

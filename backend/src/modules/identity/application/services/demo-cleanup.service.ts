@@ -52,17 +52,13 @@ export class DemoCleanupService {
         return;
       }
 
-      this.logger.log(
-        `Found ${expiredProfiles.length} expired demo accounts to clean up`,
-      );
+      this.logger.log(`Found ${expiredProfiles.length} expired demo accounts to clean up`);
 
       for (const profile of expiredProfiles) {
         await this.deleteUserData(profile.id);
       }
 
-      this.logger.log(
-        `Successfully cleaned up ${expiredProfiles.length} expired demo accounts`,
-      );
+      this.logger.log(`Successfully cleaned up ${expiredProfiles.length} expired demo accounts`);
     } catch (error) {
       this.logger.error('Failed to cleanup expired demo accounts', error);
     }

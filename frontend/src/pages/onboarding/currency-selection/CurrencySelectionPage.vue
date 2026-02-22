@@ -40,28 +40,19 @@ async function handleContinue() {
 </script>
 
 <template>
-  <div
-    class="min-h-screen bg-background-light dark:bg-background-dark flex flex-col"
-  >
+  <div class="min-h-screen bg-background-light dark:bg-background-dark flex flex-col">
     <!-- Header -->
-    <header
-      class="px-5 pb-6"
-      :style="{ paddingTop: 'calc(3rem + var(--safe-area-inset-top))' }"
-    >
+    <header class="px-5 pb-6" :style="{ paddingTop: 'calc(3rem + var(--safe-area-inset-top))' }">
       <div class="flex items-center justify-between mb-6">
-        <span
-          class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
-        >
+        <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
           Шаг 1 из 2
         </span>
-        <UButton variant="ghost" size="sm"> Пропустить </UButton>
+        <UButton variant="ghost" size="sm">Пропустить</UButton>
       </div>
 
       <UProgressBar :value="50" size="sm" class="mb-8" />
 
-      <h1
-        class="text-2xl font-bold text-text-primary-light dark:text-text-primary-dark mb-2"
-      >
+      <h1 class="text-2xl font-bold text-text-primary-light dark:text-text-primary-dark mb-2">
         Выберите валюту
       </h1>
       <p class="text-text-secondary-light dark:text-text-secondary-dark">
@@ -71,10 +62,7 @@ async function handleContinue() {
 
     <!-- Currency List -->
     <main class="flex-1 px-5 pb-32 overflow-y-auto">
-      <CurrencyList
-        :selected-code="selectedCurrency?.code"
-        @select="handleSelect"
-      />
+      <CurrencyList :selected-code="selectedCurrency?.code" @select="handleSelect" />
     </main>
 
     <!-- Footer -->

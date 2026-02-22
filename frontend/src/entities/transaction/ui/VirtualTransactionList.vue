@@ -100,10 +100,7 @@ watchEffect(() => {
           >
             <span class="inline-block animate-pulse">Загрузка...</span>
           </span>
-          <span
-            v-else
-            class="text-sm text-text-tertiary-light dark:text-text-tertiary-dark"
-          >
+          <span v-else class="text-sm text-text-tertiary-light dark:text-text-tertiary-dark">
             Все транзакции загружены
           </span>
         </div>
@@ -114,14 +111,8 @@ watchEffect(() => {
           :transaction="transactions[virtualRow.index]"
           :currency="currency"
           :viewing-account-id="viewingAccountId"
-          :account-name="
-            getAccountName?.(transactions[virtualRow.index].account_id)
-          "
-          :to-account-name="
-            getAccountName?.(
-              transactions[virtualRow.index].to_account_id ?? null,
-            )
-          "
+          :account-name="getAccountName?.(transactions[virtualRow.index].account_id)"
+          :to-account-name="getAccountName?.(transactions[virtualRow.index].to_account_id ?? null)"
           @click="emit('transactionClick', transactions[virtualRow.index])"
         />
       </div>

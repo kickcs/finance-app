@@ -47,8 +47,7 @@ const paddingClasses: Record<string, string> = {
           'bg-transparent border border-border-light dark:border-border-dark',
         variant === 'flat' && 'bg-surface-light dark:bg-surface-dark',
         paddingClasses[padding],
-        hoverable &&
-          'hover:border-primary/30 dark:hover:border-primary/30 hover:shadow-sm',
+        hoverable && 'hover:border-primary/30 dark:hover:border-primary/30 hover:shadow-sm',
         clickable &&
           'cursor-pointer active:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 hover:shadow-sm',
       )

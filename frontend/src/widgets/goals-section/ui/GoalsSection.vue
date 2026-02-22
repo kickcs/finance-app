@@ -19,18 +19,13 @@ defineEmits<{
 const overallProgress = computed(() => {
   if (props.goals.length === 0) return 0;
   const totalTarget = props.goals.reduce((sum, g) => sum + g.target_amount, 0);
-  const totalCurrent = props.goals.reduce(
-    (sum, g) => sum + g.current_amount,
-    0,
-  );
+  const totalCurrent = props.goals.reduce((sum, g) => sum + g.current_amount, 0);
   return totalTarget > 0 ? Math.round((totalCurrent / totalTarget) * 100) : 0;
 });
 
 // Check if goal is near completion (>90%)
 function isNearCompletion(goal: Goal): boolean {
-  return (
-    goal.target_amount > 0 && goal.current_amount / goal.target_amount >= 0.9
-  );
+  return goal.target_amount > 0 && goal.current_amount / goal.target_amount >= 0.9;
 }
 </script>
 
@@ -60,20 +55,14 @@ function isNearCompletion(goal: Goal): boolean {
     >
       <div class="flex-1">
         <div class="flex items-center justify-between mb-1.5">
-          <span
-            class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark"
-          >
+          <span class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark">
             Общий прогресс
           </span>
-          <span
-            class="text-xs font-bold text-goal-text dark:text-goal-text-dark"
-          >
+          <span class="text-xs font-bold text-goal-text dark:text-goal-text-dark">
             {{ overallProgress }}%
           </span>
         </div>
-        <div
-          class="h-1.5 rounded-full bg-surface-light dark:bg-surface-dark overflow-hidden"
-        >
+        <div class="h-1.5 rounded-full bg-surface-light dark:bg-surface-dark overflow-hidden">
           <div
             class="h-full rounded-full transition-all duration-500"
             :style="{

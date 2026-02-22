@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { UIcon } from '@/shared/ui';
 import { haptics } from '@/shared/lib/haptics/haptics';
+import { MAIN_NAV_ITEMS, type NavItem } from '@/shared/config/navigation';
 
 const emit = defineEmits<{
   'add-click': [];
@@ -11,17 +12,12 @@ const emit = defineEmits<{
 const route = useRoute();
 const router = useRouter();
 
-const navItems = [
-  { id: 'home', icon: 'home', path: '/', label: 'Главная' },
-  {
-    id: 'analytics',
-    icon: 'pie_chart',
-    path: '/analytics',
-    label: 'Аналитика',
-  },
+// Insert "add" button in the middle of shared nav items
+const midpoint = Math.floor(MAIN_NAV_ITEMS.length / 2);
+const navItems: NavItem[] = [
+  ...MAIN_NAV_ITEMS.slice(0, midpoint),
   { id: 'add', icon: 'add', path: '', label: 'Добавить' },
-  { id: 'history', icon: 'history', path: '/history', label: 'История' },
-  { id: 'profile', icon: 'person', path: '/profile', label: 'Профиль' },
+  ...MAIN_NAV_ITEMS.slice(midpoint),
 ];
 
 const activeItem = computed(() => {
@@ -67,6 +63,7 @@ function handleNavClick(item: (typeof navItems)[0]) {
           v-else
           type="button"
           :aria-label="item.label"
+          :aria-current="activeItem === item.id ? 'page' : undefined"
           class="relative flex flex-col items-center justify-center w-12 h-12 rounded-lg transition-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] active:scale-95 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-none"
           @click="handleNavClick(item)"
         >

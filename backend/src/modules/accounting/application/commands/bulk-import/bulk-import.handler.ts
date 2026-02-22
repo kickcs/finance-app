@@ -36,10 +36,8 @@ export class BulkImportHandler implements ICommandHandler<BulkImportCommand> {
     const { userId, transactions: rows } = command;
 
     // Fetch existing categories and accounts
-    const existingCategories =
-      await this.categoryRepository.findByUserId(userId);
-    const existingAccounts =
-      await this.accountRepository.findAllWithBalances(userId);
+    const existingCategories = await this.categoryRepository.findByUserId(userId);
+    const existingAccounts = await this.accountRepository.findAllWithBalances(userId);
 
     // Build name→entity maps (case-insensitive, trimmed)
     const categoryMap = new Map<string, Category>();

@@ -1,10 +1,4 @@
-export type Json =
-  | string
-  | number
-  | boolean
-  | null
-  | { [key: string]: Json | undefined }
-  | Json[];
+export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type Database = {
   public: {
@@ -54,13 +48,7 @@ export type Database = {
           currency: string;
           icon: string;
           color: string;
-          type:
-            | 'basic'
-            | 'savings'
-            | 'credit_card'
-            | 'cash'
-            | 'loan'
-            | 'deposit';
+          type: 'basic' | 'savings' | 'credit_card' | 'cash' | 'loan' | 'deposit';
           order: number;
           created_at: string;
           credit_limit: number | null;
@@ -83,13 +71,7 @@ export type Database = {
           currency: string;
           icon: string;
           color: string;
-          type?:
-            | 'basic'
-            | 'savings'
-            | 'credit_card'
-            | 'cash'
-            | 'loan'
-            | 'deposit';
+          type?: 'basic' | 'savings' | 'credit_card' | 'cash' | 'loan' | 'deposit';
           order?: number;
           created_at?: string;
           credit_limit?: number | null;
@@ -112,13 +94,7 @@ export type Database = {
           currency?: string;
           icon?: string;
           color?: string;
-          type?:
-            | 'basic'
-            | 'savings'
-            | 'credit_card'
-            | 'cash'
-            | 'loan'
-            | 'deposit';
+          type?: 'basic' | 'savings' | 'credit_card' | 'cash' | 'loan' | 'deposit';
           order?: number;
           created_at?: string;
           credit_limit?: number | null;
@@ -461,10 +437,8 @@ export type Database = {
 // Helper types
 export type Profile = Database['public']['Tables']['profiles']['Row'];
 export type Account = Database['public']['Tables']['accounts']['Row'];
-export type AccountBalance =
-  Database['public']['Tables']['account_balances']['Row'];
-export type ExchangeRate =
-  Database['public']['Tables']['exchange_rates']['Row'];
+export type AccountBalance = Database['public']['Tables']['account_balances']['Row'];
+export type ExchangeRate = Database['public']['Tables']['exchange_rates']['Row'];
 export type Transaction = Database['public']['Tables']['transactions']['Row'];
 export type Goal = Database['public']['Tables']['goals']['Row'];
 export type Debt = Database['public']['Tables']['debts']['Row'];
@@ -472,22 +446,15 @@ export type Reminder = Database['public']['Tables']['reminders']['Row'];
 export type Settings = Database['public']['Tables']['settings']['Row'];
 
 export type AccountInsert = Database['public']['Tables']['accounts']['Insert'];
-export type AccountBalanceInsert =
-  Database['public']['Tables']['account_balances']['Insert'];
-export type TransactionInsert =
-  Database['public']['Tables']['transactions']['Insert'];
+export type AccountBalanceInsert = Database['public']['Tables']['account_balances']['Insert'];
+export type TransactionInsert = Database['public']['Tables']['transactions']['Insert'];
 export type GoalInsert = Database['public']['Tables']['goals']['Insert'];
 export type DebtInsert = Database['public']['Tables']['debts']['Insert'];
-export type ReminderInsert =
-  Database['public']['Tables']['reminders']['Insert'];
+export type ReminderInsert = Database['public']['Tables']['reminders']['Insert'];
 export type UserCategory = Database['public']['Tables']['categories']['Row'];
-export type UserCategoryInsert =
-  Database['public']['Tables']['categories']['Insert'];
+export type UserCategoryInsert = Database['public']['Tables']['categories']['Insert'];
 
 // Extended types for multi-currency accounts
-export interface AccountWithBalances extends Omit<
-  Account,
-  'balance' | 'currency'
-> {
+export interface AccountWithBalances extends Omit<Account, 'balance' | 'currency'> {
   balances: AccountBalance[];
 }

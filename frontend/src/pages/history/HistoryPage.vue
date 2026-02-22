@@ -5,7 +5,6 @@ import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 import { useRouter } from 'vue-router';
 import { queryClient } from '@/shared/api/queryClient';
 import { AppHeader } from '@/widgets/header';
-import { BottomNav } from '@/widgets/bottom-nav';
 import {
   VirtualGroupedTransactionList,
   TransactionGroupSkeleton,
@@ -47,7 +46,6 @@ const {
   serverFilters,
   usedCategories,
   handleTypeFilterChange,
-  clearAdditionalFilters,
   resetAll,
 } = useHistoryFilters(userId);
 
@@ -66,14 +64,8 @@ const {
 } = useServerSearch(userId);
 
 // Main transactions query with infinite scroll
-const {
-  transactions,
-  isLoading,
-  hasNextPage,
-  isFetchingNextPage,
-  isFetching,
-  fetchNextPage,
-} = useInfiniteTransactions(userId, serverFilters);
+const { transactions, isLoading, hasNextPage, isFetchingNextPage, isFetching, fetchNextPage } =
+  useInfiniteTransactions(userId, serverFilters);
 
 // Use search results when searching, otherwise use main transactions
 const displayedTransactions = computed(() =>
@@ -83,8 +75,7 @@ const displayedTransactions = computed(() =>
 // Group transactions by date
 const groupedTransactions = useGroupedTransactions(displayedTransactions, {
   sortGroups: true,
-  sortTransactions: (a, b) =>
-    new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+  sortTransactions: (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
   computeTotal: (txs) => computeDayTotal(txs, currency.value, convert),
 });
 
@@ -96,9 +87,7 @@ const currentHasNextPage = computed(() =>
   isSearchActive.value ? searchHasNextPage.value : hasNextPage.value,
 );
 const currentIsFetchingNextPage = computed(() =>
-  isSearchActive.value
-    ? searchIsFetchingNextPage.value
-    : isFetchingNextPage.value,
+  isSearchActive.value ? searchIsFetchingNextPage.value : isFetchingNextPage.value,
 );
 const currentIsFetching = computed(() =>
   isSearchActive.value ? searchIsFetching.value : isFetching.value,
@@ -117,19 +106,12 @@ const isEmpty = computed(() => {
     searchTerm.value.trim() !== '' ||
     activeTypeFilter.value !== 'all' ||
     activeFiltersCount.value > 0;
-  return (
-    hasFilters &&
-    displayedTransactions.value.length === 0 &&
-    !currentIsLoading.value
-  );
+  return hasFilters && displayedTransactions.value.length === 0 && !currentIsLoading.value;
 });
 
 // Balance after
 const isFilterActive = computed(
-  () =>
-    isSearchActive.value ||
-    activeTypeFilter.value !== 'all' ||
-    activeFiltersCount.value > 0,
+  () => isSearchActive.value || activeTypeFilter.value !== 'all' || activeFiltersCount.value > 0,
 );
 const { getBalanceAfter } = useBalanceAfter(
   accounts,
@@ -208,7 +190,7 @@ async function handleRefresh() {
 
 <template>
   <div
-    class="h-dvh flex flex-col overflow-hidden bg-background-light dark:bg-background-dark"
+    class="h-full flex flex-col overflow-hidden bg-background-light dark:bg-background-dark relative"
   >
     <!-- Header -->
     <AppHeader title="История">
@@ -248,11 +230,7 @@ async function handleRefresh() {
             aria-label="Обновить"
             @click="handleRefresh"
           >
-            <UIcon
-              name="refresh"
-              size="sm"
-              :class="{ 'animate-spin': isRefreshing }"
-            />
+            <UIcon name="refresh" size="sm" :class="{ 'animate-spin': isRefreshing }" />
           </UButton>
         </div>
       </template>
@@ -294,18 +272,14 @@ async function handleRefresh() {
             :accounts="accounts"
             :selected-id="selectedAccountId"
             label="Счета"
-            @select="
-              selectedAccountId = $event === selectedAccountId ? null : $event
-            "
+            @select="selectedAccountId = $event === selectedAccountId ? null : $event"
           />
           <CategoryChips
             v-if="usedCategories.length > 0"
             :categories="usedCategories"
             :selected-id="selectedCategoryId ?? ''"
             label="Категории"
-            @select="
-              selectedCategoryId = $event === selectedCategoryId ? null : $event
-            "
+            @select="selectedCategoryId = $event === selectedCategoryId ? null : $event"
           />
         </div>
       </div>
@@ -322,7 +296,15 @@ async function handleRefresh() {
       </div>
 
       <!-- Virtualized Transaction Groups: flex-1 wrapper ensures virtualizer gets definite height from flex, not from % -->
-      <div v-else-if="groupedTransactions.length > 0" :class="['flex-1 min-h-0 transition-opacity duration-300', { 'opacity-50 pointer-events-none': currentIsFetching && displayedTransactions.length > 0 }]">
+      <div
+        v-else-if="groupedTransactions.length > 0"
+        :class="[
+          'flex-1 min-h-0 transition-opacity duration-300',
+          {
+            'opacity-50 pointer-events-none': currentIsFetching && displayedTransactions.length > 0,
+          },
+        ]"
+      >
         <VirtualGroupedTransactionList
           :groups="groupedTransactions"
           :currency="currency"
@@ -350,14 +332,10 @@ async function handleRefresh() {
             class="text-text-tertiary-light dark:text-text-tertiary-dark"
           />
         </div>
-        <p
-          class="text-text-secondary-light dark:text-text-secondary-dark mb-2 font-medium"
-        >
+        <p class="text-text-secondary-light dark:text-text-secondary-dark mb-2 font-medium">
           {{ isEmpty ? 'Ничего не найдено' : 'Нет транзакций' }}
         </p>
-        <p
-          class="text-sm text-text-tertiary-light dark:text-text-tertiary-dark mb-6"
-        >
+        <p class="text-sm text-text-tertiary-light dark:text-text-tertiary-dark mb-6">
           {{
             isEmpty
               ? 'Попробуйте изменить параметры поиска'
@@ -382,7 +360,7 @@ async function handleRefresh() {
       </div>
 
       <!-- Spacer for fixed BottomNav — sits outside the flex-1 blocks so the virtualizer height excludes it -->
-      <div class="shrink-0 h-20" />
+      <div class="shrink-0 h-20 md:h-0" />
     </div>
 
     <!-- Edit Transaction Modal -->
@@ -407,8 +385,5 @@ async function handleRefresh() {
       @confirm="handleDeleteTransaction"
       @cancel="showDeleteModal = false"
     />
-
-    <!-- Bottom Navigation -->
-    <BottomNav @add-click="handleAddTransaction" />
   </div>
 </template>

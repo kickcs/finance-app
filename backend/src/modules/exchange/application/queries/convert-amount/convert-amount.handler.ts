@@ -1,10 +1,7 @@
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 import { Inject, NotFoundException } from '@nestjs/common';
 import { ConvertAmountQuery } from './convert-amount.query';
-import {
-  IExchangeRateRepository,
-  EXCHANGE_RATE_REPOSITORY,
-} from '../../../domain/repositories';
+import { IExchangeRateRepository, EXCHANGE_RATE_REPOSITORY } from '../../../domain/repositories';
 import { CurrencyConverterService } from '../../../domain/services';
 
 const INTERMEDIATE_CURRENCY = 'USD';
@@ -42,16 +39,10 @@ export class ConvertAmountHandler implements IQueryHandler<ConvertAmountQuery> {
     }
 
     // Try inverse rate
-    const inverseExchangeRate = await this.exchangeRateRepository.findByPair(
-      to,
-      from,
-    );
+    const inverseExchangeRate = await this.exchangeRateRepository.findByPair(to, from);
 
     if (inverseExchangeRate) {
-      return CurrencyConverterService.convertInverse(
-        amount,
-        inverseExchangeRate,
-      );
+      return CurrencyConverterService.convertInverse(amount, inverseExchangeRate);
     }
 
     // Try cross-rate through USD (e.g., EUR -> UZS = EUR -> USD -> UZS)
@@ -77,20 +68,11 @@ export class ConvertAmountHandler implements IQueryHandler<ConvertAmountQuery> {
    * Calculate cross-rate through USD
    * e.g., EUR -> UZS = (1/USD->EUR) * (USD->UZS)
    */
-  private async calculateCrossRate(
-    from: string,
-    to: string,
-  ): Promise<number | null> {
+  private async calculateCrossRate(from: string, to: string): Promise<number | null> {
     // Get rate from USD to source currency (to calculate FROM -> USD)
-    const usdToFrom = await this.exchangeRateRepository.findByPair(
-      INTERMEDIATE_CURRENCY,
-      from,
-    );
+    const usdToFrom = await this.exchangeRateRepository.findByPair(INTERMEDIATE_CURRENCY, from);
     // Get rate from USD to target currency (to calculate USD -> TO)
-    const usdToTo = await this.exchangeRateRepository.findByPair(
-      INTERMEDIATE_CURRENCY,
-      to,
-    );
+    const usdToTo = await this.exchangeRateRepository.findByPair(INTERMEDIATE_CURRENCY, to);
 
     if (usdToFrom && usdToTo) {
       // FROM -> USD -> TO

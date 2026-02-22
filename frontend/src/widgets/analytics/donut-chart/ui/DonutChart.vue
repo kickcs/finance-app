@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, onMounted } from 'vue';
-import { UCard, UIcon, EmptyState } from '@/shared/ui';
+import { UCard, EmptyState } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { cn } from '@/shared/lib/utils';
 import type { DonutSegment } from '../types';
@@ -69,8 +69,7 @@ const segmentPaths = computed(() => {
 });
 
 function handleSegmentClick(segment: DonutSegment) {
-  selectedSegment.value =
-    selectedSegment.value === segment.id ? null : segment.id;
+  selectedSegment.value = selectedSegment.value === segment.id ? null : segment.id;
   emit('segment-click', segment);
 }
 
@@ -119,10 +118,12 @@ const centerInfo = computed(() => {
             :stroke-width="strokeWidth"
             stroke-linecap="round"
             class="cursor-pointer transition-opacity duration-150"
-            :class="cn(
-              isAnimated ? 'opacity-100' : 'opacity-0',
-              selectedSegment && selectedSegment !== segment.id && 'opacity-40',
-            )"
+            :class="
+              cn(
+                isAnimated ? 'opacity-100' : 'opacity-0',
+                selectedSegment && selectedSegment !== segment.id && 'opacity-40',
+              )
+            "
             :style="{
               transitionDelay: `${index * 50}ms`,
             }"
@@ -131,9 +132,7 @@ const centerInfo = computed(() => {
         </svg>
 
         <!-- Center content -->
-        <div
-          class="absolute inset-0 flex flex-col items-center justify-center text-center px-6"
-        >
+        <div class="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
           <span
             class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark mb-0.5 truncate max-w-[90px]"
           >
@@ -177,9 +176,7 @@ const centerInfo = computed(() => {
           >
             {{ segment.label }}
           </p>
-          <p
-            class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
-          >
+          <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
             {{ segment.percent.toFixed(1) }}%
           </p>
         </div>

@@ -23,9 +23,7 @@ const selectedAccountId = ref('');
 
 const isEditing = computed(() => !!props.editAction);
 
-const canSave = computed(
-  () => !!selectedCategoryId.value && !!selectedAccountId.value,
-);
+const canSave = computed(() => !!selectedCategoryId.value && !!selectedAccountId.value);
 
 watch(
   () => props.modelValue,
@@ -44,9 +42,7 @@ watch(
 
 function handleSave() {
   if (!canSave.value) return;
-  const cat = props.expenseCategories.find(
-    (c) => c.id === selectedCategoryId.value,
-  );
+  const cat = props.expenseCategories.find((c) => c.id === selectedCategoryId.value);
   emit('save', {
     label: cat?.name || 'Расход',
     categoryId: selectedCategoryId.value,
@@ -70,9 +66,7 @@ function handleDelete() {
     <div class="space-y-4">
       <!-- Category grid -->
       <div>
-        <p
-          class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2"
-        >
+        <p class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
           Категория
         </p>
         <div class="grid grid-cols-4 gap-2">
@@ -109,9 +103,7 @@ function handleDelete() {
 
       <!-- Account selector -->
       <div>
-        <p
-          class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2"
-        >
+        <p class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
           Счёт
         </p>
         <div class="flex gap-2 flex-wrap">
@@ -142,23 +134,12 @@ function handleDelete() {
     </div>
 
     <template #actions>
-      <UButton
-        v-if="isEditing"
-        variant="ghost"
-        size="sm"
-        class="text-danger"
-        @click="handleDelete"
-      >
+      <UButton v-if="isEditing" variant="ghost" size="sm" class="text-danger" @click="handleDelete">
         <UIcon name="delete" size="xs" class="mr-1" />
         Удалить
       </UButton>
       <div v-else />
-      <UButton
-        variant="primary"
-        size="sm"
-        :disabled="!canSave"
-        @click="handleSave"
-      >
+      <UButton variant="primary" size="sm" :disabled="!canSave" @click="handleSave">
         {{ isEditing ? 'Сохранить' : 'Добавить' }}
       </UButton>
     </template>

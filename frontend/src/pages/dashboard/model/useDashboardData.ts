@@ -7,6 +7,7 @@ import { useCategories } from '@/entities/category';
 import { useProfile, useExchangeRates } from '@/shared/api';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
+import { getGreeting } from '@/shared/lib/format/greeting';
 
 export function useDashboardData() {
   const { user, userId } = useCurrentUser();
@@ -14,16 +15,14 @@ export function useDashboardData() {
   const { profile } = useProfile(userId);
   const { convert, isLoading: ratesLoading } = useExchangeRates(currency);
 
-  const {
-    accounts,
-    totalBalancesByCurrency,
-    isLoading: accountsLoading,
-  } = useAccounts(userId);
+  const { accounts, totalBalancesByCurrency, isLoading: accountsLoading } = useAccounts(userId);
   const { debts, isLoading: debtsLoading } = useDebts(userId);
   const { reminders, isLoading: remindersLoading } = useReminders(userId);
   const { expenseCategories, allCategories } = useCategories(userId);
-  const { transactions: recentTransactions, isLoading: recentTxLoading } =
-    useRecentTransactions(userId, 5);
+  const { transactions: recentTransactions, isLoading: recentTxLoading } = useRecentTransactions(
+    userId,
+    5,
+  );
 
   // Monthly statistics
   const now = new Date();
@@ -46,14 +45,8 @@ export function useDashboardData() {
     month: lastMonth.getMonth() + 1,
   });
 
-  // Greeting
-  const greeting = computed(() => {
-    const hour = new Date().getHours();
-    if (hour >= 5 && hour < 12) return 'Доброе утро';
-    if (hour >= 12 && hour < 17) return 'Добрый день';
-    if (hour >= 17 && hour < 23) return 'Добрый вечер';
-    return 'Доброй ночи';
-  });
+  // Greeting (static — doesn't need to be reactive)
+  const greeting = getGreeting();
 
   const userName = computed(() => {
     const fullName = profile.value?.name || user?.value?.name;
@@ -70,27 +63,19 @@ export function useDashboardData() {
     return total;
   }
 
-  const totalBalance = computed(() =>
-    sumConverted(totalBalancesByCurrency.value),
-  );
+  const totalBalance = computed(() => sumConverted(totalBalancesByCurrency.value));
 
-  const savedThisMonth = computed(() =>
-    sumConverted(incomeByCurrency.value),
-  );
+  const savedThisMonth = computed(() => sumConverted(incomeByCurrency.value));
 
-  const spentThisMonth = computed(() =>
-    sumConverted(expenseByCurrency.value),
-  );
+  const spentThisMonth = computed(() => sumConverted(expenseByCurrency.value));
 
   const percentChange = computed(() => {
-    const thisIncome = sumConverted(incomeByCurrency.value);
-    const thisExpense = sumConverted(expenseByCurrency.value);
     const lastIncome = sumConverted(lastMonthIncomeByCurrency.value);
     const lastExpense = sumConverted(lastMonthExpenseByCurrency.value);
 
     if (lastIncome === 0 && lastExpense === 0) return undefined;
 
-    const thisSavings = thisIncome - thisExpense;
+    const thisSavings = savedThisMonth.value - spentThisMonth.value;
     const lastSavings = lastIncome - lastExpense;
 
     if (lastSavings === 0) {
@@ -101,7 +86,6 @@ export function useDashboardData() {
   });
 
   return {
-    user,
     userId,
     currency,
     greeting,

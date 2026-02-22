@@ -29,13 +29,9 @@ function handleChipClick(id: string) {
 <template>
   <div class="space-y-1.5">
     <div v-if="label" class="flex items-center justify-between px-1">
-      <span
-        class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark"
-      >
+      <span class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark">
         {{ label }}
-        <span v-if="selectedIds.length > 0" class="text-primary">
-          ({{ selectedIds.length }})
-        </span>
+        <span v-if="selectedIds.length > 0" class="text-primary">({{ selectedIds.length }})</span>
       </span>
       <button
         v-if="selectedIds.length > 0"

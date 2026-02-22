@@ -20,9 +20,7 @@ export function useInfiniteTransactions(
   const queryKey = computed(() => {
     const uid = toValue(userId);
     const f = toValue(filters);
-    return uid
-      ? transactionQueryKeys.infinite(uid, f)
-      : transactionQueryKeys.all;
+    return uid ? transactionQueryKeys.infinite(uid, f) : transactionQueryKeys.all;
   });
 
   const {
@@ -44,16 +42,13 @@ export function useInfiniteTransactions(
       return transactionsApi.getPaginated(uid, PAGE_SIZE, pageParam, f);
     },
     initialPageParam: undefined as PaginatedCursor | undefined,
-    getNextPageParam: (lastPage) =>
-      lastPage.hasMore ? lastPage.nextCursor : undefined,
+    getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.nextCursor : undefined),
     enabled: computed(() => !!toValue(userId)),
     placeholderData: keepPreviousData,
   });
 
   // Flatten all pages into single array
-  const transactions = computed(
-    () => data.value?.pages.flatMap((page) => page.data) ?? [],
-  );
+  const transactions = computed(() => data.value?.pages.flatMap((page) => page.data) ?? []);
 
   const totalCount = computed(() => transactions.value.length);
 
@@ -91,9 +86,7 @@ export function useInfiniteTransactions(
 
       const newPages = old.pages.map((page) => ({
         ...page,
-        data: page.data.map((t) =>
-          t.id === updatedTransaction.id ? updatedTransaction : t,
-        ),
+        data: page.data.map((t) => (t.id === updatedTransaction.id ? updatedTransaction : t)),
       }));
       return { ...old, pages: newPages };
     });

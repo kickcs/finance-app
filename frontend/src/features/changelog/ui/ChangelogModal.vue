@@ -20,9 +20,7 @@ function handleClose() {
     </div>
 
     <template #actions>
-      <UButton variant="primary" full-width @click="handleClose">
-        Понятно
-      </UButton>
+      <UButton variant="primary" full-width @click="handleClose">Понятно</UButton>
     </template>
   </UModal>
 </template>

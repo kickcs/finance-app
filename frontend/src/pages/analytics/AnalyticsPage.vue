@@ -1,14 +1,18 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue';
-import { useRouter, useRoute } from 'vue-router';
+import { useRoute } from 'vue-router';
 import { AppHeader } from '@/widgets/header';
-import { BottomNav } from '@/widgets/bottom-nav';
 import { StatCard } from '@/widgets/analytics';
-import { UTabs, UCard, UProgressBar, Skeleton, SectionHeader, EmptyState, IconBadge } from '@/shared/ui';
 import {
-  useAnalyticsStats,
-  type CategoryBreakdown,
-} from '@/entities/transaction';
+  UTabs,
+  UCard,
+  UProgressBar,
+  Skeleton,
+  SectionHeader,
+  EmptyState,
+  IconBadge,
+} from '@/shared/ui';
+import { useAnalyticsStats, type CategoryBreakdown } from '@/entities/transaction';
 import { useAccounts } from '@/entities/account';
 import { useDebts } from '@/entities/debt';
 import { formatCurrency, COMPACT_FORMAT } from '@/shared/lib/format/currency';
@@ -24,7 +28,6 @@ import {
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 
-const router = useRouter();
 const route = useRoute();
 
 const { userId } = useCurrentUser();
@@ -111,9 +114,7 @@ const categoryStats = computed<CategoryStat[]>(() => {
   if (filters.value.type === 'all') {
     filtered = categoryBreakdown.value;
   } else {
-    filtered = categoryBreakdown.value.filter(
-      (c) => c.type === filters.value.type,
-    );
+    filtered = categoryBreakdown.value.filter((c) => c.type === filters.value.type);
   }
 
   // Calculate total for percentages
@@ -151,11 +152,6 @@ function handleTypeChange(value: string | number) {
   setType(value as TransactionType);
 }
 
-function handleAddTransaction() {
-  router.push('/transactions/new');
-}
-
-
 // Read initial type filter from query param
 onMounted(() => {
   const queryType = route.query.type as string | undefined;
@@ -167,8 +163,8 @@ onMounted(() => {
 
 <template>
   <div
-    class="min-h-screen bg-background-light dark:bg-background-dark"
-    :style="{ paddingBottom: 'calc(7rem + var(--safe-area-inset-bottom))' }"
+    class="h-full flex flex-col relative bg-background-light dark:bg-background-dark overflow-y-auto"
+    :style="{ paddingBottom: 'calc(2rem + env(safe-area-inset-bottom, 0px))' }"
   >
     <!-- Header with Mode Toggle -->
     <AppHeader title="Аналитика">
@@ -180,7 +176,10 @@ onMounted(() => {
     <!-- Content -->
     <main class="px-5 pt-6 space-y-5">
       <!-- Sticky Filters -->
-      <div class="sticky z-20 -mx-5 px-5 py-2 space-y-3 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-border-light/50 dark:border-border-dark/50 shadow-sm" :style="{ top: 'calc(3rem + var(--safe-area-inset-top, 0px))' }">
+      <div
+        class="sticky z-20 -mx-5 px-5 py-2 space-y-3 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-border-light/50 dark:border-border-dark/50 shadow-sm"
+        :style="{ top: 'calc(3rem + env(safe-area-inset-top, 0px))' }"
+      >
         <!-- Period Tabs -->
         <UTabs
           :model-value="filters.period"
@@ -216,7 +215,10 @@ onMounted(() => {
       </div>
 
       <!-- Summary Cards - 2 Rows -->
-      <div class="space-y-3 pt-2 transition-opacity duration-300" :class="{ 'opacity-50 pointer-events-none': analyticsFetching }">
+      <div
+        class="space-y-3 pt-2 transition-opacity duration-300"
+        :class="{ 'opacity-50 pointer-events-none': analyticsFetching }"
+      >
         <StatCard
           icon="trending_down"
           label="Расходы"
@@ -236,15 +238,8 @@ onMounted(() => {
       </div>
 
       <!-- Debt Summary Cards -->
-      <div
-        v-if="debtsLoading || totalOwedToMe > 0 || totalIOwe > 0"
-        class="space-y-3"
-      >
-        <SectionHeader
-          title="Долги"
-          :show-add="false"
-          :show-view-all="false"
-        />
+      <div v-if="debtsLoading || totalOwedToMe > 0 || totalIOwe > 0" class="space-y-3">
+        <SectionHeader title="Долги" :show-add="false" :show-view-all="false" />
 
         <!-- Debt Loading Skeleton -->
         <template v-if="debtsLoading">
@@ -280,13 +275,14 @@ onMounted(() => {
       </div>
 
       <!-- Category Breakdown -->
-      <div class="space-y-3 transition-opacity duration-300" :class="{ 'opacity-50 pointer-events-none': analyticsFetching && categoryStats.length > 0 }">
+      <div
+        class="space-y-3 transition-opacity duration-300"
+        :class="{
+          'opacity-50 pointer-events-none': analyticsFetching && categoryStats.length > 0,
+        }"
+      >
         <div class="flex items-center justify-between">
-          <SectionHeader
-            title="По категориям"
-            :show-add="false"
-            :show-view-all="false"
-          />
+          <SectionHeader title="По категориям" :show-add="false" :show-view-all="false" />
           <UTabs
             :model-value="filters.type"
             :items="typeItems"
@@ -314,17 +310,14 @@ onMounted(() => {
           <div v-if="categoryStats.length > 0" class="space-y-3">
             <UCard v-for="stat in categoryStats" :key="stat.id" class="p-4">
               <div class="flex items-center gap-3 mb-3">
-                <IconBadge
-                  :icon="stat.icon"
-                  size="md"
-                  :color="stat.color"
-                  class="shrink-0"
-                />
+                <IconBadge :icon="stat.icon" size="md" :color="stat.color" class="shrink-0" />
                 <div class="flex-1">
                   <p class="font-medium text-text-primary-light dark:text-text-primary-dark">
                     {{ stat.name }}
                   </p>
-                  <p class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">
+                  <p
+                    class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark"
+                  >
                     {{ stat.percent.toFixed(1) }}%
                   </p>
                 </div>
@@ -332,11 +325,7 @@ onMounted(() => {
                   {{ formatCurrency(stat.amount, currency, COMPACT_FORMAT) }}
                 </p>
               </div>
-              <UProgressBar
-                :value="stat.percent"
-                :color="stat.color"
-                size="sm"
-              />
+              <UProgressBar :value="stat.percent" :color="stat.color" size="sm" />
             </UCard>
           </div>
 
@@ -351,8 +340,5 @@ onMounted(() => {
         </template>
       </div>
     </main>
-
-    <!-- Bottom Navigation -->
-    <BottomNav @add-click="handleAddTransaction" />
   </div>
 </template>
