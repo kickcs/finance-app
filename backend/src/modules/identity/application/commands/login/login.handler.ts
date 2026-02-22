@@ -17,18 +17,13 @@ export class LoginHandler implements ICommandHandler<LoginCommand> {
   ) {}
 
   async execute(command: LoginCommand): Promise<AuthResponse> {
-    const profile = await this.profileRepository.findByEmail(
-      command.email.toLowerCase(),
-    );
+    const profile = await this.profileRepository.findByEmail(command.email.toLowerCase());
 
     if (!profile?.password) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const isPasswordValid = await bcrypt.compare(
-      command.password,
-      profile.password.hashedValue,
-    );
+    const isPasswordValid = await bcrypt.compare(command.password, profile.password.hashedValue);
 
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');

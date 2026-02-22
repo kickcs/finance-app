@@ -1,11 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { CalendarDate, type DateValue } from '@internationalized/date';
-import {
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-} from '@/shared/ui/primitives/popover';
+import { Popover, PopoverTrigger, PopoverContent } from '@/shared/ui/primitives/popover';
 import { RangeCalendar } from '@/shared/ui/primitives/range-calendar';
 import { UIcon } from '@/shared/ui';
 import type { DateRange } from '../model/types';
@@ -42,10 +38,7 @@ const calendarValue = computed({
     start: parseDate(props.modelValue.startDate),
     end: parseDate(props.modelValue.endDate),
   }),
-  set: (value: {
-    start: DateValue | undefined;
-    end: DateValue | undefined;
-  }) => {
+  set: (value: { start: DateValue | undefined; end: DateValue | undefined }) => {
     emit('update:modelValue', {
       startDate: formatDate(value.start),
       endDate: formatDate(value.end),
@@ -112,12 +105,7 @@ const today = new CalendarDate(
       </button>
     </PopoverTrigger>
     <PopoverContent class="w-auto p-0" align="start">
-      <RangeCalendar
-        v-model="calendarValue"
-        locale="ru-RU"
-        :max-value="today"
-        class="rounded-xl"
-      />
+      <RangeCalendar v-model="calendarValue" locale="ru-RU" :max-value="today" class="rounded-xl" />
     </PopoverContent>
   </Popover>
 </template>

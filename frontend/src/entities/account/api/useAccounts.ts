@@ -2,11 +2,7 @@ import { computed, toValue, type MaybeRefOrGetter } from 'vue';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import { accountQueryKeys } from './queryKeys';
 import { accountsApi } from './accountsApi';
-import type {
-  Account,
-  AccountInsert,
-  AccountWithBalances,
-} from '@/shared/api/database.types';
+import type { Account, AccountInsert, AccountWithBalances } from '@/shared/api/database.types';
 
 export function useAccounts(userId: MaybeRefOrGetter<string | null>) {
   const queryClient = useQueryClient();
@@ -40,10 +36,7 @@ export function useAccounts(userId: MaybeRefOrGetter<string | null>) {
     }) => {
       const uid = toValue(userId);
       if (!uid) throw new Error('User not authenticated');
-      return accountsApi.createWithBalances(
-        { ...account, user_id: uid },
-        balances,
-      );
+      return accountsApi.createWithBalances({ ...account, user_id: uid }, balances);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKey.value });
@@ -59,19 +52,14 @@ export function useAccounts(userId: MaybeRefOrGetter<string | null>) {
         account.currency && account.balance !== undefined
           ? [{ currency: account.currency, balance: account.balance }]
           : [{ currency: account.currency ?? 'UZS', balance: 0 }];
-      return accountsApi.createWithBalances(
-        { ...account, user_id: uid },
-        balances,
-      );
+      return accountsApi.createWithBalances({ ...account, user_id: uid }, balances);
     },
     onMutate: async (newAccount) => {
       const uid = toValue(userId);
       if (!uid) return;
 
       await queryClient.cancelQueries({ queryKey: queryKey.value });
-      const previousAccounts = queryClient.getQueryData<AccountWithBalances[]>(
-        queryKey.value,
-      );
+      const previousAccounts = queryClient.getQueryData<AccountWithBalances[]>(queryKey.value);
 
       const optimisticAccount: AccountWithBalances = {
         id: `temp-${Date.now()}`,
@@ -127,14 +115,11 @@ export function useAccounts(userId: MaybeRefOrGetter<string | null>) {
       accountsApi.update(id, updates),
     onMutate: async ({ id, updates }) => {
       await queryClient.cancelQueries({ queryKey: queryKey.value });
-      const previousAccounts = queryClient.getQueryData<AccountWithBalances[]>(
-        queryKey.value,
-      );
+      const previousAccounts = queryClient.getQueryData<AccountWithBalances[]>(queryKey.value);
 
       queryClient.setQueryData<AccountWithBalances[]>(
         queryKey.value,
-        (old) =>
-          old?.map((a) => (a.id === id ? { ...a, ...updates } : a)) ?? [],
+        (old) => old?.map((a) => (a.id === id ? { ...a, ...updates } : a)) ?? [],
       );
 
       return { previousAccounts };
@@ -154,9 +139,7 @@ export function useAccounts(userId: MaybeRefOrGetter<string | null>) {
     mutationFn: (id: string) => accountsApi.delete(id),
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: queryKey.value });
-      const previousAccounts = queryClient.getQueryData<AccountWithBalances[]>(
-        queryKey.value,
-      );
+      const previousAccounts = queryClient.getQueryData<AccountWithBalances[]>(queryKey.value);
 
       queryClient.setQueryData<AccountWithBalances[]>(
         queryKey.value,
@@ -188,8 +171,7 @@ export function useAccounts(userId: MaybeRefOrGetter<string | null>) {
     const totals: Record<string, number> = {};
     for (const account of accounts.value) {
       for (const balance of account.balances) {
-        totals[balance.currency] =
-          (totals[balance.currency] ?? 0) + balance.balance;
+        totals[balance.currency] = (totals[balance.currency] ?? 0) + balance.balance;
       }
     }
     return totals;

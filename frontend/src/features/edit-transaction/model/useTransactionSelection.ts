@@ -3,9 +3,7 @@ import type { Ref, ComputedRef } from 'vue';
 import { debtsApi } from '@/entities/debt';
 import type { Transaction } from '@/shared/api/database.types';
 
-export function useTransactionSelection(
-  userId: Ref<string> | ComputedRef<string>,
-) {
+export function useTransactionSelection(userId: Ref<string> | ComputedRef<string>) {
   const selectedTransaction = ref<Transaction | null>(null);
   const hasSplitDebts = ref(false);
   const showEditModal = ref(false);

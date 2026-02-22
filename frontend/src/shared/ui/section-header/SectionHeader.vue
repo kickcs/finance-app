@@ -38,9 +38,7 @@ defineEmits<{
   <div class="flex items-center justify-between">
     <div class="flex items-center gap-2">
       <slot name="icon" />
-      <h2
-        class="text-base font-semibold text-text-primary-light dark:text-text-primary-dark"
-      >
+      <h2 class="text-base font-semibold text-text-primary-light dark:text-text-primary-dark">
         {{ title }}
       </h2>
       <UBadge
@@ -54,20 +52,10 @@ defineEmits<{
       <slot name="badge" />
     </div>
     <div class="flex items-center gap-1">
-      <UButton
-        v-if="showAdd"
-        variant="ghost"
-        size="xs"
-        @click="$emit('add-click')"
-      >
+      <UButton v-if="showAdd" variant="ghost" size="xs" @click="$emit('add-click')">
         <UIcon name="add" size="xs" />
       </UButton>
-      <UButton
-        v-if="showViewAll"
-        variant="ghost"
-        size="xs"
-        @click="$emit('view-all')"
-      >
+      <UButton v-if="showViewAll" variant="ghost" size="xs" @click="$emit('view-all')">
         {{ viewAllText }}
         <UIcon name="chevron_right" size="xs" />
       </UButton>

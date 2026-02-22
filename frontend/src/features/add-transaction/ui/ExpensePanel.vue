@@ -78,12 +78,8 @@ const {
       :validation-error="splitValidationError"
       @add-participant="$emit('addParticipant', $event)"
       @remove-participant="$emit('removeParticipant', $event)"
-      @update-participant-amount="
-        (id, amount) => $emit('updateParticipantAmount', id, amount)
-      "
-      @update-participant-name="
-        (id, name) => $emit('updateParticipantName', id, name)
-      "
+      @update-participant-amount="(id, amount) => $emit('updateParticipantAmount', id, amount)"
+      @update-participant-name="(id, name) => $emit('updateParticipantName', id, name)"
       @set-method="$emit('setSplitMethod', $event)"
       @set-my-share="$emit('setMyShare', $event)"
       @set-is-included="$emit('setIsIncluded', $event)"

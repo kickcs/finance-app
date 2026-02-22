@@ -14,9 +14,7 @@ export class GetBalancesByAccountHandler implements IQueryHandler<GetBalancesByA
   ) {}
 
   async execute(query: GetBalancesByAccountQuery) {
-    const balances = await this.accountBalanceRepository.findByAccountId(
-      query.accountId,
-    );
+    const balances = await this.accountBalanceRepository.findByAccountId(query.accountId);
 
     return balances.map((b) => ({
       id: b.id,

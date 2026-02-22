@@ -7,10 +7,7 @@ export function useUserCurrency() {
   const { profile } = useProfile(userId);
 
   const currency = computed(
-    () =>
-      profile.value?.currency ||
-      localStorage.getItem('selectedCurrency') ||
-      'UZS',
+    () => profile.value?.currency || localStorage.getItem('selectedCurrency') || 'UZS',
   );
 
   return {

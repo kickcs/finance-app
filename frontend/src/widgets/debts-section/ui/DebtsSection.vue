@@ -1,17 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import {
-  DebtCardSkeleton,
-  type Debt,
-  DEBT_DIRECTION_COLORS,
-} from '@/entities/debt';
-import {
-  UBadge,
-  UTabs,
-  SectionHeader,
-  IconBadge,
-  EmptyState,
-} from '@/shared/ui';
+import { DebtCardSkeleton, type Debt, DEBT_DIRECTION_COLORS } from '@/entities/debt';
+import { UBadge, UTabs, SectionHeader, IconBadge, EmptyState } from '@/shared/ui';
 import { formatMasked } from '@/shared/lib/format/currency';
 import { formatDate } from '@/shared/lib/format/date';
 import { useExchangeRates } from '@/shared/api';
@@ -77,16 +67,12 @@ const debtsByPerson = computed<DebtByPerson[]>(() => {
     }
 
     grouped[key].debts.push(debt);
-    grouped[key].totalRemaining += convert(
-      debt.remaining_amount,
-      debt.currency || 'UZS',
-    );
+    grouped[key].totalRemaining += convert(debt.remaining_amount, debt.currency || 'UZS');
 
     if (debt.next_payment_date) {
       if (
         !grouped[key].nearestDueDate ||
-        new Date(debt.next_payment_date) <
-          new Date(grouped[key].nearestDueDate!)
+        new Date(debt.next_payment_date) < new Date(grouped[key].nearestDueDate!)
       ) {
         grouped[key].nearestDueDate = debt.next_payment_date;
       }
@@ -95,10 +81,7 @@ const debtsByPerson = computed<DebtByPerson[]>(() => {
 
   return Object.values(grouped).sort((a, b) => {
     if (a.nearestDueDate && b.nearestDueDate) {
-      return (
-        new Date(a.nearestDueDate).getTime() -
-        new Date(b.nearestDueDate).getTime()
-      );
+      return new Date(a.nearestDueDate).getTime() - new Date(b.nearestDueDate).getTime();
     }
     if (a.nearestDueDate) return -1;
     if (b.nearestDueDate) return 1;
@@ -112,9 +95,8 @@ const filteredDebts = computed(() => {
 
 const overdueCount = computed(() => {
   const now = new Date();
-  return activeDebts.value.filter(
-    (d) => d.next_payment_date && new Date(d.next_payment_date) < now,
-  ).length;
+  return activeDebts.value.filter((d) => d.next_payment_date && new Date(d.next_payment_date) < now)
+    .length;
 });
 
 function isOverdue(date: string | null): boolean {
@@ -134,9 +116,9 @@ function isOverdue(date: string | null): boolean {
       @view-all="$emit('view-all')"
     >
       <template #badge>
-        <UBadge v-if="overdueCount > 0" variant="danger" size="xs"
-          >{{ overdueCount }} просрочено</UBadge
-        >
+        <UBadge v-if="overdueCount > 0" variant="danger" size="xs">
+          {{ overdueCount }} просрочено
+        </UBadge>
       </template>
     </SectionHeader>
 
@@ -169,9 +151,7 @@ function isOverdue(date: string | null): boolean {
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-3 min-w-0">
             <IconBadge
-              :icon="
-                group.debtType === 'given' ? 'arrow_upward' : 'arrow_downward'
-              "
+              :icon="group.debtType === 'given' ? 'arrow_upward' : 'arrow_downward'"
               size="sm"
               :color="DEBT_DIRECTION_COLORS[group.debtType]"
             />
@@ -196,15 +176,8 @@ function isOverdue(date: string | null): boolean {
                     : formatDate(group.nearestDueDate, { format: 'short' })
                 }}
               </p>
-              <p
-                v-else
-                class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
-              >
-                {{
-                  group.debts.length > 1
-                    ? `${group.debts.length} долга`
-                    : 'Без срока'
-                }}
+              <p v-else class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
+                {{ group.debts.length > 1 ? `${group.debts.length} долга` : 'Без срока' }}
               </p>
             </div>
           </div>
@@ -222,11 +195,7 @@ function isOverdue(date: string | null): boolean {
     <!-- Empty state for current tab -->
     <div v-else-if="activeDebts.length > 0" class="py-6 text-center">
       <p class="text-sm text-text-tertiary-light dark:text-text-tertiary-dark">
-        {{
-          activeTab === 'given'
-            ? 'Нет долгов «вам должны»'
-            : 'Нет долгов «вы должны»'
-        }}
+        {{ activeTab === 'given' ? 'Нет долгов «вам должны»' : 'Нет долгов «вы должны»' }}
       </p>
     </div>
 

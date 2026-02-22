@@ -9,10 +9,7 @@ export interface IExchangeRateRepository {
   /**
    * Find an exchange rate by currency pair
    */
-  findByPair(
-    baseCurrency: string,
-    targetCurrency: string,
-  ): Promise<ExchangeRate | null>;
+  findByPair(baseCurrency: string, targetCurrency: string): Promise<ExchangeRate | null>;
 
   /**
    * Find all exchange rates

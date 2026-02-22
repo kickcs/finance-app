@@ -5,14 +5,7 @@ export class AddForeignKeysAndIndexes1770891041400 implements MigrationInterface
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Clean up orphaned records before adding FK constraints
-    const tables = [
-      'accounts',
-      'transactions',
-      'categories',
-      'debts',
-      'goals',
-      'reminders',
-    ];
+    const tables = ['accounts', 'transactions', 'categories', 'debts', 'goals', 'reminders'];
     for (const table of tables) {
       await queryRunner.query(
         `DELETE FROM "${table}" WHERE "user_id" NOT IN (SELECT "id" FROM "profiles")`,
@@ -67,30 +60,18 @@ export class AddForeignKeysAndIndexes1770891041400 implements MigrationInterface
     );
 
     // Indexes for frequently queried columns
-    await queryRunner.query(
-      `CREATE INDEX "IDX_accounts_user_id" ON "accounts" ("user_id")`,
-    );
+    await queryRunner.query(`CREATE INDEX "IDX_accounts_user_id" ON "accounts" ("user_id")`);
     await queryRunner.query(
       `CREATE INDEX "IDX_transactions_user_id_date" ON "transactions" ("user_id", "date" DESC)`,
     );
     await queryRunner.query(
       `CREATE INDEX "IDX_transactions_account_id" ON "transactions" ("account_id")`,
     );
-    await queryRunner.query(
-      `CREATE INDEX "IDX_categories_user_id" ON "categories" ("user_id")`,
-    );
-    await queryRunner.query(
-      `CREATE INDEX "IDX_debts_user_id" ON "debts" ("user_id")`,
-    );
-    await queryRunner.query(
-      `CREATE INDEX "IDX_goals_user_id" ON "goals" ("user_id")`,
-    );
-    await queryRunner.query(
-      `CREATE INDEX "IDX_reminders_user_id" ON "reminders" ("user_id")`,
-    );
-    await queryRunner.query(
-      `CREATE INDEX "IDX_profiles_email" ON "profiles" ("email")`,
-    );
+    await queryRunner.query(`CREATE INDEX "IDX_categories_user_id" ON "categories" ("user_id")`);
+    await queryRunner.query(`CREATE INDEX "IDX_debts_user_id" ON "debts" ("user_id")`);
+    await queryRunner.query(`CREATE INDEX "IDX_goals_user_id" ON "goals" ("user_id")`);
+    await queryRunner.query(`CREATE INDEX "IDX_reminders_user_id" ON "reminders" ("user_id")`);
+    await queryRunner.query(`CREATE INDEX "IDX_profiles_email" ON "profiles" ("email")`);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
@@ -114,23 +95,11 @@ export class AddForeignKeysAndIndexes1770891041400 implements MigrationInterface
     await queryRunner.query(
       `ALTER TABLE "transactions" DROP CONSTRAINT "FK_transactions_account_id"`,
     );
-    await queryRunner.query(
-      `ALTER TABLE "reminders" DROP CONSTRAINT "FK_reminders_user_id"`,
-    );
-    await queryRunner.query(
-      `ALTER TABLE "goals" DROP CONSTRAINT "FK_goals_user_id"`,
-    );
-    await queryRunner.query(
-      `ALTER TABLE "debts" DROP CONSTRAINT "FK_debts_user_id"`,
-    );
-    await queryRunner.query(
-      `ALTER TABLE "categories" DROP CONSTRAINT "FK_categories_user_id"`,
-    );
-    await queryRunner.query(
-      `ALTER TABLE "transactions" DROP CONSTRAINT "FK_transactions_user_id"`,
-    );
-    await queryRunner.query(
-      `ALTER TABLE "accounts" DROP CONSTRAINT "FK_accounts_user_id"`,
-    );
+    await queryRunner.query(`ALTER TABLE "reminders" DROP CONSTRAINT "FK_reminders_user_id"`);
+    await queryRunner.query(`ALTER TABLE "goals" DROP CONSTRAINT "FK_goals_user_id"`);
+    await queryRunner.query(`ALTER TABLE "debts" DROP CONSTRAINT "FK_debts_user_id"`);
+    await queryRunner.query(`ALTER TABLE "categories" DROP CONSTRAINT "FK_categories_user_id"`);
+    await queryRunner.query(`ALTER TABLE "transactions" DROP CONSTRAINT "FK_transactions_user_id"`);
+    await queryRunner.query(`ALTER TABLE "accounts" DROP CONSTRAINT "FK_accounts_user_id"`);
   }
 }

@@ -48,9 +48,7 @@ defineEmits<{
         v-if="!loading"
         class="text-4xl sm:text-5xl font-bold tracking-tight text-text-primary-light dark:text-text-primary-dark"
       >
-        {{
-          formatMasked(totalBalance, currency, hidden ?? false, COMPACT_FORMAT)
-        }}
+        {{ formatMasked(totalBalance, currency, hidden ?? false, COMPACT_FORMAT) }}
       </h1>
     </Transition>
 
@@ -59,19 +57,11 @@ defineEmits<{
       v-if="percentChange !== undefined && !loading && !hidden"
       :class="[
         'inline-flex items-center gap-1 mt-2 px-2.5 py-1 rounded-full text-xs font-medium',
-        percentChange >= 0
-          ? 'bg-success-light text-success'
-          : 'bg-danger-light text-danger',
+        percentChange >= 0 ? 'bg-success-light text-success' : 'bg-danger-light text-danger',
       ]"
     >
-      <UIcon
-        :name="percentChange >= 0 ? 'trending_up' : 'trending_down'"
-        size="xs"
-      />
-      <span
-        >{{ percentChange >= 0 ? '+' : '' }}{{ percentChange.toFixed(1) }}% за
-        месяц</span
-      >
+      <UIcon :name="percentChange >= 0 ? 'trending_up' : 'trending_down'" size="xs" />
+      <span>{{ percentChange >= 0 ? '+' : '' }}{{ percentChange.toFixed(1) }}% за месяц</span>
     </div>
 
     <!-- Quick Action Buttons -->
@@ -80,11 +70,7 @@ defineEmits<{
         class="group flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-primary to-primary-hover text-white font-medium text-body-sm shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 hover:-translate-y-0.5 active:translate-y-0 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 transition-all duration-300"
         @click="$emit('income-click')"
       >
-        <UIcon
-          name="add"
-          size="sm"
-          class="transition-transform group-hover:scale-110"
-        />
+        <UIcon name="add" size="sm" class="transition-transform group-hover:scale-110" />
         Доход
       </button>
 
@@ -92,11 +78,7 @@ defineEmits<{
         class="group flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark font-medium text-body-sm shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:bg-card-light dark:hover:bg-card-dark active:translate-y-0 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 transition-all duration-300"
         @click="$emit('expense-click')"
       >
-        <UIcon
-          name="remove"
-          size="sm"
-          class="transition-transform group-hover:scale-110"
-        />
+        <UIcon name="remove" size="sm" class="transition-transform group-hover:scale-110" />
         Расход
       </button>
     </div>

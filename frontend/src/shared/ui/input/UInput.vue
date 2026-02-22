@@ -76,8 +76,7 @@ const inputValue = computed({
         .replace(/,/g, '.')
         .replace(/[^\d.]/g, '');
       const parts = cleaned.split('.');
-      const sanitized =
-        parts.length > 2 ? `${parts[0]}.${parts.slice(1).join('')}` : cleaned;
+      const sanitized = parts.length > 2 ? `${parts[0]}.${parts.slice(1).join('')}` : cleaned;
       emit('update:modelValue', sanitized);
     } else {
       emit('update:modelValue', value);
@@ -87,11 +86,7 @@ const inputValue = computed({
 
 const inputType = computed(() => {
   if (props.variant === 'currency') return 'text';
-  if (
-    props.type === 'password' &&
-    props.showPasswordToggle &&
-    isPasswordVisible.value
-  ) {
+  if (props.type === 'password' && props.showPasswordToggle && isPasswordVisible.value) {
     return 'text';
   }
   return props.type;
@@ -128,10 +123,8 @@ defineExpose({
           'bg-card-light dark:bg-card-dark',
           'border border-border-light dark:border-border-dark',
           'focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/20',
-          variant === 'search' &&
-            'bg-surface-light dark:bg-surface-dark border-transparent',
-          error &&
-            'border-danger focus-within:border-danger focus-within:ring-danger/20',
+          variant === 'search' && 'bg-surface-light dark:bg-surface-dark border-transparent',
+          error && 'border-danger focus-within:border-danger focus-within:ring-danger/20',
           disabled && 'opacity-50 pointer-events-none',
           isShaking && 'animate-shake',
         )
@@ -194,19 +187,12 @@ defineExpose({
         class="flex items-center justify-center pr-3 text-text-tertiary-light dark:text-text-tertiary-dark hover:text-text-secondary-light dark:hover:text-text-secondary-dark transition-colors"
         @click="togglePasswordVisibility"
       >
-        <UIcon
-          :name="isPasswordVisible ? 'visibility_off' : 'visibility'"
-          size="sm"
-        />
+        <UIcon :name="isPasswordVisible ? 'visibility_off' : 'visibility'" size="sm" />
       </button>
 
       <!-- Error icon -->
       <span
-        v-if="
-          error &&
-          variant !== 'currency' &&
-          !(type === 'password' && showPasswordToggle)
-        "
+        v-if="error && variant !== 'currency' && !(type === 'password' && showPasswordToggle)"
         class="absolute right-3 text-danger"
       >
         <UIcon name="error" size="sm" />

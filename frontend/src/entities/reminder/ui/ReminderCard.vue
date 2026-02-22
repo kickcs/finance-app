@@ -71,9 +71,7 @@ const isOverdue = computed(() => {
 
     <!-- Content -->
     <div class="flex-1 text-left min-w-0">
-      <p
-        class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark truncate"
-      >
+      <p class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark truncate">
         {{ reminder.name }}
       </p>
       <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
@@ -83,9 +81,7 @@ const isOverdue = computed(() => {
 
     <!-- Right side -->
     <div class="text-right shrink-0">
-      <p
-        class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark"
-      >
+      <p class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark">
         {{ formatCurrency(reminder.amount, currency || 'UZS') }}
       </p>
       <p

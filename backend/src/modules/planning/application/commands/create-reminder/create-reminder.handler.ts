@@ -2,10 +2,7 @@ import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
 import { CreateReminderCommand } from './create-reminder.command';
 import { Reminder } from '../../../domain/aggregates/reminder';
-import {
-  IReminderRepository,
-  REMINDER_REPOSITORY,
-} from '../../../domain/repositories';
+import { IReminderRepository, REMINDER_REPOSITORY } from '../../../domain/repositories';
 import { ReminderResponseMapper } from '../../mappers';
 
 @CommandHandler(CreateReminderCommand)

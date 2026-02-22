@@ -43,31 +43,17 @@ export class CategoriesController {
     @Body() dto: CreateCategoryDto,
   ): Promise<unknown> {
     return this.commandBus.execute(
-      new CreateCategoryCommand(
-        userId,
-        dto.name,
-        dto.icon,
-        dto.color,
-        dto.type,
-        dto.sortOrder,
-      ),
+      new CreateCategoryCommand(userId, dto.name, dto.icon, dto.color, dto.type, dto.sortOrder),
     );
   }
 
   @Post('initialize-defaults')
-  async initializeDefaults(
-    @CurrentUser('sub') userId: string,
-  ): Promise<unknown> {
-    return this.commandBus.execute(
-      new InitializeDefaultCategoriesCommand(userId),
-    );
+  async initializeDefaults(@CurrentUser('sub') userId: string): Promise<unknown> {
+    return this.commandBus.execute(new InitializeDefaultCategoriesCommand(userId));
   }
 
   @Patch(':id')
-  async update(
-    @Param('id') id: string,
-    @Body() dto: UpdateCategoryDto,
-  ): Promise<unknown> {
+  async update(@Param('id') id: string, @Body() dto: UpdateCategoryDto): Promise<unknown> {
     return this.commandBus.execute(new UpdateCategoryCommand(id, dto));
   }
 
@@ -80,9 +66,7 @@ export class CategoriesController {
   @Post('reorder')
   @HttpCode(HttpStatus.OK)
   async reorder(@Body() body: { categoryIds: string[] }) {
-    await this.commandBus.execute(
-      new ReorderCategoriesCommand(body.categoryIds),
-    );
+    await this.commandBus.execute(new ReorderCategoriesCommand(body.categoryIds));
     return { success: true };
   }
 }

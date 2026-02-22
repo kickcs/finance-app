@@ -6,10 +6,7 @@ import type { HtmlTagDescriptor, Plugin } from 'vite';
  * Matches hashed font filenames in the bundle and generates preload tags.
  */
 export function fontPreloadPlugin(): Plugin {
-  const CRITICAL_FONTS = [
-    'inter-latin-wght-normal',
-    'inter-cyrillic-wght-normal',
-  ];
+  const CRITICAL_FONTS = ['inter-latin-wght-normal', 'inter-cyrillic-wght-normal'];
 
   return {
     name: 'font-preload',

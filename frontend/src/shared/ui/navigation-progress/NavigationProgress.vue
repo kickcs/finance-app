@@ -62,10 +62,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div
-    v-if="isVisible"
-    class="fixed top-0 left-0 right-0 z-50 h-[2px] safe-area-inset-top"
-  >
+  <div v-if="isVisible" class="fixed top-0 left-0 right-0 z-50 h-[2px] safe-area-inset-top">
     <div
       class="h-full w-full"
       :class="isFinishing ? 'nav-progress-finish' : 'nav-progress-loading'"

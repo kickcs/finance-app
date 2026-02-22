@@ -10,11 +10,7 @@ const MAX_AGE = 1000 * 60 * 60 * 24; // 24 hours
  * Query key prefixes that should be persisted to localStorage.
  * Only critical dashboard data — keeps storage small and restore fast.
  */
-const PERSISTED_KEY_PREFIXES = [
-  'accounts',
-  'profile',
-  'categories',
-];
+const PERSISTED_KEY_PREFIXES = ['accounts', 'profile', 'categories'];
 
 /** Check if a query key should be persisted */
 function shouldPersistQuery(queryKey: readonly unknown[]): boolean {

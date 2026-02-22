@@ -41,10 +41,7 @@ export const profileApi = {
 
   async getOrCreate(_userId: string): Promise<Profile> {
     // Backend gets userId from JWT token
-    const data = await http.post<ProfileResponse>(
-      '/profiles/get-or-create',
-      {},
-    );
+    const data = await http.post<ProfileResponse>('/profiles/get-or-create', {});
     return transformProfile(data);
   },
 

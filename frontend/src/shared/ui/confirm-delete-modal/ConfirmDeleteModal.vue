@@ -47,38 +47,19 @@ function close() {
       <slot />
 
       <!-- Error message (takes priority over warning) -->
-      <div
-        v-if="error"
-        :class="['rounded-xl bg-warning/10', compact ? 'p-2.5' : 'p-4']"
-      >
+      <div v-if="error" :class="['rounded-xl bg-warning/10', compact ? 'p-2.5' : 'p-4']">
         <div :class="['flex items-start', compact ? 'gap-2' : 'gap-3']">
-          <UIcon
-            name="info"
-            :size="compact ? 'xs' : 'sm'"
-            class="text-warning mt-0.5 shrink-0"
-          />
-          <p
-            :class="[
-              compact ? 'text-xs' : 'text-sm',
-              'text-warning font-medium',
-            ]"
-          >
+          <UIcon name="info" :size="compact ? 'xs' : 'sm'" class="text-warning mt-0.5 shrink-0" />
+          <p :class="[compact ? 'text-xs' : 'text-sm', 'text-warning font-medium']">
             {{ error }}
           </p>
         </div>
       </div>
 
       <!-- Warning message -->
-      <div
-        v-else
-        :class="['rounded-xl bg-danger/10', compact ? 'p-2.5' : 'p-4']"
-      >
+      <div v-else :class="['rounded-xl bg-danger/10', compact ? 'p-2.5' : 'p-4']">
         <div :class="['flex items-start', compact ? 'gap-2' : 'gap-3']">
-          <UIcon
-            name="warning"
-            :size="compact ? 'xs' : 'sm'"
-            class="text-danger mt-0.5 shrink-0"
-          />
+          <UIcon name="warning" :size="compact ? 'xs' : 'sm'" class="text-danger mt-0.5 shrink-0" />
           <p :class="[compact ? 'text-xs' : 'text-sm', 'text-danger']">
             {{ warningText }}
           </p>
@@ -87,12 +68,7 @@ function close() {
     </div>
 
     <template #actions>
-      <UButton
-        variant="secondary"
-        :size="compact ? 'sm' : undefined"
-        full-width
-        @click="close"
-      >
+      <UButton variant="secondary" :size="compact ? 'sm' : undefined" full-width @click="close">
         {{ cancelLabel }}
       </UButton>
       <UButton

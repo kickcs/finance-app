@@ -1,10 +1,7 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { Inject, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { DeleteReminderCommand } from './delete-reminder.command';
-import {
-  IReminderRepository,
-  REMINDER_REPOSITORY,
-} from '../../../domain/repositories';
+import { IReminderRepository, REMINDER_REPOSITORY } from '../../../domain/repositories';
 
 @CommandHandler(DeleteReminderCommand)
 export class DeleteReminderHandler implements ICommandHandler<DeleteReminderCommand> {

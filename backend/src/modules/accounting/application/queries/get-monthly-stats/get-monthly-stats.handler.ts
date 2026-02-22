@@ -14,10 +14,6 @@ export class GetMonthlyStatsHandler implements IQueryHandler<GetMonthlyStatsQuer
   ) {}
 
   async execute(query: GetMonthlyStatsQuery) {
-    return this.transactionRepository.getMonthlyStats(
-      query.userId,
-      query.year,
-      query.month,
-    );
+    return this.transactionRepository.getMonthlyStats(query.userId, query.year, query.month);
   }
 }

@@ -63,8 +63,7 @@ export function useHistoryFilters(userId: MaybeRefOrGetter<string | null>) {
 
   const usedCategories = computed(() => {
     const uid = toValue(userId);
-    const useDefaults =
-      isLoadingCategories.value || (!uid && userCategories.value.length === 0);
+    const useDefaults = isLoadingCategories.value || (!uid && userCategories.value.length === 0);
 
     switch (activeTypeFilter.value) {
       case 'expense':

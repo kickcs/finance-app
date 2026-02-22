@@ -14,11 +14,7 @@ export class TransactionType extends ValueObject<TransactionTypeProps> {
   static readonly EXPENSE = new TransactionType({ value: 'expense' });
   static readonly TRANSFER = new TransactionType({ value: 'transfer' });
 
-  private static readonly VALID_TYPES: TransactionTypeValue[] = [
-    'income',
-    'expense',
-    'transfer',
-  ];
+  private static readonly VALID_TYPES: TransactionTypeValue[] = ['income', 'expense', 'transfer'];
 
   private constructor(props: TransactionTypeProps) {
     super(props);

@@ -15,10 +15,7 @@ export class GetCategoriesHandler implements IQueryHandler<GetCategoriesQuery> {
 
   async execute(query: GetCategoriesQuery) {
     const categories = query.type
-      ? await this.categoryRepository.findByUserIdAndType(
-          query.userId,
-          query.type,
-        )
+      ? await this.categoryRepository.findByUserIdAndType(query.userId, query.type)
       : await this.categoryRepository.findByUserId(query.userId);
 
     return categories.map((c) => ({

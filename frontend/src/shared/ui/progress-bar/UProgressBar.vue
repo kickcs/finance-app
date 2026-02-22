@@ -62,9 +62,7 @@ const colorClass = computed(() => {
   <div class="w-full">
     <div v-if="showLabel" class="flex justify-between items-center mb-1.5">
       <slot name="label" />
-      <span
-        class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark"
-      >
+      <span class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark">
         {{ Math.round(percentage) }}%
       </span>
     </div>

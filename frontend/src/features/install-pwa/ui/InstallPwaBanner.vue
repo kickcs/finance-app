@@ -26,22 +26,16 @@ function handleDismiss(e: Event) {
     >
       <div class="flex items-center gap-4 p-4">
         <!-- Icon -->
-        <div
-          class="w-11 h-11 rounded-xl bg-primary flex items-center justify-center shrink-0"
-        >
+        <div class="w-11 h-11 rounded-xl bg-primary flex items-center justify-center shrink-0">
           <UIcon name="phone_iphone" size="md" class="text-white" />
         </div>
 
         <!-- Text -->
         <div class="flex-1 min-w-0">
-          <p
-            class="font-semibold text-text-primary-light dark:text-text-primary-dark"
-          >
+          <p class="font-semibold text-text-primary-light dark:text-text-primary-dark">
             Установите приложение
           </p>
-          <p
-            class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
-          >
+          <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
             Быстрый доступ с главного экрана
           </p>
         </div>

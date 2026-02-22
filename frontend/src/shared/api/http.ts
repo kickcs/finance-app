@@ -94,10 +94,7 @@ export class HttpError extends Error {
   }
 }
 
-async function request<T>(
-  endpoint: string,
-  options: HttpOptions = {},
-): Promise<T> {
+async function request<T>(endpoint: string, options: HttpOptions = {}): Promise<T> {
   const { params, skipAuth, ...fetchOptions } = options;
 
   // Build URL with query params
@@ -192,11 +189,7 @@ export const http = {
     });
   },
 
-  patch<T>(
-    endpoint: string,
-    body?: unknown,
-    options?: HttpOptions,
-  ): Promise<T> {
+  patch<T>(endpoint: string, body?: unknown, options?: HttpOptions): Promise<T> {
     return request<T>(endpoint, {
       ...options,
       method: 'PATCH',

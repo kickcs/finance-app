@@ -18,9 +18,7 @@ export class UserId extends ValueObject<UserIdProps> {
 
   static create(value: string): UserId {
     if (!value || !this.UUID_REGEX.test(value)) {
-      throw new Error(
-        `Invalid user ID format: ${value}. Must be a valid UUID.`,
-      );
+      throw new Error(`Invalid user ID format: ${value}. Must be a valid UUID.`);
     }
 
     return new UserId({ value: value.toLowerCase() });

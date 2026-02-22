@@ -19,9 +19,7 @@ export class CountTransactionsByAccountHandler implements IQueryHandler<CountTra
     private readonly accountRepository: IAccountRepository,
   ) {}
 
-  async execute(
-    query: CountTransactionsByAccountQuery,
-  ): Promise<{ count: number }> {
+  async execute(query: CountTransactionsByAccountQuery): Promise<{ count: number }> {
     const account = await this.accountRepository.findById(query.accountId);
     if (!account) {
       throw new NotFoundException('Account not found');
@@ -30,9 +28,7 @@ export class CountTransactionsByAccountHandler implements IQueryHandler<CountTra
       throw new ForbiddenException('Access denied');
     }
 
-    const count = await this.transactionRepository.countByAccountId(
-      query.accountId,
-    );
+    const count = await this.transactionRepository.countByAccountId(query.accountId);
     return { count };
   }
 }

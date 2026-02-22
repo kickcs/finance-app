@@ -9,27 +9,15 @@ import {
   USpinner,
   NotFoundState,
   IconBadge,
-  UBadge
+  UBadge,
 } from '@/shared/ui';
 import { AppHeader } from '@/widgets/header';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { formatDate } from '@/shared/lib/format/date';
-import {
-  useDebts,
-  DEBT_DIRECTION_LABELS,
-  DEBT_DIRECTION_COLORS,
-  type Debt,
-} from '@/entities/debt';
+import { useDebts, DEBT_DIRECTION_LABELS, DEBT_DIRECTION_COLORS, type Debt } from '@/entities/debt';
 import { useAccounts } from '@/entities/account';
-import {
-  CloseDebtModal,
-  DeleteDebtModal,
-  useCloseDebt,
-} from '@/features/close-debt';
-import {
-  PartialPaymentModal,
-  usePartialPayment,
-} from '@/features/partial-payment';
+import { CloseDebtModal, DeleteDebtModal, useCloseDebt } from '@/features/close-debt';
+import { PartialPaymentModal, usePartialPayment } from '@/features/partial-payment';
 import { navigateBack } from '@/app/router';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 
@@ -58,9 +46,9 @@ const linkedAccount = computed(() => {
 
 // Calculate progress
 const progress = computed(() => {
-  if (!debt.value) return 0;
+  if (!debt.value || debt.value.total_amount === 0) return 0;
   const paid = debt.value.total_amount - debt.value.remaining_amount;
-  return Math.round((paid / debt.value.total_amount) * 100);
+  return Math.min(100, Math.max(0, Math.round((paid / debt.value.total_amount) * 100)));
 });
 
 // Modal states
@@ -97,12 +85,7 @@ async function handleDeleteDebt() {
 async function handlePartialPayment(amount: number, accountId: string) {
   if (!debt.value || !userId.value) return;
 
-  const success = await makePartialPayment(
-    debt.value,
-    amount,
-    accountId,
-    userId.value,
-  );
+  const success = await makePartialPayment(debt.value, amount, accountId, userId.value);
   if (success) {
     showPartialPaymentModal.value = false;
   }
@@ -114,14 +97,11 @@ function goBack() {
 </script>
 
 <template>
-  <div class="min-h-screen bg-background-light dark:bg-background-dark pb-28">
+  <div
+    class="h-full flex flex-col relative bg-background-light dark:bg-background-dark pb-28 md:pb-8 overflow-y-auto"
+  >
     <!-- Header -->
-    <AppHeader
-      :title="debt?.person_name || debt?.name || 'Долг'"
-      show-back
-      blur
-      @back="goBack"
-    />
+    <AppHeader :title="debt?.person_name || debt?.name || 'Долг'" show-back blur @back="goBack" />
 
     <!-- Content -->
     <main class="px-5 pt-8 pb-6">
@@ -148,46 +128,39 @@ function goBack() {
 
             <!-- Info -->
             <div class="flex-1 min-w-0 pt-1">
-              <p class="text-xl font-bold text-text-primary-light dark:text-text-primary-dark truncate">
+              <p
+                class="text-xl font-bold text-text-primary-light dark:text-text-primary-dark truncate"
+              >
                 {{ debt.person_name || debt.name }}
               </p>
-              <p class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mt-0.5">
+              <p
+                class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mt-0.5"
+              >
                 {{ DEBT_DIRECTION_LABELS[debt.debt_type] }}
               </p>
             </div>
 
             <!-- Closed Badge or Delete Action -->
-            <UBadge
-              v-if="debt.is_closed"
-              variant="success"
-              shape="pill"
-              class="mt-1"
-            >
+            <UBadge v-if="debt.is_closed" variant="success" shape="pill" class="mt-1">
               Погашен
             </UBadge>
             <button
               v-else
               class="shrink-0 w-10 h-10 -mt-1 -mr-1 rounded-xl flex items-center justify-center text-text-tertiary-light dark:text-text-tertiary-dark hover:bg-danger/10 hover:text-danger transition-colors"
-              @click="showDeleteModal = true"
               aria-label="Удалить долг"
+              @click="showDeleteModal = true"
             >
               <UIcon name="delete" size="md" />
             </button>
           </div>
 
           <!-- Amount -->
-          <div
-            class="mt-6 pt-6 border-t border-border-light dark:border-border-dark"
-          >
+          <div class="mt-6 pt-6 border-t border-border-light dark:border-border-dark">
             <div class="flex justify-between items-end mb-3">
-              <span
-                class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
-              >
+              <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
                 {{ debt.is_closed ? 'Сумма' : 'Осталось' }}
               </span>
-              <span
-                class="text-2xl font-bold text-text-primary-light dark:text-text-primary-dark"
-              >
+              <span class="text-2xl font-bold text-text-primary-light dark:text-text-primary-dark">
                 {{ formatCurrency(debt.remaining_amount, debtCurrency) }}
               </span>
             </div>
@@ -197,40 +170,25 @@ function goBack() {
               v-if="debt.remaining_amount < debt.total_amount"
               class="flex justify-between items-center mt-2"
             >
-              <span
-                class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
-              >
+              <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
                 Уже выплачено
               </span>
               <span class="text-sm font-medium text-success">
-                {{
-                  formatCurrency(
-                    debt.total_amount - debt.remaining_amount,
-                    debtCurrency,
-                  )
-                }}
+                {{ formatCurrency(debt.total_amount - debt.remaining_amount, debtCurrency) }}
               </span>
             </div>
 
             <!-- Progress (only if not closed) -->
             <div
-              v-if="
-                !debt.is_closed && debt.remaining_amount < debt.total_amount
-              "
+              v-if="!debt.is_closed && debt.remaining_amount < debt.total_amount"
               class="space-y-2 mt-3"
             >
-              <UProgressBar
-                :value="progress"
-                :color="DEBT_DIRECTION_COLORS[debt.debt_type]"
-              />
+              <UProgressBar :value="progress" :color="DEBT_DIRECTION_COLORS[debt.debt_type]" />
               <div
                 class="flex justify-between text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
               >
                 <span>Погашено {{ progress }}%</span>
-                <span
-                  >Всего:
-                  {{ formatCurrency(debt.total_amount, debtCurrency) }}</span
-                >
+                <span>Всего: {{ formatCurrency(debt.total_amount, debtCurrency) }}</span>
               </div>
             </div>
           </div>
@@ -240,9 +198,7 @@ function goBack() {
         <UCard variant="bordered" class="p-5 space-y-4 shadow-sm">
           <!-- Linked Account -->
           <div v-if="linkedAccount" class="flex items-center justify-between">
-            <span
-              class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
-            >
+            <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
               Счёт
             </span>
             <div class="flex items-center gap-2">
@@ -250,9 +206,7 @@ function goBack() {
                 class="w-3 h-3 rounded-full"
                 :style="{ backgroundColor: linkedAccount.color }"
               />
-              <span
-                class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
-              >
+              <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
                 {{ linkedAccount.name }}
               </span>
             </div>
@@ -260,54 +214,35 @@ function goBack() {
 
           <!-- Original Amount -->
           <div class="flex items-center justify-between">
-            <span
-              class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
-            >
+            <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
               Исходная сумма
             </span>
-            <span
-              class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
-            >
+            <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
               {{ formatCurrency(debt.total_amount, debtCurrency) }}
             </span>
           </div>
 
           <!-- Currency -->
           <div class="flex items-center justify-between">
-            <span
-              class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
-            >
+            <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
               Валюта
             </span>
-            <span
-              class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
-            >
+            <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
               {{ debtCurrency }}
             </span>
           </div>
 
           <!-- Type -->
           <div class="flex items-center justify-between">
-            <span
-              class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
-            >
-              Тип
-            </span>
-            <span
-              class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
-            >
+            <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">Тип</span>
+            <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
               {{ debt.debt_type === 'given' ? 'Вам должны' : 'Вы должны' }}
             </span>
           </div>
 
           <!-- Due Date -->
-          <div
-            v-if="debt.next_payment_date"
-            class="flex items-center justify-between"
-          >
-            <span
-              class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
-            >
+          <div v-if="debt.next_payment_date" class="flex items-center justify-between">
+            <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
               Дата возврата
             </span>
             <span
@@ -320,10 +255,7 @@ function goBack() {
             >
               {{ formatDate(debt.next_payment_date, { format: 'short' }) }}
               <span
-                v-if="
-                  new Date(debt.next_payment_date) < new Date() &&
-                  !debt.is_closed
-                "
+                v-if="new Date(debt.next_payment_date) < new Date() && !debt.is_closed"
                 class="text-xs"
               >
                 (просрочено)
@@ -333,14 +265,10 @@ function goBack() {
 
           <!-- Created Date -->
           <div class="flex items-center justify-between">
-            <span
-              class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
-            >
+            <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
               Дата создания
             </span>
-            <span
-              class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
-            >
+            <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
               {{ formatDate(debt.created_at, { format: 'short' }) }}
             </span>
           </div>
@@ -358,12 +286,7 @@ function goBack() {
             Платёж
           </UButton>
 
-          <UButton
-            variant="primary"
-            size="lg"
-            class="flex-1"
-            @click="showCloseModal = true"
-          >
+          <UButton variant="primary" size="lg" class="flex-1" @click="showCloseModal = true">
             <UIcon name="check_circle" size="sm" class="mr-1.5" />
             Закрыть
           </UButton>

@@ -64,10 +64,7 @@ export function usePullToRefresh(config: PullToRefreshConfig) {
     }
 
     // Determine direction in first 10px of movement
-    if (
-      isVerticalPull === null &&
-      (Math.abs(diffX) > 10 || Math.abs(diffY) > 10)
-    ) {
+    if (isVerticalPull === null && (Math.abs(diffX) > 10 || Math.abs(diffY) > 10)) {
       isVerticalPull = Math.abs(diffY) > Math.abs(diffX);
     }
 

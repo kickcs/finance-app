@@ -7,9 +7,7 @@ import { UCard, UIcon, Skeleton } from '@/shared/ui';
     <!-- Header -->
     <div class="flex items-center justify-between px-1">
       <div class="flex items-center gap-2">
-        <div
-          class="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center"
-        >
+        <div class="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
           <UIcon name="calendar_month" size="sm" class="text-primary" />
         </div>
         <Skeleton class="h-5 w-24 rounded" />

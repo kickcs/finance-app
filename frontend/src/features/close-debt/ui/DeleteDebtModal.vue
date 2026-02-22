@@ -33,31 +33,19 @@ const emit = defineEmits<{
     >
       <div
         class="w-12 h-12 rounded-xl flex items-center justify-center"
-        :class="
-          debt.debt_type === 'given'
-            ? 'bg-debt-given-light'
-            : 'bg-debt-received-light'
-        "
+        :class="debt.debt_type === 'given' ? 'bg-debt-given-light' : 'bg-debt-received-light'"
       >
         <UIcon
           :name="debt.debt_type === 'given' ? 'arrow_upward' : 'arrow_downward'"
           size="md"
-          :class="
-            debt.debt_type === 'given'
-              ? 'text-debt-given'
-              : 'text-debt-received'
-          "
+          :class="debt.debt_type === 'given' ? 'text-debt-given' : 'text-debt-received'"
         />
       </div>
       <div class="flex-1 min-w-0">
-        <p
-          class="font-semibold text-text-primary-light dark:text-text-primary-dark truncate"
-        >
+        <p class="font-semibold text-text-primary-light dark:text-text-primary-dark truncate">
           {{ debt.person_name || debt.name }}
         </p>
-        <p
-          class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
-        >
+        <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
           {{ formatCurrency(debt.total_amount, currency) }}
         </p>
       </div>

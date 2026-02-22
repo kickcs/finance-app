@@ -26,9 +26,7 @@ export class GetTransactionsByAccountHandler implements IQueryHandler<GetTransac
       throw new ForbiddenException('Access denied');
     }
 
-    const transactions = await this.transactionRepository.findByAccountId(
-      query.accountId,
-    );
+    const transactions = await this.transactionRepository.findByAccountId(query.accountId);
 
     return transactions.map((t) => ({
       id: t.id,

@@ -25,12 +25,10 @@ onMounted(async () => {
 
     // OAuth not implemented in NestJS backend yet
     // Just redirect to login
-    error.value =
-      'OAuth авторизация не поддерживается. Используйте email/пароль.';
+    error.value = 'OAuth авторизация не поддерживается. Используйте email/пароль.';
   } catch (err) {
     console.error('Auth callback error:', err);
-    error.value =
-      err instanceof Error ? err.message : 'Произошла ошибка при авторизации';
+    error.value = err instanceof Error ? err.message : 'Произошла ошибка при авторизации';
   } finally {
     isProcessing.value = false;
   }
@@ -61,17 +59,13 @@ function goToLogin() {
         >
           <UIcon name="error" size="xl" class="text-danger" />
         </div>
-        <h2
-          class="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark mb-2"
-        >
+        <h2 class="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark mb-2">
           Ошибка
         </h2>
         <p class="text-text-secondary-light dark:text-text-secondary-dark mb-4">
           {{ error }}
         </p>
-        <button class="text-primary font-medium" @click="goToLogin">
-          Вернуться к входу
-        </button>
+        <button class="text-primary font-medium" @click="goToLogin">Вернуться к входу</button>
       </template>
     </UCard>
   </div>

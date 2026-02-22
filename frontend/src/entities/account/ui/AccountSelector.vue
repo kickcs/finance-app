@@ -33,9 +33,7 @@ watch(
 
 <template>
   <div class="space-y-2">
-    <label
-      class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark"
-    >
+    <label class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark">
       {{ label }}
     </label>
     <div
@@ -65,10 +63,7 @@ watch(
         ]"
         @click="emit('select', account.id)"
       >
-        <span
-          class="w-2.5 h-2.5 rounded-full"
-          :style="{ backgroundColor: account.color }"
-        />
+        <span class="w-2.5 h-2.5 rounded-full" :style="{ backgroundColor: account.color }" />
         {{ account.name }}
         <slot name="badge" :account="account">
           <span v-if="account.balances.length > 1" class="text-xs opacity-60">

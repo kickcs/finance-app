@@ -51,10 +51,9 @@ const iconTextClasses: Record<string, string> = {
   >
     <!-- Title left-aligned -->
     <div class="mt-2 mb-8 relative z-10">
-      <h1
-        class="text-3xl font-bold text-text-primary-dark tracking-tight leading-tight"
-      >
-        Все финансы <br />
+      <h1 class="text-3xl font-bold text-text-primary-dark tracking-tight leading-tight">
+        Все финансы
+        <br />
         <span class="text-primary">в одном месте</span>
       </h1>
     </div>
@@ -71,11 +70,7 @@ const iconTextClasses: Record<string, string> = {
             class="w-10 h-10 rounded-full flex items-center justify-center"
             :class="iconBgClasses[acc.color]"
           >
-            <UIcon
-              :name="acc.icon"
-              size="sm"
-              :class="iconTextClasses[acc.color]"
-            />
+            <UIcon :name="acc.icon" size="sm" :class="iconTextClasses[acc.color]" />
           </div>
           <div>
             <p
@@ -93,19 +88,13 @@ const iconTextClasses: Record<string, string> = {
 
     <!-- Feature list -->
     <div class="flex flex-col gap-5 mt-auto mb-6 relative z-10">
-      <div
-        v-for="feat in features"
-        :key="feat.text"
-        class="flex items-center gap-4"
-      >
+      <div v-for="feat in features" :key="feat.text" class="flex items-center gap-4">
         <div
           class="flex-shrink-0 w-10 h-10 rounded-full bg-card-dark border border-white/5 flex items-center justify-center"
         >
           <UIcon :name="feat.icon" size="sm" class="text-primary" />
         </div>
-        <span class="text-sm font-medium text-text-secondary-dark">{{
-          feat.text
-        }}</span>
+        <span class="text-sm font-medium text-text-secondary-dark">{{ feat.text }}</span>
       </div>
     </div>
   </div>

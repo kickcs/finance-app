@@ -20,8 +20,7 @@ export class Money extends ValueObject<MoneyProps> {
       throw new Error('Amount must be a finite number');
     }
 
-    const currencyVo =
-      typeof currency === 'string' ? Currency.create(currency) : currency;
+    const currencyVo = typeof currency === 'string' ? Currency.create(currency) : currency;
 
     // Round to 2 decimal places
     const roundedAmount = Math.round(amount * 100) / 100;

@@ -27,11 +27,7 @@ export class ExchangeRate extends AggregateRoot<string> {
     this._updatedAt = props.updatedAt;
   }
 
-  static create(
-    baseCurrency: string,
-    targetCurrency: string,
-    rate: number,
-  ): ExchangeRate {
+  static create(baseCurrency: string, targetCurrency: string, rate: number): ExchangeRate {
     // Validate currency pair
     const currencyPair = CurrencyPair.create(baseCurrency, targetCurrency);
 

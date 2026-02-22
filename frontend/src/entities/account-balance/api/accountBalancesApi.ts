@@ -31,28 +31,18 @@ export const accountBalancesApi = {
   async getByAccountIds(accountIds: string[]): Promise<AccountBalance[]> {
     if (accountIds.length === 0) return [];
 
-    const data = await http.post<AccountBalanceResponse[]>(
-      '/account-balances/by-accounts',
-      {
-        accountIds,
-      },
-    );
+    const data = await http.post<AccountBalanceResponse[]>('/account-balances/by-accounts', {
+      accountIds,
+    });
     return data.map(transformBalance);
   },
 
-  async upsert(
-    accountId: string,
-    currency: string,
-    balance: number,
-  ): Promise<AccountBalance> {
-    const data = await http.post<AccountBalanceResponse>(
-      '/account-balances/upsert',
-      {
-        accountId,
-        currency,
-        balance,
-      },
-    );
+  async upsert(accountId: string, currency: string, balance: number): Promise<AccountBalance> {
+    const data = await http.post<AccountBalanceResponse>('/account-balances/upsert', {
+      accountId,
+      currency,
+      balance,
+    });
     return transformBalance(data);
   },
 
@@ -60,29 +50,19 @@ export const accountBalancesApi = {
     accountId: string,
     balances: Array<{ currency: string; balance: number }>,
   ): Promise<AccountBalance[]> {
-    const data = await http.post<AccountBalanceResponse[]>(
-      '/account-balances/create-many',
-      {
-        accountId,
-        balances,
-      },
-    );
+    const data = await http.post<AccountBalanceResponse[]>('/account-balances/create-many', {
+      accountId,
+      balances,
+    });
     return data.map(transformBalance);
   },
 
-  async updateByDelta(
-    accountId: string,
-    currency: string,
-    delta: number,
-  ): Promise<AccountBalance> {
-    const data = await http.post<AccountBalanceResponse>(
-      '/account-balances/update-by-delta',
-      {
-        accountId,
-        currency,
-        delta,
-      },
-    );
+  async updateByDelta(accountId: string, currency: string, delta: number): Promise<AccountBalance> {
+    const data = await http.post<AccountBalanceResponse>('/account-balances/update-by-delta', {
+      accountId,
+      currency,
+      delta,
+    });
     return transformBalance(data);
   },
 

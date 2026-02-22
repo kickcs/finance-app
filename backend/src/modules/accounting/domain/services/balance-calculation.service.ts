@@ -27,10 +27,7 @@ export class BalanceCalculationService {
   /**
    * Apply the receiving side of a transfer
    */
-  static applyTransferReceive(
-    account: Account,
-    transaction: Transaction,
-  ): void {
+  static applyTransferReceive(account: Account, transaction: Transaction): void {
     if (!transaction.type.isTransfer() || !transaction.toAmount) {
       throw new Error('Transaction is not a transfer or missing toAmount');
     }
@@ -59,10 +56,7 @@ export class BalanceCalculationService {
   /**
    * Reverse the receiving side of a transfer
    */
-  static reverseTransferReceive(
-    account: Account,
-    transaction: Transaction,
-  ): void {
+  static reverseTransferReceive(account: Account, transaction: Transaction): void {
     if (!transaction.type.isTransfer() || !transaction.toAmount) {
       throw new Error('Transaction is not a transfer or missing toAmount');
     }

@@ -17,15 +17,13 @@ const chartSegments = [
 </script>
 
 <template>
-  <div
-    class="w-full h-full flex-shrink-0 flex flex-col items-center px-6 relative"
-  >
+  <div class="w-full h-full flex-shrink-0 flex flex-col items-center px-6 relative">
     <!-- Title -->
     <div class="text-center mt-2 mb-4 w-full relative z-10">
-      <h1
-        class="text-3xl font-bold text-text-primary-dark tracking-tight leading-tight"
-      >
-        Анализируйте свои<br />расходы
+      <h1 class="text-3xl font-bold text-text-primary-dark tracking-tight leading-tight">
+        Анализируйте свои
+        <br />
+        расходы
       </h1>
     </div>
 
@@ -71,38 +69,24 @@ const chartSegments = [
               stroke-linecap="round"
             />
           </svg>
-          <div
-            class="absolute inset-0 flex flex-col items-center justify-center text-center"
-          >
+          <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
             <span
               class="text-caption-sm text-text-tertiary-dark font-medium uppercase tracking-wider"
-              >Итого</span
             >
-            <span class="text-xl font-bold text-text-primary-dark"
-              >₽84,200</span
-            >
+              Итого
+            </span>
+            <span class="text-xl font-bold text-text-primary-dark">₽84,200</span>
           </div>
         </div>
 
         <!-- Legend -->
         <div class="w-full grid grid-cols-1 gap-3">
-          <div
-            v-for="cat in categories"
-            :key="cat.label"
-            class="flex items-center justify-between"
-          >
+          <div v-for="cat in categories" :key="cat.label" class="flex items-center justify-between">
             <div class="flex items-center gap-3">
-              <div
-                class="w-2.5 h-2.5 rounded-full"
-                :style="{ backgroundColor: cat.color }"
-              />
-              <span class="text-sm text-text-secondary-dark font-medium">{{
-                cat.label
-              }}</span>
+              <div class="w-2.5 h-2.5 rounded-full" :style="{ backgroundColor: cat.color }" />
+              <span class="text-sm text-text-secondary-dark font-medium">{{ cat.label }}</span>
             </div>
-            <span class="text-sm font-semibold text-text-primary-dark">{{
-              cat.amount
-            }}</span>
+            <span class="text-sm font-semibold text-text-primary-dark">{{ cat.amount }}</span>
           </div>
         </div>
       </div>

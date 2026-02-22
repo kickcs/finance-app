@@ -21,9 +21,7 @@ onMounted(() => {
 
 // Savings calculations
 const savings = computed(() =>
-  props.totalBalance !== undefined
-    ? props.totalBalance
-    : props.totalIncome - props.totalExpense,
+  props.totalBalance !== undefined ? props.totalBalance : props.totalIncome - props.totalExpense,
 );
 
 const savingsRate = computed(() => {
@@ -35,9 +33,7 @@ const savingsRate = computed(() => {
 });
 
 // Clamp savings rate between 0 and 100 for visualization
-const displayRate = computed(() =>
-  Math.max(0, Math.min(100, savingsRate.value)),
-);
+const displayRate = computed(() => Math.max(0, Math.min(100, savingsRate.value)));
 
 // Status zone
 type StatusZone = 'critical' | 'normal' | 'good' | 'excellent';
@@ -113,20 +109,14 @@ const progressOffset = computed(() => {
 
 <template>
   <UCard class="p-5">
-    <h3
-      class="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark mb-4"
-    >
+    <h3 class="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark mb-4">
       Норма сбережений
     </h3>
 
     <!-- Gauge -->
     <div class="flex justify-center mb-4">
       <div class="relative">
-        <svg
-          :width="size"
-          :height="size / 2 + 10"
-          :viewBox="`0 0 ${size} ${size / 2 + 10}`"
-        >
+        <svg :width="size" :height="size / 2 + 10" :viewBox="`0 0 ${size} ${size / 2 + 10}`">
           <!-- Background arc -->
           <path
             :d="arcPath"
@@ -152,19 +142,12 @@ const progressOffset = computed(() => {
         <!-- Center content -->
         <div class="absolute inset-x-0 bottom-0 text-center">
           <div class="flex items-center justify-center gap-2 mb-1">
-            <UIcon
-              :name="currentStatus.icon"
-              size="lg"
-              :style="{ color: currentStatus.color }"
-            />
+            <UIcon :name="currentStatus.icon" size="lg" :style="{ color: currentStatus.color }" />
           </div>
           <p class="text-3xl font-bold" :style="{ color: currentStatus.color }">
             {{ Math.min(savingsRate, 999).toFixed(0) }}%
           </p>
-          <p
-            class="text-sm font-medium"
-            :style="{ color: currentStatus.color }"
-          >
+          <p class="text-sm font-medium" :style="{ color: currentStatus.color }">
             {{ currentStatus.label }}
           </p>
         </div>
@@ -172,20 +155,14 @@ const progressOffset = computed(() => {
     </div>
 
     <!-- Stats breakdown - 3 rows layout -->
-    <div
-      class="space-y-3 py-3 border-t border-border-light dark:border-border-dark"
-    >
+    <div class="space-y-3 py-3 border-t border-border-light dark:border-border-dark">
       <!-- Income row -->
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-2">
-          <div
-            class="w-8 h-8 rounded-lg bg-success/10 flex items-center justify-center"
-          >
+          <div class="w-8 h-8 rounded-lg bg-success/10 flex items-center justify-center">
             <UIcon name="trending_up" size="sm" class="text-success" />
           </div>
-          <span
-            class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
-          >
+          <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
             Доходы
           </span>
         </div>
@@ -197,14 +174,10 @@ const progressOffset = computed(() => {
       <!-- Expense row -->
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-2">
-          <div
-            class="w-8 h-8 rounded-lg bg-danger/10 flex items-center justify-center"
-          >
+          <div class="w-8 h-8 rounded-lg bg-danger/10 flex items-center justify-center">
             <UIcon name="trending_down" size="sm" class="text-danger" />
           </div>
-          <span
-            class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
-          >
+          <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
             Расходы
           </span>
         </div>
@@ -228,18 +201,12 @@ const progressOffset = computed(() => {
               :class="savings >= 0 ? 'text-primary' : 'text-danger'"
             />
           </div>
-          <span
-            class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
-          >
+          <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
             {{ totalBalance !== undefined ? 'Текущий баланс' : 'Сбережения' }}
           </span>
         </div>
-        <span
-          class="font-bold text-lg"
-          :class="savings >= 0 ? 'text-primary' : 'text-danger'"
-        >
-          {{ savings >= 0 ? '+' : ''
-          }}{{ formatCurrency(savings, currency, COMPACT_FORMAT) }}
+        <span class="font-bold text-lg" :class="savings >= 0 ? 'text-primary' : 'text-danger'">
+          {{ savings >= 0 ? '+' : '' }}{{ formatCurrency(savings, currency, COMPACT_FORMAT) }}
         </span>
       </div>
     </div>

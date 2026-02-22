@@ -37,9 +37,7 @@ export function useReminders(userId: MaybeRefOrGetter<string | null>) {
       if (!uid) return;
 
       await queryClient.cancelQueries({ queryKey: queryKey.value });
-      const previousReminders = queryClient.getQueryData<Reminder[]>(
-        queryKey.value,
-      );
+      const previousReminders = queryClient.getQueryData<Reminder[]>(queryKey.value);
 
       const optimisticReminder: Reminder = {
         id: `temp-${Date.now()}`,
@@ -51,8 +49,7 @@ export function useReminders(userId: MaybeRefOrGetter<string | null>) {
 
       queryClient.setQueryData<Reminder[]>(queryKey.value, (old) =>
         [...(old ?? []), optimisticReminder].sort(
-          (a, b) =>
-            new Date(a.next_date).getTime() - new Date(b.next_date).getTime(),
+          (a, b) => new Date(a.next_date).getTime() - new Date(b.next_date).getTime(),
         ),
       );
 
@@ -74,14 +71,11 @@ export function useReminders(userId: MaybeRefOrGetter<string | null>) {
       remindersApi.update(id, updates),
     onMutate: async ({ id, updates }) => {
       await queryClient.cancelQueries({ queryKey: queryKey.value });
-      const previousReminders = queryClient.getQueryData<Reminder[]>(
-        queryKey.value,
-      );
+      const previousReminders = queryClient.getQueryData<Reminder[]>(queryKey.value);
 
       queryClient.setQueryData<Reminder[]>(
         queryKey.value,
-        (old) =>
-          old?.map((r) => (r.id === id ? { ...r, ...updates } : r)) ?? [],
+        (old) => old?.map((r) => (r.id === id ? { ...r, ...updates } : r)) ?? [],
       );
 
       return { previousReminders };
@@ -101,9 +95,7 @@ export function useReminders(userId: MaybeRefOrGetter<string | null>) {
     mutationFn: (id: string) => remindersApi.delete(id),
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: queryKey.value });
-      const previousReminders = queryClient.getQueryData<Reminder[]>(
-        queryKey.value,
-      );
+      const previousReminders = queryClient.getQueryData<Reminder[]>(queryKey.value);
 
       queryClient.setQueryData<Reminder[]>(
         queryKey.value,
@@ -123,9 +115,7 @@ export function useReminders(userId: MaybeRefOrGetter<string | null>) {
   });
 
   // Computed values
-  const activeReminders = computed(() =>
-    reminders.value.filter((r) => r.is_active),
-  );
+  const activeReminders = computed(() => reminders.value.filter((r) => r.is_active));
 
   const upcomingReminders = computed(() => {
     const now = new Date();

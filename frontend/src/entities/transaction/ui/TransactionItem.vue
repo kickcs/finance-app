@@ -19,8 +19,7 @@ defineEmits<{
   click: [];
 }>();
 // Get getCategoryById from App.vue or fallback to static
-const injectedGetCategoryById =
-  inject<(id: string) => Category | undefined>('getCategoryById');
+const injectedGetCategoryById = inject<(id: string) => Category | undefined>('getCategoryById');
 const getCategoryById = (id: string): Category | undefined => {
   return injectedGetCategoryById?.(id) ?? getCategoryByIdStatic(id);
 };
@@ -53,10 +52,7 @@ const transferLabel = computed(() => {
 
 // Use net_amount for expenses if available, otherwise use amount
 const displayAmount = computed(() => {
-  if (
-    props.transaction.type === 'expense' &&
-    props.transaction.net_amount !== undefined
-  ) {
+  if (props.transaction.type === 'expense' && props.transaction.net_amount !== undefined) {
     return props.transaction.net_amount;
   }
   return props.transaction.amount;
@@ -68,8 +64,7 @@ const formattedAmount = computed(() => {
     if (props.viewingAccountId) {
       if (isIncomingTransfer.value) {
         const amount = props.transaction.to_amount ?? props.transaction.amount;
-        const curr =
-          props.transaction.to_currency || props.transaction.currency || 'UZS';
+        const curr = props.transaction.to_currency || props.transaction.currency || 'UZS';
         return `+${formatCurrency(amount, curr, compact)}`;
       }
       const curr = props.transaction.currency || props.currency || 'UZS';
@@ -84,9 +79,7 @@ const formattedAmount = computed(() => {
   return `${prefix}${formatCurrency(displayAmount.value, curr, compact)}`;
 });
 
-const displayCurrency = computed(
-  () => props.transaction.currency || props.currency || 'UZS',
-);
+const displayCurrency = computed(() => props.transaction.currency || props.currency || 'UZS');
 
 const formattedDate = computed(() =>
   formatRelativeDate(new Date(props.transaction.date).getTime()),
@@ -103,9 +96,7 @@ const formattedDate = computed(() =>
     <div
       class="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center"
       :style="{
-        backgroundColor: isTransfer
-          ? '#4F46E512'
-          : `${category?.color || '#64748b'}12`,
+        backgroundColor: isTransfer ? '#4F46E512' : `${category?.color || '#64748b'}12`,
       }"
     >
       <UIcon
@@ -119,22 +110,14 @@ const formattedDate = computed(() =>
 
     <!-- Content -->
     <div class="flex-1 text-left min-w-0">
-      <p
-        class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark truncate"
-      >
+      <p class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark truncate">
         {{ isTransfer ? 'Перевод' : category?.name || 'Транзакция' }}
       </p>
-      <p
-        class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark truncate"
-      >
+      <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark truncate">
         <template v-if="isTransfer">{{ transferLabel }}</template>
         <template v-else>
           <span v-if="accountName">{{ accountName }}</span>
-          <span
-            v-if="accountName && (transaction.description || formattedDate)"
-          >
-            ·
-          </span>
+          <span v-if="accountName && (transaction.description || formattedDate)">·</span>
           <span>{{ transaction.description || formattedDate }}</span>
         </template>
       </p>
@@ -169,22 +152,14 @@ const formattedDate = computed(() =>
         class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
       >
         →
-        {{
-          formatCurrency(
-            transaction.to_amount || 0,
-            transaction.to_currency,
-            COMPACT_FORMAT,
-          )
-        }}
+        {{ formatCurrency(transaction.to_amount || 0, transaction.to_currency, COMPACT_FORMAT) }}
       </p>
       <!-- Original amount indicator when there are debt returns -->
       <p
         v-if="transaction.has_debt_returns && transaction.type === 'expense'"
         class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark line-through"
       >
-        -{{
-          formatCurrency(transaction.amount, displayCurrency, COMPACT_FORMAT)
-        }}
+        -{{ formatCurrency(transaction.amount, displayCurrency, COMPACT_FORMAT) }}
       </p>
       <!-- Balance after transaction -->
       <p

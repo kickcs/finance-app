@@ -62,9 +62,7 @@ function addToast(toast: Toast) {
 }
 
 function updateToast(id: string, toast: Partial<ToasterToast>) {
-  toasts.value = toasts.value.map((t) =>
-    t.id === id ? { ...t, ...toast } : t,
-  );
+  toasts.value = toasts.value.map((t) => (t.id === id ? { ...t, ...toast } : t));
 }
 
 function dismissToast(id: string) {

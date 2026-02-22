@@ -47,43 +47,31 @@ function goHome() {
 </script>
 
 <template>
-  <div class="min-h-screen bg-background-light dark:bg-background-dark pb-28">
+  <div
+    class="h-full flex flex-col relative bg-background-light dark:bg-background-dark pb-28 md:pb-8 overflow-y-auto"
+  >
     <AppHeader title="Импорт данных" show-back @back="navigateBack" />
 
-    <input
-      ref="fileInput"
-      type="file"
-      accept=".csv"
-      class="hidden"
-      @change="handleFileChange"
-    />
+    <input ref="fileInput" type="file" accept=".csv" class="hidden" @change="handleFileChange" />
 
     <main class="px-5 pt-6 space-y-4">
       <!-- Step 1: Select App -->
       <template v-if="step === 'select'">
-        <p
-          class="text-sm text-text-secondary-light dark:text-text-secondary-dark mb-2"
-        >
+        <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark mb-2">
           Выберите приложение, из которого хотите импортировать данные
         </p>
 
         <!-- MoneyLover -->
         <UCard clickable class="p-4" @click="openFilePicker">
           <div class="flex items-center gap-4">
-            <div
-              class="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center"
-            >
+            <div class="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center">
               <UIcon name="wallet" size="md" class="text-emerald-500" />
             </div>
             <div class="flex-1">
-              <p
-                class="font-semibold text-text-primary-light dark:text-text-primary-dark"
-              >
+              <p class="font-semibold text-text-primary-light dark:text-text-primary-dark">
                 MoneyLover
               </p>
-              <p
-                class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
-              >
+              <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
                 Импорт из CSV файла
               </p>
             </div>
@@ -108,16 +96,10 @@ function goHome() {
               />
             </div>
             <div class="flex-1">
-              <p
-                class="font-semibold text-text-primary-light dark:text-text-primary-dark"
-              >
+              <p class="font-semibold text-text-primary-light dark:text-text-primary-dark">
                 Google Sheets
               </p>
-              <p
-                class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
-              >
-                Скоро
-              </p>
+              <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark">Скоро</p>
             </div>
           </div>
         </UCard>
@@ -134,16 +116,8 @@ function goHome() {
               />
             </div>
             <div class="flex-1">
-              <p
-                class="font-semibold text-text-primary-light dark:text-text-primary-dark"
-              >
-                Excel
-              </p>
-              <p
-                class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
-              >
-                Скоро
-              </p>
+              <p class="font-semibold text-text-primary-light dark:text-text-primary-dark">Excel</p>
+              <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark">Скоро</p>
             </div>
           </div>
         </UCard>
@@ -159,58 +133,39 @@ function goHome() {
         <!-- Stats -->
         <div class="grid grid-cols-2 gap-3">
           <UCard class="p-4 text-center">
-            <p
-              class="text-2xl font-bold text-text-primary-light dark:text-text-primary-dark"
-            >
+            <p class="text-2xl font-bold text-text-primary-light dark:text-text-primary-dark">
               {{ parseResult.stats.total_rows.toLocaleString('ru-RU') }}
             </p>
-            <p
-              class="text-xs text-text-secondary-light dark:text-text-secondary-dark mt-1"
-            >
+            <p class="text-xs text-text-secondary-light dark:text-text-secondary-dark mt-1">
               Транзакций
             </p>
           </UCard>
 
           <UCard class="p-4 text-center">
-            <p
-              class="text-2xl font-bold text-text-primary-light dark:text-text-primary-dark"
-            >
+            <p class="text-2xl font-bold text-text-primary-light dark:text-text-primary-dark">
               {{ parseResult.stats.unique_categories.length }}
             </p>
-            <p
-              class="text-xs text-text-secondary-light dark:text-text-secondary-dark mt-1"
-            >
+            <p class="text-xs text-text-secondary-light dark:text-text-secondary-dark mt-1">
               Категорий
             </p>
           </UCard>
 
           <UCard class="p-4 text-center">
-            <p
-              class="text-2xl font-bold text-text-primary-light dark:text-text-primary-dark"
-            >
+            <p class="text-2xl font-bold text-text-primary-light dark:text-text-primary-dark">
               {{ parseResult.stats.unique_accounts.length }}
             </p>
-            <p
-              class="text-xs text-text-secondary-light dark:text-text-secondary-dark mt-1"
-            >
+            <p class="text-xs text-text-secondary-light dark:text-text-secondary-dark mt-1">
               Счетов
             </p>
           </UCard>
 
           <UCard v-if="parseResult.stats.date_range" class="p-4 text-center">
-            <p
-              class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark"
-            >
+            <p class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark">
               {{
-                formatDateRange(
-                  parseResult.stats.date_range.from,
-                  parseResult.stats.date_range.to,
-                )
+                formatDateRange(parseResult.stats.date_range.from, parseResult.stats.date_range.to)
               }}
             </p>
-            <p
-              class="text-xs text-text-secondary-light dark:text-text-secondary-dark mt-1"
-            >
+            <p class="text-xs text-text-secondary-light dark:text-text-secondary-dark mt-1">
               Период
             </p>
           </UCard>
@@ -225,9 +180,7 @@ function goHome() {
         </p>
 
         <!-- Transaction preview -->
-        <p
-          class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark"
-        >
+        <p class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">
           Предпросмотр
         </p>
 
@@ -257,9 +210,7 @@ function goHome() {
               >
                 {{ formatAmount(tx.amount) }}
               </p>
-              <p
-                class="text-xs text-text-secondary-light dark:text-text-secondary-dark"
-              >
+              <p class="text-xs text-text-secondary-light dark:text-text-secondary-dark">
                 {{ formatDate(tx.date) }}
               </p>
             </div>
@@ -292,10 +243,7 @@ function goHome() {
         </div>
 
         <!-- Import error -->
-        <p
-          v-if="importMutation.isError.value"
-          class="text-sm text-danger text-center"
-        >
+        <p v-if="importMutation.isError.value" class="text-sm text-danger text-center">
           Ошибка импорта. Попробуйте ещё раз.
         </p>
       </template>
@@ -310,14 +258,10 @@ function goHome() {
           </div>
 
           <div>
-            <h2
-              class="text-xl font-bold text-text-primary-light dark:text-text-primary-dark"
-            >
+            <h2 class="text-xl font-bold text-text-primary-light dark:text-text-primary-dark">
               Импорт завершён
             </h2>
-            <p
-              class="text-sm text-text-secondary-light dark:text-text-secondary-dark mt-1"
-            >
+            <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark mt-1">
               {{ importResult.imported_count.toLocaleString('ru-RU') }}
               транзакций добавлено
             </p>
@@ -325,18 +269,13 @@ function goHome() {
 
           <!-- Details -->
           <div class="space-y-2 text-left">
-            <UCard
-              v-if="importResult.categories_created.length > 0"
-              class="p-4"
-            >
+            <UCard v-if="importResult.categories_created.length > 0" class="p-4">
               <p
                 class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark mb-2"
               >
                 Новые категории ({{ importResult.categories_created.length }})
               </p>
-              <p
-                class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
-              >
+              <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
                 {{ importResult.categories_created.join(', ') }}
               </p>
             </UCard>
@@ -347,9 +286,7 @@ function goHome() {
               >
                 Новые счета ({{ importResult.accounts_created.length }})
               </p>
-              <p
-                class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
-              >
+              <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
                 {{ importResult.accounts_created.join(', ') }}
               </p>
             </UCard>
@@ -357,17 +294,10 @@ function goHome() {
 
           <!-- Actions -->
           <div class="space-y-3 pt-4">
-            <UButton
-              variant="primary"
-              size="lg"
-              full-width
-              @click="goToTransactions"
-            >
+            <UButton variant="primary" size="lg" full-width @click="goToTransactions">
               К транзакциям
             </UButton>
-            <UButton variant="secondary" size="lg" full-width @click="goHome">
-              На главную
-            </UButton>
+            <UButton variant="secondary" size="lg" full-width @click="goHome">На главную</UButton>
           </div>
         </div>
       </template>

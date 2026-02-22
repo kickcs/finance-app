@@ -52,9 +52,7 @@ const sizeConfig = computed(() => {
       'flex flex-col items-center transition-all duration-200',
       'active:scale-95',
       sizeConfig.container,
-      selected
-        ? 'shadow-sm'
-        : 'hover:bg-surface-light dark:hover:bg-surface-dark',
+      selected ? 'shadow-sm' : 'hover:bg-surface-light dark:hover:bg-surface-dark',
     ]"
     :style="
       selected
@@ -74,11 +72,7 @@ const sizeConfig = computed(() => {
         backgroundColor: `${category.color}25`,
       }"
     >
-      <UIcon
-        :name="category.icon"
-        :size="sizeConfig.iconSize"
-        :style="{ color: category.color }"
-      />
+      <UIcon :name="category.icon" :size="sizeConfig.iconSize" :style="{ color: category.color }" />
     </div>
 
     <!-- Label -->

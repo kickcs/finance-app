@@ -2,10 +2,7 @@ import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
 import { UpsertRateCommand } from './upsert-rate.command';
 import { ExchangeRate } from '../../../domain/aggregates';
-import {
-  IExchangeRateRepository,
-  EXCHANGE_RATE_REPOSITORY,
-} from '../../../domain/repositories';
+import { IExchangeRateRepository, EXCHANGE_RATE_REPOSITORY } from '../../../domain/repositories';
 
 @CommandHandler(UpsertRateCommand)
 export class UpsertRateHandler implements ICommandHandler<UpsertRateCommand> {
@@ -18,10 +15,7 @@ export class UpsertRateHandler implements ICommandHandler<UpsertRateCommand> {
     const { baseCurrency, targetCurrency, rate } = command;
 
     // Check if rate already exists
-    const existingRate = await this.exchangeRateRepository.findByPair(
-      baseCurrency,
-      targetCurrency,
-    );
+    const existingRate = await this.exchangeRateRepository.findByPair(baseCurrency, targetCurrency);
 
     let exchangeRate: ExchangeRate;
 

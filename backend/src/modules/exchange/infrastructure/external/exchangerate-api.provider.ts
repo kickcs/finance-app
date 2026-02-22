@@ -1,8 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import {
-  ExchangeRateData,
-  IExchangeRateProvider,
-} from './exchange-rate-provider.interface';
+import { ExchangeRateData, IExchangeRateProvider } from './exchange-rate-provider.interface';
 
 interface ExchangeRateApiResponse {
   result: string;
@@ -15,10 +12,7 @@ export class ExchangeRateApiProvider implements IExchangeRateProvider {
   private readonly logger = new Logger(ExchangeRateApiProvider.name);
   private readonly baseUrl = 'https://open.er-api.com/v6/latest';
 
-  async fetchRates(
-    baseCurrency: string,
-    targetCurrencies: string[],
-  ): Promise<ExchangeRateData[]> {
+  async fetchRates(baseCurrency: string, targetCurrencies: string[]): Promise<ExchangeRateData[]> {
     const url = `${this.baseUrl}/${baseCurrency}`;
 
     try {
@@ -50,9 +44,7 @@ export class ExchangeRateApiProvider implements IExchangeRateProvider {
         const rate = data.rates[currency];
 
         if (rate === undefined) {
-          this.logger.warn(
-            `Rate for ${baseCurrency}/${currency} not found in API response`,
-          );
+          this.logger.warn(`Rate for ${baseCurrency}/${currency} not found in API response`);
           continue;
         }
 

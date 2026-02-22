@@ -1,8 +1,5 @@
 import { http } from '@/shared/api/http';
-import type {
-  Transaction,
-  TransactionInsert,
-} from '@/shared/api/database.types';
+import type { Transaction, TransactionInsert } from '@/shared/api/database.types';
 
 export interface PaginatedCursor {
   date: string;
@@ -134,19 +131,14 @@ export const transactionsApi = {
     endDate: string,
   ): Promise<Transaction[]> {
     // Backend gets userId from JWT token
-    const data = await http.get<TransactionResponse[]>(
-      '/transactions/by-date-range',
-      {
-        params: { startDate, endDate },
-      },
-    );
+    const data = await http.get<TransactionResponse[]>('/transactions/by-date-range', {
+      params: { startDate, endDate },
+    });
     return data.map(transformTransaction);
   },
 
   async getByAccount(accountId: string): Promise<Transaction[]> {
-    const data = await http.get<TransactionResponse[]>(
-      `/transactions/by-account/${accountId}`,
-    );
+    const data = await http.get<TransactionResponse[]>(`/transactions/by-account/${accountId}`);
     return data.map(transformTransaction);
   },
 
@@ -175,10 +167,7 @@ export const transactionsApi = {
     return transformTransaction(data);
   },
 
-  async update(
-    id: string,
-    updates: Partial<Transaction>,
-  ): Promise<Transaction> {
+  async update(id: string, updates: Partial<Transaction>): Promise<Transaction> {
     const data = await http.patch<TransactionResponse>(`/transactions/${id}`, {
       accountId: updates.account_id,
       categoryId: updates.category_id,
@@ -277,18 +266,11 @@ export const transactionsApi = {
     };
   },
 
-  async getMonthlyStats(
-    _userId: string,
-    year: number,
-    month: number,
-  ): Promise<MonthlyStats> {
+  async getMonthlyStats(_userId: string, year: number, month: number): Promise<MonthlyStats> {
     // Backend gets userId from JWT token
-    const data = await http.get<MonthlyStatsResponse>(
-      '/transactions/stats/monthly',
-      {
-        params: { year, month },
-      },
-    );
+    const data = await http.get<MonthlyStatsResponse>('/transactions/stats/monthly', {
+      params: { year, month },
+    });
     return {
       total_income: data.totalIncome,
       total_expense: data.totalExpense,
@@ -316,9 +298,7 @@ export const transactionsApi = {
   },
 
   async countByAccount(accountId: string): Promise<number> {
-    const data = await http.get<{ count: number }>(
-      `/transactions/by-account/${accountId}/count`,
-    );
+    const data = await http.get<{ count: number }>(`/transactions/by-account/${accountId}/count`);
     return data.count;
   },
 };

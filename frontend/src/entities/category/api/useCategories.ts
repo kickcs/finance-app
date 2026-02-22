@@ -2,10 +2,7 @@ import { computed, toValue, type MaybeRefOrGetter } from 'vue';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import { categoryQueryKeys } from './queryKeys';
 import { categoriesApi } from './categoriesApi';
-import type {
-  UserCategory,
-  UserCategoryInsert,
-} from '@/shared/api/database.types';
+import type { UserCategory, UserCategoryInsert } from '@/shared/api/database.types';
 import { TRANSFER_CATEGORY, DEBT_CATEGORIES } from '../model/constants';
 import type { Category } from '../model/types';
 
@@ -43,15 +40,10 @@ export function useCategories(userId: MaybeRefOrGetter<string | null>) {
       if (!uid) return;
 
       await queryClient.cancelQueries({ queryKey: queryKey.value });
-      const previousCategories = queryClient.getQueryData<UserCategory[]>(
-        queryKey.value,
-      );
+      const previousCategories = queryClient.getQueryData<UserCategory[]>(queryKey.value);
 
       const existingCategories = previousCategories ?? [];
-      const maxSortOrder = existingCategories.reduce(
-        (max, c) => Math.max(max, c.sort_order),
-        -1,
-      );
+      const maxSortOrder = existingCategories.reduce((max, c) => Math.max(max, c.sort_order), -1);
 
       const optimisticCategory: UserCategory = {
         id: `temp-${Date.now()}`,
@@ -92,14 +84,11 @@ export function useCategories(userId: MaybeRefOrGetter<string | null>) {
     }) => categoriesApi.update(id, updates),
     onMutate: async ({ id, updates }) => {
       await queryClient.cancelQueries({ queryKey: queryKey.value });
-      const previousCategories = queryClient.getQueryData<UserCategory[]>(
-        queryKey.value,
-      );
+      const previousCategories = queryClient.getQueryData<UserCategory[]>(queryKey.value);
 
       queryClient.setQueryData<UserCategory[]>(
         queryKey.value,
-        (old) =>
-          old?.map((c) => (c.id === id ? { ...c, ...updates } : c)) ?? [],
+        (old) => old?.map((c) => (c.id === id ? { ...c, ...updates } : c)) ?? [],
       );
 
       return { previousCategories };
@@ -119,9 +108,7 @@ export function useCategories(userId: MaybeRefOrGetter<string | null>) {
     mutationFn: (id: string) => categoriesApi.delete(id),
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: queryKey.value });
-      const previousCategories = queryClient.getQueryData<UserCategory[]>(
-        queryKey.value,
-      );
+      const previousCategories = queryClient.getQueryData<UserCategory[]>(queryKey.value);
 
       queryClient.setQueryData<UserCategory[]>(
         queryKey.value,
@@ -153,15 +140,11 @@ export function useCategories(userId: MaybeRefOrGetter<string | null>) {
 
   // Categories by type (from DB only)
   const expenseCategories = computed<Category[]>(() =>
-    categories.value
-      .filter((c) => c.type === 'expense')
-      .map(userCategoryToCategory),
+    categories.value.filter((c) => c.type === 'expense').map(userCategoryToCategory),
   );
 
   const incomeCategories = computed<Category[]>(() =>
-    categories.value
-      .filter((c) => c.type === 'income')
-      .map(userCategoryToCategory),
+    categories.value.filter((c) => c.type === 'income').map(userCategoryToCategory),
   );
 
   // All categories (DB + system transfer/debt categories)
@@ -188,13 +171,9 @@ export function useCategories(userId: MaybeRefOrGetter<string | null>) {
   }
 
   // Get categories by type
-  function getCategoriesByType(
-    type: 'expense' | 'income' | 'transfer',
-  ): Category[] {
+  function getCategoriesByType(type: 'expense' | 'income' | 'transfer'): Category[] {
     if (type === 'transfer') return [TRANSFER_CATEGORY];
-    return type === 'expense'
-      ? expenseCategories.value
-      : incomeCategories.value;
+    return type === 'expense' ? expenseCategories.value : incomeCategories.value;
   }
 
   async function createCategory(category: Omit<UserCategoryInsert, 'user_id'>) {
@@ -217,9 +196,7 @@ export function useCategories(userId: MaybeRefOrGetter<string | null>) {
     mutationFn: (categoryIds: string[]) => categoriesApi.reorder(categoryIds),
     onMutate: async (categoryIds) => {
       await queryClient.cancelQueries({ queryKey: queryKey.value });
-      const previousCategories = queryClient.getQueryData<UserCategory[]>(
-        queryKey.value,
-      );
+      const previousCategories = queryClient.getQueryData<UserCategory[]>(queryKey.value);
 
       // Optimistically update the order
       queryClient.setQueryData<UserCategory[]>(queryKey.value, (old) => {

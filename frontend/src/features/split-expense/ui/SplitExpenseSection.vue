@@ -82,25 +82,17 @@ function handleToggle() {
           <UIcon name="group" size="sm" />
         </div>
         <div class="text-left">
-          <p
-            class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
-          >
+          <p class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
             Разделить расход
           </p>
-          <p
-            class="text-xs text-text-secondary-light dark:text-text-secondary-dark"
-          >
+          <p class="text-xs text-text-secondary-light dark:text-text-secondary-dark">
             Создать долги от друзей
           </p>
         </div>
       </div>
       <div
         class="w-12 h-7 rounded-full transition-all relative"
-        :class="
-          splitData.enabled
-            ? 'bg-primary'
-            : 'bg-border-light dark:bg-border-dark'
-        "
+        :class="splitData.enabled ? 'bg-primary' : 'bg-border-light dark:bg-border-dark'"
       >
         <div
           class="absolute w-5 h-5 bg-white rounded-full top-1 transition-all shadow-sm"
@@ -155,9 +147,7 @@ function handleToggle() {
           >
             <UIcon v-if="splitData.isIncluded" name="check" size="xs" />
           </div>
-          <span
-            class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
-          >
+          <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
             Я тоже участвую в расходе
           </span>
           <input
@@ -184,18 +174,14 @@ function handleToggle() {
             :suffix="currencySymbol"
             :disabled="splitData.method === 'equal'"
             @update:model-value="$emit('setMyShare', Number($event) || 0)"
-            @keydown="
-              (e: KeyboardEvent) => e.key === 'Enter' && e.preventDefault()
-            "
+            @keydown="(e: KeyboardEvent) => e.key === 'Enter' && e.preventDefault()"
           />
         </div>
       </div>
 
       <!-- Participants -->
       <div class="space-y-2">
-        <label
-          class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark"
-        >
+        <label class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark">
           Участники (кто должен вернуть)
         </label>
 
@@ -301,18 +287,11 @@ function handleToggle() {
       </div>
 
       <!-- Summary -->
-      <div
-        class="p-3 rounded-xl bg-surface-light dark:bg-surface-dark space-y-3"
-      >
+      <div class="p-3 rounded-xl bg-surface-light dark:bg-surface-dark space-y-3">
         <div class="space-y-2">
           <div class="flex justify-between text-sm">
-            <span
-              class="text-text-secondary-light dark:text-text-secondary-dark"
-              >Общая сумма</span
-            >
-            <span
-              class="font-medium text-text-primary-light dark:text-text-primary-dark"
-            >
+            <span class="text-text-secondary-light dark:text-text-secondary-dark">Общая сумма</span>
+            <span class="font-medium text-text-primary-light dark:text-text-primary-dark">
               {{ formatCurrency(totalAmount, currency) }}
             </span>
           </div>
@@ -325,12 +304,8 @@ function handleToggle() {
         </div>
 
         <div class="flex justify-between text-sm">
-          <span class="text-text-secondary-light dark:text-text-secondary-dark"
-            >Моя доля</span
-          >
-          <span
-            class="font-medium text-text-primary-light dark:text-text-primary-dark"
-          >
+          <span class="text-text-secondary-light dark:text-text-secondary-dark">Моя доля</span>
+          <span class="font-medium text-text-primary-light dark:text-text-primary-dark">
             {{ formatCurrency(splitData.myShare, currency) }}
           </span>
         </div>
@@ -346,10 +321,7 @@ function handleToggle() {
       </div>
 
       <!-- Validation error or Info -->
-      <p
-        v-if="validationError"
-        class="text-xs text-danger flex items-center gap-1"
-      >
+      <p v-if="validationError" class="text-xs text-danger flex items-center gap-1">
         <UIcon name="error" size="xs" />
         {{ validationError }}
       </p>

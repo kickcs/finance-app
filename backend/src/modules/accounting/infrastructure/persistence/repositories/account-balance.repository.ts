@@ -47,15 +47,8 @@ export class AccountBalanceRepository implements IAccountBalanceRepository {
     return entity ? this.toData(entity) : null;
   }
 
-  async upsert(
-    accountId: string,
-    currency: string,
-    balance: number,
-  ): Promise<AccountBalanceData> {
-    await this.ormRepository.upsert({ accountId, currency, balance }, [
-      'accountId',
-      'currency',
-    ]);
+  async upsert(accountId: string, currency: string, balance: number): Promise<AccountBalanceData> {
+    await this.ormRepository.upsert({ accountId, currency, balance }, ['accountId', 'currency']);
 
     const entity = await this.ormRepository.findOne({
       where: { accountId, currency },
@@ -104,10 +97,7 @@ export class AccountBalanceRepository implements IAccountBalanceRepository {
     }
 
     const newBalance = Number(existing.balance) + delta;
-    await this.ormRepository.update(
-      { accountId, currency },
-      { balance: newBalance },
-    );
+    await this.ormRepository.update({ accountId, currency }, { balance: newBalance });
 
     const updated = await this.ormRepository.findOne({
       where: { accountId, currency },

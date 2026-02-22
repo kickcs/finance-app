@@ -31,8 +31,7 @@ const formattedAmount = computed(() => {
 
 const warningText = computed(() => {
   if (!props.transaction) return '';
-  const direction =
-    props.transaction.type === 'income' ? 'уменьшен' : 'увеличен';
+  const direction = props.transaction.type === 'income' ? 'уменьшен' : 'увеличен';
   return `Баланс будет ${direction} на ${formatCurrency(props.transaction.amount, props.currency)}`;
 });
 </script>

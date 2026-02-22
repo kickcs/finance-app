@@ -14,13 +14,9 @@ const emit = defineEmits<{
   select: [categoryId: string];
 }>();
 
-const firstRow = computed(() =>
-  props.categories.slice(0, Math.ceil(props.categories.length / 2)),
-);
+const firstRow = computed(() => props.categories.slice(0, Math.ceil(props.categories.length / 2)));
 
-const secondRow = computed(() =>
-  props.categories.slice(Math.ceil(props.categories.length / 2)),
-);
+const secondRow = computed(() => props.categories.slice(Math.ceil(props.categories.length / 2)));
 
 const containerRef = ref<HTMLElement | null>(null);
 
@@ -60,9 +56,7 @@ function getChipStyle(category: Category) {
 <template>
   <div>
     <div v-if="label" class="flex items-center gap-1.5 mb-2">
-      <span
-        class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark"
-      >
+      <span class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark">
         {{ label }}
       </span>
       <span
@@ -73,10 +67,7 @@ function getChipStyle(category: Category) {
       </span>
     </div>
 
-    <div
-      ref="containerRef"
-      class="relative overflow-x-auto no-scrollbar -mx-4 px-4 pb-1"
-    >
+    <div ref="containerRef" class="relative overflow-x-auto no-scrollbar -mx-4 px-4 pb-1">
       <!-- Sliding Indicator -->
       <span
         class="absolute rounded-lg pointer-events-none transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] z-0 border"
@@ -99,11 +90,7 @@ function getChipStyle(category: Category) {
             :style="getChipStyle(category)"
             @click="emit('select', category.id)"
           >
-            <UIcon
-              :name="category.icon"
-              size="sm"
-              :style="{ color: category.color }"
-            />
+            <UIcon :name="category.icon" size="sm" :style="{ color: category.color }" />
             {{ category.name }}
           </button>
         </div>
@@ -123,11 +110,7 @@ function getChipStyle(category: Category) {
             :style="getChipStyle(category)"
             @click="emit('select', category.id)"
           >
-            <UIcon
-              :name="category.icon"
-              size="sm"
-              :style="{ color: category.color }"
-            />
+            <UIcon :name="category.icon" size="sm" :style="{ color: category.color }" />
             {{ category.name }}
           </button>
         </div>

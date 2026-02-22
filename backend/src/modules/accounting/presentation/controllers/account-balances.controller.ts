@@ -1,13 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Delete,
-  Body,
-  Param,
-  HttpCode,
-  HttpStatus,
-} from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Param, HttpCode, HttpStatus } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import {
   GetByAccountIdsDto,
@@ -22,10 +13,7 @@ import {
   DeleteBalanceCommand,
   DeleteBalancesByAccountCommand,
 } from '../../application/commands';
-import {
-  GetBalancesByAccountQuery,
-  GetBalancesByAccountsQuery,
-} from '../../application/queries';
+import { GetBalancesByAccountQuery, GetBalancesByAccountsQuery } from '../../application/queries';
 
 @Controller('account-balances')
 export class AccountBalancesController {
@@ -41,9 +29,7 @@ export class AccountBalancesController {
 
   @Post('by-accounts')
   async findByAccounts(@Body() dto: GetByAccountIdsDto): Promise<unknown> {
-    return this.queryBus.execute(
-      new GetBalancesByAccountsQuery(dto.accountIds),
-    );
+    return this.queryBus.execute(new GetBalancesByAccountsQuery(dto.accountIds));
   }
 
   @Post('upsert')
@@ -55,9 +41,7 @@ export class AccountBalancesController {
 
   @Post('create-many')
   async createMany(@Body() dto: CreateManyBalancesDto): Promise<unknown> {
-    return this.commandBus.execute(
-      new CreateManyBalancesCommand(dto.accountId, dto.balances),
-    );
+    return this.commandBus.execute(new CreateManyBalancesCommand(dto.accountId, dto.balances));
   }
 
   @Post('update-by-delta')
@@ -73,16 +57,12 @@ export class AccountBalancesController {
     @Param('accountId') accountId: string,
     @Param('currency') currency: string,
   ): Promise<void> {
-    await this.commandBus.execute(
-      new DeleteBalanceCommand(accountId, currency),
-    );
+    await this.commandBus.execute(new DeleteBalanceCommand(accountId, currency));
   }
 
   @Delete('by-account/:accountId')
   @HttpCode(HttpStatus.NO_CONTENT)
   async removeByAccount(@Param('accountId') accountId: string): Promise<void> {
-    await this.commandBus.execute(
-      new DeleteBalancesByAccountCommand(accountId),
-    );
+    await this.commandBus.execute(new DeleteBalancesByAccountCommand(accountId));
   }
 }

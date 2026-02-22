@@ -14,9 +14,7 @@ export class ProfileMapper {
       id: ormEntity.id,
       email: ormEntity.email ? Email.create(ormEntity.email) : null,
       name: ormEntity.name,
-      password: ormEntity.passwordHash
-        ? Password.fromHash(ormEntity.passwordHash)
-        : null,
+      password: ormEntity.passwordHash ? Password.fromHash(ormEntity.passwordHash) : null,
       currency: ormEntity.currency,
       hasCompletedOnboarding: ormEntity.hasCompletedOnboarding,
       defaultAccountId: ormEntity.defaultAccountId,

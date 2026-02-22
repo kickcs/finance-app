@@ -22,9 +22,7 @@ export function useQuickActions() {
   }
 
   function updateAction(id: string, updates: Partial<Omit<QuickAction, 'id'>>) {
-    actions.value = actions.value.map((a) =>
-      a.id === id ? { ...a, ...updates } : a,
-    );
+    actions.value = actions.value.map((a) => (a.id === id ? { ...a, ...updates } : a));
   }
 
   function removeAction(id: string) {

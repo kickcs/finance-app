@@ -1,13 +1,5 @@
 // API
-export {
-  accountBalancesApi,
-  accountBalanceQueryKeys,
-  useAccountBalances,
-} from './api';
+export { accountBalancesApi, accountBalanceQueryKeys, useAccountBalances } from './api';
 
 // Model
-export type {
-  AccountBalance,
-  CurrencyBalance,
-  AccountBalanceUpdate,
-} from './model/types';
+export type { AccountBalance, CurrencyBalance, AccountBalanceUpdate } from './model/types';

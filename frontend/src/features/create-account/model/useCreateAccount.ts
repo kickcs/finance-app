@@ -173,10 +173,7 @@ export function useCreateAccount() {
     }
   }
 
-  function updateField<K extends keyof AccountFormData>(
-    field: K,
-    value: AccountFormData[K],
-  ) {
+  function updateField<K extends keyof AccountFormData>(field: K, value: AccountFormData[K]) {
     formData.value[field] = value;
   }
 
@@ -213,9 +210,7 @@ export function useCreateAccount() {
   }
 
   // Get primary currency (first one)
-  const primaryCurrency = computed(
-    () => formData.value.balances[0]?.currency ?? 'UZS',
-  );
+  const primaryCurrency = computed(() => formData.value.balances[0]?.currency ?? 'UZS');
 
   return {
     formData,

@@ -18,8 +18,6 @@ export class ReminderResponseMapper {
   }
 
   static toResponseList(reminders: Reminder[]) {
-    return reminders.map((reminder) =>
-      ReminderResponseMapper.toResponse(reminder),
-    );
+    return reminders.map((reminder) => ReminderResponseMapper.toResponse(reminder));
   }
 }

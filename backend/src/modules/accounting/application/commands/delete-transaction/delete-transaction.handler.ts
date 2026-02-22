@@ -11,10 +11,7 @@ import {
   ACCOUNT_REPOSITORY,
 } from '../../../domain/repositories/account.repository.interface';
 import { DomainEventPublisher } from '../../../../../shared';
-import {
-  BalanceCalculationService,
-  TransferDomainService,
-} from '../../../domain/services';
+import { BalanceCalculationService, TransferDomainService } from '../../../domain/services';
 
 @CommandHandler(DeleteTransactionCommand)
 export class DeleteTransactionHandler implements ICommandHandler<DeleteTransactionCommand> {
@@ -39,9 +36,7 @@ export class DeleteTransactionHandler implements ICommandHandler<DeleteTransacti
     }
 
     // Get the account and reverse the transaction effect
-    const account = await this.accountRepository.findByIdWithBalances(
-      transaction.accountId,
-    );
+    const account = await this.accountRepository.findByIdWithBalances(transaction.accountId);
 
     // Mark transaction as deleted (raises event)
     transaction.markDeleted();

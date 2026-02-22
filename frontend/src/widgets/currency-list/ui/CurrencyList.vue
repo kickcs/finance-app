@@ -11,8 +11,7 @@ const _emit = defineEmits<{
   select: [currency: Currency];
 }>();
 
-const { searchQuery, filteredCurrencies, setSearchQuery } =
-  useCurrencySelection();
+const { searchQuery, filteredCurrencies, setSearchQuery } = useCurrencySelection();
 </script>
 
 <template>

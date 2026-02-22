@@ -1,10 +1,7 @@
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
 import { GetRemindersQuery } from './get-reminders.query';
-import {
-  IReminderRepository,
-  REMINDER_REPOSITORY,
-} from '../../../domain/repositories';
+import { IReminderRepository, REMINDER_REPOSITORY } from '../../../domain/repositories';
 import { ReminderResponseMapper } from '../../mappers';
 
 @QueryHandler(GetRemindersQuery)

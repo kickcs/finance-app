@@ -26,11 +26,7 @@ const router = useRouter();
     <div
       class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-surface-light dark:bg-surface-dark flex items-center justify-center"
     >
-      <UIcon
-        :name="icon"
-        size="xl"
-        class="text-text-tertiary-light dark:text-text-tertiary-dark"
-      />
+      <UIcon :name="icon" size="xl" class="text-text-tertiary-light dark:text-text-tertiary-dark" />
     </div>
     <p class="text-text-secondary-light dark:text-text-secondary-dark mb-4">
       {{ message }}

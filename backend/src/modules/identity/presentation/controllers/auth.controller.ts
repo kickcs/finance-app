@@ -56,20 +56,13 @@ export class AuthController {
 
   @Public()
   @Post('register')
-  async register(
-    @Body() dto: RegisterDto,
-    @Res({ passthrough: true }) response: Response,
-  ) {
+  async register(@Body() dto: RegisterDto, @Res({ passthrough: true }) response: Response) {
     const result: AuthResponse = await this.commandBus.execute(
       new RegisterCommand(dto.email, dto.password, dto.name),
     );
 
     // Set refresh token in httpOnly cookie
-    response.cookie(
-      REFRESH_TOKEN_COOKIE,
-      result.tokens.refreshToken,
-      COOKIE_OPTIONS,
-    );
+    response.cookie(REFRESH_TOKEN_COOKIE, result.tokens.refreshToken, COOKIE_OPTIONS);
 
     // Return only access token and user (refresh token is in cookie)
     return {
@@ -81,20 +74,13 @@ export class AuthController {
   @Public()
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  async login(
-    @Body() dto: LoginDto,
-    @Res({ passthrough: true }) response: Response,
-  ) {
+  async login(@Body() dto: LoginDto, @Res({ passthrough: true }) response: Response) {
     const result: AuthResponse = await this.commandBus.execute(
       new LoginCommand(dto.email, dto.password),
     );
 
     // Set refresh token in httpOnly cookie
-    response.cookie(
-      REFRESH_TOKEN_COOKIE,
-      result.tokens.refreshToken,
-      COOKIE_OPTIONS,
-    );
+    response.cookie(REFRESH_TOKEN_COOKIE, result.tokens.refreshToken, COOKIE_OPTIONS);
 
     // Return only access token and user (refresh token is in cookie)
     return {
@@ -113,16 +99,10 @@ export class AuthController {
   @Post('login/anonymous')
   @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 per minute
   async loginAnonymously(@Res({ passthrough: true }) response: Response) {
-    const result: AuthResponse = await this.commandBus.execute(
-      new LoginAnonymousCommand(),
-    );
+    const result: AuthResponse = await this.commandBus.execute(new LoginAnonymousCommand());
 
     // Set refresh token in httpOnly cookie (shorter duration for demo)
-    response.cookie(
-      REFRESH_TOKEN_COOKIE,
-      result.tokens.refreshToken,
-      DEMO_COOKIE_OPTIONS,
-    );
+    response.cookie(REFRESH_TOKEN_COOKIE, result.tokens.refreshToken, DEMO_COOKIE_OPTIONS);
 
     // Return only access token and user (refresh token is in cookie)
     return {
@@ -134,23 +114,17 @@ export class AuthController {
   @Public()
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
-  async refresh(
-    @Req() request: Request,
-    @Res({ passthrough: true }) response: Response,
-  ) {
+  async refresh(@Req() request: Request, @Res({ passthrough: true }) response: Response) {
     // Read refresh token from httpOnly cookie
-    const refreshToken = (request.cookies as Record<string, string>)[
-      REFRESH_TOKEN_COOKIE
-    ];
+    const refreshToken = (request.cookies as Record<string, string>)[REFRESH_TOKEN_COOKIE];
 
     if (!refreshToken) {
       throw new UnauthorizedException('No refresh token');
     }
 
-    const tokens: AuthTokens = await this.commandBus.execute<
-      RefreshCommand,
-      AuthTokens
-    >(new RefreshCommand(refreshToken));
+    const tokens: AuthTokens = await this.commandBus.execute<RefreshCommand, AuthTokens>(
+      new RefreshCommand(refreshToken),
+    );
 
     // Decode token to check if demo account, use appropriate cookie options
     const payload = this.tokenService.verifyToken(tokens.accessToken);
@@ -182,9 +156,7 @@ export class AuthController {
   @SkipThrottle()
   @Get('me')
   async me(@CurrentUser() user: JwtPayload): Promise<unknown> {
-    const profile: unknown = await this.queryBus.execute(
-      new GetProfileQuery(user.sub),
-    );
+    const profile: unknown = await this.queryBus.execute(new GetProfileQuery(user.sub));
     return {
       ...(profile as Record<string, unknown>),
       isAnonymous: user.isAnonymous,

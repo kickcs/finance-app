@@ -78,13 +78,7 @@ const CATEGORY_AMOUNTS: Record<string, { min: number; max: number }> = {
 
 // Description templates for each category
 const CATEGORY_DESCRIPTIONS: Record<string, string[]> = {
-  groceries: [
-    'Makro',
-    'Korzinka',
-    'Havas',
-    'Овощи на базаре',
-    'Продукты на неделю',
-  ],
+  groceries: ['Makro', 'Korzinka', 'Havas', 'Овощи на базаре', 'Продукты на неделю'],
   transport: ['Yandex Go', 'Метро', 'Заправка', 'MyTaxi', 'Автобус'],
   health: ['Аптека', 'Анализы', 'Врач', 'Стоматолог', 'Витамины'],
   housing: ['Коммунальные', 'Интернет', 'Уборка', 'Ремонт', 'Мебель'],
@@ -301,9 +295,7 @@ export function generateDemoData(): GeneratedDemoData {
         icon: 'account_balance_wallet',
         color: '#3b82f6',
         type: 'cash',
-        balances: [
-          { currency: 'UZS', balance: roundToThousand(walletBalance) },
-        ],
+        balances: [{ currency: 'UZS', balance: roundToThousand(walletBalance) }],
       },
       {
         name: 'Карта Visa',
@@ -320,9 +312,7 @@ export function generateDemoData(): GeneratedDemoData {
         icon: 'savings',
         color: '#a855f7',
         type: 'savings',
-        balances: [
-          { currency: 'UZS', balance: roundToThousand(savingsBalance) },
-        ],
+        balances: [{ currency: 'UZS', balance: roundToThousand(savingsBalance) }],
       },
       {
         name: 'Visa Gold',

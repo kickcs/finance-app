@@ -27,12 +27,7 @@ export class AccountBalance extends Entity<string> {
     this._createdAt = props.createdAt;
   }
 
-  static create(
-    id: string,
-    accountId: string,
-    currency: string,
-    balance: number,
-  ): AccountBalance {
+  static create(id: string, accountId: string, currency: string, balance: number): AccountBalance {
     const currencyVo = Currency.create(currency);
     return new AccountBalance({
       id,

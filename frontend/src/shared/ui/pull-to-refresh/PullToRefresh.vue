@@ -10,12 +10,11 @@ const props = defineProps<{
 
 const THRESHOLD = 64;
 
-const { pullDistance, isRefreshing, isPulling, isThresholdReached, resetPull } =
-  usePullToRefresh({
-    threshold: THRESHOLD,
-    onRefresh: props.onRefresh,
-    containerRef: toRef(props, 'containerRef'),
-  });
+const { pullDistance, isRefreshing, isPulling, isThresholdReached, resetPull } = usePullToRefresh({
+  threshold: THRESHOLD,
+  onRefresh: props.onRefresh,
+  containerRef: toRef(props, 'containerRef'),
+});
 
 const contentStyle = computed(() => {
   if (pullDistance.value === 0) return {};
@@ -25,9 +24,7 @@ const contentStyle = computed(() => {
   };
 });
 
-const contentTransition = computed(() =>
-  isPulling.value ? 'none' : 'transform 300ms ease-out',
-);
+const contentTransition = computed(() => (isPulling.value ? 'none' : 'transform 300ms ease-out'));
 
 const spinnerOpacity = computed(() =>
   isRefreshing.value ? 1 : Math.min(pullDistance.value / THRESHOLD, 1),

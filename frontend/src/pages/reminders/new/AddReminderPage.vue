@@ -34,7 +34,9 @@ function goBack() {
 </script>
 
 <template>
-  <div class="min-h-screen bg-background-light dark:bg-background-dark pb-28">
+  <div
+    class="h-full flex flex-col relative bg-background-light dark:bg-background-dark pb-28 md:pb-8 overflow-y-auto"
+  >
     <!-- Header -->
     <AppHeader title="Новая подписка" show-back blur @back="goBack" />
 

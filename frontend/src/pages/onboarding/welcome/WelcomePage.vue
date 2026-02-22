@@ -62,10 +62,7 @@ function onTouchEnd() {
   if (!isSwiping.value) return;
   isSwiping.value = false;
 
-  if (
-    touchDeltaX.value < -SWIPE_THRESHOLD_PX &&
-    currentSlide.value < TOTAL_SLIDES - 1
-  ) {
+  if (touchDeltaX.value < -SWIPE_THRESHOLD_PX && currentSlide.value < TOTAL_SLIDES - 1) {
     currentSlide.value++;
   } else if (touchDeltaX.value > SWIPE_THRESHOLD_PX && currentSlide.value > 0) {
     currentSlide.value--;
@@ -88,9 +85,7 @@ const carouselTransform = computed(() => {
     class="h-dvh flex flex-col bg-background-dark overflow-hidden relative select-none"
   >
     <!-- Skip button -->
-    <header
-      class="safe-area-inset-top px-6 py-4 flex justify-end items-center z-50 relative"
-    >
+    <header class="safe-area-inset-top px-6 py-4 flex justify-end items-center z-50 relative">
       <button
         v-if="!isLastSlide"
         class="text-text-tertiary-dark hover:text-text-primary-dark transition-colors font-medium text-sm"
@@ -129,9 +124,7 @@ const carouselTransform = computed(() => {
           v-for="i in TOTAL_SLIDES"
           :key="i"
           class="h-2 w-2 rounded-full transition-colors"
-          :class="
-            currentSlide === i - 1 ? 'bg-primary' : 'bg-text-tertiary-dark/30'
-          "
+          :class="currentSlide === i - 1 ? 'bg-primary' : 'bg-text-tertiary-dark/30'"
           :aria-label="`Слайд ${i}`"
           @click="goToSlide(i - 1)"
         />

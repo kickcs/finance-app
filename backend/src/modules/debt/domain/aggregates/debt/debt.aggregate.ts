@@ -1,11 +1,7 @@
 import { AggregateRoot } from '../../../../../shared/domain/base';
 import { Money, Currency } from '../../../../../shared/domain/value-objects';
 import { DebtType } from '../../value-objects';
-import {
-  DebtCreatedEvent,
-  DebtPaymentMadeEvent,
-  DebtClosedEvent,
-} from '../../events';
+import { DebtCreatedEvent, DebtPaymentMadeEvent, DebtClosedEvent } from '../../events';
 
 export interface DebtProps {
   id: string;
@@ -78,9 +74,7 @@ export class Debt extends AggregateRoot<string> {
       name,
       totalAmount: Money.create(totalAmount, currencyVo),
       remainingAmount: Money.create(totalAmount, currencyVo),
-      monthlyPayment: monthlyPayment
-        ? Money.create(monthlyPayment, currencyVo)
-        : null,
+      monthlyPayment: monthlyPayment ? Money.create(monthlyPayment, currencyVo) : null,
       nextPaymentDate: nextPaymentDate || null,
       debtType: DebtType.create(debtType),
       personName: personName?.trim() || null,
@@ -218,21 +212,14 @@ export class Debt extends AggregateRoot<string> {
       this._remainingAmount = Money.create(data.remainingAmount, this.currency);
     if (data.monthlyPayment !== undefined) {
       this._monthlyPayment =
-        data.monthlyPayment !== null
-          ? Money.create(data.monthlyPayment, this.currency)
-          : null;
+        data.monthlyPayment !== null ? Money.create(data.monthlyPayment, this.currency) : null;
     }
-    if (data.nextPaymentDate !== undefined)
-      this._nextPaymentDate = data.nextPaymentDate;
-    if (data.debtType !== undefined)
-      this._debtType = DebtType.create(data.debtType);
-    if (data.personName !== undefined)
-      this._personName = data.personName?.trim() || null;
+    if (data.nextPaymentDate !== undefined) this._nextPaymentDate = data.nextPaymentDate;
+    if (data.debtType !== undefined) this._debtType = DebtType.create(data.debtType);
+    if (data.personName !== undefined) this._personName = data.personName?.trim() || null;
     if (data.accountId !== undefined) this._accountId = data.accountId;
-    if (data.transactionId !== undefined)
-      this._transactionId = data.transactionId;
-    if (data.closeTransactionId !== undefined)
-      this._closeTransactionId = data.closeTransactionId;
+    if (data.transactionId !== undefined) this._transactionId = data.transactionId;
+    if (data.closeTransactionId !== undefined) this._closeTransactionId = data.closeTransactionId;
     if (data.isClosed !== undefined) this._isClosed = data.isClosed;
     if (data.sourceTransactionId !== undefined)
       this._sourceTransactionId = data.sourceTransactionId;

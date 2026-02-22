@@ -15,11 +15,7 @@ export interface IAccountBalanceRepository {
     accountId: string,
     currency: string,
   ): Promise<AccountBalanceData | null>;
-  upsert(
-    accountId: string,
-    currency: string,
-    balance: number,
-  ): Promise<AccountBalanceData>;
+  upsert(accountId: string, currency: string, balance: number): Promise<AccountBalanceData>;
   createMany(
     accountId: string,
     balances: { currency: string; balance: number }[],

@@ -1,10 +1,7 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { Inject, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { UpdateReminderCommand } from './update-reminder.command';
-import {
-  IReminderRepository,
-  REMINDER_REPOSITORY,
-} from '../../../domain/repositories';
+import { IReminderRepository, REMINDER_REPOSITORY } from '../../../domain/repositories';
 import { ReminderResponseMapper } from '../../mappers';
 
 @CommandHandler(UpdateReminderCommand)

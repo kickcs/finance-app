@@ -53,16 +53,14 @@ const features = [
   >
     <!-- Title -->
     <div class="text-center mt-2 mb-4 z-10">
-      <h1
-        class="text-3xl font-bold text-text-primary-dark tracking-tight leading-tight"
-      >
-        Долги и подписки<br />под контролем
+      <h1 class="text-3xl font-bold text-text-primary-dark tracking-tight leading-tight">
+        Долги и подписки
+        <br />
+        под контролем
       </h1>
     </div>
 
-    <div
-      class="relative w-full flex-grow flex flex-col items-center justify-start gap-4"
-    >
+    <div class="relative w-full flex-grow flex flex-col items-center justify-start gap-4">
       <!-- Two debt cards side by side -->
       <div class="grid grid-cols-2 gap-4 w-full z-10">
         <div
@@ -76,36 +74,25 @@ const features = [
           <div>
             <div class="flex items-center gap-2 mb-1">
               <div class="w-2 h-2 rounded-full" :class="debt.dotClass" />
-              <span
-                class="text-xs font-medium text-text-tertiary-dark uppercase tracking-wide"
-                >{{ debt.label }}</span
-              >
+              <span class="text-xs font-medium text-text-tertiary-dark uppercase tracking-wide">
+                {{ debt.label }}
+              </span>
             </div>
             <p class="text-sm font-semibold text-text-secondary-dark mt-2">
               {{ debt.name }}
             </p>
           </div>
           <div>
-            <span class="text-xl font-bold text-text-primary-dark">{{
-              debt.amount
-            }}</span>
+            <span class="text-xl font-bold text-text-primary-dark">{{ debt.amount }}</span>
           </div>
         </div>
       </div>
 
       <!-- Reminders card -->
-      <div
-        class="w-full bg-card-dark border border-white/5 rounded-xl p-4 z-10"
-      >
+      <div class="w-full bg-card-dark border border-white/5 rounded-xl p-4 z-10">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-semibold text-text-secondary-dark">
-            Напоминания
-          </h3>
-          <UIcon
-            name="notifications"
-            size="xs"
-            class="text-text-tertiary-dark"
-          />
+          <h3 class="text-sm font-semibold text-text-secondary-dark">Напоминания</h3>
+          <UIcon name="notifications" size="xs" class="text-text-tertiary-dark" />
         </div>
         <div class="space-y-3">
           <div
@@ -121,29 +108,22 @@ const features = [
                 <UIcon :name="item.icon" size="xs" :class="item.iconColor" />
               </div>
               <div class="flex flex-col">
-                <span class="text-sm font-medium text-text-primary-dark">{{
-                  item.title
-                }}</span>
-                <span class="text-caption-sm text-text-tertiary-dark">{{
-                  item.date
-                }}</span>
+                <span class="text-sm font-medium text-text-primary-dark">{{ item.title }}</span>
+                <span class="text-caption-sm text-text-tertiary-dark">{{ item.date }}</span>
               </div>
             </div>
             <span
               class="text-xs font-semibold text-text-primary-dark bg-card-dark px-2 py-1 rounded border border-white/5"
-              >{{ item.amount }}</span
             >
+              {{ item.amount }}
+            </span>
           </div>
         </div>
       </div>
 
       <!-- Feature list -->
       <div class="w-full space-y-3 px-2 z-10">
-        <div
-          v-for="feat in features"
-          :key="feat.text"
-          class="flex items-center gap-3"
-        >
+        <div v-for="feat in features" :key="feat.text" class="flex items-center gap-3">
           <div
             class="flex-shrink-0 w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center"
           >

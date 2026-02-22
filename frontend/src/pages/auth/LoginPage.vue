@@ -6,13 +6,7 @@ import { useAuth } from '@/shared/api/composables/useAuth';
 import { profileApi } from '@/shared/api/services/profileApi';
 
 const router = useRouter();
-const {
-  signIn,
-  signUp,
-  signInAnonymously,
-  isLoading,
-  error: _error,
-} = useAuth();
+const { signIn, signUp, signInAnonymously, isLoading, error: _error } = useAuth();
 
 const isSignUp = ref(false);
 const email = ref('');
@@ -148,8 +142,7 @@ async function handleSubmit() {
     // Логируем для отладки
     console.error('Auth error:', err);
 
-    const errorMessage =
-      err instanceof Error ? err.message : 'Произошла ошибка';
+    const errorMessage = err instanceof Error ? err.message : 'Произошла ошибка';
 
     // Обработка ошибки "email уже зарегистрирован"
     if (
@@ -232,9 +225,7 @@ async function handleDemoMode() {
       <!-- Email Verification Message -->
       <template v-if="showEmailVerification">
         <div class="flex flex-col items-center text-center">
-          <div
-            class="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4"
-          >
+          <div class="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
             <UIcon name="mark_email_read" size="2xl" class="text-primary" />
           </div>
           <h2
@@ -242,18 +233,14 @@ async function handleDemoMode() {
           >
             Проверьте почту
           </h2>
-          <p
-            class="text-text-secondary-light dark:text-text-secondary-dark mb-4"
-          >
+          <p class="text-text-secondary-light dark:text-text-secondary-dark mb-4">
             Мы отправили письмо на
-            <strong
-              class="text-text-primary-light dark:text-text-primary-dark"
-              >{{ verificationEmail }}</strong
-            >. Перейдите по ссылке для подтверждения аккаунта.
+            <strong class="text-text-primary-light dark:text-text-primary-dark">
+              {{ verificationEmail }}
+            </strong>
+            . Перейдите по ссылке для подтверждения аккаунта.
           </p>
-          <UButton variant="ghost" @click="backToLogin"
-            >Вернуться к входу</UButton
-          >
+          <UButton variant="ghost" @click="backToLogin">Вернуться к входу</UButton>
         </div>
       </template>
 
@@ -261,9 +248,7 @@ async function handleDemoMode() {
       <template v-else>
         <!-- Logo & Title -->
         <div class="flex flex-col items-center justify-center mb-10">
-          <h1 class="text-primary text-5xl font-extrabold tracking-tight mb-3">
-            Ouro
-          </h1>
+          <h1 class="text-primary text-5xl font-extrabold tracking-tight mb-3">Ouro</h1>
           <h2
             class="text-text-primary-light dark:text-text-primary-dark text-xl font-bold leading-tight tracking-[-0.015em] text-center opacity-90"
           >
@@ -337,16 +322,13 @@ async function handleDemoMode() {
           >
             <div class="flex flex-col items-center text-center gap-3">
               <div>
-                <h3
-                  class="text-base font-bold text-text-primary-light dark:text-text-primary-dark"
-                >
+                <h3 class="text-base font-bold text-text-primary-light dark:text-text-primary-dark">
                   Впервые здесь?
                 </h3>
                 <p
                   class="text-xs text-text-secondary-light dark:text-text-secondary-dark mt-1 leading-relaxed"
                 >
-                  Создайте учётную запись, чтобы начать отслеживать свои
-                  финансы.
+                  Создайте учётную запись, чтобы начать отслеживать свои финансы.
                 </p>
               </div>
               <button
@@ -365,11 +347,7 @@ async function handleDemoMode() {
             class="text-center text-sm text-text-secondary-light dark:text-text-secondary-dark"
           >
             Уже есть аккаунт?
-            <button
-              type="button"
-              class="text-primary font-semibold ml-1"
-              @click="isSignUp = false"
-            >
+            <button type="button" class="text-primary font-semibold ml-1" @click="isSignUp = false">
               Войти
             </button>
           </p>
@@ -378,8 +356,9 @@ async function handleDemoMode() {
           <div class="flex items-center justify-center my-1">
             <span
               class="text-xs font-medium text-text-tertiary-light dark:text-text-tertiary-dark uppercase tracking-widest"
-              >или попробуйте</span
             >
+              или попробуйте
+            </span>
           </div>
 
           <!-- Demo Mode Button -->

@@ -3,10 +3,7 @@ import { useQuery } from '@tanstack/vue-query';
 import { transactionQueryKeys } from './queryKeys';
 import { transactionsApi } from './transactionsApi';
 
-export function useRecentTransactions(
-  userId: MaybeRefOrGetter<string | null>,
-  limit: number = 5,
-) {
+export function useRecentTransactions(userId: MaybeRefOrGetter<string | null>, limit: number = 5) {
   const queryKey = computed(() => {
     const uid = toValue(userId);
     return uid ? transactionQueryKeys.recent(uid) : transactionQueryKeys.all;

@@ -184,9 +184,7 @@ export function getCategoryById(id: string): Category | undefined {
   return ALL_CATEGORIES.find((cat) => cat.id === id);
 }
 
-export function getCategoriesByType(
-  type: 'expense' | 'income' | 'transfer',
-): Category[] {
+export function getCategoriesByType(type: 'expense' | 'income' | 'transfer'): Category[] {
   if (type === 'transfer') return [TRANSFER_CATEGORY];
   return type === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
 }

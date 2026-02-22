@@ -49,10 +49,7 @@ export function useDebts(userId: MaybeRefOrGetter<string | null>) {
         ...newDebt,
       } as Debt;
 
-      queryClient.setQueryData<Debt[]>(queryKey.value, (old) => [
-        optimisticDebt,
-        ...(old ?? []),
-      ]);
+      queryClient.setQueryData<Debt[]>(queryKey.value, (old) => [optimisticDebt, ...(old ?? [])]);
 
       return { previousDebts };
     },
@@ -76,8 +73,7 @@ export function useDebts(userId: MaybeRefOrGetter<string | null>) {
 
       queryClient.setQueryData<Debt[]>(
         queryKey.value,
-        (old) =>
-          old?.map((d) => (d.id === id ? { ...d, ...updates } : d)) ?? [],
+        (old) => old?.map((d) => (d.id === id ? { ...d, ...updates } : d)) ?? [],
       );
 
       return { previousDebts };
@@ -117,15 +113,10 @@ export function useDebts(userId: MaybeRefOrGetter<string | null>) {
   });
 
   // Computed values
-  const totalDebt = computed(() =>
-    debts.value.reduce((sum, d) => sum + d.remaining_amount, 0),
-  );
+  const totalDebt = computed(() => debts.value.reduce((sum, d) => sum + d.remaining_amount, 0));
 
   const totalPaid = computed(() =>
-    debts.value.reduce(
-      (sum, d) => sum + (d.total_amount - d.remaining_amount),
-      0,
-    ),
+    debts.value.reduce((sum, d) => sum + (d.total_amount - d.remaining_amount), 0),
   );
 
   const overallProgress = computed(() => {
@@ -136,10 +127,7 @@ export function useDebts(userId: MaybeRefOrGetter<string | null>) {
 
   // Group debts by person_name
   const debtsByPerson = computed<DebtsByPerson[]>(() => {
-    const groups = new Map<
-      string,
-      { debts: Debt[]; debtType: 'given' | 'taken' }
-    >();
+    const groups = new Map<string, { debts: Debt[]; debtType: 'given' | 'taken' }>();
 
     for (const debt of debts.value) {
       if (debt.is_closed) continue;
@@ -152,21 +140,13 @@ export function useDebts(userId: MaybeRefOrGetter<string | null>) {
       }
     }
 
-    return Array.from(groups.entries()).map(
-      ([personName, { debts: personDebts, debtType }]) => ({
-        personName,
-        debts: personDebts,
-        totalRemaining: personDebts.reduce(
-          (sum, d) => sum + d.remaining_amount,
-          0,
-        ),
-        totalPaid: personDebts.reduce(
-          (sum, d) => sum + (d.total_amount - d.remaining_amount),
-          0,
-        ),
-        debtType,
-      }),
-    );
+    return Array.from(groups.entries()).map(([personName, { debts: personDebts, debtType }]) => ({
+      personName,
+      debts: personDebts,
+      totalRemaining: personDebts.reduce((sum, d) => sum + d.remaining_amount, 0),
+      totalPaid: personDebts.reduce((sum, d) => sum + (d.total_amount - d.remaining_amount), 0),
+      debtType,
+    }));
   });
 
   // Helper functions (same public API)

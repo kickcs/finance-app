@@ -1,9 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import {
-  TransactionItem,
-  TransactionItemSkeleton,
-} from '@/entities/transaction';
+import { TransactionItem, TransactionItemSkeleton } from '@/entities/transaction';
 import type { Transaction } from '@/entities/transaction';
 import { EmptyState, SectionHeader } from '@/shared/ui';
 import { useAccounts } from '@/entities/account';

@@ -15,9 +15,7 @@ export function useSearch(transactions: () => Transaction[]) {
     return txs.filter((tx) => {
       const category = getCategoryById(tx.category_id);
       const categoryMatch = category?.name.toLowerCase().includes(searchTerm);
-      const descriptionMatch = tx.description
-        ?.toLowerCase()
-        .includes(searchTerm);
+      const descriptionMatch = tx.description?.toLowerCase().includes(searchTerm);
       const amountMatch = String(tx.amount).includes(searchTerm);
 
       return categoryMatch || descriptionMatch || amountMatch;
@@ -25,9 +23,7 @@ export function useSearch(transactions: () => Transaction[]) {
   });
 
   const hasResults = computed(() => filteredTransactions.value.length > 0);
-  const isEmpty = computed(
-    () => query.value.trim() !== '' && !hasResults.value,
-  );
+  const isEmpty = computed(() => query.value.trim() !== '' && !hasResults.value);
 
   function setQuery(newQuery: string) {
     query.value = newQuery;

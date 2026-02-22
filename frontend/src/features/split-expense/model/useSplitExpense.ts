@@ -59,8 +59,7 @@ export function useSplitExpense(totalAmountRef: () => number) {
     }
 
     const participantCount =
-      splitData.value.participants.length +
-      (splitData.value.isIncluded ? 1 : 0);
+      splitData.value.participants.length + (splitData.value.isIncluded ? 1 : 0);
 
     if (participantCount <= 0) return;
 
@@ -110,10 +109,7 @@ export function useSplitExpense(totalAmountRef: () => number) {
     }
 
     const totalAmount = totalAmountRef();
-    const friendsTotal = splitData.value.participants.reduce(
-      (sum, p) => sum + p.amount,
-      0,
-    );
+    const friendsTotal = splitData.value.participants.reduce((sum, p) => sum + p.amount, 0);
     const newMyShare = totalAmount - friendsTotal;
     // Set myShare to the remainder, even if it's negative (will show as error in validation)
     splitData.value.myShare = newMyShare >= 0 ? newMyShare : 0;
@@ -196,9 +192,7 @@ export function useSplitExpense(totalAmountRef: () => number) {
 
     try {
       // Filter out participants with zero or negative amounts
-      const validParticipants = splitData.value.participants.filter(
-        (p) => p.amount > 0,
-      );
+      const validParticipants = splitData.value.participants.filter((p) => p.amount > 0);
 
       if (validParticipants.length === 0) {
         console.warn('No valid participants with amount > 0 for split expense');

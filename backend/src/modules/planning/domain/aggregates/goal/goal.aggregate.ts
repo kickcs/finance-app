@@ -108,8 +108,7 @@ export class Goal extends AggregateRoot<string> {
   }): void {
     if (data.name !== undefined) this._name = data.name;
     if (data.targetAmount !== undefined) this._targetAmount = data.targetAmount;
-    if (data.currentAmount !== undefined)
-      this._currentAmount = data.currentAmount;
+    if (data.currentAmount !== undefined) this._currentAmount = data.currentAmount;
     if (data.deadline !== undefined) this._deadline = data.deadline;
     if (data.icon !== undefined) this._icon = data.icon;
     if (data.color !== undefined) this._color = data.color;

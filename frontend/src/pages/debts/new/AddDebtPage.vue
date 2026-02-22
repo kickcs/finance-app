@@ -35,17 +35,16 @@ function goBack() {
 </script>
 
 <template>
-  <div class="min-h-screen bg-background-light dark:bg-background-dark pb-28">
+  <div
+    class="h-full flex flex-col relative bg-background-light dark:bg-background-dark pb-28 md:pb-8 overflow-y-auto"
+  >
     <!-- Header -->
     <AppHeader title="Новый долг" show-back blur @back="goBack" />
 
     <!-- Content -->
     <main class="px-5 pt-8 pb-6">
       <!-- Loading State -->
-      <div
-        v-if="accountsLoading"
-        class="flex items-center justify-center py-12"
-      >
+      <div v-if="accountsLoading" class="flex items-center justify-center py-12">
         <USpinner />
       </div>
 
@@ -63,10 +62,7 @@ function goBack() {
         <p class="text-text-secondary-light dark:text-text-secondary-dark mb-4">
           Сначала создайте счёт
         </p>
-        <UButton
-          variant="primary"
-          @click="router.push({ name: 'new-account' })"
-        >
+        <UButton variant="primary" @click="router.push({ name: 'new-account' })">
           Создать счёт
         </UButton>
       </div>

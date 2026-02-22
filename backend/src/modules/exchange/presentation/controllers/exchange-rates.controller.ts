@@ -20,9 +20,7 @@ export class ExchangeRatesController {
     @Param('baseCurrency') baseCurrency: string,
     @Param('targetCurrency') targetCurrency: string,
   ): Promise<unknown> {
-    return this.queryBus.execute(
-      new GetRateQuery(baseCurrency, targetCurrency),
-    );
+    return this.queryBus.execute(new GetRateQuery(baseCurrency, targetCurrency));
   }
 
   /**

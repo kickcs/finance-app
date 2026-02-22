@@ -25,9 +25,7 @@ async function handleRegister() {
     <div class="flex items-center justify-between max-w-md mx-auto">
       <div class="flex items-center gap-2">
         <UIcon name="timer" size="sm" class="animate-pulse" />
-        <span class="text-sm font-medium">
-          Демо: {{ formattedRemaining }}
-        </span>
+        <span class="text-sm font-medium">Демо: {{ formattedRemaining }}</span>
       </div>
       <UButton
         variant="ghost"

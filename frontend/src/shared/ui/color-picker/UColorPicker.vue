@@ -28,8 +28,7 @@ defineEmits<{
         :class="[
           'w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200',
           'hover:scale-110 active:scale-95',
-          modelValue === color &&
-            'ring-2 ring-offset-2 dark:ring-offset-background-dark',
+          modelValue === color && 'ring-2 ring-offset-2 dark:ring-offset-background-dark',
         ]"
         :style="{
           backgroundColor: color,
@@ -37,12 +36,7 @@ defineEmits<{
         }"
         @click="$emit('update:modelValue', color)"
       >
-        <UIcon
-          v-if="modelValue === color"
-          name="check"
-          size="sm"
-          class="text-white"
-        />
+        <UIcon v-if="modelValue === color" name="check" size="sm" class="text-white" />
       </button>
     </div>
   </div>

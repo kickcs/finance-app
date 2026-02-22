@@ -34,10 +34,7 @@ export class CurrencyConverterService {
    * Convert an amount using the inverse of the exchange rate
    * (when converting from target currency to base currency)
    */
-  static convertInverse(
-    amount: number,
-    exchangeRate: ExchangeRate,
-  ): ConversionResult {
+  static convertInverse(amount: number, exchangeRate: ExchangeRate): ConversionResult {
     const convertedAmount = exchangeRate.convertReverse(amount);
 
     return {
@@ -81,16 +78,11 @@ export class CurrencyConverterService {
    * Calculate the cross rate between two currencies
    * given their rates against a common intermediate currency
    */
-  static calculateCrossRate(
-    firstRate: ExchangeRate,
-    secondRate: ExchangeRate,
-  ): number {
+  static calculateCrossRate(firstRate: ExchangeRate, secondRate: ExchangeRate): number {
     // Assuming both rates have the same base currency
     // e.g., USD/EUR and USD/JPY -> calculate EUR/JPY
     if (firstRate.baseCurrency !== secondRate.baseCurrency) {
-      throw new Error(
-        'Cross rate calculation requires rates with the same base currency',
-      );
+      throw new Error('Cross rate calculation requires rates with the same base currency');
     }
 
     // EUR/JPY = (USD/JPY) / (USD/EUR) = JPY_rate / EUR_rate
@@ -111,10 +103,7 @@ export class CurrencyConverterService {
   ): boolean {
     let convertedAmount: number;
 
-    if (
-      exchangeRate.baseCurrency === currency1 &&
-      exchangeRate.targetCurrency === currency2
-    ) {
+    if (exchangeRate.baseCurrency === currency1 && exchangeRate.targetCurrency === currency2) {
       convertedAmount = exchangeRate.convert(amount1);
     } else if (
       exchangeRate.baseCurrency === currency2 &&
@@ -123,9 +112,7 @@ export class CurrencyConverterService {
       convertedAmount = exchangeRate.convert(amount2);
       return Math.abs(convertedAmount - amount1) <= tolerance;
     } else {
-      throw new Error(
-        'Exchange rate currencies do not match provided currencies',
-      );
+      throw new Error('Exchange rate currencies do not match provided currencies');
     }
 
     return Math.abs(convertedAmount - amount2) <= tolerance;

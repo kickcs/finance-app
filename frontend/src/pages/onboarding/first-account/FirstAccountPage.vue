@@ -79,14 +79,9 @@ function handleFormUpdate(newData: typeof formData.value) {
 </script>
 
 <template>
-  <div
-    class="min-h-screen bg-background-light dark:bg-background-dark flex flex-col"
-  >
+  <div class="min-h-screen bg-background-light dark:bg-background-dark flex flex-col">
     <!-- Header -->
-    <header
-      class="px-5 pb-6"
-      :style="{ paddingTop: 'calc(3rem + var(--safe-area-inset-top))' }"
-    >
+    <header class="px-5 pb-6" :style="{ paddingTop: 'calc(3rem + var(--safe-area-inset-top))' }">
       <div class="flex items-center justify-between mb-6">
         <!-- Back button (shown when not onboarding) -->
         <UButton v-if="!isOnboarding" variant="ghost" size="sm" @click="goBack">
@@ -95,18 +90,14 @@ function handleFormUpdate(newData: typeof formData.value) {
         <div v-else class="w-10" />
         <!-- Spacer for onboarding -->
 
-        <span
-          class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
-        >
+        <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
           {{ isOnboarding ? 'Настройка аккаунта' : 'Новый счёт' }}
         </span>
         <div class="w-10" />
         <!-- Spacer -->
       </div>
 
-      <h1
-        class="text-2xl font-bold text-text-primary-light dark:text-text-primary-dark mb-2"
-      >
+      <h1 class="text-2xl font-bold text-text-primary-light dark:text-text-primary-dark mb-2">
         {{ isOnboarding ? 'Создайте первый счёт' : 'Новый счёт' }}
       </h1>
       <p class="text-text-secondary-light dark:text-text-secondary-dark">

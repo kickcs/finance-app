@@ -16,10 +16,7 @@ defineEmits<{
 
 const progress = computed(() => {
   if (props.goal.target_amount === 0) return 0;
-  return Math.min(
-    (props.goal.current_amount / props.goal.target_amount) * 100,
-    100,
-  );
+  return Math.min((props.goal.current_amount / props.goal.target_amount) * 100, 100);
 });
 
 const _remaining = computed(() => {
@@ -60,9 +57,7 @@ const daysLeft = computed(() => {
       <!-- Content -->
       <div class="flex-1 min-w-0">
         <div class="flex items-center justify-between gap-2 mb-1">
-          <p
-            class="font-semibold text-text-primary-light dark:text-text-primary-dark truncate"
-          >
+          <p class="font-semibold text-text-primary-light dark:text-text-primary-dark truncate">
             {{ goal.name }}
           </p>
           <span
@@ -74,12 +69,7 @@ const daysLeft = computed(() => {
         </div>
 
         <!-- Progress Bar -->
-        <UProgressBar
-          :value="progress"
-          :color="goal.color"
-          size="sm"
-          class="mb-2"
-        />
+        <UProgressBar :value="progress" :color="goal.color" size="sm" class="mb-2" />
 
         <!-- Amount Info -->
         <div class="flex items-center justify-between text-sm">

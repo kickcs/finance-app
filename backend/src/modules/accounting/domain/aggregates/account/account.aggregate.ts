@@ -2,11 +2,7 @@ import { AggregateRoot } from '../../../../../shared/domain/base';
 import { Money } from '../../../../../shared/domain/value-objects';
 import { AccountType } from '../../value-objects';
 import { AccountBalance } from './account-balance.entity';
-import {
-  AccountCreatedEvent,
-  AccountDeletedEvent,
-  BalanceUpdatedEvent,
-} from '../../events';
+import { AccountCreatedEvent, AccountDeletedEvent, BalanceUpdatedEvent } from '../../events';
 
 export interface AccountTypeFields {
   creditLimit?: number | null;
@@ -248,20 +244,16 @@ export class Account extends AggregateRoot<string> {
     if (data.type !== undefined) this._type = AccountType.create(data.type);
     if (data.order !== undefined) this._order = data.order;
     if (data.creditLimit !== undefined) this._creditLimit = data.creditLimit;
-    if (data.gracePeriodDays !== undefined)
-      this._gracePeriodDays = data.gracePeriodDays;
+    if (data.gracePeriodDays !== undefined) this._gracePeriodDays = data.gracePeriodDays;
     if (data.billingDay !== undefined) this._billingDay = data.billingDay;
     if (data.totalAmount !== undefined) this._totalAmount = data.totalAmount;
     if (data.interestRate !== undefined) this._interestRate = data.interestRate;
-    if (data.monthlyPayment !== undefined)
-      this._monthlyPayment = data.monthlyPayment;
+    if (data.monthlyPayment !== undefined) this._monthlyPayment = data.monthlyPayment;
     if (data.startDate !== undefined) this._startDate = data.startDate;
     if (data.endDate !== undefined) this._endDate = data.endDate;
     if (data.maturityDate !== undefined) this._maturityDate = data.maturityDate;
-    if (data.isReplenishable !== undefined)
-      this._isReplenishable = data.isReplenishable;
-    if (data.isWithdrawable !== undefined)
-      this._isWithdrawable = data.isWithdrawable;
+    if (data.isReplenishable !== undefined) this._isReplenishable = data.isReplenishable;
+    if (data.isWithdrawable !== undefined) this._isWithdrawable = data.isWithdrawable;
   }
 
   setOrder(order: number): void {
@@ -269,23 +261,13 @@ export class Account extends AggregateRoot<string> {
   }
 
   getBalance(currency: string): AccountBalance | undefined {
-    return this._balances.find(
-      (b) => b.currencyCode === currency.toUpperCase(),
-    );
+    return this._balances.find((b) => b.currencyCode === currency.toUpperCase());
   }
 
-  getOrCreateBalance(
-    currency: string,
-    initialBalance: number = 0,
-  ): AccountBalance {
+  getOrCreateBalance(currency: string, initialBalance: number = 0): AccountBalance {
     let balance = this.getBalance(currency);
     if (!balance) {
-      balance = AccountBalance.create(
-        crypto.randomUUID(),
-        this.id,
-        currency,
-        initialBalance,
-      );
+      balance = AccountBalance.create(crypto.randomUUID(), this.id, currency, initialBalance);
       this._balances.push(balance);
     }
     return balance;

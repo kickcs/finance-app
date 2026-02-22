@@ -20,10 +20,7 @@ export function useEditProfile(userId: MaybeRefOrGetter<string | null>) {
     formData.value.name = profile.value?.name || '';
   }
 
-  function updateField<K extends keyof ProfileFormData>(
-    field: K,
-    value: ProfileFormData[K],
-  ) {
+  function updateField<K extends keyof ProfileFormData>(field: K, value: ProfileFormData[K]) {
     formData.value[field] = value;
   }
 

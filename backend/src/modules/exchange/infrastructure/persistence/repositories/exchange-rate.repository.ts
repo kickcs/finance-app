@@ -13,10 +13,7 @@ export class ExchangeRateRepository implements IExchangeRateRepository {
     private readonly ormRepository: Repository<ExchangeRateOrmEntity>,
   ) {}
 
-  async findByPair(
-    baseCurrency: string,
-    targetCurrency: string,
-  ): Promise<ExchangeRate | null> {
+  async findByPair(baseCurrency: string, targetCurrency: string): Promise<ExchangeRate | null> {
     const ormEntity = await this.ormRepository.findOne({
       where: {
         baseCurrency: baseCurrency.toUpperCase(),
@@ -72,10 +69,7 @@ export class ExchangeRateRepository implements IExchangeRateRepository {
     );
 
     // Fetch and return the saved entity
-    const savedEntity = await this.findByPair(
-      ormEntity.baseCurrency,
-      ormEntity.targetCurrency,
-    );
+    const savedEntity = await this.findByPair(ormEntity.baseCurrency, ormEntity.targetCurrency);
 
     return savedEntity!;
   }
@@ -99,9 +93,7 @@ export class ExchangeRateRepository implements IExchangeRateRepository {
   }
 
   async saveMany(exchangeRates: ExchangeRate[]): Promise<ExchangeRate[]> {
-    const ormEntities = exchangeRates.map((rate) =>
-      ExchangeRateMapper.toOrm(rate),
-    );
+    const ormEntities = exchangeRates.map((rate) => ExchangeRateMapper.toOrm(rate));
 
     await this.ormRepository.upsert(
       ormEntities.map((e) => ({
@@ -123,8 +115,6 @@ export class ExchangeRateRepository implements IExchangeRateRepository {
       where: conditions,
     });
 
-    return savedOrmEntities.map((entity) =>
-      ExchangeRateMapper.toDomain(entity),
-    );
+    return savedOrmEntities.map((entity) => ExchangeRateMapper.toDomain(entity));
   }
 }

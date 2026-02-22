@@ -7,10 +7,7 @@ import { CommandHandlers, RateSyncScheduler } from './application';
 import { QueryHandlers } from './application/queries';
 import { ExchangeRateOrmEntity } from './infrastructure/persistence/typeorm';
 import { ExchangeRateRepository } from './infrastructure/persistence/repositories';
-import {
-  EXCHANGE_RATE_PROVIDER,
-  ExchangeRateApiProvider,
-} from './infrastructure/external';
+import { EXCHANGE_RATE_PROVIDER, ExchangeRateApiProvider } from './infrastructure/external';
 import { ExchangeRatesController } from './presentation/controllers';
 
 @Module({

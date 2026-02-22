@@ -14,9 +14,7 @@ interface BackendImportResult {
 }
 
 export const importApi = {
-  async importTransactions(
-    transactions: ParsedTransaction[],
-  ): Promise<ImportResult> {
+  async importTransactions(transactions: ParsedTransaction[]): Promise<ImportResult> {
     const payload = {
       transactions: transactions.map((t) => ({
         note: t.note,
@@ -28,10 +26,7 @@ export const importApi = {
       })),
     };
 
-    const result = await http.post<BackendImportResult>(
-      '/import/transactions',
-      payload,
-    );
+    const result = await http.post<BackendImportResult>('/import/transactions', payload);
 
     return {
       imported_count: result.importedCount,

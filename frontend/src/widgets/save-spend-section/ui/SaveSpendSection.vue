@@ -49,14 +49,10 @@ const hasData = computed(() => props.savedAmount > 0 || props.spentAmount > 0);
           icon-class="text-text-tertiary-light dark:text-text-tertiary-dark"
         />
         <div>
-          <p
-            class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
-          >
+          <p class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
             Нет данных за месяц
           </p>
-          <p
-            class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
-          >
+          <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
             Добавьте доходы и расходы
           </p>
         </div>
@@ -85,9 +81,7 @@ const hasData = computed(() => props.savedAmount > 0 || props.spentAmount > 0);
           </span>
         </div>
         <p class="text-h3 font-semibold text-success">
-          {{
-            formatMasked(savedAmount, currency, hidden ?? false, COMPACT_FORMAT)
-          }}
+          {{ formatMasked(savedAmount, currency, hidden ?? false, COMPACT_FORMAT) }}
         </p>
       </UCard>
 
@@ -111,9 +105,7 @@ const hasData = computed(() => props.savedAmount > 0 || props.spentAmount > 0);
           </span>
         </div>
         <p class="text-h3 font-semibold text-danger">
-          {{
-            formatMasked(spentAmount, currency, hidden ?? false, COMPACT_FORMAT)
-          }}
+          {{ formatMasked(spentAmount, currency, hidden ?? false, COMPACT_FORMAT) }}
         </p>
       </UCard>
     </div>

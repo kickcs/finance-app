@@ -27,9 +27,7 @@ export class Password extends ValueObject<PasswordProps> {
    */
   static validatePlainText(plainPassword: string): void {
     if (!plainPassword || plainPassword.length < this.MIN_LENGTH) {
-      throw new Error(
-        `Password must be at least ${this.MIN_LENGTH} characters long`,
-      );
+      throw new Error(`Password must be at least ${this.MIN_LENGTH} characters long`);
     }
   }
 

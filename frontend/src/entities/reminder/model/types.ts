@@ -30,10 +30,7 @@ export const REMINDER_ICONS = [
   'shopping_cart',
 ] as const;
 
-export const FREQUENCY_LABELS: Record<
-  'weekly' | 'monthly' | 'yearly' | 'once',
-  string
-> = {
+export const FREQUENCY_LABELS: Record<'weekly' | 'monthly' | 'yearly' | 'once', string> = {
   weekly: 'Неделя',
   monthly: 'Месяц',
   yearly: 'Год',

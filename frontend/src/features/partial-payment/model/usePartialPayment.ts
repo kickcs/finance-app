@@ -2,10 +2,7 @@ import { ref } from 'vue';
 import { transactionsApi } from '@/entities/transaction';
 import { debtsApi, debtQueryKeys } from '@/entities/debt';
 import { queryClient } from '@/shared/api/queryClient';
-import {
-  invalidateTransactionRelated,
-  invalidateAccountRelated,
-} from '@/shared/api/invalidation';
+import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
 import type { Debt } from '@/shared/api/database.types';
 
 export function usePartialPayment() {
@@ -40,9 +37,7 @@ export function usePartialPayment() {
 
         // 1. Get the source transaction
         const transactions = await transactionsApi.getAll(userId);
-        const sourceTx = transactions.find(
-          (tx) => tx.id === debt.source_transaction_id,
-        );
+        const sourceTx = transactions.find((tx) => tx.id === debt.source_transaction_id);
 
         if (!sourceTx) throw new Error('Source transaction not found');
 
@@ -67,9 +62,7 @@ export function usePartialPayment() {
         // Note: Backend automatically updates account balance when transaction is created
         const isGiven = debt.debt_type === 'given';
         const transactionType = isGiven ? 'income' : 'expense';
-        const categoryId = isGiven
-          ? 'debt_return_to_me'
-          : 'debt_return_from_me';
+        const categoryId = isGiven ? 'debt_return_to_me' : 'debt_return_from_me';
 
         // Only mark as debt-related if the original debt had a balance-affecting transaction
         const hadBalanceEffect = !!debt.transaction_id;

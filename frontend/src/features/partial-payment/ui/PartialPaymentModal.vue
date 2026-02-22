@@ -36,10 +36,7 @@ const debtCurrency = computed(() => props.debt?.currency || 'UZS');
 
 const isValid = computed(() => {
   if (!props.debt || !selectedAccountId.value) return false;
-  return (
-    paymentAmount.value > 0 &&
-    paymentAmount.value <= props.debt.remaining_amount
-  );
+  return paymentAmount.value > 0 && paymentAmount.value <= props.debt.remaining_amount;
 });
 
 const paidAmount = computed(() => {
@@ -69,36 +66,23 @@ function confirm() {
       <!-- Debt Info -->
       <div class="p-4 rounded-xl bg-surface-light dark:bg-surface-dark">
         <div class="flex justify-between items-center mb-2">
-          <span
-            class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
-          >
+          <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
             {{ debt.debt_type === 'given' ? 'Вам должны' : 'Вы должны' }}
           </span>
-          <span
-            class="font-bold text-text-primary-light dark:text-text-primary-dark"
-          >
+          <span class="font-bold text-text-primary-light dark:text-text-primary-dark">
             {{ debt.person_name || debt.name }}
           </span>
         </div>
         <div class="flex justify-between items-center">
-          <span
-            class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
-          >
+          <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
             Осталось
           </span>
-          <span
-            class="font-bold text-lg text-text-primary-light dark:text-text-primary-dark"
-          >
+          <span class="font-bold text-lg text-text-primary-light dark:text-text-primary-dark">
             {{ formatCurrency(debt.remaining_amount, debtCurrency) }}
           </span>
         </div>
-        <div
-          v-if="paidAmount > 0"
-          class="flex justify-between items-center mt-1"
-        >
-          <span
-            class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
-          >
+        <div v-if="paidAmount > 0" class="flex justify-between items-center mt-1">
+          <span class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
             Уже выплачено
           </span>
           <span class="text-xs text-success">
@@ -109,9 +93,7 @@ function confirm() {
 
       <!-- Payment Amount Input -->
       <div class="space-y-2">
-        <label
-          class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark"
-        >
+        <label class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">
           Сумма платежа
         </label>
         <UInput
@@ -131,25 +113,15 @@ function confirm() {
         >
           50%
         </UButton>
-        <UButton
-          variant="secondary"
-          size="sm"
-          @click="paymentAmount = debt.remaining_amount"
-        >
+        <UButton variant="secondary" size="sm" @click="paymentAmount = debt.remaining_amount">
           Полностью
         </UButton>
       </div>
 
       <!-- Account Selection -->
       <div class="space-y-2">
-        <label
-          class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark"
-        >
-          {{
-            debt.debt_type === 'given'
-              ? 'Куда зачислить'
-              : 'С какого счёта списать'
-          }}
+        <label class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">
+          {{ debt.debt_type === 'given' ? 'Куда зачислить' : 'С какого счёта списать' }}
         </label>
         <div class="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1">
           <button
@@ -181,9 +153,7 @@ function confirm() {
             size="sm"
             class="text-text-tertiary-light dark:text-text-tertiary-dark mt-0.5 shrink-0"
           />
-          <p
-            class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
-          >
+          <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
             {{
               debt.debt_type === 'given'
                 ? 'Сумма платежа будет зачислена на выбранный счёт.'
@@ -195,7 +165,7 @@ function confirm() {
     </div>
 
     <template #actions>
-      <UButton variant="secondary" full-width @click="close"> Отмена </UButton>
+      <UButton variant="secondary" full-width @click="close">Отмена</UButton>
       <UButton
         variant="primary"
         full-width

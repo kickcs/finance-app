@@ -15,10 +15,7 @@ const emit = defineEmits<{
   ];
 }>();
 
-function updateNumber(
-  key: keyof AccountTypeFieldValues,
-  value: string | number,
-) {
+function updateNumber(key: keyof AccountTypeFieldValues, value: string | number) {
   emit('update:field', key, value ? Number(value) : null);
 }
 
@@ -35,9 +32,7 @@ function updateBoolean(key: keyof AccountTypeFieldValues, value: boolean) {
   <!-- Credit Card Fields -->
   <template v-if="type === 'credit_card'">
     <UInput
-      :model-value="
-        fields.creditLimit != null ? String(fields.creditLimit) : ''
-      "
+      :model-value="fields.creditLimit != null ? String(fields.creditLimit) : ''"
       label="Кредитный лимит"
       placeholder="0"
       type="number"
@@ -46,18 +41,14 @@ function updateBoolean(key: keyof AccountTypeFieldValues, value: boolean) {
     />
     <div class="grid grid-cols-2 gap-3">
       <UInput
-        :model-value="
-          fields.gracePeriodDays != null ? String(fields.gracePeriodDays) : ''
-        "
+        :model-value="fields.gracePeriodDays != null ? String(fields.gracePeriodDays) : ''"
         label="Грейс-период (дней)"
         placeholder="55"
         type="number"
         @update:model-value="updateNumber('gracePeriodDays', $event)"
       />
       <UInput
-        :model-value="
-          fields.billingDay != null ? String(fields.billingDay) : ''
-        "
+        :model-value="fields.billingDay != null ? String(fields.billingDay) : ''"
         label="День выписки"
         placeholder="1-31"
         type="number"
@@ -69,9 +60,7 @@ function updateBoolean(key: keyof AccountTypeFieldValues, value: boolean) {
   <!-- Loan Fields -->
   <template v-if="type === 'loan'">
     <UInput
-      :model-value="
-        fields.totalAmount != null ? String(fields.totalAmount) : ''
-      "
+      :model-value="fields.totalAmount != null ? String(fields.totalAmount) : ''"
       label="Сумма кредита"
       placeholder="0"
       type="number"
@@ -80,18 +69,14 @@ function updateBoolean(key: keyof AccountTypeFieldValues, value: boolean) {
     />
     <div class="grid grid-cols-2 gap-3">
       <UInput
-        :model-value="
-          fields.interestRate != null ? String(fields.interestRate) : ''
-        "
+        :model-value="fields.interestRate != null ? String(fields.interestRate) : ''"
         label="Ставка (%)"
         placeholder="12.5"
         type="number"
         @update:model-value="updateNumber('interestRate', $event)"
       />
       <UInput
-        :model-value="
-          fields.monthlyPayment != null ? String(fields.monthlyPayment) : ''
-        "
+        :model-value="fields.monthlyPayment != null ? String(fields.monthlyPayment) : ''"
         label="Ежемесячный платёж"
         placeholder="0"
         type="number"
@@ -118,9 +103,7 @@ function updateBoolean(key: keyof AccountTypeFieldValues, value: boolean) {
   <!-- Deposit Fields -->
   <template v-if="type === 'deposit'">
     <UInput
-      :model-value="
-        fields.interestRate != null ? String(fields.interestRate) : ''
-      "
+      :model-value="fields.interestRate != null ? String(fields.interestRate) : ''"
       label="Ставка (%)"
       placeholder="12.5"
       type="number"
@@ -138,34 +121,20 @@ function updateBoolean(key: keyof AccountTypeFieldValues, value: boolean) {
           type="checkbox"
           :checked="fields.isReplenishable === true"
           class="w-4 h-4 rounded border-border-light dark:border-border-dark text-primary focus:ring-primary"
-          @change="
-            updateBoolean(
-              'isReplenishable',
-              ($event.target as HTMLInputElement).checked,
-            )
-          "
+          @change="updateBoolean('isReplenishable', ($event.target as HTMLInputElement).checked)"
         />
-        <span
-          class="text-sm text-text-primary-light dark:text-text-primary-dark"
-          >Пополняемый</span
-        >
+        <span class="text-sm text-text-primary-light dark:text-text-primary-dark">Пополняемый</span>
       </label>
       <label class="flex items-center gap-2 cursor-pointer">
         <input
           type="checkbox"
           :checked="fields.isWithdrawable === true"
           class="w-4 h-4 rounded border-border-light dark:border-border-dark text-primary focus:ring-primary"
-          @change="
-            updateBoolean(
-              'isWithdrawable',
-              ($event.target as HTMLInputElement).checked,
-            )
-          "
+          @change="updateBoolean('isWithdrawable', ($event.target as HTMLInputElement).checked)"
         />
-        <span
-          class="text-sm text-text-primary-light dark:text-text-primary-dark"
-          >С возможностью снятия</span
-        >
+        <span class="text-sm text-text-primary-light dark:text-text-primary-dark">
+          С возможностью снятия
+        </span>
       </label>
     </div>
   </template>

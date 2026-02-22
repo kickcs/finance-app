@@ -9,48 +9,28 @@ import { UIcon } from '@/shared/ui';
   >
     <!-- Title -->
     <div class="text-center w-full z-20">
-      <h1
-        class="text-[32px] font-bold text-primary tracking-tight leading-tight"
-      >
-        Ouro
-      </h1>
+      <h1 class="text-[32px] font-bold text-primary tracking-tight leading-tight">Ouro</h1>
       <p class="text-text-tertiary-dark text-sm mt-1 font-medium tracking-wide">
         Ваш личный финансовый помощник
       </p>
     </div>
 
     <!-- Cards area -->
-    <div
-      class="relative w-full max-w-sm flex-grow flex items-center justify-center py-6"
-    >
-      <div
-        class="relative w-full flex flex-col items-center justify-center gap-6"
-      >
+    <div class="relative w-full max-w-sm flex-grow flex items-center justify-center py-6">
+      <div class="relative w-full flex flex-col items-center justify-center gap-6">
         <!-- Main balance card -->
         <div
           class="w-full bg-card-dark border border-white/10 rounded-2xl p-6 z-20 relative overflow-hidden"
         >
           <div class="flex justify-between items-start mb-8 relative z-10">
             <div>
-              <p
-                class="text-text-tertiary-dark text-xs font-medium uppercase tracking-wider mb-1"
-              >
+              <p class="text-text-tertiary-dark text-xs font-medium uppercase tracking-wider mb-1">
                 Общий баланс
               </p>
-              <h2
-                class="text-4xl font-bold text-text-primary-dark tracking-tight"
-              >
-                $12,450.00
-              </h2>
+              <h2 class="text-4xl font-bold text-text-primary-dark tracking-tight">$12,450.00</h2>
             </div>
-            <div
-              class="bg-primary/10 p-2.5 rounded-xl border border-primary/20"
-            >
-              <UIcon
-                name="account_balance_wallet"
-                size="md"
-                class="text-primary"
-              />
+            <div class="bg-primary/10 p-2.5 rounded-xl border border-primary/20">
+              <UIcon name="account_balance_wallet" size="md" class="text-primary" />
             </div>
           </div>
           <!-- Mini dots decoration -->
@@ -72,15 +52,12 @@ import { UIcon } from '@/shared/ui';
               <div class="flex items-center justify-between">
                 <span
                   class="text-caption-sm text-text-tertiary-dark font-semibold uppercase tracking-wider"
-                  >Наличные</span
                 >
+                  Наличные
+                </span>
                 <UIcon name="payments" size="sm" class="text-success" />
               </div>
-              <p
-                class="text-xl font-bold text-text-primary-dark tracking-tight"
-              >
-                $850.00
-              </p>
+              <p class="text-xl font-bold text-text-primary-dark tracking-tight">$850.00</p>
             </div>
           </div>
           <div
@@ -90,15 +67,12 @@ import { UIcon } from '@/shared/ui';
               <div class="flex items-center justify-between">
                 <span
                   class="text-caption-sm text-text-tertiary-dark font-semibold uppercase tracking-wider"
-                  >Карта</span
                 >
+                  Карта
+                </span>
                 <UIcon name="credit_card" size="sm" class="text-primary" />
               </div>
-              <p
-                class="text-xl font-bold text-text-primary-dark tracking-tight"
-              >
-                $11,600.00
-              </p>
+              <p class="text-xl font-bold text-text-primary-dark tracking-tight">$11,600.00</p>
             </div>
           </div>
         </div>

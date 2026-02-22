@@ -31,17 +31,12 @@ export class RefreshHandler implements ICommandHandler<RefreshCommand> {
 
       // Check if demo account has expired
       if (profile.isDemo && profile.isExpired()) {
-        this.logger.debug(
-          `Demo account ${profile.id} has expired, rejecting refresh`,
-        );
+        this.logger.debug(`Demo account ${profile.id} has expired, rejecting refresh`);
         throw new UnauthorizedException('Demo account has expired');
       }
 
       // Verify stored refresh token matches
-      const isValid = await bcrypt.compare(
-        command.refreshToken,
-        profile.refreshToken,
-      );
+      const isValid = await bcrypt.compare(command.refreshToken, profile.refreshToken);
       if (!isValid) {
         throw new UnauthorizedException('Invalid refresh token');
       }

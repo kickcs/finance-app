@@ -32,15 +32,12 @@ export function usePanelState(props: PanelProps, emit: PanelEmit) {
   const currentBalance = computed(() => {
     if (!selectedAccount.value) return 0;
     return (
-      selectedAccount.value.balances.find(
-        (b) => b.currency === props.formData.currency,
-      )?.balance ?? 0
+      selectedAccount.value.balances.find((b) => b.currency === props.formData.currency)?.balance ??
+      0
     );
   });
 
-  const hasSufficientFunds = computed(
-    () => props.formData.amount <= currentBalance.value,
-  );
+  const hasSufficientFunds = computed(() => props.formData.amount <= currentBalance.value);
 
   function updateField<K extends keyof TransactionFormData>(
     field: K,
@@ -64,9 +61,7 @@ export function usePanelState(props: PanelProps, emit: PanelEmit) {
     selectedAccount,
     (account) => {
       if (account && account.balances.length > 0) {
-        if (
-          !account.balances.some((b) => b.currency === props.formData.currency)
-        ) {
+        if (!account.balances.some((b) => b.currency === props.formData.currency)) {
           updateField('currency', account.balances[0].currency);
         }
       }

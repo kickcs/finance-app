@@ -34,26 +34,17 @@ function addCurrency(code: string) {
 <template>
   <div class="space-y-4">
     <div>
-      <label
-        class="block text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
-      >
+      <label class="block text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
         {{ label ?? 'Валюты и балансы' }}
       </label>
-      <p
-        v-if="hint"
-        class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark mt-0.5"
-      >
+      <p v-if="hint" class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark mt-0.5">
         {{ hint }}
       </p>
     </div>
 
     <!-- Balance items -->
     <div class="space-y-3">
-      <div
-        v-for="(balance, index) in balances"
-        :key="index"
-        class="flex items-stretch gap-2"
-      >
+      <div v-for="(balance, index) in balances" :key="index" class="flex items-stretch gap-2">
         <!-- Currency selector - styled to match UInput, stretches to same height -->
         <div
           class="relative shrink-0 w-24 flex items-center rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark transition-all duration-200 focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-0"
@@ -61,21 +52,13 @@ function addCurrency(code: string) {
           <select
             :value="balance.currency"
             class="w-full h-full pl-3 pr-8 appearance-none bg-transparent text-sm font-medium text-text-primary-light dark:text-text-primary-dark focus:outline-none"
-            @change="
-              $emit(
-                'updateCurrency',
-                index,
-                ($event.target as HTMLSelectElement).value,
-              )
-            "
+            @change="$emit('updateCurrency', index, ($event.target as HTMLSelectElement).value)"
           >
             <option
               v-for="curr in CURRENCIES"
               :key="curr.code"
               :value="curr.code"
-              :disabled="
-                balances.some((b, i) => i !== index && b.currency === curr.code)
-              "
+              :disabled="balances.some((b, i) => i !== index && b.currency === curr.code)"
             >
               {{ curr.flag }} {{ curr.code }}
             </option>
@@ -93,12 +76,8 @@ function addCurrency(code: string) {
             :model-value="String(balance.balance)"
             placeholder="0"
             variant="currency"
-            :suffix="
-              getCurrencyByCode(balance.currency)?.symbol || balance.currency
-            "
-            @update:model-value="
-              $emit('updateBalance', index, Number($event) || 0)
-            "
+            :suffix="getCurrencyByCode(balance.currency)?.symbol || balance.currency"
+            @update:model-value="$emit('updateBalance', index, Number($event) || 0)"
           />
         </div>
 
@@ -121,22 +100,14 @@ function addCurrency(code: string) {
     <!-- Add currency button -->
     <div v-if="availableCurrencies.length > 0">
       <div v-if="!showCurrencyPicker">
-        <UButton
-          type="button"
-          variant="ghost"
-          size="sm"
-          @click="showCurrencyPicker = true"
-        >
+        <UButton type="button" variant="ghost" size="sm" @click="showCurrencyPicker = true">
           <UIcon name="add" size="sm" class="mr-1" />
           Добавить валюту
         </UButton>
       </div>
 
       <!-- Currency picker dropdown -->
-      <div
-        v-else
-        class="flex flex-wrap gap-2 p-3 bg-surface-light dark:bg-surface-dark rounded-xl"
-      >
+      <div v-else class="flex flex-wrap gap-2 p-3 bg-surface-light dark:bg-surface-dark rounded-xl">
         <button
           v-for="currency in availableCurrencies"
           :key="currency.code"

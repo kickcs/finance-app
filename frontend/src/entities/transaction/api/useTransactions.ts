@@ -2,10 +2,7 @@ import { computed, toValue, type MaybeRefOrGetter } from 'vue';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import { transactionQueryKeys } from './queryKeys';
 import { transactionsApi } from './transactionsApi';
-import type {
-  Transaction,
-  TransactionInsert,
-} from '@/shared/api/database.types';
+import type { Transaction, TransactionInsert } from '@/shared/api/database.types';
 
 export function useTransactions(userId: MaybeRefOrGetter<string | null>) {
   const queryClient = useQueryClient();
@@ -48,9 +45,7 @@ export function useTransactions(userId: MaybeRefOrGetter<string | null>) {
       // Update account balance (skip for transfers - handled separately)
       if (transaction.type !== 'transfer') {
         const balanceChange =
-          transaction.type === 'income'
-            ? transaction.amount
-            : -transaction.amount;
+          transaction.type === 'income' ? transaction.amount : -transaction.amount;
         await updateBalance(transaction.account_id, balanceChange);
       }
 
@@ -61,9 +56,7 @@ export function useTransactions(userId: MaybeRefOrGetter<string | null>) {
       if (!uid) return;
 
       await queryClient.cancelQueries({ queryKey: queryKey.value });
-      const previousTransactions = queryClient.getQueryData<Transaction[]>(
-        queryKey.value,
-      );
+      const previousTransactions = queryClient.getQueryData<Transaction[]>(queryKey.value);
 
       const optimisticTransaction: Transaction = {
         id: `temp-${Date.now()}`,
@@ -107,17 +100,13 @@ export function useTransactions(userId: MaybeRefOrGetter<string | null>) {
       // Revert balance (skip for transfers - they need special handling)
       if (transaction.type !== 'transfer') {
         const balanceRevert =
-          transaction.type === 'income'
-            ? -transaction.amount
-            : transaction.amount;
+          transaction.type === 'income' ? -transaction.amount : transaction.amount;
         await updateBalance(transaction.account_id, balanceRevert);
       }
     },
     onMutate: async ({ id }) => {
       await queryClient.cancelQueries({ queryKey: queryKey.value });
-      const previousTransactions = queryClient.getQueryData<Transaction[]>(
-        queryKey.value,
-      );
+      const previousTransactions = queryClient.getQueryData<Transaction[]>(queryKey.value);
 
       queryClient.setQueryData<Transaction[]>(
         queryKey.value,
@@ -158,11 +147,7 @@ export function useTransactions(userId: MaybeRefOrGetter<string | null>) {
   async function getByDateRange(startDate: Date, endDate: Date) {
     const uid = toValue(userId);
     if (!uid) return [];
-    return transactionsApi.getByDateRange(
-      uid,
-      startDate.toISOString(),
-      endDate.toISOString(),
-    );
+    return transactionsApi.getByDateRange(uid, startDate.toISOString(), endDate.toISOString());
   }
 
   async function getMonthlySummary(year: number, month: number) {
@@ -172,9 +157,7 @@ export function useTransactions(userId: MaybeRefOrGetter<string | null>) {
     const data = await getByDateRange(startDate, endDate);
 
     // Filter out debt-related transactions and transfers from money flow calculations
-    const nonDebtTransactions = data.filter(
-      (t) => !t.is_debt_related && t.type !== 'transfer',
-    );
+    const nonDebtTransactions = data.filter((t) => !t.is_debt_related && t.type !== 'transfer');
 
     const income = nonDebtTransactions
       .filter((t) => t.type === 'income')

@@ -1,10 +1,7 @@
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 import { Inject, NotFoundException } from '@nestjs/common';
 import { GetRateQuery } from './get-rate.query';
-import {
-  IExchangeRateRepository,
-  EXCHANGE_RATE_REPOSITORY,
-} from '../../../domain/repositories';
+import { IExchangeRateRepository, EXCHANGE_RATE_REPOSITORY } from '../../../domain/repositories';
 
 const INTERMEDIATE_CURRENCY = 'USD';
 
@@ -34,10 +31,7 @@ export class GetRateHandler implements IQueryHandler<GetRateQuery> {
     }
 
     // Try to find direct rate
-    const exchangeRate = await this.exchangeRateRepository.findByPair(
-      base,
-      target,
-    );
+    const exchangeRate = await this.exchangeRateRepository.findByPair(base, target);
 
     if (exchangeRate) {
       return {
@@ -51,10 +45,7 @@ export class GetRateHandler implements IQueryHandler<GetRateQuery> {
     }
 
     // Try inverse rate
-    const inverseRate = await this.exchangeRateRepository.findByPair(
-      target,
-      base,
-    );
+    const inverseRate = await this.exchangeRateRepository.findByPair(target, base);
 
     if (inverseRate) {
       return {
@@ -82,31 +73,21 @@ export class GetRateHandler implements IQueryHandler<GetRateQuery> {
       }
     }
 
-    throw new NotFoundException(
-      `Exchange rate not found for ${baseCurrency}/${targetCurrency}`,
-    );
+    throw new NotFoundException(`Exchange rate not found for ${baseCurrency}/${targetCurrency}`);
   }
 
   private async calculateCrossRate(
     from: string,
     to: string,
   ): Promise<{ rate: number; updatedAt: Date } | null> {
-    const usdToFrom = await this.exchangeRateRepository.findByPair(
-      INTERMEDIATE_CURRENCY,
-      from,
-    );
-    const usdToTo = await this.exchangeRateRepository.findByPair(
-      INTERMEDIATE_CURRENCY,
-      to,
-    );
+    const usdToFrom = await this.exchangeRateRepository.findByPair(INTERMEDIATE_CURRENCY, from);
+    const usdToTo = await this.exchangeRateRepository.findByPair(INTERMEDIATE_CURRENCY, to);
 
     if (usdToFrom && usdToTo) {
       const fromToUsd = 1 / usdToFrom.rate;
       const rate = fromToUsd * usdToTo.rate;
       const updatedAt =
-        usdToFrom.updatedAt > usdToTo.updatedAt
-          ? usdToTo.updatedAt
-          : usdToFrom.updatedAt;
+        usdToFrom.updatedAt > usdToTo.updatedAt ? usdToTo.updatedAt : usdToFrom.updatedAt;
 
       return { rate, updatedAt };
     }

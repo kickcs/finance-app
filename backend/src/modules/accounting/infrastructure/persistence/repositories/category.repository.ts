@@ -48,9 +48,7 @@ export class CategoryRepository implements ICategoryRepository {
   }
 
   async saveMany(categories: Category[]): Promise<Category[]> {
-    const ormEntities = categories.map((category) =>
-      CategoryMapper.toOrm(category),
-    );
+    const ormEntities = categories.map((category) => CategoryMapper.toOrm(category));
     const savedEntities = await this.ormRepository.save(ormEntities);
     return savedEntities.map((entity) => CategoryMapper.toDomain(entity));
   }

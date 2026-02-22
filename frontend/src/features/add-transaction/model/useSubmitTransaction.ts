@@ -1,24 +1,17 @@
 // frontend/src/features/add-transaction/model/useSubmitTransaction.ts
-import { useMutation, useQueryClient, type InfiniteData, type QueryClient } from '@tanstack/vue-query';
 import {
-  transactionsApi,
-  transactionQueryKeys,
-} from '@/entities/transaction';
+  useMutation,
+  useQueryClient,
+  type InfiniteData,
+  type QueryClient,
+} from '@tanstack/vue-query';
+import { transactionsApi, transactionQueryKeys } from '@/entities/transaction';
 import { accountQueryKeys } from '@/entities/account';
-import {
-  invalidateTransactionRelated,
-  invalidateAccountRelated,
-} from '@/shared/api/invalidation';
+import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
 import { useToast } from '@/shared/ui';
 import type { TransactionFormData } from './useTransactionForm';
-import type {
-  Transaction,
-  AccountWithBalances,
-} from '@/shared/api/database.types';
-import type {
-  MonthlyStats,
-  PaginatedResult,
-} from '@/entities/transaction/api/transactionsApi';
+import type { Transaction, AccountWithBalances } from '@/shared/api/database.types';
+import type { MonthlyStats, PaginatedResult } from '@/entities/transaction/api/transactionsApi';
 
 const TRANSACTION_TYPE_LABELS: Record<TransactionFormData['type'], string> = {
   income: 'Доход',
@@ -82,7 +75,10 @@ function getCacheKeys(userId: string, formData: TransactionFormData) {
 
 async function cancelRelatedQueries(
   queryClient: QueryClient,
-  keys: Pick<OptimisticSnapshots, 'recentKey' | 'listKey' | 'accountsKey' | 'monthlyStatsKey' | 'infinitePrefix'>,
+  keys: Pick<
+    OptimisticSnapshots,
+    'recentKey' | 'listKey' | 'accountsKey' | 'monthlyStatsKey' | 'infinitePrefix'
+  >,
 ) {
   await Promise.all([
     queryClient.cancelQueries({ queryKey: keys.recentKey }),
@@ -122,9 +118,9 @@ function snapshotAndApplyOptimistic(
   const previousList = queryClient.getQueryData<Transaction[]>(keys.listKey);
   const previousAccounts = queryClient.getQueryData<AccountWithBalances[]>(keys.accountsKey);
   const previousMonthlyStats = queryClient.getQueryData<MonthlyStats>(keys.monthlyStatsKey);
-  const previousInfinite = queryClient.getQueriesData<
-    InfiniteData<PaginatedResult<Transaction>>
-  >({ queryKey: keys.infinitePrefix });
+  const previousInfinite = queryClient.getQueriesData<InfiniteData<PaginatedResult<Transaction>>>({
+    queryKey: keys.infinitePrefix,
+  });
 
   // Apply optimistic updates (all sync)
 
@@ -135,23 +131,21 @@ function snapshotAndApplyOptimistic(
   ]);
 
   // 2. Prepend to list
-  queryClient.setQueryData<Transaction[]>(keys.listKey, (old) => [
-    optimisticTx,
-    ...(old ?? []),
-  ]);
+  queryClient.setQueryData<Transaction[]>(keys.listKey, (old) => [optimisticTx, ...(old ?? [])]);
 
   // 3. Prepend to all infinite queries
-  queryClient.setQueriesData<
-    InfiniteData<PaginatedResult<Transaction>> | undefined
-  >({ queryKey: keys.infinitePrefix }, (old) => {
-    if (!old || old.pages.length === 0) return old;
-    const newPages = [...old.pages];
-    newPages[0] = {
-      ...newPages[0],
-      data: [optimisticTx, ...newPages[0].data],
-    };
-    return { ...old, pages: newPages };
-  });
+  queryClient.setQueriesData<InfiniteData<PaginatedResult<Transaction>> | undefined>(
+    { queryKey: keys.infinitePrefix },
+    (old) => {
+      if (!old || old.pages.length === 0) return old;
+      const newPages = [...old.pages];
+      newPages[0] = {
+        ...newPages[0],
+        data: [optimisticTx, ...newPages[0].data],
+      };
+      return { ...old, pages: newPages };
+    },
+  );
 
   // 4. Update account balance
   if (previousAccounts) {
@@ -159,14 +153,11 @@ function snapshotAndApplyOptimistic(
       if (!old) return old;
       return old.map((account) => {
         if (account.id === formData.accountId) {
-          const balanceChange =
-            formData.type === 'income' ? formData.amount : -formData.amount;
+          const balanceChange = formData.type === 'income' ? formData.amount : -formData.amount;
           return {
             ...account,
             balances: account.balances.map((b) =>
-              b.currency === formData.currency
-                ? { ...b, balance: b.balance + balanceChange }
-                : b,
+              b.currency === formData.currency ? { ...b, balance: b.balance + balanceChange } : b,
             ),
           };
         }
@@ -200,8 +191,7 @@ function snapshotAndApplyOptimistic(
           total_income: old.total_income + formData.amount,
           income_by_currency: {
             ...old.income_by_currency,
-            [formData.currency]:
-              (old.income_by_currency[formData.currency] ?? 0) + formData.amount,
+            [formData.currency]: (old.income_by_currency[formData.currency] ?? 0) + formData.amount,
           },
         };
       }
@@ -210,8 +200,7 @@ function snapshotAndApplyOptimistic(
         total_expense: old.total_expense + formData.amount,
         expense_by_currency: {
           ...old.expense_by_currency,
-          [formData.currency]:
-            (old.expense_by_currency[formData.currency] ?? 0) + formData.amount,
+          [formData.currency]: (old.expense_by_currency[formData.currency] ?? 0) + formData.amount,
         },
       };
     });

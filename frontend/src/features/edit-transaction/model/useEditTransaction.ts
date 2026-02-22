@@ -2,10 +2,7 @@ import { ref } from 'vue';
 import { transactionsApi } from '@/entities/transaction';
 import { debtsApi } from '@/entities/debt';
 import { queryClient } from '@/shared/api/queryClient';
-import {
-  invalidateTransactionRelated,
-  invalidateAccountRelated,
-} from '@/shared/api/invalidation';
+import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
 import type { Transaction } from '@/shared/api/database.types';
 
 export function useEditTransaction(userId: string) {
@@ -13,14 +10,10 @@ export function useEditTransaction(userId: string) {
   const isDeleting = ref(false);
   const error = ref<string | null>(null);
 
-  async function update(
-    transaction: Transaction,
-    updates: Partial<Transaction>,
-  ) {
+  async function update(transaction: Transaction, updates: Partial<Transaction>) {
     // Debt-related transactions cannot be edited
     if (transaction.is_debt_related) {
-      error.value =
-        'Транзакции долгов нельзя редактировать. Управляйте долгом в разделе "Долги"';
+      error.value = 'Транзакции долгов нельзя редактировать. Управляйте долгом в разделе "Долги"';
       return false;
     }
 
@@ -58,8 +51,7 @@ export function useEditTransaction(userId: string) {
   async function remove(transaction: Transaction) {
     // Debt-related transactions cannot be deleted directly
     if (transaction.is_debt_related) {
-      error.value =
-        'Транзакции долгов нельзя удалять. Удалите долг в разделе "Долги"';
+      error.value = 'Транзакции долгов нельзя удалять. Удалите долг в разделе "Долги"';
       return false;
     }
 

@@ -1,9 +1,5 @@
 // Re-export from database types for consistency
-export type {
-  Account,
-  AccountWithBalances,
-  AccountBalance,
-} from '@/shared/api/database.types';
+export type { Account, AccountWithBalances, AccountBalance } from '@/shared/api/database.types';
 export type AccountId = string;
 
 export interface AccountTypeFieldValues {
