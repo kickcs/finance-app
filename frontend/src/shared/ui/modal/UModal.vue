@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { watch } from 'vue';
 import {
   DialogRoot,
   DialogPortal,
@@ -11,7 +10,7 @@ import {
 import { cn } from '@/shared/lib/utils';
 import { UIcon } from '../icon';
 
-const props = withDefaults(
+withDefaults(
   defineProps<{
     modelValue: boolean;
     title?: string;
@@ -33,8 +32,6 @@ function handleOpenChange(open: boolean) {
     emit('close');
   }
 }
-
-
 </script>
 
 <template>

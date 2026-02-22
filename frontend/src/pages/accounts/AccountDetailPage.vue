@@ -2,21 +2,10 @@
 import { ref, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
-import {
-  UButton,
-  UIcon,
-  UCard,
-  EmptyState,
-  USpinner,
-  NotFoundState,
-} from '@/shared/ui';
+import { UButton, UIcon, UCard, EmptyState, USpinner, NotFoundState } from '@/shared/ui';
 import { AppHeader } from '@/widgets/header';
 import { formatCurrency } from '@/shared/lib/format/currency';
-import {
-  useAccounts,
-  getAccountTypeLabel,
-  type AccountWithBalances,
-} from '@/entities/account';
+import { useAccounts, getAccountTypeLabel, type AccountWithBalances } from '@/entities/account';
 import {
   VirtualGroupedTransactionList,
   TransactionGroupSkeleton,
@@ -27,11 +16,7 @@ import {
   type Transaction,
 } from '@/entities/transaction';
 import { useQuery } from '@tanstack/vue-query';
-import {
-  EditAccountModal,
-  DeleteAccountModal,
-  useEditAccount,
-} from '@/features/edit-account';
+import { EditAccountModal, DeleteAccountModal, useEditAccount } from '@/features/edit-account';
 import {
   EditTransactionModal,
   DeleteTransactionModal,
@@ -115,13 +100,8 @@ const {
 } = useEditAccount(userId.value);
 
 // Total transaction count for this account (lazy - only fetched when delete modal opens)
-const {
-  data: accountTransactionsCount,
-  isLoading: isLoadingTransactionsCount,
-} = useQuery({
-  queryKey: computed(() =>
-    transactionQueryKeys.countByAccount(accountId.value),
-  ),
+const { data: accountTransactionsCount, isLoading: isLoadingTransactionsCount } = useQuery({
+  queryKey: computed(() => transactionQueryKeys.countByAccount(accountId.value)),
   queryFn: () => transactionsApi.countByAccount(accountId.value),
   enabled: computed(() => showDeleteAccountModal.value && !!accountId.value),
 });
@@ -209,7 +189,9 @@ async function handleSetAsDefault() {
 </script>
 
 <template>
-  <div class="min-h-screen bg-background-light dark:bg-background-dark pb-28">
+  <div
+    class="h-full flex flex-col relative bg-background-light dark:bg-background-dark pb-28 md:pb-8 overflow-y-auto"
+  >
     <!-- Header -->
     <AppHeader :title="account?.name ?? 'Счёт'" show-back blur @back="goBack" />
 
@@ -233,19 +215,19 @@ async function handleSetAsDefault() {
               class="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-sm"
               :style="{ backgroundColor: `${account.color}15` }"
             >
-              <UIcon
-                :name="account.icon"
-                size="lg"
-                :style="{ color: account.color }"
-              />
+              <UIcon :name="account.icon" size="lg" :style="{ color: account.color }" />
             </div>
 
             <!-- Info -->
             <div class="flex-1 min-w-0 pt-1">
-              <p class="text-xl font-bold text-text-primary-light dark:text-text-primary-dark truncate">
+              <p
+                class="text-xl font-bold text-text-primary-light dark:text-text-primary-dark truncate"
+              >
                 {{ account.name }}
               </p>
-              <p class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mt-0.5">
+              <p
+                class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mt-0.5"
+              >
                 {{ getAccountTypeLabel(account.type) }}
               </p>
             </div>
@@ -255,10 +237,10 @@ async function handleSetAsDefault() {
               v-if="!isDefaultAccount(account.id)"
               class="shrink-0 w-10 h-10 -mt-1 -mr-1 rounded-xl flex items-center justify-center text-text-tertiary-light dark:text-text-tertiary-dark hover:bg-surface-light dark:hover:bg-surface-dark transition-colors"
               :disabled="isSettingDefault"
-              @click="handleSetAsDefault"
               aria-label="Сделать по умолчанию"
+              @click="handleSetAsDefault"
             >
-              <UIcon name="star" size="md" :class="{'animate-pulse': isSettingDefault}" />
+              <UIcon name="star" size="md" :class="{ 'animate-pulse': isSettingDefault }" />
             </button>
             <div
               v-else
@@ -271,26 +253,14 @@ async function handleSetAsDefault() {
 
           <!-- Credit Card Balances -->
           <div
-            v-if="
-              account.type === 'credit_card' && account.credit_limit != null
-            "
+            v-if="account.type === 'credit_card' && account.credit_limit != null"
             class="mt-6 pt-6 border-t border-border-light dark:border-border-dark space-y-4"
           >
-            <div
-              v-for="balance in account.balances"
-              :key="balance.currency"
-              class="space-y-3"
-            >
+            <div v-for="balance in account.balances" :key="balance.currency" class="space-y-3">
               <!-- Balance row -->
               <div class="flex justify-between items-center">
-                <span
-                  class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
-                >
-                  {{
-                    balance.balance < 0
-                      ? 'Задолженность'
-                      : 'Собственные средства'
-                  }}
+                <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
+                  {{ balance.balance < 0 ? 'Задолженность' : 'Собственные средства' }}
                 </span>
                 <span
                   class="text-xl font-bold"
@@ -306,26 +276,19 @@ async function handleSetAsDefault() {
 
               <!-- Available -->
               <div class="flex justify-between items-center">
-                <span
-                  class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
-                  >Доступно</span
-                >
+                <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
+                  Доступно
+                </span>
                 <span class="text-sm font-semibold text-success">
-                  {{
-                    formatCurrency(
-                      account.credit_limit + balance.balance,
-                      balance.currency,
-                    )
-                  }}
+                  {{ formatCurrency(account.credit_limit + balance.balance, balance.currency) }}
                 </span>
               </div>
 
               <!-- Limit -->
               <div class="flex justify-between items-center">
-                <span
-                  class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
-                  >Лимит</span
-                >
+                <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
+                  Лимит
+                </span>
                 <span
                   class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark"
                 >
@@ -334,12 +297,19 @@ async function handleSetAsDefault() {
               </div>
 
               <!-- Progress bar -->
-              <div
-                v-if="balance.balance < 0 && account.credit_limit > 0"
-                class="space-y-1"
-              >
+              <div v-if="balance.balance < 0 && account.credit_limit > 0" class="space-y-1">
                 <div
                   class="h-2 rounded-full bg-surface-light dark:bg-surface-dark overflow-hidden"
+                  role="progressbar"
+                  :aria-valuenow="
+                    Math.min(
+                      Math.round((Math.abs(balance.balance) / account.credit_limit) * 100),
+                      100,
+                    )
+                  "
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                  :aria-label="`Использовано ${Math.min(Math.round((Math.abs(balance.balance) / account.credit_limit) * 100), 100)}% кредитного лимита`"
                 >
                   <div
                     class="h-full rounded-full transition-all duration-300"
@@ -353,27 +323,17 @@ async function handleSetAsDefault() {
                     }"
                   />
                 </div>
-                <p
-                  class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark text-right"
-                >
-                  {{
-                    Math.round(
-                      (Math.abs(balance.balance) / account.credit_limit) * 100,
-                    )
-                  }}% использовано
+                <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark text-right">
+                  {{ Math.round((Math.abs(balance.balance) / account.credit_limit) * 100) }}%
+                  использовано
                 </p>
               </div>
             </div>
           </div>
 
           <!-- Regular Balances -->
-          <div
-            v-else
-            class="mt-6 pt-6 border-t border-border-light dark:border-border-dark"
-          >
-            <span
-              class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
-            >
+          <div v-else class="mt-6 pt-6 border-t border-border-light dark:border-border-dark">
+            <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
               Баланс
             </span>
             <div class="mt-2 space-y-2">
@@ -382,14 +342,10 @@ async function handleSetAsDefault() {
                 :key="balance.currency"
                 class="flex justify-between items-center"
               >
-                <span
-                  class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
-                >
+                <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
                   {{ balance.currency }}
                 </span>
-                <span
-                  class="text-xl font-bold text-text-primary-light dark:text-text-primary-dark"
-                >
+                <span class="text-xl font-bold text-text-primary-light dark:text-text-primary-dark">
                   {{ formatCurrency(balance.balance, balance.currency) }}
                 </span>
               </div>
@@ -398,11 +354,7 @@ async function handleSetAsDefault() {
 
           <!-- Inline Actions -->
           <div class="flex gap-2 mt-4">
-            <UButton
-              variant="secondary"
-              class="flex-1"
-              @click="showEditAccountModal = true"
-            >
+            <UButton variant="secondary" class="flex-1" @click="showEditAccountModal = true">
               <UIcon name="edit" size="sm" class="mr-1.5" />
               Изменить
             </UButton>
@@ -430,31 +382,21 @@ async function handleSetAsDefault() {
             Параметры кредитной карты
           </h3>
           <div class="space-y-2">
-            <div
-              v-if="account.grace_period_days != null"
-              class="flex justify-between"
-            >
-              <span
-                class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
-                >Грейс-период</span
-              >
-              <span
-                class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
-                >{{ account.grace_period_days }} дней</span
-              >
+            <div v-if="account.grace_period_days != null" class="flex justify-between">
+              <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
+                Грейс-период
+              </span>
+              <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
+                {{ account.grace_period_days }} дней
+              </span>
             </div>
-            <div
-              v-if="account.billing_day != null"
-              class="flex justify-between"
-            >
-              <span
-                class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
-                >День выписки</span
-              >
-              <span
-                class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
-                >{{ account.billing_day }}-е число</span
-              >
+            <div v-if="account.billing_day != null" class="flex justify-between">
+              <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
+                День выписки
+              </span>
+              <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
+                {{ account.billing_day }}-е число
+              </span>
             </div>
           </div>
         </UCard>
@@ -472,76 +414,47 @@ async function handleSetAsDefault() {
             Параметры кредита
           </h3>
           <div class="space-y-2">
-            <div
-              v-if="account.total_amount != null"
-              class="flex justify-between"
-            >
-              <span
-                class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
-                >Сумма кредита</span
-              >
-              <span
-                class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
-              >
-                {{
-                  formatCurrency(
-                    account.total_amount,
-                    account.balances?.[0]?.currency ?? 'UZS',
-                  )
-                }}
+            <div v-if="account.total_amount != null" class="flex justify-between">
+              <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
+                Сумма кредита
+              </span>
+              <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
+                {{ formatCurrency(account.total_amount, account.balances?.[0]?.currency ?? 'UZS') }}
               </span>
             </div>
-            <div
-              v-if="account.interest_rate != null"
-              class="flex justify-between"
-            >
-              <span
-                class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
-                >Ставка</span
-              >
-              <span
-                class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
-                >{{ account.interest_rate }}%</span
-              >
+            <div v-if="account.interest_rate != null" class="flex justify-between">
+              <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
+                Ставка
+              </span>
+              <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
+                {{ account.interest_rate }}%
+              </span>
             </div>
-            <div
-              v-if="account.monthly_payment != null"
-              class="flex justify-between"
-            >
-              <span
-                class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
-                >Ежемесячный платёж</span
-              >
-              <span
-                class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
-              >
+            <div v-if="account.monthly_payment != null" class="flex justify-between">
+              <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
+                Ежемесячный платёж
+              </span>
+              <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
                 {{
-                  formatCurrency(
-                    account.monthly_payment,
-                    account.balances?.[0]?.currency ?? 'UZS',
-                  )
+                  formatCurrency(account.monthly_payment, account.balances?.[0]?.currency ?? 'UZS')
                 }}
               </span>
             </div>
             <div v-if="account.start_date" class="flex justify-between">
-              <span
-                class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
-                >Дата начала</span
-              >
-              <span
-                class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
-                >{{ account.start_date }}</span
-              >
+              <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
+                Дата начала
+              </span>
+              <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
+                {{ account.start_date }}
+              </span>
             </div>
             <div v-if="account.end_date" class="flex justify-between">
-              <span
-                class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
-                >Дата окончания</span
-              >
-              <span
-                class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
-                >{{ account.end_date }}</span
-              >
+              <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
+                Дата окончания
+              </span>
+              <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
+                {{ account.end_date }}
+              </span>
             </div>
           </div>
         </UCard>
@@ -559,54 +472,37 @@ async function handleSetAsDefault() {
             Параметры вклада
           </h3>
           <div class="space-y-2">
-            <div
-              v-if="account.interest_rate != null"
-              class="flex justify-between"
-            >
-              <span
-                class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
-                >Ставка</span
-              >
-              <span
-                class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
-                >{{ account.interest_rate }}%</span
-              >
+            <div v-if="account.interest_rate != null" class="flex justify-between">
+              <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
+                Ставка
+              </span>
+              <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
+                {{ account.interest_rate }}%
+              </span>
             </div>
             <div v-if="account.maturity_date" class="flex justify-between">
-              <span
-                class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
-                >Дата окончания</span
-              >
-              <span
-                class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
-                >{{ account.maturity_date }}</span
-              >
+              <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
+                Дата окончания
+              </span>
+              <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
+                {{ account.maturity_date }}
+              </span>
             </div>
-            <div
-              v-if="account.is_replenishable != null"
-              class="flex justify-between"
-            >
-              <span
-                class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
-                >Пополняемый</span
-              >
-              <span
-                class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
-                >{{ account.is_replenishable ? 'Да' : 'Нет' }}</span
-              >
+            <div v-if="account.is_replenishable != null" class="flex justify-between">
+              <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
+                Пополняемый
+              </span>
+              <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
+                {{ account.is_replenishable ? 'Да' : 'Нет' }}
+              </span>
             </div>
-            <div
-              v-if="account.is_withdrawable != null"
-              class="flex justify-between"
-            >
-              <span
-                class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
-                >С возможностью снятия</span
-              >
-              <span
-                class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
-                >{{ account.is_withdrawable ? 'Да' : 'Нет' }}</span
-              >
+            <div v-if="account.is_withdrawable != null" class="flex justify-between">
+              <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
+                С возможностью снятия
+              </span>
+              <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
+                {{ account.is_withdrawable ? 'Да' : 'Нет' }}
+              </span>
             </div>
           </div>
         </UCard>
@@ -620,10 +516,7 @@ async function handleSetAsDefault() {
           </h2>
 
           <!-- Loading Transactions -->
-          <div
-            v-if="isLoadingTransactions && accountTransactions.length === 0"
-            class="space-y-4"
-          >
+          <div v-if="isLoadingTransactions && accountTransactions.length === 0" class="space-y-4">
             <TransactionGroupSkeleton :count="3" />
             <TransactionGroupSkeleton :count="2" />
           </div>
@@ -634,7 +527,10 @@ async function handleSetAsDefault() {
               icon="receipt_long"
               title="Здесь пока пусто"
               description="Добавьте первую транзакцию по этому счету"
-              :action="{ label: 'Добавить', onClick: () => router.push('/transactions/new') }"
+              :action="{
+                label: 'Добавить',
+                onClick: () => router.push('/transactions/new'),
+              }"
             />
           </UCard>
 
@@ -646,7 +542,7 @@ async function handleSetAsDefault() {
             :has-next-page="hasNextPage"
             :is-fetching-next-page="isFetchingNextPage"
             :get-account-name="getAccountName"
-            height="400px"
+            height="min(calc(100dvh - 320px), 600px)"
             @load-more="fetchNextPage"
             @transaction-click="handleTransactionClick"
           />

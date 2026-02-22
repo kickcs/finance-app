@@ -79,14 +79,14 @@ provide('getCategoryById', getCategoryById);
 
       <!-- App content -->
       <RouterView v-slot="{ Component, route }">
-        <!-- When transitionName is 'none' (browser gesture), skip Transition entirely -->
+        <!-- Skip transitions in App.vue for nested routes (they are handled in MainLayout) -->
         <component
           :is="Component"
-          v-if="transitionName === 'none'"
-          :key="route.path"
+          v-if="transitionName === 'none' || route.matched.length > 1"
+          :key="route.matched[0]?.path ?? route.path"
         />
         <Transition v-else :name="transitionName">
-          <component :is="Component" :key="route.path" />
+          <component :is="Component" :key="route.matched[0]?.path ?? route.path" />
         </Transition>
       </RouterView>
     </div>

@@ -10,7 +10,7 @@ const props = defineProps<{
   limit?: number;
 }>();
 
-const emit = defineEmits<{
+defineEmits<{
   'category-click': [category: CategoryStat];
 }>();
 
@@ -34,11 +34,7 @@ function getBarWidth(amount: number): string {
 <template>
   <UCard padding="lg" variant="bordered" class="shadow-sm">
     <div v-if="topCategories.length > 0" class="space-y-4">
-      <div
-        v-for="(category, index) in topCategories"
-        :key="category.id"
-        class="w-full text-left"
-      >
+      <div v-for="(category, index) in topCategories" :key="category.id" class="w-full text-left">
         <div class="flex items-center gap-3 mb-2">
           <!-- Rank -->
           <span
@@ -53,12 +49,7 @@ function getBarWidth(amount: number): string {
           </span>
 
           <!-- Category icon -->
-          <IconBadge
-            :icon="category.icon"
-            size="sm"
-            :color="category.color"
-            class="shrink-0"
-          />
+          <IconBadge :icon="category.icon" size="sm" :color="category.color" class="shrink-0" />
 
           <!-- Category name -->
           <span
@@ -69,23 +60,17 @@ function getBarWidth(amount: number): string {
 
           <!-- Amount and percent -->
           <div class="text-right">
-            <p
-              class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark"
-            >
+            <p class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark">
               {{ formatCurrency(category.amount, currency) }}
             </p>
-            <p
-              class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
-            >
+            <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
               {{ category.percent.toFixed(1) }}%
             </p>
           </div>
         </div>
 
         <!-- Progress bar - thin and flat -->
-        <div
-          class="h-1.5 bg-surface-light dark:bg-surface-dark rounded-full overflow-hidden"
-        >
+        <div class="h-1.5 bg-surface-light dark:bg-surface-dark rounded-full overflow-hidden">
           <div
             class="h-full rounded-full transition-all duration-200 ease-out"
             :style="{

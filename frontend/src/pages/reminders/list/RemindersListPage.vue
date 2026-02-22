@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
-import { BottomNav } from '@/widgets/bottom-nav';
 import { AppHeader } from '@/widgets/header';
 import { ReminderCard, useReminders, type Reminder } from '@/entities/reminder';
 import { UButton, UIcon, UCard, EmptyState } from '@/shared/ui';
@@ -31,17 +30,19 @@ const todayReminders = computed(() => {
   });
 });
 
-// Calculate reminders due this week
+// Calculate reminders due this week (excluding today)
 const thisWeekReminders = computed(() => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
   const nextWeek = new Date(today);
   nextWeek.setDate(nextWeek.getDate() + 7);
 
   return reminders.value.filter((r) => {
     if (!r.next_date) return false;
     const date = new Date(r.next_date);
-    return date >= today && date < nextWeek;
+    return date >= tomorrow && date < nextWeek;
   });
 });
 
@@ -67,14 +68,12 @@ function handleReminderClick(reminder: Reminder) {
 function handleAddReminder() {
   router.push({ name: 'new-reminder' });
 }
-
-function handleAddTransaction() {
-  router.push('/transactions/new');
-}
 </script>
 
 <template>
-  <div class="min-h-screen bg-background-light dark:bg-background-dark pb-28">
+  <div
+    class="h-full flex flex-col relative bg-background-light dark:bg-background-dark pb-28 md:pb-8 overflow-y-auto"
+  >
     <!-- Header -->
     <AppHeader blur show-back title="Напоминания" @back="goBack">
       <template #actions>
@@ -82,6 +81,7 @@ function handleAddTransaction() {
           variant="ghost"
           size="sm"
           class="!p-2"
+          aria-label="Добавить напоминание"
           @click="handleAddReminder"
         >
           <UIcon name="add" size="sm" />
@@ -95,11 +95,7 @@ function handleAddTransaction() {
       <div v-if="reminders.length > 0" class="grid grid-cols-2 gap-3">
         <!-- Today count -->
         <UCard class="p-4">
-          <p
-            class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark mb-1"
-          >
-            Сегодня
-          </p>
+          <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark mb-1">Сегодня</p>
           <p class="text-lg font-bold text-reminder">
             {{ todayReminders.length }}
           </p>
@@ -107,9 +103,7 @@ function handleAddTransaction() {
 
         <!-- This week count -->
         <UCard class="p-4">
-          <p
-            class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark mb-1"
-          >
+          <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark mb-1">
             На этой неделе
           </p>
           <p class="text-lg font-bold text-primary">
@@ -120,18 +114,12 @@ function handleAddTransaction() {
 
       <!-- Reminders List -->
       <div class="space-y-3">
-        <h2
-          class="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark px-1"
-        >
+        <h2 class="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark px-1">
           Все подписки
         </h2>
 
         <div v-if="reminders.length > 0" class="space-y-2">
-          <div
-            v-for="reminder in reminders"
-            :key="reminder.id"
-            class="relative"
-          >
+          <div v-for="reminder in reminders" :key="reminder.id" class="relative">
             <!-- Today highlight bar -->
             <div
               v-if="isDueToday(reminder)"
@@ -158,8 +146,5 @@ function handleAddTransaction() {
         </div>
       </div>
     </main>
-
-    <!-- Bottom Navigation -->
-    <BottomNav @add-click="handleAddTransaction" />
   </div>
 </template>
