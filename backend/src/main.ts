@@ -6,7 +6,7 @@ import express from 'express';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { rawBody: true });
 
   // Increase JSON body size limit for bulk import
   app.use(express.json({ limit: '5mb' }));

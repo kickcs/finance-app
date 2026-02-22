@@ -21,6 +21,7 @@ import {
   ReminderOrmEntity,
 } from './modules/planning/infrastructure/persistence/typeorm';
 import { ExchangeRateOrmEntity } from './modules/exchange/infrastructure/persistence/typeorm';
+import { UserSubscriptionOrmEntity } from './modules/subscription/infrastructure/persistence/typeorm';
 
 // Legacy entity (to be migrated)
 import { Settings } from './database/entities';
@@ -31,6 +32,7 @@ import { AccountingModule } from './modules/accounting';
 import { DebtModule } from './modules/debt';
 import { PlanningModule } from './modules/planning';
 import { ExchangeModule } from './modules/exchange';
+import { SubscriptionModule } from './modules/subscription';
 @Module({
   imports: [
     // Configuration
@@ -60,6 +62,7 @@ import { ExchangeModule } from './modules/exchange';
           GoalOrmEntity,
           ReminderOrmEntity,
           ExchangeRateOrmEntity,
+          UserSubscriptionOrmEntity,
           // Legacy (to be migrated)
           Settings,
         ],
@@ -81,6 +84,7 @@ import { ExchangeModule } from './modules/exchange';
     DebtModule,
     PlanningModule,
     ExchangeModule,
+    SubscriptionModule,
 
     // Health check module
     HealthModule,
