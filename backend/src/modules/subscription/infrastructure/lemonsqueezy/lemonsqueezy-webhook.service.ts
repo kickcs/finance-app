@@ -29,21 +29,16 @@ export class LemonSqueezyWebhookService {
   private readonly webhookSecret: string;
 
   constructor(private readonly configService: ConfigService) {
-    this.webhookSecret = this.configService.getOrThrow<string>(
-      'LEMONSQUEEZY_WEBHOOK_SECRET',
-    );
+    this.webhookSecret = this.configService.getOrThrow<string>('LEMONSQUEEZY_WEBHOOK_SECRET');
   }
 
   verifySignature(rawBody: Buffer, signature: string): boolean {
     const hmac = crypto.createHmac('sha256', this.webhookSecret);
     const digest = hmac.update(rawBody).digest('hex');
-    return crypto.timingSafeEqual(
-      Buffer.from(digest),
-      Buffer.from(signature),
-    );
+    return crypto.timingSafeEqual(Buffer.from(digest), Buffer.from(signature));
   }
 
   parseEvent(rawBody: Buffer): LemonSqueezyWebhookEvent {
-    return JSON.parse(rawBody.toString());
+    return JSON.parse(rawBody.toString()) as LemonSqueezyWebhookEvent;
   }
 }

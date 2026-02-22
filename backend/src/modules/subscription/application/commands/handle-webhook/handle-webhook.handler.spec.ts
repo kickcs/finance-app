@@ -1,4 +1,4 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
 import { UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HandleWebhookHandler } from './handle-webhook.handler';
@@ -7,7 +7,7 @@ import { USER_SUBSCRIPTION_REPOSITORY } from '../../../domain/repositories';
 import { UserSubscription } from '../../../domain/aggregates/user-subscription/user-subscription.aggregate';
 import {
   LemonSqueezyWebhookService,
-  LemonSqueezyWebhookEvent,
+  type LemonSqueezyWebhookEvent,
 } from '../../../infrastructure/lemonsqueezy';
 import { SubscriptionPlan, SubscriptionStatus } from '../../../domain/value-objects';
 
@@ -57,9 +57,7 @@ describe('HandleWebhookHandler', () => {
     jest.clearAllMocks();
   });
 
-  function makeCommand(
-    event: LemonSqueezyWebhookEvent,
-  ): HandleWebhookCommand {
+  function makeCommand(event: LemonSqueezyWebhookEvent): HandleWebhookCommand {
     const rawBody = Buffer.from(JSON.stringify(event));
     return new HandleWebhookCommand(rawBody, 'valid-signature');
   }
@@ -96,14 +94,9 @@ describe('HandleWebhookHandler', () => {
   it('should throw UnauthorizedException for invalid signature', async () => {
     mockWebhookService.verifySignature.mockReturnValue(false);
 
-    const command = new HandleWebhookCommand(
-      Buffer.from('{}'),
-      'invalid-sig',
-    );
+    const command = new HandleWebhookCommand(Buffer.from('{}'), 'invalid-sig');
 
-    await expect(handler.execute(command)).rejects.toThrow(
-      UnauthorizedException,
-    );
+    await expect(handler.execute(command)).rejects.toThrow(UnauthorizedException);
     expect(mockWebhookService.verifySignature).toHaveBeenCalled();
   });
 
@@ -120,6 +113,7 @@ describe('HandleWebhookHandler', () => {
     await handler.execute(command);
 
     expect(mockRepository.save).toHaveBeenCalledTimes(1);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     const savedSub = mockRepository.save.mock.calls[0][0] as UserSubscription;
     expect(savedSub.planValue).toBe('premium_monthly');
     expect(savedSub.statusValue).toBe('active');
@@ -139,6 +133,7 @@ describe('HandleWebhookHandler', () => {
     await handler.execute(command);
 
     expect(mockRepository.save).toHaveBeenCalledTimes(1);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     const savedSub = mockRepository.save.mock.calls[0][0] as UserSubscription;
     expect(savedSub.planValue).toBe('premium_monthly');
     expect(savedSub.isPremium()).toBe(true);
@@ -172,6 +167,7 @@ describe('HandleWebhookHandler', () => {
     await handler.execute(command);
 
     expect(mockRepository.save).toHaveBeenCalledTimes(1);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     const savedSub = mockRepository.save.mock.calls[0][0] as UserSubscription;
     expect(savedSub.cancelAtPeriodEnd).toBe(true);
     expect(savedSub.isPremium()).toBe(true); // still premium until period end
@@ -205,6 +201,7 @@ describe('HandleWebhookHandler', () => {
     await handler.execute(command);
 
     expect(mockRepository.save).toHaveBeenCalledTimes(1);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     const savedSub = mockRepository.save.mock.calls[0][0] as UserSubscription;
     expect(savedSub.planValue).toBe('free');
     expect(savedSub.statusValue).toBe('expired');
@@ -226,6 +223,7 @@ describe('HandleWebhookHandler', () => {
 
     await handler.execute(command);
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     const savedSub = mockRepository.save.mock.calls[0][0] as UserSubscription;
     expect(savedSub.statusValue).toBe('trialing');
     expect(savedSub.trialEnd).toEqual(new Date('2026-03-01T00:00:00Z'));

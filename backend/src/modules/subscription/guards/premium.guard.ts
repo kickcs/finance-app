@@ -5,10 +5,12 @@ import {
   ForbiddenException,
   Inject,
 } from '@nestjs/common';
-import {
-  IUserSubscriptionRepository,
-  USER_SUBSCRIPTION_REPOSITORY,
-} from '../domain/repositories';
+import { Request } from 'express';
+import { IUserSubscriptionRepository, USER_SUBSCRIPTION_REPOSITORY } from '../domain/repositories';
+
+interface AuthenticatedRequest extends Request {
+  user?: { sub: string };
+}
 
 @Injectable()
 export class PremiumGuard implements CanActivate {
@@ -18,13 +20,12 @@ export class PremiumGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const userId = request.user?.sub;
     if (!userId) throw new ForbiddenException('Authentication required');
 
-    const subscription =
-      await this.subscriptionRepository.findByUserId(userId);
-    if (!subscription || !subscription.isPremium()) {
+    const subscription = await this.subscriptionRepository.findByUserId(userId);
+    if (!subscription?.isPremium()) {
       throw new ForbiddenException('Premium subscription required');
     }
 
