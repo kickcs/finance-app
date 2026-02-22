@@ -33,7 +33,7 @@ export class LemonSqueezyService {
     const variantId =
       params.plan === 'premium_monthly' ? this.monthlyVariantId : this.yearlyVariantId;
 
-    const { data, error } = await createCheckout(this.storeId, variantId, {
+    const { data, error } = await createCheckout(Number(this.storeId), Number(variantId), {
       checkoutData: {
         ...(params.userEmail ? { email: params.userEmail } : {}),
         custom: { user_id: params.userId },
