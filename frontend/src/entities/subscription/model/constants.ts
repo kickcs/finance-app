@@ -18,4 +18,5 @@ export const PREMIUM_FEATURES = [
   { icon: 'account_balance_wallet', label: 'Бюджеты по категориям', description: 'Лимиты с уведомлениями' },
   { icon: 'palette', label: 'Темы оформления', description: 'Дополнительные варианты внешнего вида' },
   { icon: 'new_releases', label: 'Ранний доступ', description: 'Новые функции раньше всех' },
+  { icon: 'document_scanner', label: 'Сканирование чеков', description: 'Сфотографируйте чек и разделите расходы по позициям' },
 ];

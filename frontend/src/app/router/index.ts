@@ -171,6 +171,12 @@ export const router = createRouter({
           name: 'settings-quick-actions',
           component: () => import('@/pages/settings/quick-actions/QuickActionsSettingsPage.vue'),
         },
+        {
+          path: 'scan-receipt',
+          name: 'scan-receipt',
+          component: () => import('@/pages/scan-receipt/ScanReceiptPage.vue'),
+          meta: { requiresAuth: true },
+        },
       ],
     },
     // Welcome onboarding (pre-auth)
