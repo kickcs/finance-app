@@ -8,7 +8,7 @@ export const ACCOUNT_TYPES = [
 ] as const;
 
 // TODO: re-enable all types after debugging
-export const VISIBLE_ACCOUNT_TYPES: AccountType[] = ['basic', 'savings', 'credit_card'];
+export const VISIBLE_ACCOUNT_TYPES: AccountType[] = ['basic', 'savings'];
 export type AccountType = (typeof ACCOUNT_TYPES)[number];
 
 export const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {

@@ -82,20 +82,9 @@ function handleFormUpdate(newData: typeof formData.value) {
   <div class="h-dvh bg-background-light dark:bg-background-dark flex flex-col overflow-hidden">
     <!-- Header -->
     <header class="px-5 pb-4" :style="{ paddingTop: 'calc(1rem + var(--safe-area-inset-top))' }">
-      <div class="flex items-center justify-between mb-4">
-        <!-- Back button (shown when not onboarding) -->
-        <UButton v-if="!isOnboarding" variant="ghost" size="sm" @click="goBack">
-          <UIcon name="arrow_back" size="md" />
-        </UButton>
-        <div v-else class="w-10" />
-        <!-- Spacer for onboarding -->
-
-        <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
-          {{ isOnboarding ? 'Настройка аккаунта' : 'Новый счёт' }}
-        </span>
-        <div class="w-10" />
-        <!-- Spacer -->
-      </div>
+      <UButton v-if="!isOnboarding" variant="ghost" size="sm" class="mb-3" @click="goBack">
+        <UIcon name="arrow_back" size="md" />
+      </UButton>
 
       <h1 class="text-2xl font-bold text-text-primary-light dark:text-text-primary-dark mb-2">
         {{ isOnboarding ? 'Создайте первый счёт' : 'Новый счёт' }}
@@ -106,7 +95,7 @@ function handleFormUpdate(newData: typeof formData.value) {
     </header>
 
     <!-- Form -->
-    <main class="flex-1 overflow-y-auto px-5 pb-16">
+    <main class="flex-1 overflow-y-auto px-5 pb-28">
       <AccountForm
         :form-data="formData"
         :is-submitting="isSubmitting"
