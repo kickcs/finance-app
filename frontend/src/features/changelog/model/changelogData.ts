@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.19';
+export const CURRENT_VERSION = '1.0.20';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,17 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.20',
+    date: '2026-02-24',
+    title: 'Сканирование чеков',
+    items: [
+      {
+        type: 'feature',
+        text: 'Сканирование чеков — сфотографируйте чек и разделите расходы по позициям между участниками (Премиум)',
+      },
+    ],
+  },
   {
     version: '1.0.19',
     date: '2026-02-22',
