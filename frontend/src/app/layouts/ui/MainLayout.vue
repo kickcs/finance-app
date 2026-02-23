@@ -5,9 +5,15 @@ import { BottomNav } from '@/widgets/bottom-nav';
 import { transitionName } from '@/app/router';
 import { useLayoutData } from '../model/useLayoutData';
 
+import { computed } from 'vue';
+import { useRoute } from 'vue-router';
+
 const router = useRouter();
+const route = useRoute();
 const { userName, greeting, totalBalance, currency, isHidden, toggleHidden, isLoading } =
   useLayoutData();
+
+const hideBottomNav = computed(() => route.name === 'scan-receipt');
 
 function handleAddTransaction() {
   router.push('/transactions/new');
@@ -60,6 +66,7 @@ function handleAddTransaction() {
 
       <!-- Bottom Navigation (Mobile Only) -->
       <div
+        v-if="!hideBottomNav"
         class="md:hidden shrink-0 border-t border-border-light dark:border-border-dark relative z-40 bg-background-light dark:bg-background-dark"
       >
         <BottomNav @add-click="handleAddTransaction" />
