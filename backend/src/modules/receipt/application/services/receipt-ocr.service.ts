@@ -69,6 +69,7 @@ Important rules:
       ],
       max_tokens: 2048,
       temperature: 0,
+      response_format: { type: 'json_object' },
     });
 
     const content = response.choices[0]?.message?.content;
@@ -82,6 +83,11 @@ Important rules:
     const jsonText = content.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
 
     const result = JSON.parse(jsonText) as ScanResult;
+
+    if (!Array.isArray(result.items)) {
+      throw new Error('Invalid OCR response: missing items array');
+    }
+
     return result;
   }
 }

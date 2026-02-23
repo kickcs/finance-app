@@ -1,10 +1,12 @@
 <script setup lang="ts">
+import { ref } from 'vue';
 import { UButton, UBadge, UIcon } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
+import { haptics } from '@/shared/lib/haptics';
 import ReceiptItemRow from '../ReceiptItemRow.vue';
 import type { ReceiptItem } from '../../model/types';
 
-defineProps<{
+const props = defineProps<{
   items: ReceiptItem[];
   currency: string;
   totalAmount: number;
@@ -17,6 +19,29 @@ const emit = defineEmits<{
   next: [];
   back: [];
 }>();
+
+const validationError = ref<string | null>(null);
+const invalidItemId = ref<string | null>(null);
+
+function validateAndNext() {
+  validationError.value = null;
+  invalidItemId.value = null;
+
+  const firstInvalid = props.items.find(
+    (item) => !item.name.trim() || item.unitPrice <= 0,
+  );
+
+  if (firstInvalid) {
+    invalidItemId.value = firstInvalid.id;
+    validationError.value = !firstInvalid.name.trim()
+      ? 'Заполните название позиции'
+      : 'Цена позиции должна быть больше нуля';
+    haptics.error();
+    return;
+  }
+
+  emit('next');
+}
 </script>
 
 <template>
@@ -75,7 +100,8 @@ const emit = defineEmits<{
             :item="item"
             :index="index"
             :currency="currency"
-            @update="emit('updateItem', item.id, $event)"
+            :is-invalid="invalidItemId === item.id"
+            @update="emit('updateItem', item.id, $event); if (invalidItemId === item.id) { validationError = null; invalidItemId = null; }"
             @delete="emit('deleteItem', item.id)"
           />
         </TransitionGroup>
@@ -117,13 +143,21 @@ const emit = defineEmits<{
         </span>
       </div>
 
+      <!-- Validation error -->
+      <Transition name="section-slide">
+        <p v-if="validationError" class="text-sm text-danger mb-3 flex items-center gap-2">
+          <UIcon name="error" size="sm" class="flex-shrink-0" />
+          {{ validationError }}
+        </p>
+      </Transition>
+
       <UButton
         variant="primary"
         size="lg"
         :full-width="true"
         :disabled="items.length === 0"
         aria-label="Перейти к назначению участников"
-        @click="emit('next')"
+        @click="validateAndNext"
       >
         Далее — Участники
         <UIcon name="arrow_forward" size="sm" class="ml-2" />
@@ -134,6 +168,16 @@ const emit = defineEmits<{
 </template>
 
 <style scoped>
+.section-slide-enter-active,
+.section-slide-leave-active {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.section-slide-enter-from,
+.section-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
 .item-list-enter-active {
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }

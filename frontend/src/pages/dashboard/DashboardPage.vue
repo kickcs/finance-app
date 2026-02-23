@@ -62,6 +62,7 @@ const { staggerClass } = useStaggerAnimation();
 const { showModal: showInstallModal } = usePwaInstall();
 const isHidden = useLocalStorage('balance_hidden', false);
 const quickActionsHintDismissed = useLocalStorage('quick_actions_hint_dismissed', false);
+const { requirePremium } = usePremiumFeature();
 
 const mobileTransactions = computed(() => recentTransactions.value.slice(0, 5));
 
@@ -84,7 +85,6 @@ async function handleRefresh() {
 
 function handleScanReceipt() {
   haptics.tap();
-  const { requirePremium } = usePremiumFeature();
   if (!requirePremium('Сканирование чеков')) return;
   nav.toScanReceipt();
 }
@@ -149,6 +149,7 @@ function handleScanReceipt() {
               <div class="flex gap-3">
                 <button
                   type="button"
+                  aria-label="Сканировать чек — Премиум функция"
                   class="relative flex flex-col items-center gap-1.5 p-3 rounded-2xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark shadow-xs active:scale-95 transition-all duration-150 min-w-[72px]"
                   @click="handleScanReceipt"
                 >

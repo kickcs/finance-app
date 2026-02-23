@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue';
+import { ref, computed, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { ENTITY_COLORS } from '@/shared/config/colors';
 import { receiptApi, type ScanReceiptResponse } from '../api/receiptApi';
@@ -75,7 +75,13 @@ export function useReceiptWizard(userId: () => string | null) {
         .map((item) => {
           const sharedWith = item.assignedParticipantIds.length;
           const lineTotal = item.qty * item.unitPrice;
-          const share = Math.round(lineTotal / sharedWith);
+          const isLast =
+            item.assignedParticipantIds[item.assignedParticipantIds.length - 1] === p.id;
+          const baseShare = Math.floor(lineTotal / sharedWith);
+          // Last participant absorbs the remainder to preserve exact total
+          const share = isLast
+            ? lineTotal - baseShare * (sharedWith - 1)
+            : baseShare;
           return {
             id: item.id,
             name: item.name,
@@ -295,6 +301,13 @@ export function useReceiptWizard(userId: () => string | null) {
   const isFormValid = computed(
     () => !!formData.value.accountId && !!formData.value.categoryId && totalAmount.value > 0,
   );
+
+  onUnmounted(() => {
+    if (previewUrl.value) {
+      URL.revokeObjectURL(previewUrl.value);
+      previewUrl.value = null;
+    }
+  });
 
   return {
     // Step state

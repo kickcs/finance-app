@@ -10,6 +10,7 @@ const props = defineProps<{
   item: ReceiptItem;
   index: number;
   currency: string;
+  isInvalid?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -46,6 +47,7 @@ function incrementQty() {
         'border border-border-light dark:border-border-dark',
         'shadow-xs',
         isEditing && 'border-primary/40 shadow-soft ring-1 ring-primary/20',
+        props.isInvalid && 'border-danger ring-1 ring-danger/30',
       )"
     >
       <!-- Index number -->

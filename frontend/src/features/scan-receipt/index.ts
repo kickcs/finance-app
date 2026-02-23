@@ -1,1 +1,2 @@
-export { default as ScanReceiptPage } from '@/pages/scan-receipt/ScanReceiptPage.vue';
+export { useReceiptWizard } from './model/useReceiptWizard';
+export type { ReceiptItem, Participant, ParticipantSummary, ScanReceiptFormData } from './model/types';

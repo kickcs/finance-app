@@ -62,10 +62,8 @@ const createDebts = computed({
   },
 });
 
-// Transaction count = one per participant who has items
-const transactionCount = computed(() =>
-  props.participantSummaries.filter((p) => p.itemCount > 0).length
-);
+// Transaction count = always 1 (handleSubmit creates a single transaction for the full receipt total)
+const transactionCount = computed(() => 1);
 
 // Debt count = non-me participants
 const debtCount = computed(() =>
@@ -100,7 +98,7 @@ function handleBack() {
           Готово!
         </h2>
         <p class="text-base text-text-secondary-light dark:text-text-secondary-dark text-center px-8">
-          Создано {{ transactionCount }} транзакций
+          Создана 1 транзакция
           <template v-if="createDebts"> и {{ debtCount }} долгов</template>
         </p>
       </div>
