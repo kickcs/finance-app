@@ -26,5 +26,6 @@ export function useDashboardNavigation() {
     toReminders: () => router.push('/reminders'),
     toAnalytics: (type: 'income' | 'expense') => router.push(`/analytics?type=${type}`),
     toQuickActionsSettings: () => router.push('/settings/quick-actions'),
+    toScanReceipt: () => router.push('/scan-receipt'),
   };
 }
