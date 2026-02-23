@@ -1,0 +1,43 @@
+export interface ReceiptItem {
+  id: string;
+  name: string;
+  qty: number;
+  unitPrice: number;
+  assignedParticipantIds: string[];
+}
+
+export interface Participant {
+  id: string;
+  name: string;
+  isMe: boolean;
+  color: string;
+}
+
+export interface ParticipantSummaryItem {
+  id: string;
+  name: string;
+  lineTotal: number;
+  share: number;
+  sharedWith: number;
+}
+
+export interface ParticipantSummary {
+  id: string;
+  name: string;
+  isMe: boolean;
+  color: string;
+  itemCount: number;
+  total: number;
+  items: ParticipantSummaryItem[];
+}
+
+export interface ScanReceiptFormData {
+  accountId: string | null;
+  categoryId: string;
+  description: string;
+  date: number;
+  createDebts: boolean;
+  currency: string;
+}
+
+export type WizardDirection = 'forward' | 'back';
