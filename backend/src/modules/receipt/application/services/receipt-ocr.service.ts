@@ -41,6 +41,9 @@ Important rules:
 - Handle Uzbek, Russian, and English receipts
 - If quantity is not specified, use 1
 - currency must always be a 3-letter ISO code
+- Include service charges, tips, delivery fees, taxes, discounts as separate line items (e.g. "Обслуживание 10%", "Скидка", "НДС")
+- For discounts, use negative totalPrice
+- totalAmount must equal the final total on the receipt (after all charges and discounts)
 - Return only valid JSON, no markdown or extra text`;
 
     const response = await this.openai.chat.completions.create({
