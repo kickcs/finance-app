@@ -79,7 +79,7 @@ function handleFormUpdate(newData: typeof formData.value) {
 </script>
 
 <template>
-  <div class="min-h-screen bg-background-light dark:bg-background-dark flex flex-col">
+  <div class="h-dvh bg-background-light dark:bg-background-dark flex flex-col overflow-hidden">
     <!-- Header -->
     <header class="px-5 pb-6" :style="{ paddingTop: 'calc(3rem + var(--safe-area-inset-top))' }">
       <div class="flex items-center justify-between mb-6">
@@ -106,7 +106,7 @@ function handleFormUpdate(newData: typeof formData.value) {
     </header>
 
     <!-- Form -->
-    <main class="flex-1 px-5 pb-10">
+    <main class="flex-1 overflow-y-auto px-5 pb-16">
       <AccountForm
         :form-data="formData"
         :is-submitting="isSubmitting"
