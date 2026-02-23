@@ -34,6 +34,7 @@ import { DebtModule } from './modules/debt';
 import { PlanningModule } from './modules/planning';
 import { ExchangeModule } from './modules/exchange';
 import { SubscriptionModule } from './modules/subscription';
+import { ReceiptModule } from './modules/receipt/receipt.module';
 @Module({
   imports: [
     // Configuration
@@ -86,6 +87,7 @@ import { SubscriptionModule } from './modules/subscription';
     PlanningModule,
     ExchangeModule,
     SubscriptionModule,
+    ReceiptModule,
 
     // Health check module
     HealthModule,
