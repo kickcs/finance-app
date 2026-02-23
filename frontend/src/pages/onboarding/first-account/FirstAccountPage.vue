@@ -81,8 +81,8 @@ function handleFormUpdate(newData: typeof formData.value) {
 <template>
   <div class="h-dvh bg-background-light dark:bg-background-dark flex flex-col overflow-hidden">
     <!-- Header -->
-    <header class="px-5 pb-6" :style="{ paddingTop: 'calc(3rem + var(--safe-area-inset-top))' }">
-      <div class="flex items-center justify-between mb-6">
+    <header class="px-5 pb-4" :style="{ paddingTop: 'calc(1rem + var(--safe-area-inset-top))' }">
+      <div class="flex items-center justify-between mb-4">
         <!-- Back button (shown when not onboarding) -->
         <UButton v-if="!isOnboarding" variant="ghost" size="sm" @click="goBack">
           <UIcon name="arrow_back" size="md" />
