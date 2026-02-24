@@ -6,6 +6,7 @@ import { databaseConfig, jwtConfig } from './config';
 import { CommonModule } from './common';
 import { SharedModule } from './shared';
 import { HealthModule } from './health';
+import { ObservabilityModule } from './observability';
 
 // ORM Entities from DDD modules
 import { ProfileOrmEntity } from './modules/identity/infrastructure/persistence/typeorm';
@@ -88,6 +89,9 @@ import { SubscriptionModule } from './modules/subscription';
 
     // Health check module
     HealthModule,
+
+    // Observability (Prometheus metrics)
+    ObservabilityModule,
   ],
 })
 export class AppModule {}
