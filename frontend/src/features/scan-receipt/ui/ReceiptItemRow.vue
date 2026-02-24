@@ -10,6 +10,7 @@ const props = defineProps<{
   item: ReceiptItem;
   index: number;
   currency: string;
+  serviceChargePercent: number | null;
   isInvalid?: boolean;
 }>();
 
@@ -22,6 +23,11 @@ const isEditing = ref(false);
 
 const currencySymbol = computed(() => getCurrencySymbol(props.currency));
 const lineTotal = computed(() => props.item.qty * props.item.unitPrice);
+const lineTotalWithService = computed(() => {
+  if (!props.serviceChargePercent) return lineTotal.value;
+  return Math.round(lineTotal.value * (1 + props.serviceChargePercent / 100));
+});
+const hasServiceCharge = computed(() => !!props.serviceChargePercent && props.serviceChargePercent > 0);
 
 function decrementQty() {
   const newQty = Math.max(0.01, Math.round((props.item.qty - 1) * 100) / 100);
@@ -158,13 +164,32 @@ function incrementQty() {
 
       <!-- Line total + delete -->
       <div class="flex flex-col items-end gap-1 flex-shrink-0">
-        <span
-          class="text-body font-semibold
-                 text-text-primary-light dark:text-text-primary-dark
-                 tabular-nums transition-all duration-200"
-        >
-          {{ formatCurrency(lineTotal, currency) }}
-        </span>
+        <!-- With service charge: show both prices -->
+        <template v-if="hasServiceCharge">
+          <span
+            class="text-body font-semibold
+                   text-text-primary-light dark:text-text-primary-dark
+                   tabular-nums transition-all duration-200"
+          >
+            {{ formatCurrency(lineTotalWithService, currency) }}
+          </span>
+          <span
+            class="text-caption text-text-tertiary-light dark:text-text-tertiary-dark
+                   tabular-nums line-through"
+          >
+            {{ formatCurrency(lineTotal, currency) }}
+          </span>
+        </template>
+        <!-- No service charge: single price -->
+        <template v-else>
+          <span
+            class="text-body font-semibold
+                   text-text-primary-light dark:text-text-primary-dark
+                   tabular-nums transition-all duration-200"
+          >
+            {{ formatCurrency(lineTotal, currency) }}
+          </span>
+        </template>
         <button
           type="button"
           :aria-label="`Удалить позицию ${index + 1}: ${item.name}`"

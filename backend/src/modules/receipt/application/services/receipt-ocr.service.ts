@@ -26,23 +26,25 @@ Return a JSON object with the following structure:
     {
       "name": "item name (string)",
       "quantity": number,
-      "unitPrice": number (in smallest currency unit, e.g. 35000 for 35,000 UZS),
-      "totalPrice": number (in smallest currency unit)
+      "unitPrice": number (price per unit in the receipt's currency, e.g. 35000 for 35,000 UZS),
+      "totalPrice": number (quantity × unitPrice, in the receipt's currency)
     }
   ],
-  "totalAmount": number (in smallest currency unit),
+  "totalAmount": number (final total on the receipt including all charges),
+  "serviceChargePercent": number or null (service charge percentage if present, e.g. 10 for 10%),
   "currency": "3-letter ISO currency code (e.g. UZS, USD, RUB)",
   "date": "YYYY-MM-DD or null if not found",
   "storeName": "store/business name or null if not found"
 }
 
 Important rules:
-- All prices must be in the smallest currency unit (e.g. tiyin for UZS, kopek for RUB, cent for USD)
+- All prices must be whole numbers in the receipt's display currency (e.g. 35000 for 35,000 UZS, not in tiyin)
 - Handle Uzbek, Russian, and English receipts
 - If quantity is not specified, use 1
 - currency must always be a 3-letter ISO code
-- Include service charges, tips, delivery fees, taxes, discounts as separate line items (e.g. "Обслуживание 10%", "Скидка", "НДС")
-- For discounts, use negative totalPrice
+- Do NOT include service charges, tips, or taxes as separate items in the "items" array. Instead, extract the service charge percentage into "serviceChargePercent" (e.g. 10 for "Обслуживание 10%"). Items should only contain actual products/dishes
+- If there is a flat service charge amount (not percentage), calculate the percentage from the subtotal and put it in serviceChargePercent
+- If no service charge is found, set serviceChargePercent to null
 - totalAmount must equal the final total on the receipt (after all charges and discounts)
 - Return only valid JSON, no markdown or extra text`;
 

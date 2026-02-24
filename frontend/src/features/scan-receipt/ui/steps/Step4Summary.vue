@@ -18,6 +18,9 @@ const props = defineProps<{
   currency: string;
   formData: ScanReceiptFormData;
   accounts: AccountWithBalances[];
+  subtotal: number;
+  serviceChargePercent: number | null;
+  serviceChargeAmount: number;
   totalAmount: number;
   isSubmitting: boolean;
   submitError: string | null;
@@ -233,6 +236,25 @@ function handleBack() {
 
       <!-- Total summary -->
       <div class="p-4 rounded-2xl bg-surface-light dark:bg-surface-dark space-y-2">
+        <template v-if="serviceChargePercent">
+          <div class="flex justify-between items-baseline">
+            <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
+              Подытог
+            </span>
+            <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark tabular-nums">
+              {{ formatCurrency(subtotal, currency) }}
+            </span>
+          </div>
+          <div class="flex justify-between items-baseline">
+            <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
+              Обслуживание {{ serviceChargePercent }}%
+            </span>
+            <span class="text-sm text-primary tabular-nums font-medium">
+              +{{ formatCurrency(serviceChargeAmount, currency) }}
+            </span>
+          </div>
+          <div class="h-px bg-border-light dark:bg-border-dark" />
+        </template>
         <div class="flex justify-between items-baseline">
           <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
             Сумма чека

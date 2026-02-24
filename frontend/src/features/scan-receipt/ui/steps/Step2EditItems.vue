@@ -9,6 +9,9 @@ import type { ReceiptItem } from '../../model/types';
 const props = defineProps<{
   items: ReceiptItem[];
   currency: string;
+  subtotal: number;
+  serviceChargePercent: number | null;
+  serviceChargeAmount: number;
   totalAmount: number;
 }>();
 
@@ -100,6 +103,7 @@ function validateAndNext() {
             :item="item"
             :index="index"
             :currency="currency"
+            :service-charge-percent="serviceChargePercent"
             :is-invalid="invalidItemId === item.id"
             @update="emit('updateItem', item.id, $event); if (invalidItemId === item.id) { validationError = null; invalidItemId = null; }"
             @delete="emit('deleteItem', item.id)"
@@ -130,17 +134,57 @@ function validateAndNext() {
              px-5 pt-3 pb-[calc(1.25rem+var(--safe-area-inset-bottom))]
              bg-background-light dark:bg-background-dark"
     >
-      <!-- Total row -->
-      <div class="flex items-baseline justify-between mb-4">
-        <span class="text-body-sm text-text-secondary-light dark:text-text-secondary-dark">
-          Итого:
-        </span>
-        <span
-          class="text-h3 font-bold text-text-primary-light dark:text-text-primary-dark
-                 tabular-nums transition-all duration-200"
-        >
-          {{ formatCurrency(totalAmount, currency) }}
-        </span>
+      <!-- Subtotal + service charge breakdown -->
+      <div class="space-y-1.5 mb-4">
+        <!-- If service charge exists, show subtotal + charge + total -->
+        <template v-if="serviceChargePercent">
+          <div class="flex items-baseline justify-between">
+            <span class="text-body-sm text-text-secondary-light dark:text-text-secondary-dark">
+              Подытог:
+            </span>
+            <span
+              class="text-body-sm text-text-secondary-light dark:text-text-secondary-dark tabular-nums"
+            >
+              {{ formatCurrency(subtotal, currency) }}
+            </span>
+          </div>
+          <div class="flex items-baseline justify-between">
+            <span class="text-body-sm text-text-secondary-light dark:text-text-secondary-dark">
+              Обслуживание {{ serviceChargePercent }}%:
+            </span>
+            <span
+              class="text-body-sm text-primary tabular-nums font-medium"
+            >
+              +{{ formatCurrency(serviceChargeAmount, currency) }}
+            </span>
+          </div>
+          <div class="h-px bg-border-light dark:bg-border-dark" />
+          <div class="flex items-baseline justify-between">
+            <span class="text-body font-medium text-text-primary-light dark:text-text-primary-dark">
+              Итого:
+            </span>
+            <span
+              class="text-h3 font-bold text-text-primary-light dark:text-text-primary-dark
+                     tabular-nums transition-all duration-200"
+            >
+              {{ formatCurrency(totalAmount, currency) }}
+            </span>
+          </div>
+        </template>
+        <!-- No service charge: simple total -->
+        <template v-else>
+          <div class="flex items-baseline justify-between">
+            <span class="text-body-sm text-text-secondary-light dark:text-text-secondary-dark">
+              Итого:
+            </span>
+            <span
+              class="text-h3 font-bold text-text-primary-light dark:text-text-primary-dark
+                     tabular-nums transition-all duration-200"
+            >
+              {{ formatCurrency(totalAmount, currency) }}
+            </span>
+          </div>
+        </template>
       </div>
 
       <!-- Validation error -->

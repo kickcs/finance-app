@@ -42,6 +42,7 @@ export function useReceiptWizard(userId: () => string | null) {
   const currency = ref('UZS');
   const storeName = ref<string | null>(null);
   const receiptDate = ref<string | null>(null);
+  const serviceChargePercent = ref<number | null>(null);
 
   // Step 3: Participants
   const participants = ref<Participant[]>([]);
@@ -60,9 +61,23 @@ export function useReceiptWizard(userId: () => string | null) {
   const isSuccess = ref(false);
 
   // Computed
-  const totalAmount = computed(() =>
+  const subtotal = computed(() =>
     items.value.reduce((sum, item) => sum + item.qty * item.unitPrice, 0),
   );
+
+  const serviceChargeAmount = computed(() => {
+    if (!serviceChargePercent.value) return 0;
+    return Math.round(subtotal.value * serviceChargePercent.value / 100);
+  });
+
+  const totalAmount = computed(() => subtotal.value + serviceChargeAmount.value);
+
+  // Per-item service-inclusive price (proportionally distributed)
+  function getItemWithServiceTotal(item: ReceiptItem): number {
+    const lineTotal = item.qty * item.unitPrice;
+    if (!serviceChargePercent.value) return lineTotal;
+    return Math.round(lineTotal * (1 + serviceChargePercent.value / 100));
+  }
 
   const unassignedCount = computed(() =>
     items.value.filter((item) => item.assignedParticipantIds.length === 0).length,
@@ -74,7 +89,8 @@ export function useReceiptWizard(userId: () => string | null) {
         .filter((item) => item.assignedParticipantIds.includes(p.id))
         .map((item) => {
           const sharedWith = item.assignedParticipantIds.length;
-          const lineTotal = item.qty * item.unitPrice;
+          // Use service-inclusive total for splitting
+          const lineTotal = getItemWithServiceTotal(item);
           const isLast =
             item.assignedParticipantIds[item.assignedParticipantIds.length - 1] === p.id;
           const baseShare = Math.floor(lineTotal / sharedWith);
@@ -155,6 +171,7 @@ export function useReceiptWizard(userId: () => string | null) {
       formData.value.currency = result.currency;
       storeName.value = result.storeName;
       receiptDate.value = result.date;
+      serviceChargePercent.value = result.serviceChargePercent ?? null;
       if (result.storeName) {
         formData.value.description = result.storeName;
       }
@@ -329,7 +346,11 @@ export function useReceiptWizard(userId: () => string | null) {
     currency,
     storeName,
     receiptDate,
+    subtotal,
+    serviceChargePercent,
+    serviceChargeAmount,
     totalAmount,
+    getItemWithServiceTotal,
     updateItem,
     deleteItem,
     addItem,

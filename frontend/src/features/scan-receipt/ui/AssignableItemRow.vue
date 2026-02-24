@@ -9,6 +9,7 @@ const props = defineProps<{
   item: ReceiptItem;
   participants: Participant[];
   currency: string;
+  serviceChargePercent?: number | null;
 }>();
 
 const emit = defineEmits<{
@@ -34,6 +35,11 @@ function getParticipantColor(participantId: string): string {
 }
 
 const lineTotal = computed(() => props.item.qty * props.item.unitPrice);
+const lineTotalWithService = computed(() => {
+  if (!props.serviceChargePercent) return lineTotal.value;
+  return Math.round(lineTotal.value * (1 + props.serviceChargePercent / 100));
+});
+const hasServiceCharge = computed(() => !!props.serviceChargePercent && props.serviceChargePercent > 0);
 </script>
 
 <template>
@@ -60,7 +66,13 @@ const lineTotal = computed(() => props.item.qty * props.item.unitPrice);
           {{ item.name }}
         </p>
         <p class="text-xs text-text-secondary-light dark:text-text-secondary-dark">
-          {{ formatCurrency(lineTotal, currency) }}
+          <template v-if="hasServiceCharge">
+            {{ formatCurrency(lineTotalWithService, currency) }}
+            <span class="line-through text-text-tertiary-light dark:text-text-tertiary-dark ml-1">{{ formatCurrency(lineTotal, currency) }}</span>
+          </template>
+          <template v-else>
+            {{ formatCurrency(lineTotal, currency) }}
+          </template>
           <span v-if="item.qty !== 1" class="ml-1">· {{ item.qty }} шт.</span>
         </p>
       </div>

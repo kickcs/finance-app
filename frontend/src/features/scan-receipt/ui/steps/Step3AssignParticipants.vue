@@ -12,6 +12,7 @@ const props = defineProps<{
   currency: string;
   hasMe: boolean;
   unassignedCount: number;
+  serviceChargePercent: number | null;
 }>();
 
 const emit = defineEmits<{
@@ -200,6 +201,7 @@ function handleToggleItemParticipant(itemId: string, participantId: string) {
           :item="item"
           :participants="participants"
           :currency="currency"
+          :service-charge-percent="serviceChargePercent"
           @toggle-participant="handleToggleItemParticipant(item.id, $event)"
         />
       </div>
