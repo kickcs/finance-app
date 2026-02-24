@@ -20,6 +20,8 @@ const galleryInputRef = ref<HTMLInputElement | null>(null);
 const fileError = ref<string | null>(null);
 
 const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
+const NEEDS_CONVERSION = /^image\/(heic|heif|tiff|bmp)$/i;
+const MAX_DIMENSION = 2048; // OpenAI recommends ≤2048px for detail:high
 
 function openCamera() {
   cameraInputRef.value?.click();
@@ -29,23 +31,51 @@ function openGallery() {
   galleryInputRef.value?.click();
 }
 
-function handleFileChange(e: Event) {
-  const input = e.target as HTMLInputElement;
-  const file = input.files?.[0];
-  input.value = ''; // reset so same file can be re-selected
-  if (!file) return;
+/** Convert any image to JPEG via Canvas (handles HEIC, resizes large images) */
+async function toJpeg(file: File): Promise<File> {
+  const bitmap = await createImageBitmap(file);
+  let { width, height } = bitmap;
 
-  if (!file.type.startsWith('image/')) {
+  // Downscale if too large
+  if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+    const scale = MAX_DIMENSION / Math.max(width, height);
+    width = Math.round(width * scale);
+    height = Math.round(height * scale);
+  }
+
+  const canvas = new OffscreenCanvas(width, height);
+  const ctx = canvas.getContext('2d')!;
+  ctx.drawImage(bitmap, 0, 0, width, height);
+  bitmap.close();
+
+  const blob = await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.85 });
+  return new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' });
+}
+
+async function handleFileChange(e: Event) {
+  const input = e.target as HTMLInputElement;
+  const rawFile = input.files?.[0];
+  input.value = ''; // reset so same file can be re-selected
+  if (!rawFile) return;
+
+  if (!rawFile.type.startsWith('image/')) {
     fileError.value = 'Неверный формат файла. Поддерживаются JPG, PNG, HEIC.';
     return;
   }
-  if (file.size > MAX_SIZE) {
+  if (rawFile.size > MAX_SIZE) {
     fileError.value = 'Файл слишком большой. Максимальный размер — 10 МБ.';
     return;
   }
 
   fileError.value = null;
-  emit('selectFile', file);
+
+  // Convert HEIC/HEIF/TIFF/BMP or oversized images to JPEG
+  try {
+    const file = NEEDS_CONVERSION.test(rawFile.type) ? await toJpeg(rawFile) : rawFile;
+    emit('selectFile', file);
+  } catch {
+    fileError.value = 'Не удалось обработать изображение. Попробуйте сделать скриншот чека.';
+  }
 }
 </script>
 
