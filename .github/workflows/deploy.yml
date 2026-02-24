@@ -171,7 +171,7 @@ jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     needs: [build-backend, build-frontend]
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     steps:
@@ -270,18 +270,10 @@ jobs:
               sleep 1
             done
 
-            # Run migrations only if there are pending ones
-            echo "Checking for pending migrations..."
-            PENDING=$(docker compose -f docker-compose.prod.yml run --rm --no-deps -T backend \
-              npx typeorm migration:show -d dist/config/data-source.js 2>/dev/null \
-              | grep -c "\[ \]" || true)
-            if [ "$PENDING" -gt 0 ]; then
-              echo "Running $PENDING pending migration(s)..."
-              docker compose -f docker-compose.prod.yml run --rm --no-deps -T backend \
-                npx typeorm migration:run -d dist/config/data-source.js
-            else
-              echo "No pending migrations, skipping"
-            fi
+            # Run database migrations (fast no-op when none pending)
+            echo "Running database migrations..."
+            docker compose -f docker-compose.prod.yml run --rm --no-deps -T backend \
+              npx typeorm migration:run -d dist/config/data-source.js
 
             # Recreate only backend and frontend with new images (postgres keeps running)
             docker compose -f docker-compose.prod.yml up -d --no-deps --force-recreate backend frontend alloy
