@@ -79,7 +79,6 @@ provide('getCategoryById', getCategoryById);
       <NavigationProgress />
 
       <!-- Loading state while auth/router initializes -->
-      <!-- We don't need USpinner anymore, the HTML skeleton will show -->
       <div v-if="!isAppReady" class="min-h-screen opacity-0"></div>
 
       <!-- Demo Banner - shown globally when in demo mode -->

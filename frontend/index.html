@@ -47,7 +47,7 @@
     <!-- Inter font is now self-hosted via @fontsource-variable/inter -->
     <!-- Icons provided by lucide-vue-next (bundled SVGs, no external requests) -->
 
-    <!-- Prevent white flash on load + Initial loading skeleton -->
+    <!-- Prevent white flash on load + Animated ring loader -->
     <style>
       /* Critical CSS - inlined for instant render */
       html, body, #app {
@@ -64,147 +64,35 @@
         background-color: #09090B;
       }
 
-      /* Initial loading skeleton */
+      /* Animated ring loader */
       .app-loading {
         position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
+        top: 0; left: 0; right: 0; bottom: 0;
         z-index: 1000;
-        background-color: #FAFAFA;
+        background-color: #09090B;
         display: flex;
         flex-direction: column;
-        padding: 1rem;
-        padding-top: max(env(safe-area-inset-top), 1rem);
-        transition: opacity 0.3s ease-out;
+        align-items: center;
+        justify-content: center;
+        gap: 1.5rem;
+        transition: opacity 0.4s ease-out;
         opacity: 1;
       }
-      html.dark .app-loading {
-        background-color: #09090B;
-      }
-      .app-loading .skeleton {
-        background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
-        background-size: 200% 100%;
-        animation: shimmer 1.5s infinite;
-        border-radius: 1rem;
-      }
-      html.dark .app-loading .skeleton {
-        background: linear-gradient(90deg, #1f2937 25%, #374151 50%, #1f2937 75%);
-        background-size: 200% 100%;
-      }
-      .app-loading .header {
-        height: 3.5rem;
-        margin-bottom: 2rem;
-      }
-      .app-loading .balance-card {
-        height: 12rem;
-        margin-bottom: 1.25rem;
-      }
-      .app-loading .stats-row {
-        display: flex;
-        gap: 0.75rem;
-        margin-bottom: 1.5rem;
-      }
-      .app-loading .stats-row .stat {
-        flex: 1;
-        height: 5.5rem;
-      }
-      .app-loading .section-header {
-        height: 1.5rem;
-        width: 6rem;
-        margin-bottom: 0.75rem;
-      }
-      .app-loading .card {
-        height: 4.5rem;
-        margin-bottom: 0.5rem;
+
+      .app-loading .ring-img {
+        width: 120px;
+        height: 120px;
+        filter: drop-shadow(0 0 20px rgba(232, 200, 101, 0.25));
       }
 
-      /* Desktop initial skeleton styles */
-      @media (min-width: 768px) {
-        .app-loading {
-          flex-direction: row;
-          padding: 0;
-        }
-        
-        /* Left Sidebar Skeleton */
-        .app-loading .desktop-sidebar {
-          display: flex;
-          width: 18rem; /* 72px * 4 = 288px */
-          height: 100dvh;
-          border-right: 1px solid #e5e7eb;
-          padding: 1.5rem 1rem;
-          flex-direction: column;
-          flex-shrink: 0;
-        }
-        html.dark .app-loading .desktop-sidebar {
-          border-right-color: #27272a;
-        }
-        .app-loading .sidebar-user { height: 3rem; margin-bottom: 2rem; border-radius: 0.75rem; }
-        .app-loading .sidebar-balance { height: 6rem; margin-bottom: 2rem; border-radius: 1rem; }
-        .app-loading .sidebar-nav { height: 3rem; margin-bottom: 0.5rem; border-radius: 0.75rem; }
-        
-        /* Main Content Area */
-        .app-loading .desktop-main {
-          display: flex;
-          flex: 1;
-          padding: 2rem;
-        }
-        .app-loading .desktop-main-inner {
-          display: grid;
-          grid-template-columns: repeat(12, 1fr);
-          gap: 2rem;
-          max-width: 80rem;
-          margin: 0 auto;
-          width: 100%;
-        }
-        
-        /* Left Column (5/12) */
-        .app-loading .col-left {
-          grid-column: span 5 / span 5;
-          display: flex;
-          flex-direction: column;
-          gap: 1.5rem;
-        }
-        
-        /* Right Column (7/12) */
-        .app-loading .col-right {
-          grid-column: span 7 / span 7;
-          display: flex;
-          flex-direction: column;
-          gap: 1.5rem;
-        }
-        
-        .app-loading .desktop-large-card {
-          height: 18rem;
-          border-radius: 1.5rem;
-        }
-        .app-loading .desktop-medium-card {
-          height: 12rem;
-          border-radius: 1.5rem;
-        }
-        
-        /* Hide mobile elements */
-        .app-loading > .skeleton:not(.desktop-sidebar):not(.desktop-main),
-        .app-loading > .stats-row {
-          display: none;
-        }
-      }
-      
-      /* Hide desktop elements on mobile */
-      @media (max-width: 767px) {
-        .app-loading .desktop-sidebar,
-        .app-loading .desktop-main {
-          display: none;
-        }
+      .app-loading .app-name {
+        color: #e8c865;
+        font-family: 'Inter Variable', 'Inter', -apple-system, sans-serif;
+        font-size: 1.25rem;
+        font-weight: 600;
+        letter-spacing: 0.15em;
       }
 
-      @keyframes shimmer {
-        0% { background-position: 200% 0; }
-        100% { background-position: -200% 0; }
-      }
-
-      /* Hide loading skeleton when app is ready - using body.app-ready class */
       body.app-ready .app-loading {
         opacity: 0;
         pointer-events: none;
@@ -230,45 +118,10 @@
   <body>
     <div id="app"></div>
 
-    <!-- Loading skeleton shown until Vue app is ready -->
+    <!-- Animated ring loader shown until Vue app is ready -->
     <div class="app-loading" aria-hidden="true">
-      <!-- Mobile Skeleton Elements -->
-      <div class="skeleton header"></div>
-      <div class="skeleton balance-card"></div>
-      <div class="stats-row">
-        <div class="skeleton stat"></div>
-        <div class="skeleton stat"></div>
-      </div>
-      <div class="skeleton section-header"></div>
-      <div class="skeleton card"></div>
-      <div class="skeleton card"></div>
-
-      <!-- Desktop Skeleton Elements -->
-      <div class="desktop-sidebar">
-        <div class="skeleton sidebar-user"></div>
-        <div class="skeleton sidebar-balance"></div>
-        <div class="skeleton sidebar-nav"></div>
-        <div class="skeleton sidebar-nav"></div>
-        <div class="skeleton sidebar-nav"></div>
-        <div class="skeleton sidebar-nav"></div>
-      </div>
-      
-      <div class="desktop-main">
-        <div class="desktop-main-inner">
-          <div class="col-left">
-            <div class="skeleton balance-card" style="height: 14rem; margin-bottom: 0;"></div>
-            <div class="skeleton" style="height: 6rem;"></div>
-            <div class="skeleton desktop-large-card" style="height: 24rem;"></div>
-          </div>
-          <div class="col-right">
-            <div class="skeleton desktop-large-card" style="height: 26rem;"></div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
-              <div class="skeleton desktop-medium-card"></div>
-              <div class="skeleton desktop-medium-card"></div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <img class="ring-img" src="/loader-ring.png" alt="" width="120" height="120" />
+      <span class="app-name">OURO</span>
     </div>
 
     <script type="module" src="/src/main.ts"></script>
