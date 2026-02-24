@@ -7,7 +7,6 @@ import { Public } from '../../common/decorators/public.decorator';
 @Public()
 export class PublicMetricsController extends PrometheusController {
   @Get()
-  @Public()
   async index(@Res({ passthrough: true }) response: Response) {
     return super.index(response);
   }

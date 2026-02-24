@@ -4,7 +4,7 @@ import {
   ExecutionContext,
   CallHandler,
 } from '@nestjs/common';
-import { Observable, tap } from 'rxjs';
+import { Observable, tap, finalize } from 'rxjs';
 import { InjectMetric } from '@willsoto/nestjs-prometheus';
 import { Counter, Histogram, Gauge } from 'prom-client';
 
@@ -20,9 +20,11 @@ export class MetricsInterceptor implements NestInterceptor {
   ) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
+    if (context.getType() !== 'http') return next.handle();
+
     const req = context.switchToHttp().getRequest();
     const { method, route } = req;
-    const path = route?.path || req.url;
+    const path = route?.path ?? this.sanitizePath(req.url);
 
     this.requestsInFlight.inc();
     const start = process.hrtime.bigint();
@@ -38,7 +40,15 @@ export class MetricsInterceptor implements NestInterceptor {
           this.record(method, path, status, start);
         },
       }),
+      finalize(() => {
+        this.requestsInFlight.dec();
+      }),
     );
+  }
+
+  private sanitizePath(url: string): string {
+    const withoutQuery = url.split('?')[0];
+    return withoutQuery.length > 100 ? withoutQuery.slice(0, 100) : withoutQuery;
   }
 
   private record(
@@ -48,7 +58,6 @@ export class MetricsInterceptor implements NestInterceptor {
     start: bigint,
   ) {
     const duration = Number(process.hrtime.bigint() - start) / 1e9;
-    this.requestsInFlight.dec();
     this.requestsTotal.inc({ method, path, status_code: statusCode });
     this.requestDuration.observe(
       { method, path, status_code: statusCode },
