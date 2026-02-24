@@ -177,8 +177,11 @@ export function useReceiptWizard(userId: () => string | null) {
       // Only use serviceChargePercent if it's meaningful (>= 0.1%)
       const rawPercent = result.serviceChargePercent;
       serviceChargePercent.value = rawPercent && rawPercent >= 0.1 ? rawPercent : null;
-      if (result.storeName) {
-        formData.value.description = result.storeName;
+      // Use hashtags from OCR for description, fallback to store name
+      if (result.hashtags?.length > 0) {
+        formData.value.description = result.hashtags.join(' ');
+      } else if (result.storeName) {
+        formData.value.description = `#${result.storeName.replace(/[^a-zа-яёA-ZА-ЯЁ0-9]/g, '').toLowerCase()}`;
       }
       if (result.date) {
         formData.value.date = new Date(result.date).getTime();
@@ -303,6 +306,7 @@ export function useReceiptWizard(userId: () => string | null) {
       isSuccess.value = true;
       haptics.success();
     } catch (error) {
+      console.error('Receipt submit failed:', error);
       submitError.value = error instanceof Error ? error.message : 'Произошла ошибка';
       haptics.error();
     } finally {

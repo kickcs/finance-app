@@ -1,7 +1,6 @@
 import {
   Controller,
   Post,
-  UseGuards,
   UseInterceptors,
   UploadedFile,
   BadRequestException,
@@ -10,7 +9,6 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CurrentUser } from '../../../../common';
-import { PremiumGuard } from '../../../subscription/guards/premium.guard';
 import { ReceiptOcrService } from '../../application/services/receipt-ocr.service';
 import type { ScanReceiptResponseDto } from '../dto/scan-receipt-response.dto';
 

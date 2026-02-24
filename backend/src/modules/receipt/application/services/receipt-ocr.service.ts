@@ -43,7 +43,8 @@ Return JSON:
   "serviceChargePercent": number or null,
   "currency": "3-letter ISO code (e.g. UZS, USD, RUB)",
   "date": "YYYY-MM-DD or null",
-  "storeName": "store name or null"
+  "storeName": "store name or null",
+  "hashtags": ["#tag1", "#tag2"]
 }
 
 Rules:
@@ -53,6 +54,7 @@ Rules:
 - Do NOT include charges/taxes as items. Extract into "serviceChargePercent": "Обслуживание 10%" → 10, "НДС +12%" → 12, "VAT 15%" → 15
 - If charge is a flat amount, calculate percentage from subtotal
 - No charges found → serviceChargePercent: null
+- "hashtags": 1-3 short hashtags in Russian describing the PLACE TYPE and WHAT was bought. Examples: restaurant → ["#кафе", "#обед"], grocery store → ["#продукты"], gas station → ["#бензин"], pharmacy → ["#аптека"], clothing store → ["#одежда"]. Use lowercase, no spaces inside tags. Focus on the category of spending, not the store name
 - Return only valid JSON, no markdown`;
 
     const response = await this.openai.chat.completions.create({
@@ -92,7 +94,10 @@ Rules:
     this.logger.debug(`GPT-4o response: ${content}`);
 
     // Strip markdown code fences if present
-    const jsonText = content.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+    const jsonText = content
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/\s*```$/i, '')
+      .trim();
 
     const result = JSON.parse(jsonText) as ScanResult;
 

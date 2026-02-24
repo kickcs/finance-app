@@ -12,4 +12,5 @@ export class ScanReceiptResponseDto {
   currency: string;
   date: string | null;
   storeName: string | null;
+  hashtags: string[];
 }
