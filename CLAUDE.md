@@ -35,7 +35,7 @@ docker compose up -d           # Start all services
 
 ## CI/CD
 
-GitHub Actions (`deploy.yml`): validate-backend (lint + test with PostgreSQL) + validate-frontend (type-check + build) → build Docker images → push to GHCR → deploy via SSH with migrations. Production uses `docker-compose.prod.yml`.
+GitHub Actions (`deploy.yml`): build-backend (lint + test + Docker build/push) + build-frontend (type-check + Vite build + Docker build/push) → deploy via SSH with conditional migrations. On PRs only validation runs (Docker steps skipped). Production uses `docker-compose.prod.yml`.
 
 ## Architecture Overview
 

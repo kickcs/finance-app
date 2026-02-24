@@ -107,7 +107,7 @@ services:
 
   # Grafana Alloy (observability agent)
   alloy:
-    image: grafana/alloy:latest
+    image: grafana/alloy:v1.13.2
     container_name: finance-alloy
     restart: always
     volumes:
