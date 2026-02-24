@@ -15,7 +15,10 @@ prometheus.scrape "backend" {
 // ---- Prometheus: node/system metrics ----
 prometheus.exporter.unix "node" {
   set_collectors = ["cpu", "meminfo", "diskstats", "filesystem", "loadavg", "netdev"]
-  filesystem_mount_points_exclude = "^/(sys|proc|dev|host|etc)($|/)"
+
+  filesystem {
+    mount_points_exclude = "^/(sys|proc|dev|host|etc)($|/)"
+  }
 }
 
 prometheus.scrape "node" {
