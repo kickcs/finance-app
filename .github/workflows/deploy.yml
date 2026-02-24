@@ -301,7 +301,12 @@ jobs:
               sleep 1
             done
 
-            # Clean up old images in background (non-blocking)
+            # Clean up old tagged images, keep only latest 3 per service
+            for svc in backend frontend; do
+              docker images "ghcr.io/*/finance-app/$svc" --format '{{.ID}} {{.CreatedAt}}' \
+                | sort -k2 -r | tail -n +4 | awk '{print $1}' \
+                | xargs -r docker rmi -f 2>/dev/null || true
+            done
             docker image prune -f > /dev/null 2>&1 &
 
       - name: Deployment notification

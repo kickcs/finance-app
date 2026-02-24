@@ -1,5 +1,5 @@
 # ================================
-# Stage 1: Install dependencies
+# Stage 1: Install ALL dependencies (for build)
 # ================================
 FROM oven/bun:1 AS deps
 
@@ -8,7 +8,7 @@ WORKDIR /app
 # Copy package files
 COPY backend/package.json backend/bun.lock* ./
 
-# Install dependencies
+# Install all dependencies (including dev for build)
 RUN bun install --frozen-lockfile
 
 # ================================
@@ -28,7 +28,19 @@ COPY backend/ ./
 RUN bun run build
 
 # ================================
-# Stage 3: Production runtime
+# Stage 3: Production dependencies only
+# ================================
+FROM oven/bun:1 AS prod-deps
+
+WORKDIR /app
+
+COPY backend/package.json backend/bun.lock* ./
+
+# Install only production dependencies
+RUN bun install --frozen-lockfile --production
+
+# ================================
+# Stage 4: Production runtime
 # ================================
 FROM node:22-alpine AS runner
 
@@ -38,9 +50,9 @@ WORKDIR /app
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nestjs
 
-# Copy built application
+# Copy built application and prod-only dependencies
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules ./node_modules
+COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 
 # Set ownership
