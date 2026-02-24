@@ -49,7 +49,7 @@ Important rules:
 - Return only valid JSON, no markdown or extra text`;
 
     const response = await this.openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'gpt-4.1-nano',
       messages: [
         {
           role: 'system',
