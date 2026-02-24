@@ -35,11 +35,12 @@ function handleBack() {
   }
 }
 
-onMounted(() => {
-  if (!requirePremium('Сканирование чеков')) {
-    router.replace('/');
-  }
-});
+// TODO: re-enable after beta
+// onMounted(() => {
+//   if (!requirePremium('Сканирование чеков')) {
+//     router.replace('/');
+//   }
+// });
 </script>
 
 <template>
@@ -130,6 +131,7 @@ onMounted(() => {
           :service-charge-percent="wizard.serviceChargePercent.value"
           :service-charge-amount="wizard.serviceChargeAmount.value"
           :total-amount="wizard.totalAmount.value"
+          :store-name="wizard.storeName.value"
           :is-submitting="wizard.isSubmitting.value"
           :submit-error="wizard.submitError.value"
           :is-success="wizard.isSuccess.value"

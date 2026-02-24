@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 import { UIcon } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
+import { pluralize } from '@/shared/lib/format/pluralize';
 import type { ParticipantSummary } from '../model/types';
 
 const props = defineProps<{
@@ -14,17 +15,23 @@ const isExpanded = ref(false);
 
 <template>
   <div
-    class="rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark overflow-hidden"
+    class="rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark overflow-hidden transition-all duration-200"
+    :class="isExpanded && 'ring-1 ring-border-light dark:ring-border-dark'"
   >
-    <!-- Header row: avatar + name + total -->
-    <div class="flex items-center gap-3 px-4 py-3">
+    <!-- Header row -->
+    <button
+      type="button"
+      class="flex items-center gap-3 px-4 py-3 w-full text-left"
+      :aria-expanded="isExpanded"
+      @click="isExpanded = !isExpanded"
+    >
       <!-- Colored avatar -->
       <div
-        class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
-        :style="{ backgroundColor: participant.color + '22' }"
+        class="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
+        :style="{ backgroundColor: participant.color + '18' }"
       >
         <span
-          class="text-base font-bold"
+          class="text-sm font-bold"
           :style="{ color: participant.color }"
         >
           {{ participant.name.charAt(0).toUpperCase() }}
@@ -32,87 +39,81 @@ const isExpanded = ref(false);
       </div>
 
       <div class="flex-1 min-w-0">
-        <p class="text-base font-semibold text-text-primary-light dark:text-text-primary-dark">
+        <p class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark leading-tight">
           {{ participant.name }}
           <span
             v-if="participant.isMe"
-            class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark font-normal ml-1"
+            class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark font-normal"
           >
             (вы)
           </span>
         </p>
-        <p class="text-xs text-text-secondary-light dark:text-text-secondary-dark">
-          {{ participant.itemCount }} поз.
+        <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
+          {{ participant.itemCount }} {{ pluralize(participant.itemCount, 'позиция', 'позиции', 'позиций') }}
         </p>
       </div>
 
-      <!-- Total for this person -->
-      <span class="text-lg font-bold tabular-nums" :style="{ color: participant.color }">
+      <!-- Total -->
+      <span
+        class="text-base font-bold tabular-nums flex-shrink-0"
+        :style="{ color: participant.color }"
+      >
         {{ formatCurrency(participant.total, currency) }}
       </span>
-    </div>
 
-    <!-- Expandable item list — collapsed by default -->
-    <Transition name="section-slide">
+      <!-- Expand chevron -->
+      <UIcon
+        :name="isExpanded ? 'expand_less' : 'expand_more'"
+        size="xs"
+        class="text-text-tertiary-light dark:text-text-tertiary-dark flex-shrink-0 transition-transform duration-200"
+      />
+    </button>
+
+    <!-- Expandable item list -->
+    <Transition name="expand">
       <div
         v-if="isExpanded"
-        class="border-t border-border-light dark:border-border-dark divide-y divide-border-light dark:divide-border-dark"
+        class="border-t border-border-light dark:border-border-dark"
       >
         <div
-          v-for="item in participant.items"
+          v-for="(item, idx) in participant.items"
           :key="item.id"
           class="flex items-center justify-between px-4 py-2.5"
+          :class="idx < participant.items.length - 1 && 'border-b border-border-light/50 dark:border-border-dark/50'"
         >
           <div class="flex-1 min-w-0 mr-3">
             <p class="text-sm text-text-primary-light dark:text-text-primary-dark truncate">
               {{ item.name }}
             </p>
-            <!-- If item is shared: show per-person split -->
             <p
               v-if="item.sharedWith > 1"
-              class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
+              class="text-[11px] text-text-tertiary-light dark:text-text-tertiary-dark"
             >
               1/{{ item.sharedWith }} от {{ formatCurrency(item.lineTotal, currency) }}
             </p>
           </div>
-          <span class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark tabular-nums">
+          <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark tabular-nums">
             {{ formatCurrency(item.share, currency) }}
           </span>
         </div>
       </div>
     </Transition>
-
-    <!-- Expand toggle button -->
-    <button
-      type="button"
-      class="flex items-center justify-center gap-1 w-full py-2 border-t border-border-light dark:border-border-dark text-text-tertiary-light dark:text-text-tertiary-dark text-xs font-medium hover:text-text-secondary-light transition-colors duration-150"
-      :aria-expanded="isExpanded"
-      :aria-label="isExpanded ? `Скрыть позиции ${participant.name}` : `Показать позиции ${participant.name}`"
-      @click="isExpanded = !isExpanded"
-    >
-      {{ isExpanded ? 'Скрыть' : 'Показать позиции' }}
-      <UIcon
-        :name="isExpanded ? 'expand_less' : 'expand_more'"
-        size="xs"
-        class="transition-transform duration-200"
-      />
-    </button>
   </div>
 </template>
 
 <style scoped>
-.section-slide-enter-active,
-.section-slide-leave-active {
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+.expand-enter-active,
+.expand-leave-active {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
 }
-.section-slide-enter-from,
-.section-slide-leave-to {
+.expand-enter-from,
+.expand-leave-to {
   opacity: 0;
   max-height: 0;
 }
-.section-slide-enter-to,
-.section-slide-leave-from {
+.expand-enter-to,
+.expand-leave-from {
   opacity: 1;
   max-height: 500px;
 }

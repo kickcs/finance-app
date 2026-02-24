@@ -53,10 +53,10 @@ function validateAndNext() {
     <!-- Scrollable items list -->
     <div class="flex-1 overflow-y-auto no-scrollbar px-5 pt-4 pb-4">
 
-      <!-- Empty state: zero items -->
+      <!-- Empty state -->
       <template v-if="items.length === 0">
         <div class="flex-1 flex flex-col items-center justify-center px-8 gap-5 py-10 h-full">
-          <div class="w-16 h-16 rounded-full bg-warning-light flex items-center justify-center">
+          <div class="w-14 h-14 rounded-2xl bg-warning/10 flex items-center justify-center">
             <UIcon name="receipt" size="xl" class="text-warning" />
           </div>
           <div class="text-center">
@@ -64,7 +64,7 @@ function validateAndNext() {
               Позиции не найдены
             </h3>
             <p class="text-body-sm text-text-secondary-light dark:text-text-secondary-dark">
-              Не удалось распознать позиции чека. Добавьте их вручную или переснимите чек.
+              Добавьте позиции вручную или переснимите чек
             </p>
           </div>
           <div class="flex flex-col gap-2 w-full">
@@ -82,16 +82,16 @@ function validateAndNext() {
       <!-- Populated state -->
       <template v-else>
         <!-- Section header -->
-        <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center justify-between mb-3">
           <h2 class="text-body font-semibold text-text-primary-light dark:text-text-primary-dark">
             Позиции чека
           </h2>
           <UBadge variant="neutral" size="sm" shape="pill">
-            {{ items.length }} поз.
+            {{ items.length }}
           </UBadge>
         </div>
 
-        <!-- Items list with TransitionGroup -->
+        <!-- Items list -->
         <TransitionGroup
           tag="div"
           name="item-list"
@@ -113,7 +113,7 @@ function validateAndNext() {
         <!-- Add item button -->
         <button
           type="button"
-          class="mt-3 flex items-center gap-2 w-full px-4 py-3 rounded-xl
+          class="mt-3 flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl
                  border border-dashed border-border-light dark:border-border-dark
                  text-text-secondary-light dark:text-text-secondary-dark
                  hover:border-primary/40 hover:text-primary hover:bg-primary-light
@@ -128,63 +128,45 @@ function validateAndNext() {
 
     </div>
 
-    <!-- Sticky footer: total + continue -->
+    <!-- Sticky footer -->
     <div
       class="flex-shrink-0 border-t border-border-light dark:border-border-dark
              px-5 pt-3 pb-[calc(1.25rem+var(--safe-area-inset-bottom))]
              bg-background-light dark:bg-background-dark"
     >
-      <!-- Subtotal + service charge breakdown -->
-      <div class="space-y-1.5 mb-4">
-        <!-- If service charge exists, show subtotal + charge + total -->
-        <template v-if="serviceChargePercent">
-          <div class="flex items-baseline justify-between">
-            <span class="text-body-sm text-text-secondary-light dark:text-text-secondary-dark">
-              Подытог:
+      <!-- Total breakdown -->
+      <div class="mb-3">
+        <!-- With service charge: show subtotal → charge → total -->
+        <template v-if="serviceChargePercent && serviceChargeAmount > 0">
+          <div class="flex items-baseline justify-between mb-1">
+            <span class="text-caption text-text-tertiary-light dark:text-text-tertiary-dark">
+              Подытог
             </span>
-            <span
-              class="text-body-sm text-text-secondary-light dark:text-text-secondary-dark tabular-nums"
-            >
+            <span class="text-body-sm text-text-secondary-light dark:text-text-secondary-dark tabular-nums">
               {{ formatCurrency(subtotal, currency) }}
             </span>
           </div>
-          <div class="flex items-baseline justify-between">
-            <span class="text-body-sm text-text-secondary-light dark:text-text-secondary-dark">
-              Обслуживание {{ serviceChargePercent }}%:
+          <div class="flex items-baseline justify-between mb-2">
+            <span class="text-caption text-primary font-medium">
+              Обслуживание {{ serviceChargePercent }}%
             </span>
-            <span
-              class="text-body-sm text-primary tabular-nums font-medium"
-            >
+            <span class="text-body-sm text-primary tabular-nums font-medium">
               +{{ formatCurrency(serviceChargeAmount, currency) }}
             </span>
           </div>
-          <div class="h-px bg-border-light dark:bg-border-dark" />
-          <div class="flex items-baseline justify-between">
-            <span class="text-body font-medium text-text-primary-light dark:text-text-primary-dark">
-              Итого:
-            </span>
-            <span
-              class="text-h3 font-bold text-text-primary-light dark:text-text-primary-dark
-                     tabular-nums transition-all duration-200"
-            >
-              {{ formatCurrency(totalAmount, currency) }}
-            </span>
-          </div>
+          <div class="h-px bg-border-light dark:bg-border-dark mb-2" />
         </template>
-        <!-- No service charge: simple total -->
-        <template v-else>
-          <div class="flex items-baseline justify-between">
-            <span class="text-body-sm text-text-secondary-light dark:text-text-secondary-dark">
-              Итого:
-            </span>
-            <span
-              class="text-h3 font-bold text-text-primary-light dark:text-text-primary-dark
-                     tabular-nums transition-all duration-200"
-            >
-              {{ formatCurrency(totalAmount, currency) }}
-            </span>
-          </div>
-        </template>
+        <div class="flex items-baseline justify-between">
+          <span class="text-body font-medium text-text-primary-light dark:text-text-primary-dark">
+            Итого
+          </span>
+          <span
+            class="text-h3 font-bold text-text-primary-light dark:text-text-primary-dark
+                   tabular-nums transition-all duration-200"
+          >
+            {{ formatCurrency(totalAmount, currency) }}
+          </span>
+        </div>
       </div>
 
       <!-- Validation error -->
@@ -211,17 +193,11 @@ function validateAndNext() {
   </div>
 </template>
 
-<style scoped>
-.section-slide-enter-active,
-.section-slide-leave-active {
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.section-slide-enter-from,
-.section-slide-leave-to {
-  opacity: 0;
-  transform: translateY(-8px);
-}
+<style>
+@import '../transitions.css';
+</style>
 
+<style scoped>
 .item-list-enter-active {
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }

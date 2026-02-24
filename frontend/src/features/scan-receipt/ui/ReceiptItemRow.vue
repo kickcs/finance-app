@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { UIcon } from '@/shared/ui';
-import { SwipeableItem } from '@/shared/ui';
+import { UIcon, SwipeableItem } from '@/shared/ui';
 import { formatCurrency, getCurrencySymbol } from '@/shared/lib/format/currency';
 import { cn } from '@/shared/lib/utils';
+import { calcLineTotal, calcLineTotalWithService } from '../model/calcLineTotal';
 import type { ReceiptItem } from '../model/types';
 
 const props = defineProps<{
@@ -22,12 +22,12 @@ const emit = defineEmits<{
 const isEditing = ref(false);
 
 const currencySymbol = computed(() => getCurrencySymbol(props.currency));
-const lineTotal = computed(() => props.item.qty * props.item.unitPrice);
-const lineTotalWithService = computed(() => {
-  if (!props.serviceChargePercent) return lineTotal.value;
-  return Math.round(lineTotal.value * (1 + props.serviceChargePercent / 100));
-});
-const hasServiceCharge = computed(() => !!props.serviceChargePercent && props.serviceChargePercent > 0);
+const lineTotal = computed(() => calcLineTotal(props.item));
+const lineTotalWithService = computed(() => calcLineTotalWithService(props.item, props.serviceChargePercent));
+const serviceAmount = computed(() => lineTotalWithService.value - lineTotal.value);
+const hasServiceCharge = computed(
+  () => !!props.serviceChargePercent && props.serviceChargePercent > 0 && serviceAmount.value > 0,
+);
 
 function decrementQty() {
   const newQty = Math.max(0.01, Math.round((props.item.qty - 1) * 100) / 100);
@@ -51,8 +51,7 @@ function incrementQty() {
         'flex items-start gap-3 px-4 py-3 rounded-xl',
         'bg-card-light dark:bg-card-dark',
         'border border-border-light dark:border-border-dark',
-        'shadow-xs',
-        isEditing && 'border-primary/40 shadow-soft ring-1 ring-primary/20',
+        isEditing && 'border-primary/40 ring-1 ring-primary/20',
         props.isInvalid && 'border-danger ring-1 ring-danger/30',
       )"
     >
@@ -162,34 +161,22 @@ function incrementQty() {
         </div>
       </div>
 
-      <!-- Line total + delete -->
+      <!-- Line total + service badge -->
       <div class="flex flex-col items-end gap-1 flex-shrink-0">
-        <!-- With service charge: show both prices -->
-        <template v-if="hasServiceCharge">
-          <span
-            class="text-body font-semibold
-                   text-text-primary-light dark:text-text-primary-dark
-                   tabular-nums transition-all duration-200"
-          >
-            {{ formatCurrency(lineTotalWithService, currency) }}
-          </span>
-          <span
-            class="text-caption text-text-tertiary-light dark:text-text-tertiary-dark
-                   tabular-nums line-through"
-          >
-            {{ formatCurrency(lineTotal, currency) }}
-          </span>
-        </template>
-        <!-- No service charge: single price -->
-        <template v-else>
-          <span
-            class="text-body font-semibold
-                   text-text-primary-light dark:text-text-primary-dark
-                   tabular-nums transition-all duration-200"
-          >
-            {{ formatCurrency(lineTotal, currency) }}
-          </span>
-        </template>
+        <span
+          class="text-body font-semibold
+                 text-text-primary-light dark:text-text-primary-dark
+                 tabular-nums transition-all duration-200"
+        >
+          {{ formatCurrency(hasServiceCharge ? lineTotalWithService : lineTotal, currency) }}
+        </span>
+        <!-- Service charge badge: shows "+X%" instead of strikethrough -->
+        <span
+          v-if="hasServiceCharge"
+          class="text-[10px] font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded-full tabular-nums"
+        >
+          +{{ serviceChargePercent }}%
+        </span>
         <button
           type="button"
           :aria-label="`Удалить позицию ${index + 1}: ${item.name}`"

@@ -50,7 +50,7 @@ function handleFileChange(e: Event) {
 </script>
 
 <template>
-  <div class="h-full flex flex-col px-5 pt-6 pb-6 overflow-y-auto no-scrollbar">
+  <div class="h-full flex flex-col px-5 pt-4 pb-6 overflow-y-auto no-scrollbar">
 
     <!-- Hidden native file inputs -->
     <input
@@ -71,51 +71,59 @@ function handleFileChange(e: Event) {
 
     <!-- === IDLE STATE === -->
     <template v-if="!previewUrl">
-      <!-- Illustration zone -->
-      <div class="flex-1 flex flex-col items-center justify-center gap-6 min-h-0">
+      <div class="flex-1 flex flex-col items-center justify-center gap-5 min-h-0">
 
-        <!-- Receipt placeholder -->
+        <!-- Receipt illustration area -->
         <div
-          class="w-full max-w-[280px] aspect-[3/4] rounded-2xl
-                 border-2 border-dashed border-border-light dark:border-border-dark
-                 bg-surface-light dark:bg-surface-dark
-                 flex flex-col items-center justify-center gap-4"
+          class="w-full max-w-[260px] aspect-[3/4] rounded-2xl relative
+                 border-2 border-dashed border-primary/30
+                 bg-gradient-to-b from-primary/[0.04] to-primary/[0.08]
+                 flex flex-col items-center justify-center gap-3
+                 transition-all duration-300"
           aria-hidden="true"
         >
-          <div class="w-16 h-16 rounded-full bg-primary-light flex items-center justify-center">
-            <UIcon name="photo_camera" size="xl" class="text-primary" />
+          <!-- Decorative receipt lines -->
+          <div class="absolute inset-x-8 top-8 space-y-2.5 opacity-[0.15]">
+            <div class="h-2 bg-primary rounded-full w-3/4" />
+            <div class="h-2 bg-primary rounded-full w-full" />
+            <div class="h-2 bg-primary rounded-full w-5/6" />
+            <div class="h-2 bg-primary rounded-full w-2/3" />
+            <div class="h-2 bg-primary rounded-full w-full" />
+            <div class="h-2 bg-primary rounded-full w-1/2" />
           </div>
-          <div class="text-center px-6">
-            <p class="text-body-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">
+
+          <!-- Camera icon -->
+          <div class="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center relative z-10">
+            <UIcon name="document_scanner" size="xl" class="text-primary" />
+          </div>
+          <div class="text-center px-6 relative z-10">
+            <p class="text-body-sm font-semibold text-text-primary-light dark:text-text-primary-dark">
               Сфотографируйте чек
             </p>
-            <p class="text-caption text-text-tertiary-light dark:text-text-tertiary-dark mt-1">
-              Держите чек ровно, текст должен быть чётким
+            <p class="text-caption text-text-tertiary-light dark:text-text-tertiary-dark mt-0.5">
+              Текст должен быть чётким и читаемым
             </p>
           </div>
         </div>
 
-        <!-- Tips row -->
-        <div class="flex gap-3 w-full">
-          <!-- TipChip: good light -->
-          <div class="flex-1 flex flex-col items-center gap-1 p-2 rounded-xl bg-surface-light dark:bg-surface-dark">
-            <UIcon name="light_mode" size="sm" class="text-text-secondary-light dark:text-text-secondary-dark" />
-            <span class="text-caption text-center text-text-tertiary-light dark:text-text-tertiary-dark leading-tight">
-              Хорошее освещение
+        <!-- Tips -->
+        <div class="flex gap-2 w-full max-w-[300px]">
+          <div class="flex-1 flex items-center gap-2 px-3 py-2.5 rounded-xl bg-surface-light dark:bg-surface-dark">
+            <UIcon name="light_mode" size="xs" class="text-text-tertiary-light dark:text-text-tertiary-dark flex-shrink-0" />
+            <span class="text-caption text-text-tertiary-light dark:text-text-tertiary-dark leading-tight">
+              Свет
             </span>
           </div>
-          <!-- TipChip: full receipt in frame -->
-          <div class="flex-1 flex flex-col items-center gap-1 p-2 rounded-xl bg-surface-light dark:bg-surface-dark">
-            <UIcon name="crop_free" size="sm" class="text-text-secondary-light dark:text-text-secondary-dark" />
-            <span class="text-caption text-center text-text-tertiary-light dark:text-text-tertiary-dark leading-tight">
-              Весь чек в кадре
+          <div class="flex-1 flex items-center gap-2 px-3 py-2.5 rounded-xl bg-surface-light dark:bg-surface-dark">
+            <UIcon name="crop_free" size="xs" class="text-text-tertiary-light dark:text-text-tertiary-dark flex-shrink-0" />
+            <span class="text-caption text-text-tertiary-light dark:text-text-tertiary-dark leading-tight">
+              Весь чек
             </span>
           </div>
-          <!-- TipChip: clear text -->
-          <div class="flex-1 flex flex-col items-center gap-1 p-2 rounded-xl bg-surface-light dark:bg-surface-dark">
-            <UIcon name="text_fields" size="sm" class="text-text-secondary-light dark:text-text-secondary-dark" />
-            <span class="text-caption text-center text-text-tertiary-light dark:text-text-tertiary-dark leading-tight">
-              Чёткий текст
+          <div class="flex-1 flex items-center gap-2 px-3 py-2.5 rounded-xl bg-surface-light dark:bg-surface-dark">
+            <UIcon name="text_fields" size="xs" class="text-text-tertiary-light dark:text-text-tertiary-dark flex-shrink-0" />
+            <span class="text-caption text-text-tertiary-light dark:text-text-tertiary-dark leading-tight">
+              Чётко
             </span>
           </div>
         </div>
@@ -126,7 +134,7 @@ function handleFileChange(e: Event) {
       <Transition name="fade">
         <div
           v-if="fileError"
-          class="mt-4 flex items-center gap-2 px-4 py-3 rounded-xl bg-danger-light animate-shake"
+          class="mt-3 flex items-center gap-2 px-4 py-3 rounded-xl bg-danger-light"
           role="alert"
         >
           <UIcon name="warning" size="sm" class="text-danger flex-shrink-0" />
@@ -135,7 +143,7 @@ function handleFileChange(e: Event) {
       </Transition>
 
       <!-- Action buttons -->
-      <div class="flex-shrink-0 space-y-3 mt-6">
+      <div class="flex-shrink-0 space-y-2.5 mt-5">
         <UButton
           variant="primary"
           size="lg"
@@ -155,34 +163,39 @@ function handleFileChange(e: Event) {
           @click="openGallery"
         >
           <UIcon name="photo_library" size="sm" class="mr-2" />
-          Выбрать из галереи
+          Из галереи
         </UButton>
       </div>
     </template>
 
     <!-- === PREVIEW STATE === -->
     <template v-else>
-      <!-- Image preview with overlays -->
       <div class="flex-1 relative min-h-0">
         <img
           :src="previewUrl"
           alt="Фото чека"
           class="w-full h-full object-contain rounded-2xl"
-          style="max-height: calc(100dvh - 280px)"
+          style="max-height: calc(100dvh - 260px)"
         />
 
-        <!-- OCR loading overlay -->
+        <!-- OCR loading overlay with scanline -->
         <Transition name="fade">
           <div
             v-if="isOcrLoading"
-            class="absolute inset-0 rounded-2xl
-                   bg-background-dark/70 backdrop-blur-sm
+            class="absolute inset-0 rounded-2xl overflow-hidden
+                   bg-background-dark/60 backdrop-blur-[2px]
                    flex flex-col items-center justify-center gap-3"
             aria-live="polite"
             aria-label="Распознаём текст чека..."
           >
-            <USpinner size="lg" class="text-white" />
-            <p class="text-body-sm font-medium text-white">Распознаём текст...</p>
+            <!-- Animated scan line -->
+            <div class="absolute inset-x-0 top-0 h-full pointer-events-none">
+              <div class="scan-line absolute inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-primary to-transparent opacity-80" />
+            </div>
+            <div class="relative z-10 flex flex-col items-center gap-2">
+              <USpinner size="lg" class="text-white" />
+              <p class="text-body-sm font-medium text-white">Распознаём чек...</p>
+            </div>
           </div>
         </Transition>
 
@@ -195,22 +208,22 @@ function handleFileChange(e: Event) {
             role="alert"
             aria-live="assertive"
           >
-            <div class="w-14 h-14 rounded-full bg-danger-light flex items-center justify-center">
+            <div class="w-14 h-14 rounded-full bg-danger/20 flex items-center justify-center">
               <UIcon name="error_outline" size="xl" class="text-danger" />
             </div>
             <div class="text-center">
               <p class="text-body font-semibold text-white mb-1">Не удалось распознать</p>
-              <p class="text-body-sm text-white/70">
-                Убедитесь, что чек хорошо освещён и полностью в кадре
+              <p class="text-body-sm text-white/60">
+                Убедитесь, что чек хорошо освещён и полностью виден
               </p>
             </div>
-            <div class="flex flex-col gap-2 w-full">
+            <div class="flex flex-col gap-2 w-full max-w-[250px]">
               <UButton variant="primary" size="md" :full-width="true" @click="emit('retryOcr')">
                 <UIcon name="refresh" size="sm" class="mr-2" />
                 Попробовать снова
               </UButton>
-              <UButton variant="ghost" size="md" :full-width="true" class="text-white/80" @click="emit('resetPhoto')">
-                Выбрать другое фото
+              <UButton variant="ghost" size="md" :full-width="true" class="text-white/70" @click="emit('resetPhoto')">
+                Другое фото
               </UButton>
             </div>
           </div>
@@ -220,34 +233,33 @@ function handleFileChange(e: Event) {
         <Transition name="fade">
           <div
             v-if="isOcrSuccess"
-            class="absolute inset-0 rounded-2xl
-                   bg-success/20 flex items-center justify-center"
+            class="absolute inset-0 rounded-2xl bg-success/15 backdrop-blur-[1px]
+                   flex items-center justify-center"
             aria-live="assertive"
           >
-            <div class="w-16 h-16 rounded-full bg-success flex items-center justify-center animate-scaleIn">
+            <div class="w-16 h-16 rounded-full bg-success flex items-center justify-center animate-scaleIn shadow-lg shadow-success/30">
               <UIcon name="check" size="xl" class="text-white" />
             </div>
           </div>
         </Transition>
 
-        <!-- Retake button top-right -->
+        <!-- Retake button -->
         <button
           v-if="!isOcrLoading"
           type="button"
           aria-label="Переснять фото"
           class="absolute top-3 right-3
-                 w-9 h-9 rounded-full bg-background-dark/60 backdrop-blur-sm
+                 w-9 h-9 rounded-full bg-background-dark/50 backdrop-blur-sm
                  flex items-center justify-center
                  text-white active:scale-90 transition-transform"
           @click="emit('resetPhoto')"
         >
-          <UIcon name="refresh" size="sm" />
+          <UIcon name="close" size="sm" />
         </button>
       </div>
 
       <!-- Action row below preview -->
-      <div class="flex-shrink-0 space-y-3 mt-4">
-        <!-- While OCR loading: disabled loading button -->
+      <div class="flex-shrink-0 mt-3">
         <UButton
           v-if="isOcrLoading"
           variant="primary"
@@ -259,9 +271,6 @@ function handleFileChange(e: Event) {
           Распознаём...
         </UButton>
 
-        <!-- OCR error: no continue button shown — buttons are in the overlay -->
-
-        <!-- OCR idle (preview selected, not loading, no error, not success): show retake -->
         <template v-if="!isOcrLoading && !ocrError && !isOcrSuccess">
           <UButton
             variant="ghost"
@@ -278,13 +287,16 @@ function handleFileChange(e: Event) {
   </div>
 </template>
 
+<style>
+@import '../transitions.css';
+</style>
+
 <style scoped>
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 200ms ease;
+@keyframes scanMove {
+  0% { top: 0; }
+  100% { top: 100%; }
 }
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
+.scan-line {
+  animation: scanMove 2s ease-in-out infinite;
 }
 </style>

@@ -30,7 +30,7 @@ export class ReceiptController {
   constructor(private readonly ocrService: ReceiptOcrService) {}
 
   @Post('scan')
-  @UseGuards(PremiumGuard)
+  // TODO: re-enable after beta — @UseGuards(PremiumGuard)
   @UseInterceptors(
     FileInterceptor('image', {
       limits: { fileSize: 10 * 1024 * 1024 }, // 10MB

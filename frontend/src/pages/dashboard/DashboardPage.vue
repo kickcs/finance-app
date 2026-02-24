@@ -85,7 +85,7 @@ async function handleRefresh() {
 
 function handleScanReceipt() {
   haptics.tap();
-  if (!requirePremium('Сканирование чеков')) return;
+  // TODO: re-enable after beta — if (!requirePremium('Сканирование чеков')) return;
   nav.toScanReceipt();
 }
 </script>
@@ -159,9 +159,11 @@ function handleScanReceipt() {
                   <span class="text-caption font-medium text-text-secondary-light dark:text-text-secondary-dark whitespace-nowrap">
                     Сканировать
                   </span>
+                  <!-- TODO: re-enable after beta
                   <div class="absolute -top-1 -right-1">
                     <PremiumBadge />
                   </div>
+                  -->
                 </button>
               </div>
             </section>

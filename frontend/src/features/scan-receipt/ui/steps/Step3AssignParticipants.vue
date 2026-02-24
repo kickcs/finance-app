@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { UButton, UIcon, UModal, UInput } from '@/shared/ui';
+import { UButton, UIcon, UModal, UInput, UProgressBar } from '@/shared/ui';
+import { pluralize } from '@/shared/lib/format/pluralize';
 import { haptics } from '@/shared/lib/haptics';
 import type { ReceiptItem, Participant } from '../../model/types';
 import ParticipantChip from '../ParticipantChip.vue';
@@ -34,16 +35,18 @@ function toggleFilter(participantId: string) {
 const filteredItems = computed(() => {
   if (!activeFilter.value) return props.items;
   return props.items.filter((item) =>
-    item.assignedParticipantIds.includes(activeFilter.value!)
+    item.assignedParticipantIds.includes(activeFilter.value!),
   );
 });
 
-// Hint state
-const showHint = ref(true);
+// Assignment progress
+const assignedCount = computed(() =>
+  props.items.filter((item) => item.assignedParticipantIds.length > 0).length,
+);
 
-function dismissHint() {
-  showHint.value = false;
-}
+const assignProgress = computed(() =>
+  props.items.length > 0 ? Math.round((assignedCount.value / props.items.length) * 100) : 0,
+);
 
 // Add participant modal
 const addParticipantOpen = ref(false);
@@ -75,6 +78,16 @@ function confirmAdd() {
   addParticipantOpen.value = false;
 }
 
+// Assign all items to a participant
+function assignAllTo(participantId: string) {
+  for (const item of props.items) {
+    if (!item.assignedParticipantIds.includes(participantId)) {
+      emit('toggleItemParticipant', item.id, participantId);
+    }
+  }
+  haptics.tap();
+}
+
 function handleNext() {
   haptics.tap();
   emit('next');
@@ -94,27 +107,27 @@ function handleToggleItemParticipant(itemId: string, participantId: string) {
 <template>
   <div class="h-full flex flex-col">
 
-    <!-- Participants bar — fixed height, horizontal scroll -->
-    <div class="flex-shrink-0 px-5 pt-4 pb-3 border-b border-border-light dark:border-border-dark">
-      <!-- Section label -->
-      <p class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
-        Участники
-      </p>
-
+    <!-- Participants bar -->
+    <div class="flex-shrink-0 px-5 pt-3 pb-3 border-b border-border-light dark:border-border-dark">
       <!-- Horizontal scrollable chips row -->
       <div class="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-        <!-- Add participant button — always first -->
+        <!-- Add participant button -->
         <button
           type="button"
           aria-label="Добавить участника"
-          class="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-full border border-dashed border-border-light dark:border-border-dark text-text-secondary-light dark:text-text-secondary-dark hover:border-primary/40 hover:text-primary active:scale-95 transition-all duration-150 text-sm font-medium whitespace-nowrap"
+          class="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-full
+                 border border-dashed border-border-light dark:border-border-dark
+                 text-text-secondary-light dark:text-text-secondary-dark
+                 hover:border-primary/40 hover:text-primary
+                 active:scale-95 transition-all duration-150
+                 text-sm font-medium whitespace-nowrap"
           @click="openAddParticipantSheet"
         >
-          <UIcon name="person_add" size="xs" />
+          <UIcon name="add" size="xs" />
           Добавить
         </button>
 
-        <!-- Participant chips — one per person -->
+        <!-- Participant chips -->
         <TransitionGroup tag="div" name="chip-list" class="flex gap-2">
           <ParticipantChip
             v-for="p in participants"
@@ -125,14 +138,28 @@ function handleToggleItemParticipant(itemId: string, participantId: string) {
           />
         </TransitionGroup>
       </div>
+
+      <!-- Quick action: Assign all to filtered participant -->
+      <Transition name="section-slide">
+        <button
+          v-if="activeFilter && filteredItems.length < items.length"
+          type="button"
+          class="flex items-center gap-1.5 mt-2 text-xs text-primary font-medium
+                 active:opacity-70 transition-opacity"
+          @click="assignAllTo(activeFilter)"
+        >
+          <UIcon name="check_circle" size="xs" />
+          Назначить все позиции этому участнику
+        </button>
+      </Transition>
     </div>
 
     <!-- Empty state — no participants -->
     <div
       v-if="participants.length === 0"
-      class="flex-1 flex flex-col items-center justify-center px-8 gap-5 py-10"
+      class="flex-1 flex flex-col items-center justify-center px-8 gap-4"
     >
-      <div class="w-16 h-16 rounded-full bg-primary-light flex items-center justify-center">
+      <div class="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
         <UIcon name="group_add" size="xl" class="text-primary" />
       </div>
 
@@ -141,24 +168,27 @@ function handleToggleItemParticipant(itemId: string, participantId: string) {
           Добавьте участников
         </h3>
         <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
-          Укажите, кто участвовал в покупке. Начните с себя.
+          Укажите, кто участвовал в покупке
         </p>
       </div>
 
       <!-- Quick-add "Я" -->
       <button
+        v-if="!hasMe"
         type="button"
-        class="flex items-center gap-3 w-full max-w-xs px-5 py-4 rounded-2xl bg-primary text-white shadow-md active:scale-[0.97] transition-all"
+        class="flex items-center gap-3 w-full max-w-xs px-4 py-3.5 rounded-2xl
+               bg-primary text-white shadow-md shadow-primary/20
+               active:scale-[0.97] transition-all"
         @click="addMe"
       >
-        <div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-          <UIcon name="person" size="md" class="text-white" />
+        <div class="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center">
+          <UIcon name="person" size="sm" class="text-white" />
         </div>
-        <div class="text-left">
-          <p class="text-base font-semibold">Добавить «Я»</p>
-          <p class="text-sm text-white/70">Я участвовал в покупке</p>
+        <div class="text-left flex-1">
+          <p class="text-sm font-semibold">Добавить «Я»</p>
+          <p class="text-xs text-white/60">Я участвую в покупке</p>
         </div>
-        <UIcon name="add" size="sm" class="ml-auto text-white/80" />
+        <UIcon name="add" size="sm" class="text-white/70" />
       </button>
 
       <button
@@ -170,27 +200,27 @@ function handleToggleItemParticipant(itemId: string, participantId: string) {
       </button>
     </div>
 
-    <!-- Items list — scrollable, fills remaining height -->
-    <div v-else class="flex-1 overflow-y-auto no-scrollbar px-5 pt-4 pb-4">
+    <!-- Items list -->
+    <div v-else class="flex-1 overflow-y-auto no-scrollbar px-5 pt-3 pb-4">
 
-      <!-- Assignment instruction hint — shown only on first use -->
-      <div
-        v-if="showHint"
-        class="flex items-start gap-3 p-3 mb-4 rounded-xl bg-info-light border border-primary/20"
-      >
-        <UIcon name="touch_app" size="sm" class="text-primary flex-shrink-0 mt-0.5" />
-        <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark flex-1">
-          Нажмите на позицию, чтобы назначить участников. Один товар может принадлежать
-          нескольким людям.
-        </p>
-        <button
-          type="button"
-          aria-label="Закрыть подсказку"
-          class="text-text-tertiary-light dark:text-text-tertiary-dark hover:text-text-secondary-light active:scale-90 transition-all"
-          @click="dismissHint"
-        >
-          <UIcon name="close" size="xs" />
-        </button>
+      <!-- Assignment progress bar -->
+      <div class="mb-3">
+        <div class="flex items-center justify-between mb-1.5">
+          <span class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
+            Назначено {{ assignedCount }} из {{ items.length }}
+          </span>
+          <span
+            class="text-xs font-medium tabular-nums"
+            :class="assignProgress === 100 ? 'text-success' : 'text-text-secondary-light dark:text-text-secondary-dark'"
+          >
+            {{ assignProgress }}%
+          </span>
+        </div>
+        <UProgressBar
+          :value="assignProgress"
+          size="sm"
+          :color="assignProgress === 100 ? 'success' : 'primary'"
+        />
       </div>
 
       <!-- Items list -->
@@ -209,25 +239,34 @@ function handleToggleItemParticipant(itemId: string, participantId: string) {
       <!-- Empty filtered state -->
       <div
         v-if="filteredItems.length === 0 && activeFilter"
-        class="text-center py-8 text-sm text-text-tertiary-light dark:text-text-tertiary-dark"
+        class="text-center py-8"
       >
-        Нет позиций, назначенных этому участнику
+        <p class="text-sm text-text-tertiary-light dark:text-text-tertiary-dark mb-2">
+          Нет позиций для этого участника
+        </p>
+        <button
+          type="button"
+          class="text-sm text-primary font-medium"
+          @click="assignAllTo(activeFilter)"
+        >
+          Назначить все позиции
+        </button>
       </div>
     </div>
 
-    <!-- Footer — summary + continue -->
+    <!-- Footer -->
     <div class="flex-shrink-0 border-t border-border-light dark:border-border-dark px-5 pt-3 pb-[calc(1.25rem+var(--safe-area-inset-bottom))] bg-background-light dark:bg-background-dark">
 
-      <!-- Unassigned items warning -->
+      <!-- Unassigned warning -->
       <Transition name="section-slide">
         <div
-          v-if="unassignedCount > 0"
-          class="flex items-center gap-2 mb-3 px-3 py-2 rounded-xl bg-warning-light"
+          v-if="unassignedCount > 0 && participants.length > 0"
+          class="flex items-center gap-2 mb-3 px-3 py-2.5 rounded-xl bg-warning/[0.08] border border-warning/20"
           role="alert"
         >
           <UIcon name="warning" size="sm" class="text-warning flex-shrink-0" />
-          <p class="text-sm text-warning font-medium">
-            {{ unassignedCount }} поз. без участника — назначьте «Я» или другого
+          <p class="text-xs text-warning font-medium flex-1">
+            {{ unassignedCount }} {{ pluralize(unassignedCount, 'позиция', 'позиции', 'позиций') }} без участника
           </p>
         </div>
       </Transition>
@@ -237,7 +276,6 @@ function handleToggleItemParticipant(itemId: string, participantId: string) {
         size="lg"
         full-width
         :disabled="participants.length === 0"
-        aria-label="Перейти к итогу и созданию транзакций"
         @click="handleNext"
       >
         Далее — Итог
@@ -249,23 +287,25 @@ function handleToggleItemParticipant(itemId: string, participantId: string) {
 
   <!-- Add participant modal -->
   <UModal v-model="addParticipantOpen" title="Добавить участника">
-    <!-- "Я" quick-add — only shown if "Я" not already in list -->
+    <!-- "Я" quick-add -->
     <button
       v-if="!hasMe"
       type="button"
-      class="flex items-center gap-3 w-full px-4 py-3 rounded-xl mb-3 bg-primary-light border border-primary/20 active:scale-[0.98] transition-all"
+      class="flex items-center gap-3 w-full px-4 py-3 rounded-xl mb-3
+             bg-primary/[0.06] border border-primary/15
+             active:scale-[0.98] transition-all"
       @click="addMe"
     >
       <div class="w-9 h-9 rounded-full bg-primary flex items-center justify-center">
         <UIcon name="person" size="sm" class="text-white" />
       </div>
-      <div class="text-left">
+      <div class="text-left flex-1">
         <p class="text-sm font-semibold text-primary">Добавить «Я»</p>
         <p class="text-xs text-text-secondary-light dark:text-text-secondary-dark">
           Вы участвуете в этом чеке
         </p>
       </div>
-      <UIcon name="add_circle" size="sm" class="text-primary ml-auto" />
+      <UIcon name="add_circle" size="sm" class="text-primary" />
     </button>
 
     <!-- Custom name input -->
@@ -293,6 +333,10 @@ function handleToggleItemParticipant(itemId: string, participantId: string) {
   </UModal>
 </template>
 
+<style>
+@import '../transitions.css';
+</style>
+
 <style scoped>
 .chip-list-enter-active,
 .chip-list-leave-active {
@@ -302,15 +346,5 @@ function handleToggleItemParticipant(itemId: string, participantId: string) {
 .chip-list-leave-to {
   opacity: 0;
   transform: scale(0.8);
-}
-
-.section-slide-enter-active,
-.section-slide-leave-active {
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.section-slide-enter-from,
-.section-slide-leave-to {
-  opacity: 0;
-  transform: translateY(-8px);
 }
 </style>

@@ -20,33 +20,40 @@ export class ReceiptOcrService {
     const dataUrl = `data:${mimeType};base64,${base64Image}`;
 
     const systemPrompt = `You are a receipt OCR assistant. Extract structured data from receipt images.
-Return a JSON object with the following structure:
+
+STEP-BY-STEP PROCESS (follow this order):
+1. FIRST, find the FINAL total on the receipt — the largest total at the bottom ("ИТОГО К ОПЛАТЕ", "ИТОГО", "Total", "Grand Total"). This is your anchor — set it as "totalAmount"
+2. THEN, check if there are any additional charges (service, НДС, VAT, tax, tips) between the subtotal and the final total. Extract the percentage into "serviceChargePercent"
+3. Calculate the subtotal: if serviceChargePercent exists, subtotal = totalAmount / (1 + serviceChargePercent/100). Otherwise subtotal = totalAmount
+4. Extract each item with name, quantity, and the LINE TOTAL from the "Сумма"/"Sum" column (this is totalPrice, NOT unitPrice)
+5. Calculate unitPrice = totalPrice / quantity for each item
+6. VERIFY: sum of all item totalPrice values must equal the subtotal (step 3). If not, re-check your item extraction
+
+Return JSON:
 {
   "items": [
     {
-      "name": "item name (string)",
+      "name": "item name",
       "quantity": number,
-      "unitPrice": number (price per unit in the receipt's currency, e.g. 35000 for 35,000 UZS),
-      "totalPrice": number (quantity × unitPrice, in the receipt's currency)
+      "unitPrice": number (price PER SINGLE UNIT = totalPrice / quantity),
+      "totalPrice": number (line total from receipt "Сумма" column)
     }
   ],
-  "totalAmount": number (final total on the receipt including all charges),
-  "serviceChargePercent": number or null (service charge percentage if present, e.g. 10 for 10%),
-  "currency": "3-letter ISO currency code (e.g. UZS, USD, RUB)",
-  "date": "YYYY-MM-DD or null if not found",
-  "storeName": "store/business name or null if not found"
+  "totalAmount": number (FINAL total — the largest number at the bottom of receipt),
+  "serviceChargePercent": number or null,
+  "currency": "3-letter ISO code (e.g. UZS, USD, RUB)",
+  "date": "YYYY-MM-DD or null",
+  "storeName": "store name or null"
 }
 
-Important rules:
-- All prices must be whole numbers in the receipt's display currency (e.g. 35000 for 35,000 UZS, not in tiyin)
-- Handle Uzbek, Russian, and English receipts
-- If quantity is not specified, use 1
-- currency must always be a 3-letter ISO code
-- Do NOT include service charges, tips, or taxes as separate items in the "items" array. Instead, extract the service charge percentage into "serviceChargePercent" (e.g. 10 for "Обслуживание 10%"). Items should only contain actual products/dishes
-- If there is a flat service charge amount (not percentage), calculate the percentage from the subtotal and put it in serviceChargePercent
-- If no service charge is found, set serviceChargePercent to null
-- totalAmount must equal the final total on the receipt (after all charges and discounts)
-- Return only valid JSON, no markdown or extra text`;
+Rules:
+- All prices: whole numbers in receipt currency (e.g. 35000 for 35,000 UZS)
+- Handle Uzbek, Russian, English receipts
+- If quantity not specified, use 1
+- Do NOT include charges/taxes as items. Extract into "serviceChargePercent": "Обслуживание 10%" → 10, "НДС +12%" → 12, "VAT 15%" → 15
+- If charge is a flat amount, calculate percentage from subtotal
+- No charges found → serviceChargePercent: null
+- Return only valid JSON, no markdown`;
 
     const response = await this.openai.chat.completions.create({
       model: 'gpt-4.1-nano',

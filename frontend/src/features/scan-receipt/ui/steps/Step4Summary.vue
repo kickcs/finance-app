@@ -1,16 +1,18 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { UButton, UIcon, UBadge, UInput } from '@/shared/ui';
+import { useRouter } from 'vue-router';
+import { UButton, UIcon, UInput } from '@/shared/ui';
 import { AccountSelector } from '@/entities/account';
-import { CategoryChips } from '@/entities/category';
-import { EXPENSE_CATEGORIES } from '@/entities/category';
+import { CategoryChips, EXPENSE_CATEGORIES } from '@/entities/category';
 import { Popover, PopoverTrigger, PopoverContent } from '@/shared/ui/primitives/popover';
 import { Calendar } from '@/shared/ui/primitives/calendar';
 import { CalendarDate, type DateValue } from '@internationalized/date';
 import { formatCurrency } from '@/shared/lib/format/currency';
+import { pluralize } from '@/shared/lib/format/pluralize';
 import { haptics } from '@/shared/lib/haptics';
 import type { ParticipantSummary, ScanReceiptFormData } from '../../model/types';
 import type { AccountWithBalances } from '@/entities/account';
+import { useReceiptShare, type ReceiptShareData } from '../../model/useReceiptShare';
 import PersonSummaryCard from '../PersonSummaryCard.vue';
 
 const props = defineProps<{
@@ -22,6 +24,7 @@ const props = defineProps<{
   serviceChargePercent: number | null;
   serviceChargeAmount: number;
   totalAmount: number;
+  storeName: string | null;
   isSubmitting: boolean;
   submitError: string | null;
   isSuccess: boolean;
@@ -33,6 +36,8 @@ const emit = defineEmits<{
   submit: [];
   back: [];
 }>();
+
+const router = useRouter();
 
 // Calendar / date picker
 const calendarOpen = ref(false);
@@ -57,7 +62,7 @@ function onDateSelect(value: DateValue | undefined) {
   calendarOpen.value = false;
 }
 
-// Create debts toggle (local, synced to formData)
+// Create debts toggle
 const createDebts = computed({
   get: () => props.formData.createDebts,
   set: (val: boolean) => {
@@ -65,12 +70,9 @@ const createDebts = computed({
   },
 });
 
-// Transaction count = always 1 (handleSubmit creates a single transaction for the full receipt total)
-const transactionCount = computed(() => 1);
-
-// Debt count = non-me participants
+// Debt count = non-me participants with items
 const debtCount = computed(() =>
-  props.participantSummaries.filter((p) => !p.isMe && p.itemCount > 0).length
+  props.participantSummaries.filter((p) => !p.isMe && p.itemCount > 0).length,
 );
 
 function handleSubmit() {
@@ -78,10 +80,25 @@ function handleSubmit() {
   emit('submit');
 }
 
-function handleBack() {
-  haptics.tap();
-  emit('back');
-}
+// Sharing
+const { isSharing, shareAsImage, shareAsText, saveToGallery } = useReceiptShare();
+
+const shareActions = computed(() => [
+  { icon: 'photo_camera', label: 'Картинкой', action: () => shareAsImage(shareData.value) },
+  { icon: 'share', label: 'Текстом', action: () => shareAsText(shareData.value) },
+  { icon: 'download', label: 'Сохранить', action: () => saveToGallery(shareData.value) },
+]);
+
+const shareData = computed<ReceiptShareData>(() => ({
+  storeName: props.storeName,
+  date: props.formData.date,
+  currency: props.currency,
+  totalAmount: props.totalAmount,
+  subtotal: props.subtotal,
+  serviceChargePercent: props.serviceChargePercent,
+  serviceChargeAmount: props.serviceChargeAmount,
+  participants: props.participantSummaries,
+}));
 </script>
 
 <template>
@@ -91,35 +108,117 @@ function handleBack() {
     <Transition name="fade">
       <div
         v-if="isSuccess"
-        class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background-light dark:bg-background-dark animate-fadeInUp"
+        class="fixed inset-0 z-50 flex flex-col items-center
+               bg-background-light dark:bg-background-dark
+               px-6 pt-[var(--safe-area-inset-top)] pb-[calc(2rem+var(--safe-area-inset-bottom))]"
         aria-live="assertive"
       >
-        <div class="w-20 h-20 rounded-full bg-success/20 flex items-center justify-center mb-6 animate-scaleIn">
-          <UIcon name="receipt_long" size="2xl" class="text-success" />
+        <!-- Centered content group -->
+        <div class="flex-1 flex flex-col items-center justify-center w-full max-w-xs">
+          <!-- Checkmark + message -->
+          <div class="flex flex-col items-center gap-3 success-hero">
+            <div class="w-20 h-20 rounded-full bg-success/12 flex items-center justify-center success-icon">
+              <UIcon name="check_circle" size="2xl" class="text-success" />
+            </div>
+            <div class="text-center">
+              <h2 class="text-2xl font-bold text-text-primary-light dark:text-text-primary-dark mb-1">
+                Готово!
+              </h2>
+              <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
+                Создана транзакция на {{ formatCurrency(totalAmount, currency) }}
+                <template v-if="createDebts && debtCount > 0">
+                  <br />и {{ debtCount }} {{ pluralize(debtCount, 'долг', 'долга', 'долгов') }}
+                </template>
+              </p>
+            </div>
+          </div>
+
+          <!-- Share actions -->
+          <div class="w-full mt-10 space-y-3 success-actions">
+            <p class="text-xs font-medium text-text-tertiary-light dark:text-text-tertiary-dark text-center uppercase tracking-wide">
+              Поделиться
+            </p>
+            <div class="grid grid-cols-3 gap-2">
+              <button
+                v-for="btn in shareActions"
+                :key="btn.icon"
+                type="button"
+                :disabled="isSharing"
+                class="flex flex-col items-center gap-2 p-3 rounded-2xl
+                       bg-card-light dark:bg-card-dark
+                       border border-border-light dark:border-border-dark
+                       active:scale-95 transition-all duration-150
+                       disabled:opacity-50"
+                @click="btn.action"
+              >
+                <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <UIcon :name="btn.icon" size="sm" class="text-primary" />
+                </div>
+                <span class="text-[11px] font-medium text-text-secondary-light dark:text-text-secondary-dark leading-tight">
+                  {{ btn.label }}
+                </span>
+              </button>
+            </div>
+          </div>
         </div>
-        <h2 class="text-3xl font-bold text-text-primary-light dark:text-text-primary-dark mb-2">
-          Готово!
-        </h2>
-        <p class="text-base text-text-secondary-light dark:text-text-secondary-dark text-center px-8">
-          Создана 1 транзакция
-          <template v-if="createDebts"> и {{ debtCount }} долгов</template>
-        </p>
+
+        <!-- Done button pinned at bottom -->
+        <div class="w-full max-w-xs flex-shrink-0 pt-4 success-done">
+          <UButton
+            variant="primary"
+            size="xl"
+            full-width
+            @click="router.push('/')"
+          >
+            На главную
+          </UButton>
+        </div>
       </div>
     </Transition>
 
-    <!-- Scrollable summary content -->
+    <!-- Scrollable content -->
     <div
-      class="flex-1 overflow-y-auto no-scrollbar px-5 pt-4 pb-4 space-y-5"
-      :class="isSubmitting && 'opacity-60 pointer-events-none'"
+      class="flex-1 overflow-y-auto no-scrollbar px-5 pt-4 pb-4 space-y-4"
+      :class="isSubmitting && 'opacity-50 pointer-events-none'"
     >
 
-      <!-- Per-person breakdown cards -->
-      <section aria-label="Разбивка по участникам">
-        <h2 class="text-sm font-semibold text-text-secondary-light dark:text-text-secondary-dark uppercase tracking-wide mb-3">
-          Кто платит сколько
-        </h2>
+      <!-- Total summary card -->
+      <div class="p-4 rounded-2xl bg-surface-light dark:bg-surface-dark">
+        <template v-if="serviceChargePercent && serviceChargeAmount > 0">
+          <div class="flex justify-between items-baseline mb-1">
+            <span class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
+              Подытог
+            </span>
+            <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark tabular-nums">
+              {{ formatCurrency(subtotal, currency) }}
+            </span>
+          </div>
+          <div class="flex justify-between items-baseline mb-2">
+            <span class="text-xs text-primary font-medium">
+              Обслуживание {{ serviceChargePercent }}%
+            </span>
+            <span class="text-sm text-primary tabular-nums font-medium">
+              +{{ formatCurrency(serviceChargeAmount, currency) }}
+            </span>
+          </div>
+          <div class="h-px bg-border-light dark:bg-border-dark mb-2" />
+        </template>
+        <div class="flex justify-between items-baseline">
+          <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
+            Сумма чека
+          </span>
+          <span class="text-xl font-bold text-text-primary-light dark:text-text-primary-dark tabular-nums">
+            {{ formatCurrency(totalAmount, currency) }}
+          </span>
+        </div>
+      </div>
 
-        <div class="space-y-3">
+      <!-- Per-person breakdown -->
+      <section aria-label="Разбивка по участникам">
+        <h2 class="text-xs font-semibold text-text-tertiary-light dark:text-text-tertiary-dark uppercase tracking-wide mb-2.5">
+          Кто сколько
+        </h2>
+        <div class="space-y-2">
           <PersonSummaryCard
             v-for="p in participantSummaries"
             :key="p.id"
@@ -132,13 +231,13 @@ function handleBack() {
       <!-- Divider -->
       <div class="h-px bg-border-light dark:bg-border-dark" />
 
-      <!-- Transaction details form -->
-      <section aria-label="Параметры транзакций" class="space-y-4">
-        <h2 class="text-sm font-semibold text-text-secondary-light dark:text-text-secondary-dark uppercase tracking-wide">
+      <!-- Transaction parameters -->
+      <section aria-label="Параметры транзакции" class="space-y-3">
+        <h2 class="text-xs font-semibold text-text-tertiary-light dark:text-text-tertiary-dark uppercase tracking-wide">
           Параметры
         </h2>
 
-        <!-- Account selector -->
+        <!-- Account -->
         <AccountSelector
           :accounts="accounts"
           :selected-id="formData.accountId"
@@ -146,7 +245,7 @@ function handleBack() {
           @select="$emit('update:formData', { ...formData, accountId: $event })"
         />
 
-        <!-- Category chips -->
+        <!-- Category -->
         <CategoryChips
           :categories="EXPENSE_CATEGORIES"
           :selected-id="formData.categoryId"
@@ -154,12 +253,12 @@ function handleBack() {
           @select="$emit('update:formData', { ...formData, categoryId: $event })"
         />
 
-        <!-- Description + Date row -->
+        <!-- Description + Date -->
         <div class="grid grid-cols-2 gap-2">
           <UInput
             :model-value="formData.description"
             label="Комментарий"
-            placeholder="#продукты, #кафе..."
+            placeholder="#кафе..."
             @update:model-value="$emit('update:formData', { ...formData, description: $event as string })"
           />
 
@@ -171,7 +270,9 @@ function handleBack() {
               <PopoverTrigger as-child>
                 <button
                   type="button"
-                  class="flex items-center justify-between w-full px-3 py-3 rounded-lg text-sm bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark transition-all duration-150"
+                  class="flex items-center justify-between w-full px-3 py-3 rounded-lg text-sm
+                         bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark
+                         text-text-primary-light dark:text-text-primary-dark transition-all duration-150"
                 >
                   <span>{{ displayDate }}</span>
                   <UIcon
@@ -197,17 +298,18 @@ function handleBack() {
           type="button"
           role="switch"
           :aria-checked="createDebts"
-          aria-label="Создать долги для участников"
-          class="flex items-center justify-between w-full px-4 py-3 rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark transition-all"
-          :class="createDebts && 'border-primary bg-primary/5'"
+          class="flex items-center justify-between w-full px-4 py-3 rounded-xl
+                 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark
+                 transition-all"
+          :class="createDebts && 'border-primary/30 bg-primary/[0.03]'"
           @click="createDebts = !createDebts"
         >
           <div class="flex items-center gap-3">
             <div
-              class="w-9 h-9 rounded-full flex items-center justify-center"
+              class="w-8 h-8 rounded-full flex items-center justify-center transition-colors"
               :class="createDebts
-                ? 'bg-primary/20 text-primary'
-                : 'bg-surface-light dark:bg-surface-dark text-text-secondary-light dark:text-text-secondary-dark'"
+                ? 'bg-primary/15 text-primary'
+                : 'bg-surface-light dark:bg-surface-dark text-text-tertiary-light dark:text-text-tertiary-dark'"
             >
               <UIcon name="group" size="sm" />
             </div>
@@ -215,79 +317,41 @@ function handleBack() {
               <p class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
                 Создать долги
               </p>
-              <p class="text-xs text-text-secondary-light dark:text-text-secondary-dark">
-                Участники увидят, сколько должны вам
+              <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
+                {{ debtCount }} {{ pluralize(debtCount, 'участник', 'участника', 'участников') }} должны вам
               </p>
             </div>
           </div>
-          <!-- Toggle switch -->
+          <!-- Toggle -->
           <div
-            class="w-12 h-7 rounded-full transition-all relative flex-shrink-0"
+            class="w-11 h-6 rounded-full transition-all relative flex-shrink-0"
             :class="createDebts ? 'bg-primary' : 'bg-border-light dark:bg-border-dark'"
           >
             <div
-              class="absolute w-5 h-5 bg-white rounded-full top-1 shadow-xs transition-all"
-              :class="createDebts ? 'right-1' : 'left-1'"
+              class="absolute w-4.5 h-4.5 bg-white rounded-full top-[3px] shadow-xs transition-all"
+              :class="createDebts ? 'right-[3px]' : 'left-[3px]'"
             />
           </div>
         </button>
 
-      </section>
+        <!-- What will be created -->
+        <div class="flex items-center gap-3 px-3 py-2 rounded-xl bg-surface-light dark:bg-surface-dark">
+          <UIcon name="receipt_long" size="sm" class="text-text-tertiary-light dark:text-text-tertiary-dark flex-shrink-0" />
+          <span class="text-xs text-text-secondary-light dark:text-text-secondary-dark flex-1">
+            Будет создана 1 транзакция
+            <template v-if="createDebts && debtCount > 0">
+              и {{ debtCount }} {{ pluralize(debtCount, 'долг', 'долга', 'долгов') }}
+            </template>
+          </span>
+        </div>
 
-      <!-- Total summary -->
-      <div class="p-4 rounded-2xl bg-surface-light dark:bg-surface-dark space-y-2">
-        <template v-if="serviceChargePercent">
-          <div class="flex justify-between items-baseline">
-            <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
-              Подытог
-            </span>
-            <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark tabular-nums">
-              {{ formatCurrency(subtotal, currency) }}
-            </span>
-          </div>
-          <div class="flex justify-between items-baseline">
-            <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
-              Обслуживание {{ serviceChargePercent }}%
-            </span>
-            <span class="text-sm text-primary tabular-nums font-medium">
-              +{{ formatCurrency(serviceChargeAmount, currency) }}
-            </span>
-          </div>
-          <div class="h-px bg-border-light dark:bg-border-dark" />
-        </template>
-        <div class="flex justify-between items-baseline">
-          <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
-            Сумма чека
-          </span>
-          <span class="text-2xl font-bold text-text-primary-light dark:text-text-primary-dark tabular-nums">
-            {{ formatCurrency(totalAmount, currency) }}
-          </span>
-        </div>
-        <div class="h-px bg-border-light dark:bg-border-dark" />
-        <div class="flex justify-between items-center">
-          <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
-            Создаётся транзакций
-          </span>
-          <UBadge variant="primary" size="sm" shape="pill">
-            {{ transactionCount }}
-          </UBadge>
-        </div>
-        <div v-if="createDebts" class="flex justify-between items-center">
-          <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
-            Создаётся долгов
-          </span>
-          <UBadge variant="neutral" size="sm" shape="pill">
-            {{ debtCount }}
-          </UBadge>
-        </div>
-      </div>
+      </section>
 
     </div>
 
-    <!-- Sticky footer: error + create button -->
+    <!-- Sticky footer -->
     <div class="flex-shrink-0 border-t border-border-light dark:border-border-dark px-5 pt-3 pb-[calc(1.25rem+var(--safe-area-inset-bottom))] bg-background-light dark:bg-background-dark">
 
-      <!-- Validation error -->
       <Transition name="section-slide">
         <p v-if="submitError" class="text-sm text-danger mb-3 flex items-center gap-2">
           <UIcon name="error" size="sm" class="flex-shrink-0" />
@@ -301,34 +365,57 @@ function handleBack() {
         full-width
         :loading="isSubmitting"
         :disabled="!isFormValid"
-        aria-label="Создать транзакции по чеку"
         @click="handleSubmit"
       >
-        <UIcon name="receipt_long" size="sm" class="mr-2" />
-        Создать транзакции
+        <UIcon name="check" size="sm" class="mr-2" />
+        Создать
       </UButton>
     </div>
 
   </div>
 </template>
 
+<style>
+@import '../transitions.css';
+</style>
+
 <style scoped>
-.section-slide-enter-active,
-.section-slide-leave-active {
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.section-slide-enter-from,
-.section-slide-leave-to {
-  opacity: 0;
-  transform: translateY(-8px);
+/* Success overlay staggered animations */
+.success-icon {
+  animation: scaleIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s both;
 }
 
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.25s ease;
+.success-hero {
+  animation: fadeSlideUp 0.4s ease-out 0.05s both;
 }
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
+
+.success-actions {
+  animation: fadeSlideUp 0.35s ease-out 0.35s both;
+}
+
+.success-done {
+  animation: fadeSlideUp 0.3s ease-out 0.55s both;
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeSlideUp {
+  from {
+    transform: translateY(16px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 </style>

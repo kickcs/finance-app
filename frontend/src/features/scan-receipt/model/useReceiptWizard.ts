@@ -1,13 +1,12 @@
 import { ref, computed, onUnmounted } from 'vue';
-import { useRouter } from 'vue-router';
 import { ENTITY_COLORS } from '@/shared/config/colors';
 import { receiptApi, type ScanReceiptResponse } from '../api/receiptApi';
 import { transactionsApi } from '@/entities/transaction';
 import { debtsApi, debtQueryKeys } from '@/entities/debt';
 import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
 import { useQueryClient } from '@tanstack/vue-query';
-import { useToast } from '@/shared/ui';
 import { haptics } from '@/shared/lib/haptics';
+import { calcLineTotal, calcLineTotalWithService } from './calcLineTotal';
 import type {
   ReceiptItem,
   Participant,
@@ -22,9 +21,7 @@ function uid(): string {
 }
 
 export function useReceiptWizard(userId: () => string | null) {
-  const router = useRouter();
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   // Step state
   const currentStep = ref(1);
@@ -62,7 +59,7 @@ export function useReceiptWizard(userId: () => string | null) {
 
   // Computed
   const subtotal = computed(() =>
-    items.value.reduce((sum, item) => sum + item.qty * item.unitPrice, 0),
+    items.value.reduce((sum, item) => sum + calcLineTotal(item), 0),
   );
 
   const serviceChargeAmount = computed(() => {
@@ -74,9 +71,7 @@ export function useReceiptWizard(userId: () => string | null) {
 
   // Per-item service-inclusive price (proportionally distributed)
   function getItemWithServiceTotal(item: ReceiptItem): number {
-    const lineTotal = item.qty * item.unitPrice;
-    if (!serviceChargePercent.value) return lineTotal;
-    return Math.round(lineTotal * (1 + serviceChargePercent.value / 100));
+    return calcLineTotalWithService(item, serviceChargePercent.value);
   }
 
   const unassignedCount = computed(() =>
@@ -307,16 +302,6 @@ export function useReceiptWizard(userId: () => string | null) {
 
       isSuccess.value = true;
       haptics.success();
-
-      // Auto-navigate after 1.5s
-      setTimeout(() => {
-        toast({
-          title: 'Чек добавлен',
-          description: `Создана транзакция${formData.value.createDebts ? ` и ${participantSummaries.value.filter((p) => !p.isMe && p.total > 0).length} долгов` : ''}`,
-          variant: 'success',
-        });
-        router.push('/');
-      }, 1500);
     } catch (error) {
       submitError.value = error instanceof Error ? error.message : 'Произошла ошибка';
       haptics.error();

@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.20';
+export const CURRENT_VERSION = '1.0.21';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,29 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.21',
+    date: '2026-02-25',
+    title: 'Поделиться чеком',
+    items: [
+      {
+        type: 'feature',
+        text: 'Экран «Поделиться» после создания транзакции — отправьте картинку или текст с разбивкой по позициям каждому участнику',
+      },
+      {
+        type: 'feature',
+        text: 'Сохранение картинки чека в галерею',
+      },
+      {
+        type: 'improvement',
+        text: 'Сканирование чеков теперь доступно всем пользователям без подписки',
+      },
+      {
+        type: 'improvement',
+        text: 'Улучшено распознавание НДС и обслуживания на чеках',
+      },
+    ],
+  },
   {
     version: '1.0.20',
     date: '2026-02-24',
