@@ -16,7 +16,7 @@ import { formatCurrency } from '@/shared/lib/format/currency';
 import { formatDate } from '@/shared/lib/format/date';
 import { useDebts, DEBT_DIRECTION_LABELS, DEBT_DIRECTION_COLORS, type Debt } from '@/entities/debt';
 import { useAccounts } from '@/entities/account';
-import { CloseDebtModal, DeleteDebtModal, useCloseDebt } from '@/features/close-debt';
+import { DeleteDebtModal, useCloseDebt } from '@/features/close-debt';
 import { PartialPaymentModal, usePartialPayment } from '@/features/partial-payment';
 import { navigateBack } from '@/app/router';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
@@ -52,25 +52,14 @@ const progress = computed(() => {
 });
 
 // Modal states
-const showCloseModal = ref(false);
 const showDeleteModal = ref(false);
 const showPartialPaymentModal = ref(false);
 
 // Close debt logic
-const { isClosing, isDeleting, closeDebt, deleteDebt } = useCloseDebt();
+const { isDeleting, deleteDebt } = useCloseDebt();
 
 // Partial payment logic
 const { isPaying, makePartialPayment } = usePartialPayment();
-
-async function handleCloseDebt() {
-  if (!debt.value || !userId.value) return;
-
-  const success = await closeDebt(debt.value, userId.value);
-  if (success) {
-    showCloseModal.value = false;
-    router.push({ name: 'dashboard' });
-  }
-}
 
 async function handleDeleteDebt() {
   if (!debt.value || !userId.value) return;
@@ -85,9 +74,13 @@ async function handleDeleteDebt() {
 async function handlePartialPayment(amount: number, accountId: string) {
   if (!debt.value || !userId.value) return;
 
+  const willClose = amount >= debt.value.remaining_amount;
   const success = await makePartialPayment(debt.value, amount, accountId, userId.value);
   if (success) {
     showPartialPaymentModal.value = false;
+    if (willClose) {
+      router.push({ name: 'debts-list' });
+    }
   }
 }
 
@@ -275,20 +268,15 @@ function goBack() {
         </UCard>
 
         <!-- Actions (only if not closed) -->
-        <div v-if="!debt.is_closed" class="flex gap-2">
+        <div v-if="!debt.is_closed">
           <UButton
-            variant="secondary"
+            variant="primary"
             size="lg"
-            class="flex-1"
+            full-width
             @click="showPartialPaymentModal = true"
           >
             <UIcon name="payments" size="sm" class="mr-1.5" />
-            Платёж
-          </UButton>
-
-          <UButton variant="primary" size="lg" class="flex-1" @click="showCloseModal = true">
-            <UIcon name="check_circle" size="sm" class="mr-1.5" />
-            Закрыть
+            Внести платёж
           </UButton>
         </div>
 
@@ -307,15 +295,6 @@ function goBack() {
         </div>
       </div>
     </main>
-
-    <!-- Close Debt Modal -->
-    <CloseDebtModal
-      v-model="showCloseModal"
-      :debt="debt"
-      :currency="debtCurrency"
-      :is-closing="isClosing"
-      @confirm="handleCloseDebt"
-    />
 
     <!-- Delete Debt Modal -->
     <DeleteDebtModal

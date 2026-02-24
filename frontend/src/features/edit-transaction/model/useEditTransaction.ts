@@ -88,7 +88,15 @@ export function useEditTransaction(userId: string) {
       ]);
 
       return true;
-    } catch (e) {
+    } catch (e: unknown) {
+      // Show backend error message for debt-related rejections (HttpError from http.ts)
+      if (e && typeof e === 'object' && 'status' in e && 'data' in e) {
+        const httpError = e as { status: number; data?: { message?: string } };
+        if (httpError.status === 400 && httpError.data?.message) {
+          error.value = httpError.data.message;
+          return false;
+        }
+      }
       error.value = 'Не удалось удалить транзакцию';
       console.error('Failed to delete transaction:', e);
       return false;

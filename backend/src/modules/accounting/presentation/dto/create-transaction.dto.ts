@@ -49,4 +49,8 @@ export class CreateTransactionDto {
   @IsOptional()
   @IsString()
   toCurrency?: string;
+
+  @IsOptional()
+  @IsString()
+  debtId?: string;
 }

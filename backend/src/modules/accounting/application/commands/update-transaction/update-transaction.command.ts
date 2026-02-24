@@ -11,6 +11,7 @@ export class UpdateTransactionCommand {
       description?: string;
       date?: Date;
       isDebtRelated?: boolean;
+      debtId?: string | null;
       toAccountId?: string | null;
       toAmount?: number | null;
       toCurrency?: string | null;

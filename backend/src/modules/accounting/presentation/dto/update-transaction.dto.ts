@@ -44,6 +44,10 @@ export class UpdateTransactionDto {
   isDebtRelated?: boolean;
 
   @IsOptional()
+  @IsString()
+  debtId?: string;
+
+  @IsOptional()
   @IsUUID()
   toAccountId?: string | null;
 

@@ -154,6 +154,7 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
       description: transaction.description,
       date: transaction.date,
       isDebtRelated: transaction.isDebtRelated,
+      debtId: transaction.debtId,
       toAccountId: transaction.toAccountId,
       toAmount: transaction.toAmountValue,
       toCurrency: transaction.toCurrency,

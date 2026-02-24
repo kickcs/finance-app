@@ -99,7 +99,12 @@ export function useCreateDebt() {
         currency: currency,
       });
 
-      // 3. Invalidate caches
+      // 3. Link transaction back to debt (debt_id for reliable cleanup on deletion)
+      if (transactionId) {
+        await transactionsApi.update(transactionId, { debt_id: debt.id });
+      }
+
+      // 4. Invalidate caches
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: debtQueryKeys.list(userId) }),
         invalidateTransactionRelated(queryClient, userId),

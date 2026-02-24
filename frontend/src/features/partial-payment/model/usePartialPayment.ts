@@ -62,6 +62,7 @@ export function usePartialPayment() {
         description,
         date: new Date().toISOString(),
         is_debt_related: hadBalanceEffect,
+        debt_id: debt.id,
       });
 
       // 2. Update debt remaining amount (and save close_transaction_id if fully closed)

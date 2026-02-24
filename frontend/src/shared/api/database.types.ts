@@ -169,6 +169,7 @@ export type Database = {
           date: string;
           created_at: string;
           is_debt_related: boolean;
+          debt_id: string | null;
           to_account_id: string | null;
           to_amount: number | null;
           to_currency: string | null;
@@ -188,6 +189,7 @@ export type Database = {
           date: string;
           created_at?: string;
           is_debt_related?: boolean;
+          debt_id?: string | null;
           to_account_id?: string | null;
           to_amount?: number | null;
           to_currency?: string | null;
@@ -204,6 +206,7 @@ export type Database = {
           date?: string;
           created_at?: string;
           is_debt_related?: boolean;
+          debt_id?: string | null;
           to_account_id?: string | null;
           to_amount?: number | null;
           to_currency?: string | null;

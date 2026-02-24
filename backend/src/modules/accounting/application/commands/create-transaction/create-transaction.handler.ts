@@ -39,6 +39,7 @@ export class CreateTransactionHandler implements ICommandHandler<CreateTransacti
       toAccountId,
       toAmount,
       toCurrency,
+      debtId,
     } = command;
 
     const transactionId = crypto.randomUUID();
@@ -107,6 +108,7 @@ export class CreateTransactionHandler implements ICommandHandler<CreateTransacti
           date,
           description,
           isDebtRelated,
+          debtId,
         );
         account.credit(amount, currency);
       } else {
@@ -120,6 +122,7 @@ export class CreateTransactionHandler implements ICommandHandler<CreateTransacti
           date,
           description,
           isDebtRelated,
+          debtId,
         );
         account.debit(amount, currency);
       }
@@ -150,6 +153,7 @@ export class CreateTransactionHandler implements ICommandHandler<CreateTransacti
       description: transaction.description,
       date: transaction.date,
       isDebtRelated: transaction.isDebtRelated,
+      debtId: transaction.debtId,
       toAccountId: transaction.toAccountId,
       toAmount: transaction.toAmountValue,
       toCurrency: transaction.toCurrency,

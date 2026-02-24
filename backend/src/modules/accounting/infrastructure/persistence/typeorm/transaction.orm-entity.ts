@@ -35,6 +35,9 @@ export class TransactionOrmEntity {
   @Column({ name: 'is_debt_related', default: false })
   isDebtRelated: boolean;
 
+  @Column({ name: 'debt_id', nullable: true, type: 'uuid' })
+  debtId: string | null;
+
   @Column({ name: 'to_account_id', nullable: true, type: 'uuid' })
   toAccountId: string | null;
 

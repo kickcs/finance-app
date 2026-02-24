@@ -6,6 +6,7 @@ import { UButton, UIcon, UCard, EmptyState, USpinner, NotFoundState } from '@/sh
 import { AppHeader } from '@/widgets/header';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { useAccounts, getAccountTypeLabel, type AccountWithBalances } from '@/entities/account';
+import { DEBT_CATEGORY_IDS } from '@/entities/category';
 import {
   VirtualGroupedTransactionList,
   TransactionGroupSkeleton,
@@ -76,6 +77,7 @@ const groupedTransactions = useGroupedTransactions(accountTransactions, {
   computeTotal: (txs) => {
     const currentAccountId = accountId.value;
     return txs.reduce((sum, tx) => {
+      if (DEBT_CATEGORY_IDS.has(tx.category_id)) return sum;
       if (tx.type === 'transfer') {
         if (tx.to_account_id === currentAccountId) {
           return sum + (tx.to_amount ?? 0);

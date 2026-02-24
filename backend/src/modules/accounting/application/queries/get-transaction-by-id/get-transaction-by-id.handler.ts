@@ -35,6 +35,7 @@ export class GetTransactionByIdHandler implements IQueryHandler<GetTransactionBy
       description: transaction.description,
       date: transaction.date,
       isDebtRelated: transaction.isDebtRelated,
+      debtId: transaction.debtId,
       toAccountId: transaction.toAccountId,
       toAmount: transaction.toAmountValue,
       toCurrency: transaction.toCurrency,

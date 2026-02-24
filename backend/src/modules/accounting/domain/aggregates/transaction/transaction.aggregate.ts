@@ -18,6 +18,7 @@ export interface TransactionProps {
   description: string | null;
   date: Date;
   isDebtRelated: boolean;
+  debtId: string | null;
   toAccountId: string | null;
   toAmount: Money | null;
   createdAt: Date;
@@ -35,6 +36,7 @@ export class Transaction extends AggregateRoot<string> {
   private _description: string | null;
   private _date: Date;
   private _isDebtRelated: boolean;
+  private _debtId: string | null;
   private _toAccountId: string | null;
   private _toAmount: Money | null;
   private _createdAt: Date;
@@ -49,6 +51,7 @@ export class Transaction extends AggregateRoot<string> {
     this._description = props.description;
     this._date = props.date;
     this._isDebtRelated = props.isDebtRelated;
+    this._debtId = props.debtId;
     this._toAccountId = props.toAccountId;
     this._toAmount = props.toAmount;
     this._createdAt = props.createdAt;
@@ -67,6 +70,7 @@ export class Transaction extends AggregateRoot<string> {
     date: Date,
     description?: string,
     isDebtRelated: boolean = false,
+    debtId?: string,
   ): Transaction {
     const transaction = new Transaction({
       id,
@@ -78,6 +82,7 @@ export class Transaction extends AggregateRoot<string> {
       description: description || null,
       date,
       isDebtRelated,
+      debtId: debtId ?? null,
       toAccountId: null,
       toAmount: null,
       createdAt: new Date(),
@@ -103,6 +108,7 @@ export class Transaction extends AggregateRoot<string> {
     date: Date,
     description?: string,
     isDebtRelated: boolean = false,
+    debtId?: string,
   ): Transaction {
     const transaction = new Transaction({
       id,
@@ -114,6 +120,7 @@ export class Transaction extends AggregateRoot<string> {
       description: description || null,
       date,
       isDebtRelated,
+      debtId: debtId ?? null,
       toAccountId: null,
       toAmount: null,
       createdAt: new Date(),
@@ -160,6 +167,7 @@ export class Transaction extends AggregateRoot<string> {
       description: description || null,
       date,
       isDebtRelated: false,
+      debtId: null,
       toAccountId,
       toAmount: Money.create(toAmount, toCurrency),
       createdAt: new Date(),
@@ -245,6 +253,10 @@ export class Transaction extends AggregateRoot<string> {
     return this._isDebtRelated;
   }
 
+  get debtId(): string | null {
+    return this._debtId;
+  }
+
   get toAccountId(): string | null {
     return this._toAccountId;
   }
@@ -275,6 +287,7 @@ export class Transaction extends AggregateRoot<string> {
     description?: string;
     date?: Date;
     isDebtRelated?: boolean;
+    debtId?: string | null;
     toAccountId?: string | null;
     toAmount?: number | null;
     toCurrency?: string | null;
@@ -326,6 +339,12 @@ export class Transaction extends AggregateRoot<string> {
       previousValues.isDebtRelated = this._isDebtRelated;
       this._isDebtRelated = data.isDebtRelated;
       changes.isDebtRelated = data.isDebtRelated;
+    }
+
+    if (data.debtId !== undefined) {
+      previousValues.debtId = this._debtId;
+      this._debtId = data.debtId;
+      changes.debtId = data.debtId;
     }
 
     if (data.toAccountId !== undefined) {

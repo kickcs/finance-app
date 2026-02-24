@@ -172,6 +172,7 @@ export class TransactionsController {
         dto.toAccountId,
         dto.toAmount,
         dto.toCurrency,
+        dto.debtId,
       ),
     );
   }

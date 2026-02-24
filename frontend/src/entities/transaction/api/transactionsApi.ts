@@ -63,6 +63,7 @@ interface TransactionResponse {
   date: string;
   createdAt: string;
   isDebtRelated: boolean;
+  debtId: string | null;
   toAccountId: string | null;
   toAmount: number | null;
   toCurrency: string | null;
@@ -92,6 +93,7 @@ function transformTransaction(tx: TransactionResponse): Transaction {
     date: tx.date,
     created_at: tx.createdAt,
     is_debt_related: tx.isDebtRelated,
+    debt_id: tx.debtId,
     to_account_id: tx.toAccountId,
     to_amount: tx.toAmount,
     to_currency: tx.toCurrency,
@@ -158,6 +160,7 @@ export const transactionsApi = {
       description: transaction.description,
       date: transaction.date,
       isDebtRelated: transaction.is_debt_related ?? false,
+      debtId: transaction.debt_id,
       toAccountId: transaction.to_account_id,
       toAmount: transaction.to_amount,
       toCurrency: transaction.to_currency,
@@ -175,6 +178,7 @@ export const transactionsApi = {
       description: updates.description,
       date: updates.date,
       isDebtRelated: updates.is_debt_related,
+      debtId: updates.debt_id,
       toAccountId: updates.to_account_id,
       toAmount: updates.to_amount,
       toCurrency: updates.to_currency,

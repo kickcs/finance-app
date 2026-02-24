@@ -1,5 +1,5 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { Inject, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Inject, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { DeleteTransactionCommand } from './delete-transaction.command';
 import {
@@ -10,6 +10,7 @@ import {
   IAccountRepository,
   ACCOUNT_REPOSITORY,
 } from '../../../domain/repositories/account.repository.interface';
+import { IDebtRepository, DEBT_REPOSITORY } from '../../../../debt/domain/repositories';
 import { DomainEventPublisher } from '../../../../../shared';
 import { BalanceCalculationService, TransferDomainService } from '../../../domain/services';
 
@@ -20,6 +21,8 @@ export class DeleteTransactionHandler implements ICommandHandler<DeleteTransacti
     private readonly transactionRepository: ITransactionRepository,
     @Inject(ACCOUNT_REPOSITORY)
     private readonly accountRepository: IAccountRepository,
+    @Inject(DEBT_REPOSITORY)
+    private readonly debtRepository: IDebtRepository,
     private readonly eventPublisher: DomainEventPublisher,
     private readonly dataSource: DataSource,
   ) {}
@@ -33,6 +36,14 @@ export class DeleteTransactionHandler implements ICommandHandler<DeleteTransacti
 
     if (transaction.userId !== command.userId) {
       throw new ForbiddenException('Transaction does not belong to user');
+    }
+
+    // Prevent deletion if transaction is linked to open debts (as source or direct transaction)
+    const hasOpenDebts = await this.debtRepository.hasOpenDebtsForTransaction(command.id);
+    if (hasOpenDebts) {
+      throw new BadRequestException(
+        'Нельзя удалить транзакцию, пока есть связанные открытые долги. Сначала закройте долги.',
+      );
     }
 
     // Get the account and reverse the transaction effect

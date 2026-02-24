@@ -106,6 +106,7 @@ function snapshotAndApplyOptimistic(
     id: `temp-${Date.now()}`,
     created_at: new Date().toISOString(),
     is_debt_related: false,
+    debt_id: null,
     returned_amount: 0,
     net_amount: formData.amount,
     has_debt_returns: false,

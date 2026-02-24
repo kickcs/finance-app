@@ -28,6 +28,9 @@ import {
   AccountBalanceRepository,
 } from './infrastructure/persistence/repositories';
 
+// Cross-module
+import { DebtModule } from '../debt/debt.module';
+
 // Presentation
 import {
   AccountsController,
@@ -40,6 +43,7 @@ import {
 @Module({
   imports: [
     CqrsModule,
+    DebtModule,
     TypeOrmModule.forFeature([
       AccountOrmEntity,
       AccountBalanceOrmEntity,

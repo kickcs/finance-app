@@ -3,7 +3,7 @@ import { ref, computed, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { AppHeader } from '@/widgets/header';
 import { DebtCard, useDebts, type Debt } from '@/entities/debt';
-import { UButton, UIcon, UCard, Skeleton, EmptyState, SectionHeader } from '@/shared/ui';
+import { UButton, UIcon, UCard, Skeleton, EmptyState, SectionHeader, UTabs } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { useExchangeRates } from '@/shared/api';
 import { navigateBack } from '@/app/router';
@@ -29,6 +29,13 @@ const typeFilter = ref<'given' | 'taken' | null>(route.query.type as 'given' | '
 
 // View mode toggle: grouped by person or flat list
 const viewMode = ref<'grouped' | 'flat'>(personFilter.value ? 'flat' : 'grouped');
+
+// Status filter: active or closed
+const statusFilter = ref<'active' | 'closed'>('active');
+const statusTabs = [
+  { id: 'active', label: 'Активные' },
+  { id: 'closed', label: 'Закрытые' },
+];
 
 // Clear filter when route changes
 watch(
@@ -56,6 +63,11 @@ const activeDebts = computed(() => {
   }
 
   return filtered;
+});
+
+// Closed debts
+const closedDebts = computed(() => {
+  return debts.value.filter((d) => d.is_closed);
 });
 
 // Clear filter
@@ -112,21 +124,31 @@ function handleAddDebt() {
 
     <!-- Content -->
     <main class="px-5 pt-8 space-y-6">
+      <!-- Status Tabs -->
+      <UTabs v-model="statusFilter" :items="statusTabs" size="sm" />
+
       <!-- Loading Skeleton -->
       <template v-if="isLoading">
-        <div class="grid grid-cols-2 gap-3">
-          <Skeleton class="h-20 rounded-2xl" />
-          <Skeleton class="h-20 rounded-2xl" />
-        </div>
-        <div class="space-y-3">
-          <Skeleton class="h-6 w-32" />
-          <Skeleton class="h-16 rounded-xl" />
+        <template v-if="statusFilter === 'active'">
+          <div class="grid grid-cols-2 gap-3">
+            <Skeleton class="h-20 rounded-2xl" />
+            <Skeleton class="h-20 rounded-2xl" />
+          </div>
+          <div class="space-y-3">
+            <Skeleton class="h-6 w-32" />
+            <Skeleton class="h-16 rounded-xl" />
+            <Skeleton class="h-16 rounded-xl" />
+            <Skeleton class="h-16 rounded-xl" />
+          </div>
+        </template>
+        <div v-else class="space-y-3">
+          <Skeleton class="h-6 w-40" />
           <Skeleton class="h-16 rounded-xl" />
           <Skeleton class="h-16 rounded-xl" />
         </div>
       </template>
 
-      <template v-else>
+      <template v-else-if="statusFilter === 'active'">
         <!-- Debt Summary Cards (converted to main currency) -->
         <div v-if="activeDebts.length > 0" class="grid grid-cols-2 gap-3">
           <!-- Given debts (people owe you) -->
@@ -304,6 +326,43 @@ function handleAddDebt() {
             />
           </UCard>
         </div>
+      </template>
+
+      <!-- Closed Debts -->
+      <template v-else-if="statusFilter === 'closed'">
+        <div v-if="closedDebts.length > 0" class="space-y-3">
+          <SectionHeader
+            title="Погашенные долги"
+            :show-add="false"
+            :show-view-all="false"
+          />
+
+          <TransitionGroup
+            tag="div"
+            class="space-y-2"
+            :enter-active-class="listTransition.enterActiveClass"
+            :leave-active-class="listTransition.leaveActiveClass"
+            :enter-from-class="listTransition.enterFromClass"
+            :leave-to-class="listTransition.leaveToClass"
+            :move-class="listTransition.moveClass"
+          >
+            <DebtCard
+              v-for="debt in closedDebts"
+              :key="debt.id"
+              :debt="debt"
+              @click="handleDebtClick(debt)"
+            />
+          </TransitionGroup>
+        </div>
+
+        <UCard v-else class="py-4">
+          <EmptyState
+            icon="history"
+            title="Нет закрытых долгов"
+            description="Здесь будут погашенные долги"
+            icon-bg-class="bg-surface-light dark:bg-surface-dark text-text-tertiary-light dark:text-text-tertiary-dark"
+          />
+        </UCard>
       </template>
     </main>
   </div>

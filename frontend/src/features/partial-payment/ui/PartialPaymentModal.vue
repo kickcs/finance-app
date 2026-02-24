@@ -123,7 +123,7 @@ function confirm() {
         <label class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">
           {{ debt.debt_type === 'given' ? 'Куда зачислить' : 'С какого счёта списать' }}
         </label>
-        <div class="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1">
+        <div v-if="accounts.length > 0" class="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1">
           <button
             v-for="account in accounts"
             :key="account.id"
@@ -143,6 +143,12 @@ function confirm() {
             <span class="text-sm font-medium">{{ account.name }}</span>
           </button>
         </div>
+        <p
+          v-if="!selectedAccountId"
+          class="text-xs text-warning"
+        >
+          Выберите счёт для проведения платежа
+        </p>
       </div>
 
       <!-- Info Message -->

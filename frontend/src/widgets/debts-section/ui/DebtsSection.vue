@@ -111,7 +111,7 @@ function isOverdue(date: string | null): boolean {
     <SectionHeader
       title="Долги"
       :count="activeDebts.length"
-      :show-view-all="activeDebts.length > 0"
+      show-view-all
       @add-click="$emit('add-click')"
       @view-all="$emit('view-all')"
     >

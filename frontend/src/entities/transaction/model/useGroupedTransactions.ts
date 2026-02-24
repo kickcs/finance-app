@@ -2,6 +2,7 @@ import { computed } from 'vue';
 import type { Ref, ComputedRef } from 'vue';
 import type { Transaction, TransactionGroup } from './types';
 import { formatDateGroup } from '@/shared/lib/format/date';
+import { DEBT_CATEGORY_IDS } from '@/entities/category';
 
 /**
  * Options for controlling grouping behaviour.
@@ -86,6 +87,7 @@ function defaultSortTransactions(a: Transaction, b: Transaction): number {
  */
 function defaultComputeTotal(txs: Transaction[]): number {
   return txs.reduce((sum, tx) => {
+    if (DEBT_CATEGORY_IDS.has(tx.category_id)) return sum;
     if (tx.type === 'transfer') return sum;
     return sum + (tx.type === 'income' ? tx.amount : -tx.amount);
   }, 0);

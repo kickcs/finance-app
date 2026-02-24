@@ -38,6 +38,7 @@ export class GetTransactionsPaginatedHandler implements IQueryHandler<GetTransac
           description: t.description,
           date: t.date,
           isDebtRelated: t.isDebtRelated,
+          debtId: t.debtId,
           toAccountId: t.toAccountId,
           toAmount: t.toAmountValue,
           toCurrency: t.toCurrency,
