@@ -3,10 +3,12 @@ import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
 import express from 'express';
+import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { rawBody: true });
+  app.useLogger(app.get(Logger));
 
   // Increase JSON body size limit for bulk import (preserve rawBody for webhook signature verification)
   app.use(
@@ -62,8 +64,9 @@ async function bootstrap() {
   const host = process.env.HOST || '0.0.0.0';
   await app.listen(port, host);
 
-  console.log(`Application is running on: http://localhost:${port}`);
-  console.log(`Swagger docs: http://localhost:${port}/docs`);
+  const logger = app.get(Logger);
+  logger.log(`Application is running on: http://localhost:${port}`);
+  logger.log(`Swagger docs: http://localhost:${port}/docs`);
 }
 
 void bootstrap();
