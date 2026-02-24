@@ -160,7 +160,14 @@ export function useReceiptWizard(userId: () => string | null) {
 
     try {
       const result: ScanReceiptResponse = await receiptApi.scan(selectedFile.value);
-      items.value = result.items.map((item) => ({
+
+      // Filter out service charge / tax / discount line items that GPT may still return
+      const serviceKeywords = /обслуживание|service|чаевые|tip|ндс|vat|tax|скидка|discount|delivery|доставка/i;
+      const productItems = result.items.filter(
+        (item) => !serviceKeywords.test(item.name),
+      );
+
+      items.value = productItems.map((item) => ({
         id: uid(),
         name: item.name,
         qty: item.quantity,
@@ -171,7 +178,10 @@ export function useReceiptWizard(userId: () => string | null) {
       formData.value.currency = result.currency;
       storeName.value = result.storeName;
       receiptDate.value = result.date;
-      serviceChargePercent.value = result.serviceChargePercent ?? null;
+
+      // Only use serviceChargePercent if it's meaningful (>= 0.1%)
+      const rawPercent = result.serviceChargePercent;
+      serviceChargePercent.value = rawPercent && rawPercent >= 0.1 ? rawPercent : null;
       if (result.storeName) {
         formData.value.description = result.storeName;
       }
