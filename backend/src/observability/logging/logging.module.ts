@@ -5,7 +5,8 @@ import { LoggerModule } from 'nestjs-pino';
   imports: [
     LoggerModule.forRoot({
       pinoHttp: {
-        level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
+        // Synchronous read — ConfigService unavailable before DI container resolves
+        level: process.env.LOG_LEVEL ?? (process.env.NODE_ENV === 'production' ? 'info' : 'debug'),
         transport:
           process.env.NODE_ENV !== 'production'
             ? { target: 'pino-pretty', options: { colorize: true } }
@@ -21,7 +22,6 @@ import { LoggerModule } from 'nestjs-pino';
               id: req.id,
               method: req.method,
               url: req.url,
-              query: req.query,
               remoteAddress: req.remoteAddress,
             };
           },
