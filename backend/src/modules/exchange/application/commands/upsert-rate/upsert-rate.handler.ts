@@ -3,12 +3,18 @@ import { Inject } from '@nestjs/common';
 import { UpsertRateCommand } from './upsert-rate.command';
 import { ExchangeRate } from '../../../domain/aggregates';
 import { IExchangeRateRepository, EXCHANGE_RATE_REPOSITORY } from '../../../domain/repositories';
+import {
+  IExchangeRateCache,
+  EXCHANGE_RATE_CACHE,
+} from '../../services/exchange-rate-cache.service';
 
 @CommandHandler(UpsertRateCommand)
 export class UpsertRateHandler implements ICommandHandler<UpsertRateCommand> {
   constructor(
     @Inject(EXCHANGE_RATE_REPOSITORY)
     private readonly exchangeRateRepository: IExchangeRateRepository,
+    @Inject(EXCHANGE_RATE_CACHE)
+    private readonly exchangeRateCache: IExchangeRateCache,
   ) {}
 
   async execute(command: UpsertRateCommand) {
@@ -29,6 +35,7 @@ export class UpsertRateHandler implements ICommandHandler<UpsertRateCommand> {
     }
 
     const savedRate = await this.exchangeRateRepository.save(exchangeRate);
+    await this.exchangeRateCache.reload();
 
     return this.toResponse(savedRate);
   }

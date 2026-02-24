@@ -1,14 +1,19 @@
-import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
+import { Inject, Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { CommandBus } from '@nestjs/cqrs';
 import { SyncRatesCommand } from '../commands';
+import { IExchangeRateCache, EXCHANGE_RATE_CACHE } from './exchange-rate-cache.service';
 
 @Injectable()
 export class RateSyncScheduler implements OnApplicationBootstrap {
   private readonly logger = new Logger(RateSyncScheduler.name);
   private readonly baseCurrency = 'USD';
 
-  constructor(private readonly commandBus: CommandBus) {}
+  constructor(
+    private readonly commandBus: CommandBus,
+    @Inject(EXCHANGE_RATE_CACHE)
+    private readonly exchangeRateCache: IExchangeRateCache,
+  ) {}
 
   async onApplicationBootstrap(): Promise<void> {
     this.logger.log('Initializing exchange rate sync on startup...');
@@ -24,6 +29,7 @@ export class RateSyncScheduler implements OnApplicationBootstrap {
   private async syncRates(): Promise<void> {
     try {
       await this.commandBus.execute(new SyncRatesCommand(this.baseCurrency));
+      await this.exchangeRateCache.reload();
       this.logger.log('Exchange rate sync completed successfully');
     } catch (error) {
       this.logger.error(

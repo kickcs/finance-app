@@ -1,17 +1,21 @@
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 import { Inject, NotFoundException } from '@nestjs/common';
 import { GetRateQuery } from './get-rate.query';
-import { IExchangeRateRepository, EXCHANGE_RATE_REPOSITORY } from '../../../domain/repositories';
+import {
+  IExchangeRateCache,
+  EXCHANGE_RATE_CACHE,
+} from '../../services/exchange-rate-cache.service';
 
 const INTERMEDIATE_CURRENCY = 'USD';
 
 @QueryHandler(GetRateQuery)
 export class GetRateHandler implements IQueryHandler<GetRateQuery> {
   constructor(
-    @Inject(EXCHANGE_RATE_REPOSITORY)
-    private readonly exchangeRateRepository: IExchangeRateRepository,
+    @Inject(EXCHANGE_RATE_CACHE)
+    private readonly cache: IExchangeRateCache,
   ) {}
 
+  // eslint-disable-next-line @typescript-eslint/require-await
   async execute(query: GetRateQuery) {
     const { baseCurrency, targetCurrency } = query;
 
@@ -31,7 +35,7 @@ export class GetRateHandler implements IQueryHandler<GetRateQuery> {
     }
 
     // Try to find direct rate
-    const exchangeRate = await this.exchangeRateRepository.findByPair(base, target);
+    const exchangeRate = this.cache.get(base, target);
 
     if (exchangeRate) {
       return {
@@ -45,7 +49,7 @@ export class GetRateHandler implements IQueryHandler<GetRateQuery> {
     }
 
     // Try inverse rate
-    const inverseRate = await this.exchangeRateRepository.findByPair(target, base);
+    const inverseRate = this.cache.get(target, base);
 
     if (inverseRate) {
       return {
@@ -60,7 +64,7 @@ export class GetRateHandler implements IQueryHandler<GetRateQuery> {
 
     // Try cross-rate through USD
     if (base !== INTERMEDIATE_CURRENCY && target !== INTERMEDIATE_CURRENCY) {
-      const crossRateResult = await this.calculateCrossRate(base, target);
+      const crossRateResult = this.calculateCrossRate(base, target);
       if (crossRateResult) {
         return {
           baseCurrency: base,
@@ -76,12 +80,9 @@ export class GetRateHandler implements IQueryHandler<GetRateQuery> {
     throw new NotFoundException(`Exchange rate not found for ${baseCurrency}/${targetCurrency}`);
   }
 
-  private async calculateCrossRate(
-    from: string,
-    to: string,
-  ): Promise<{ rate: number; updatedAt: Date } | null> {
-    const usdToFrom = await this.exchangeRateRepository.findByPair(INTERMEDIATE_CURRENCY, from);
-    const usdToTo = await this.exchangeRateRepository.findByPair(INTERMEDIATE_CURRENCY, to);
+  private calculateCrossRate(from: string, to: string): { rate: number; updatedAt: Date } | null {
+    const usdToFrom = this.cache.get(INTERMEDIATE_CURRENCY, from);
+    const usdToTo = this.cache.get(INTERMEDIATE_CURRENCY, to);
 
     if (usdToFrom && usdToTo) {
       const fromToUsd = 1 / usdToFrom.rate;

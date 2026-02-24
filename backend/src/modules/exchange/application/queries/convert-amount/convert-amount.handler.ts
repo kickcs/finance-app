@@ -1,7 +1,10 @@
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 import { Inject, NotFoundException } from '@nestjs/common';
 import { ConvertAmountQuery } from './convert-amount.query';
-import { IExchangeRateRepository, EXCHANGE_RATE_REPOSITORY } from '../../../domain/repositories';
+import {
+  IExchangeRateCache,
+  EXCHANGE_RATE_CACHE,
+} from '../../services/exchange-rate-cache.service';
 import { CurrencyConverterService } from '../../../domain/services';
 
 const INTERMEDIATE_CURRENCY = 'USD';
@@ -9,10 +12,11 @@ const INTERMEDIATE_CURRENCY = 'USD';
 @QueryHandler(ConvertAmountQuery)
 export class ConvertAmountHandler implements IQueryHandler<ConvertAmountQuery> {
   constructor(
-    @Inject(EXCHANGE_RATE_REPOSITORY)
-    private readonly exchangeRateRepository: IExchangeRateRepository,
+    @Inject(EXCHANGE_RATE_CACHE)
+    private readonly cache: IExchangeRateCache,
   ) {}
 
+  // eslint-disable-next-line @typescript-eslint/require-await
   async execute(query: ConvertAmountQuery) {
     const { amount, fromCurrency, toCurrency } = query;
 
@@ -32,14 +36,14 @@ export class ConvertAmountHandler implements IQueryHandler<ConvertAmountQuery> {
     }
 
     // Try direct rate first
-    const exchangeRate = await this.exchangeRateRepository.findByPair(from, to);
+    const exchangeRate = this.cache.get(from, to);
 
     if (exchangeRate) {
       return CurrencyConverterService.convert(amount, exchangeRate);
     }
 
     // Try inverse rate
-    const inverseExchangeRate = await this.exchangeRateRepository.findByPair(to, from);
+    const inverseExchangeRate = this.cache.get(to, from);
 
     if (inverseExchangeRate) {
       return CurrencyConverterService.convertInverse(amount, inverseExchangeRate);
@@ -47,7 +51,7 @@ export class ConvertAmountHandler implements IQueryHandler<ConvertAmountQuery> {
 
     // Try cross-rate through USD (e.g., EUR -> UZS = EUR -> USD -> UZS)
     if (from !== INTERMEDIATE_CURRENCY && to !== INTERMEDIATE_CURRENCY) {
-      const crossRate = await this.calculateCrossRate(from, to);
+      const crossRate = this.calculateCrossRate(from, to);
       if (crossRate !== null) {
         const convertedAmount = amount * crossRate;
         return {
@@ -68,11 +72,11 @@ export class ConvertAmountHandler implements IQueryHandler<ConvertAmountQuery> {
    * Calculate cross-rate through USD
    * e.g., EUR -> UZS = (1/USD->EUR) * (USD->UZS)
    */
-  private async calculateCrossRate(from: string, to: string): Promise<number | null> {
+  private calculateCrossRate(from: string, to: string): number | null {
     // Get rate from USD to source currency (to calculate FROM -> USD)
-    const usdToFrom = await this.exchangeRateRepository.findByPair(INTERMEDIATE_CURRENCY, from);
+    const usdToFrom = this.cache.get(INTERMEDIATE_CURRENCY, from);
     // Get rate from USD to target currency (to calculate USD -> TO)
-    const usdToTo = await this.exchangeRateRepository.findByPair(INTERMEDIATE_CURRENCY, to);
+    const usdToTo = this.cache.get(INTERMEDIATE_CURRENCY, to);
 
     if (usdToFrom && usdToTo) {
       // FROM -> USD -> TO
