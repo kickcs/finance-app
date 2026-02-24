@@ -203,7 +203,7 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "docker-compose.prod.yml,docker/postgres/init.sql"
+          source: "docker-compose.prod.yml,docker/postgres/init.sql,docker/alloy/config.alloy"
           target: ~/finance-app
           overwrite: true
 
@@ -222,11 +222,18 @@ jobs:
           LEMONSQUEEZY_STORE_ID: ${{ secrets.LEMONSQUEEZY_STORE_ID }}
           LEMONSQUEEZY_PREMIUM_MONTHLY_VARIANT_ID: ${{ secrets.LEMONSQUEEZY_PREMIUM_MONTHLY_VARIANT_ID }}
           LEMONSQUEEZY_PREMIUM_YEARLY_VARIANT_ID: ${{ secrets.LEMONSQUEEZY_PREMIUM_YEARLY_VARIANT_ID }}
+          GRAFANA_CLOUD_API_KEY: ${{ secrets.GRAFANA_CLOUD_API_KEY }}
+          GRAFANA_CLOUD_PROMETHEUS_URL: ${{ secrets.GRAFANA_CLOUD_PROMETHEUS_URL }}
+          GRAFANA_CLOUD_PROMETHEUS_USER: ${{ secrets.GRAFANA_CLOUD_PROMETHEUS_USER }}
+          GRAFANA_CLOUD_LOKI_URL: ${{ secrets.GRAFANA_CLOUD_LOKI_URL }}
+          GRAFANA_CLOUD_LOKI_USER: ${{ secrets.GRAFANA_CLOUD_LOKI_USER }}
+          GRAFANA_CLOUD_TEMPO_URL: ${{ secrets.GRAFANA_CLOUD_TEMPO_URL }}
+          GRAFANA_CLOUD_TEMPO_USER: ${{ secrets.GRAFANA_CLOUD_TEMPO_USER }}
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          envs: GITHUB_REPOSITORY,GHCR_IMAGE_TAG,DATABASE_PASSWORD,JWT_SECRET,CORS_ORIGIN,GHCR_TOKEN,GHCR_USER,LEMONSQUEEZY_API_KEY,LEMONSQUEEZY_WEBHOOK_SECRET,LEMONSQUEEZY_STORE_ID,LEMONSQUEEZY_PREMIUM_MONTHLY_VARIANT_ID,LEMONSQUEEZY_PREMIUM_YEARLY_VARIANT_ID
+          envs: GITHUB_REPOSITORY,GHCR_IMAGE_TAG,DATABASE_PASSWORD,JWT_SECRET,CORS_ORIGIN,GHCR_TOKEN,GHCR_USER,LEMONSQUEEZY_API_KEY,LEMONSQUEEZY_WEBHOOK_SECRET,LEMONSQUEEZY_STORE_ID,LEMONSQUEEZY_PREMIUM_MONTHLY_VARIANT_ID,LEMONSQUEEZY_PREMIUM_YEARLY_VARIANT_ID,GRAFANA_CLOUD_API_KEY,GRAFANA_CLOUD_PROMETHEUS_URL,GRAFANA_CLOUD_PROMETHEUS_USER,GRAFANA_CLOUD_LOKI_URL,GRAFANA_CLOUD_LOKI_USER,GRAFANA_CLOUD_TEMPO_URL,GRAFANA_CLOUD_TEMPO_USER
           script: |
             set -e
             cd ~/finance-app
@@ -248,6 +255,14 @@ jobs:
             LEMONSQUEEZY_STORE_ID=$LEMONSQUEEZY_STORE_ID
             LEMONSQUEEZY_PREMIUM_MONTHLY_VARIANT_ID=$LEMONSQUEEZY_PREMIUM_MONTHLY_VARIANT_ID
             LEMONSQUEEZY_PREMIUM_YEARLY_VARIANT_ID=$LEMONSQUEEZY_PREMIUM_YEARLY_VARIANT_ID
+            GRAFANA_CLOUD_API_KEY=$GRAFANA_CLOUD_API_KEY
+            GRAFANA_CLOUD_PROMETHEUS_URL=$GRAFANA_CLOUD_PROMETHEUS_URL
+            GRAFANA_CLOUD_PROMETHEUS_USER=$GRAFANA_CLOUD_PROMETHEUS_USER
+            GRAFANA_CLOUD_LOKI_URL=$GRAFANA_CLOUD_LOKI_URL
+            GRAFANA_CLOUD_LOKI_USER=$GRAFANA_CLOUD_LOKI_USER
+            GRAFANA_CLOUD_TEMPO_URL=$GRAFANA_CLOUD_TEMPO_URL
+            GRAFANA_CLOUD_TEMPO_USER=$GRAFANA_CLOUD_TEMPO_USER
+            OTEL_EXPORTER_OTLP_ENDPOINT=http://finance-alloy:4317
             EOF
 
             chmod 600 .env
@@ -256,7 +271,7 @@ jobs:
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
 
             # Pull new images in parallel (postgres stays untouched)
-            docker compose -f docker-compose.prod.yml pull backend frontend
+            docker compose -f docker-compose.prod.yml pull backend frontend alloy
 
             # Ensure postgres is running (no-op if already up)
             docker compose -f docker-compose.prod.yml up -d postgres
@@ -279,7 +294,7 @@ jobs:
             docker compose -f docker-compose.prod.yml run --rm --no-deps -T backend npx typeorm migration:run -d dist/config/data-source.js
 
             # Recreate only backend and frontend with new images (postgres keeps running)
-            docker compose -f docker-compose.prod.yml up -d --no-deps --force-recreate backend frontend
+            docker compose -f docker-compose.prod.yml up -d --no-deps --force-recreate backend frontend alloy
 
             # Wait for health check
             echo "Waiting for services to be healthy..."
