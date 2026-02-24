@@ -20,7 +20,9 @@ export class MetricsInterceptor implements NestInterceptor {
 
     const req = context.switchToHttp().getRequest<Request>();
     const method = req.method;
-    const path = req.route?.path ? String(req.route.path) : this.sanitizePath(req.url);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    const routePath = req.route?.path as string | undefined;
+    const path = routePath ?? this.sanitizePath(req.url);
 
     this.requestsInFlight.inc();
     const start = process.hrtime.bigint();
