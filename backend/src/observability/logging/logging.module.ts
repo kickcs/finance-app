@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { LoggerModule } from 'nestjs-pino';
+import { IncomingMessage, ServerResponse } from 'http';
 
 @Module({
   imports: [
@@ -17,7 +18,7 @@ import { LoggerModule } from 'nestjs-pino';
           censor: '[REDACTED]',
         },
         serializers: {
-          req(req) {
+          req(req: IncomingMessage & { id?: string; remoteAddress?: string }) {
             return {
               id: req.id,
               method: req.method,
@@ -25,7 +26,7 @@ import { LoggerModule } from 'nestjs-pino';
               remoteAddress: req.remoteAddress,
             };
           },
-          res(res) {
+          res(res: ServerResponse) {
             return { statusCode: res.statusCode };
           },
         },
