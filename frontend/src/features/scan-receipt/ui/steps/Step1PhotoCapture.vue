@@ -20,8 +20,7 @@ const galleryInputRef = ref<HTMLInputElement | null>(null);
 const fileError = ref<string | null>(null);
 
 const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
-const NEEDS_CONVERSION = /^image\/(heic|heif|tiff|bmp)$/i;
-const MAX_DIMENSION = 2048; // OpenAI recommends ≤2048px for detail:high
+const MAX_DIMENSION = 2048;
 
 function openCamera() {
   cameraInputRef.value?.click();
@@ -31,31 +30,51 @@ function openGallery() {
   galleryInputRef.value?.click();
 }
 
-/** Convert any image to JPEG via Canvas (handles HEIC, resizes large images) */
-async function toJpeg(file: File): Promise<File> {
-  const bitmap = await createImageBitmap(file);
-  let { width, height } = bitmap;
+/** Convert image to JPEG via <img> + Canvas (universal iOS/Android support) */
+function toJpeg(file: File): Promise<File> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      let { width, height } = img;
+      if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+        const scale = MAX_DIMENSION / Math.max(width, height);
+        width = Math.round(width * scale);
+        height = Math.round(height * scale);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(img, 0, 0, width, height);
+      URL.revokeObjectURL(url);
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) return reject(new Error('Canvas toBlob returned null'));
+          resolve(new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' }));
+        },
+        'image/jpeg',
+        0.85,
+      );
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error(`Image load failed for ${file.type}`));
+    };
+    img.src = url;
+  });
+}
 
-  // Downscale if too large
-  if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
-    const scale = MAX_DIMENSION / Math.max(width, height);
-    width = Math.round(width * scale);
-    height = Math.round(height * scale);
-  }
-
-  const canvas = new OffscreenCanvas(width, height);
-  const ctx = canvas.getContext('2d')!;
-  ctx.drawImage(bitmap, 0, 0, width, height);
-  bitmap.close();
-
-  const blob = await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.85 });
-  return new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' });
+/** Check if file needs conversion (non-JPEG/PNG/WebP or no type) */
+function needsConversion(file: File): boolean {
+  const supported = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+  return !supported.includes(file.type);
 }
 
 async function handleFileChange(e: Event) {
   const input = e.target as HTMLInputElement;
   const rawFile = input.files?.[0];
-  input.value = ''; // reset so same file can be re-selected
+  input.value = '';
   if (!rawFile) return;
 
   if (!rawFile.type.startsWith('image/')) {
@@ -69,13 +88,12 @@ async function handleFileChange(e: Event) {
 
   fileError.value = null;
 
-  // Convert HEIC/HEIF/TIFF/BMP or oversized images to JPEG
   try {
-    const file = NEEDS_CONVERSION.test(rawFile.type) ? await toJpeg(rawFile) : rawFile;
+    const file = needsConversion(rawFile) ? await toJpeg(rawFile) : rawFile;
     emit('selectFile', file);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    fileError.value = `Не удалось обработать изображение (${rawFile.type}, ${Math.round(rawFile.size / 1024)}KB): ${msg}`;
+    fileError.value = `Ошибка обработки (${rawFile.type}, ${Math.round(rawFile.size / 1024)}KB): ${msg}`;
   }
 }
 </script>
