@@ -2,7 +2,7 @@ import { computed, toValue, type MaybeRefOrGetter } from 'vue';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import { queryKeys } from '../queryKeys';
 import { profileApi } from '../services/profileApi';
-import type { Profile } from '../database.types';
+import type { Profile, DashboardSettings } from '../database.types';
 
 export function useProfile(userId: MaybeRefOrGetter<string | null>) {
   const queryClient = useQueryClient();
@@ -86,6 +86,12 @@ export function useProfile(userId: MaybeRefOrGetter<string | null>) {
     return updateProfile({ default_account_id: accountId });
   }
 
+  const dashboardSettings = computed(() => profile.value?.dashboard_settings ?? null);
+
+  async function updateDashboardSettings(settings: DashboardSettings) {
+    return updateProfile({ dashboard_settings: settings });
+  }
+
   return {
     profile,
     isLoading,
@@ -96,6 +102,8 @@ export function useProfile(userId: MaybeRefOrGetter<string | null>) {
     hasCompletedOnboarding,
     defaultAccountId,
     setDefaultAccount,
+    dashboardSettings,
+    updateDashboardSettings,
     refetch,
   };
 }

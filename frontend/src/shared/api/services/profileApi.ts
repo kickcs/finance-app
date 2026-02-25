@@ -1,5 +1,5 @@
 import { http } from '../http';
-import type { Profile } from '../database.types';
+import type { Profile, WidgetId } from '../database.types';
 
 // Response type from NestJS backend (camelCase)
 interface ProfileResponse {
@@ -12,6 +12,11 @@ interface ProfileResponse {
   createdAt: string;
   isDemo: boolean;
   demoExpiresAt: string | null;
+  dashboardSettings: {
+    widgetOrder: string[];
+    hiddenWidgets: string[];
+    hiddenAccountIds: string[];
+  } | null;
 }
 
 function transformProfile(profile: ProfileResponse): Profile {
@@ -25,6 +30,11 @@ function transformProfile(profile: ProfileResponse): Profile {
     created_at: profile.createdAt,
     is_demo: profile.isDemo,
     demo_expires_at: profile.demoExpiresAt,
+    dashboard_settings: profile.dashboardSettings ? {
+      widget_order: profile.dashboardSettings.widgetOrder as WidgetId[],
+      hidden_widgets: profile.dashboardSettings.hiddenWidgets as WidgetId[],
+      hidden_account_ids: profile.dashboardSettings.hiddenAccountIds,
+    } : null,
   };
 }
 
@@ -53,6 +63,11 @@ export const profileApi = {
       currency: updates.currency,
       hasCompletedOnboarding: updates.has_completed_onboarding,
       defaultAccountId: updates.default_account_id,
+      dashboardSettings: updates.dashboard_settings ? {
+        widgetOrder: updates.dashboard_settings.widget_order,
+        hiddenWidgets: updates.dashboard_settings.hidden_widgets,
+        hiddenAccountIds: updates.dashboard_settings.hidden_account_ids,
+      } : updates.dashboard_settings,
     });
     return transformProfile(data);
   },

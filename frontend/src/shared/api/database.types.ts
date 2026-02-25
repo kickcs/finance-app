@@ -1,5 +1,13 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
+export type WidgetId = 'quick_actions' | 'accounts' | 'transactions' | 'debts' | 'reminders';
+
+export interface DashboardSettings {
+  widget_order: WidgetId[];
+  hidden_widgets: WidgetId[];
+  hidden_account_ids: string[];
+}
+
 export type Database = {
   public: {
     Tables: {
@@ -14,6 +22,7 @@ export type Database = {
           created_at: string;
           is_demo: boolean;
           demo_expires_at: string | null;
+          dashboard_settings: DashboardSettings | null;
         };
         Insert: {
           id: string;
@@ -25,6 +34,7 @@ export type Database = {
           created_at?: string;
           is_demo?: boolean;
           demo_expires_at?: string | null;
+          dashboard_settings?: DashboardSettings | null;
         };
         Update: {
           id?: string;
@@ -36,6 +46,7 @@ export type Database = {
           created_at?: string;
           is_demo?: boolean;
           demo_expires_at?: string | null;
+          dashboard_settings?: DashboardSettings | null;
         };
         Relationships: [];
       };
