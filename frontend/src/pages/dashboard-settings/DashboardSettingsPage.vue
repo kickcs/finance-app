@@ -3,10 +3,9 @@ import { ref, computed, inject, watch } from 'vue';
 import type { Ref } from 'vue';
 import type { User } from '@/shared/api/composables/useAuth';
 import type { WidgetId, DashboardSettings } from '@/shared/api/database.types';
-import { useDebounceFn } from '@vueuse/core';
 import draggable from 'vuedraggable';
 import { AppHeader } from '@/widgets/header';
-import { UIcon } from '@/shared/ui';
+import { UButton, UIcon } from '@/shared/ui';
 import { useProfile } from '@/shared/api';
 import { useAccounts } from '@/entities/account';
 import { navigateBack } from '@/app/router';
@@ -26,6 +25,8 @@ interface WidgetItem {
 const widgetList = ref<WidgetItem[]>([]);
 const hiddenAccountIds = ref<Set<string>>(new Set());
 const initialized = ref(false);
+const saving = ref(false);
+const hasChanges = ref(false);
 
 // Initialize from profile settings
 watch(
@@ -41,11 +42,15 @@ watch(
   { immediate: true },
 );
 
+function markChanged() {
+  hasChanges.value = true;
+}
+
 function toggleWidget(id: WidgetId) {
   const item = widgetList.value.find((w) => w.id === id);
   if (item) {
     item.visible = !item.visible;
-    saveSettings();
+    markChanged();
   }
 }
 
@@ -56,24 +61,24 @@ function toggleAccount(accountId: string) {
     hiddenAccountIds.value.add(accountId);
   }
   hiddenAccountIds.value = new Set(hiddenAccountIds.value);
-  saveSettings();
+  markChanged();
 }
 
 function isAccountVisible(accountId: string) {
   return !hiddenAccountIds.value.has(accountId);
 }
 
-const debouncedSave = useDebounceFn(async () => {
+async function saveSettings() {
+  saving.value = true;
   const settings: DashboardSettings = {
     widget_order: widgetList.value.map((w) => w.id),
     hidden_widgets: widgetList.value.filter((w) => !w.visible).map((w) => w.id),
     hidden_account_ids: Array.from(hiddenAccountIds.value),
   };
   await updateDashboardSettings(settings);
-}, 500);
-
-function saveSettings() {
-  debouncedSave();
+  saving.value = false;
+  hasChanges.value = false;
+  navigateBack();
 }
 </script>
 
@@ -100,7 +105,7 @@ function saveSettings() {
           item-key="id"
           handle=".drag-handle"
           :animation="200"
-          @end="saveSettings"
+          @end="markChanged"
         >
           <template #item="{ element }: { element: WidgetItem }">
             <div
@@ -206,5 +211,19 @@ function saveSettings() {
         </div>
       </section>
     </main>
+
+    <!-- Save button (sticky bottom) -->
+    <div
+      v-if="hasChanges"
+      class="fixed bottom-0 left-0 right-0 p-5 pb-8 bg-gradient-to-t from-background-light dark:from-background-dark via-background-light/95 dark:via-background-dark/95 to-transparent"
+    >
+      <UButton
+        class="w-full"
+        :loading="saving"
+        @click="saveSettings"
+      >
+        Сохранить
+      </UButton>
+    </div>
   </div>
 </template>
