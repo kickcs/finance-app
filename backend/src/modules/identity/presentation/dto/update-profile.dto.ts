@@ -1,5 +1,27 @@
-import { IsString, IsOptional, IsBoolean, IsUUID } from 'class-validator';
-import type { DashboardSettings } from '../../domain/entities/profile.entity';
+import {
+  IsString,
+  IsOptional,
+  IsBoolean,
+  IsUUID,
+  IsArray,
+  ValidateNested,
+} from 'class-validator';
+import { Type } from 'class-transformer';
+import type { WidgetId } from '../../domain/entities/profile.entity';
+
+class DashboardSettingsDto {
+  @IsArray()
+  @IsString({ each: true })
+  widgetOrder: WidgetId[];
+
+  @IsArray()
+  @IsString({ each: true })
+  hiddenWidgets: WidgetId[];
+
+  @IsArray()
+  @IsString({ each: true })
+  hiddenAccountIds: string[];
+}
 
 export class UpdateProfileDto {
   @IsOptional()
@@ -19,5 +41,7 @@ export class UpdateProfileDto {
   defaultAccountId?: string | null;
 
   @IsOptional()
-  dashboardSettings?: DashboardSettings | null;
+  @ValidateNested()
+  @Type(() => DashboardSettingsDto)
+  dashboardSettings?: DashboardSettingsDto | null;
 }
