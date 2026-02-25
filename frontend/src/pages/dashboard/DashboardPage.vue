@@ -41,6 +41,8 @@ const {
   recentTxLoading,
   statsLoading,
   ratesLoading,
+  widgetOrder,
+  hiddenWidgets,
 } = useDashboardData();
 
 const {
@@ -99,6 +101,7 @@ function handleScanReceipt() {
       :is-hidden="isHidden"
       :is-scrolled-past-balance="isScrolledPastBalance"
       @profile-click="nav.toProfile"
+      @settings-click="nav.toDashboardSettings"
     />
 
     <!-- Scrollable content -->
@@ -131,31 +134,39 @@ function handleScanReceipt() {
               />
             </section>
 
-            <section :class="staggerClass('delay-150')">
-              <DashboardQuickActions
-                :slots="quickActionSlots"
-                :category-map="categoryMap"
-                :hint-dismissed="quickActionsHintDismissed"
-                :hidden="quickActionsHidden"
-                show-scan-button
-                @click="handleQuickActionClick"
-                @long-press="handleQuickActionLongPress"
-                @dismiss-hint="quickActionsHintDismissed = true"
-                @settings-click="nav.toQuickActionsSettings"
-                @scan-click="handleScanReceipt"
-              />
-            </section>
+            <template v-for="widgetId in widgetOrder" :key="widgetId">
+              <section
+                v-if="widgetId === 'quick_actions' && !hiddenWidgets.has('quick_actions')"
+                :class="staggerClass('delay-150')"
+              >
+                <DashboardQuickActions
+                  :slots="quickActionSlots"
+                  :category-map="categoryMap"
+                  :hint-dismissed="quickActionsHintDismissed"
+                  :hidden="quickActionsHidden"
+                  show-scan-button
+                  @click="handleQuickActionClick"
+                  @long-press="handleQuickActionLongPress"
+                  @dismiss-hint="quickActionsHintDismissed = true"
+                  @settings-click="nav.toQuickActionsSettings"
+                  @scan-click="handleScanReceipt"
+                />
+              </section>
 
-            <section :class="staggerClass('delay-300')">
-              <AccountStack
-                :accounts="accounts"
-                :loading="accountsLoading"
-                :hidden="isHidden"
-                @account-click="nav.toAccount"
-                @add-click="nav.toNewAccount"
-                @view-all="nav.toAccounts"
-              />
-            </section>
+              <section
+                v-if="widgetId === 'accounts' && !hiddenWidgets.has('accounts')"
+                :class="staggerClass('delay-300')"
+              >
+                <AccountStack
+                  :accounts="accounts"
+                  :loading="accountsLoading"
+                  :hidden="isHidden"
+                  @account-click="nav.toAccount"
+                  @add-click="nav.toNewAccount"
+                  @view-all="nav.toAccounts"
+                />
+              </section>
+            </template>
 
             <section :class="staggerClass('delay-300')">
               <DashboardActivityColumn
@@ -168,6 +179,8 @@ function handleScanReceipt() {
                 :recent-tx-loading="recentTxLoading"
                 :debts-loading="debtsLoading"
                 :reminders-loading="remindersLoading"
+                :hidden-widgets="hiddenWidgets"
+                :widget-order="widgetOrder"
                 @transaction-click="nav.toHistory"
                 @add-transaction="nav.toNewTransaction()"
                 @view-all-transactions="nav.toHistory"
@@ -215,6 +228,8 @@ function handleScanReceipt() {
                   :recent-tx-loading="recentTxLoading"
                   :debts-loading="debtsLoading"
                   :reminders-loading="remindersLoading"
+                  :hidden-widgets="hiddenWidgets"
+                  :widget-order="widgetOrder"
                   class="bg-surface-light dark:bg-surface-dark rounded-2xl border border-border-light dark:border-border-dark p-6"
                   @transaction-click="nav.toHistory"
                   @add-transaction="nav.toNewTransaction()"
@@ -246,6 +261,8 @@ function handleScanReceipt() {
                   :reminders="reminders"
                   :reminders-loading="remindersLoading"
                   :is-hidden="isHidden"
+                  :hidden-widgets="hiddenWidgets"
+                  :widget-order="widgetOrder"
                   @quick-action-click="handleQuickActionClick"
                   @quick-action-long-press="handleQuickActionLongPress"
                   @dismiss-hint="quickActionsHintDismissed = true"

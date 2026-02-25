@@ -15,6 +15,7 @@ defineProps<{
 
 const emit = defineEmits<{
   'profile-click': [];
+  'settings-click': [];
 }>();
 </script>
 
@@ -90,6 +91,14 @@ const emit = defineEmits<{
         </button>
       </template>
       <template #actions>
+        <button
+          type="button"
+          aria-label="Настройки дашборда"
+          class="w-9 h-9 rounded-xl flex items-center justify-center text-text-secondary-light dark:text-text-secondary-dark hover:bg-surface-light dark:hover:bg-surface-dark transition-colors"
+          @click="emit('settings-click')"
+        >
+          <UIcon name="tune" size="sm" />
+        </button>
         <ThemeToggle />
       </template>
     </AppHeader>

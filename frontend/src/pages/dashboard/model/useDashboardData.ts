@@ -8,6 +8,8 @@ import { useProfile, useExchangeRates } from '@/shared/api';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { getGreeting } from '@/shared/lib/format/greeting';
+import type { WidgetId } from '@/shared/api/database.types';
+import { DEFAULT_WIDGET_ORDER } from '@/pages/dashboard-settings/model/constants';
 
 export function useDashboardData() {
   const { user, userId } = useCurrentUser();
@@ -63,7 +65,32 @@ export function useDashboardData() {
     return total;
   }
 
-  const totalBalance = computed(() => sumConverted(totalBalancesByCurrency.value));
+  // Dashboard customization settings
+  const dashboardSettings = computed(() => profile.value?.dashboard_settings ?? null);
+
+  const widgetOrder = computed<WidgetId[]>(() =>
+    dashboardSettings.value?.widget_order ?? DEFAULT_WIDGET_ORDER,
+  );
+
+  const hiddenWidgets = computed<Set<WidgetId>>(() =>
+    new Set(dashboardSettings.value?.hidden_widgets ?? []),
+  );
+
+  const hiddenAccountIds = computed<Set<string>>(() =>
+    new Set(dashboardSettings.value?.hidden_account_ids ?? []),
+  );
+
+  const totalBalance = computed(() => {
+    const filteredByCurrency: Record<string, number> = {};
+    for (const account of accounts.value) {
+      if (hiddenAccountIds.value.has(account.id)) continue;
+      for (const balance of account.balances) {
+        filteredByCurrency[balance.currency] =
+          (filteredByCurrency[balance.currency] ?? 0) + balance.balance;
+      }
+    }
+    return sumConverted(filteredByCurrency);
+  });
 
   const savedThisMonth = computed(() => sumConverted(incomeByCurrency.value));
 
@@ -106,5 +133,7 @@ export function useDashboardData() {
     recentTxLoading,
     statsLoading,
     ratesLoading,
+    widgetOrder,
+    hiddenWidgets,
   };
 }

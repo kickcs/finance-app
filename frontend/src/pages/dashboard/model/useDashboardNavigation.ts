@@ -27,5 +27,6 @@ export function useDashboardNavigation() {
     toAnalytics: (type: 'income' | 'expense') => router.push(`/analytics?type=${type}`),
     toQuickActionsSettings: () => router.push('/settings/quick-actions'),
     toScanReceipt: () => router.push('/scan-receipt'),
+    toDashboardSettings: () => router.push({ name: 'dashboard-settings' }),
   };
 }

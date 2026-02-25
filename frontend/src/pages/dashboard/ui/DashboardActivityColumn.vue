@@ -1,23 +1,32 @@
 <script setup lang="ts">
-import { defineAsyncComponent } from 'vue';
+import { computed, defineAsyncComponent } from 'vue';
 import type { Transaction } from '@/entities/transaction';
 import type { Debt } from '@/entities/debt';
 import type { Reminder } from '@/entities/reminder';
+import type { WidgetId } from '@/shared/api/database.types';
 import { DebtsSectionSkeleton } from '@/widgets/debts-section';
 import { RemindersSectionSkeleton } from '@/widgets/reminders-section';
 import { RecentTransactionsSkeleton } from '@/widgets/recent-transactions';
 
-defineProps<{
-  transactions: Transaction[];
-  debts: Debt[];
-  reminders: Reminder[];
-  userId: string | null;
-  currency: string;
-  isHidden: boolean;
-  recentTxLoading: boolean;
-  debtsLoading: boolean;
-  remindersLoading: boolean;
-}>();
+const props = withDefaults(
+  defineProps<{
+    transactions: Transaction[];
+    debts: Debt[];
+    reminders: Reminder[];
+    userId: string | null;
+    currency: string;
+    isHidden: boolean;
+    recentTxLoading: boolean;
+    debtsLoading: boolean;
+    remindersLoading: boolean;
+    hiddenWidgets?: Set<WidgetId>;
+    widgetOrder?: WidgetId[];
+  }>(),
+  {
+    hiddenWidgets: () => new Set<WidgetId>(),
+    widgetOrder: () => ['transactions', 'debts', 'reminders'] as WidgetId[],
+  },
+);
 
 const emit = defineEmits<{
   'transaction-click': [tx: Transaction];
@@ -31,6 +40,21 @@ const emit = defineEmits<{
   'add-reminder': [];
   'view-all-reminders': [];
 }>();
+
+const activityWidgets = computed(() =>
+  (['transactions', 'debts', 'reminders'] as const).filter(
+    (id) => props.widgetOrder.includes(id) && !props.hiddenWidgets.has(id),
+  ),
+);
+
+const orderedWidgets = computed(() =>
+  activityWidgets.value.slice().sort((a, b) => {
+    const orderA = props.widgetOrder.indexOf(a);
+    const orderB = props.widgetOrder.indexOf(b);
+    return orderA - orderB;
+  }),
+);
+
 const RecentTransactions = defineAsyncComponent({
   loader: () => import('@/widgets/recent-transactions').then((m) => m.RecentTransactions),
   delay: 0,
@@ -47,28 +71,28 @@ const RemindersSection = defineAsyncComponent({
 
 <template>
   <div class="flex flex-col space-y-6 md:space-y-8">
-    <!-- Recent Transactions -->
-    <section class="flex-1">
-      <Suspense>
-        <RecentTransactions
-          :transactions="transactions"
-          :user-id="userId ?? ''"
-          :loading="recentTxLoading"
-          :hidden="isHidden"
-          class="h-full"
-          @transaction-click="emit('transaction-click', $event)"
-          @add-click="emit('add-transaction')"
-          @view-all="emit('view-all-transactions')"
-        />
-        <template #fallback>
-          <RecentTransactionsSkeleton />
-        </template>
-      </Suspense>
-    </section>
+    <template v-for="widgetId in orderedWidgets" :key="widgetId">
+      <!-- Recent Transactions -->
+      <section v-if="widgetId === 'transactions'" class="flex-1">
+        <Suspense>
+          <RecentTransactions
+            :transactions="transactions"
+            :user-id="userId ?? ''"
+            :loading="recentTxLoading"
+            :hidden="isHidden"
+            class="h-full"
+            @transaction-click="emit('transaction-click', $event)"
+            @add-click="emit('add-transaction')"
+            @view-all="emit('view-all-transactions')"
+          />
+          <template #fallback>
+            <RecentTransactionsSkeleton />
+          </template>
+        </Suspense>
+      </section>
 
-    <!-- Secondary Grid: Debts & Reminders -->
-    <div class="grid grid-cols-1 md:hidden gap-6">
-      <section>
+      <!-- Debts -->
+      <section v-if="widgetId === 'debts'" class="grid grid-cols-1 md:hidden">
         <Suspense>
           <DebtsSection
             :debts="debts"
@@ -89,7 +113,8 @@ const RemindersSection = defineAsyncComponent({
         </Suspense>
       </section>
 
-      <section>
+      <!-- Reminders -->
+      <section v-if="widgetId === 'reminders'" class="grid grid-cols-1 md:hidden">
         <Suspense>
           <RemindersSection
             :reminders="reminders"
@@ -106,6 +131,6 @@ const RemindersSection = defineAsyncComponent({
           </template>
         </Suspense>
       </section>
-    </div>
+    </template>
   </div>
 </template>
