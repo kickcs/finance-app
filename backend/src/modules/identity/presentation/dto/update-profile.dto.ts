@@ -4,6 +4,7 @@ import {
   IsBoolean,
   IsUUID,
   IsArray,
+  IsObject,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -41,6 +42,7 @@ export class UpdateProfileDto {
   defaultAccountId?: string | null;
 
   @IsOptional()
+  @IsObject()
   @ValidateNested()
   @Type(() => DashboardSettingsDto)
   dashboardSettings?: DashboardSettingsDto | null;
