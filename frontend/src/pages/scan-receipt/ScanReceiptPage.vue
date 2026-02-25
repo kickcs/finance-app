@@ -45,9 +45,10 @@ function handleBack() {
 
 <template>
   <div class="h-dvh flex flex-col overflow-hidden bg-background-light dark:bg-background-dark">
-
     <!-- Header -->
-    <header class="flex-shrink-0 flex items-center gap-3 px-5 pt-[calc(0.75rem+var(--safe-area-inset-top))] pb-3 bg-background-light dark:bg-background-dark">
+    <header
+      class="flex-shrink-0 flex items-center gap-3 px-5 pt-[calc(0.75rem+var(--safe-area-inset-top))] pb-3 bg-background-light dark:bg-background-dark"
+    >
       <button
         type="button"
         aria-label="Назад"
@@ -58,27 +59,29 @@ function handleBack() {
       </button>
 
       <div class="flex-1 min-w-0">
-        <h1 class="text-body font-semibold text-text-primary-light dark:text-text-primary-dark leading-tight truncate">
+        <h1
+          class="text-body font-semibold text-text-primary-light dark:text-text-primary-dark leading-tight truncate"
+        >
           Сканировать чек
         </h1>
-        <Transition name="step-label">
-          <p
-            :key="wizard.currentStep.value"
-            class="text-caption text-text-tertiary-light dark:text-text-tertiary-dark"
-          >
-            Шаг {{ wizard.currentStep.value }} из 4 · {{ STEP_LABELS[wizard.currentStep.value - 1] }}
-          </p>
-        </Transition>
+        <div class="relative h-5 overflow-hidden">
+          <Transition name="step-label">
+            <p
+              :key="wizard.currentStep.value"
+              class="absolute inset-x-0 top-0 text-caption text-text-tertiary-light dark:text-text-tertiary-dark"
+            >
+              Шаг {{ wizard.currentStep.value }} из 4 ·
+              {{ STEP_LABELS[wizard.currentStep.value - 1] }}
+            </p>
+          </Transition>
+        </div>
       </div>
 
       <PremiumBadge />
     </header>
 
     <!-- Step Progress Indicator -->
-    <StepProgressIndicator
-      :current-step="wizard.currentStep.value"
-      :total-steps="4"
-    />
+    <StepProgressIndicator :current-step="wizard.currentStep.value" :total-steps="4" />
 
     <!-- Step content area -->
     <div class="flex-1 overflow-hidden relative">
@@ -146,7 +149,6 @@ function handleBack() {
         />
       </Transition>
     </div>
-
   </div>
 </template>
 
@@ -164,8 +166,9 @@ function handleBack() {
 /* Forward: new step slides in from the right */
 .step-forward-enter-active,
 .step-forward-leave-active {
-  transition: transform 280ms cubic-bezier(0.4, 0, 0.2, 1),
-              opacity 280ms cubic-bezier(0.4, 0, 0.2, 1);
+  transition:
+    transform 280ms cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 280ms cubic-bezier(0.4, 0, 0.2, 1);
   position: absolute;
   inset: 0;
   width: 100%;
@@ -182,8 +185,9 @@ function handleBack() {
 /* Backward: new step slides in from the left */
 .step-back-enter-active,
 .step-back-leave-active {
-  transition: transform 280ms cubic-bezier(0.4, 0, 0.2, 1),
-              opacity 280ms cubic-bezier(0.4, 0, 0.2, 1);
+  transition:
+    transform 280ms cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 280ms cubic-bezier(0.4, 0, 0.2, 1);
   position: absolute;
   inset: 0;
   width: 100%;
