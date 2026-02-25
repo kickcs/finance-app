@@ -20,7 +20,7 @@ const galleryInputRef = ref<HTMLInputElement | null>(null);
 const fileError = ref<string | null>(null);
 
 const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
-const MAX_DIMENSION = 2048;
+const MAX_DIMENSION = 1536; // Good enough for OCR, keeps JPEG under ~2MB
 
 function openCamera() {
   cameraInputRef.value?.click();
@@ -65,12 +65,6 @@ function toJpeg(file: File): Promise<File> {
   });
 }
 
-/** Check if file needs conversion (non-JPEG/PNG/WebP or no type) */
-function needsConversion(file: File): boolean {
-  const supported = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-  return !supported.includes(file.type);
-}
-
 async function handleFileChange(e: Event) {
   const input = e.target as HTMLInputElement;
   const rawFile = input.files?.[0];
@@ -88,8 +82,9 @@ async function handleFileChange(e: Event) {
 
   fileError.value = null;
 
+  // Always convert through canvas to ensure compatible format + reasonable size
   try {
-    const file = needsConversion(rawFile) ? await toJpeg(rawFile) : rawFile;
+    const file = await toJpeg(rawFile);
     emit('selectFile', file);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
