@@ -166,33 +166,71 @@ function handleScanReceipt() {
                   @view-all="nav.toAccounts"
                 />
               </section>
-            </template>
 
-            <section :class="staggerClass('delay-300')">
-              <DashboardActivityColumn
-                :transactions="mobileTransactions"
-                :debts="debts"
-                :reminders="reminders"
-                :user-id="userId"
-                :currency="currency"
-                :is-hidden="isHidden"
-                :recent-tx-loading="recentTxLoading"
-                :debts-loading="debtsLoading"
-                :reminders-loading="remindersLoading"
-                :hidden-widgets="hiddenWidgets"
-                :widget-order="widgetOrder"
-                @transaction-click="nav.toHistory"
-                @add-transaction="nav.toNewTransaction()"
-                @view-all-transactions="nav.toHistory"
-                @debt-click="nav.toDebt"
-                @person-click="nav.toDebts"
-                @add-debt="nav.toNewDebt"
-                @view-all-debts="nav.toDebts"
-                @reminder-click="nav.toReminder"
-                @add-reminder="nav.toNewReminder"
-                @view-all-reminders="nav.toReminders"
-              />
-            </section>
+              <section
+                v-if="widgetId === 'transactions' && !hiddenWidgets.has('transactions')"
+                :class="staggerClass('delay-300')"
+              >
+                <DashboardActivityColumn
+                  :transactions="mobileTransactions"
+                  :debts="[]"
+                  :reminders="[]"
+                  :user-id="userId"
+                  :currency="currency"
+                  :is-hidden="isHidden"
+                  :recent-tx-loading="recentTxLoading"
+                  :debts-loading="false"
+                  :reminders-loading="false"
+                  :widget-order="['transactions']"
+                  @transaction-click="nav.toHistory"
+                  @add-transaction="nav.toNewTransaction()"
+                  @view-all-transactions="nav.toHistory"
+                />
+              </section>
+
+              <section
+                v-if="widgetId === 'debts' && !hiddenWidgets.has('debts')"
+                :class="staggerClass('delay-300')"
+              >
+                <DashboardActivityColumn
+                  :transactions="[]"
+                  :debts="debts"
+                  :reminders="[]"
+                  :user-id="userId"
+                  :currency="currency"
+                  :is-hidden="isHidden"
+                  :recent-tx-loading="false"
+                  :debts-loading="debtsLoading"
+                  :reminders-loading="false"
+                  :widget-order="['debts']"
+                  @debt-click="nav.toDebt"
+                  @person-click="nav.toDebts"
+                  @add-debt="nav.toNewDebt"
+                  @view-all-debts="nav.toDebts"
+                />
+              </section>
+
+              <section
+                v-if="widgetId === 'reminders' && !hiddenWidgets.has('reminders')"
+                :class="staggerClass('delay-300')"
+              >
+                <DashboardActivityColumn
+                  :transactions="[]"
+                  :debts="[]"
+                  :reminders="reminders"
+                  :user-id="userId"
+                  :currency="currency"
+                  :is-hidden="isHidden"
+                  :recent-tx-loading="false"
+                  :debts-loading="false"
+                  :reminders-loading="remindersLoading"
+                  :widget-order="['reminders']"
+                  @reminder-click="nav.toReminder"
+                  @add-reminder="nav.toNewReminder"
+                  @view-all-reminders="nav.toReminders"
+                />
+              </section>
+            </template>
           </div>
 
           <!-- Desktop layout (8/4 fintech grid) -->
