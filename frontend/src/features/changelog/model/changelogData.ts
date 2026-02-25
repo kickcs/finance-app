@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.21';
+export const CURRENT_VERSION = '1.0.22';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,21 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.22',
+    date: '2026-02-25',
+    title: 'Настройка главной',
+    items: [
+      {
+        type: 'feature',
+        text: 'Настройка дашборда — перетаскивайте виджеты для изменения порядка и скрывайте ненужные модули',
+      },
+      {
+        type: 'feature',
+        text: 'Исключение счетов из общего баланса — выберите какие счета учитывать',
+      },
+    ],
+  },
   {
     version: '1.0.21',
     date: '2026-02-25',
