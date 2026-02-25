@@ -5,11 +5,13 @@ import type { User } from '@/shared/api/composables/useAuth';
 import type { WidgetId, DashboardSettings } from '@/shared/api/database.types';
 import draggable from 'vuedraggable';
 import { AppHeader } from '@/widgets/header';
-import { UButton, UIcon } from '@/shared/ui';
+import { UButton, UIcon, UToggle, useToast } from '@/shared/ui';
 import { useProfile } from '@/shared/api';
 import { useAccounts } from '@/entities/account';
 import { navigateBack } from '@/app/router';
 import { DEFAULT_WIDGET_ORDER, WIDGET_LABELS, WIDGET_ICONS } from './model/constants';
+
+const { toast } = useToast();
 
 const user = inject<Ref<User | null>>('user');
 const userId = computed(() => user?.value?.id ?? null);
@@ -33,7 +35,9 @@ watch(
   dashboardSettings,
   (settings) => {
     if (initialized.value) return;
-    const order = settings?.widget_order ?? DEFAULT_WIDGET_ORDER;
+    const savedOrder = settings?.widget_order ?? DEFAULT_WIDGET_ORDER;
+    const missingIds = DEFAULT_WIDGET_ORDER.filter((id) => !savedOrder.includes(id));
+    const order = [...savedOrder, ...missingIds];
     const hidden = new Set(settings?.hidden_widgets ?? []);
     widgetList.value = order.map((id) => ({ id, visible: !hidden.has(id) }));
     hiddenAccountIds.value = new Set(settings?.hidden_account_ids ?? []);
@@ -70,15 +74,20 @@ function isAccountVisible(accountId: string) {
 
 async function saveSettings() {
   saving.value = true;
-  const settings: DashboardSettings = {
-    widget_order: widgetList.value.map((w) => w.id),
-    hidden_widgets: widgetList.value.filter((w) => !w.visible).map((w) => w.id),
-    hidden_account_ids: Array.from(hiddenAccountIds.value),
-  };
-  await updateDashboardSettings(settings);
-  saving.value = false;
-  hasChanges.value = false;
-  navigateBack();
+  try {
+    const settings: DashboardSettings = {
+      widget_order: widgetList.value.map((w) => w.id),
+      hidden_widgets: widgetList.value.filter((w) => !w.visible).map((w) => w.id),
+      hidden_account_ids: Array.from(hiddenAccountIds.value),
+    };
+    await updateDashboardSettings(settings);
+    hasChanges.value = false;
+    navigateBack();
+  } catch {
+    toast({ title: 'Ошибка', description: 'Не удалось сохранить настройки', variant: 'error' });
+  } finally {
+    saving.value = false;
+  }
 }
 </script>
 
@@ -134,24 +143,11 @@ async function saveSettings() {
               </span>
 
               <!-- Toggle -->
-              <button
-                role="switch"
-                :aria-checked="element.visible"
+              <UToggle
+                :model-value="element.visible"
                 :aria-label="`Показывать ${WIDGET_LABELS[element.id]}`"
-                @click="toggleWidget(element.id)"
-              >
-                <div
-                  class="w-11 h-6 rounded-full relative transition-colors duration-200"
-                  :class="
-                    element.visible ? 'bg-primary' : 'bg-border-light dark:bg-border-dark'
-                  "
-                >
-                  <div
-                    class="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform duration-200"
-                    :class="element.visible ? 'translate-x-5 left-0.5' : 'left-0.5'"
-                  />
-                </div>
-              </button>
+                @update:model-value="toggleWidget(element.id)"
+              />
             </div>
           </template>
         </draggable>
@@ -169,14 +165,10 @@ async function saveSettings() {
         </div>
 
         <div class="space-y-2">
-          <button
+          <div
             v-for="account in accounts"
             :key="account.id"
-            class="w-full flex items-center gap-3 p-4 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark"
-            role="switch"
-            :aria-checked="isAccountVisible(account.id)"
-            :aria-label="`Включить ${account.name} в баланс`"
-            @click="toggleAccount(account.id)"
+            class="flex items-center gap-3 p-4 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark"
           >
             <!-- Account icon -->
             <div
@@ -194,28 +186,20 @@ async function saveSettings() {
             </span>
 
             <!-- Toggle -->
-            <div
-              class="w-11 h-6 rounded-full relative transition-colors duration-200"
-              :class="
-                isAccountVisible(account.id)
-                  ? 'bg-primary'
-                  : 'bg-border-light dark:bg-border-dark'
-              "
-            >
-              <div
-                class="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform duration-200"
-                :class="isAccountVisible(account.id) ? 'translate-x-5 left-0.5' : 'left-0.5'"
-              />
-            </div>
-          </button>
+            <UToggle
+              :model-value="isAccountVisible(account.id)"
+              :aria-label="`Включить ${account.name} в баланс`"
+              @update:model-value="toggleAccount(account.id)"
+            />
+          </div>
         </div>
       </section>
     </main>
 
-    <!-- Save button (below scroll area) -->
+    <!-- Save button (below scroll area, above BottomNav) -->
     <div
       v-if="hasChanges"
-      class="shrink-0 px-5 py-4 border-t border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark"
+      class="shrink-0 px-5 pt-4 pb-24 border-t border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark"
     >
       <UButton
         class="w-full"

@@ -91,7 +91,7 @@ const RemindersSection = defineAsyncComponent({
         </Suspense>
       </section>
 
-      <!-- Debts -->
+      <!-- Debts (mobile only — on desktop rendered via DashboardSidePanel) -->
       <section v-if="widgetId === 'debts'" class="grid grid-cols-1 md:hidden">
         <Suspense>
           <DebtsSection
@@ -113,7 +113,7 @@ const RemindersSection = defineAsyncComponent({
         </Suspense>
       </section>
 
-      <!-- Reminders -->
+      <!-- Reminders (mobile only — on desktop rendered via DashboardSidePanel) -->
       <section v-if="widgetId === 'reminders'" class="grid grid-cols-1 md:hidden">
         <Suspense>
           <RemindersSection

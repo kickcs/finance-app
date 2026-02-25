@@ -3,7 +3,7 @@ import { ref, computed, inject } from 'vue';
 import type { Ref } from 'vue';
 import type { User } from '@/shared/api/composables/useAuth';
 import { AppHeader } from '@/widgets/header';
-import { UIcon } from '@/shared/ui';
+import { UIcon, UToggle } from '@/shared/ui';
 import {
   QuickActionModal,
   useQuickActions,
@@ -57,12 +57,8 @@ function handleDelete() {
       </p>
 
       <!-- Visibility toggle -->
-      <button
+      <div
         class="w-full flex items-center justify-between p-4 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark"
-        role="switch"
-        :aria-checked="!hidden"
-        aria-label="Показывать быстрые действия на главной"
-        @click="toggleHidden"
       >
         <div class="flex items-center gap-3">
           <UIcon
@@ -74,16 +70,12 @@ function handleDelete() {
             Показывать на главной
           </span>
         </div>
-        <div
-          class="w-11 h-6 rounded-full relative transition-colors duration-200"
-          :class="hidden ? 'bg-border-light dark:bg-border-dark' : 'bg-primary'"
-        >
-          <div
-            class="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform duration-200"
-            :class="hidden ? 'left-0.5' : 'translate-x-5 left-0.5'"
-          />
-        </div>
-      </button>
+        <UToggle
+          :model-value="!hidden"
+          aria-label="Показывать быстрые действия на главной"
+          @update:model-value="toggleHidden"
+        />
+      </div>
 
       <div class="space-y-3">
         <button

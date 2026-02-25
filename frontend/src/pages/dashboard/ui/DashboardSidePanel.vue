@@ -5,7 +5,7 @@ import type { Debt } from '@/entities/debt';
 import type { Reminder } from '@/entities/reminder';
 import type { QuickAction } from '@/features/configure-quick-action';
 import type { WidgetId } from '@/shared/api/database.types';
-import { DEFAULT_WIDGET_ORDER } from '@/pages/dashboard-settings/model/constants';
+import { DEFAULT_WIDGET_ORDER } from '@/shared/config/dashboard';
 import { AccountStack } from '@/widgets/account-stack';
 import { DebtsSectionSkeleton } from '@/widgets/debts-section';
 import { RemindersSectionSkeleton } from '@/widgets/reminders-section';

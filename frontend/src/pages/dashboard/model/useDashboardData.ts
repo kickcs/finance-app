@@ -9,7 +9,7 @@ import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { getGreeting } from '@/shared/lib/format/greeting';
 import type { WidgetId } from '@/shared/api/database.types';
-import { DEFAULT_WIDGET_ORDER } from '@/pages/dashboard-settings/model/constants';
+import { DEFAULT_WIDGET_ORDER } from '@/shared/config/dashboard';
 
 export function useDashboardData() {
   const { user, userId } = useCurrentUser();
@@ -68,9 +68,12 @@ export function useDashboardData() {
   // Dashboard customization settings
   const dashboardSettings = computed(() => profile.value?.dashboard_settings ?? null);
 
-  const widgetOrder = computed<WidgetId[]>(() =>
-    dashboardSettings.value?.widget_order ?? DEFAULT_WIDGET_ORDER,
-  );
+  const widgetOrder = computed<WidgetId[]>(() => {
+    const saved = dashboardSettings.value?.widget_order;
+    if (!saved) return DEFAULT_WIDGET_ORDER;
+    const missing = DEFAULT_WIDGET_ORDER.filter((id) => !saved.includes(id));
+    return missing.length > 0 ? [...saved, ...missing] : saved;
+  });
 
   const hiddenWidgets = computed<Set<WidgetId>>(() =>
     new Set(dashboardSettings.value?.hidden_widgets ?? []),
