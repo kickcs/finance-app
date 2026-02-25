@@ -73,8 +73,9 @@ async function handleFileChange(e: Event) {
   try {
     const file = NEEDS_CONVERSION.test(rawFile.type) ? await toJpeg(rawFile) : rawFile;
     emit('selectFile', file);
-  } catch {
-    fileError.value = 'Не удалось обработать изображение. Попробуйте сделать скриншот чека.';
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    fileError.value = `Не удалось обработать изображение (${rawFile.type}, ${Math.round(rawFile.size / 1024)}KB): ${msg}`;
   }
 }
 </script>

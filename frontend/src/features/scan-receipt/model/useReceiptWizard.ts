@@ -190,8 +190,12 @@ export function useReceiptWizard(userId: () => string | null) {
       haptics.success();
       // Auto-advance after 600ms
       setTimeout(() => goNext(), 600);
-    } catch (error) {
-      ocrError.value = error instanceof Error ? error.message : 'Не удалось распознать чек';
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      const fileInfo = selectedFile.value
+        ? `[${selectedFile.value.type || 'unknown'}, ${Math.round(selectedFile.value.size / 1024)}KB]`
+        : '';
+      ocrError.value = `${msg} ${fileInfo}`.trim();
       haptics.error();
     } finally {
       isOcrLoading.value = false;
@@ -305,7 +309,7 @@ export function useReceiptWizard(userId: () => string | null) {
 
       isSuccess.value = true;
       haptics.success();
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Receipt submit failed:', error);
       submitError.value = error instanceof Error ? error.message : 'Произошла ошибка';
       haptics.error();
