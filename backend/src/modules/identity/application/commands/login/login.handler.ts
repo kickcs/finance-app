@@ -38,7 +38,7 @@ export class LoginHandler implements ICommandHandler<LoginCommand> {
     });
 
     // Update refresh token
-    const hashedRefreshToken = await bcrypt.hash(tokens.refreshToken, 10);
+    const hashedRefreshToken = this.tokenService.hashToken(tokens.refreshToken);
     profile.setRefreshToken(hashedRefreshToken);
     await this.profileRepository.save(profile);
 

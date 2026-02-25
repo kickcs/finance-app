@@ -1,6 +1,5 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { Inject, Logger } from '@nestjs/common';
-import * as bcrypt from 'bcrypt';
 import { LoginAnonymousCommand } from './login-anonymous.command';
 import { Profile } from '../../../domain';
 import {
@@ -40,7 +39,7 @@ export class LoginAnonymousHandler implements ICommandHandler<LoginAnonymousComm
     });
 
     // Set refresh token
-    const hashedRefreshToken = await bcrypt.hash(tokens.refreshToken, 10);
+    const hashedRefreshToken = this.tokenService.hashToken(tokens.refreshToken);
     profile.setRefreshToken(hashedRefreshToken);
 
     // Save profile first

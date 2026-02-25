@@ -1,6 +1,5 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { UnauthorizedException, Inject, Logger } from '@nestjs/common';
-import * as bcrypt from 'bcrypt';
 import { RefreshCommand } from './refresh.command';
 import {
   IProfileRepository,
@@ -35,8 +34,11 @@ export class RefreshHandler implements ICommandHandler<RefreshCommand> {
         throw new UnauthorizedException('Demo account has expired');
       }
 
-      // Verify stored refresh token matches
-      const isValid = await bcrypt.compare(command.refreshToken, profile.refreshToken);
+      // Verify stored refresh token matches (SHA-256 hash comparison).
+      // NOTE: Migrated from bcrypt to SHA-256. Existing bcrypt hashes will fail
+      // this comparison, forcing a one-time re-login for all active sessions on deploy.
+      const hashedInput = this.tokenService.hashToken(command.refreshToken);
+      const isValid = hashedInput === profile.refreshToken;
       if (!isValid) {
         throw new UnauthorizedException('Invalid refresh token');
       }
@@ -50,7 +52,7 @@ export class RefreshHandler implements ICommandHandler<RefreshCommand> {
       });
 
       // Update refresh token
-      const hashedRefreshToken = await bcrypt.hash(tokens.refreshToken, 10);
+      const hashedRefreshToken = this.tokenService.hashToken(tokens.refreshToken);
       profile.setRefreshToken(hashedRefreshToken);
       await this.profileRepository.save(profile);
 

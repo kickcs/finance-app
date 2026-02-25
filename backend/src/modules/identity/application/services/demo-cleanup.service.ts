@@ -1,12 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, LessThan } from 'typeorm';
+import { Repository, LessThan, In } from 'typeorm';
 import { ProfileOrmEntity } from '../../infrastructure/persistence/typeorm';
 import { AccountOrmEntity } from '../../../accounting/infrastructure/persistence/typeorm';
 import { TransactionOrmEntity } from '../../../accounting/infrastructure/persistence/typeorm';
 import { DebtOrmEntity } from '../../../debt/infrastructure/persistence/typeorm';
-import { ReminderOrmEntity } from '../../../planning/infrastructure/persistence/typeorm';
+import { GoalOrmEntity, ReminderOrmEntity } from '../../../planning/infrastructure/persistence/typeorm';
 
 /**
  * Service responsible for cleaning up expired demo accounts and their data
@@ -18,14 +18,6 @@ export class DemoCleanupService {
   constructor(
     @InjectRepository(ProfileOrmEntity)
     private readonly profileRepository: Repository<ProfileOrmEntity>,
-    @InjectRepository(AccountOrmEntity)
-    private readonly accountRepository: Repository<AccountOrmEntity>,
-    @InjectRepository(TransactionOrmEntity)
-    private readonly transactionRepository: Repository<TransactionOrmEntity>,
-    @InjectRepository(DebtOrmEntity)
-    private readonly debtRepository: Repository<DebtOrmEntity>,
-    @InjectRepository(ReminderOrmEntity)
-    private readonly reminderRepository: Repository<ReminderOrmEntity>,
   ) {}
 
   /**
@@ -38,13 +30,14 @@ export class DemoCleanupService {
     try {
       const now = new Date();
 
-      // Find all expired demo profiles
-      // Use camelCase property names matching the ORM entity
+      // Find up to 50 expired demo profiles per run (limits CPU spike)
       const expiredProfiles = await this.profileRepository.find({
         where: {
           isDemo: true,
           demoExpiresAt: LessThan(now),
         },
+        select: ['id'],
+        take: 50,
       });
 
       if (expiredProfiles.length === 0) {
@@ -54,42 +47,32 @@ export class DemoCleanupService {
 
       this.logger.log(`Found ${expiredProfiles.length} expired demo accounts to clean up`);
 
-      for (const profile of expiredProfiles) {
-        await this.deleteUserData(profile.id);
-      }
+      const userIds = expiredProfiles.map((p) => p.id);
+
+      // Delete all data in a single transaction, respecting foreign key order
+      await this.profileRepository.manager.transaction(async (manager) => {
+        // 1. Delete transactions first
+        await manager.delete(TransactionOrmEntity, { userId: In(userIds) });
+
+        // 2. Delete accounts (cascades to account_balances)
+        await manager.delete(AccountOrmEntity, { userId: In(userIds) });
+
+        // 3. Delete debts
+        await manager.delete(DebtOrmEntity, { userId: In(userIds) });
+
+        // 4. Delete goals
+        await manager.delete(GoalOrmEntity, { userId: In(userIds) });
+
+        // 5. Delete reminders
+        await manager.delete(ReminderOrmEntity, { userId: In(userIds) });
+
+        // 6. Finally delete the profiles
+        await manager.delete(ProfileOrmEntity, { id: In(userIds) });
+      });
 
       this.logger.log(`Successfully cleaned up ${expiredProfiles.length} expired demo accounts`);
     } catch (error) {
       this.logger.error('Failed to cleanup expired demo accounts', error);
-    }
-  }
-
-  /**
-   * Delete all data associated with a user
-   */
-  private async deleteUserData(userId: string): Promise<void> {
-    try {
-      // Delete in order to respect foreign key constraints
-      // Use camelCase property names matching the ORM entities
-      // 1. Delete transactions
-      await this.transactionRepository.delete({ userId });
-
-      // 2. Delete accounts (this will cascade to account_balances)
-      await this.accountRepository.delete({ userId });
-
-      // 3. Delete debts
-      await this.debtRepository.delete({ userId });
-
-      // 4. Delete reminders
-      await this.reminderRepository.delete({ userId });
-
-      // 5. Finally delete the profile
-      await this.profileRepository.delete({ id: userId });
-
-      this.logger.debug(`Deleted all data for demo user ${userId}`);
-    } catch (error) {
-      this.logger.error(`Failed to delete data for user ${userId}`, error);
-      throw error;
     }
   }
 

@@ -340,194 +340,116 @@ export class TransactionRepository implements ITransactionRepository {
     const startDate = new Date(year, month - 1, 1);
     const endDate = new Date(year, month, 1);
 
-    // Helper to create base query with date range
-    const createBaseQuery = () =>
-      this.ormRepository
-        .createQueryBuilder('t')
-        .where('t.user_id = :userId', { userId })
-        .andWhere('t.date >= :startDate', { startDate })
-        .andWhere('t.date < :endDate', { endDate });
-
-    // 1. Regular income (non-debt-related, handles NULL as false)
-    const regularIncomeResult = await createBaseQuery()
-      .select('SUM(t.amount)', 'total')
-      .andWhere('t.type = :type', { type: 'income' })
-      .andWhere('(t.is_debt_related = false OR t.is_debt_related IS NULL)')
-      .andWhere(
-        "t.category_id NOT IN ('debt_given', 'debt_taken', 'debt_return_to_me', 'debt_return_from_me')",
+    // Query 1: All totals in one query using conditional SUM
+    const result = await this.ormRepository
+      .createQueryBuilder('t')
+      .where('t.user_id = :userId', { userId })
+      .andWhere('t.date >= :startDate', { startDate })
+      .andWhere('t.date < :endDate', { endDate })
+      .select(
+        `SUM(CASE WHEN t.type = 'income' AND (t.is_debt_related = false OR t.is_debt_related IS NULL) AND t.category_id NOT IN ('debt_given','debt_taken','debt_return_to_me','debt_return_from_me') THEN t.amount ELSE 0 END)`,
+        'regularIncome',
       )
-      .getRawOne<{ total: string | null }>();
-
-    // 2. Regular expense (non-debt-related, handles NULL as false)
-    const regularExpenseResult = await createBaseQuery()
-      .select('SUM(t.amount)', 'total')
-      .andWhere('t.type = :type', { type: 'expense' })
-      .andWhere('(t.is_debt_related = false OR t.is_debt_related IS NULL)')
-      .andWhere(
-        "t.category_id NOT IN ('debt_given', 'debt_taken', 'debt_return_to_me', 'debt_return_from_me')",
+      .addSelect(
+        `SUM(CASE WHEN t.type = 'expense' AND (t.is_debt_related = false OR t.is_debt_related IS NULL) AND t.category_id NOT IN ('debt_given','debt_taken','debt_return_to_me','debt_return_from_me') THEN t.amount ELSE 0 END)`,
+        'regularExpense',
       )
-      .getRawOne<{ total: string | null }>();
+      .addSelect(
+        `SUM(CASE WHEN t.category_id = 'debt_given' THEN t.amount ELSE 0 END)`,
+        'debtGiven',
+      )
+      .addSelect(
+        `SUM(CASE WHEN t.category_id = 'debt_taken' THEN t.amount ELSE 0 END)`,
+        'debtTaken',
+      )
+      .addSelect(
+        `SUM(CASE WHEN t.category_id = 'debt_return_to_me' AND t.is_debt_related = true THEN t.amount ELSE 0 END)`,
+        'debtReturnsToMe',
+      )
+      .addSelect(
+        `SUM(CASE WHEN t.category_id = 'debt_return_from_me' AND t.is_debt_related = true THEN t.amount ELSE 0 END)`,
+        'debtReturnsFromMe',
+      )
+      .getRawOne<{
+        regularIncome: string | null;
+        regularExpense: string | null;
+        debtGiven: string | null;
+        debtTaken: string | null;
+        debtReturnsToMe: string | null;
+        debtReturnsFromMe: string | null;
+      }>();
 
-    // 3. Debt given (counts as expense - money I lent out)
-    const debtGivenResult = await createBaseQuery()
-      .select('SUM(t.amount)', 'total')
-      .andWhere("t.category_id = 'debt_given'")
-      .getRawOne<{ total: string | null }>();
+    const regularIncome = Number(result?.regularIncome ?? 0);
+    const regularExpense = Number(result?.regularExpense ?? 0);
+    const debtGiven = Number(result?.debtGiven ?? 0);
+    const debtTaken = Number(result?.debtTaken ?? 0);
+    const debtReturnsToMe = Number(result?.debtReturnsToMe ?? 0);
+    const debtReturnsFromMe = Number(result?.debtReturnsFromMe ?? 0);
 
-    // 4. Debt taken (counts as income - money I borrowed)
-    const debtTakenResult = await createBaseQuery()
-      .select('SUM(t.amount)', 'total')
-      .andWhere("t.category_id = 'debt_taken'")
-      .getRawOne<{ total: string | null }>();
-
-    // 5. Debt returns TO ME (subtract from expenses - only if original debt affected balance)
-    const debtReturnsToMeResult = await createBaseQuery()
-      .select('SUM(t.amount)', 'total')
-      .andWhere("t.category_id = 'debt_return_to_me'")
-      .andWhere('t.is_debt_related = true')
-      .getRawOne<{ total: string | null }>();
-
-    // 6. Debt returns FROM ME (subtract from income - only if original debt affected balance)
-    const debtReturnsFromMeResult = await createBaseQuery()
-      .select('SUM(t.amount)', 'total')
-      .andWhere("t.category_id = 'debt_return_from_me'")
-      .andWhere('t.is_debt_related = true')
-      .getRawOne<{ total: string | null }>();
-
-    // Calculate NET values
-    const regularIncome = Number(regularIncomeResult?.total ?? 0);
-    const regularExpense = Number(regularExpenseResult?.total ?? 0);
-    const debtGiven = Number(debtGivenResult?.total ?? 0);
-    const debtTaken = Number(debtTakenResult?.total ?? 0);
-    const debtReturnsToMe = Number(debtReturnsToMeResult?.total ?? 0);
-    const debtReturnsFromMe = Number(debtReturnsFromMeResult?.total ?? 0);
-
-    // Income = regular + debt_taken - returns_from_me
     const netIncome = Math.max(0, regularIncome + debtTaken - debtReturnsFromMe);
-    // Expense = regular + debt_given - returns_to_me
     const netExpense = Math.max(0, regularExpense + debtGiven - debtReturnsToMe);
 
-    // By currency calculations
-    // 5. Regular income by currency
-    const regularIncomeByCurrencyResult = await createBaseQuery()
+    // Query 2: By-currency breakdown with same conditional logic
+    const byCurrencyResult = await this.ormRepository
+      .createQueryBuilder('t')
+      .where('t.user_id = :userId', { userId })
+      .andWhere('t.date >= :startDate', { startDate })
+      .andWhere('t.date < :endDate', { endDate })
       .select('t.currency', 'currency')
-      .addSelect('SUM(t.amount)', 'amount')
-      .andWhere('t.type = :type', { type: 'income' })
-      .andWhere('(t.is_debt_related = false OR t.is_debt_related IS NULL)')
-      .andWhere(
-        "t.category_id NOT IN ('debt_given', 'debt_taken', 'debt_return_to_me', 'debt_return_from_me')",
+      .addSelect(
+        `SUM(CASE WHEN t.type = 'income' AND (t.is_debt_related = false OR t.is_debt_related IS NULL) AND t.category_id NOT IN ('debt_given','debt_taken','debt_return_to_me','debt_return_from_me') THEN t.amount ELSE 0 END)`,
+        'regularIncome',
+      )
+      .addSelect(
+        `SUM(CASE WHEN t.type = 'expense' AND (t.is_debt_related = false OR t.is_debt_related IS NULL) AND t.category_id NOT IN ('debt_given','debt_taken','debt_return_to_me','debt_return_from_me') THEN t.amount ELSE 0 END)`,
+        'regularExpense',
+      )
+      .addSelect(
+        `SUM(CASE WHEN t.category_id = 'debt_given' THEN t.amount ELSE 0 END)`,
+        'debtGiven',
+      )
+      .addSelect(
+        `SUM(CASE WHEN t.category_id = 'debt_taken' THEN t.amount ELSE 0 END)`,
+        'debtTaken',
+      )
+      .addSelect(
+        `SUM(CASE WHEN t.category_id = 'debt_return_to_me' AND t.is_debt_related = true THEN t.amount ELSE 0 END)`,
+        'debtReturnsToMe',
+      )
+      .addSelect(
+        `SUM(CASE WHEN t.category_id = 'debt_return_from_me' AND t.is_debt_related = true THEN t.amount ELSE 0 END)`,
+        'debtReturnsFromMe',
       )
       .groupBy('t.currency')
-      .getRawMany<{ currency: string; amount: string }>();
-
-    // 6. Regular expense by currency
-    const regularExpenseByCurrencyResult = await createBaseQuery()
-      .select('t.currency', 'currency')
-      .addSelect('SUM(t.amount)', 'amount')
-      .andWhere('t.type = :type', { type: 'expense' })
-      .andWhere('(t.is_debt_related = false OR t.is_debt_related IS NULL)')
-      .andWhere(
-        "t.category_id NOT IN ('debt_given', 'debt_taken', 'debt_return_to_me', 'debt_return_from_me')",
-      )
-      .groupBy('t.currency')
-      .getRawMany<{ currency: string; amount: string }>();
-
-    // 9. Debt given by currency
-    const debtGivenByCurrencyResult = await createBaseQuery()
-      .select('t.currency', 'currency')
-      .addSelect('SUM(t.amount)', 'amount')
-      .andWhere("t.category_id = 'debt_given'")
-      .groupBy('t.currency')
-      .getRawMany<{ currency: string; amount: string }>();
-
-    // 10. Debt taken by currency
-    const debtTakenByCurrencyResult = await createBaseQuery()
-      .select('t.currency', 'currency')
-      .addSelect('SUM(t.amount)', 'amount')
-      .andWhere("t.category_id = 'debt_taken'")
-      .groupBy('t.currency')
-      .getRawMany<{ currency: string; amount: string }>();
-
-    // 11. Debt returns TO ME by currency (only if original debt affected balance)
-    const debtReturnsToMeByCurrencyResult = await createBaseQuery()
-      .select('t.currency', 'currency')
-      .addSelect('SUM(t.amount)', 'amount')
-      .andWhere("t.category_id = 'debt_return_to_me'")
-      .andWhere('t.is_debt_related = true')
-      .groupBy('t.currency')
-      .getRawMany<{ currency: string; amount: string }>();
-
-    // 12. Debt returns FROM ME by currency (only if original debt affected balance)
-    const debtReturnsFromMeByCurrencyResult = await createBaseQuery()
-      .select('t.currency', 'currency')
-      .addSelect('SUM(t.amount)', 'amount')
-      .andWhere("t.category_id = 'debt_return_from_me'")
-      .andWhere('t.is_debt_related = true')
-      .groupBy('t.currency')
-      .getRawMany<{ currency: string; amount: string }>();
-
-    // Process by-currency data
-    const regularIncomeByCurrency: Record<string, number> = {};
-    for (const row of regularIncomeByCurrencyResult) {
-      regularIncomeByCurrency[row.currency] = Number(row.amount);
-    }
-
-    const regularExpenseByCurrency: Record<string, number> = {};
-    for (const row of regularExpenseByCurrencyResult) {
-      regularExpenseByCurrency[row.currency] = Number(row.amount);
-    }
-
-    const debtGivenByCurrency: Record<string, number> = {};
-    for (const row of debtGivenByCurrencyResult) {
-      debtGivenByCurrency[row.currency] = Number(row.amount);
-    }
-
-    const debtTakenByCurrency: Record<string, number> = {};
-    for (const row of debtTakenByCurrencyResult) {
-      debtTakenByCurrency[row.currency] = Number(row.amount);
-    }
-
-    const debtReturnsToMeByCurrency: Record<string, number> = {};
-    for (const row of debtReturnsToMeByCurrencyResult) {
-      debtReturnsToMeByCurrency[row.currency] = Number(row.amount);
-    }
-
-    const debtReturnsFromMeByCurrency: Record<string, number> = {};
-    for (const row of debtReturnsFromMeByCurrencyResult) {
-      debtReturnsFromMeByCurrency[row.currency] = Number(row.amount);
-    }
-
-    // Calculate NET by currency
-    const allCurrencies = new Set([
-      ...Object.keys(regularIncomeByCurrency),
-      ...Object.keys(regularExpenseByCurrency),
-      ...Object.keys(debtGivenByCurrency),
-      ...Object.keys(debtTakenByCurrency),
-      ...Object.keys(debtReturnsToMeByCurrency),
-      ...Object.keys(debtReturnsFromMeByCurrency),
-    ]);
+      .getRawMany<{
+        currency: string;
+        regularIncome: string | null;
+        regularExpense: string | null;
+        debtGiven: string | null;
+        debtTaken: string | null;
+        debtReturnsToMe: string | null;
+        debtReturnsFromMe: string | null;
+      }>();
 
     const incomeByCurrency: Record<string, number> = {};
     const expenseByCurrency: Record<string, number> = {};
 
-    for (const currency of allCurrencies) {
-      const incomeVal = regularIncomeByCurrency[currency] ?? 0;
-      const expenseVal = regularExpenseByCurrency[currency] ?? 0;
-      const givenVal = debtGivenByCurrency[currency] ?? 0;
-      const takenVal = debtTakenByCurrency[currency] ?? 0;
-      const returnsToMe = debtReturnsToMeByCurrency[currency] ?? 0;
-      const returnsFromMe = debtReturnsFromMeByCurrency[currency] ?? 0;
+    for (const row of byCurrencyResult) {
+      const incomeVal = Number(row.regularIncome ?? 0);
+      const expenseVal = Number(row.regularExpense ?? 0);
+      const givenVal = Number(row.debtGiven ?? 0);
+      const takenVal = Number(row.debtTaken ?? 0);
+      const returnsToMe = Number(row.debtReturnsToMe ?? 0);
+      const returnsFromMe = Number(row.debtReturnsFromMe ?? 0);
 
-      // Income = regular + debt_taken - returns_from_me
       const netIncomeForCurrency = Math.max(0, incomeVal + takenVal - returnsFromMe);
-      // Expense = regular + debt_given - returns_to_me
       const netExpenseForCurrency = Math.max(0, expenseVal + givenVal - returnsToMe);
 
       if (netIncomeForCurrency > 0) {
-        incomeByCurrency[currency] = netIncomeForCurrency;
+        incomeByCurrency[row.currency] = netIncomeForCurrency;
       }
       if (netExpenseForCurrency > 0) {
-        expenseByCurrency[currency] = netExpenseForCurrency;
+        expenseByCurrency[row.currency] = netExpenseForCurrency;
       }
     }
 
