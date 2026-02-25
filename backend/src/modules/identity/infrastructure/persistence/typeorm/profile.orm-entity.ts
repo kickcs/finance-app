@@ -42,4 +42,7 @@ export class ProfileOrmEntity {
 
   @Column({ name: 'refresh_token', type: 'text', nullable: true })
   refreshToken: string | null;
+
+  @Column({ name: 'dashboard_settings', type: 'jsonb', nullable: true })
+  dashboardSettings: Record<string, unknown> | null;
 }

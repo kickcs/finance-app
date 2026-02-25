@@ -1,4 +1,5 @@
 import { Profile, Email, Password } from '../../../domain';
+import type { DashboardSettings } from '../../../domain/entities/profile.entity';
 import { ProfileOrmEntity } from '../typeorm/profile.orm-entity';
 
 /**
@@ -21,6 +22,7 @@ export class ProfileMapper {
       isDemo: ormEntity.isDemo,
       demoExpiresAt: ormEntity.demoExpiresAt,
       refreshToken: ormEntity.refreshToken,
+      dashboardSettings: ormEntity.dashboardSettings as DashboardSettings | null,
       createdAt: ormEntity.createdAt,
     });
   }
@@ -41,6 +43,7 @@ export class ProfileMapper {
     ormEntity.isDemo = domainEntity.isDemo;
     ormEntity.demoExpiresAt = domainEntity.demoExpiresAt;
     ormEntity.refreshToken = domainEntity.refreshToken;
+    ormEntity.dashboardSettings = domainEntity.dashboardSettings as Record<string, unknown> | null;
     ormEntity.createdAt = domainEntity.createdAt;
 
     return ormEntity;

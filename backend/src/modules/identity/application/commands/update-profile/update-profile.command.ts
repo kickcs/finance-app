@@ -1,3 +1,5 @@
+import type { DashboardSettings } from '../../../domain/entities/profile.entity';
+
 export class UpdateProfileCommand {
   constructor(
     public readonly userId: string,
@@ -6,6 +8,7 @@ export class UpdateProfileCommand {
       currency?: string;
       hasCompletedOnboarding?: boolean;
       defaultAccountId?: string | null;
+      dashboardSettings?: DashboardSettings | null;
     },
   ) {}
 }

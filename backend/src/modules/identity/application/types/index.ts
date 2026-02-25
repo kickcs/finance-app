@@ -1,3 +1,5 @@
+import type { DashboardSettings } from '../../domain/entities/profile.entity';
+
 export interface ProfileResponse {
   id: string;
   email: string | null;
@@ -7,6 +9,7 @@ export interface ProfileResponse {
   defaultAccountId: string | null;
   isDemo: boolean;
   demoExpiresAt: Date | null;
+  dashboardSettings: DashboardSettings | null;
   createdAt: Date;
 }
 

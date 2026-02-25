@@ -42,6 +42,7 @@ export class UpdateProfileHandler implements ICommandHandler<UpdateProfileComman
       defaultAccountId: profile.defaultAccountId,
       isDemo: profile.isDemo,
       demoExpiresAt: profile.demoExpiresAt,
+      dashboardSettings: profile.dashboardSettings,
       createdAt: profile.createdAt,
     };
   }

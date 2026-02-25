@@ -4,6 +4,14 @@ import { Password } from '../value-objects/password.vo';
 import { ProfileCreatedEvent } from '../events/profile-created.event';
 import { ProfileUpdatedEvent } from '../events/profile-updated.event';
 
+export type WidgetId = 'quick_actions' | 'accounts' | 'transactions' | 'debts' | 'reminders';
+
+export interface DashboardSettings {
+  widgetOrder: WidgetId[];
+  hiddenWidgets: WidgetId[];
+  hiddenAccountIds: string[];
+}
+
 export interface ProfileProps {
   id: string;
   email: Email | null;
@@ -15,6 +23,7 @@ export interface ProfileProps {
   isDemo: boolean;
   demoExpiresAt: Date | null;
   refreshToken: string | null;
+  dashboardSettings: DashboardSettings | null;
   createdAt: Date;
 }
 
@@ -32,6 +41,7 @@ export class Profile extends AggregateRoot<string> {
   private _isDemo: boolean;
   private _demoExpiresAt: Date | null;
   private _refreshToken: string | null;
+  private _dashboardSettings: DashboardSettings | null;
   private _createdAt: Date;
 
   private constructor(props: ProfileProps) {
@@ -45,6 +55,7 @@ export class Profile extends AggregateRoot<string> {
     this._isDemo = props.isDemo;
     this._demoExpiresAt = props.demoExpiresAt;
     this._refreshToken = props.refreshToken;
+    this._dashboardSettings = props.dashboardSettings;
     this._createdAt = props.createdAt;
   }
 
@@ -69,6 +80,7 @@ export class Profile extends AggregateRoot<string> {
       isDemo: false,
       demoExpiresAt: null,
       refreshToken: null,
+      dashboardSettings: null,
       createdAt: new Date(),
     });
 
@@ -94,6 +106,7 @@ export class Profile extends AggregateRoot<string> {
       isDemo: true,
       demoExpiresAt: expiresAt,
       refreshToken: null,
+      dashboardSettings: null,
       createdAt: new Date(),
     });
 
@@ -150,6 +163,10 @@ export class Profile extends AggregateRoot<string> {
     return this._refreshToken;
   }
 
+  get dashboardSettings(): DashboardSettings | null {
+    return this._dashboardSettings;
+  }
+
   get createdAt(): Date {
     return this._createdAt;
   }
@@ -160,6 +177,7 @@ export class Profile extends AggregateRoot<string> {
     currency?: string;
     hasCompletedOnboarding?: boolean;
     defaultAccountId?: string | null;
+    dashboardSettings?: DashboardSettings | null;
   }): void {
     const changes: Record<string, unknown> = {};
 
@@ -181,6 +199,11 @@ export class Profile extends AggregateRoot<string> {
     if (data.defaultAccountId !== undefined) {
       this._defaultAccountId = data.defaultAccountId;
       changes.defaultAccountId = data.defaultAccountId;
+    }
+
+    if (data.dashboardSettings !== undefined) {
+      this._dashboardSettings = data.dashboardSettings;
+      changes.dashboardSettings = data.dashboardSettings;
     }
 
     if (Object.keys(changes).length > 0) {

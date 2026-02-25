@@ -1,4 +1,5 @@
 import { IsString, IsOptional, IsBoolean, IsUUID } from 'class-validator';
+import type { DashboardSettings } from '../../domain/entities/profile.entity';
 
 export class UpdateProfileDto {
   @IsOptional()
@@ -16,4 +17,7 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsUUID()
   defaultAccountId?: string | null;
+
+  @IsOptional()
+  dashboardSettings?: DashboardSettings | null;
 }
