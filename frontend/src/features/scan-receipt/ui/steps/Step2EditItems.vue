@@ -83,9 +83,17 @@ function validateAndNext() {
       <template v-else>
         <!-- Section header -->
         <div class="flex items-center justify-between mb-3">
-          <h2 class="text-body font-semibold text-text-primary-light dark:text-text-primary-dark">
-            Позиции чека
-          </h2>
+          <div class="flex items-center gap-2">
+            <h2 class="text-body font-semibold text-text-primary-light dark:text-text-primary-dark">
+              Позиции чека
+            </h2>
+            <span
+              v-if="serviceChargePercent && serviceChargeAmount > 0"
+              class="text-[11px] font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full tabular-nums"
+            >
+              +{{ serviceChargePercent }}% обсл.
+            </span>
+          </div>
           <UBadge variant="neutral" size="sm" shape="pill">
             {{ items.length }}
           </UBadge>

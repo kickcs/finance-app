@@ -72,7 +72,7 @@ defineExpose({ resetSwipe });
 
 <template>
   <div
-    class="relative overflow-hidden"
+    class="relative overflow-hidden rounded-xl"
     @touchstart.passive="onTouchStart"
     @touchmove="onTouchMove"
     @touchend.passive="onTouchEnd"

@@ -85,6 +85,7 @@ function handleBack() {
       <Transition :name="transitionName">
         <Step1PhotoCapture
           v-if="wizard.currentStep.value === 1"
+          key="step-1"
           :preview-url="wizard.previewUrl.value"
           :is-ocr-loading="wizard.isOcrLoading.value"
           :is-ocr-success="wizard.isOcrSuccess.value"
@@ -95,6 +96,7 @@ function handleBack() {
         />
         <Step2EditItems
           v-else-if="wizard.currentStep.value === 2"
+          key="step-2"
           :items="wizard.items.value"
           :currency="wizard.currency.value"
           :subtotal="wizard.subtotal.value"
@@ -109,6 +111,7 @@ function handleBack() {
         />
         <Step3AssignParticipants
           v-else-if="wizard.currentStep.value === 3"
+          key="step-3"
           :items="wizard.items.value"
           :participants="wizard.participants.value"
           :currency="wizard.currency.value"
@@ -123,6 +126,7 @@ function handleBack() {
         />
         <Step4Summary
           v-else-if="wizard.currentStep.value === 4"
+          key="step-4"
           :participant-summaries="wizard.participantSummaries.value"
           :currency="wizard.currency.value"
           :form-data="wizard.formData.value"

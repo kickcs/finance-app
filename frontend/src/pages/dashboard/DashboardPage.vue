@@ -2,11 +2,10 @@
 import { ref, computed } from 'vue';
 import { useLocalStorage } from '@vueuse/core';
 import { queryClient } from '@/shared/api/queryClient';
-import { PullToRefresh, UIcon } from '@/shared/ui';
+import { PullToRefresh } from '@/shared/ui';
 import { InstallPwaBanner, InstallPwaModal, usePwaInstall } from '@/features/install-pwa';
 import { QuickActionModal } from '@/features/configure-quick-action';
 import { AccountStack } from '@/widgets/account-stack';
-import { PremiumBadge } from '@/features/upgrade-to-premium';
 import { usePremiumFeature } from '@/shared/lib/composables/usePremiumFeature';
 import { haptics } from '@/shared/lib/haptics';
 
@@ -138,34 +137,13 @@ function handleScanReceipt() {
                 :category-map="categoryMap"
                 :hint-dismissed="quickActionsHintDismissed"
                 :hidden="quickActionsHidden"
+                show-scan-button
                 @click="handleQuickActionClick"
                 @long-press="handleQuickActionLongPress"
                 @dismiss-hint="quickActionsHintDismissed = true"
                 @settings-click="nav.toQuickActionsSettings"
+                @scan-click="handleScanReceipt"
               />
-            </section>
-
-            <section :class="staggerClass('delay-200')">
-              <div class="flex gap-3">
-                <button
-                  type="button"
-                  aria-label="Сканировать чек — Премиум функция"
-                  class="relative flex flex-col items-center gap-1.5 p-3 rounded-2xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark shadow-xs active:scale-95 transition-all duration-150 min-w-[72px]"
-                  @click="handleScanReceipt"
-                >
-                  <div class="w-10 h-10 rounded-full bg-primary-light flex items-center justify-center">
-                    <UIcon name="document_scanner" size="md" class="text-primary" />
-                  </div>
-                  <span class="text-caption font-medium text-text-secondary-light dark:text-text-secondary-dark whitespace-nowrap">
-                    Сканировать
-                  </span>
-                  <!-- TODO: re-enable after beta
-                  <div class="absolute -top-1 -right-1">
-                    <PremiumBadge />
-                  </div>
-                  -->
-                </button>
-              </div>
             </section>
 
             <section :class="staggerClass('delay-300')">

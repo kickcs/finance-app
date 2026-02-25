@@ -7,6 +7,7 @@ defineProps<{
   categoryMap: Map<string, { icon: string; color: string }>;
   hintDismissed: boolean;
   hidden: boolean;
+  showScanButton?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -14,12 +15,30 @@ const emit = defineEmits<{
   'long-press': [action: QuickAction | null];
   'dismiss-hint': [];
   'settings-click': [];
+  'scan-click': [];
 }>();
 </script>
 
 <template>
   <section v-if="!hidden">
-    <div class="grid grid-cols-4 gap-3 md:gap-4">
+    <div class="flex gap-3 md:gap-4 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-1">
+      <!-- Scan receipt button (first item) -->
+      <button
+        v-if="showScanButton"
+        type="button"
+        aria-label="Сканировать чек"
+        class="flex flex-col items-center gap-1.5 py-3 md:py-4 rounded-xl md:rounded-2xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark shadow-sm hover:shadow-md hover:-translate-y-1 hover:bg-card-light dark:hover:bg-card-dark active:scale-95 active:translate-y-0 active:shadow-sm transition-[transform,box-shadow,background-color] duration-200 group cursor-pointer snap-start shrink-0 w-[calc((100%-36px)/4)]"
+        @click="emit('scan-click')"
+      >
+        <div class="w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center bg-primary/10 transition-transform duration-200 group-hover:scale-110">
+          <UIcon name="document_scanner" size="sm" class="text-primary" />
+        </div>
+        <span class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark whitespace-nowrap">
+          Сканировать
+        </span>
+      </button>
+
+      <!-- Quick action slots -->
       <button
         v-for="(action, index) in slots"
         :key="action?.id ?? `empty-${index}`"
@@ -28,7 +47,7 @@ const emit = defineEmits<{
             ? `Добавить расход: ${action.label}`
             : `Настроить быстрое действие, слот ${index + 1}`
         "
-        class="flex flex-col items-center gap-1.5 py-3 md:py-4 rounded-xl md:rounded-2xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark shadow-sm hover:shadow-md hover:-translate-y-1 hover:bg-card-light dark:hover:bg-card-dark active:scale-95 active:translate-y-0 active:shadow-sm transition-[transform,box-shadow,background-color] duration-200 group cursor-pointer"
+        class="flex flex-col items-center gap-1.5 py-3 md:py-4 rounded-xl md:rounded-2xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark shadow-sm hover:shadow-md hover:-translate-y-1 hover:bg-card-light dark:hover:bg-card-dark active:scale-95 active:translate-y-0 active:shadow-sm transition-[transform,box-shadow,background-color] duration-200 group cursor-pointer snap-start shrink-0 w-[calc((100%-36px)/4)]"
         @click="emit('click', action)"
         @contextmenu.prevent="emit('long-press', action)"
       >
