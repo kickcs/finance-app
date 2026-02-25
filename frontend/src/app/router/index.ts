@@ -177,6 +177,11 @@ export const router = createRouter({
           component: () => import('@/pages/scan-receipt/ScanReceiptPage.vue'),
           meta: { requiresAuth: true },
         },
+        {
+          path: 'dashboard/settings',
+          name: 'dashboard-settings',
+          component: () => import('@/pages/dashboard-settings/DashboardSettingsPage.vue'),
+        },
       ],
     },
     // Welcome onboarding (pre-auth)
