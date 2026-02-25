@@ -84,11 +84,11 @@ async function saveSettings() {
 
 <template>
   <div
-    class="h-full flex flex-col relative bg-background-light dark:bg-background-dark overflow-y-auto"
+    class="h-full flex flex-col relative bg-background-light dark:bg-background-dark"
   >
     <AppHeader title="Настройка главной" show-back @back="navigateBack" />
 
-    <main class="px-5 pt-6 pb-28 space-y-6">
+    <main class="flex-1 overflow-y-auto px-5 pt-6 pb-8 space-y-6">
       <!-- Section 1: Widgets -->
       <section class="space-y-3">
         <div>
@@ -212,10 +212,10 @@ async function saveSettings() {
       </section>
     </main>
 
-    <!-- Save button (sticky bottom) -->
+    <!-- Save button (below scroll area) -->
     <div
       v-if="hasChanges"
-      class="fixed bottom-0 left-0 right-0 p-5 pb-8 bg-gradient-to-t from-background-light dark:from-background-dark via-background-light/95 dark:via-background-dark/95 to-transparent"
+      class="shrink-0 px-5 py-4 border-t border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark"
     >
       <UButton
         class="w-full"
