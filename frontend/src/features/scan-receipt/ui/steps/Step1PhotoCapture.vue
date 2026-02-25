@@ -262,8 +262,11 @@ async function handleFileChange(e: Event) {
             </div>
             <div class="text-center">
               <p class="text-body font-semibold text-white mb-1">Не удалось распознать</p>
-              <p class="text-body-sm text-white/60">
+              <p class="text-body-sm text-white/60 mb-2">
                 Убедитесь, что чек хорошо освещён и полностью виден
+              </p>
+              <p class="text-caption text-white/40 break-all px-2">
+                {{ ocrError }}
               </p>
             </div>
             <div class="flex flex-col gap-2 w-full max-w-[250px]">
