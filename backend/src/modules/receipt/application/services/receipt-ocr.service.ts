@@ -51,7 +51,7 @@ Rules:
 - All prices: whole numbers in receipt currency (e.g. 35000 for 35,000 UZS)
 - Handle Uzbek, Russian, English receipts
 - If quantity not specified, use 1
-- Do NOT include charges/taxes as items. Extract into "serviceChargePercent": "Обслуживание 10%" → 10, "НДС +12%" → 12, "VAT 15%" → 15
+- Do NOT include charges/taxes/VAT as items. Extract into "serviceChargePercent": "Обслуживание 10%" → 10, "НДС +12%" → 12, "НДС 12%" → 12, "VAT 15%" → 15, "Tax 8%" → 8
 - If charge is a flat amount, calculate percentage from subtotal
 - No charges found → serviceChargePercent: null
 - "hashtags": 1-3 short hashtags in Russian describing the PLACE TYPE and WHAT was bought. Examples: restaurant → ["#кафе", "#обед"], grocery store → ["#продукты"], gas station → ["#бензин"], pharmacy → ["#аптека"], clothing store → ["#одежда"]. Use lowercase, no spaces inside tags. Focus on the category of spending, not the store name
@@ -103,6 +103,26 @@ Rules:
 
     if (!Array.isArray(result.items)) {
       throw new Error('Invalid OCR response: missing items array');
+    }
+
+    // Fallback: if GPT missed serviceChargePercent but totalAmount > sum of items,
+    // auto-calculate the percentage (handles НДС/VAT/tax the model failed to extract)
+    if (!result.serviceChargePercent && result.totalAmount > 0) {
+      const itemsSubtotal = result.items.reduce(
+        (sum, item) => sum + (item.totalPrice || item.unitPrice * item.quantity),
+        0,
+      );
+      if (itemsSubtotal > 0 && result.totalAmount > itemsSubtotal) {
+        const diff = result.totalAmount - itemsSubtotal;
+        const percent = (diff / itemsSubtotal) * 100;
+        // Only apply if it looks like a real charge (0.5% – 30%)
+        if (percent >= 0.5 && percent <= 30) {
+          result.serviceChargePercent = Math.round(percent * 10) / 10;
+          this.logger.debug(
+            `Auto-detected service charge: ${result.serviceChargePercent}% (subtotal=${itemsSubtotal}, total=${result.totalAmount})`,
+          );
+        }
+      }
     }
 
     return result;
