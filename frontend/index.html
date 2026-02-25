@@ -64,33 +64,27 @@
         background-color: #09090B;
       }
 
-      /* Animated ring loader */
+      /* App loader — matches iOS PWA splash screen for seamless transition */
       .app-loading {
         position: fixed;
         top: 0; left: 0; right: 0; bottom: 0;
         z-index: 1000;
-        background-color: #09090B;
+        background-color: #FAFAFA;
         display: flex;
-        flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 1.5rem;
         transition: opacity 0.4s ease-out;
         opacity: 1;
       }
 
-      .app-loading .ring-img {
-        width: 120px;
-        height: 120px;
-        filter: drop-shadow(0 0 20px rgba(232, 200, 101, 0.25));
+      html.dark .app-loading {
+        background-color: #09090B;
       }
 
-      .app-loading .app-name {
-        color: #e8c865;
-        font-family: 'Inter Variable', 'Inter', -apple-system, sans-serif;
-        font-size: 1.25rem;
-        font-weight: 600;
-        letter-spacing: 0.15em;
+      .app-loading .app-icon {
+        width: 88px;
+        height: 88px;
+        border-radius: 20px;
       }
 
       body.app-ready .app-loading {
@@ -118,10 +112,9 @@
   <body>
     <div id="app"></div>
 
-    <!-- Animated ring loader shown until Vue app is ready -->
+    <!-- App loader — matches iOS PWA splash screen for seamless transition -->
     <div class="app-loading" aria-hidden="true">
-      <img class="ring-img" src="/loader-ring.png" alt="" width="120" height="120" />
-      <span class="app-name">OURO</span>
+      <img class="app-icon" src="/logo-192.png" alt="" width="88" height="88" />
     </div>
 
     <script type="module" src="/src/main.ts"></script>
