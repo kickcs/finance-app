@@ -1,18 +1,26 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, provide } from 'vue';
+import { ref, computed, onMounted, provide, defineAsyncComponent } from 'vue';
 import { RouterView } from 'vue-router';
 import { useTheme } from '@/features/toggle-theme';
-import { initializeAuth, useAuth, useProfile } from '@/shared/api';
+import { initializeAuth, useAuth } from '@/shared/api/composables/useAuth';
+import { useProfile } from '@/shared/api/composables/useProfile';
 import { transitionName } from '@/app/router';
-import { useCategories } from '@/entities/category';
+import { useCategories } from '@/entities/category/api/useCategories';
 import { ToastProvider, Toaster } from '@/shared/ui/primitives/toast';
 import { DemoBanner, useDemoMode } from '@/features/demo-mode';
-import { useChangelog, ChangelogModal } from '@/features/changelog';
+import { useChangelog } from '@/features/changelog/model/useChangelog';
 import { NavigationProgress } from '@/shared/ui/navigation-progress';
 import { usePwaUpdate } from '@/shared/lib/composables/usePwaUpdate';
 import { usePremiumFeature } from '@/shared/lib/composables/usePremiumFeature';
-import { useSubscription } from '@/entities/subscription';
-import { PremiumUpgradeModal } from '@/features/upgrade-to-premium';
+import { useSubscription } from '@/entities/subscription/api/useSubscription';
+
+// Lazy-loaded modals (rarely shown, loaded on demand)
+const ChangelogModal = defineAsyncComponent(() =>
+  import('@/features/changelog/ui/ChangelogModal.vue')
+);
+const PremiumUpgradeModal = defineAsyncComponent(() =>
+  import('@/features/upgrade-to-premium/ui/PremiumUpgradeModal.vue')
+);
 
 // Initialize theme synchronously on script setup (before mount)
 const { initTheme } = useTheme();
@@ -99,10 +107,10 @@ provide('getCategoryById', getCategoryById);
     </div>
 
     <!-- Changelog modal -->
-    <ChangelogModal v-model="showChangelogModal" />
+    <ChangelogModal v-if="showChangelogModal" v-model="showChangelogModal" />
 
     <!-- Premium upgrade modal (global) -->
-    <PremiumUpgradeModal v-model="showUpgradeModal" :feature-name="upgradeFeatureName" />
+    <PremiumUpgradeModal v-if="showUpgradeModal" v-model="showUpgradeModal" :feature-name="upgradeFeatureName" />
 
     <!-- Toast notifications -->
     <Toaster />

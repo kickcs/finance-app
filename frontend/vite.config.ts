@@ -84,7 +84,7 @@ export default defineConfig({
           'vue-core': ['vue', 'vue-router'],
           // TanStack Query - changes rarely
           'tanstack': ['@tanstack/vue-query', '@tanstack/vue-virtual'],
-          // UI primitives - Reka UI components
+          // UI primitives - Reka UI (single vendor chunk for long-term caching)
           'ui-primitives': ['reka-ui'],
           // VueUse utilities
           'vueuse': ['@vueuse/core'],

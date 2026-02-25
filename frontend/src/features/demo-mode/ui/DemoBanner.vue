@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
-import { UButton, UIcon } from '@/shared/ui';
-import { useAuth } from '@/shared/api';
+import { UButton } from '@/shared/ui/button';
+import { UIcon } from '@/shared/ui/icon';
+import { useAuth } from '@/shared/api/composables/useAuth';
 
 defineProps<{
   formattedRemaining: string;

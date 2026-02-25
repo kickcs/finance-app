@@ -1,7 +1,8 @@
 import { computed } from 'vue';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
-import { useProfile, useExchangeRates } from '@/shared/api';
-import { useAccounts } from '@/entities/account';
+import { useProfile } from '@/shared/api/composables/useProfile';
+import { useExchangeRates } from '@/shared/api/composables/useExchangeRates';
+import { useAccounts } from '@/entities/account/api';
 import { useLocalStorage } from '@vueuse/core';
 import { getGreeting } from '@/shared/lib/format/greeting';
 

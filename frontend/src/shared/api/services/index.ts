@@ -2,9 +2,9 @@
 export { profileApi } from './profileApi';
 export { exchangeRatesApi } from './exchangeRatesApi';
 
-// Re-export from entities for backward compatibility
-export { accountsApi } from '@/entities/account';
-export { transactionsApi } from '@/entities/transaction';
-export { goalsApi } from '@/entities/goal';
-export { debtsApi } from '@/entities/debt';
-export { remindersApi } from '@/entities/reminder';
+// Re-export from entities for backward compatibility (API-only to avoid pulling UI components)
+export { accountsApi } from '@/entities/account/api';
+export { transactionsApi } from '@/entities/transaction/api';
+export { goalsApi } from '@/entities/goal/api';
+export { debtsApi } from '@/entities/debt/api';
+export { remindersApi } from '@/entities/reminder/api';

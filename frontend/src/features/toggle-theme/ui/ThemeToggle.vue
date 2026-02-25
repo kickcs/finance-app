@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { UIcon, UButton } from '@/shared/ui';
+import { UButton } from '@/shared/ui/button';
+import { UIcon } from '@/shared/ui/icon';
 import { useTheme } from '../model/useTheme';
 
 defineProps<{
