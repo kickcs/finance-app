@@ -295,10 +295,19 @@ jobs:
             set -e
             cd ~/finance-app
 
+            # Preserve previous image tag if no new images were built
+            if [ "$BACKEND_CHANGED" = "true" ] || [ "$FRONTEND_CHANGED" = "true" ]; then
+              IMAGE_TAG=$GHCR_IMAGE_TAG
+            elif [ -f .env ]; then
+              IMAGE_TAG=$(grep -oP 'GHCR_IMAGE_TAG=\K.*' .env | tr -d ' ' || echo "$GHCR_IMAGE_TAG")
+            else
+              IMAGE_TAG=$GHCR_IMAGE_TAG
+            fi
+
             # Create/update environment file
             cat > .env << EOF
             GITHUB_REPOSITORY=$GITHUB_REPOSITORY
-            GHCR_IMAGE_TAG=$GHCR_IMAGE_TAG
+            GHCR_IMAGE_TAG=$IMAGE_TAG
             DATABASE_NAME=my_finance
             DATABASE_USERNAME=postgres
             DATABASE_PASSWORD=$DATABASE_PASSWORD
@@ -328,32 +337,41 @@ jobs:
             # Login to GitHub Container Registry
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
 
-            # Build list of services to deploy
-            SERVICES=""
-            [ "$BACKEND_CHANGED" = "true" ] && SERVICES="backend"
-            [ "$FRONTEND_CHANGED" = "true" ] && SERVICES="$SERVICES frontend"
-            [ "$INFRA_CHANGED" = "true" ] && SERVICES="backend frontend alloy"
+            # Determine which services have new images vs infra-only restart
+            PULL_SERVICES=""
+            RESTART_SERVICES=""
 
-            # Deduplicate and trim
-            SERVICES=$(echo "$SERVICES" | tr ' ' '\n' | sort -u | tr '\n' ' ' | xargs)
-
-            # Always include alloy if backend changed (metrics config may depend on it)
-            if echo "$SERVICES" | grep -q "backend"; then
-              echo "$SERVICES" | grep -q "alloy" || SERVICES="$SERVICES alloy"
+            if [ "$BACKEND_CHANGED" = "true" ]; then
+              PULL_SERVICES="backend"
+              RESTART_SERVICES="backend alloy"
+            fi
+            if [ "$FRONTEND_CHANGED" = "true" ]; then
+              PULL_SERVICES="$PULL_SERVICES frontend"
+              RESTART_SERVICES="$RESTART_SERVICES frontend"
+            fi
+            if [ "$INFRA_CHANGED" = "true" ]; then
+              RESTART_SERVICES="$RESTART_SERVICES backend frontend alloy"
             fi
 
-            echo "Services to deploy: $SERVICES"
+            # Deduplicate
+            PULL_SERVICES=$(echo "$PULL_SERVICES" | tr ' ' '\n' | sort -u | tr '\n' ' ' | xargs)
+            RESTART_SERVICES=$(echo "$RESTART_SERVICES" | tr ' ' '\n' | sort -u | tr '\n' ' ' | xargs)
 
-            if [ -z "$SERVICES" ]; then
+            echo "Services with new images: ${PULL_SERVICES:-none}"
+            echo "Services to restart: ${RESTART_SERVICES:-none}"
+
+            if [ -z "$RESTART_SERVICES" ]; then
               echo "No services to deploy"
               exit 0
             fi
 
-            # Pull images (instant if pre-pulled during build phase)
-            docker compose -f docker-compose.prod.yml pull $SERVICES
+            # Pull only services that have new images (others keep current image)
+            if [ -n "$PULL_SERVICES" ]; then
+              docker compose -f docker-compose.prod.yml pull $PULL_SERVICES
+            fi
 
-            # Run migrations only if backend changed
-            if echo "$SERVICES" | grep -q "backend"; then
+            # Run migrations only if backend has a new image
+            if echo "$PULL_SERVICES" | grep -q "backend"; then
               # Ensure postgres is running
               docker compose -f docker-compose.prod.yml up -d postgres
               echo "Waiting for postgres..."
@@ -375,8 +393,8 @@ jobs:
                 npx typeorm migration:run -d dist/config/data-source.js
             fi
 
-            # Recreate only changed services, wait for health checks
-            docker compose -f docker-compose.prod.yml up -d --no-deps --force-recreate --wait --wait-timeout 60 $SERVICES
+            # Recreate services, wait for health checks
+            docker compose -f docker-compose.prod.yml up -d --no-deps --force-recreate --wait --wait-timeout 60 $RESTART_SERVICES
 
             # Clean up old images in background (non-blocking)
             {
