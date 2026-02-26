@@ -350,7 +350,7 @@ async function handleCloseAll(accountId: string) {
           </UButton>
 
           <!-- Empty State -->
-          <UCard v-else class="py-4">
+          <UCard v-if="activeDebts.length === 0" class="py-4">
             <EmptyState
               icon="celebration"
               title="Вы без долгов!"
