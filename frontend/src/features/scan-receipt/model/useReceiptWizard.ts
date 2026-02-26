@@ -167,6 +167,7 @@ export function useReceiptWizard(userId: () => string | null) {
         name: item.name,
         qty: item.quantity,
         unitPrice: item.unitPrice,
+        ocrTotalPrice: item.totalPrice ?? null,
         assignedParticipantIds: [],
       }));
       currency.value = result.currency;
@@ -206,6 +207,10 @@ export function useReceiptWizard(userId: () => string | null) {
   function updateItem(id: string, updates: Partial<ReceiptItem>) {
     const idx = items.value.findIndex((i) => i.id === id);
     if (idx !== -1) {
+      // Clear OCR total when user manually edits qty or price — recalculate from qty × unitPrice
+      if ('qty' in updates || 'unitPrice' in updates) {
+        updates.ocrTotalPrice = null;
+      }
       items.value[idx] = { ...items.value[idx], ...updates };
     }
   }
@@ -222,6 +227,7 @@ export function useReceiptWizard(userId: () => string | null) {
       name: '',
       qty: 1,
       unitPrice: 0,
+      ocrTotalPrice: null,
       assignedParticipantIds: [],
     });
     haptics.tap();

@@ -5,7 +5,7 @@ import { UIcon } from '@/shared/ui';
 import { PremiumBadge } from '@/features/upgrade-to-premium';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { usePremiumFeature } from '@/shared/lib/composables';
-import { useReceiptWizard } from '@/features/scan-receipt/model/useReceiptWizard';
+import { useReceiptWizard } from '@/features/scan-receipt';
 import { useAccounts } from '@/entities/account';
 import StepProgressIndicator from '@/features/scan-receipt/ui/StepProgressIndicator.vue';
 import Step1PhotoCapture from '@/features/scan-receipt/ui/steps/Step1PhotoCapture.vue';

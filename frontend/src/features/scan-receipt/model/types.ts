@@ -3,6 +3,8 @@ export interface ReceiptItem {
   name: string;
   qty: number;
   unitPrice: number;
+  /** Original line total from receipt OCR. Used as source of truth to avoid rounding errors. Cleared on manual edit. */
+  ocrTotalPrice: number | null;
   assignedParticipantIds: string[];
 }
 

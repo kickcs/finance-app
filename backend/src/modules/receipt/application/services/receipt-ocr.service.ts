@@ -21,13 +21,18 @@ export class ReceiptOcrService {
 
     const systemPrompt = `You are a receipt OCR assistant. Extract structured data from receipt images.
 
-STEP-BY-STEP PROCESS (follow this order):
-1. FIRST, find the FINAL total on the receipt — the largest total at the bottom ("ИТОГО К ОПЛАТЕ", "ИТОГО", "Total", "Grand Total"). This is your anchor — set it as "totalAmount"
-2. THEN, check if there are any additional charges (service, НДС, VAT, tax, tips) between the subtotal and the final total. Extract the percentage into "serviceChargePercent"
-3. Calculate the subtotal: if serviceChargePercent exists, subtotal = totalAmount / (1 + serviceChargePercent/100). Otherwise subtotal = totalAmount
-4. Extract each item with name, quantity, and the LINE TOTAL from the "Сумма"/"Sum" column (this is totalPrice, NOT unitPrice)
-5. Calculate unitPrice = totalPrice / quantity for each item
-6. VERIFY: sum of all item totalPrice values must equal the subtotal (step 3). If not, re-check your item extraction
+CRITICAL — NUMBER READING:
+- Receipts use spaces as thousand separators: "134 000" = 134000, "50 000" = 50000, "18 000" = 18000
+- Columns are: Name | Quantity | Sum. The quantity is a SMALL number (1, 2, 3). The sum is a LARGE number (thousands or more)
+- NEVER merge the quantity digit into the sum. Example: "Нон  2  18 000" → qty=2, totalPrice=18000 (NOT qty=2, totalPrice=218000)
+- UZS prices are typically 1,000–500,000. If a unitPrice is under 100 UZS, you likely dropped "000"
+
+STEP-BY-STEP PROCESS:
+1. Find the FINAL total at the bottom ("ИТОГО К ОПЛАТЕ", "ИТОГО", "Total", "Grand Total") → "totalAmount"
+2. Check for additional charges (service, НДС, VAT, tax, tips) between subtotal and final total → "serviceChargePercent"
+3. Calculate subtotal: if serviceChargePercent exists, subtotal = totalAmount / (1 + serviceChargePercent/100), otherwise subtotal = totalAmount
+4. Extract each item: name, quantity (from "Кол-во" column), and LINE TOTAL (from "Сумма" column) → totalPrice. Then unitPrice = totalPrice / quantity
+5. VERIFY: sum of all totalPrice must equal subtotal (step 3). If not, re-read the receipt carefully — you likely misread a number
 
 Return JSON:
 {
@@ -35,11 +40,11 @@ Return JSON:
     {
       "name": "item name",
       "quantity": number,
-      "unitPrice": number (price PER SINGLE UNIT = totalPrice / quantity),
-      "totalPrice": number (line total from receipt "Сумма" column)
+      "unitPrice": number (= totalPrice / quantity),
+      "totalPrice": number (line total from "Сумма" column)
     }
   ],
-  "totalAmount": number (FINAL total — the largest number at the bottom of receipt),
+  "totalAmount": number (FINAL total at the bottom),
   "serviceChargePercent": number or null,
   "currency": "3-letter ISO code (e.g. UZS, USD, RUB)",
   "date": "YYYY-MM-DD or null",
@@ -48,17 +53,17 @@ Return JSON:
 }
 
 Rules:
-- All prices: whole numbers in receipt currency (e.g. 35000 for 35,000 UZS)
+- All prices: whole numbers, no decimals (e.g. 35000 for "35 000")
 - Handle Uzbek, Russian, English receipts
 - If quantity not specified, use 1
-- Do NOT include charges/taxes/VAT as items. Extract into "serviceChargePercent": "Обслуживание 10%" → 10, "НДС +12%" → 12, "НДС 12%" → 12, "VAT 15%" → 15, "Tax 8%" → 8
+- Do NOT include charges/taxes/VAT as items. Extract into "serviceChargePercent": "Обслуживание 10%" → 10, "НДС +12%" → 12, "VAT 15%" → 15
 - If charge is a flat amount, calculate percentage from subtotal
 - No charges found → serviceChargePercent: null
-- "hashtags": 1-3 short hashtags in Russian describing the PLACE TYPE and WHAT was bought. Examples: restaurant → ["#кафе", "#обед"], grocery store → ["#продукты"], gas station → ["#бензин"], pharmacy → ["#аптека"], clothing store → ["#одежда"]. Use lowercase, no spaces inside tags. Focus on the category of spending, not the store name
+- "hashtags": 1-3 short Russian hashtags for the PLACE TYPE and WHAT was bought (e.g. restaurant → ["#кафе", "#обед"], grocery → ["#продукты"]). Lowercase, no spaces
 - Return only valid JSON, no markdown`;
 
     const response = await this.openai.chat.completions.create({
-      model: 'gpt-4.1-nano',
+      model: 'gpt-4.1-mini',
       messages: [
         {
           role: 'system',
@@ -91,7 +96,7 @@ Rules:
       throw new Error('No response from OCR service');
     }
 
-    this.logger.debug(`GPT-4o response: ${content}`);
+    this.logger.debug(`OCR response: ${content}`);
 
     // Strip markdown code fences if present
     const jsonText = content
@@ -103,6 +108,24 @@ Rules:
 
     if (!Array.isArray(result.items)) {
       throw new Error('Invalid OCR response: missing items array');
+    }
+
+    // Sanity-check: ensure unitPrice and totalPrice are consistent
+    for (const item of result.items) {
+      // Fix totalPrice if missing or zero
+      if (!item.totalPrice && item.unitPrice > 0) {
+        item.totalPrice = item.unitPrice * item.quantity;
+      }
+      // Recalculate unitPrice from totalPrice (totalPrice is read directly from receipt)
+      if (item.totalPrice > 0 && item.quantity > 0) {
+        const recalculated = Math.round(item.totalPrice / item.quantity);
+        if (recalculated !== item.unitPrice) {
+          this.logger.debug(
+            `Corrected unitPrice for "${item.name}": ${item.unitPrice} → ${recalculated} (totalPrice=${item.totalPrice}, qty=${item.quantity})`,
+          );
+        }
+        item.unitPrice = recalculated;
+      }
     }
 
     // Fallback: if GPT missed serviceChargePercent but totalAmount > sum of items,
