@@ -1,5 +1,5 @@
 import { ref, computed, readonly } from 'vue';
-import { http, setTokens, clearTokens, getAccessToken } from '../http';
+import { http, setTokens, clearTokens, getAccessToken, HttpError } from '../http';
 import { queryClient, clearPersistedCache } from '../queryClient';
 import { resetOnboardingVerified } from '@/app/router';
 
@@ -132,17 +132,19 @@ export async function initializeAuth(): Promise<User | null> {
             localStorage.setItem('demoExpiresAt', userData.demoExpiresAt);
           }
         })
-        .catch(() => {
-          // Token was invalid — clear everything
-          clearTokens();
-          user.value = null;
-          // Redirect to login if we're on a protected page
-          import('@/app/router').then(({ router }) => {
-            const currentRoute = router.currentRoute.value;
-            if (currentRoute.meta.requiresAuth) {
-              router.push({ name: 'login' });
-            }
-          });
+        .catch((err) => {
+          // Only logout on 401 (token truly invalid)
+          // Network errors, 500s, timeouts — keep optimistic user working
+          if (err instanceof HttpError && err.status === 401) {
+            clearTokens();
+            user.value = null;
+            import('@/app/router').then(({ router }) => {
+              const currentRoute = router.currentRoute.value;
+              if (currentRoute.meta.requiresAuth) {
+                router.push({ name: 'login' });
+              }
+            });
+          }
         });
 
       return optimisticUser;

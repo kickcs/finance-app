@@ -3,19 +3,23 @@ import { ref, computed, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { AppHeader } from '@/widgets/header';
 import { DebtCard, useDebts, type Debt } from '@/entities/debt';
-import { UButton, UIcon, UCard, Skeleton, EmptyState, SectionHeader, UTabs } from '@/shared/ui';
+import { useAccounts } from '@/entities/account';
+import { CloseAllDebtsModal, useCloseAllDebts } from '@/features/close-debt';
+import { UButton, UIcon, UCard, Skeleton, EmptyState, SectionHeader, UTabs, useToast } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { useExchangeRates } from '@/shared/api';
 import { navigateBack } from '@/app/router';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 import { listTransition } from '@/shared/lib/transitions';
+import { haptics } from '@/shared/lib/haptics';
 
 const router = useRouter();
 const route = useRoute();
 
 const { userId } = useCurrentUser();
 const { currency } = useUserCurrency();
+const { toast } = useToast();
 
 // Exchange rates for converting debts to user's main currency
 const { convert } = useExchangeRates(currency);
@@ -100,6 +104,25 @@ function handleDebtClick(debt: Debt) {
 
 function handleAddDebt() {
   router.push({ name: 'new-debt' });
+}
+
+// Close all debts for a person
+const { accounts } = useAccounts(userId);
+const { isClosing, progress, total, closeAllDebts } = useCloseAllDebts();
+const showCloseAllModal = ref(false);
+
+async function handleCloseAll(accountId: string) {
+  if (!userId.value) return;
+  const success = await closeAllDebts(activeDebts.value, accountId, userId.value);
+  if (success) {
+    showCloseAllModal.value = false;
+    haptics.success();
+    toast({ title: 'Все долги закрыты', variant: 'success' });
+    clearFilter();
+  } else {
+    haptics.error();
+    toast({ title: 'Ошибка при закрытии долгов', variant: 'error' });
+  }
 }
 </script>
 
@@ -315,6 +338,17 @@ function handleAddDebt() {
             />
           </TransitionGroup>
 
+          <!-- Close All Button (when filtering by person) -->
+          <UButton
+            v-if="personFilter && activeDebts.length > 1"
+            variant="primary"
+            full-width
+            @click="showCloseAllModal = true"
+          >
+            <UIcon name="check_circle" size="sm" />
+            Закрыть все долги
+          </UButton>
+
           <!-- Empty State -->
           <UCard v-else class="py-4">
             <EmptyState
@@ -365,5 +399,17 @@ function handleAddDebt() {
         </UCard>
       </template>
     </main>
+
+    <!-- Close All Debts Modal -->
+    <CloseAllDebtsModal
+      v-model="showCloseAllModal"
+      :debts="activeDebts"
+      :person-name="personFilter || ''"
+      :accounts="accounts"
+      :is-closing="isClosing"
+      :progress="progress"
+      :total="total"
+      @confirm="handleCloseAll"
+    />
   </div>
 </template>

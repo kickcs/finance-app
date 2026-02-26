@@ -19,6 +19,7 @@ export function usePartialPayment() {
     paymentAmount: number,
     selectedAccountId: string,
     userId: string,
+    options?: { skipInvalidation?: boolean },
   ): Promise<boolean> {
     if (paymentAmount <= 0 || paymentAmount > debt.remaining_amount) {
       error.value = 'Некорректная сумма платежа';
@@ -72,12 +73,14 @@ export function usePartialPayment() {
         ...(isClosed ? { close_transaction_id: transaction.id } : {}),
       });
 
-      // Invalidate caches
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: debtQueryKeys.list(userId) }),
-        invalidateTransactionRelated(queryClient, userId),
-        invalidateAccountRelated(queryClient, userId),
-      ]);
+      // Invalidate caches (skip when caller handles invalidation, e.g. bulk operations)
+      if (!options?.skipInvalidation) {
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: debtQueryKeys.list(userId) }),
+          invalidateTransactionRelated(queryClient, userId),
+          invalidateAccountRelated(queryClient, userId),
+        ]);
+      }
 
       return true;
     } catch (e) {
