@@ -17,12 +17,45 @@ env:
 
 jobs:
   # ===================
+  # Detect which services changed
+  # ===================
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      infra: ${{ steps.filter.outputs.infra }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Detect changed paths
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+              - 'docker/backend/**'
+            frontend:
+              - 'frontend/**'
+              - 'docker/frontend/**'
+            infra:
+              - 'docker-compose.prod.yml'
+              - 'docker/postgres/**'
+              - 'docker/alloy/**'
+
+  # ===================
   # Backend: lint + test + build & push image
   # ===================
   build-backend:
     name: Backend
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
     permissions:
       contents: read
       packages: write
@@ -101,6 +134,22 @@ jobs:
           cache-from: type=gha,scope=backend
           cache-to: type=gha,mode=max,scope=backend
 
+      - name: Pre-pull backend image on server
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+          IMAGE: ${{ env.REGISTRY }}/${{ github.repository }}/backend:${{ github.sha }}
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: GHCR_TOKEN,GHCR_USER,IMAGE
+          script: |
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin 2>/dev/null
+            docker pull "$IMAGE" > /dev/null 2>&1
+
   # ===================
   # Frontend: type-check + build & push image
   # ===================
@@ -108,6 +157,8 @@ jobs:
     name: Frontend
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
     permissions:
       contents: read
       packages: write
@@ -165,6 +216,22 @@ jobs:
           cache-from: type=gha,scope=frontend
           cache-to: type=gha,mode=max,scope=frontend
 
+      - name: Pre-pull frontend image on server
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+          IMAGE: ${{ env.REGISTRY }}/${{ github.repository }}/frontend:${{ github.sha }}
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: GHCR_TOKEN,GHCR_USER,IMAGE
+          script: |
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin 2>/dev/null
+            docker pull "$IMAGE" > /dev/null 2>&1
+
   # ===================
   # Deploy to Server
   # ===================
@@ -172,8 +239,12 @@ jobs:
     name: Deploy
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: [build-backend, build-frontend]
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    needs: [changes, build-backend, build-frontend]
+    if: |
+      always() &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+      !contains(needs.*.result, 'failure') &&
+      (needs.build-backend.result == 'success' || needs.build-frontend.result == 'success' || needs.changes.outputs.infra == 'true')
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -212,11 +283,14 @@ jobs:
           GRAFANA_CLOUD_LOKI_USER: ${{ secrets.GRAFANA_CLOUD_LOKI_USER }}
           GRAFANA_CLOUD_TEMPO_URL: ${{ secrets.GRAFANA_CLOUD_TEMPO_URL }}
           GRAFANA_CLOUD_TEMPO_USER: ${{ secrets.GRAFANA_CLOUD_TEMPO_USER }}
+          BACKEND_CHANGED: ${{ needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch' }}
+          FRONTEND_CHANGED: ${{ needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch' }}
+          INFRA_CHANGED: ${{ needs.changes.outputs.infra == 'true' || github.event_name == 'workflow_dispatch' }}
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          envs: GITHUB_REPOSITORY,GHCR_IMAGE_TAG,DATABASE_PASSWORD,JWT_SECRET,CORS_ORIGIN,GHCR_TOKEN,GHCR_USER,LEMONSQUEEZY_API_KEY,LEMONSQUEEZY_WEBHOOK_SECRET,LEMONSQUEEZY_STORE_ID,LEMONSQUEEZY_PREMIUM_MONTHLY_VARIANT_ID,LEMONSQUEEZY_PREMIUM_YEARLY_VARIANT_ID,OPENAI_API_KEY,GRAFANA_CLOUD_API_KEY,GRAFANA_CLOUD_PROMETHEUS_URL,GRAFANA_CLOUD_PROMETHEUS_USER,GRAFANA_CLOUD_LOKI_URL,GRAFANA_CLOUD_LOKI_USER,GRAFANA_CLOUD_TEMPO_URL,GRAFANA_CLOUD_TEMPO_USER
+          envs: GITHUB_REPOSITORY,GHCR_IMAGE_TAG,DATABASE_PASSWORD,JWT_SECRET,CORS_ORIGIN,GHCR_TOKEN,GHCR_USER,LEMONSQUEEZY_API_KEY,LEMONSQUEEZY_WEBHOOK_SECRET,LEMONSQUEEZY_STORE_ID,LEMONSQUEEZY_PREMIUM_MONTHLY_VARIANT_ID,LEMONSQUEEZY_PREMIUM_YEARLY_VARIANT_ID,OPENAI_API_KEY,GRAFANA_CLOUD_API_KEY,GRAFANA_CLOUD_PROMETHEUS_URL,GRAFANA_CLOUD_PROMETHEUS_USER,GRAFANA_CLOUD_LOKI_URL,GRAFANA_CLOUD_LOKI_USER,GRAFANA_CLOUD_TEMPO_URL,GRAFANA_CLOUD_TEMPO_USER,BACKEND_CHANGED,FRONTEND_CHANGED,INFRA_CHANGED
           script: |
             set -e
             cd ~/finance-app
@@ -254,36 +328,55 @@ jobs:
             # Login to GitHub Container Registry
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
 
-            # Pull images in background while waiting for postgres
-            docker compose -f docker-compose.prod.yml pull backend frontend alloy &
-            PULL_PID=$!
+            # Build list of services to deploy
+            SERVICES=""
+            [ "$BACKEND_CHANGED" = "true" ] && SERVICES="backend"
+            [ "$FRONTEND_CHANGED" = "true" ] && SERVICES="$SERVICES frontend"
+            [ "$INFRA_CHANGED" = "true" ] && SERVICES="backend frontend alloy"
 
-            # Ensure postgres is running
-            docker compose -f docker-compose.prod.yml up -d postgres
-            echo "Waiting for postgres..."
-            for i in $(seq 1 15); do
-              if docker compose -f docker-compose.prod.yml exec -T postgres pg_isready -U postgres > /dev/null 2>&1; then
-                echo "Postgres ready"
-                break
-              fi
-              if [ "$i" -eq 15 ]; then
-                echo "Postgres failed to become ready"
-                docker compose -f docker-compose.prod.yml logs postgres --tail=30
-                exit 1
-              fi
-              sleep 1
-            done
+            # Deduplicate and trim
+            SERVICES=$(echo "$SERVICES" | tr ' ' '\n' | sort -u | tr '\n' ' ' | xargs)
 
-            # Wait for image pull to complete
-            wait $PULL_PID
+            # Always include alloy if backend changed (metrics config may depend on it)
+            if echo "$SERVICES" | grep -q "backend"; then
+              echo "$SERVICES" | grep -q "alloy" || SERVICES="$SERVICES alloy"
+            fi
 
-            # Run database migrations (fast no-op when none pending)
-            echo "Running database migrations..."
-            docker compose -f docker-compose.prod.yml run --rm --no-deps -T backend \
-              npx typeorm migration:run -d dist/config/data-source.js
+            echo "Services to deploy: $SERVICES"
 
-            # Recreate services and wait for built-in health checks
-            docker compose -f docker-compose.prod.yml up -d --no-deps --force-recreate --wait --wait-timeout 60 backend frontend alloy
+            if [ -z "$SERVICES" ]; then
+              echo "No services to deploy"
+              exit 0
+            fi
+
+            # Pull images (instant if pre-pulled during build phase)
+            docker compose -f docker-compose.prod.yml pull $SERVICES
+
+            # Run migrations only if backend changed
+            if echo "$SERVICES" | grep -q "backend"; then
+              # Ensure postgres is running
+              docker compose -f docker-compose.prod.yml up -d postgres
+              echo "Waiting for postgres..."
+              for i in $(seq 1 15); do
+                if docker compose -f docker-compose.prod.yml exec -T postgres pg_isready -U postgres > /dev/null 2>&1; then
+                  echo "Postgres ready"
+                  break
+                fi
+                if [ "$i" -eq 15 ]; then
+                  echo "Postgres failed to become ready"
+                  docker compose -f docker-compose.prod.yml logs postgres --tail=30
+                  exit 1
+                fi
+                sleep 1
+              done
+
+              echo "Running database migrations..."
+              docker compose -f docker-compose.prod.yml run --rm --no-deps -T backend \
+                npx typeorm migration:run -d dist/config/data-source.js
+            fi
+
+            # Recreate only changed services, wait for health checks
+            docker compose -f docker-compose.prod.yml up -d --no-deps --force-recreate --wait --wait-timeout 60 $SERVICES
 
             # Clean up old images in background (non-blocking)
             {
