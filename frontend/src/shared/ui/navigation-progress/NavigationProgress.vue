@@ -9,14 +9,22 @@ const isFinishing = ref(false);
 const SHOW_DELAY = 150; // Don't show for fast navigations
 const HIDE_DELAY = 300; // Keep visible briefly after navigation completes
 
-const { start: startShowTimer, stop: stopShowTimer } = useTimeoutFn(() => {
-  isVisible.value = true;
-}, SHOW_DELAY, { immediate: false });
+const { start: startShowTimer, stop: stopShowTimer } = useTimeoutFn(
+  () => {
+    isVisible.value = true;
+  },
+  SHOW_DELAY,
+  { immediate: false },
+);
 
-const { start: startHideTimer, stop: stopHideTimer } = useTimeoutFn(() => {
-  isVisible.value = false;
-  isFinishing.value = false;
-}, HIDE_DELAY, { immediate: false });
+const { start: startHideTimer, stop: stopHideTimer } = useTimeoutFn(
+  () => {
+    isVisible.value = false;
+    isFinishing.value = false;
+  },
+  HIDE_DELAY,
+  { immediate: false },
+);
 
 function cleanup() {
   stopShowTimer();

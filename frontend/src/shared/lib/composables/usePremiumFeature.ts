@@ -13,7 +13,10 @@ let subscriptionRef: Ref<SubscriptionStatus> | ComputedRef<SubscriptionStatus> |
  * the subscription-aware refs. Other callers get only modal controls.
  */
 export function usePremiumFeature() {
-  function init(deps: { isPremium: ComputedRef<boolean>; subscription: Ref<SubscriptionStatus> | ComputedRef<SubscriptionStatus> }) {
+  function init(deps: {
+    isPremium: ComputedRef<boolean>;
+    subscription: Ref<SubscriptionStatus> | ComputedRef<SubscriptionStatus>;
+  }) {
     isPremiumRef = deps.isPremium;
     subscriptionRef = deps.subscription;
   }
@@ -30,7 +33,11 @@ export function usePremiumFeature() {
     upgradeFeatureName,
     requirePremium,
     init,
-    get isPremium() { return isPremiumRef?.value ?? false; },
-    get subscription() { return subscriptionRef?.value ?? null; },
+    get isPremium() {
+      return isPremiumRef?.value ?? false;
+    },
+    get subscription() {
+      return subscriptionRef?.value ?? null;
+    },
   };
 }

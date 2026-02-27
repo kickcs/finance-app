@@ -12,7 +12,9 @@ if (raw && raw.startsWith('"')) {
     if (typeof parsed === 'string') {
       localStorage.setItem('theme', parsed);
     }
-  } catch { /* ignore malformed values */ }
+  } catch {
+    /* ignore malformed values */
+  }
 }
 
 // Singleton state - shared across all useTheme() calls

@@ -9,6 +9,7 @@ import { DEFAULT_WIDGET_ORDER } from '@/shared/config/dashboard';
 import { AccountStack } from '@/widgets/account-stack';
 import { DebtsSectionSkeleton } from '@/widgets/debts-section';
 import { RemindersSectionSkeleton } from '@/widgets/reminders-section';
+import { UIcon } from '@/shared/ui';
 import DashboardQuickActions from './DashboardQuickActions.vue';
 
 const props = withDefaults(
@@ -59,6 +60,7 @@ const emit = defineEmits<{
   'reminder-click': [reminder: Reminder];
   'add-reminder': [];
   'view-all-reminders': [];
+  'dashboard-settings-click': [];
 }>();
 
 const sidePanelWidgets = computed(() =>
@@ -125,7 +127,9 @@ const RemindersSection = defineAsyncComponent({
             :hidden="isHidden"
             class="hover:-translate-y-0.5 hover:shadow-md transition-[transform,box-shadow] duration-300 rounded-3xl"
             @debt-click="emit('debt-click', $event)"
-            @person-click="(person: string, type: 'given' | 'taken') => emit('person-click', person, type)"
+            @person-click="
+              (person: string, type: 'given' | 'taken') => emit('person-click', person, type)
+            "
             @add-click="emit('add-debt')"
             @view-all="emit('view-all-debts')"
           />
@@ -154,5 +158,16 @@ const RemindersSection = defineAsyncComponent({
         </Suspense>
       </section>
     </template>
+
+    <div class="flex justify-center mt-2 pb-4 md:pb-0">
+      <button
+        type="button"
+        class="flex items-center gap-2 text-[13px] font-medium text-text-tertiary-light dark:text-text-tertiary-dark hover:text-text-secondary-light dark:hover:text-text-secondary-dark transition-colors px-4 py-2 rounded-xl hover:bg-surface-light dark:hover:bg-surface-dark"
+        @click="emit('dashboard-settings-click')"
+      >
+        <UIcon name="tune" size="sm" />
+        Настроить вид дашборда
+      </button>
+    </div>
   </div>
 </template>

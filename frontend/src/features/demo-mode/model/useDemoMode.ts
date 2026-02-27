@@ -3,7 +3,11 @@ import { useTimestamp } from '@vueuse/core';
 import type { Profile } from '@/shared/api';
 
 export function useDemoMode(profile: Ref<Profile | null | undefined>) {
-  const { timestamp: now, pause, resume } = useTimestamp({
+  const {
+    timestamp: now,
+    pause,
+    resume,
+  } = useTimestamp({
     controls: true,
     interval: 1000,
     immediate: false,

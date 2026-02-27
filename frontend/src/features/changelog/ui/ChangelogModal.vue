@@ -39,7 +39,14 @@ function goToChangelog() {
 </script>
 
 <template>
-  <DialogRoot :open="modelValue" @update:open="(v) => { if (!v) handleClose(); }">
+  <DialogRoot
+    :open="modelValue"
+    @update:open="
+      (v) => {
+        if (!v) handleClose();
+      }
+    "
+  >
     <DialogPortal>
       <DialogOverlay
         class="fixed inset-0 z-50 bg-black/50 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 duration-200"
@@ -66,7 +73,9 @@ function goToChangelog() {
         <!-- Header -->
         <div class="flex items-start justify-between px-5 pt-4 pb-2">
           <div class="flex flex-col gap-1">
-            <DialogTitle class="text-base font-semibold text-text-primary-light dark:text-text-primary-dark">
+            <DialogTitle
+              class="text-base font-semibold text-text-primary-light dark:text-text-primary-dark"
+            >
               Что нового
             </DialogTitle>
             <VersionBadge v-if="latestEntry" :version="latestEntry.version" current />
@@ -105,7 +114,9 @@ function goToChangelog() {
               >
                 <UIcon :name="CHANGELOG_TYPE_CONFIG[item.type].icon" class="w-3.5 h-3.5" />
               </div>
-              <span class="text-[13px] leading-relaxed text-text-secondary-light dark:text-text-secondary-dark pt-px">
+              <span
+                class="text-[13px] leading-relaxed text-text-secondary-light dark:text-text-secondary-dark pt-px"
+              >
                 {{ item.text }}
               </span>
             </li>
@@ -117,9 +128,7 @@ function goToChangelog() {
           <UButton variant="ghost" size="sm" class="flex-1" @click="goToChangelog">
             Все обновления
           </UButton>
-          <UButton variant="primary" size="sm" class="flex-1" @click="handleClose">
-            Понятно
-          </UButton>
+          <UButton variant="primary" size="sm" class="flex-1" @click="handleClose">Понятно</UButton>
         </div>
       </DialogContent>
     </DialogPortal>

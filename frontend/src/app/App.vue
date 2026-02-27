@@ -15,11 +15,11 @@ import { usePremiumFeature } from '@/shared/lib/composables/usePremiumFeature';
 import { useSubscription } from '@/entities/subscription/api/useSubscription';
 
 // Lazy-loaded modals (rarely shown, loaded on demand)
-const ChangelogModal = defineAsyncComponent(() =>
-  import('@/features/changelog/ui/ChangelogModal.vue')
+const ChangelogModal = defineAsyncComponent(
+  () => import('@/features/changelog/ui/ChangelogModal.vue'),
 );
-const PremiumUpgradeModal = defineAsyncComponent(() =>
-  import('@/features/upgrade-to-premium/ui/PremiumUpgradeModal.vue')
+const PremiumUpgradeModal = defineAsyncComponent(
+  () => import('@/features/upgrade-to-premium/ui/PremiumUpgradeModal.vue'),
 );
 
 // Initialize theme synchronously on script setup (before mount)
@@ -110,7 +110,11 @@ provide('getCategoryById', getCategoryById);
     <ChangelogModal v-if="showChangelogModal" v-model="showChangelogModal" />
 
     <!-- Premium upgrade modal (global) -->
-    <PremiumUpgradeModal v-if="showUpgradeModal" v-model="showUpgradeModal" :feature-name="upgradeFeatureName" />
+    <PremiumUpgradeModal
+      v-if="showUpgradeModal"
+      v-model="showUpgradeModal"
+      :feature-name="upgradeFeatureName"
+    />
 
     <!-- Toast notifications -->
     <Toaster />

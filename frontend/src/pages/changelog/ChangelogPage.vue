@@ -48,9 +48,7 @@ const { isMounted } = useMountedAnimation();
       <!-- Timeline -->
       <div class="relative">
         <!-- Vertical line -->
-        <div
-          class="absolute top-3 bottom-0 left-[11px] w-px bg-border-light dark:bg-border-dark"
-        />
+        <div class="absolute top-3 bottom-0 left-[11px] w-px bg-border-light dark:bg-border-dark" />
 
         <div class="space-y-6">
           <div
@@ -70,10 +68,7 @@ const { isMounted } = useMountedAnimation();
                     : 'border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark'
                 "
               >
-                <div
-                  v-if="index === 0"
-                  class="w-2 h-2 rounded-full bg-primary"
-                />
+                <div v-if="index === 0" class="w-2 h-2 rounded-full bg-primary" />
                 <div
                   v-else
                   class="w-1.5 h-1.5 rounded-full bg-text-tertiary-light dark:bg-text-tertiary-dark"
@@ -98,9 +93,7 @@ const { isMounted } = useMountedAnimation();
         <!-- End marker -->
         <div class="relative pl-8 pt-4">
           <div class="absolute left-[7px] top-4">
-            <div
-              class="w-[9px] h-[9px] rounded-full bg-border-light dark:bg-border-dark"
-            />
+            <div class="w-[9px] h-[9px] rounded-full bg-border-light dark:bg-border-dark" />
           </div>
           <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark py-1">
             Начало истории

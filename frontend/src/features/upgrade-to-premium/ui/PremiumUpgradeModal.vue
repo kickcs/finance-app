@@ -31,11 +31,19 @@ async function handlePurchase(plan: 'premium_monthly' | 'premium_yearly') {
       </p>
 
       <div class="space-y-3">
-        <div v-for="feature in PREMIUM_FEATURES" :key="feature.label" class="flex items-start gap-3">
+        <div
+          v-for="feature in PREMIUM_FEATURES"
+          :key="feature.label"
+          class="flex items-start gap-3"
+        >
           <UIcon :name="feature.icon" size="sm" class="text-primary mt-0.5" />
           <div>
-            <p class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">{{ feature.label }}</p>
-            <p class="text-xs text-text-secondary-light dark:text-text-secondary-dark">{{ feature.description }}</p>
+            <p class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
+              {{ feature.label }}
+            </p>
+            <p class="text-xs text-text-secondary-light dark:text-text-secondary-dark">
+              {{ feature.description }}
+            </p>
           </div>
         </div>
       </div>
@@ -46,10 +54,20 @@ async function handlePurchase(plan: 'premium_monthly' | 'premium_yearly') {
     </div>
 
     <template #actions>
-      <UButton variant="primary" full-width :loading="isLoading" @click="handlePurchase('premium_yearly')">
+      <UButton
+        variant="primary"
+        full-width
+        :loading="isLoading"
+        @click="handlePurchase('premium_yearly')"
+      >
         {{ PLAN_PRICES.premium_yearly }} — выгоднее
       </UButton>
-      <UButton variant="secondary" full-width :loading="isLoading" @click="handlePurchase('premium_monthly')">
+      <UButton
+        variant="secondary"
+        full-width
+        :loading="isLoading"
+        @click="handlePurchase('premium_monthly')"
+      >
         {{ PLAN_PRICES.premium_monthly }}
       </UButton>
     </template>

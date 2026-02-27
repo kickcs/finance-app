@@ -3,9 +3,7 @@ import { UIcon, Skeleton } from '@/shared/ui';
 </script>
 
 <template>
-  <div
-    class="space-y-3"
-  >
+  <div class="space-y-3">
     <!-- Header -->
     <div class="flex items-center justify-between px-1 md:px-0 md:mb-2">
       <div class="flex items-center gap-2">

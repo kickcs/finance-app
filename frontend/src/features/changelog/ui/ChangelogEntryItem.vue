@@ -28,11 +28,7 @@ defineProps<{ entry: ChangelogEntry; showTitle?: boolean }>();
 
     <!-- Items -->
     <ul class="space-y-2.5">
-      <li
-        v-for="(item, index) in entry.items"
-        :key="index"
-        class="flex items-start gap-2.5 group"
-      >
+      <li v-for="(item, index) in entry.items" :key="index" class="flex items-start gap-2.5 group">
         <div
           :class="[
             'w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-110',

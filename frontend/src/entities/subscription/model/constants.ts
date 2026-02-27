@@ -12,11 +12,31 @@ export const PLAN_PRICES: Record<'premium_monthly' | 'premium_yearly', string> =
 };
 
 export const PREMIUM_FEATURES = [
-  { icon: 'trending_up', label: 'Расширенная аналитика', description: 'Тренды, сравнение месяцев, прогнозы' },
+  {
+    icon: 'trending_up',
+    label: 'Расширенная аналитика',
+    description: 'Тренды, сравнение месяцев, прогнозы',
+  },
   { icon: 'download', label: 'Экспорт данных', description: 'PDF и Excel отчёты' },
-  { icon: 'repeat', label: 'Рекуррентные транзакции', description: 'Автоматическое создание повторяющихся транзакций' },
-  { icon: 'account_balance_wallet', label: 'Бюджеты по категориям', description: 'Лимиты с уведомлениями' },
-  { icon: 'palette', label: 'Темы оформления', description: 'Дополнительные варианты внешнего вида' },
+  {
+    icon: 'repeat',
+    label: 'Рекуррентные транзакции',
+    description: 'Автоматическое создание повторяющихся транзакций',
+  },
+  {
+    icon: 'account_balance_wallet',
+    label: 'Бюджеты по категориям',
+    description: 'Лимиты с уведомлениями',
+  },
+  {
+    icon: 'palette',
+    label: 'Темы оформления',
+    description: 'Дополнительные варианты внешнего вида',
+  },
   { icon: 'new_releases', label: 'Ранний доступ', description: 'Новые функции раньше всех' },
-  { icon: 'document_scanner', label: 'Сканирование чеков', description: 'Сфотографируйте чек и разделите расходы по позициям' },
+  {
+    icon: 'document_scanner',
+    label: 'Сканирование чеков',
+    description: 'Сфотографируйте чек и разделите расходы по позициям',
+  },
 ];

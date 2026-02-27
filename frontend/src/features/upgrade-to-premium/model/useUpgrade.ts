@@ -17,7 +17,11 @@ export function useUpgrade() {
       }
       return true;
     } catch {
-      toast({ title: 'Ошибка', description: 'Не удалось открыть страницу оплаты', variant: 'error' });
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось открыть страницу оплаты',
+        variant: 'error',
+      });
       return false;
     } finally {
       isLoading.value = false;

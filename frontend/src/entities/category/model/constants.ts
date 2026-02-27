@@ -135,7 +135,10 @@ export const INCOME_CATEGORIES: Category[] = [
 // Debt-related categories (excluded from money flow calculations)
 /** Set of all debt-related category IDs — used to exclude debt transactions from daily totals. */
 export const DEBT_CATEGORY_IDS = new Set([
-  'debt_given', 'debt_taken', 'debt_return_to_me', 'debt_return_from_me',
+  'debt_given',
+  'debt_taken',
+  'debt_return_to_me',
+  'debt_return_from_me',
 ]);
 
 export const DEBT_CATEGORIES: Category[] = [

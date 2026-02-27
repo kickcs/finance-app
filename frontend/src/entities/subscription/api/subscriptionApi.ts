@@ -27,7 +27,9 @@ export const subscriptionApi = {
     return transformStatus(data);
   },
 
-  async createCheckout(plan: 'premium_monthly' | 'premium_yearly'): Promise<{ checkout_url: string }> {
+  async createCheckout(
+    plan: 'premium_monthly' | 'premium_yearly',
+  ): Promise<{ checkout_url: string }> {
     const data = await http.post<{ checkoutUrl: string }>('/subscription/checkout', { plan });
     return { checkout_url: data.checkoutUrl };
   },

@@ -1,4 +1,4 @@
-import { API_URL, getAccessToken } from '@/shared/api/http';
+import { API_URL, getAccessToken, refreshTokens } from '@/shared/api/http';
 
 export interface ReceiptItemResponse {
   name: string;
@@ -22,15 +22,24 @@ export const receiptApi = {
     const formData = new FormData();
     formData.append('image', imageFile);
 
-    const token = getAccessToken();
-    const response = await fetch(`${API_URL}/receipts/scan`, {
-      method: 'POST',
-      headers: {
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      credentials: 'include',
-      body: formData,
-    });
+    const doFetch = (token: string | null) =>
+      fetch(`${API_URL}/receipts/scan`, {
+        method: 'POST',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        credentials: 'include',
+        body: formData,
+      });
+
+    let response = await doFetch(getAccessToken());
+
+    if (response.status === 401) {
+      const refreshed = await refreshTokens();
+      if (refreshed) {
+        response = await doFetch(getAccessToken());
+      }
+    }
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => null);

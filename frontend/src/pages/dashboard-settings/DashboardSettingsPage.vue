@@ -4,11 +4,13 @@ import type { Ref } from 'vue';
 import type { User } from '@/shared/api/composables/useAuth';
 import type { WidgetId, DashboardSettings } from '@/shared/api/database.types';
 import draggable from 'vuedraggable';
+import { useDebounceFn } from '@vueuse/core';
 import { AppHeader } from '@/widgets/header';
-import { UButton, UIcon, UToggle, useToast } from '@/shared/ui';
+import { UIcon, UToggle, useToast } from '@/shared/ui';
 import { useProfile } from '@/shared/api';
 import { useAccounts } from '@/entities/account';
 import { navigateBack } from '@/app/router';
+import { haptics } from '@/shared/lib/haptics';
 import { DEFAULT_WIDGET_ORDER, WIDGET_LABELS, WIDGET_ICONS } from './model/constants';
 
 const { toast } = useToast();
@@ -27,8 +29,6 @@ interface WidgetItem {
 const widgetList = ref<WidgetItem[]>([]);
 const hiddenAccountIds = ref<Set<string>>(new Set());
 const initialized = ref(false);
-const saving = ref(false);
-const hasChanges = ref(false);
 
 // Initialize from profile settings
 watch(
@@ -46,34 +46,8 @@ watch(
   { immediate: true },
 );
 
-function markChanged() {
-  hasChanges.value = true;
-}
-
-function toggleWidget(id: WidgetId) {
-  const item = widgetList.value.find((w) => w.id === id);
-  if (item) {
-    item.visible = !item.visible;
-    markChanged();
-  }
-}
-
-function toggleAccount(accountId: string) {
-  if (hiddenAccountIds.value.has(accountId)) {
-    hiddenAccountIds.value.delete(accountId);
-  } else {
-    hiddenAccountIds.value.add(accountId);
-  }
-  hiddenAccountIds.value = new Set(hiddenAccountIds.value);
-  markChanged();
-}
-
-function isAccountVisible(accountId: string) {
-  return !hiddenAccountIds.value.has(accountId);
-}
-
-async function saveSettings() {
-  saving.value = true;
+// Auto-save logic
+const debouncedSave = useDebounceFn(async () => {
   try {
     const settings: DashboardSettings = {
       widget_order: widgetList.value.map((w) => w.id),
@@ -81,98 +55,146 @@ async function saveSettings() {
       hidden_account_ids: Array.from(hiddenAccountIds.value),
     };
     await updateDashboardSettings(settings);
-    hasChanges.value = false;
-    navigateBack();
+    haptics.success();
   } catch {
     toast({ title: 'Ошибка', description: 'Не удалось сохранить настройки', variant: 'error' });
-  } finally {
-    saving.value = false;
+    haptics.error();
   }
+}, 500);
+
+function onDragStart() {
+  haptics.tap();
+}
+
+function onDragEnd() {
+  haptics.tap();
+  debouncedSave();
+}
+
+function toggleWidget(id: WidgetId) {
+  haptics.tap();
+  const item = widgetList.value.find((w) => w.id === id);
+  if (item) {
+    item.visible = !item.visible;
+    debouncedSave();
+  }
+}
+
+function toggleAccount(accountId: string) {
+  haptics.tap();
+  if (hiddenAccountIds.value.has(accountId)) {
+    hiddenAccountIds.value.delete(accountId);
+  } else {
+    hiddenAccountIds.value.add(accountId);
+  }
+  hiddenAccountIds.value = new Set(hiddenAccountIds.value);
+  debouncedSave();
+}
+
+function isAccountVisible(accountId: string) {
+  return !hiddenAccountIds.value.has(accountId);
 }
 </script>
 
 <template>
-  <div
-    class="h-full flex flex-col relative bg-background-light dark:bg-background-dark"
-  >
+  <div class="h-full flex flex-col relative bg-background-light dark:bg-background-dark">
     <AppHeader title="Настройка главной" show-back @back="navigateBack" />
 
-    <main class="flex-1 overflow-y-auto px-5 pt-6 pb-8 space-y-6">
+    <main class="flex-1 overflow-y-auto px-4 pt-6 pb-28 space-y-8">
       <!-- Section 1: Widgets -->
-      <section class="space-y-3">
-        <div>
-          <h2 class="text-base font-semibold text-text-primary-light dark:text-text-primary-dark">
-            Виджеты
+      <section class="space-y-2">
+        <div class="px-2">
+          <h2
+            class="text-[13px] font-medium text-text-secondary-light dark:text-text-secondary-dark uppercase tracking-wide"
+          >
+            Виджеты на главной
           </h2>
-          <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark mt-1">
-            Перетаскивайте для изменения порядка
-          </p>
         </div>
 
-        <draggable
-          v-model="widgetList"
-          item-key="id"
-          handle=".drag-handle"
-          :animation="200"
-          @end="markChanged"
+        <div
+          class="overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark shadow-sm"
         >
-          <template #item="{ element }: { element: WidgetItem }">
-            <div
-              class="flex items-center gap-3 p-4 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark mb-2"
-            >
-              <!-- Drag handle -->
-              <div class="drag-handle cursor-grab active:cursor-grabbing touch-none">
-                <UIcon
-                  name="drag_indicator"
-                  size="sm"
-                  class="text-text-tertiary-light dark:text-text-tertiary-dark"
+          <draggable
+            v-model="widgetList"
+            item-key="id"
+            handle=".drag-handle"
+            :animation="250"
+            ghost-class="opacity-40"
+            @start="onDragStart"
+            @end="onDragEnd"
+          >
+            <template #item="{ element, index }: { element: WidgetItem; index: number }">
+              <div
+                class="flex items-center gap-3 p-4 bg-card-light dark:bg-card-dark transition-colors duration-200"
+                :class="{
+                  'border-b border-border-light dark:border-border-dark':
+                    index !== widgetList.length - 1,
+                }"
+              >
+                <!-- Drag handle -->
+                <div
+                  class="drag-handle cursor-grab active:cursor-grabbing touch-none px-1 -ml-1 py-2"
+                >
+                  <UIcon
+                    name="drag_indicator"
+                    size="sm"
+                    class="text-text-tertiary-light dark:text-text-tertiary-dark"
+                  />
+                </div>
+
+                <!-- Widget icon -->
+                <div
+                  class="w-8 h-8 shrink-0 rounded-[10px] bg-primary/10 flex items-center justify-center"
+                >
+                  <UIcon :name="WIDGET_ICONS[element.id]" size="sm" class="text-primary" />
+                </div>
+
+                <!-- Label -->
+                <span
+                  class="flex-1 text-[15px] font-medium text-text-primary-light dark:text-text-primary-dark"
+                >
+                  {{ WIDGET_LABELS[element.id] }}
+                </span>
+
+                <!-- Toggle -->
+                <UToggle
+                  :model-value="element.visible"
+                  :aria-label="`Показывать ${WIDGET_LABELS[element.id]}`"
+                  @update:model-value="toggleWidget(element.id)"
                 />
               </div>
-
-              <!-- Widget icon + label -->
-              <div
-                class="w-9 h-9 shrink-0 rounded-lg bg-primary/10 flex items-center justify-center"
-              >
-                <UIcon :name="WIDGET_ICONS[element.id]" size="sm" class="text-primary" />
-              </div>
-
-              <span
-                class="flex-1 text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
-              >
-                {{ WIDGET_LABELS[element.id] }}
-              </span>
-
-              <!-- Toggle -->
-              <UToggle
-                :model-value="element.visible"
-                :aria-label="`Показывать ${WIDGET_LABELS[element.id]}`"
-                @update:model-value="toggleWidget(element.id)"
-              />
-            </div>
-          </template>
-        </draggable>
+            </template>
+          </draggable>
+        </div>
+        <p class="px-2 pt-1 text-xs text-text-secondary-light dark:text-text-secondary-dark">
+          Перетаскивайте виджеты за иконку слева для изменения порядка на главном экране.
+        </p>
       </section>
 
       <!-- Section 2: Accounts in balance -->
-      <section v-if="accounts && accounts.length > 0" class="space-y-3">
-        <div>
-          <h2 class="text-base font-semibold text-text-primary-light dark:text-text-primary-dark">
-            Счета в балансе
+      <section v-if="accounts && accounts.length > 0" class="space-y-2">
+        <div class="px-2">
+          <h2
+            class="text-[13px] font-medium text-text-secondary-light dark:text-text-secondary-dark uppercase tracking-wide"
+          >
+            Участвуют в балансе
           </h2>
-          <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark mt-1">
-            Выберите счета для общего баланса
-          </p>
         </div>
 
-        <div class="space-y-2">
+        <div
+          class="overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark shadow-sm"
+        >
           <div
-            v-for="account in accounts"
+            v-for="(account, index) in accounts"
             :key="account.id"
-            class="flex items-center gap-3 p-4 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark"
+            class="flex items-center gap-3 p-4 transition-colors duration-200"
+            :class="{
+              'border-b border-border-light dark:border-border-dark': index !== accounts.length - 1,
+            }"
           >
             <!-- Account icon -->
             <div
-              class="w-9 h-9 shrink-0 rounded-lg flex items-center justify-center"
+              class="w-8 h-8 shrink-0 rounded-[10px] flex items-center justify-center"
               :style="{ backgroundColor: account.color + '1A' }"
             >
               <UIcon :name="account.icon" size="sm" :style="{ color: account.color }" />
@@ -180,7 +202,7 @@ async function saveSettings() {
 
             <!-- Account name -->
             <span
-              class="flex-1 text-left text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
+              class="flex-1 text-left text-[15px] font-medium text-text-primary-light dark:text-text-primary-dark truncate"
             >
               {{ account.name }}
             </span>
@@ -193,21 +215,10 @@ async function saveSettings() {
             />
           </div>
         </div>
+        <p class="px-2 pt-1 text-xs text-text-secondary-light dark:text-text-secondary-dark">
+          Отключенные счета не будут учитываться в виджете "Общий баланс".
+        </p>
       </section>
     </main>
-
-    <!-- Save button (below scroll area, above BottomNav) -->
-    <div
-      v-if="hasChanges"
-      class="shrink-0 px-5 pt-4 pb-24 border-t border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark"
-    >
-      <UButton
-        class="w-full"
-        :loading="saving"
-        @click="saveSettings"
-      >
-        Сохранить
-      </UButton>
-    </div>
   </div>
 </template>

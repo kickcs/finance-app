@@ -19,14 +19,17 @@ export function useSubscription(userId: MaybeRefOrGetter<string | null>) {
     staleTime: 5 * 60 * 1000,
   });
 
-  const subscription = computed<SubscriptionStatus>(() => data.value ?? {
-    plan: 'free',
-    status: 'active',
-    is_premium: false,
-    trial_end: null,
-    current_period_end: null,
-    cancel_at_period_end: false,
-  });
+  const subscription = computed<SubscriptionStatus>(
+    () =>
+      data.value ?? {
+        plan: 'free',
+        status: 'active',
+        is_premium: false,
+        trial_end: null,
+        current_period_end: null,
+        cancel_at_period_end: false,
+      },
+  );
 
   const isPremium = computed(() => subscription.value.is_premium);
 

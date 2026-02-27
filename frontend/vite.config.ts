@@ -1,11 +1,11 @@
-import { defineConfig } from 'vite'
-import vue from '@vitejs/plugin-vue'
-import tailwindcss from '@tailwindcss/vite'
-import { compression } from 'vite-plugin-compression2'
-import VueDevTools from 'vite-plugin-vue-devtools'
-import { VitePWA } from 'vite-plugin-pwa'
-import { fontPreloadPlugin } from './src/app/plugins/fontPreloadPlugin'
-import { fileURLToPath, URL } from 'node:url'
+import { defineConfig } from 'vite';
+import vue from '@vitejs/plugin-vue';
+import tailwindcss from '@tailwindcss/vite';
+import { compression } from 'vite-plugin-compression2';
+import VueDevTools from 'vite-plugin-vue-devtools';
+import { VitePWA } from 'vite-plugin-pwa';
+import { fontPreloadPlugin } from './src/app/plugins/fontPreloadPlugin';
+import { fileURLToPath, URL } from 'node:url';
 
 export default defineConfig({
   plugins: [
@@ -34,7 +34,8 @@ export default defineConfig({
       manifest: {
         name: 'Ouro Finance',
         short_name: 'Ouro',
-        description: 'Управляйте личными финансами: учёт доходов и расходов, мультивалютные счета, долги, цели и напоминания',
+        description:
+          'Управляйте личными финансами: учёт доходов и расходов, мультивалютные счета, долги, цели и напоминания',
         start_url: '/',
         scope: '/',
         display: 'standalone',
@@ -83,59 +84,54 @@ export default defineConfig({
           // Vue core - changes rarely
           'vue-core': ['vue', 'vue-router'],
           // TanStack Query - changes rarely
-          'tanstack': ['@tanstack/vue-query', '@tanstack/vue-virtual'],
+          tanstack: ['@tanstack/vue-query', '@tanstack/vue-virtual'],
           // UI primitives - Reka UI (single vendor chunk for long-term caching)
           'ui-primitives': ['reka-ui'],
           // VueUse utilities
-          'vueuse': ['@vueuse/core'],
+          vueuse: ['@vueuse/core'],
         },
         // Optimize chunk file naming for better caching
         chunkFileNames: (chunkInfo) => {
-          const facadeModuleId = chunkInfo.facadeModuleId || ''
+          const facadeModuleId = chunkInfo.facadeModuleId || '';
           // Page chunks
           if (facadeModuleId.includes('/pages/')) {
-            return 'pages/[name]-[hash].js'
+            return 'pages/[name]-[hash].js';
           }
           // Widget chunks
           if (facadeModuleId.includes('/widgets/')) {
-            return 'widgets/[name]-[hash].js'
+            return 'widgets/[name]-[hash].js';
           }
           // Entity chunks
           if (facadeModuleId.includes('/entities/')) {
-            return 'entities/[name]-[hash].js'
+            return 'entities/[name]-[hash].js';
           }
           // Default for vendor and other chunks
-          return 'chunks/[name]-[hash].js'
+          return 'chunks/[name]-[hash].js';
         },
         // Entry file naming
         entryFileNames: '[name]-[hash].js',
         // Asset file naming
         assetFileNames: (assetInfo) => {
-          const name = assetInfo.name || ''
+          const name = assetInfo.name || '';
           // CSS files
           if (name.endsWith('.css')) {
-            return 'css/[name]-[hash][extname]'
+            return 'css/[name]-[hash][extname]';
           }
           // Font files
           if (/\.(woff2?|ttf|eot|otf)$/.test(name)) {
-            return 'fonts/[name]-[hash][extname]'
+            return 'fonts/[name]-[hash][extname]';
           }
           // Image files
           if (/\.(png|jpe?g|gif|svg|webp|ico)$/.test(name)) {
-            return 'images/[name]-[hash][extname]'
+            return 'images/[name]-[hash][extname]';
           }
-          return 'assets/[name]-[hash][extname]'
+          return 'assets/[name]-[hash][extname]';
         },
       },
     },
   },
   // Optimize dependencies pre-bundling
   optimizeDeps: {
-    include: [
-      'vue',
-      'vue-router',
-      '@tanstack/vue-query',
-      '@vueuse/core',
-    ],
+    include: ['vue', 'vue-router', '@tanstack/vue-query', '@vueuse/core'],
   },
-})
+});
