@@ -23,11 +23,7 @@
     "pre-commit": "bunx lint-staged"
   },
   "lint-staged": {
-    "backend/src/**/*.ts": [
-      "bash -c 'cd backend && bunx eslint --fix'"
-    ],
-    "frontend/src/**/*.{ts,vue}": [
-      "bash -c 'cd frontend && bunx eslint --fix'"
-    ]
+    "backend/src/**/*.ts": "bash -c 'cd backend && npx eslint --fix \"$@\"' --",
+    "frontend/src/**/*.{ts,vue}": "bash -c 'cd frontend && npx eslint --fix \"$@\"' --"
   }
 }
