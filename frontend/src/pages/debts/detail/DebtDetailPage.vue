@@ -71,11 +71,15 @@ async function handleDeleteDebt() {
   }
 }
 
-async function handlePartialPayment(amount: number, accountId: string) {
+async function handlePartialPayment(
+  amount: number,
+  accountId: string,
+  options: { forgiveRemainder?: boolean; excessCategoryId?: string } = {},
+) {
   if (!debt.value || !userId.value) return;
 
-  const willClose = amount >= debt.value.remaining_amount;
-  const success = await makePartialPayment(debt.value, amount, accountId, userId.value);
+  const willClose = amount >= debt.value.remaining_amount || options.forgiveRemainder;
+  const success = await makePartialPayment(debt.value, amount, accountId, userId.value, options);
   if (success) {
     showPartialPaymentModal.value = false;
     if (willClose) {
@@ -269,12 +273,7 @@ function goBack() {
 
         <!-- Actions (only if not closed) -->
         <div v-if="!debt.is_closed">
-          <UButton
-            variant="primary"
-            size="lg"
-            full-width
-            @click="showPartialPaymentModal = true"
-          >
+          <UButton variant="primary" size="lg" full-width @click="showPartialPaymentModal = true">
             <UIcon name="payments" size="sm" class="mr-1.5" />
             Внести платёж
           </UButton>
