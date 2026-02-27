@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, watch, useTemplateRef } from 'vue';
+import { useIntervalFn } from '@vueuse/core';
 import { UButton, UIcon, USpinner } from '@/shared/ui';
 
-defineProps<{
+const props = defineProps<{
   previewUrl: string | null;
   isOcrLoading: boolean;
   isOcrSuccess: boolean;
@@ -15,12 +16,38 @@ const emit = defineEmits<{
   retryOcr: [];
 }>();
 
-const cameraInputRef = ref<HTMLInputElement | null>(null);
-const galleryInputRef = ref<HTMLInputElement | null>(null);
+const cameraInputRef = useTemplateRef<HTMLInputElement>('cameraInputRef');
+const galleryInputRef = useTemplateRef<HTMLInputElement>('galleryInputRef');
 const fileError = ref<string | null>(null);
 
 const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
 const MAX_DIMENSION = 1536; // Good enough for OCR, keeps JPEG under ~2MB
+
+const OCR_MESSAGES = ['Читаем текст...', 'Ищем суммы...', 'Почти готово...'];
+const currentOcrMessage = ref(OCR_MESSAGES[0]);
+let messageIndex = 0;
+
+const { pause: pauseMessages, resume: resumeMessages } = useIntervalFn(
+  () => {
+    messageIndex = (messageIndex + 1) % OCR_MESSAGES.length;
+    currentOcrMessage.value = OCR_MESSAGES[messageIndex];
+  },
+  1500,
+  { immediate: false },
+);
+
+watch(
+  () => props.isOcrLoading,
+  (isLoading) => {
+    if (isLoading) {
+      messageIndex = 0;
+      currentOcrMessage.value = OCR_MESSAGES[0];
+      resumeMessages();
+    } else {
+      pauseMessages();
+    }
+  },
+);
 
 function openCamera() {
   cameraInputRef.value?.click();
@@ -95,7 +122,6 @@ async function handleFileChange(e: Event) {
 
 <template>
   <div class="h-full flex flex-col px-5 pt-4 pb-6 overflow-y-auto no-scrollbar">
-
     <!-- Hidden native file inputs -->
     <input
       ref="cameraInputRef"
@@ -116,35 +142,47 @@ async function handleFileChange(e: Event) {
     <!-- === IDLE STATE === -->
     <template v-if="!previewUrl">
       <div class="flex-1 flex flex-col items-center justify-center gap-5 min-h-0">
-
-        <!-- Receipt illustration area -->
+        <!-- Receipt illustration area (Viewfinder) -->
         <div
-          class="w-full max-w-[260px] aspect-[3/4] rounded-2xl relative
-                 border-2 border-dashed border-primary/30
-                 bg-gradient-to-b from-primary/[0.04] to-primary/[0.08]
-                 flex flex-col items-center justify-center gap-3
-                 transition-all duration-300"
+          class="w-full max-w-[280px] aspect-[3/4] rounded-3xl relative bg-surface-light dark:bg-surface-dark flex flex-col items-center justify-center gap-4 transition-all duration-300 shadow-sm"
           aria-hidden="true"
         >
-          <!-- Decorative receipt lines -->
-          <div class="absolute inset-x-8 top-8 space-y-2.5 opacity-[0.15]">
-            <div class="h-2 bg-primary rounded-full w-3/4" />
-            <div class="h-2 bg-primary rounded-full w-full" />
-            <div class="h-2 bg-primary rounded-full w-5/6" />
-            <div class="h-2 bg-primary rounded-full w-2/3" />
-            <div class="h-2 bg-primary rounded-full w-full" />
-            <div class="h-2 bg-primary rounded-full w-1/2" />
+          <!-- Viewfinder corners -->
+          <div class="absolute inset-2 pointer-events-none opacity-50">
+            <div
+              class="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-primary rounded-tl-2xl"
+            ></div>
+            <div
+              class="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-primary rounded-tr-2xl"
+            ></div>
+            <div
+              class="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-primary rounded-bl-2xl"
+            ></div>
+            <div
+              class="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-primary rounded-br-2xl"
+            ></div>
+          </div>
+
+          <!-- Subtle animated scan line -->
+          <div class="absolute inset-0 overflow-hidden rounded-3xl pointer-events-none">
+            <div
+              class="scan-line-idle absolute inset-x-0 h-16 bg-gradient-to-b from-transparent via-primary/5 to-transparent mix-blend-overlay"
+            ></div>
           </div>
 
           <!-- Camera icon -->
-          <div class="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center relative z-10">
+          <div
+            class="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center relative z-10"
+          >
             <UIcon name="document_scanner" size="xl" class="text-primary" />
           </div>
           <div class="text-center px-6 relative z-10">
-            <p class="text-body-sm font-semibold text-text-primary-light dark:text-text-primary-dark">
-              Сфотографируйте чек
+            <p
+              class="text-body font-semibold text-text-primary-light dark:text-text-primary-dark mb-1"
+            >
+              Наведите камеру на чек
             </p>
-            <p class="text-caption text-text-tertiary-light dark:text-text-tertiary-dark mt-0.5">
+            <p class="text-caption text-text-tertiary-light dark:text-text-tertiary-dark">
               Текст должен быть чётким и читаемым
             </p>
           </div>
@@ -152,26 +190,49 @@ async function handleFileChange(e: Event) {
 
         <!-- Tips -->
         <div class="flex gap-2 w-full max-w-[300px]">
-          <div class="flex-1 flex items-center gap-2 px-3 py-2.5 rounded-xl bg-surface-light dark:bg-surface-dark">
-            <UIcon name="light_mode" size="xs" class="text-text-tertiary-light dark:text-text-tertiary-dark flex-shrink-0" />
-            <span class="text-caption text-text-tertiary-light dark:text-text-tertiary-dark leading-tight">
+          <div
+            class="flex-1 flex items-center gap-2 px-3 py-2.5 rounded-xl bg-surface-light dark:bg-surface-dark"
+          >
+            <UIcon
+              name="light_mode"
+              size="xs"
+              class="text-text-tertiary-light dark:text-text-tertiary-dark flex-shrink-0"
+            />
+            <span
+              class="text-caption text-text-tertiary-light dark:text-text-tertiary-dark leading-tight"
+            >
               Свет
             </span>
           </div>
-          <div class="flex-1 flex items-center gap-2 px-3 py-2.5 rounded-xl bg-surface-light dark:bg-surface-dark">
-            <UIcon name="crop_free" size="xs" class="text-text-tertiary-light dark:text-text-tertiary-dark flex-shrink-0" />
-            <span class="text-caption text-text-tertiary-light dark:text-text-tertiary-dark leading-tight">
+          <div
+            class="flex-1 flex items-center gap-2 px-3 py-2.5 rounded-xl bg-surface-light dark:bg-surface-dark"
+          >
+            <UIcon
+              name="crop_free"
+              size="xs"
+              class="text-text-tertiary-light dark:text-text-tertiary-dark flex-shrink-0"
+            />
+            <span
+              class="text-caption text-text-tertiary-light dark:text-text-tertiary-dark leading-tight"
+            >
               Весь чек
             </span>
           </div>
-          <div class="flex-1 flex items-center gap-2 px-3 py-2.5 rounded-xl bg-surface-light dark:bg-surface-dark">
-            <UIcon name="text_fields" size="xs" class="text-text-tertiary-light dark:text-text-tertiary-dark flex-shrink-0" />
-            <span class="text-caption text-text-tertiary-light dark:text-text-tertiary-dark leading-tight">
+          <div
+            class="flex-1 flex items-center gap-2 px-3 py-2.5 rounded-xl bg-surface-light dark:bg-surface-dark"
+          >
+            <UIcon
+              name="text_fields"
+              size="xs"
+              class="text-text-tertiary-light dark:text-text-tertiary-dark flex-shrink-0"
+            />
+            <span
+              class="text-caption text-text-tertiary-light dark:text-text-tertiary-dark leading-tight"
+            >
               Чётко
             </span>
           </div>
         </div>
-
       </div>
 
       <!-- File validation error -->
@@ -186,29 +247,32 @@ async function handleFileChange(e: Event) {
         </div>
       </Transition>
 
-      <!-- Action buttons -->
-      <div class="flex-shrink-0 space-y-2.5 mt-5">
-        <UButton
-          variant="primary"
-          size="lg"
-          :full-width="true"
-          aria-label="Открыть камеру"
-          @click="openCamera"
-        >
-          <UIcon name="photo_camera" size="sm" class="mr-2" />
-          Сфотографировать
-        </UButton>
-
-        <UButton
-          variant="outline"
-          size="lg"
-          :full-width="true"
+      <!-- Action buttons (Camera UI) -->
+      <div class="flex-shrink-0 flex items-center justify-between px-8 mt-5 pb-4">
+        <button
+          type="button"
           aria-label="Выбрать из галереи"
+          class="w-12 h-12 rounded-full bg-surface-light dark:bg-surface-dark flex items-center justify-center text-text-secondary-light dark:text-text-secondary-dark active:scale-90 transition-transform"
           @click="openGallery"
         >
-          <UIcon name="photo_library" size="sm" class="mr-2" />
-          Из галереи
-        </UButton>
+          <UIcon name="photo_library" size="md" />
+        </button>
+
+        <button
+          type="button"
+          aria-label="Сфотографировать"
+          class="w-20 h-20 rounded-full border-4 border-primary/20 flex items-center justify-center active:scale-95 transition-all group"
+          @click="openCamera"
+        >
+          <div
+            class="w-16 h-16 rounded-full bg-primary flex items-center justify-center shadow-lg shadow-primary/30 group-active:scale-95 transition-all"
+          >
+            <UIcon name="photo_camera" size="lg" class="text-white" />
+          </div>
+        </button>
+
+        <!-- Placeholder for symmetry -->
+        <div class="w-12 h-12" aria-hidden="true" />
       </div>
     </template>
 
@@ -226,19 +290,28 @@ async function handleFileChange(e: Event) {
         <Transition name="fade">
           <div
             v-if="isOcrLoading"
-            class="absolute inset-0 rounded-2xl overflow-hidden
-                   bg-background-dark/60 backdrop-blur-[2px]
-                   flex flex-col items-center justify-center gap-3"
+            class="absolute inset-0 rounded-2xl overflow-hidden bg-background-dark/60 backdrop-blur-[2px] flex flex-col items-center justify-center gap-3"
             aria-live="polite"
             aria-label="Распознаём текст чека..."
           >
             <!-- Animated scan line -->
             <div class="absolute inset-x-0 top-0 h-full pointer-events-none">
-              <div class="scan-line absolute inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-primary to-transparent opacity-80" />
+              <div
+                class="scan-line absolute inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-primary to-transparent opacity-80"
+              />
             </div>
-            <div class="relative z-10 flex flex-col items-center gap-2">
+            <div class="relative z-10 flex flex-col items-center gap-3">
               <USpinner size="lg" class="text-white" />
-              <p class="text-body-sm font-medium text-white">Распознаём чек...</p>
+              <div class="h-6 overflow-hidden relative w-40">
+                <Transition name="slide-up">
+                  <p
+                    :key="currentOcrMessage"
+                    class="absolute inset-0 text-center text-body-sm font-medium text-white"
+                  >
+                    {{ currentOcrMessage }}
+                  </p>
+                </Transition>
+              </div>
             </div>
           </div>
         </Transition>
@@ -247,8 +320,7 @@ async function handleFileChange(e: Event) {
         <Transition name="fade">
           <div
             v-if="ocrError && !isOcrLoading"
-            class="absolute inset-0 rounded-2xl bg-background-dark/80 backdrop-blur-sm
-                   flex flex-col items-center justify-center gap-4 px-8"
+            class="absolute inset-0 rounded-2xl bg-background-dark/80 backdrop-blur-sm flex flex-col items-center justify-center gap-4 px-8"
             role="alert"
             aria-live="assertive"
           >
@@ -269,7 +341,13 @@ async function handleFileChange(e: Event) {
                 <UIcon name="refresh" size="sm" class="mr-2" />
                 Попробовать снова
               </UButton>
-              <UButton variant="ghost" size="md" :full-width="true" class="text-white/70" @click="emit('resetPhoto')">
+              <UButton
+                variant="ghost"
+                size="md"
+                :full-width="true"
+                class="text-white/70"
+                @click="emit('resetPhoto')"
+              >
                 Другое фото
               </UButton>
             </div>
@@ -280,11 +358,12 @@ async function handleFileChange(e: Event) {
         <Transition name="fade">
           <div
             v-if="isOcrSuccess"
-            class="absolute inset-0 rounded-2xl bg-success/15 backdrop-blur-[1px]
-                   flex items-center justify-center"
+            class="absolute inset-0 rounded-2xl bg-success/15 backdrop-blur-[1px] flex items-center justify-center"
             aria-live="assertive"
           >
-            <div class="w-16 h-16 rounded-full bg-success flex items-center justify-center animate-scaleIn shadow-lg shadow-success/30">
+            <div
+              class="w-16 h-16 rounded-full bg-success flex items-center justify-center animate-scaleIn shadow-lg shadow-success/30"
+            >
               <UIcon name="check" size="xl" class="text-white" />
             </div>
           </div>
@@ -295,10 +374,7 @@ async function handleFileChange(e: Event) {
           v-if="!isOcrLoading"
           type="button"
           aria-label="Переснять фото"
-          class="absolute top-3 right-3
-                 w-9 h-9 rounded-full bg-background-dark/50 backdrop-blur-sm
-                 flex items-center justify-center
-                 text-white active:scale-90 transition-transform"
+          class="absolute top-3 right-3 w-9 h-9 rounded-full bg-background-dark/50 backdrop-blur-sm flex items-center justify-center text-white active:scale-90 transition-transform"
           @click="emit('resetPhoto')"
         >
           <UIcon name="close" size="sm" />
@@ -319,18 +395,12 @@ async function handleFileChange(e: Event) {
         </UButton>
 
         <template v-if="!isOcrLoading && !ocrError && !isOcrSuccess">
-          <UButton
-            variant="ghost"
-            size="md"
-            :full-width="true"
-            @click="emit('resetPhoto')"
-          >
+          <UButton variant="ghost" size="md" :full-width="true" @click="emit('resetPhoto')">
             Переснять
           </UButton>
         </template>
       </div>
     </template>
-
   </div>
 </template>
 
@@ -340,10 +410,47 @@ async function handleFileChange(e: Event) {
 
 <style scoped>
 @keyframes scanMove {
-  0% { top: 0; }
-  100% { top: 100%; }
+  0% {
+    top: 0;
+  }
+  100% {
+    top: 100%;
+  }
 }
 .scan-line {
-  animation: scanMove 2s ease-in-out infinite;
+  animation: scanMove 2.5s ease-in-out infinite;
+}
+
+@keyframes scanMoveIdle {
+  0% {
+    top: -10%;
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    top: 110%;
+    opacity: 0;
+  }
+}
+.scan-line-idle {
+  animation: scanMoveIdle 3s linear infinite;
+}
+
+.slide-up-enter-active,
+.slide-up-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.slide-up-enter-from {
+  opacity: 0;
+  transform: translateY(10px);
+}
+.slide-up-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
 }
 </style>

@@ -6,7 +6,6 @@ import { PullToRefresh } from '@/shared/ui';
 import { InstallPwaBanner, InstallPwaModal, usePwaInstall } from '@/features/install-pwa';
 import { QuickActionModal } from '@/features/configure-quick-action';
 import { AccountStack } from '@/widgets/account-stack';
-import { usePremiumFeature } from '@/shared/lib/composables/usePremiumFeature';
 import { haptics } from '@/shared/lib/haptics';
 
 import { useDashboardData } from './model/useDashboardData';
@@ -63,8 +62,6 @@ const { staggerClass } = useStaggerAnimation();
 const { showModal: showInstallModal } = usePwaInstall();
 const isHidden = useLocalStorage('balance_hidden', false);
 const quickActionsHintDismissed = useLocalStorage('quick_actions_hint_dismissed', false);
-const { requirePremium } = usePremiumFeature();
-
 const mobileTransactions = computed(() => recentTransactions.value.slice(0, 5));
 
 // Scroll tracking
@@ -86,7 +83,7 @@ async function handleRefresh() {
 
 function handleScanReceipt() {
   haptics.tap();
-  // TODO: re-enable after beta — if (!requirePremium('Сканирование чеков')) return;
+  // TODO: re-enable after beta — premium gate for scan receipt
   nav.toScanReceipt();
 }
 </script>

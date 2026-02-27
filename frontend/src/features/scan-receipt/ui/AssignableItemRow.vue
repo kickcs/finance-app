@@ -4,6 +4,7 @@ import { UIcon } from '@/shared/ui';
 import { cn } from '@/shared/lib/utils';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { calcLineTotalWithService } from '../model/calcLineTotal';
+import { ALL_PARTICIPANTS_ID } from '../model/constants';
 import type { ReceiptItem, Participant } from '../model/types';
 
 const props = defineProps<{
@@ -11,13 +12,14 @@ const props = defineProps<{
   participants: Participant[];
   currency: string;
   serviceChargePercent?: number | null;
+  activeBrushId?: string | null;
 }>();
 
 const emit = defineEmits<{
-  toggleParticipant: [participantId: string];
+  tapRow: [];
 }>();
 
-const isFullyAssigned = computed(() => props.item.assignedParticipantIds.length > 0);
+const hasAssignments = computed(() => props.item.assignedParticipantIds.length > 0);
 
 function isAssigned(participantId: string): boolean {
   return props.item.assignedParticipantIds.includes(participantId);
@@ -35,39 +37,58 @@ function getParticipantColor(participantId: string): string {
   return getParticipant(participantId)?.color ?? '#888888';
 }
 
-const displayTotal = computed(() => calcLineTotalWithService(props.item, props.serviceChargePercent));
+const displayTotal = computed(() =>
+  calcLineTotalWithService(props.item, props.serviceChargePercent),
+);
 
 const perPersonAmount = computed(() => {
   if (props.item.assignedParticipantIds.length <= 1) return null;
   return Math.round(displayTotal.value / props.item.assignedParticipantIds.length);
 });
+
+const isAssignedToAll = computed(() => {
+  if (props.participants.length === 0) return false;
+  return props.participants.every((p) => isAssigned(p.id));
+});
+
+/** Подсвечена ли строка для текущей активной кисти */
+const isHighlighted = computed(() => {
+  if (!props.activeBrushId) return false;
+  return props.activeBrushId === ALL_PARTICIPANTS_ID
+    ? isAssignedToAll.value
+    : isAssigned(props.activeBrushId);
+});
 </script>
 
 <template>
-  <div
-    class="rounded-xl border transition-all duration-150 overflow-hidden"
-    :class="cn(
-      isFullyAssigned
-        ? 'border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark'
-        : 'border-warning/40 bg-warning/[0.04]'
-    )"
+  <button
+    type="button"
+    class="w-full text-left rounded-xl border transition-all duration-200 overflow-hidden active:scale-[0.98] outline-none"
+    :class="
+      cn(
+        hasAssignments
+          ? 'border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark'
+          : 'border-warning/40 bg-warning/[0.04]',
+        isHighlighted && 'border-primary/40 shadow-sm ring-1 ring-primary/20 bg-primary/[0.02]',
+      )
+    "
+    @click="emit('tapRow')"
   >
     <!-- Main row: item info -->
     <div class="flex items-center gap-3 px-4 py-3">
       <!-- Assignment status -->
       <div
-        class="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-200"
-        :class="isFullyAssigned
-          ? 'bg-success/15'
-          : 'bg-warning/15'"
+        class="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 shadow-sm"
+        :class="
+          cn(
+            hasAssignments ? 'bg-success/15' : 'bg-warning/15',
+            isHighlighted && 'bg-primary text-white shadow-primary/30',
+          )
+        "
       >
-        <UIcon
-          v-if="isFullyAssigned"
-          name="check"
-          size="xs"
-          class="text-success"
-        />
-        <div v-else class="w-1.5 h-1.5 rounded-full bg-warning" />
+        <UIcon v-if="isHighlighted" name="check" size="xs" class="text-white" />
+        <UIcon v-else-if="hasAssignments" name="check" size="xs" class="text-success" />
+        <div v-else class="w-2 h-2 rounded-full bg-warning" />
       </div>
 
       <!-- Item name and price -->
@@ -97,49 +118,32 @@ const perPersonAmount = computed(() => {
         <div
           v-for="(pid, i) in item.assignedParticipantIds.slice(0, 3)"
           :key="pid"
-          class="w-6 h-6 rounded-full border-2 border-card-light dark:border-card-dark flex items-center justify-center"
-          :style="{ backgroundColor: getParticipantColor(pid), zIndex: 10 - i }"
+          class="w-7 h-7 rounded-full border-[2.5px] border-card-light dark:border-card-dark flex items-center justify-center transition-all duration-300"
+          :class="
+            props.activeBrushId === pid &&
+            'ring-2 ring-primary ring-offset-1 ring-offset-card-light dark:ring-offset-card-dark z-20 shadow-sm'
+          "
+          :style="{
+            backgroundColor: getParticipantColor(pid),
+            zIndex: props.activeBrushId === pid ? 20 : 10 - i,
+          }"
           :aria-label="getParticipantName(pid)"
         >
-          <span class="text-[9px] font-bold text-white leading-none">
+          <span class="text-[10px] font-bold text-white leading-none">
             {{ getParticipantName(pid).charAt(0).toUpperCase() }}
           </span>
         </div>
         <div
           v-if="item.assignedParticipantIds.length > 3"
-          class="w-6 h-6 rounded-full border-2 border-card-light dark:border-card-dark bg-surface-light dark:bg-surface-dark flex items-center justify-center"
+          class="w-7 h-7 rounded-full border-[2.5px] border-card-light dark:border-card-dark bg-surface-light dark:bg-surface-dark flex items-center justify-center z-0"
         >
-          <span class="text-[9px] font-bold text-text-secondary-light dark:text-text-secondary-dark">
+          <span
+            class="text-[10px] font-bold text-text-secondary-light dark:text-text-secondary-dark"
+          >
             +{{ item.assignedParticipantIds.length - 3 }}
           </span>
         </div>
       </div>
     </div>
-
-    <!-- Participant toggle chips -->
-    <div
-      class="flex gap-1.5 flex-wrap px-4 pb-3"
-      role="group"
-      :aria-label="`Назначить участников для позиции «${item.name}»`"
-    >
-      <button
-        v-for="p in participants"
-        :key="p.id"
-        type="button"
-        :aria-label="`${p.name}${isAssigned(p.id) ? ', назначен' : ''}`"
-        :aria-pressed="isAssigned(p.id)"
-        class="flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-medium transition-all duration-150 active:scale-95"
-        :class="cn(
-          isAssigned(p.id)
-            ? 'text-white shadow-xs'
-            : 'bg-surface-light dark:bg-surface-dark text-text-secondary-light dark:text-text-secondary-dark'
-        )"
-        :style="isAssigned(p.id) ? { backgroundColor: p.color } : {}"
-        @click="emit('toggleParticipant', p.id)"
-      >
-        {{ p.name }}
-        <UIcon v-if="isAssigned(p.id)" name="check" size="xs" class="ml-0.5" />
-      </button>
-    </div>
-  </div>
+  </button>
 </template>

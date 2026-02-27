@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue';
+import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { UIcon } from '@/shared/ui';
 import { PremiumBadge } from '@/features/upgrade-to-premium';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
-import { usePremiumFeature } from '@/shared/lib/composables';
 import { useReceiptWizard } from '@/features/scan-receipt';
 import { useAccounts } from '@/entities/account';
 import StepProgressIndicator from '@/features/scan-receipt/ui/StepProgressIndicator.vue';
@@ -17,7 +16,6 @@ const STEP_LABELS = ['Фото чека', 'Позиции', 'Участники'
 
 const router = useRouter();
 const { userId } = useCurrentUser();
-const { requirePremium } = usePremiumFeature();
 
 const wizard = useReceiptWizard(() => userId.value || null);
 
@@ -35,12 +33,7 @@ function handleBack() {
   }
 }
 
-// TODO: re-enable after beta
-// onMounted(() => {
-//   if (!requirePremium('Сканирование чеков')) {
-//     router.replace('/');
-//   }
-// });
+// TODO: re-enable after beta — premium gate for scan receipt
 </script>
 
 <template>

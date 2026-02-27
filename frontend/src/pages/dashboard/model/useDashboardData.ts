@@ -17,7 +17,7 @@ export function useDashboardData() {
   const { profile } = useProfile(userId);
   const { convert, isLoading: ratesLoading } = useExchangeRates(currency);
 
-  const { accounts, totalBalancesByCurrency, isLoading: accountsLoading } = useAccounts(userId);
+  const { accounts, isLoading: accountsLoading } = useAccounts(userId);
   const { debts, isLoading: debtsLoading } = useDebts(userId);
   const { reminders, isLoading: remindersLoading } = useReminders(userId);
   const { expenseCategories, allCategories } = useCategories(userId);
@@ -75,12 +75,12 @@ export function useDashboardData() {
     return missing.length > 0 ? [...saved, ...missing] : saved;
   });
 
-  const hiddenWidgets = computed<Set<WidgetId>>(() =>
-    new Set(dashboardSettings.value?.hidden_widgets ?? []),
+  const hiddenWidgets = computed<Set<WidgetId>>(
+    () => new Set(dashboardSettings.value?.hidden_widgets ?? []),
   );
 
-  const hiddenAccountIds = computed<Set<string>>(() =>
-    new Set(dashboardSettings.value?.hidden_account_ids ?? []),
+  const hiddenAccountIds = computed<Set<string>>(
+    () => new Set(dashboardSettings.value?.hidden_account_ids ?? []),
   );
 
   const totalBalance = computed(() => {

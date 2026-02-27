@@ -7,6 +7,7 @@ import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared
 import { useQueryClient } from '@tanstack/vue-query';
 import { haptics } from '@/shared/lib/haptics';
 import { calcLineTotal, calcLineTotalWithService } from './calcLineTotal';
+import { ALL_PARTICIPANTS_ID } from './constants';
 import type {
   ReceiptItem,
   Participant,
@@ -58,13 +59,11 @@ export function useReceiptWizard(userId: () => string | null) {
   const isSuccess = ref(false);
 
   // Computed
-  const subtotal = computed(() =>
-    items.value.reduce((sum, item) => sum + calcLineTotal(item), 0),
-  );
+  const subtotal = computed(() => items.value.reduce((sum, item) => sum + calcLineTotal(item), 0));
 
   const serviceChargeAmount = computed(() => {
     if (!serviceChargePercent.value) return 0;
-    return Math.round(subtotal.value * serviceChargePercent.value / 100);
+    return Math.round((subtotal.value * serviceChargePercent.value) / 100);
   });
 
   const totalAmount = computed(() => subtotal.value + serviceChargeAmount.value);
@@ -74,8 +73,8 @@ export function useReceiptWizard(userId: () => string | null) {
     return calcLineTotalWithService(item, serviceChargePercent.value);
   }
 
-  const unassignedCount = computed(() =>
-    items.value.filter((item) => item.assignedParticipantIds.length === 0).length,
+  const unassignedCount = computed(
+    () => items.value.filter((item) => item.assignedParticipantIds.length === 0).length,
   );
 
   const participantSummaries = computed<ParticipantSummary[]>(() => {
@@ -90,9 +89,7 @@ export function useReceiptWizard(userId: () => string | null) {
             item.assignedParticipantIds[item.assignedParticipantIds.length - 1] === p.id;
           const baseShare = Math.floor(lineTotal / sharedWith);
           // Last participant absorbs the remainder to preserve exact total
-          const share = isLast
-            ? lineTotal - baseShare * (sharedWith - 1)
-            : baseShare;
+          const share = isLast ? lineTotal - baseShare * (sharedWith - 1) : baseShare;
           return {
             id: item.id,
             name: item.name,
@@ -157,10 +154,9 @@ export function useReceiptWizard(userId: () => string | null) {
       const result: ScanReceiptResponse = await receiptApi.scan(selectedFile.value);
 
       // Filter out service charge / tax / discount line items that GPT may still return
-      const serviceKeywords = /обслуживание|service|чаевые|tip|ндс|vat|tax|скидка|discount|delivery|доставка/i;
-      const productItems = result.items.filter(
-        (item) => !serviceKeywords.test(item.name),
-      );
+      const serviceKeywords =
+        /обслуживание|service|чаевые|tip|ндс|vat|tax|скидка|discount|delivery|доставка/i;
+      const productItems = result.items.filter((item) => !serviceKeywords.test(item.name));
 
       items.value = productItems.map((item) => ({
         id: uid(),
@@ -258,11 +254,22 @@ export function useReceiptWizard(userId: () => string | null) {
   function toggleItemParticipant(itemId: string, participantId: string) {
     const item = items.value.find((i) => i.id === itemId);
     if (!item) return;
-    const idx = item.assignedParticipantIds.indexOf(participantId);
-    if (idx === -1) {
-      item.assignedParticipantIds.push(participantId);
+
+    if (participantId === ALL_PARTICIPANTS_ID) {
+      const allIds = participants.value.map((p) => p.id);
+      const isAssignedToAll = allIds.every((id) => item.assignedParticipantIds.includes(id));
+      if (isAssignedToAll) {
+        item.assignedParticipantIds = [];
+      } else {
+        item.assignedParticipantIds = [...allIds];
+      }
     } else {
-      item.assignedParticipantIds.splice(idx, 1);
+      const idx = item.assignedParticipantIds.indexOf(participantId);
+      if (idx === -1) {
+        item.assignedParticipantIds.push(participantId);
+      } else {
+        item.assignedParticipantIds.splice(idx, 1);
+      }
     }
     haptics.tap();
   }

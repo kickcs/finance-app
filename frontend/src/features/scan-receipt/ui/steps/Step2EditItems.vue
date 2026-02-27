@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, useTemplateRef } from 'vue';
 import { UButton, UBadge, UIcon } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { haptics } from '@/shared/lib/haptics';
@@ -23,6 +23,8 @@ const emit = defineEmits<{
   back: [];
 }>();
 
+const itemRowRefs = useTemplateRef<InstanceType<typeof ReceiptItemRow>[]>('itemRows');
+
 const validationError = ref<string | null>(null);
 const invalidItemId = ref<string | null>(null);
 
@@ -30,9 +32,7 @@ function validateAndNext() {
   validationError.value = null;
   invalidItemId.value = null;
 
-  const firstInvalid = props.items.find(
-    (item) => !item.name.trim() || item.unitPrice <= 0,
-  );
+  const firstInvalid = props.items.find((item) => !item.name.trim() || item.unitPrice <= 0);
 
   if (firstInvalid) {
     invalidItemId.value = firstInvalid.id;
@@ -45,14 +45,31 @@ function validateAndNext() {
 
   emit('next');
 }
+
+function handleFocusNext(index: number, currentField: 'name' | 'price' | 'qty') {
+  let nextField: 'name' | 'price' | 'qty' = 'name';
+  let nextIndex = index;
+
+  if (currentField === 'name') {
+    nextField = 'price';
+  } else if (currentField === 'price' || currentField === 'qty') {
+    if (index + 1 < props.items.length) {
+      nextField = 'name';
+      nextIndex = index + 1;
+    } else {
+      validateAndNext();
+      return;
+    }
+  }
+
+  itemRowRefs.value?.[nextIndex]?.focusField(nextField);
+}
 </script>
 
 <template>
-  <div class="h-full flex flex-col">
-
+  <div class="h-full flex flex-col relative">
     <!-- Scrollable items list -->
-    <div class="flex-1 overflow-y-auto no-scrollbar px-5 pt-4 pb-4">
-
+    <div class="flex-1 overflow-y-auto no-scrollbar px-5 pt-4 pb-52">
       <!-- Empty state -->
       <template v-if="items.length === 0">
         <div class="flex-1 flex flex-col items-center justify-center px-8 gap-5 py-10 h-full">
@@ -60,7 +77,9 @@ function validateAndNext() {
             <UIcon name="receipt" size="xl" class="text-warning" />
           </div>
           <div class="text-center">
-            <h3 class="text-body font-semibold text-text-primary-light dark:text-text-primary-dark mb-1">
+            <h3
+              class="text-body font-semibold text-text-primary-light dark:text-text-primary-dark mb-1"
+            >
               Позиции не найдены
             </h3>
             <p class="text-body-sm text-text-secondary-light dark:text-text-secondary-dark">
@@ -100,32 +119,32 @@ function validateAndNext() {
         </div>
 
         <!-- Items list -->
-        <TransitionGroup
-          tag="div"
-          name="item-list"
-          class="space-y-2 relative"
-        >
+        <TransitionGroup tag="div" name="item-list" class="space-y-2 relative">
           <ReceiptItemRow
             v-for="(item, index) in items"
+            ref="itemRows"
             :key="item.id"
             :item="item"
             :index="index"
             :currency="currency"
             :service-charge-percent="serviceChargePercent"
             :is-invalid="invalidItemId === item.id"
-            @update="emit('updateItem', item.id, $event); if (invalidItemId === item.id) { validationError = null; invalidItemId = null; }"
+            @update="
+              emit('updateItem', item.id, $event);
+              if (invalidItemId === item.id) {
+                validationError = null;
+                invalidItemId = null;
+              }
+            "
             @delete="emit('deleteItem', item.id)"
+            @focus-next="handleFocusNext(index, $event)"
           />
         </TransitionGroup>
 
         <!-- Add item button -->
         <button
           type="button"
-          class="mt-3 flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl
-                 border border-dashed border-border-light dark:border-border-dark
-                 text-text-secondary-light dark:text-text-secondary-dark
-                 hover:border-primary/40 hover:text-primary hover:bg-primary-light
-                 active:scale-[0.98] transition-all duration-150"
+          class="mt-3 flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl border border-dashed border-border-light dark:border-border-dark text-text-secondary-light dark:text-text-secondary-dark hover:border-primary/40 hover:text-primary hover:bg-primary-light active:scale-[0.98] transition-all duration-150"
           aria-label="Добавить позицию вручную"
           @click="emit('addItem')"
         >
@@ -133,14 +152,11 @@ function validateAndNext() {
           <span class="text-body-sm font-medium">Добавить позицию</span>
         </button>
       </template>
-
     </div>
 
-    <!-- Sticky footer -->
+    <!-- Sticky Glass Footer -->
     <div
-      class="flex-shrink-0 border-t border-border-light dark:border-border-dark
-             px-5 pt-3 pb-[calc(1.25rem+var(--safe-area-inset-bottom))]
-             bg-background-light dark:bg-background-dark"
+      class="absolute bottom-0 inset-x-0 border-t border-border-light/50 dark:border-border-dark/50 px-5 pt-4 pb-[calc(1.25rem+var(--safe-area-inset-bottom))] bg-background-light/85 dark:bg-background-dark/85 backdrop-blur-xl shadow-[0_-8px_24px_-12px_rgba(0,0,0,0.1)] dark:shadow-none"
     >
       <!-- Total breakdown -->
       <div class="mb-3">
@@ -150,7 +166,9 @@ function validateAndNext() {
             <span class="text-caption text-text-tertiary-light dark:text-text-tertiary-dark">
               Подытог
             </span>
-            <span class="text-body-sm text-text-secondary-light dark:text-text-secondary-dark tabular-nums">
+            <span
+              class="text-body-sm text-text-secondary-light dark:text-text-secondary-dark tabular-nums"
+            >
               {{ formatCurrency(subtotal, currency) }}
             </span>
           </div>
@@ -169,8 +187,7 @@ function validateAndNext() {
             Итого
           </span>
           <span
-            class="text-h3 font-bold text-text-primary-light dark:text-text-primary-dark
-                   tabular-nums transition-all duration-200"
+            class="text-h3 font-bold text-text-primary-light dark:text-text-primary-dark tabular-nums transition-all duration-200"
           >
             {{ formatCurrency(totalAmount, currency) }}
           </span>
@@ -197,7 +214,6 @@ function validateAndNext() {
         <UIcon name="arrow_forward" size="sm" class="ml-2" />
       </UButton>
     </div>
-
   </div>
 </template>
 

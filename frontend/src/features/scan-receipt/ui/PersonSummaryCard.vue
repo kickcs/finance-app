@@ -5,7 +5,7 @@ import { formatCurrency } from '@/shared/lib/format/currency';
 import { pluralize } from '@/shared/lib/format/pluralize';
 import type { ParticipantSummary } from '../model/types';
 
-const props = defineProps<{
+defineProps<{
   participant: ParticipantSummary;
   currency: string;
 }>();
@@ -30,16 +30,15 @@ const isExpanded = ref(false);
         class="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
         :style="{ backgroundColor: participant.color + '18' }"
       >
-        <span
-          class="text-sm font-bold"
-          :style="{ color: participant.color }"
-        >
+        <span class="text-sm font-bold" :style="{ color: participant.color }">
           {{ participant.name.charAt(0).toUpperCase() }}
         </span>
       </div>
 
       <div class="flex-1 min-w-0">
-        <p class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark leading-tight">
+        <p
+          class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark leading-tight"
+        >
           {{ participant.name }}
           <span
             v-if="participant.isMe"
@@ -49,7 +48,8 @@ const isExpanded = ref(false);
           </span>
         </p>
         <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
-          {{ participant.itemCount }} {{ pluralize(participant.itemCount, 'позиция', 'позиции', 'позиций') }}
+          {{ participant.itemCount }}
+          {{ pluralize(participant.itemCount, 'позиция', 'позиции', 'позиций') }}
         </p>
       </div>
 
@@ -71,15 +71,15 @@ const isExpanded = ref(false);
 
     <!-- Expandable item list -->
     <Transition name="expand">
-      <div
-        v-if="isExpanded"
-        class="border-t border-border-light dark:border-border-dark"
-      >
+      <div v-if="isExpanded" class="border-t border-border-light dark:border-border-dark">
         <div
           v-for="(item, idx) in participant.items"
           :key="item.id"
           class="flex items-center justify-between px-4 py-2.5"
-          :class="idx < participant.items.length - 1 && 'border-b border-border-light/50 dark:border-border-dark/50'"
+          :class="
+            idx < participant.items.length - 1 &&
+            'border-b border-border-light/50 dark:border-border-dark/50'
+          "
         >
           <div class="flex-1 min-w-0 mr-3">
             <p class="text-sm text-text-primary-light dark:text-text-primary-dark truncate">
@@ -92,7 +92,9 @@ const isExpanded = ref(false);
               1/{{ item.sharedWith }} от {{ formatCurrency(item.lineTotal, currency) }}
             </p>
           </div>
-          <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark tabular-nums">
+          <span
+            class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark tabular-nums"
+          >
             {{ formatCurrency(item.share, currency) }}
           </span>
         </div>

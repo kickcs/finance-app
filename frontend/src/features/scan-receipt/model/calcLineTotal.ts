@@ -1,8 +1,10 @@
 import type { ReceiptItem } from './types';
 
 /** Base line total: use OCR totalPrice when available, otherwise qty × unitPrice */
-export function calcLineTotal(item: Pick<ReceiptItem, 'qty' | 'unitPrice' | 'ocrTotalPrice'>): number {
-  if (item.ocrTotalPrice != null && item.ocrTotalPrice > 0) {
+export function calcLineTotal(
+  item: Pick<ReceiptItem, 'qty' | 'unitPrice' | 'ocrTotalPrice'>,
+): number {
+  if (item.ocrTotalPrice !== null && item.ocrTotalPrice !== undefined && item.ocrTotalPrice > 0) {
     return item.ocrTotalPrice;
   }
   return item.qty * item.unitPrice;

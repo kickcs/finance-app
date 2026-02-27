@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 import { UCard, UButton, UBadge, UIcon } from '@/shared/ui';
 import { useSubscription, PLAN_LABELS } from '@/entities/subscription';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
@@ -10,7 +10,7 @@ const emit = defineEmits<{ upgrade: [] }>();
 const { userId } = useCurrentUser();
 const { subscription, isPremium } = useSubscription(userId);
 
-const statusBadgeVariant = computed(() => isPremium.value ? 'success' : 'neutral');
+const statusBadgeVariant = computed(() => (isPremium.value ? 'success' : 'neutral'));
 
 const statusLabel = computed(() => {
   if (subscription.value.status === 'trialing') return 'Пробный период';
@@ -21,7 +21,9 @@ const statusLabel = computed(() => {
 
 <template>
   <div>
-    <h2 class="text-sm font-semibold text-text-secondary-light dark:text-text-secondary-dark px-2 mb-2 uppercase tracking-wider">
+    <h2
+      class="text-sm font-semibold text-text-secondary-light dark:text-text-secondary-dark px-2 mb-2 uppercase tracking-wider"
+    >
       Подписка
     </h2>
     <UCard class="p-4 space-y-3">
@@ -35,8 +37,10 @@ const statusLabel = computed(() => {
         <UBadge :variant="statusBadgeVariant" size="sm" shape="pill">{{ statusLabel }}</UBadge>
       </div>
 
-      <p v-if="isPremium && subscription.current_period_end"
-         class="text-xs text-text-secondary-light dark:text-text-secondary-dark">
+      <p
+        v-if="isPremium && subscription.current_period_end"
+        class="text-xs text-text-secondary-light dark:text-text-secondary-dark"
+      >
         {{ subscription.cancel_at_period_end ? 'Действует до' : 'Следующая оплата' }}:
         {{ formatDate(subscription.current_period_end) }}
       </p>
