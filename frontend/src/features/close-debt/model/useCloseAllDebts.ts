@@ -3,6 +3,7 @@ import { usePartialPayment } from '@/features/partial-payment';
 import { debtQueryKeys } from '@/entities/debt';
 import { queryClient } from '@/shared/api/queryClient';
 import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
+import { useToast } from '@/shared/ui';
 import type { Debt } from '@/shared/api/database.types';
 import { sortDebtsByDateAsc } from './sortDebts';
 
@@ -13,6 +14,7 @@ interface CloseAllOptions {
 }
 
 export function useCloseAllDebts() {
+  const { toast } = useToast();
   const isClosing = ref(false);
   const error = ref<string | null>(null);
   const progress = ref(0);
@@ -72,6 +74,7 @@ export function useCloseAllDebts() {
           userId,
           {
             skipInvalidation: true,
+            skipToast: true,
             forgiveRemainder: options?.forgiveRemainder && allocated < debt.remaining_amount,
             excessCategoryId: hasExcess ? options?.excessCategoryId : undefined,
           },
@@ -85,10 +88,12 @@ export function useCloseAllDebts() {
       }
 
       await invalidateAll(userId);
+      toast({ title: 'Все долги закрыты', variant: 'success' });
       return true;
     } catch (e) {
       console.error('Failed to close all debts:', e);
       error.value = `Ошибка при закрытии долга ${progress.value + 1} из ${total.value}`;
+      toast({ title: 'Не удалось закрыть все долги', variant: 'error' });
       await invalidateAll(userId).catch(() => {});
       return false;
     } finally {

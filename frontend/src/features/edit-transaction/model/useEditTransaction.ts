@@ -3,9 +3,11 @@ import { transactionsApi } from '@/entities/transaction';
 import { debtsApi } from '@/entities/debt';
 import { queryClient } from '@/shared/api/queryClient';
 import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
+import { useToast } from '@/shared/ui';
 import type { Transaction } from '@/shared/api/database.types';
 
 export function useEditTransaction(userId: string) {
+  const { toast } = useToast();
   const isUpdating = ref(false);
   const isDeleting = ref(false);
   const error = ref<string | null>(null);
@@ -38,9 +40,11 @@ export function useEditTransaction(userId: string) {
         invalidateAccountRelated(queryClient, userId),
       ]);
 
+      toast({ title: 'Транзакция обновлена', variant: 'success' });
       return true;
     } catch (e) {
       error.value = 'Не удалось обновить транзакцию';
+      toast({ title: 'Не удалось обновить транзакцию', variant: 'error' });
       console.error('Failed to update transaction:', e);
       return false;
     } finally {
@@ -87,6 +91,7 @@ export function useEditTransaction(userId: string) {
         invalidateAccountRelated(queryClient, userId),
       ]);
 
+      toast({ title: 'Транзакция удалена', variant: 'success' });
       return true;
     } catch (e: unknown) {
       // Show backend error message for debt-related rejections (HttpError from http.ts)
@@ -94,10 +99,12 @@ export function useEditTransaction(userId: string) {
         const httpError = e as { status: number; data?: { message?: string } };
         if (httpError.status === 400 && httpError.data?.message) {
           error.value = httpError.data.message;
+          toast({ title: httpError.data.message, variant: 'error' });
           return false;
         }
       }
       error.value = 'Не удалось удалить транзакцию';
+      toast({ title: 'Не удалось удалить транзакцию', variant: 'error' });
       console.error('Failed to delete transaction:', e);
       return false;
     } finally {

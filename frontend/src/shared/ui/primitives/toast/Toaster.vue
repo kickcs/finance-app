@@ -36,7 +36,7 @@ const getDuration = (duration?: number) => duration || 3000;
       <div v-if="toast.variant && toast.variant !== 'default'" class="flex-shrink-0">
         <UIcon
           :name="variantIcons[toast.variant || 'default']"
-          size="md"
+          size="sm"
           filled
           :class="{
             'text-success': toast.variant === 'success',
@@ -48,10 +48,13 @@ const getDuration = (duration?: number) => duration || 3000;
 
       <!-- Content -->
       <div class="flex-1 min-w-0">
-        <ToastTitle v-if="toast.title" class="text-[0.9375rem] font-medium leading-5">
+        <ToastTitle v-if="toast.title" class="text-[0.8125rem] font-medium leading-tight">
           {{ toast.title }}
         </ToastTitle>
-        <ToastDescription v-if="toast.description" class="text-[0.8125rem] opacity-90 mt-0.5">
+        <ToastDescription
+          v-if="toast.description"
+          class="text-[0.75rem] opacity-80 leading-tight mt-0.5"
+        >
           {{ toast.description }}
         </ToastDescription>
       </div>
@@ -65,7 +68,7 @@ const getDuration = (duration?: number) => duration || 3000;
 
       <!-- Progress bar -->
       <div
-        class="absolute bottom-0 left-0 h-[3px] bg-black/10 dark:bg-white/10 w-full origin-left"
+        class="absolute bottom-0 left-0 h-[2px] bg-black/10 dark:bg-white/10 w-full origin-left"
         :style="{
           animation: `shrink ${getDuration(toast.duration)}ms linear forwards`,
         }"

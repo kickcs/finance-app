@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useLocalStorage } from '@vueuse/core';
 import { queryClient } from '@/shared/api/queryClient';
 import { PullToRefresh, UIcon } from '@/shared/ui';
@@ -7,6 +7,7 @@ import { InstallPwaBanner, InstallPwaModal, usePwaInstall } from '@/features/ins
 import { QuickActionModal } from '@/features/configure-quick-action';
 import { AccountStack } from '@/widgets/account-stack';
 import { haptics } from '@/shared/lib/haptics';
+import { usePwaUpdateToast } from '@/shared/lib/composables/usePwaUpdate';
 
 import { useDashboardData } from './model/useDashboardData';
 import { useDashboardQuickActions } from './model/useDashboardQuickActions';
@@ -60,6 +61,7 @@ const nav = useDashboardNavigation();
 const { staggerClass } = useStaggerAnimation();
 
 const { showModal: showInstallModal } = usePwaInstall();
+onMounted(() => usePwaUpdateToast());
 const isHidden = useLocalStorage('balance_hidden', false);
 const quickActionsHintDismissed = useLocalStorage('quick_actions_hint_dismissed', false);
 const mobileTransactions = computed(() => recentTransactions.value.slice(0, 5));
@@ -106,7 +108,7 @@ function handleScanReceipt() {
     <div ref="scrollContainerRef" class="flex-1 overflow-y-auto" @scroll="onScroll">
       <PullToRefresh :on-refresh="handleRefresh" :container-ref="scrollContainerRef">
         <main
-          class="relative z-10 px-5 md:px-8 pt-6 md:pt-8 pb-28 md:pb-8 max-w-7xl mx-auto w-full"
+          class="relative z-10 px-5 md:px-8 pt-3 md:pt-8 pb-28 md:pb-8 max-w-7xl mx-auto w-full"
         >
           <div class="mb-6 md:mb-8">
             <InstallPwaBanner @install="showInstallModal = true" />

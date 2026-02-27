@@ -4,8 +4,10 @@ import { useProfile } from '@/shared/api';
 import type { Account } from '@/shared/api/database.types';
 import { queryClient } from '@/shared/api/queryClient';
 import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
+import { useToast } from '@/shared/ui';
 
 export function useEditAccount(userId: string) {
+  const { toast } = useToast();
   const { updateAccount, deleteAccount } = useAccounts(userId);
   const { defaultAccountId } = useProfile(userId);
 
@@ -19,9 +21,11 @@ export function useEditAccount(userId: string) {
 
     try {
       await updateAccount(accountId, updates);
+      toast({ title: 'Счёт обновлён', variant: 'success' });
       return true;
     } catch (e) {
       error.value = 'Не удалось обновить счёт';
+      toast({ title: 'Не удалось обновить счёт', variant: 'error' });
       console.error('Failed to update account:', e);
       return false;
     } finally {
@@ -46,9 +50,11 @@ export function useEditAccount(userId: string) {
         invalidateAccountRelated(queryClient, userId),
         invalidateTransactionRelated(queryClient, userId),
       ]);
+      toast({ title: 'Счёт удалён', variant: 'success' });
       return true;
     } catch (e) {
       error.value = 'Не удалось удалить счёт';
+      toast({ title: 'Не удалось удалить счёт', variant: 'error' });
       console.error('Failed to delete account:', e);
       return false;
     } finally {

@@ -144,7 +144,7 @@ provide('getCategoryById', getCategoryById);
 .slide-forward-leave-active {
   transition:
     transform 0.35s cubic-bezier(0.32, 0.72, 0, 1),
-    opacity 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+    opacity 0.2s cubic-bezier(0.32, 0.72, 0, 1);
   z-index: 5;
 }
 
@@ -162,8 +162,8 @@ provide('getCategoryById', getCategoryById);
 }
 
 .slide-forward-leave-to {
-  transform: translateX(-25%);
-  opacity: 0.6;
+  transform: translateX(-15%);
+  opacity: 0;
 }
 
 /* Slide back - returning to previous screen */
@@ -197,19 +197,63 @@ provide('getCategoryById', getCategoryById);
   transform: translateX(100%);
 }
 
+/* Slide-tab — directional slide-fade for bottom tab navigation */
+.slide-tab-forward-enter-active,
+.slide-tab-backward-enter-active {
+  transition:
+    transform 0.35s cubic-bezier(0.32, 0.72, 0, 1),
+    opacity 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+  transition-delay: 0.05s;
+}
+
+.slide-tab-forward-leave-active,
+.slide-tab-backward-leave-active {
+  transition:
+    transform 0.25s cubic-bezier(0.32, 0.72, 0, 1),
+    opacity 0.2s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.slide-tab-forward-enter-from {
+  transform: translateX(40px);
+  opacity: 0;
+}
+.slide-tab-forward-leave-to {
+  transform: translateX(-40px) scale(0.98);
+  opacity: 0;
+}
+.slide-tab-backward-enter-from {
+  transform: translateX(-40px);
+  opacity: 0;
+}
+.slide-tab-backward-leave-to {
+  transform: translateX(40px) scale(0.98);
+  opacity: 0;
+}
+
 /* Common transition container styles */
 .slide-forward-enter-active,
 .slide-forward-leave-active,
 .slide-back-enter-active,
-.slide-back-leave-active {
+.slide-back-leave-active,
+.slide-tab-forward-enter-active,
+.slide-tab-forward-leave-active,
+.slide-tab-backward-enter-active,
+.slide-tab-backward-leave-active {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  will-change: transform;
+  will-change: transform, opacity;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
+}
+
+/* GPU acceleration for slide transitions (not tab - translateZ conflicts with translateX) */
+.slide-forward-enter-active,
+.slide-forward-leave-active,
+.slide-back-enter-active,
+.slide-back-leave-active {
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
 }
@@ -222,6 +266,10 @@ provide('getCategoryById', getCategoryById);
   .slide-forward-leave-active,
   .slide-back-enter-active,
   .slide-back-leave-active,
+  .slide-tab-forward-enter-active,
+  .slide-tab-forward-leave-active,
+  .slide-tab-backward-enter-active,
+  .slide-tab-backward-leave-active,
   .fade-enter-active,
   .fade-leave-active {
     transition: none !important;

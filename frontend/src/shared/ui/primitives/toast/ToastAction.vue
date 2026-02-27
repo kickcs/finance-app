@@ -11,9 +11,9 @@ const props = defineProps<ToastActionProps & { class?: HTMLAttributes['class'] }
   <ToastAction
     :class="
       cn(
-        'inline-flex h-8 shrink-0 items-center justify-center rounded-lg border px-3',
+        'inline-flex h-7 shrink-0 items-center justify-center rounded-lg border px-2.5',
         'border-border-light dark:border-border-dark',
-        'bg-transparent text-sm font-medium',
+        'bg-transparent text-xs font-medium',
         'ring-offset-background transition-colors',
         'hover:bg-surface-light dark:hover:bg-surface-dark',
         'focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',

@@ -382,7 +382,14 @@ function buildShareText(data: ReceiptShareData): string {
   return lines.join('\n');
 }
 
-const SHARE_FILENAME = 'ouro-receipt.png';
+function buildFilename(data: ReceiptShareData): string {
+  const name = (data.storeName || 'receipt')
+    .toLowerCase()
+    .replace(/[^a-zа-яё0-9]+/gi, '-')
+    .replace(/^-|-$/g, '');
+  const date = new Date(data.date).toISOString().slice(0, 10);
+  return `ouro-${name}-${date}.png`;
+}
 
 export function useReceiptShare() {
   const isSharing = ref(false);
@@ -393,14 +400,14 @@ export function useReceiptShare() {
     try {
       const canvas = renderCardToCanvas(data);
       const blob = await canvasToBlob(canvas);
-      const file = new File([blob], SHARE_FILENAME, { type: 'image/png' });
+      const file = new File([blob], buildFilename(data), { type: 'image/png' });
       const text = buildShareText(data);
 
       if (navigator.canShare?.({ files: [file] })) {
         await navigator.share({ files: [file], text });
         haptics.success();
       } else {
-        downloadBlob(blob, SHARE_FILENAME);
+        downloadBlob(blob, buildFilename(data));
         toast({ title: 'Изображение сохранено', variant: 'success' });
         haptics.success();
       }
@@ -448,7 +455,7 @@ export function useReceiptShare() {
     try {
       const canvas = renderCardToCanvas(data);
       const blob = await canvasToBlob(canvas);
-      downloadBlob(blob, SHARE_FILENAME);
+      downloadBlob(blob, buildFilename(data));
       toast({ title: 'Изображение сохранено', variant: 'success' });
       haptics.success();
     } catch (e) {

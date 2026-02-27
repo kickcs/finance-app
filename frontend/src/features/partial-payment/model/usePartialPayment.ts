@@ -3,15 +3,18 @@ import { transactionsApi } from '@/entities/transaction';
 import { debtsApi, debtQueryKeys } from '@/entities/debt';
 import { queryClient } from '@/shared/api/queryClient';
 import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
+import { useToast } from '@/shared/ui';
 import type { Debt } from '@/shared/api/database.types';
 
 interface PartialPaymentOptions {
   skipInvalidation?: boolean;
+  skipToast?: boolean;
   forgiveRemainder?: boolean;
   excessCategoryId?: string;
 }
 
 export function usePartialPayment() {
+  const { toast } = useToast();
   const isPaying = ref(false);
   const error = ref<string | null>(null);
 
@@ -141,10 +144,12 @@ export function usePartialPayment() {
         ]);
       }
 
+      if (!options?.skipToast) toast({ title: 'Платёж проведён', variant: 'success' });
       return true;
     } catch (e) {
       console.error('Failed to make partial payment:', e);
       error.value = 'Не удалось внести платёж';
+      if (!options?.skipToast) toast({ title: 'Не удалось внести платёж', variant: 'error' });
       return false;
     } finally {
       isPaying.value = false;

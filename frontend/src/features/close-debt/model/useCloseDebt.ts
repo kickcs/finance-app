@@ -2,9 +2,11 @@ import { ref } from 'vue';
 import { debtsApi, debtQueryKeys } from '@/entities/debt';
 import { queryClient } from '@/shared/api/queryClient';
 import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
+import { useToast } from '@/shared/ui';
 import type { Debt } from '@/shared/api/database.types';
 
 export function useCloseDebt() {
+  const { toast } = useToast();
   const isDeleting = ref(false);
   const error = ref<string | null>(null);
 
@@ -21,10 +23,12 @@ export function useCloseDebt() {
         invalidateAccountRelated(queryClient, userId),
       ]);
 
+      toast({ title: 'Долг удалён', variant: 'success' });
       return true;
     } catch (e) {
       console.error('Failed to delete debt:', e);
       error.value = 'Не удалось удалить долг';
+      toast({ title: 'Не удалось удалить долг', variant: 'error' });
       return false;
     } finally {
       isDeleting.value = false;

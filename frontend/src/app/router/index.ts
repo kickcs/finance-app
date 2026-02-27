@@ -7,7 +7,9 @@ import { queryClient } from '@/shared/api/queryClient';
 import { MAIN_NAV_ITEMS } from '@/shared/config/navigation';
 
 // Navigation direction state for page transitions
-export const transitionName = ref<'slide-forward' | 'slide-back' | 'fade' | 'none'>('fade');
+export const transitionName = ref<
+  'slide-forward' | 'slide-back' | 'slide-tab-forward' | 'slide-tab-backward' | 'fade' | 'none'
+>('fade');
 
 // Prefetch all page components for instant navigation
 const prefetchPages = () => {
@@ -346,12 +348,13 @@ router.beforeEach((to, from) => {
     return;
   }
 
-  // Main bottom nav tabs - use fade for horizontal navigation
+  // Main bottom nav tabs - directional slide-fade based on tab index
   const mainTabs = MAIN_NAV_ITEMS.map((item) => item.path);
-  const isMainTabNavigation = mainTabs.includes(to.path) && mainTabs.includes(from.path);
+  const fromTabIndex = mainTabs.indexOf(from.path);
+  const toTabIndex = mainTabs.indexOf(to.path);
 
-  if (isMainTabNavigation) {
-    transitionName.value = 'fade';
+  if (fromTabIndex !== -1 && toTabIndex !== -1) {
+    transitionName.value = toTabIndex > fromTabIndex ? 'slide-tab-forward' : 'slide-tab-backward';
     return;
   }
 

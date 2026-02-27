@@ -36,7 +36,8 @@ function handleAddClick() {
 }
 
 function handleNavClick(item: (typeof navItems)[0]) {
-  if (item.path === '' || item.id === activeItem.value) return;
+  if (item.path === '') return;
+  if (item.id === activeItem.value && item.id !== 'home') return;
   haptics.tap();
   router.push(item.path);
 }

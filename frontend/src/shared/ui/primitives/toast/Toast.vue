@@ -16,7 +16,7 @@ const props = defineProps<
 const emits = defineEmits<ToastRootEmits>();
 
 const toastVariants = cva(
-  'group pointer-events-auto relative flex w-full items-center gap-3 overflow-hidden rounded-[1.25rem] border px-4 py-3.5 shadow-xl backdrop-blur-md transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--reka-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--reka-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-bottom-full data-[state=closed]:zoom-out-95 data-[state=open]:slide-in-from-bottom-full data-[state=open]:zoom-in-95 data-[state=open]:duration-300 data-[state=closed]:duration-200 mt-2',
+  'group pointer-events-auto relative flex w-auto max-w-[min(90vw,360px)] items-center gap-2.5 overflow-hidden rounded-2xl border px-3.5 py-2.5 shadow-lg backdrop-blur-md transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--reka-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--reka-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-bottom-full data-[state=closed]:zoom-out-95 data-[state=open]:slide-in-from-bottom-full data-[state=open]:zoom-in-95 data-[state=open]:duration-300 data-[state=closed]:duration-200 mt-1.5',
   {
     variants: {
       variant: {
