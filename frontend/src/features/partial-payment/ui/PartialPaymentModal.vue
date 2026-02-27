@@ -36,7 +36,7 @@ watch(
       paymentAmount.value = props.debt.remaining_amount;
       selectedAccountId.value = props.debt.account_id;
       forgiveRemainder.value = false;
-      excessCategoryId.value = 'gifts_income';
+      excessCategoryId.value = props.debt.debt_type === 'given' ? 'gifts_income' : 'gifts';
     }
   },
 );
@@ -168,7 +168,8 @@ function setForgiveOnly() {
               <span class="font-semibold text-primary">
                 {{ formatCurrency(excess, debtCurrency) }}
               </span>
-              . Разница будет записана как отдельный доход.
+              . Разница будет записана как
+              {{ debt.debt_type === 'given' ? 'отдельный доход' : 'отдельный расход' }}.
             </p>
           </div>
         </div>
