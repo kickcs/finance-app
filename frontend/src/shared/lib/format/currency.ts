@@ -105,14 +105,6 @@ export function formatNumberWithSpaces(value: number | string): string {
 }
 
 /**
- * Parse formatted number string back to numeric string
- * "1 000 000" → "1000000"
- */
-export function parseFormattedNumber(value: string): string {
-  return value.replace(/\s/g, '');
-}
-
-/**
  * Format currency with optional masking for hidden balances
  * Replaces the repeated pattern: hidden ? '••••' : formatCurrency(...)
  */

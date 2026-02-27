@@ -77,7 +77,12 @@ const inputValue = computed({
         .replace(/[^\d.]/g, '');
       const parts = cleaned.split('.');
       const sanitized = parts.length > 2 ? `${parts[0]}.${parts.slice(1).join('')}` : cleaned;
-      emit('update:modelValue', sanitized);
+      if (sanitized === '') {
+        emit('update:modelValue', '');
+      } else {
+        const num = Number(sanitized);
+        emit('update:modelValue', Number.isNaN(num) ? '' : num);
+      }
     } else {
       emit('update:modelValue', value);
     }
