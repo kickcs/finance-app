@@ -20,7 +20,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:formData': [value: TransactionFormData];
-  addParticipant: [name: string];
+  addParticipant: [name: string, fromContacts: boolean, personColor?: string];
   removeParticipant: [id: string];
   updateParticipantAmount: [id: string, amount: number];
   updateParticipantName: [id: string, name: string];
@@ -76,7 +76,10 @@ const {
       :currency="formData.currency"
       :split-data="splitData"
       :validation-error="splitValidationError"
-      @add-participant="$emit('addParticipant', $event)"
+      @add-participant="
+        (name: string, fromContacts: boolean, color?: string) =>
+          $emit('addParticipant', name, fromContacts, color)
+      "
       @remove-participant="$emit('removeParticipant', $event)"
       @update-participant-amount="(id, amount) => $emit('updateParticipantAmount', id, amount)"
       @update-participant-name="(id, name) => $emit('updateParticipantName', id, name)"

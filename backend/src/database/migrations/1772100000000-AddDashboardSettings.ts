@@ -10,8 +10,6 @@ export class AddDashboardSettings1772100000000 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(
-      `ALTER TABLE "profiles" DROP COLUMN "dashboard_settings"`,
-    );
+    await queryRunner.query(`ALTER TABLE "profiles" DROP COLUMN "dashboard_settings"`);
   }
 }

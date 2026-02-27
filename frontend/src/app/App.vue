@@ -49,7 +49,7 @@ const { profile } = useProfile(userId);
 const { isDemo, formattedRemaining } = useDemoMode(profile);
 
 // Changelog modal
-const { hasUnseenChanges } = useChangelog();
+const { hasUnseenChanges, markAsSeen } = useChangelog();
 const showChangelogModal = ref(false);
 
 // Initialize auth on app mount
@@ -107,7 +107,11 @@ provide('getCategoryById', getCategoryById);
     </div>
 
     <!-- Changelog modal -->
-    <ChangelogModal v-if="showChangelogModal" v-model="showChangelogModal" />
+    <ChangelogModal
+      v-if="showChangelogModal"
+      v-model="showChangelogModal"
+      @update:model-value="(v: boolean) => !v && markAsSeen()"
+    />
 
     <!-- Premium upgrade modal (global) -->
     <PremiumUpgradeModal

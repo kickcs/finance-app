@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { UCard, UButton, UBadge, UIcon } from '@/shared/ui';
+import { UCard, UIcon, IconBadge } from '@/shared/ui';
 import { useSubscription, PLAN_LABELS } from '@/entities/subscription';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { formatDate } from '@/shared/lib/format/date';
@@ -9,8 +9,6 @@ const emit = defineEmits<{ upgrade: [] }>();
 
 const { userId } = useCurrentUser();
 const { subscription, isPremium } = useSubscription(userId);
-
-const statusBadgeVariant = computed(() => (isPremium.value ? 'success' : 'neutral'));
 
 const statusLabel = computed(() => {
   if (subscription.value.status === 'trialing') return 'Пробный период';
@@ -26,28 +24,40 @@ const statusLabel = computed(() => {
     >
       Подписка
     </h2>
-    <UCard class="p-4 space-y-3">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <UIcon name="workspace_premium" size="sm" class="text-primary" />
-          <span class="font-medium text-text-primary-light dark:text-text-primary-dark">
-            {{ PLAN_LABELS[subscription.plan] || 'Бесплатный' }}
-          </span>
-        </div>
-        <UBadge :variant="statusBadgeVariant" size="sm" shape="pill">{{ statusLabel }}</UBadge>
-      </div>
-
-      <p
-        v-if="isPremium && subscription.current_period_end"
-        class="text-xs text-text-secondary-light dark:text-text-secondary-dark"
+    <UCard class="divide-y divide-border-light dark:divide-border-dark overflow-hidden">
+      <button
+        class="w-full flex items-center gap-4 p-4 transition-colors hover:bg-surface-light dark:hover:bg-surface-dark active:bg-surface-light dark:active:bg-surface-dark text-left"
+        @click="emit('upgrade')"
       >
-        {{ subscription.cancel_at_period_end ? 'Действует до' : 'Следующая оплата' }}:
-        {{ formatDate(subscription.current_period_end) }}
-      </p>
-
-      <UButton v-if="!isPremium" variant="primary" full-width @click="emit('upgrade')">
-        Перейти на Premium
-      </UButton>
+        <IconBadge icon="workspace_premium" size="sm" color="#f59e0b" />
+        <div class="flex-1 min-w-0">
+          <p class="font-medium text-text-primary-light dark:text-text-primary-dark truncate">
+            {{ isPremium ? PLAN_LABELS[subscription.plan] || 'Premium' : 'Premium подписка' }}
+          </p>
+          <p
+            v-if="isPremium && subscription.current_period_end"
+            class="text-xs text-text-secondary-light dark:text-text-secondary-dark truncate"
+          >
+            {{ subscription.cancel_at_period_end ? 'Действует до' : 'Следующая оплата' }}:
+            {{ formatDate(subscription.current_period_end) }}
+          </p>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <span
+            class="text-sm font-medium"
+            :class="
+              isPremium ? 'text-success' : 'text-text-secondary-light dark:text-text-secondary-dark'
+            "
+          >
+            {{ statusLabel }}
+          </span>
+          <UIcon
+            name="chevron_right"
+            size="sm"
+            class="text-text-tertiary-light dark:text-text-tertiary-dark"
+          />
+        </div>
+      </button>
     </UCard>
   </div>
 </template>

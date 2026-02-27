@@ -64,7 +64,11 @@ const getDuration = (duration?: number) => duration || 3000;
         {{ toast.action.label }}
       </ToastAction>
 
-      <ToastClose class="opacity-0 group-hover:opacity-100 transition-opacity" />
+      <ToastClose
+        :class="
+          toast.action ? 'opacity-60' : 'opacity-0 group-hover:opacity-100 transition-opacity'
+        "
+      />
 
       <!-- Progress bar -->
       <div

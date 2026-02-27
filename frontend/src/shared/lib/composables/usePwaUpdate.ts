@@ -33,20 +33,22 @@ export function usePwaUpdate() {
   };
 }
 
+/** Singleton guard — toast shown at most once per app session */
+let toastShown = false;
+
 /** Show update toast when available — call from dashboard page */
 export function usePwaUpdateToast() {
   const { needRefresh: swNeedRefresh, updateServiceWorker: swUpdate } = usePwaUpdate();
   const { toast } = useToast();
-  let shown = false;
 
   const showToast = () => {
-    if (shown) return;
-    shown = true;
+    if (toastShown) return;
+    toastShown = true;
     toast({
-      title: 'Доступно обновление 🚀',
+      title: 'Доступно обновление',
       description: 'Улучшения загружены и готовы к установке',
       variant: 'success',
-      duration: 9999999,
+      duration: 15000,
       action: {
         label: 'Обновить',
         onClick: () => swUpdate(true),

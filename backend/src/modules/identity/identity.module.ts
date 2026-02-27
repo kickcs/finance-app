@@ -31,6 +31,7 @@ import { AuthController, ProfilesController } from './presentation/controllers';
 import { AccountingModule } from '../accounting';
 import { DebtModule } from '../debt';
 import { PlanningModule } from '../planning';
+import { PersonModule } from '../person/person.module';
 
 // External ORM entities for cleanup service
 import {
@@ -71,6 +72,7 @@ import { ReminderOrmEntity } from '../planning/infrastructure/persistence/typeor
     forwardRef(() => AccountingModule),
     forwardRef(() => DebtModule),
     forwardRef(() => PlanningModule),
+    forwardRef(() => PersonModule),
   ],
   controllers: [AuthController, ProfilesController],
   providers: [

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { UIcon } from '@/shared/ui';
 import { cn } from '@/shared/lib/utils';
+import { getInitial } from '@/shared/lib/format/text';
 import { ALL_PARTICIPANTS_ID } from '../model/constants';
 import type { Participant } from '../model/types';
 
@@ -47,7 +48,7 @@ const emit = defineEmits<{
         class="text-[10px] font-bold leading-none"
         :style="{ color: isActive ? '#fff' : participant.color }"
       >
-        {{ participant.name.charAt(0).toUpperCase() }}
+        {{ getInitial(participant.name) }}
       </span>
     </div>
     <span class="text-sm font-medium whitespace-nowrap">

@@ -23,6 +23,7 @@ import {
 } from './modules/planning/infrastructure/persistence/typeorm';
 import { ExchangeRateOrmEntity } from './modules/exchange/infrastructure/persistence/typeorm';
 import { UserSubscriptionOrmEntity } from './modules/subscription/infrastructure/persistence/typeorm';
+import { PersonOrmEntity } from './modules/person/infrastructure/persistence/typeorm';
 
 // Legacy entity (to be migrated)
 import { Settings } from './database/entities';
@@ -35,6 +36,7 @@ import { PlanningModule } from './modules/planning';
 import { ExchangeModule } from './modules/exchange';
 import { SubscriptionModule } from './modules/subscription';
 import { ReceiptModule } from './modules/receipt/receipt.module';
+import { PersonModule } from './modules/person';
 @Module({
   imports: [
     // Configuration
@@ -65,6 +67,7 @@ import { ReceiptModule } from './modules/receipt/receipt.module';
           ReminderOrmEntity,
           ExchangeRateOrmEntity,
           UserSubscriptionOrmEntity,
+          PersonOrmEntity,
           // Legacy (to be migrated)
           Settings,
         ],
@@ -88,6 +91,7 @@ import { ReceiptModule } from './modules/receipt/receipt.module';
     ExchangeModule,
     SubscriptionModule,
     ReceiptModule,
+    PersonModule,
 
     // Health check module
     HealthModule,

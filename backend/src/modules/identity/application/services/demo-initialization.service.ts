@@ -16,6 +16,10 @@ import {
   REMINDER_REPOSITORY,
 } from '../../../planning/domain/repositories/reminder.repository.interface';
 import {
+  IPersonRepository,
+  PERSON_REPOSITORY,
+} from '../../../person/domain/repositories/person.repository.interface';
+import {
   IProfileRepository,
   PROFILE_REPOSITORY,
 } from '../../domain/repositories/profile.repository.interface';
@@ -23,6 +27,7 @@ import { Account, AccountTypeFields } from '../../../accounting/domain/aggregate
 import { Transaction } from '../../../accounting/domain/aggregates/transaction';
 import { Debt } from '../../../debt/domain/aggregates/debt';
 import { Reminder, ReminderFrequency } from '../../../planning/domain/aggregates/reminder';
+import { Person } from '../../../person/domain/aggregates/person';
 import { Profile } from '../../domain';
 import { DomainEventPublisher } from '../../../../shared';
 
@@ -122,6 +127,8 @@ export class DemoInitializationService {
     private readonly debtRepository: IDebtRepository,
     @Inject(REMINDER_REPOSITORY)
     private readonly reminderRepository: IReminderRepository,
+    @Inject(PERSON_REPOSITORY)
+    private readonly personRepository: IPersonRepository,
     private readonly eventPublisher: DomainEventPublisher,
   ) {}
 
@@ -153,6 +160,9 @@ export class DemoInitializationService {
 
       // 5. Create reminders
       await this.createReminders(userId);
+
+      // 6. Create people (contacts)
+      await this.createPeople(userId);
 
       this.logger.log(`Demo data initialized for user ${userId}`);
       return walletId;
@@ -378,6 +388,19 @@ export class DemoInitializationService {
         data.color,
       );
       await this.reminderRepository.save(reminder);
+    }
+  }
+
+  private async createPeople(userId: string): Promise<void> {
+    const peopleData = [
+      { name: 'Ахмед', color: '#3b82f6' },
+      { name: 'Анна', color: '#f43f5e' },
+      { name: 'Коля', color: '#10b981' },
+    ];
+
+    for (const data of peopleData) {
+      const person = Person.create(crypto.randomUUID(), userId, data.name, data.color);
+      await this.personRepository.save(person);
     }
   }
 

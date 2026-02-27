@@ -3,7 +3,7 @@ import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { UIcon } from '@/shared/ui';
 import { haptics } from '@/shared/lib/haptics/haptics';
-import { MAIN_NAV_ITEMS, type NavItem } from '@/shared/config/navigation';
+import { MAIN_NAV_ITEMS, CHILD_ROUTE_MAP, type NavItem } from '@/shared/config/navigation';
 
 const emit = defineEmits<{
   'add-click': [];
@@ -21,13 +21,21 @@ const navItems: NavItem[] = [
 ];
 
 const activeItem = computed(() => {
-  return (
-    navItems.find((item) => {
-      if (item.path === '') return false;
-      if (item.path === '/') return route.path === '/';
-      return route.path.startsWith(item.path);
-    })?.id || 'home'
+  // Direct match on nav items
+  const direct = navItems.find((item) => {
+    if (item.path === '') return false;
+    if (item.path === '/') return route.path === '/';
+    return route.path.startsWith(item.path);
+  });
+  if (direct) return direct.id;
+
+  // Match child routes to parent nav item
+  const childMatch = Object.entries(CHILD_ROUTE_MAP).find(([prefix]) =>
+    route.path.startsWith(prefix),
   );
+  if (childMatch) return childMatch[1];
+
+  return null;
 });
 
 function handleAddClick() {

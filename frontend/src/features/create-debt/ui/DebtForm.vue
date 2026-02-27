@@ -6,6 +6,8 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/shared/ui/primitives/
 import { Calendar } from '@/shared/ui/primitives/calendar';
 import { DEBT_DIRECTION_LABELS, type DebtDirection } from '@/entities/debt';
 import { getCurrencyByCode } from '@/entities/currency';
+import { PersonSelector, usePeople } from '@/entities/person';
+import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import type { DebtFormData } from '../model/useCreateDebt';
 import type { AccountWithBalances } from '@/entities/account';
 
@@ -15,11 +17,12 @@ const props = defineProps<{
   isSubmitting?: boolean;
   error?: string | null;
 }>();
-
 const emit = defineEmits<{
   'update:formData': [value: DebtFormData];
   submit: [];
 }>();
+const { userId } = useCurrentUser();
+const { people, createPerson } = usePeople(userId);
 
 const debtTypeTabs = Object.entries(DEBT_DIRECTION_LABELS).map(([id, label]) => ({
   id,
@@ -98,7 +101,8 @@ function handleDateChange(value: DateValue | undefined) {
 // Format date for display
 const displayDate = computed(() => {
   const dateStr = props.formData.debt_date || new Date().toISOString().split('T')[0];
-  const date = new Date(dateStr);
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
   return date.toLocaleDateString('ru-RU', {
     day: 'numeric',
     month: 'long',
@@ -126,12 +130,20 @@ const displayDate = computed(() => {
     </div>
 
     <!-- Person Name -->
-    <UInput
-      :model-value="formData.person_name"
-      :label="formData.debt_type === 'given' ? 'Кому дали в долг' : 'У кого взяли в долг'"
-      placeholder="Имя человека"
-      @update:model-value="updateField('person_name', $event as string)"
-    />
+    <div class="space-y-2">
+      <label class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">
+        {{ formData.debt_type === 'given' ? 'Кому дали в долг' : 'У кого взяли в долг' }}
+      </label>
+
+      <PersonSelector
+        :model-value="formData.person_name"
+        :people="people"
+        placeholder="Имя человека"
+        @update:model-value="updateField('person_name', $event as string)"
+        @select="updateField('person_name', $event as string)"
+        @save-person="(name) => createPerson({ name })"
+      />
+    </div>
 
     <!-- Amount with Currency -->
     <div class="space-y-2">
@@ -186,7 +198,7 @@ const displayDate = computed(() => {
             'border',
             formData.account_id === account.id
               ? 'border-primary bg-primary/10 text-primary'
-              : 'border-gray-200 dark:border-gray-700 text-text-secondary-light dark:text-text-secondary-dark',
+              : 'border-border-light dark:border-border-dark text-text-secondary-light dark:text-text-secondary-dark',
           ]"
           @click="handleAccountChange(account.id)"
         >
@@ -208,7 +220,7 @@ const displayDate = computed(() => {
         <PopoverTrigger as-child>
           <button
             type="button"
-            class="w-full flex items-center justify-between gap-2 px-4 py-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-gray-200 dark:border-gray-700 text-text-primary-light dark:text-text-primary-dark hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+            class="w-full flex items-center justify-between gap-2 px-4 py-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
           >
             <div class="flex items-center gap-2">
               <UIcon
@@ -249,7 +261,7 @@ const displayDate = computed(() => {
       <input
         type="checkbox"
         :checked="formData.skipTransaction"
-        class="w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary"
+        class="w-5 h-5 rounded border-border-light dark:border-border-dark text-primary focus:ring-primary"
         @change="updateField('skipTransaction', ($event.target as HTMLInputElement).checked)"
       />
       <span class="text-sm text-text-primary-light dark:text-text-primary-dark">

@@ -40,7 +40,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:formData': [value: TransactionFormData];
   submit: [];
-  addParticipant: [name: string];
+  addParticipant: [name: string, fromContacts: boolean, personColor?: string];
   removeParticipant: [id: string];
   updateParticipantAmount: [id: string, amount: number];
   updateParticipantName: [id: string, name: string];
@@ -242,7 +242,10 @@ const { isMounted } = useMountedAnimation();
             :split-validation-error="splitValidationError"
             :autofocus-amount="autofocusAmount && realPanelIndices.has(idx)"
             @update:form-data="$emit('update:formData', $event)"
-            @add-participant="$emit('addParticipant', $event)"
+            @add-participant="
+              (name: string, fromContacts: boolean, color?: string) =>
+                $emit('addParticipant', name, fromContacts, color)
+            "
             @remove-participant="$emit('removeParticipant', $event)"
             @update-participant-amount="
               (id, amount) => $emit('updateParticipantAmount', id, amount)

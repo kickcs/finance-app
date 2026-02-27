@@ -54,6 +54,7 @@ const settingsGroup = [
     color: '#10b981', // success
   },
   { id: 'categories', icon: 'category', label: 'Категории', color: '#f59e0b' }, // warning
+  { id: 'people', icon: 'group', label: 'Люди', color: '#06b6d4' }, // cyan
   {
     id: 'quick-actions',
     icon: 'bolt',
@@ -91,6 +92,9 @@ function handleMenuClick(itemId: string) {
       break;
     case 'categories':
       router.push('/settings/categories');
+      break;
+    case 'people':
+      router.push('/people');
       break;
     case 'quick-actions':
       router.push('/settings/quick-actions');

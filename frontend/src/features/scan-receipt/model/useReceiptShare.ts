@@ -2,6 +2,7 @@ import { ref } from 'vue';
 import { useToast } from '@/shared/ui';
 import { haptics } from '@/shared/lib/haptics';
 import { formatCurrency } from '@/shared/lib/format/currency';
+import { getInitial } from '@/shared/lib/format/text';
 import type { ParticipantSummary } from './types';
 
 export interface ReceiptShareData {
@@ -211,7 +212,7 @@ function drawParticipants(
     ctx.fillStyle = TEXT_WHITE;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(p.name.charAt(0).toUpperCase(), PADDING_X + 16, centerY + 1);
+    ctx.fillText(getInitial(p.name), PADDING_X + 16, centerY + 1);
 
     // Name
     ctx.font = `500 16px ${FONT_FAMILY}`;

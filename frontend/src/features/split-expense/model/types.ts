@@ -4,6 +4,8 @@ export interface SplitParticipant {
   id: string;
   personName: string;
   amount: number;
+  fromContacts?: boolean;
+  personColor?: string;
 }
 
 export interface SplitExpenseData {

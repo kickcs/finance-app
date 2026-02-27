@@ -169,6 +169,11 @@ export const router = createRouter({
           component: () => import('@/pages/settings/categories/CategoriesPage.vue'),
         },
         {
+          path: 'people',
+          name: 'people-list',
+          component: () => import('@/pages/people/PeopleListPage.vue'),
+        },
+        {
           path: 'settings/quick-actions',
           name: 'settings-quick-actions',
           component: () => import('@/pages/settings/quick-actions/QuickActionsSettingsPage.vue'),

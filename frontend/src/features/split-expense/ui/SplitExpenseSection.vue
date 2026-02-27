@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { ref, computed, nextTick } from 'vue';
-import { UInput, UIcon, UProgressBar } from '@/shared/ui';
-import { formatCurrency } from '@/shared/lib/format/currency';
+import { ref, computed } from 'vue';
+import { UInput, UIcon, UProgressBar, InitialAvatar } from '@/shared/ui';
+import { formatCurrency, formatNumberWithSpaces } from '@/shared/lib/format/currency';
 import { listTransition } from '@/shared/lib/transitions';
 import { getCurrencyByCode } from '@/entities/currency';
+import { PersonSelector, usePeople } from '@/entities/person';
+import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import type { SplitExpenseData, SplitMethod } from '../model/types';
 
 const props = defineProps<{
@@ -12,10 +14,9 @@ const props = defineProps<{
   splitData: SplitExpenseData;
   validationError?: string | null;
 }>();
-
 const emit = defineEmits<{
   'update:splitData': [value: SplitExpenseData];
-  addParticipant: [name: string];
+  addParticipant: [name: string, fromContacts: boolean, personColor?: string];
   removeParticipant: [id: string];
   updateParticipantAmount: [id: string, amount: number];
   updateParticipantName: [id: string, name: string];
@@ -24,9 +25,15 @@ const emit = defineEmits<{
   setIsIncluded: [included: boolean];
   setEnabled: [enabled: boolean];
 }>();
+const { userId } = useCurrentUser();
+const { people, createPerson } = usePeople(userId);
 
 const newParticipantName = ref('');
-const newParticipantInput = ref<HTMLInputElement | null>(null);
+
+const availablePeople = computed(() => {
+  const addedNames = new Set(props.splitData.participants.map((p) => p.personName.toLowerCase()));
+  return people.value.filter((p) => !addedNames.has(p.name.toLowerCase()));
+});
 
 const currencySymbol = computed(() => {
   const currency = getCurrencyByCode(props.currency);
@@ -44,12 +51,14 @@ const progressColor = computed(() => {
   return 'primary';
 });
 
-async function handleAddParticipant() {
-  if (newParticipantName.value.trim()) {
-    emit('addParticipant', newParticipantName.value.trim());
+function handleAddParticipant(name?: string) {
+  const participantName = (typeof name === 'string' ? name : newParticipantName.value).trim();
+  if (participantName) {
+    const matchedPerson = people.value.find(
+      (p) => p.name.toLowerCase() === participantName.toLowerCase(),
+    );
+    emit('addParticipant', participantName, !!matchedPerson, matchedPerson?.color);
     newParticipantName.value = '';
-    await nextTick();
-    newParticipantInput.value?.focus();
   }
 }
 
@@ -197,14 +206,20 @@ function handleToggle() {
             :key="participant.id"
             class="flex items-center gap-2 p-2 rounded-lg bg-surface-light dark:bg-surface-dark"
           >
-            <div
-              class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0"
+            <InitialAvatar
+              :name="participant.personName"
+              :color="participant.personColor || '#3b82f6'"
+              size="md"
+              translucent
+            />
+            <span
+              v-if="participant.fromContacts"
+              class="flex-1 min-w-0 text-sm font-medium text-text-primary-light dark:text-text-primary-dark truncate"
             >
-              <span class="text-xs font-bold text-primary">
-                {{ participant.personName.charAt(0).toUpperCase() }}
-              </span>
-            </div>
+              {{ participant.personName }}
+            </span>
             <input
+              v-else
               :value="participant.personName"
               type="text"
               class="flex-1 min-w-0 bg-transparent border-none outline-none text-sm text-text-primary-light dark:text-text-primary-dark"
@@ -215,15 +230,11 @@ function handleToggle() {
                   ($event.target as HTMLInputElement).value,
                 )
               "
-              @keydown.enter.prevent="
-                ($event.target as HTMLInputElement).nextElementSibling
-                  ?.querySelector('input')
-                  ?.focus()
-              "
+              @keydown.enter.prevent
             />
             <div
               class="flex items-center gap-1 justify-end"
-              :class="splitData.method === 'custom' ? 'w-28' : 'w-auto'"
+              :class="splitData.method === 'custom' ? 'w-32' : 'w-auto'"
             >
               <template v-if="splitData.method === 'equal'">
                 <span
@@ -234,8 +245,8 @@ function handleToggle() {
               </template>
               <template v-else>
                 <input
-                  :value="participant.amount || ''"
-                  type="number"
+                  :value="participant.amount ? formatNumberWithSpaces(participant.amount) : ''"
+                  type="text"
                   inputmode="decimal"
                   placeholder="0"
                   class="w-full text-right bg-transparent border-b border-border-light dark:border-border-dark focus:border-primary outline-none text-sm font-medium text-text-primary-light dark:text-text-primary-dark transition-colors pb-0.5"
@@ -243,7 +254,7 @@ function handleToggle() {
                     $emit(
                       'updateParticipantAmount',
                       participant.id,
-                      Number(($event.target as HTMLInputElement).value) || 0,
+                      Number(($event.target as HTMLInputElement).value.replace(/\s/g, '')) || 0,
                     )
                   "
                   @keydown.enter.prevent
@@ -266,23 +277,14 @@ function handleToggle() {
         </TransitionGroup>
 
         <!-- Add participant -->
-        <div class="flex gap-2 mt-2">
-          <input
-            ref="newParticipantInput"
+        <div class="mt-2">
+          <PersonSelector
             v-model="newParticipantName"
-            type="text"
+            :people="availablePeople"
             placeholder="Имя участника"
-            class="flex-1 px-3 py-2.5 rounded-lg bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark text-sm text-text-primary-light dark:text-text-primary-dark placeholder:text-text-tertiary-light dark:placeholder:text-text-tertiary-dark focus:outline-none focus:ring-2 focus:ring-primary"
-            @keydown.enter.prevent="handleAddParticipant"
+            @select="handleAddParticipant"
+            @save-person="(name: string) => createPerson({ name })"
           />
-          <button
-            type="button"
-            class="px-4 py-2.5 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
-            :disabled="!newParticipantName.trim()"
-            @click="handleAddParticipant"
-          >
-            <UIcon name="add" size="sm" />
-          </button>
         </div>
       </div>
 

@@ -6,7 +6,10 @@ import { ProfileOrmEntity } from '../../infrastructure/persistence/typeorm';
 import { AccountOrmEntity } from '../../../accounting/infrastructure/persistence/typeorm';
 import { TransactionOrmEntity } from '../../../accounting/infrastructure/persistence/typeorm';
 import { DebtOrmEntity } from '../../../debt/infrastructure/persistence/typeorm';
-import { GoalOrmEntity, ReminderOrmEntity } from '../../../planning/infrastructure/persistence/typeorm';
+import {
+  GoalOrmEntity,
+  ReminderOrmEntity,
+} from '../../../planning/infrastructure/persistence/typeorm';
 
 /**
  * Service responsible for cleaning up expired demo accounts and their data

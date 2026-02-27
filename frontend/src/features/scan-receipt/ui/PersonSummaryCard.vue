@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { UIcon } from '@/shared/ui';
+import { UIcon, InitialAvatar } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { pluralize } from '@/shared/lib/format/pluralize';
 import type { ParticipantSummary } from '../model/types';
@@ -26,14 +26,7 @@ const isExpanded = ref(false);
       @click="isExpanded = !isExpanded"
     >
       <!-- Colored avatar -->
-      <div
-        class="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
-        :style="{ backgroundColor: participant.color + '18' }"
-      >
-        <span class="text-sm font-bold" :style="{ color: participant.color }">
-          {{ participant.name.charAt(0).toUpperCase() }}
-        </span>
-      </div>
+      <InitialAvatar :name="participant.name" :color="participant.color" size="md" translucent />
 
       <div class="flex-1 min-w-0">
         <p

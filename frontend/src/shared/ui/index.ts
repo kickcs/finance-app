@@ -34,3 +34,4 @@ export { USpinner } from './spinner';
 export { NotFoundState } from './not-found-state';
 export { ConfirmDeleteModal } from './confirm-delete-modal';
 export { UToggle } from './toggle';
+export { InitialAvatar } from './initial-avatar';

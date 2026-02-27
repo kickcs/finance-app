@@ -9,3 +9,8 @@ export const ENTITY_COLORS = [
   '#f59e0b', // Amber
   '#1f2937', // Dark
 ] as const;
+
+/** Pick a random color from ENTITY_COLORS */
+export function getRandomEntityColor(): string {
+  return ENTITY_COLORS[Math.floor(Math.random() * ENTITY_COLORS.length)];
+}

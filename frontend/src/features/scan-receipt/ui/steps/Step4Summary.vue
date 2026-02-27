@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
-import { UButton, UIcon } from '@/shared/ui';
+import { UButton, UIcon, InitialAvatar } from '@/shared/ui';
 import { AccountSelector } from '@/entities/account';
 import { CategoryChips, EXPENSE_CATEGORIES } from '@/entities/category';
 import { Popover, PopoverTrigger, PopoverContent } from '@/shared/ui/primitives/popover';
@@ -164,12 +164,7 @@ const shareData = computed<ReceiptShareData>(() => ({
             <div class="space-y-4">
               <div v-for="p in owers" :key="p.id" class="flex items-center gap-3">
                 <!-- Avatar -->
-                <div
-                  class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-white text-xs font-bold"
-                  :style="{ backgroundColor: p.color }"
-                >
-                  {{ p.name.charAt(0).toUpperCase() }}
-                </div>
+                <InitialAvatar :name="p.name" :color="p.color" size="md" />
 
                 <div class="flex-1 min-w-0 flex items-baseline">
                   <span

@@ -33,6 +33,8 @@ const emit = defineEmits<{
   'update:modelValue': [value: string | number];
   clear: [];
   keydown: [event: KeyboardEvent];
+  focus: [event: FocusEvent];
+  blur: [event: FocusEvent];
 }>();
 
 const generatedId = useId();
@@ -169,6 +171,8 @@ defineExpose({
           )
         "
         @keydown="$emit('keydown', $event)"
+        @focus="$emit('focus', $event)"
+        @blur="$emit('blur', $event)"
       />
 
       <!-- Suffix -->

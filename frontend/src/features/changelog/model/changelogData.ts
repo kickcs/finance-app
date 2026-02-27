@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.23';
+export const CURRENT_VERSION = '1.0.24';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,33 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.24',
+    date: '2026-02-28',
+    title: 'Контакты и исправления',
+    items: [
+      {
+        type: 'feature',
+        text: 'Сохраняйте контакты людей — быстрый выбор при создании долгов, разделении расходов и сканировании чеков',
+      },
+      {
+        type: 'feature',
+        text: 'Страница управления контактами — добавляйте, редактируйте и удаляйте людей в настройках профиля',
+      },
+      {
+        type: 'fix',
+        text: 'Уведомление об обновлении больше не появляется повторно после закрытия',
+      },
+      {
+        type: 'fix',
+        text: 'Исправлена работа выбора контактов на мобильных устройствах',
+      },
+      {
+        type: 'fix',
+        text: 'Исправлено отображение даты при создании долга',
+      },
+    ],
+  },
   {
     version: '1.0.23',
     date: '2026-02-27',

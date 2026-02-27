@@ -86,13 +86,15 @@ export function useSplitExpense(totalAmountRef: () => number) {
     });
   }
 
-  function addParticipant(name: string) {
+  function addParticipant(name: string, fromContacts = false, personColor?: string) {
     if (!name.trim()) return;
 
     splitData.value.participants.push({
       id: generateParticipantId(),
       personName: name.trim(),
       amount: 0,
+      fromContacts,
+      personColor,
     });
 
     if (splitData.value.method === 'equal') {
@@ -149,7 +151,7 @@ export function useSplitExpense(totalAmountRef: () => number) {
 
   function updateParticipantName(id: string, name: string) {
     const participant = splitData.value.participants.find((p) => p.id === id);
-    if (participant) {
+    if (participant && name.trim()) {
       participant.personName = name;
     }
   }

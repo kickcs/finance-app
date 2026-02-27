@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { UIcon } from '@/shared/ui';
 import { cn } from '@/shared/lib/utils';
+import { getInitial } from '@/shared/lib/format/text';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { calcLineTotalWithService } from '../model/calcLineTotal';
 import { ALL_PARTICIPANTS_ID } from '../model/constants';
@@ -130,7 +131,7 @@ const isHighlighted = computed(() => {
           :aria-label="getParticipantName(pid)"
         >
           <span class="text-[10px] font-bold text-white leading-none">
-            {{ getParticipantName(pid).charAt(0).toUpperCase() }}
+            {{ getInitial(getParticipantName(pid)) }}
           </span>
         </div>
         <div
