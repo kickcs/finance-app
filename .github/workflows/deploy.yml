@@ -396,15 +396,15 @@ jobs:
             # Recreate services, wait for health checks
             docker compose -f docker-compose.prod.yml up -d --no-deps --force-recreate --wait --wait-timeout 60 $RESTART_SERVICES
 
-            # Clean up old images in background (non-blocking)
-            {
+            # Clean up old images (fire-and-forget, detached from SSH session)
+            nohup sh -c '
               for svc in backend frontend; do
-                docker images "ghcr.io/*/finance-app/$svc" --format '{{.ID}} {{.CreatedAt}}' \
-                  | sort -k2 -r | tail -n +4 | awk '{print $1}' \
+                docker images "ghcr.io/*/finance-app/$svc" --format "{{.ID}} {{.CreatedAt}}" \
+                  | sort -k2 -r | tail -n +4 | awk "{print \$1}" \
                   | xargs -r docker rmi -f 2>/dev/null || true
               done
               docker image prune -f > /dev/null 2>&1
-            } &
+            ' > /dev/null 2>&1 &
 
       - name: Deployment notification
         if: always()
