@@ -19,6 +19,7 @@ const emit = defineEmits<{
   'expense-click': [];
   'income-analytics': [];
   'expense-analytics': [];
+  'balance-click': [];
 }>();
 </script>
 
@@ -34,6 +35,7 @@ const emit = defineEmits<{
       @toggle-hidden="emit('toggle-hidden')"
       @income-click="emit('income-click')"
       @expense-click="emit('expense-click')"
+      @balance-click="emit('balance-click')"
     />
 
     <SaveSpendSection

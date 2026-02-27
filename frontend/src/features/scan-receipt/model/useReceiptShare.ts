@@ -17,28 +17,49 @@ export interface ReceiptShareData {
 
 // --- Canvas layout constants ---
 const FONT_FAMILY = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-const CARD_WIDTH = 640;
-const PADDING_X = 36;
-const PADDING_Y = 32;
+const CARD_WIDTH = 480;
+const PADDING_X = 28;
+const PADDING_Y = 24;
 const SCALE = 2; // retina
-const HEADER_HEIGHT = 100;
+const HEADER_HEIGHT = 180;
 const PARTICIPANT_NAME_HEIGHT = 36;
-const ITEM_LINE_HEIGHT = 24;
 const PARTICIPANT_GAP = 12;
+const PARTICIPANT_SECTION_HEADER = 40; // "КТО СКОЛЬКО ДОЛЖЕН" title
 const DIVIDER_GAP = 24;
-const TOTAL_SECTION_HEIGHT = 48;
-const SERVICE_LINE_HEIGHT = 24;
+const SERVICE_CHARGE_HEIGHT = 30;
+const WATERMARK_SECTION_HEIGHT = 80; // logo + name + URL
 const CONTENT_WIDTH = CARD_WIDTH - PADDING_X * 2;
 const NAME_MAX_WIDTH = CONTENT_WIDTH - 200;
-const ITEMS_INDENT = PADDING_X + 20;
 const AMOUNT_X = CARD_WIDTH - PADDING_X;
 
 // Colors
 const BG_COLOR = '#FAFAFA';
+const BRAND_COLOR = '#c59b3f'; // Gold from logo
+const BRAND_GOLD_LIGHT = '#e8c865';
 const TEXT_PRIMARY = '#09090B';
 const TEXT_SECONDARY = '#71717A';
 const TEXT_TERTIARY = '#A1A1AA';
+const TEXT_WHITE = '#FFFFFF';
 const DIVIDER_COLOR = '#E4E4E7';
+
+function createGoldGradient(
+  ctx: CanvasRenderingContext2D,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+): CanvasGradient {
+  const g = ctx.createLinearGradient(x1, y1, x2, y2);
+  g.addColorStop(0, BRAND_COLOR);
+  g.addColorStop(0.5, BRAND_GOLD_LIGHT);
+  g.addColorStop(1, BRAND_COLOR);
+  return g;
+}
+
+// Brand
+const APP_NAME = 'OURO FINANCE';
+const APP_URL = 'app.ouro-finance.top';
+const LOGO_SIZE = 24;
 
 function formatItemName(item: { name: string; sharedWith: number }): string {
   return item.sharedWith > 1 ? `${item.name} (1/${item.sharedWith})` : item.name;
@@ -50,6 +71,30 @@ function formatShareDate(timestamp: number): string {
     month: 'long',
     year: 'numeric',
   });
+}
+
+// --- Logo drawing (programmatic — gold ring from favicon.svg) ---
+
+function drawLogo(ctx: CanvasRenderingContext2D, cx: number, cy: number, size: number): void {
+  const r = size / 2;
+  const strokeWidth = size * 0.18;
+
+  // Gold gradient ring
+  const gradient = createGoldGradient(ctx, cx - r, cy - r, cx + r, cy + r);
+
+  // Dark circle background
+  ctx.beginPath();
+  ctx.fillStyle = TEXT_PRIMARY;
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Gold ring
+  ctx.beginPath();
+  ctx.strokeStyle = gradient;
+  ctx.lineWidth = strokeWidth;
+  ctx.lineCap = 'round';
+  ctx.arc(cx, cy, r * 0.55, 0, Math.PI * 2);
+  ctx.stroke();
 }
 
 // --- Canvas drawing helpers ---
@@ -66,107 +111,147 @@ function drawDivider(ctx: CanvasRenderingContext2D, y: number): number {
 }
 
 function drawHeader(ctx: CanvasRenderingContext2D, data: ReceiptShareData, y: number): number {
-  // Brand
-  ctx.font = `500 13px ${FONT_FAMILY}`;
-  ctx.fillStyle = TEXT_TERTIARY;
+  // Brand with logo
+  const brandText = APP_NAME;
+  ctx.font = `700 13px ${FONT_FAMILY}`;
+  const brandWidth = ctx.measureText(brandText).width;
+  const totalBrandWidth = LOGO_SIZE + 8 + brandWidth;
+  const brandStartX = (CARD_WIDTH - totalBrandWidth) / 2;
+
+  drawLogo(ctx, brandStartX + LOGO_SIZE / 2, y + 10, LOGO_SIZE);
+
+  ctx.font = `700 13px ${FONT_FAMILY}`;
+  ctx.fillStyle = BRAND_COLOR;
   ctx.textAlign = 'left';
-  ctx.fillText('My Finance', PADDING_X, y + 13);
-  y += 28;
+  ctx.fillText(brandText, brandStartX + LOGO_SIZE + 8, y + 15);
+  y += 40;
 
   // Store name
-  ctx.font = `700 22px ${FONT_FAMILY}`;
-  ctx.fillStyle = TEXT_PRIMARY;
-  ctx.fillText(data.storeName || 'Чек', PADDING_X, y + 22, CONTENT_WIDTH);
+  ctx.font = `600 16px ${FONT_FAMILY}`;
+  ctx.fillStyle = TEXT_TERTIARY;
+  ctx.textAlign = 'center';
+  ctx.fillText(
+    (data.storeName || 'Чек оплачен').toUpperCase(),
+    CARD_WIDTH / 2,
+    y + 16,
+    CONTENT_WIDTH,
+  );
   y += 34;
 
+  // Amount
+  ctx.font = `900 48px ${FONT_FAMILY}`;
+  ctx.fillStyle = TEXT_PRIMARY;
+  ctx.textAlign = 'center';
+  ctx.fillText(formatCurrency(data.totalAmount, data.currency), CARD_WIDTH / 2, y + 48);
+  y += 70;
+
   // Date
-  ctx.font = `400 14px ${FONT_FAMILY}`;
+  ctx.font = `500 14px ${FONT_FAMILY}`;
   ctx.fillStyle = TEXT_SECONDARY;
-  ctx.fillText(formatShareDate(data.date), PADDING_X, y + 14);
-  y += 28;
+  ctx.textAlign = 'center';
+  ctx.fillText(formatShareDate(data.date), CARD_WIDTH / 2, y + 14);
+  y += 36;
 
   return y;
 }
 
 function calcParticipantsHeight(data: ReceiptShareData): number {
-  let h = 0;
-  for (const p of data.participants) {
-    h += PARTICIPANT_NAME_HEIGHT;
-    h += p.items.length * ITEM_LINE_HEIGHT;
-    h += PARTICIPANT_GAP;
+  const owers = data.participants.filter((p) => !p.isMe && p.total > 0);
+
+  // Section header "КТО СКОЛЬКО ДОЛЖЕН"
+  let h = PARTICIPANT_SECTION_HEADER;
+
+  if (owers.length === 0) {
+    return h + 40; // empty state text
   }
-  // Remove last gap
-  if (data.participants.length > 0) h -= PARTICIPANT_GAP;
+
+  // Each participant row
+  h += owers.length * PARTICIPANT_NAME_HEIGHT;
+  // Gaps between participants (not after last)
+  if (owers.length > 1) {
+    h += (owers.length - 1) * PARTICIPANT_GAP;
+  }
+
   return h;
 }
 
-function drawParticipants(ctx: CanvasRenderingContext2D, data: ReceiptShareData, y: number): number {
-  for (let i = 0; i < data.participants.length; i++) {
-    const p = data.participants[i];
+function drawParticipants(
+  ctx: CanvasRenderingContext2D,
+  data: ReceiptShareData,
+  y: number,
+): number {
+  ctx.font = `600 13px ${FONT_FAMILY}`;
+  ctx.fillStyle = TEXT_TERTIARY;
+  ctx.textAlign = 'left';
+  ctx.fillText('КТО СКОЛЬКО ДОЛЖЕН', PADDING_X, y + 15);
+  y += PARTICIPANT_SECTION_HEADER;
+
+  const owers = data.participants.filter((p) => !p.isMe && p.total > 0);
+
+  if (owers.length === 0) {
+    ctx.font = `400 15px ${FONT_FAMILY}`;
+    ctx.fillStyle = TEXT_TERTIARY;
+    ctx.textAlign = 'center';
+    ctx.fillText('Никто ничего не должен', CARD_WIDTH / 2, y + 15);
+    return y + 40;
+  }
+
+  for (let i = 0; i < owers.length; i++) {
+    const p = owers[i];
     const centerY = y + PARTICIPANT_NAME_HEIGHT / 2;
 
-    // Color dot
+    // Color dot (Avatar)
     ctx.beginPath();
     ctx.fillStyle = p.color;
-    ctx.arc(PADDING_X + 6, centerY, 5, 0, Math.PI * 2);
+    ctx.arc(PADDING_X + 16, centerY, 14, 0, Math.PI * 2);
     ctx.fill();
 
+    // Initial letter in avatar
+    ctx.font = `600 12px ${FONT_FAMILY}`;
+    ctx.fillStyle = TEXT_WHITE;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(p.name.charAt(0).toUpperCase(), PADDING_X + 16, centerY + 1);
+
     // Name
-    ctx.font = `500 15px ${FONT_FAMILY}`;
+    ctx.font = `500 16px ${FONT_FAMILY}`;
     ctx.fillStyle = TEXT_PRIMARY;
     ctx.textAlign = 'left';
-    const displayName = p.name + (p.isMe ? ' (вы)' : '');
-    ctx.fillText(displayName, PADDING_X + 20, centerY + 5, NAME_MAX_WIDTH);
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText(p.name, PADDING_X + 40, centerY + 5, NAME_MAX_WIDTH);
 
     // Amount
-    ctx.font = `600 15px ${FONT_FAMILY}`;
+    ctx.font = `700 16px ${FONT_FAMILY}`;
     ctx.fillStyle = TEXT_PRIMARY;
     ctx.textAlign = 'right';
     ctx.fillText(formatCurrency(p.total, data.currency), AMOUNT_X, centerY + 5);
 
-    y += PARTICIPANT_NAME_HEIGHT;
+    // Dotted line connecting name and amount
+    const nameWidth = ctx.measureText(p.name).width;
+    const amountStr = formatCurrency(p.total, data.currency);
+    const amountWidth = ctx.measureText(amountStr).width;
 
-    // Items
-    ctx.font = `400 12px ${FONT_FAMILY}`;
-    ctx.fillStyle = TEXT_TERTIARY;
-    for (const item of p.items) {
-      ctx.textAlign = 'left';
-      ctx.fillText(formatItemName(item), ITEMS_INDENT, y + 14, NAME_MAX_WIDTH - 20);
+    const lineStartX = PADDING_X + 40 + nameWidth + 10;
+    const lineEndX = AMOUNT_X - amountWidth - 10;
 
-      ctx.textAlign = 'right';
-      ctx.fillText(formatCurrency(item.share, data.currency), AMOUNT_X, y + 14);
-
-      y += ITEM_LINE_HEIGHT;
+    if (lineEndX > lineStartX) {
+      ctx.beginPath();
+      ctx.setLineDash([2, 4]);
+      ctx.strokeStyle = DIVIDER_COLOR;
+      ctx.lineWidth = 2;
+      ctx.moveTo(lineStartX, centerY + 1);
+      ctx.lineTo(lineEndX, centerY + 1);
+      ctx.stroke();
+      ctx.setLineDash([]);
     }
 
+    y += PARTICIPANT_NAME_HEIGHT;
+
     // Gap between participants
-    if (i < data.participants.length - 1) {
+    if (i < owers.length - 1) {
       y += PARTICIPANT_GAP;
     }
   }
-  return y;
-}
-
-function drawTotal(ctx: CanvasRenderingContext2D, data: ReceiptShareData, y: number): number {
-  ctx.font = `500 15px ${FONT_FAMILY}`;
-  ctx.fillStyle = TEXT_SECONDARY;
-  ctx.textAlign = 'left';
-  ctx.fillText('Итого', PADDING_X, y + 20);
-
-  ctx.font = `700 20px ${FONT_FAMILY}`;
-  ctx.fillStyle = TEXT_PRIMARY;
-  ctx.textAlign = 'right';
-  ctx.fillText(formatCurrency(data.totalAmount, data.currency), AMOUNT_X, y + 22);
-  y += TOTAL_SECTION_HEIGHT;
-
-  // Service charge note
-  if (data.serviceChargePercent && data.serviceChargeAmount > 0) {
-    ctx.font = `400 12px ${FONT_FAMILY}`;
-    ctx.fillStyle = TEXT_TERTIARY;
-    ctx.textAlign = 'left';
-    ctx.fillText(`вкл. обслуживание ${data.serviceChargePercent}%`, PADDING_X, y + 4);
-  }
-
   return y;
 }
 
@@ -174,12 +259,17 @@ function renderCardToCanvas(data: ReceiptShareData): HTMLCanvasElement {
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d')!;
 
-  // Calculate total height
   const participantsHeight = calcParticipantsHeight(data);
-  const serviceLineHeight = data.serviceChargePercent && data.serviceChargeAmount > 0 ? SERVICE_LINE_HEIGHT : 0;
+  const hasServiceCharge = data.serviceChargePercent && data.serviceChargeAmount > 0;
+
   const totalHeight =
-    PADDING_Y + HEADER_HEIGHT + DIVIDER_GAP + participantsHeight + DIVIDER_GAP +
-    TOTAL_SECTION_HEIGHT + serviceLineHeight + PADDING_Y;
+    PADDING_Y +
+    HEADER_HEIGHT +
+    DIVIDER_GAP +
+    participantsHeight +
+    (hasServiceCharge ? SERVICE_CHARGE_HEIGHT : 0) +
+    PADDING_Y +
+    WATERMARK_SECTION_HEIGHT;
 
   // Set canvas size (retina)
   canvas.width = CARD_WIDTH * SCALE;
@@ -192,12 +282,65 @@ function renderCardToCanvas(data: ReceiptShareData): HTMLCanvasElement {
   ctx.fillStyle = BG_COLOR;
   ctx.fillRect(0, 0, CARD_WIDTH, totalHeight);
 
+  // Header banner — gold gradient
+  ctx.fillStyle = createGoldGradient(ctx, 0, 0, CARD_WIDTH, 0);
+  ctx.fillRect(0, 0, CARD_WIDTH, 8);
+
   let y = PADDING_Y;
   y = drawHeader(ctx, data, y);
+
+  // Cutout circles (receipt paper effect)
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.beginPath();
+  ctx.arc(0, y + 4, 16, 0, Math.PI * 2);
+  ctx.arc(CARD_WIDTH, y + 4, 16, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+
   y = drawDivider(ctx, y);
   y = drawParticipants(ctx, data, y);
-  y = drawDivider(ctx, y);
-  drawTotal(ctx, data, y);
+
+  if (hasServiceCharge) {
+    ctx.font = `500 13px ${FONT_FAMILY}`;
+    ctx.fillStyle = TEXT_TERTIARY;
+    ctx.textAlign = 'center';
+    ctx.fillText(
+      `Суммы включают ${data.serviceChargePercent}% за обслуживание`,
+      CARD_WIDTH / 2,
+      y + 24,
+    );
+  }
+
+  // Watermark: logo + brand name + URL
+  const wmY = totalHeight - WATERMARK_SECTION_HEIGHT + 12;
+
+  // Thin divider above watermark
+  ctx.beginPath();
+  ctx.strokeStyle = DIVIDER_COLOR;
+  ctx.lineWidth = 0.5;
+  ctx.moveTo(CARD_WIDTH / 2 - 80, wmY - 4);
+  ctx.lineTo(CARD_WIDTH / 2 + 80, wmY - 4);
+  ctx.stroke();
+
+  // Logo + Brand
+  const wmLogoSize = 20;
+  ctx.font = `800 12px ${FONT_FAMILY}`;
+  const wmBrandWidth = ctx.measureText(APP_NAME).width;
+  const wmTotalWidth = wmLogoSize + 6 + wmBrandWidth;
+  const wmStartX = (CARD_WIDTH - wmTotalWidth) / 2;
+
+  drawLogo(ctx, wmStartX + wmLogoSize / 2, wmY + 10, wmLogoSize);
+
+  ctx.font = `800 12px ${FONT_FAMILY}`;
+  ctx.fillStyle = BRAND_COLOR;
+  ctx.textAlign = 'left';
+  ctx.fillText(APP_NAME, wmStartX + wmLogoSize + 6, wmY + 14);
+
+  // URL
+  ctx.font = `500 11px ${FONT_FAMILY}`;
+  ctx.fillStyle = TEXT_TERTIARY;
+  ctx.textAlign = 'center';
+  ctx.fillText(APP_URL, CARD_WIDTH / 2, wmY + 34);
 
   return canvas;
 }
@@ -235,10 +378,11 @@ function buildShareText(data: ReceiptShareData): string {
     }
   }
 
+  lines.push('', `Рассчитано в Ouro Finance — ${APP_URL}`);
   return lines.join('\n');
 }
 
-const SHARE_FILENAME = 'receipt-split.png';
+const SHARE_FILENAME = 'ouro-receipt.png';
 
 export function useReceiptShare() {
   const isSharing = ref(false);

@@ -14,6 +14,7 @@ defineEmits<{
   'income-click': [];
   'expense-click': [];
   'toggle-hidden': [];
+  'balance-click': [];
 }>();
 </script>
 
@@ -44,12 +45,19 @@ defineEmits<{
       enter-from-class="opacity-0"
       enter-to-class="opacity-100"
     >
-      <h1
+      <button
         v-if="!loading"
-        class="text-4xl sm:text-5xl font-bold tracking-tight text-text-primary-light dark:text-text-primary-dark"
+        type="button"
+        aria-label="Перейти к счетам"
+        class="group cursor-pointer"
+        @click="$emit('balance-click')"
       >
-        {{ formatMasked(totalBalance, currency, hidden ?? false, COMPACT_FORMAT) }}
-      </h1>
+        <h1
+          class="text-4xl sm:text-5xl font-bold tracking-tight text-text-primary-light dark:text-text-primary-dark group-hover:text-primary transition-colors"
+        >
+          {{ formatMasked(totalBalance, currency, hidden ?? false, COMPACT_FORMAT) }}
+        </h1>
+      </button>
     </Transition>
 
     <!-- Trend indicator -->

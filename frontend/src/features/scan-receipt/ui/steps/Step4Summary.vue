@@ -70,6 +70,9 @@ const createDebts = computed({
   },
 });
 
+// Участники, которые должны (не «я» и с суммой > 0)
+const owers = computed(() => props.participantSummaries.filter((p) => !p.isMe && p.total > 0));
+
 // Debt count = non-me participants with items
 const debtCount = computed(
   () => props.participantSummaries.filter((p) => !p.isMe && p.itemCount > 0).length,
@@ -103,72 +106,151 @@ const shareData = computed<ReceiptShareData>(() => ({
 
 <template>
   <div class="h-full flex flex-col">
-    <!-- Success overlay -->
-    <Transition name="fade">
+    <!-- Success overlay (Fullscreen Receipt) -->
+    <Transition name="receipt-slide-up">
       <div
         v-if="isSuccess"
-        class="fixed inset-0 z-50 flex flex-col items-center bg-background-light dark:bg-background-dark px-6 pt-[var(--safe-area-inset-top)] pb-[calc(2rem+var(--safe-area-inset-bottom))]"
+        class="fixed inset-0 z-50 flex flex-col items-center bg-background-light dark:bg-background-dark/95 backdrop-blur-md px-4 pt-[calc(1rem+var(--safe-area-inset-top))] pb-[calc(1.5rem+var(--safe-area-inset-bottom))]"
         aria-live="assertive"
       >
-        <!-- Centered content group -->
-        <div class="flex-1 flex flex-col items-center justify-center w-full max-w-xs">
-          <!-- Checkmark + message -->
-          <div class="flex flex-col items-center gap-3 success-hero">
+        <!-- The big receipt card -->
+        <div
+          class="flex-1 flex flex-col w-full max-w-[340px] bg-white dark:bg-surface-dark rounded-t-3xl rounded-b-xl shadow-2xl shadow-primary/10 dark:shadow-none overflow-hidden relative receipt-card"
+        >
+          <!-- Decorative receipt top -->
+          <div class="h-2 bg-primary w-full" />
+
+          <div
+            class="px-6 pt-8 pb-6 flex flex-col items-center border-b border-dashed border-border-light dark:border-border-dark relative"
+          >
             <div
-              class="w-20 h-20 rounded-full bg-success/12 flex items-center justify-center success-icon"
+              class="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center mb-4 success-icon"
             >
-              <UIcon name="check_circle" size="2xl" class="text-success" />
+              <UIcon name="check_circle" size="xl" class="text-success" />
             </div>
-            <div class="text-center">
-              <h2
-                class="text-2xl font-bold text-text-primary-light dark:text-text-primary-dark mb-1"
-              >
-                Готово!
-              </h2>
-              <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
-                Создана транзакция на {{ formatCurrency(totalAmount, currency) }}
-                <template v-if="createDebts && debtCount > 0">
-                  <br />
-                  и {{ debtCount }} {{ pluralize(debtCount, 'долг', 'долга', 'долгов') }}
-                </template>
-              </p>
+            <p
+              class="text-xs font-semibold text-text-tertiary-light dark:text-text-tertiary-dark uppercase tracking-widest mb-1 success-hero"
+            >
+              {{ storeName || 'Чек оплачен' }}
+            </p>
+            <h2
+              class="text-4xl font-black text-text-primary-light dark:text-text-primary-dark tabular-nums tracking-tight mb-2 success-hero"
+            >
+              {{ formatCurrency(totalAmount, currency) }}
+            </h2>
+            <p
+              class="text-[11px] text-text-tertiary-light dark:text-text-tertiary-dark font-medium success-hero"
+            >
+              {{ displayDate }}
+            </p>
+
+            <!-- Absolute decoration: Cutouts -->
+            <div
+              class="absolute -bottom-3 -left-3 w-6 h-6 rounded-full bg-background-light dark:bg-background-dark/95 shadow-inner"
+            />
+            <div
+              class="absolute -bottom-3 -right-3 w-6 h-6 rounded-full bg-background-light dark:bg-background-dark/95 shadow-inner"
+            />
+          </div>
+
+          <!-- Who owes what list -->
+          <div class="flex-1 px-6 py-6 overflow-y-auto no-scrollbar success-list">
+            <h3
+              class="text-[11px] font-bold text-text-tertiary-light dark:text-text-tertiary-dark uppercase tracking-widest mb-4"
+            >
+              Кто сколько должен
+            </h3>
+
+            <div class="space-y-4">
+              <div v-for="p in owers" :key="p.id" class="flex items-center gap-3">
+                <!-- Avatar -->
+                <div
+                  class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-white text-xs font-bold"
+                  :style="{ backgroundColor: p.color }"
+                >
+                  {{ p.name.charAt(0).toUpperCase() }}
+                </div>
+
+                <div class="flex-1 min-w-0 flex items-baseline">
+                  <span
+                    class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark mr-2"
+                  >
+                    {{ p.name }}
+                  </span>
+                  <!-- Dotted leader line -->
+                  <div
+                    class="flex-1 border-b-2 border-dotted border-border-light dark:border-border-dark opacity-50 relative top-[-4px] mx-1"
+                  ></div>
+                  <span
+                    class="text-sm font-bold text-text-primary-light dark:text-text-primary-dark tabular-nums ml-2"
+                  >
+                    {{ formatCurrency(p.total, currency) }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Empty state if no debts -->
+              <div v-if="owers.length === 0" class="text-center py-4">
+                <p class="text-sm text-text-tertiary-light dark:text-text-tertiary-dark">
+                  Никто ничего не должен 🙌
+                </p>
+              </div>
+            </div>
+
+            <p
+              v-if="serviceChargePercent && serviceChargeAmount > 0"
+              class="text-[10px] text-text-tertiary-light dark:text-text-tertiary-dark text-center mt-6"
+            >
+              Суммы включают {{ serviceChargePercent }}% за обслуживание
+            </p>
+
+            <!-- Watermark for shared image (hidden in UI via CSS, shown in canvas) -->
+            <div
+              class="hidden share-watermark text-center mt-8 pt-4 border-t border-border-light/50 opacity-60"
+            >
+              <span class="text-[10px] font-bold text-primary uppercase tracking-widest">
+                Рассчитано в Ouro Finance
+              </span>
             </div>
           </div>
 
-          <!-- Share actions -->
-          <div class="w-full mt-10 space-y-3 success-actions">
-            <p
-              class="text-xs font-medium text-text-tertiary-light dark:text-text-tertiary-dark text-center uppercase tracking-wide"
-            >
-              Поделиться
-            </p>
-            <div class="grid grid-cols-3 gap-2">
-              <button
-                v-for="btn in shareActions"
-                :key="btn.icon"
-                type="button"
-                :disabled="isSharing"
-                class="flex flex-col items-center gap-2 p-3 rounded-2xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark active:scale-95 transition-all duration-150 disabled:opacity-50"
-                @click="btn.action"
-              >
-                <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <UIcon :name="btn.icon" size="sm" class="text-primary" />
-                </div>
-                <span
-                  class="text-[11px] font-medium text-text-secondary-light dark:text-text-secondary-dark leading-tight"
-                >
-                  {{ btn.label }}
-                </span>
-              </button>
-            </div>
-          </div>
+          <!-- Bottom zig-zag edge -->
+          <div
+            class="receipt-edge h-3 w-full absolute bottom-0 bg-background-light dark:bg-background-dark/95 z-20 translate-y-[1px]"
+          />
         </div>
 
-        <!-- Done button pinned at bottom -->
-        <div class="w-full max-w-xs flex-shrink-0 pt-4 success-done">
-          <UButton variant="primary" size="xl" full-width @click="router.push('/')">
-            На главную
-          </UButton>
+        <!-- Action buttons area -->
+        <div class="w-full max-w-[340px] flex-shrink-0 pt-6 px-2">
+          <!-- Share actions -->
+          <div class="grid grid-cols-3 gap-3 mb-6 success-actions">
+            <button
+              v-for="btn in shareActions"
+              :key="btn.icon"
+              type="button"
+              :disabled="isSharing"
+              class="flex flex-col items-center gap-2"
+              @click="btn.action"
+            >
+              <div
+                class="w-12 h-12 rounded-full bg-surface-light dark:bg-surface-dark flex items-center justify-center active:scale-95 transition-all shadow-sm"
+              >
+                <UIcon :name="btn.icon" size="sm" class="text-primary" />
+              </div>
+              <span
+                class="text-[10px] font-semibold text-text-secondary-light dark:text-text-secondary-dark uppercase tracking-wide"
+              >
+                {{ btn.label }}
+              </span>
+            </button>
+          </div>
+
+          <!-- Done button -->
+          <div class="success-done">
+            <UButton variant="primary" size="xl" full-width @click="router.push('/')">
+              На главную
+            </UButton>
+          </div>
         </div>
       </div>
     </Transition>
@@ -437,21 +519,35 @@ const shareData = computed<ReceiptShareData>(() => ({
 </style>
 
 <style scoped>
+.receipt-slide-up-enter-active,
+.receipt-slide-up-leave-active {
+  transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.receipt-slide-up-enter-from,
+.receipt-slide-up-leave-to {
+  opacity: 0;
+  transform: translateY(30px) scale(0.95);
+}
+
 /* Success overlay staggered animations */
 .success-icon {
-  animation: scaleIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s both;
+  animation: scaleIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.15s both;
 }
 
 .success-hero {
-  animation: fadeSlideUp 0.4s ease-out 0.05s both;
+  animation: fadeSlideUp 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s both;
+}
+
+.success-list {
+  animation: fadeSlideUp 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.3s both;
 }
 
 .success-actions {
-  animation: fadeSlideUp 0.35s ease-out 0.35s both;
+  animation: fadeSlideUp 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.4s both;
 }
 
 .success-done {
-  animation: fadeSlideUp 0.3s ease-out 0.55s both;
+  animation: fadeSlideUp 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.5s both;
 }
 
 @keyframes scaleIn {

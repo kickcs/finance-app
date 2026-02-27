@@ -16,6 +16,7 @@ defineProps<{
 const emit = defineEmits<{
   'profile-click': [];
   'settings-click': [];
+  'balance-click': [];
 }>();
 </script>
 
@@ -23,21 +24,19 @@ const emit = defineEmits<{
   <div class="md:hidden shrink-0">
     <AppHeader>
       <template #logo>
-        <button
-          type="button"
-          aria-label="Перейти в профиль"
-          class="relative w-[200px] h-10 cursor-pointer overflow-hidden"
-          @click="emit('profile-click')"
-        >
+        <div class="relative w-[200px] h-10 overflow-hidden">
           <!-- Default Greeting State -->
-          <div
+          <button
+            type="button"
+            aria-label="Перейти в профиль"
             :aria-hidden="isScrolledPastBalance"
-            class="absolute inset-0 flex items-center gap-2.5 group transition-[transform,opacity] duration-300 ease-out"
+            class="absolute inset-0 flex items-center gap-2.5 group transition-[transform,opacity] duration-300 ease-out cursor-pointer"
             :class="
               isScrolledPastBalance
                 ? '-translate-y-full opacity-0 pointer-events-none'
                 : 'translate-y-0 opacity-100'
             "
+            @click="emit('profile-click')"
           >
             <div
               class="w-9 h-9 rounded-xl flex items-center justify-center bg-gradient-to-br from-primary to-primary-hover shadow-sm shadow-primary/25 group-hover:shadow-md group-hover:shadow-primary/30 group-hover:scale-105 transition-[transform,box-shadow] duration-200 shrink-0"
@@ -58,17 +57,20 @@ const emit = defineEmits<{
                 {{ userName || 'Ouro' }}
               </span>
             </div>
-          </div>
+          </button>
 
           <!-- Sticky Balance State -->
-          <div
+          <button
+            type="button"
+            aria-label="Перейти к счетам"
             :aria-hidden="!isScrolledPastBalance"
-            class="absolute inset-0 flex items-center gap-2.5 transition-[transform,opacity] duration-300 ease-out"
+            class="absolute inset-0 flex items-center gap-2.5 transition-[transform,opacity] duration-300 ease-out cursor-pointer"
             :class="
               isScrolledPastBalance
                 ? 'translate-y-0 opacity-100'
                 : 'translate-y-full opacity-0 pointer-events-none'
             "
+            @click="emit('balance-click')"
           >
             <div
               class="w-9 h-9 rounded-xl flex items-center justify-center bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark shrink-0"
@@ -87,8 +89,8 @@ const emit = defineEmits<{
                 {{ formatMasked(totalBalance, currency, isHidden, COMPACT_FORMAT) }}
               </span>
             </div>
-          </div>
-        </button>
+          </button>
+        </div>
       </template>
       <template #actions>
         <button

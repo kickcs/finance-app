@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue';
 import { useLocalStorage } from '@vueuse/core';
 import { queryClient } from '@/shared/api/queryClient';
-import { PullToRefresh } from '@/shared/ui';
+import { PullToRefresh, UIcon } from '@/shared/ui';
 import { InstallPwaBanner, InstallPwaModal, usePwaInstall } from '@/features/install-pwa';
 import { QuickActionModal } from '@/features/configure-quick-action';
 import { AccountStack } from '@/widgets/account-stack';
@@ -99,6 +99,7 @@ function handleScanReceipt() {
       :is-scrolled-past-balance="isScrolledPastBalance"
       @profile-click="nav.toProfile"
       @settings-click="nav.toDashboardSettings"
+      @balance-click="nav.toAccounts"
     />
 
     <!-- Scrollable content -->
@@ -128,6 +129,7 @@ function handleScanReceipt() {
                 @expense-click="nav.toNewTransaction('expense')"
                 @income-analytics="nav.toAnalytics('income')"
                 @expense-analytics="nav.toAnalytics('expense')"
+                @balance-click="nav.toAccounts"
               />
             </section>
 
@@ -228,6 +230,17 @@ function handleScanReceipt() {
                 />
               </section>
             </template>
+
+            <section class="flex justify-center mt-2 pb-4">
+              <button
+                type="button"
+                class="flex items-center gap-2 text-[13px] font-medium text-text-tertiary-light dark:text-text-tertiary-dark hover:text-text-secondary-light dark:hover:text-text-secondary-dark transition-colors px-4 py-2 rounded-xl hover:bg-surface-light dark:hover:bg-surface-dark"
+                @click="nav.toDashboardSettings"
+              >
+                <UIcon name="tune" size="sm" />
+                Настроить вид дашборда
+              </button>
+            </section>
           </div>
 
           <!-- Desktop layout (8/4 fintech grid) -->
@@ -312,6 +325,7 @@ function handleScanReceipt() {
                   @reminder-click="nav.toReminder"
                   @add-reminder="nav.toNewReminder"
                   @view-all-reminders="nav.toReminders"
+                  @dashboard-settings-click="nav.toDashboardSettings"
                 />
               </section>
             </div>

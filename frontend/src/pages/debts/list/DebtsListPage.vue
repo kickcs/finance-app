@@ -5,7 +5,16 @@ import { AppHeader } from '@/widgets/header';
 import { DebtCard, useDebts, type Debt } from '@/entities/debt';
 import { useAccounts } from '@/entities/account';
 import { CloseAllDebtsModal, useCloseAllDebts } from '@/features/close-debt';
-import { UButton, UIcon, UCard, Skeleton, EmptyState, SectionHeader, UTabs, useToast } from '@/shared/ui';
+import {
+  UButton,
+  UIcon,
+  UCard,
+  Skeleton,
+  EmptyState,
+  SectionHeader,
+  UTabs,
+  useToast,
+} from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { useExchangeRates } from '@/shared/api';
 import { navigateBack } from '@/app/router';
@@ -111,13 +120,24 @@ const { accounts } = useAccounts(userId);
 const { isClosing, progress, total, closeAllDebts } = useCloseAllDebts();
 const showCloseAllModal = ref(false);
 
-async function handleCloseAll(accountId: string) {
+async function handleCloseAll(
+  accountId: string,
+  options: { paymentAmount: number; forgiveRemainder?: boolean; excessCategoryId?: string },
+) {
   if (!userId.value) return;
-  const success = await closeAllDebts(activeDebts.value, accountId, userId.value);
+  const success = await closeAllDebts(activeDebts.value, accountId, userId.value, options);
   if (success) {
     showCloseAllModal.value = false;
     haptics.success();
-    toast({ title: 'Все долги закрыты', variant: 'success' });
+    toast({
+      title:
+        options.forgiveRemainder && options.paymentAmount === 0
+          ? 'Все долги прощены'
+          : options.forgiveRemainder
+            ? 'Долги закрыты и прощены'
+            : 'Все долги закрыты',
+      variant: 'success',
+    });
     clearFilter();
   } else {
     haptics.error();
@@ -365,11 +385,7 @@ async function handleCloseAll(accountId: string) {
       <!-- Closed Debts -->
       <template v-else-if="statusFilter === 'closed'">
         <div v-if="closedDebts.length > 0" class="space-y-3">
-          <SectionHeader
-            title="Погашенные долги"
-            :show-add="false"
-            :show-view-all="false"
-          />
+          <SectionHeader title="Погашенные долги" :show-add="false" :show-view-all="false" />
 
           <TransitionGroup
             tag="div"

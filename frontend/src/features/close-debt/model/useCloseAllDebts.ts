@@ -4,6 +4,13 @@ import { debtQueryKeys } from '@/entities/debt';
 import { queryClient } from '@/shared/api/queryClient';
 import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
 import type { Debt } from '@/shared/api/database.types';
+import { sortDebtsByDateAsc } from './sortDebts';
+
+interface CloseAllOptions {
+  paymentAmount?: number;
+  forgiveRemainder?: boolean;
+  excessCategoryId?: string;
+}
 
 export function useCloseAllDebts() {
   const isClosing = ref(false);
@@ -25,6 +32,7 @@ export function useCloseAllDebts() {
     debts: Debt[],
     selectedAccountId: string,
     userId: string,
+    options?: CloseAllOptions,
   ): Promise<boolean> {
     if (debts.length === 0) return true;
 
@@ -33,14 +41,40 @@ export function useCloseAllDebts() {
     progress.value = 0;
     total.value = debts.length;
 
+    const totalDebt = debts.reduce((sum, d) => sum + d.remaining_amount, 0);
+    const paymentAmount = options?.paymentAmount ?? totalDebt;
+    const excessAmount = Math.max(0, paymentAmount - totalDebt);
+
+    const sorted = sortDebtsByDateAsc(debts);
+
     try {
-      for (const debt of debts) {
+      let budget = paymentAmount;
+
+      for (let i = 0; i < sorted.length; i++) {
+        const debt = sorted[i];
+        const allocated = Math.min(budget, debt.remaining_amount);
+        budget -= allocated;
+
+        // Skip debts that get nothing and aren't being forgiven
+        if (allocated === 0 && !options?.forgiveRemainder) {
+          progress.value++;
+          continue;
+        }
+
+        // Last debt that receives payment gets the excess category
+        const isLastPaidDebt = budget === 0 || i === sorted.length - 1;
+        const hasExcess = isLastPaidDebt && excessAmount > 0;
+
         const success = await makePartialPayment(
           debt,
-          debt.remaining_amount,
+          allocated + (hasExcess ? excessAmount : 0),
           selectedAccountId,
           userId,
-          { skipInvalidation: true },
+          {
+            skipInvalidation: true,
+            forgiveRemainder: options?.forgiveRemainder && allocated < debt.remaining_amount,
+            excessCategoryId: hasExcess ? options?.excessCategoryId : undefined,
+          },
         );
 
         if (!success) {
