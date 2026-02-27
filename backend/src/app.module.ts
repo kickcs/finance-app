@@ -1,8 +1,11 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 
 import { databaseConfig, jwtConfig } from './config';
+import { DATABASE_POOL_CONFIG } from './config/database.config';
 import { CommonModule } from './common';
 import { SharedModule } from './shared';
 import { HealthModule } from './health';
@@ -45,6 +48,14 @@ import { PersonModule } from './modules/person';
       load: [databaseConfig, jwtConfig],
     }),
 
+    // Global rate limiting
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000,
+        limit: 100,
+      },
+    ]),
+
     // Database
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
@@ -73,6 +84,7 @@ import { PersonModule } from './modules/person';
         ],
         synchronize: false,
         logging: process.env.NODE_ENV === 'development',
+        extra: DATABASE_POOL_CONFIG,
       }),
       inject: [ConfigService],
     }),
@@ -98,6 +110,12 @@ import { PersonModule } from './modules/person';
 
     // Observability (Prometheus metrics)
     ObservabilityModule,
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
   ],
 })
 export class AppModule {}

@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { Request } from 'express';
+import { SkipThrottle } from '@nestjs/throttler';
 import { CurrentUser, Public } from '../../../../common';
 import { CreateCheckoutDto } from '../dto/create-checkout.dto';
 import { CreateCheckoutCommand } from '../../application/commands';
@@ -46,6 +47,7 @@ export class SubscriptionController {
   }
 
   @Public()
+  @SkipThrottle()
   @Post('webhooks/lemonsqueezy')
   @HttpCode(HttpStatus.OK)
   async handleWebhook(@Req() req: RequestWithRawBody): Promise<{ received: boolean }> {

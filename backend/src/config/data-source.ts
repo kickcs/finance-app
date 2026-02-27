@@ -1,6 +1,7 @@
 import type { DataSourceOptions } from 'typeorm';
 import { DataSource } from 'typeorm';
 import * as dotenv from 'dotenv';
+import { DATABASE_POOL_CONFIG } from './database.config';
 
 // Load environment variables
 dotenv.config();
@@ -55,6 +56,7 @@ export const dataSourceOptions: DataSourceOptions = {
   ],
   synchronize: false,
   logging: process.env.NODE_ENV === 'development',
+  extra: DATABASE_POOL_CONFIG,
 };
 
 // DataSource instance for TypeORM CLI

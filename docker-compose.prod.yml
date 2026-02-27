@@ -16,6 +16,8 @@ services:
     image: postgres:16-alpine
     container_name: finance-postgres
     restart: always
+    mem_limit: 512m
+    cpus: 0.5
     environment:
       POSTGRES_USER: ${DATABASE_USERNAME:-postgres}
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD is required}
@@ -43,6 +45,8 @@ services:
     image: ghcr.io/${GITHUB_REPOSITORY:-your-username/finance-app}/backend:${GHCR_IMAGE_TAG:-latest}
     container_name: finance-backend
     restart: always
+    mem_limit: 768m
+    cpus: 1.0
     environment:
       NODE_ENV: production
       PORT: 3000
@@ -87,6 +91,8 @@ services:
     image: ghcr.io/${GITHUB_REPOSITORY:-your-username/finance-app}/frontend:${GHCR_IMAGE_TAG:-latest}
     container_name: finance-frontend
     restart: always
+    mem_limit: 256m
+    cpus: 0.5
     ports:
       - "8080:80"
     healthcheck:
@@ -108,6 +114,8 @@ services:
     image: grafana/alloy:v1.13.2
     container_name: finance-alloy
     restart: always
+    mem_limit: 256m
+    cpus: 0.5
     volumes:
       - ./docker/alloy/config.alloy:/etc/alloy/config.alloy:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro

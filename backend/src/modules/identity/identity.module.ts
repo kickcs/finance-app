@@ -5,7 +5,6 @@ import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { CqrsModule } from '@nestjs/cqrs';
 import { ScheduleModule } from '@nestjs/schedule';
-import { ThrottlerModule } from '@nestjs/throttler';
 
 // Domain
 import { PROFILE_REPOSITORY } from './domain/repositories/profile.repository.interface';
@@ -45,12 +44,6 @@ import { ReminderOrmEntity } from '../planning/infrastructure/persistence/typeor
   imports: [
     CqrsModule,
     ScheduleModule.forRoot(),
-    ThrottlerModule.forRoot([
-      {
-        ttl: 60000, // 1 minute
-        limit: 20, // max 20 requests per minute by default
-      },
-    ]),
     TypeOrmModule.forFeature([
       ProfileOrmEntity,
       // For cleanup service
