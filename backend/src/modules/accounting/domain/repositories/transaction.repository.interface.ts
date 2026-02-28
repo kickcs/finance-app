@@ -65,7 +65,7 @@ export interface ITransactionRepository {
   findById(id: string): Promise<Transaction | null>;
   findByUserId(userId: string, limit?: number): Promise<Transaction[]>;
   findByAccountId(accountId: string): Promise<Transaction[]>;
-  findByAccountIdWithIncoming(accountId: string): Promise<Transaction[]>;
+  findByAccountIdWithIncoming(accountId: string, limit?: number): Promise<Transaction[]>;
   findByDateRange(userId: string, startDate: Date, endDate: Date): Promise<Transaction[]>;
   save(transaction: Transaction): Promise<Transaction>;
   delete(id: string): Promise<void>;
