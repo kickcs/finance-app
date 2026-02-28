@@ -133,7 +133,7 @@ function confirmAddAll() {
   for (const contactId of selectedContactIds.value) {
     const person = people.value.find((p) => p.id === contactId);
     if (person && !existingNames.value.has(person.name.toLowerCase())) {
-      emit('addParticipant', person.name, true);
+      emit('addParticipant', person.name, false);
     }
   }
   haptics.success();
@@ -368,158 +368,167 @@ function handleTapRow(item: ReceiptItem) {
         <UIcon name="arrow_forward" size="sm" class="ml-2" />
       </UButton>
     </div>
-  </div>
+    <!-- Add participant modal -->
+    <UModal v-model="addParticipantOpen" title="Добавить участников">
+      <div class="space-y-4">
+        <!-- "Я" quick-add -->
+        <button
+          v-if="!hasMe"
+          type="button"
+          class="flex items-center gap-3 w-full px-4 py-3 rounded-xl bg-primary/[0.06] border border-primary/15 active:scale-[0.98] transition-all"
+          @click="addMe"
+        >
+          <div class="w-9 h-9 rounded-full bg-primary flex items-center justify-center">
+            <UIcon name="person" size="sm" class="text-white" />
+          </div>
+          <div class="text-left flex-1">
+            <p class="text-sm font-semibold text-primary">Добавить «Я»</p>
+            <p class="text-xs text-text-secondary-light dark:text-text-secondary-dark">
+              Вы участвуете в этом чеке
+            </p>
+          </div>
+          <UIcon name="check_circle" size="sm" class="text-success" />
+        </button>
 
-  <!-- Add participant modal -->
-  <UModal v-model="addParticipantOpen" title="Добавить участников">
-    <div class="space-y-4">
-      <!-- "Я" quick-add -->
-      <button
-        v-if="!hasMe"
-        type="button"
-        class="flex items-center gap-3 w-full px-4 py-3 rounded-xl bg-primary/[0.06] border border-primary/15 active:scale-[0.98] transition-all"
-        @click="addMe"
-      >
-        <div class="w-9 h-9 rounded-full bg-primary flex items-center justify-center">
-          <UIcon name="person" size="sm" class="text-white" />
-        </div>
-        <div class="text-left flex-1">
-          <p class="text-sm font-semibold text-primary">Добавить «Я»</p>
-          <p class="text-xs text-text-secondary-light dark:text-text-secondary-dark">
-            Вы участвуете в этом чеке
-          </p>
-        </div>
-        <UIcon name="check_circle" size="sm" class="text-success" />
-      </button>
-
-      <!-- Saved contacts multi-select -->
-      <div v-if="availableContacts.length > 0">
-        <p class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
-          Сохранённые контакты
-        </p>
-        <div class="space-y-1.5 max-h-48 overflow-y-auto no-scrollbar">
-          <button
-            v-for="contact in availableContacts"
-            :key="contact.id"
-            type="button"
-            class="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl transition-all active:scale-[0.98]"
-            :class="
-              selectedContactIds.has(contact.id)
-                ? 'bg-primary/10 border border-primary/30'
-                : 'bg-surface-light dark:bg-surface-dark border border-transparent'
-            "
-            @click="toggleContactSelection(contact.id)"
+        <!-- Saved contacts multi-select -->
+        <div v-if="availableContacts.length > 0">
+          <p
+            class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2"
           >
-            <InitialAvatar :name="contact.name" :color="contact.color" size="md" />
-            <span
-              class="flex-1 text-left text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
-            >
-              {{ contact.name }}
-            </span>
-            <div
-              class="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all"
+            Сохранённые контакты
+          </p>
+          <div class="space-y-1.5 max-h-48 overflow-y-auto no-scrollbar">
+            <button
+              v-for="contact in availableContacts"
+              :key="contact.id"
+              type="button"
+              class="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl transition-all active:scale-[0.98]"
               :class="
                 selectedContactIds.has(contact.id)
-                  ? 'bg-primary border-primary'
-                  : 'border-border-light dark:border-border-dark'
+                  ? 'bg-primary/10 border border-primary/30'
+                  : 'bg-surface-light dark:bg-surface-dark border border-transparent'
               "
+              @click="toggleContactSelection(contact.id)"
             >
-              <UIcon
-                v-if="selectedContactIds.has(contact.id)"
-                name="check"
-                size="xs"
-                class="text-white"
-              />
-            </div>
-          </button>
-        </div>
-      </div>
-
-      <!-- Empty contacts hint -->
-      <p
-        v-else-if="people.length === 0"
-        class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark text-center py-2"
-      >
-        Нет сохранённых контактов. Введите имя ниже.
-      </p>
-
-      <!-- Manual name input -->
-      <div>
-        <p class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
-          Или введите имя
-        </p>
-        <div class="flex items-center gap-2">
-          <UInput
-            ref="manualInputRef"
-            v-model="newName"
-            placeholder="Имя участника"
-            :error="nameError"
-            @keydown="(e: KeyboardEvent) => e.key === 'Enter' && confirmAddManual()"
-            @update:model-value="nameError = ''"
-          />
-          <button
-            v-if="newName.trim()"
-            type="button"
-            class="h-10 px-3 rounded-xl bg-primary/10 text-primary text-sm font-medium shrink-0 active:scale-95 transition-transform"
-            @click="confirmAddManual"
-          >
-            <UIcon name="add" size="sm" />
-          </button>
-          <button
-            v-if="
-              newName.trim() &&
-              !people.some((p) => p.name.toLowerCase() === newName.trim().toLowerCase())
-            "
-            type="button"
-            class="h-10 px-3 rounded-xl bg-surface-light dark:bg-surface-dark text-text-secondary-light dark:text-text-secondary-dark text-sm shrink-0 active:scale-95 transition-transform"
-            title="Сохранить в контакты"
-            @click="handleSaveAndAdd(newName.trim())"
-          >
-            <UIcon name="person_add" size="sm" />
-          </button>
-        </div>
-      </div>
-
-      <!-- Added participants preview -->
-      <div v-if="participants.length > 0">
-        <p class="text-xs font-medium text-text-tertiary-light dark:text-text-tertiary-dark mb-2">
-          Уже добавлены
-        </p>
-        <div class="flex flex-wrap gap-1.5">
-          <span
-            v-for="p in participants"
-            :key="p.id"
-            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-light dark:bg-surface-dark text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark"
-          >
-            {{ p.name }}
-            <button
-              type="button"
-              class="text-text-tertiary-light dark:text-text-tertiary-dark hover:text-danger transition-colors"
-              @click="handleRemoveParticipant(p.id)"
-            >
-              <UIcon name="close" size="xs" />
+              <InitialAvatar :name="contact.name" :color="contact.color" size="md" />
+              <span
+                class="flex-1 text-left text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
+              >
+                {{ contact.name }}
+              </span>
+              <div
+                class="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all"
+                :class="
+                  selectedContactIds.has(contact.id)
+                    ? 'bg-primary border-primary'
+                    : 'border-border-light dark:border-border-dark'
+                "
+              >
+                <UIcon
+                  v-if="selectedContactIds.has(contact.id)"
+                  name="check"
+                  size="xs"
+                  class="text-white"
+                />
+              </div>
             </button>
-          </span>
+          </div>
+        </div>
+
+        <!-- Empty contacts hint -->
+        <p
+          v-else-if="people.length === 0"
+          class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark text-center py-2"
+        >
+          Нет сохранённых контактов. Введите имя ниже.
+        </p>
+
+        <!-- Manual name input -->
+        <div>
+          <p
+            class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2"
+          >
+            Или введите имя
+          </p>
+          <div class="flex items-center gap-2">
+            <UInput
+              ref="manualInputRef"
+              v-model="newName"
+              placeholder="Имя участника"
+              :error="nameError"
+              @keydown="(e: KeyboardEvent) => e.key === 'Enter' && confirmAddManual()"
+              @update:model-value="nameError = ''"
+            />
+            <button
+              v-if="newName.trim()"
+              type="button"
+              class="h-10 px-3 rounded-xl bg-primary/10 text-primary text-sm font-medium shrink-0 active:scale-95 transition-transform"
+              @click="confirmAddManual"
+            >
+              <UIcon name="add" size="sm" />
+            </button>
+            <button
+              v-if="
+                newName.trim() &&
+                !people.some((p) => p.name.toLowerCase() === newName.trim().toLowerCase())
+              "
+              type="button"
+              class="h-10 px-3 rounded-xl bg-surface-light dark:bg-surface-dark text-text-secondary-light dark:text-text-secondary-dark text-sm shrink-0 active:scale-95 transition-transform"
+              title="Сохранить в контакты"
+              @click="handleSaveAndAdd(newName.trim())"
+            >
+              <UIcon name="person_add" size="sm" />
+            </button>
+          </div>
+        </div>
+
+        <!-- Added participants preview -->
+        <div v-if="participants.length > 0">
+          <p class="text-xs font-medium text-text-tertiary-light dark:text-text-tertiary-dark mb-2">
+            Уже добавлены
+          </p>
+          <div class="flex flex-wrap gap-1.5">
+            <span
+              v-for="p in participants"
+              :key="p.id"
+              class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-light dark:bg-surface-dark text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark"
+            >
+              {{ p.name }}
+              <button
+                type="button"
+                class="text-text-tertiary-light dark:text-text-tertiary-dark hover:text-danger transition-colors"
+                @click="handleRemoveParticipant(p.id)"
+              >
+                <UIcon name="close" size="xs" />
+              </button>
+            </span>
+          </div>
         </div>
       </div>
-    </div>
 
-    <template #actions>
-      <UButton
-        v-if="selectedContactIds.size > 0"
-        variant="primary"
-        size="lg"
-        full-width
-        @click="confirmAddAll"
-      >
-        Добавить {{ selectedContactIds.size }}
-        {{ pluralize(selectedContactIds.size, 'контакт', 'контакта', 'контактов') }}
-      </UButton>
-      <UButton v-else variant="secondary" size="lg" full-width @click="addParticipantOpen = false">
-        Готово
-      </UButton>
-    </template>
-  </UModal>
+      <template #actions>
+        <UButton
+          v-if="selectedContactIds.size > 0"
+          variant="primary"
+          size="lg"
+          full-width
+          @click="confirmAddAll"
+        >
+          Добавить {{ selectedContactIds.size }}
+          {{ pluralize(selectedContactIds.size, 'контакт', 'контакта', 'контактов') }}
+        </UButton>
+        <UButton
+          v-else
+          variant="secondary"
+          size="lg"
+          full-width
+          @click="addParticipantOpen = false"
+        >
+          Готово
+        </UButton>
+      </template>
+    </UModal>
+  </div>
 </template>
 
 <style>
