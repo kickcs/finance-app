@@ -158,6 +158,36 @@ export function useAccounts(userId: MaybeRefOrGetter<string | null>) {
     },
   });
 
+  // Reorder mutation
+  const reorderMutation = useMutation({
+    mutationFn: (accountIds: string[]) => accountsApi.reorder(accountIds),
+    onMutate: async (accountIds) => {
+      await queryClient.cancelQueries({ queryKey: queryKey.value });
+      const previousAccounts = queryClient.getQueryData<AccountWithBalances[]>(queryKey.value);
+
+      queryClient.setQueryData<AccountWithBalances[]>(queryKey.value, (old) => {
+        if (!old) return old;
+        const ordered: AccountWithBalances[] = [];
+        for (const id of accountIds) {
+          const acc = old.find((a) => a.id === id);
+          if (acc) ordered.push(acc);
+        }
+        const remaining = old.filter((a) => !accountIds.includes(a.id));
+        return [...ordered, ...remaining];
+      });
+
+      return { previousAccounts };
+    },
+    onError: (_err, _accountIds, context) => {
+      if (context?.previousAccounts) {
+        queryClient.setQueryData(queryKey.value, context.previousAccounts);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKey.value });
+    },
+  });
+
   // Computed values
   const totalBalance = computed(() => {
     // Sum all balances (without conversion - for simple display)
@@ -212,6 +242,10 @@ export function useAccounts(userId: MaybeRefOrGetter<string | null>) {
     return deleteMutation.mutateAsync(id);
   }
 
+  async function reorderAccounts(accountIds: string[]) {
+    return reorderMutation.mutateAsync(accountIds);
+  }
+
   return {
     accounts,
     isLoading,
@@ -223,6 +257,7 @@ export function useAccounts(userId: MaybeRefOrGetter<string | null>) {
     updateAccount,
     updateBalance,
     deleteAccount,
+    reorderAccounts,
     getAccountById,
     refetch,
   };

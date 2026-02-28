@@ -214,4 +214,8 @@ export const accountsApi = {
   async delete(id: string): Promise<void> {
     await http.delete(`/accounts/${id}`);
   },
+
+  async reorder(accountIds: string[]): Promise<void> {
+    await http.post('/accounts/reorder', { accountIds });
+  },
 };

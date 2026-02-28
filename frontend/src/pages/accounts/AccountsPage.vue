@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, watch, defineAsyncComponent } from 'vue';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useRouter } from 'vue-router';
 import { ROUTE_NAMES } from '@/app/router/routeNames';
@@ -10,6 +10,9 @@ import { UButton, UIcon, UCard, EmptyState, IconBadge, SectionHeader, Skeleton }
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { useExchangeRates } from '@/shared/api';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
+import { haptics } from '@/shared/lib/haptics';
+
+const draggable = defineAsyncComponent(() => import('vuedraggable'));
 
 const router = useRouter();
 
@@ -22,7 +25,18 @@ const { currency } = useUserCurrency();
 const { convert } = useExchangeRates(currency);
 
 // Use real data from API
-const { accounts, totalBalancesByCurrency, isLoading } = useAccounts(userId);
+const { accounts, totalBalancesByCurrency, isLoading, reorderAccounts } = useAccounts(userId);
+
+// Local mutable list for draggable
+const localAccounts = ref<AccountWithBalances[]>([]);
+
+watch(
+  accounts,
+  (accs) => {
+    localAccounts.value = [...accs];
+  },
+  { immediate: true },
+);
 
 // Total balance converted to user's main currency
 const totalBalance = computed(() => {
@@ -40,6 +54,19 @@ function handleAccountClick(account: AccountWithBalances) {
 
 function handleAddAccount() {
   router.push({ name: ROUTE_NAMES.NEW_ACCOUNT });
+}
+
+function handleDragStart() {
+  haptics.tap();
+}
+
+async function handleDragEnd() {
+  const accountIds = localAccounts.value.map((a) => a.id);
+  try {
+    await reorderAccounts(accountIds);
+  } catch (error) {
+    console.error('Failed to reorder accounts:', error);
+  }
 }
 </script>
 
@@ -103,14 +130,32 @@ function handleAddAccount() {
           <Skeleton v-for="i in 3" :key="i" class="h-[88px] w-full rounded-2xl" />
         </div>
 
-        <div v-else-if="accounts.length > 0" class="space-y-3">
-          <AccountCard
-            v-for="account in accounts"
-            :key="account.id"
-            :account="account"
-            class="transition-transform active:scale-[0.98]"
-            @click="handleAccountClick(account)"
-          />
+        <div v-else-if="localAccounts.length > 0" class="space-y-3">
+          <draggable
+            v-model="localAccounts"
+            item-key="id"
+            handle=".drag-handle"
+            ghost-class="opacity-50"
+            animation="200"
+            class="space-y-3"
+            @start="handleDragStart"
+            @end="handleDragEnd"
+          >
+            <template #item="{ element: account }">
+              <div class="flex items-center gap-3">
+                <div
+                  class="drag-handle cursor-grab active:cursor-grabbing text-text-tertiary-light dark:text-text-tertiary-dark shrink-0 touch-none"
+                >
+                  <UIcon name="drag_indicator" size="sm" />
+                </div>
+                <AccountCard
+                  :account="account"
+                  class="flex-1 transition-transform active:scale-[0.98]"
+                  @click="handleAccountClick(account)"
+                />
+              </div>
+            </template>
+          </draggable>
         </div>
 
         <!-- Empty State -->
