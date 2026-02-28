@@ -181,39 +181,35 @@ export class TransactionRepository implements ITransactionRepository {
       });
     }
 
-    // Single query: fetch transactions with LEFT JOIN for debt return amounts
-    query = query
-      .addSelect('t.id', 'entityId')
-      .leftJoin(
-        (subQuery) =>
-          subQuery
-            .select('d.source_transaction_id', 'source_tx_id')
-            .addSelect('SUM(return_tx.amount)', 'returned_amount')
-            .from('debts', 'd')
-            .innerJoin(
-              'transactions',
-              'return_tx',
-              "d.close_transaction_id = return_tx.id AND return_tx.category_id = 'debt_return_to_me'",
-            )
-            .groupBy('d.source_transaction_id'),
-        'dr',
-        'dr.source_tx_id = t.id',
-      )
-      .addSelect('COALESCE(dr.returned_amount, 0)', 'returnedAmount');
+    const items = await query.getMany();
 
-    const rawItems = await query.getRawAndEntities();
+    // Calculate returned amounts for expense transactions via debt returns
+    const returnedAmountsMap: Record<string, number> = {};
+    const transactionIds = items.map((t) => t.id);
 
-    const lastItem = rawItems.entities[rawItems.entities.length - 1];
+    if (transactionIds.length > 0) {
+      const returnedAmountsResult = await this.ormRepository
+        .createQueryBuilder('return_tx')
+        .innerJoin(DebtOrmEntity, 'd', 'd.close_transaction_id = return_tx.id')
+        .where('d.source_transaction_id IN (:...transactionIds)', {
+          transactionIds,
+        })
+        .andWhere("return_tx.category_id = 'debt_return_to_me'")
+        .select('d.source_transaction_id', 'sourceTransactionId')
+        .addSelect('SUM(return_tx.amount)', 'returnedAmount')
+        .groupBy('d.source_transaction_id')
+        .getRawMany<{ sourceTransactionId: string; returnedAmount: string }>();
 
-    // Map items with returned amounts from the JOIN
-    const returnedMap: Record<string, number> = {};
-    for (const raw of rawItems.raw as Array<{ entityId: string; returnedAmount: string }>) {
-      returnedMap[raw.entityId] = Number(raw.returnedAmount ?? 0);
+      for (const row of returnedAmountsResult) {
+        returnedAmountsMap[row.sourceTransactionId] = Number(row.returnedAmount);
+      }
     }
 
-    const dataWithReturns: TransactionWithReturns[] = rawItems.entities.map((entity) => {
+    const lastItem = items[items.length - 1];
+
+    const dataWithReturns: TransactionWithReturns[] = items.map((entity) => {
       const domain = TransactionMapper.toDomain(entity);
-      const returnedAmount = returnedMap[entity.id] ?? 0;
+      const returnedAmount = returnedAmountsMap[entity.id] ?? 0;
       return Object.assign(domain, {
         returnedAmount,
       }) as TransactionWithReturns;
@@ -236,7 +232,7 @@ export class TransactionRepository implements ITransactionRepository {
             createdAt: lastItem.createdAt.toISOString(),
           }
         : null,
-      hasMore: rawItems.entities.length === options.pageSize,
+      hasMore: items.length === options.pageSize,
     };
   }
 
