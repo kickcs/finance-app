@@ -64,15 +64,13 @@ export class TransactionRepository implements ITransactionRepository {
 
   async findByAccountIdWithIncoming(accountId: string, limit = 100): Promise<Transaction[]> {
     // Parallel queries with shared limit, merge + sort in JS (bounded by limit)
-    const fetchLimit = limit + 1;
-
     const [outgoing, incoming] = await Promise.all([
       this.ormRepository
         .createQueryBuilder('t')
         .where('t.account_id = :accountId', { accountId })
         .orderBy('t.date', 'DESC')
         .addOrderBy('t.created_at', 'DESC')
-        .limit(fetchLimit)
+        .limit(limit)
         .getMany(),
       this.ormRepository
         .createQueryBuilder('t')
@@ -80,19 +78,13 @@ export class TransactionRepository implements ITransactionRepository {
         .andWhere('t.type = :type', { type: 'transfer' })
         .orderBy('t.date', 'DESC')
         .addOrderBy('t.created_at', 'DESC')
-        .limit(fetchLimit)
+        .limit(limit)
         .getMany(),
     ]);
 
-    const merged = [...outgoing, ...incoming]
-      .sort((a, b) => {
-        const dateCompare = new Date(b.date).getTime() - new Date(a.date).getTime();
-        if (dateCompare !== 0) return dateCompare;
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      })
-      .slice(0, limit);
-
-    return merged.map((entity) => TransactionMapper.toDomain(entity));
+    return this.mergeByDateDesc(outgoing, incoming, limit).map((entity) =>
+      TransactionMapper.toDomain(entity),
+    );
   }
 
   async findByDateRange(userId: string, startDate: Date, endDate: Date): Promise<Transaction[]> {
@@ -329,13 +321,7 @@ export class TransactionRepository implements ITransactionRepository {
     ]);
 
     // Merge and sort, then take pageSize + 1 to check hasMore
-    const merged = [...outgoing, ...incoming]
-      .sort((a, b) => {
-        const dateCompare = new Date(b.date).getTime() - new Date(a.date).getTime();
-        if (dateCompare !== 0) return dateCompare;
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      })
-      .slice(0, pageSize + 1);
+    const merged = this.mergeByDateDesc(outgoing, incoming, pageSize + 1);
 
     // Check if there are more items beyond the requested page
     const hasMore = merged.length > pageSize;
@@ -762,5 +748,19 @@ export class TransactionRepository implements ITransactionRepository {
     );
 
     return result;
+  }
+
+  private mergeByDateDesc(
+    a: TransactionOrmEntity[],
+    b: TransactionOrmEntity[],
+    limit: number,
+  ): TransactionOrmEntity[] {
+    return [...a, ...b]
+      .sort((x, y) => {
+        const dateCompare = new Date(y.date).getTime() - new Date(x.date).getTime();
+        if (dateCompare !== 0) return dateCompare;
+        return new Date(y.createdAt).getTime() - new Date(x.createdAt).getTime();
+      })
+      .slice(0, limit);
   }
 }
