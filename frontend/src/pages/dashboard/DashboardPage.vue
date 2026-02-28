@@ -328,6 +328,7 @@ function handleScanReceipt() {
                   @quick-action-long-press="handleQuickActionLongPress"
                   @dismiss-hint="quickActionsHintDismissed = true"
                   @settings-click="nav.toQuickActionsSettings"
+                  @scan-click="handleScanReceipt"
                   @account-click="nav.toAccount"
                   @add-account="nav.toNewAccount"
                   @view-all-accounts="nav.toAccounts"

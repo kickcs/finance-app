@@ -47,6 +47,7 @@ const emit = defineEmits<{
   'quick-action-long-press': [action: QuickAction | null];
   'dismiss-hint': [];
   'settings-click': [];
+  'scan-click': [];
   // Accounts
   'account-click': [account: AccountWithBalances];
   'add-account': [];
@@ -97,10 +98,12 @@ const RemindersSection = defineAsyncComponent({
           :category-map="categoryMap"
           :hint-dismissed="hintDismissed"
           :hidden="quickActionsHidden"
+          show-scan-button
           @click="emit('quick-action-click', $event)"
           @long-press="emit('quick-action-long-press', $event)"
           @dismiss-hint="emit('dismiss-hint')"
           @settings-click="emit('settings-click')"
+          @scan-click="emit('scan-click')"
         />
       </section>
 
