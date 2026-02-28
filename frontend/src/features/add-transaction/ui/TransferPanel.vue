@@ -231,6 +231,27 @@ function handleTargetAmountChange(newToAmount: number) {
 
 let skipWatcherRecalc = false;
 
+const feeDisplayAmount = computed(() => {
+  if (
+    props.formData.feeType === 'percent' &&
+    props.formData.amount > 0 &&
+    props.formData.feeAmount > 0
+  ) {
+    return Math.round(((props.formData.amount * props.formData.feeAmount) / 100) * 100) / 100;
+  }
+  return props.formData.feeAmount;
+});
+
+function handleFeeAmountChange(value: string) {
+  const num = parseFloat(value.replace(',', '.'));
+  emit('update:formData', { ...props.formData, feeAmount: Number.isNaN(num) ? 0 : num });
+}
+
+function handleFeeTypeToggle() {
+  const newType = props.formData.feeType === 'fixed' ? 'percent' : 'fixed';
+  emit('update:formData', { ...props.formData, feeType: newType, feeAmount: 0 });
+}
+
 // Auto-recalculate toAmount when amount or currencies change
 watch(
   () => [props.formData.amount, props.formData.currency, props.formData.toCurrency] as const,
@@ -445,6 +466,50 @@ watch(
           </button>
         </PopoverContent>
       </Popover>
+
+      <!-- Commission input (only when target selected) -->
+      <Transition name="fee">
+        <div
+          v-if="targetAccount"
+          class="mt-3 flex items-center gap-2 px-3 py-2.5 rounded-xl bg-surface-light/50 dark:bg-surface-dark/50 border border-border-light dark:border-border-dark"
+        >
+          <UIcon
+            name="receipt_long"
+            size="sm"
+            class="text-text-tertiary-light dark:text-text-tertiary-dark shrink-0"
+          />
+          <span class="text-xs text-text-secondary-light dark:text-text-secondary-dark shrink-0">
+            Комиссия
+          </span>
+          <input
+            type="number"
+            inputmode="decimal"
+            step="any"
+            :value="formData.feeAmount || ''"
+            placeholder="0"
+            class="flex-1 min-w-0 bg-transparent text-sm text-right text-text-primary-light dark:text-text-primary-dark outline-none tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            @input="handleFeeAmountChange(($event.target as HTMLInputElement).value)"
+          />
+          <button
+            type="button"
+            class="shrink-0 px-2 py-1 rounded-lg text-xs font-medium transition-colors"
+            :class="
+              formData.feeType === 'percent'
+                ? 'bg-primary/10 text-primary'
+                : 'bg-surface-light dark:bg-surface-dark text-text-secondary-light dark:text-text-secondary-dark'
+            "
+            @click="handleFeeTypeToggle"
+          >
+            {{ formData.feeType === 'percent' ? '%' : formData.currency }}
+          </button>
+          <span
+            v-if="formData.feeType === 'percent' && feeDisplayAmount > 0"
+            class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark tabular-nums shrink-0"
+          >
+            ≈ {{ feeDisplayAmount }} {{ formData.currency }}
+          </span>
+        </div>
+      </Transition>
     </div>
 
     <!-- Secondary amount input for target account when currencies differ -->
@@ -465,3 +530,15 @@ watch(
     </div>
   </div>
 </template>
+
+<style scoped>
+.fee-enter-active,
+.fee-leave-active {
+  transition: all 0.2s ease;
+}
+.fee-enter-from,
+.fee-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+</style>

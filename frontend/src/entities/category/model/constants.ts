@@ -184,11 +184,21 @@ export const TRANSFER_CATEGORY: Category = {
   type: 'transfer',
 };
 
+// Commission category (special - auto-assigned for transfer commissions)
+export const COMMISSION_CATEGORY: Category = {
+  id: 'commission',
+  name: 'Комиссия',
+  icon: 'receipt_long',
+  color: '#ef4444',
+  type: 'expense',
+};
+
 export const ALL_CATEGORIES = [
   ...EXPENSE_CATEGORIES,
   ...INCOME_CATEGORIES,
   ...DEBT_CATEGORIES,
   TRANSFER_CATEGORY,
+  COMMISSION_CATEGORY,
 ];
 
 export function getCategoryById(id: string): Category | undefined {

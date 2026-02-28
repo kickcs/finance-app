@@ -13,6 +13,8 @@ export interface TransactionFormData {
   toAccountId: string | null;
   toAmount: number | null;
   toCurrency: string | null;
+  feeAmount: number;
+  feeType: 'fixed' | 'percent';
 }
 
 const DEFAULT_FORM_DATA: Omit<TransactionFormData, 'date'> = {
@@ -25,6 +27,8 @@ const DEFAULT_FORM_DATA: Omit<TransactionFormData, 'date'> = {
   toAccountId: null,
   toAmount: null,
   toCurrency: null,
+  feeAmount: 0,
+  feeType: 'fixed',
 };
 
 export function useTransactionForm() {
@@ -68,6 +72,8 @@ export function useTransactionForm() {
       formData.value.toAccountId = null;
       formData.value.toAmount = null;
       formData.value.toCurrency = null;
+      formData.value.feeAmount = 0;
+      formData.value.feeType = 'fixed';
     }
   }
 

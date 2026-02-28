@@ -53,4 +53,9 @@ export class CreateTransactionDto {
   @IsOptional()
   @IsString()
   debtId?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @IsPositive({ message: 'Fee amount must be positive' })
+  feeAmount?: number;
 }

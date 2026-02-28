@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.24';
+export const CURRENT_VERSION = '1.0.25';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,21 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.25',
+    date: '2026-02-28',
+    title: 'Комиссия при переводе',
+    items: [
+      {
+        type: 'feature',
+        text: 'Комиссия при переводе между счетами — укажите сумму или процент, комиссия автоматически создаётся как отдельный расход',
+      },
+      {
+        type: 'improvement',
+        text: 'Курсы валют загружаются одним запросом вместо пяти — быстрее открытие приложения',
+      },
+    ],
+  },
   {
     version: '1.0.24',
     date: '2026-02-28',

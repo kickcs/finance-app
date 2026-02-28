@@ -82,17 +82,43 @@ export class CreateTransactionHandler implements ICommandHandler<CreateTransacti
         description,
       });
 
+      // Create commission expense if fee specified
+      const feeAmount = command.feeAmount;
+      let feeTransaction: Transaction | null = null;
+
+      if (feeAmount && feeAmount > 0) {
+        feeTransaction = Transaction.createExpense(
+          crypto.randomUUID(),
+          userId,
+          accountId,
+          'commission',
+          feeAmount,
+          currency,
+          date,
+          'Комиссия за перевод',
+          false,
+          undefined,
+        );
+        account.debit(feeAmount, currency);
+      }
+
       // Save all within a database transaction
       await this.dataSource.transaction(async () => {
         await this.accountRepository.save(account);
         await this.accountRepository.save(toAccount);
         await this.transactionRepository.save(transaction);
+        if (feeTransaction) {
+          await this.transactionRepository.save(feeTransaction);
+        }
       });
 
       // Publish events after commit
       await this.eventPublisher.publishEvents(account);
       await this.eventPublisher.publishEvents(toAccount);
       await this.eventPublisher.publishEvents(transaction);
+      if (feeTransaction) {
+        await this.eventPublisher.publishEvents(feeTransaction);
+      }
 
       return this.toResponse(transaction);
     } else {

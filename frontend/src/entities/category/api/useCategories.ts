@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import { categoryQueryKeys } from './queryKeys';
 import { categoriesApi } from './categoriesApi';
 import type { UserCategory, UserCategoryInsert } from '@/shared/api/database.types';
-import { TRANSFER_CATEGORY, DEBT_CATEGORIES } from '../model/constants';
+import { TRANSFER_CATEGORY, DEBT_CATEGORIES, COMMISSION_CATEGORY } from '../model/constants';
 import type { Category } from '../model/types';
 
 export function useCategories(userId: MaybeRefOrGetter<string | null>) {
@@ -152,6 +152,7 @@ export function useCategories(userId: MaybeRefOrGetter<string | null>) {
     ...categories.value.map(userCategoryToCategory),
     ...DEBT_CATEGORIES,
     TRANSFER_CATEGORY,
+    COMMISSION_CATEGORY,
   ]);
 
   // Get category by ID
@@ -166,6 +167,9 @@ export function useCategories(userId: MaybeRefOrGetter<string | null>) {
 
     // Check transfer category
     if (id === TRANSFER_CATEGORY.id) return TRANSFER_CATEGORY;
+
+    // Check commission category
+    if (id === COMMISSION_CATEGORY.id) return COMMISSION_CATEGORY;
 
     return undefined;
   }

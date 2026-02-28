@@ -1,9 +1,10 @@
 import { http } from '../http';
 
-// Common currencies to fetch rates for
-const COMMON_CURRENCIES = ['USD', 'EUR', 'RUB', 'UZS', 'KZT', 'GBP'];
+interface BatchRatesResponse {
+  baseCurrency: string;
+  rates: Record<string, { rate: number; updatedAt: string }>;
+}
 
-// Response type from NestJS backend
 interface RateResponse {
   baseCurrency: string;
   targetCurrency: string;
@@ -21,35 +22,17 @@ interface ConvertResponse {
 
 export const exchangeRatesApi = {
   /**
-   * Get exchange rates for common currencies from a base currency
-   * Fetches individual rates and combines them
+   * Get exchange rates for all common currencies from a base currency in one request
    */
   async getRates(baseCurrency: string): Promise<Record<string, number>> {
-    const rates: Record<string, number> = {};
-
-    // Fetch rates for all common currencies in parallel
-    const targetCurrencies = COMMON_CURRENCIES.filter((c) => c !== baseCurrency);
-
-    const promises = targetCurrencies.map(async (targetCurrency) => {
-      try {
-        const data = await http.get<RateResponse>(
-          `/exchange-rates/${baseCurrency}/${targetCurrency}`,
-        );
-        return { currency: targetCurrency, rate: data.rate };
-      } catch {
-        // If rate not found, skip it
-        return null;
-      }
+    const data = await http.get<BatchRatesResponse>('/exchange-rates/batch', {
+      params: { base: baseCurrency },
     });
 
-    const results = await Promise.all(promises);
-
-    for (const result of results) {
-      if (result) {
-        rates[result.currency] = result.rate;
-      }
+    const rates: Record<string, number> = {};
+    for (const [currency, info] of Object.entries(data.rates)) {
+      rates[currency] = info.rate;
     }
-
     return rates;
   },
 

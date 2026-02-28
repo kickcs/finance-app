@@ -2,7 +2,7 @@ import { Controller, Get, Post, Body, Query, Param } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { UpsertRateDto, ConvertAmountDto } from '../dto';
 import { UpsertRateCommand } from '../../application/commands';
-import { GetRateQuery, ConvertAmountQuery } from '../../application/queries';
+import { GetRateQuery, GetBatchRatesQuery, ConvertAmountQuery } from '../../application/queries';
 
 @Controller('exchange-rates')
 export class ExchangeRatesController {
@@ -10,6 +10,15 @@ export class ExchangeRatesController {
     private readonly commandBus: CommandBus,
     private readonly queryBus: QueryBus,
   ) {}
+
+  /**
+   * Get all exchange rates for a base currency in one request
+   * GET /exchange-rates/batch?base=UZS
+   */
+  @Get('batch')
+  async getBatchRates(@Query('base') baseCurrency: string): Promise<unknown> {
+    return this.queryBus.execute(new GetBatchRatesQuery(baseCurrency));
+  }
 
   /**
    * Get exchange rate for a currency pair

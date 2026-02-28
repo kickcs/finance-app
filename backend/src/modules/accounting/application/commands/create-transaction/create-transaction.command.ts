@@ -13,5 +13,6 @@ export class CreateTransactionCommand {
     public readonly toAmount?: number,
     public readonly toCurrency?: string,
     public readonly debtId?: string,
+    public readonly feeAmount?: number,
   ) {}
 }

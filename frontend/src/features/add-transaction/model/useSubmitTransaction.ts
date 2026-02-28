@@ -44,6 +44,13 @@ function buildApiPayload(userId: string, formData: TransactionFormData) {
   const isTransfer = formData.type === 'transfer';
   const categoryId = isTransfer ? CATEGORY_IDS.TRANSFER : formData.categoryId;
 
+  const computedFee =
+    isTransfer && formData.feeAmount > 0
+      ? formData.feeType === 'percent'
+        ? Math.round(((formData.amount * formData.feeAmount) / 100) * 100) / 100
+        : formData.feeAmount
+      : undefined;
+
   return {
     user_id: userId,
     account_id: formData.accountId!,
@@ -56,6 +63,7 @@ function buildApiPayload(userId: string, formData: TransactionFormData) {
     to_account_id: isTransfer ? formData.toAccountId : null,
     to_amount: isTransfer ? formData.toAmount : null,
     to_currency: isTransfer ? formData.toCurrency : null,
+    fee_amount: computedFee,
   };
 }
 
@@ -155,7 +163,14 @@ function snapshotAndApplyOptimistic(
       if (!old) return old;
       return old.map((account) => {
         if (account.id === formData.accountId) {
-          const balanceChange = formData.type === 'income' ? formData.amount : -formData.amount;
+          let balanceChange = formData.type === 'income' ? formData.amount : -formData.amount;
+          if (formData.type === 'transfer' && formData.feeAmount > 0) {
+            const computedFee =
+              formData.feeType === 'percent'
+                ? Math.round(((formData.amount * formData.feeAmount) / 100) * 100) / 100
+                : formData.feeAmount;
+            balanceChange -= computedFee;
+          }
           return {
             ...account,
             balances: account.balances.map((b) =>

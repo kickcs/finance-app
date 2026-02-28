@@ -205,6 +205,7 @@ export type Database = {
           to_account_id?: string | null;
           to_amount?: number | null;
           to_currency?: string | null;
+          fee_amount?: number;
         };
         Update: {
           id?: string;

@@ -7,4 +7,5 @@ export const CATEGORY_IDS = {
   GIFTS: 'gifts',
   GIFTS_INCOME: 'gifts_income',
   TRANSFER: 'transfer',
+  COMMISSION: 'commission',
 } as const;

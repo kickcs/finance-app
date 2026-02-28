@@ -164,6 +164,7 @@ export const transactionsApi = {
       toAccountId: transaction.to_account_id,
       toAmount: transaction.to_amount,
       toCurrency: transaction.to_currency,
+      feeAmount: transaction.fee_amount,
     });
     return transformTransaction(data);
   },
