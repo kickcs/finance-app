@@ -2,3 +2,4 @@ export { default as EditTransactionModal } from './ui/EditTransactionModal.vue';
 export { default as DeleteTransactionModal } from './ui/DeleteTransactionModal.vue';
 export { useEditTransaction } from './model/useEditTransaction';
 export { useTransactionSelection } from './model/useTransactionSelection';
+export { useTransactionEditFlow } from './model/useTransactionEditFlow';

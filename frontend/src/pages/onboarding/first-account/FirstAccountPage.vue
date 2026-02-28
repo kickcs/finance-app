@@ -3,11 +3,13 @@ import { inject, computed } from 'vue';
 import type { Ref } from 'vue';
 import type { User } from '@/shared/api/composables/useAuth';
 import { useRouter } from 'vue-router';
+import { ROUTE_NAMES } from '@/app/router/routeNames';
 import { UButton, UIcon } from '@/shared/ui';
 import { AccountForm, useCreateAccount } from '@/features/create-account';
 import { queryClient, profileQueryKeys } from '@/shared/api';
 import { profileApi } from '@/shared/api/services/profileApi';
 import { navigateBack } from '@/app/router';
+import { STORAGE_KEYS } from '@/shared/config/storageKeys';
 
 const router = useRouter();
 
@@ -16,7 +18,7 @@ const user = inject<Ref<User | null>>('user');
 
 // Check if this is onboarding or regular account creation
 const isOnboarding = computed(() => {
-  return localStorage.getItem('onboardingComplete') !== 'true';
+  return localStorage.getItem(STORAGE_KEYS.ONBOARDING_COMPLETE) !== 'true';
 });
 
 const {
@@ -36,7 +38,7 @@ async function handleSubmit() {
 
   if (!userId) {
     console.error('User not authenticated');
-    router.push({ name: 'login' });
+    router.push({ name: ROUTE_NAMES.LOGIN });
     return;
   }
 
@@ -56,8 +58,8 @@ async function handleSubmit() {
       }
 
       // Also store in localStorage for fast access
-      localStorage.setItem('onboardingComplete', 'true');
-      localStorage.setItem('selectedCurrency', primaryCurrency.value);
+      localStorage.setItem(STORAGE_KEYS.ONBOARDING_COMPLETE, 'true');
+      localStorage.setItem(STORAGE_KEYS.SELECTED_CURRENCY, primaryCurrency.value);
 
       // Invalidate profile cache so router guard sees updated onboarding status
       await queryClient.invalidateQueries({
@@ -65,7 +67,7 @@ async function handleSubmit() {
       });
     }
 
-    router.push('/');
+    router.push({ name: ROUTE_NAMES.DASHBOARD });
   }
 }
 

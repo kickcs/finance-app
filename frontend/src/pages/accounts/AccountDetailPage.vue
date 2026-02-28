@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
+import { ROUTE_NAMES } from '@/app/router/routeNames';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { UButton, UIcon, UCard, EmptyState, USpinner, NotFoundState } from '@/shared/ui';
 import { AppHeader } from '@/widgets/header';
@@ -14,15 +15,13 @@ import {
   useGroupedTransactions,
   transactionsApi,
   transactionQueryKeys,
-  type Transaction,
 } from '@/entities/transaction';
 import { useQuery } from '@tanstack/vue-query';
 import { EditAccountModal, DeleteAccountModal, useEditAccount } from '@/features/edit-account';
 import {
   EditTransactionModal,
   DeleteTransactionModal,
-  useEditTransaction,
-  useTransactionSelection,
+  useTransactionEditFlow,
 } from '@/features/edit-transaction';
 import type { Account } from '@/shared/api/database.types';
 import { navigateBack } from '@/app/router';
@@ -126,52 +125,24 @@ async function handleDeleteAccount() {
   const success = await removeAccountFn(account.value.id);
   if (success) {
     showDeleteAccountModal.value = false;
-    router.push({ name: 'accounts' });
+    router.push({ name: ROUTE_NAMES.ACCOUNTS });
   }
 }
 
 // Edit transaction
-const showDeleteTransactionModal = ref(false);
-
 const {
   selectedTransaction,
   hasSplitDebts,
   showEditModal: showEditTransactionModal,
-  select: handleTransactionClick,
-  close: closeEditTransactionModal,
-} = useTransactionSelection(userId);
-
-const {
+  showDeleteModal: showDeleteTransactionModal,
   isUpdating: isUpdatingTransaction,
   isDeleting: isDeletingTransaction,
-  error: transactionError,
-  update: updateTransactionFn,
-  remove: removeTransactionFn,
-} = useEditTransaction(userId.value);
-
-async function handleUpdateTransaction(updates: Partial<Transaction>) {
-  if (!selectedTransaction.value) return;
-  const success = await updateTransactionFn(selectedTransaction.value, updates);
-  if (success) {
-    closeEditTransactionModal();
-    // Query cache will be automatically invalidated
-  }
-}
-
-function handleDeleteTransactionClick() {
-  closeEditTransactionModal();
-  showDeleteTransactionModal.value = true;
-}
-
-async function handleDeleteTransaction() {
-  if (!selectedTransaction.value) return;
-  const success = await removeTransactionFn(selectedTransaction.value);
-  if (success) {
-    showDeleteTransactionModal.value = false;
-    selectedTransaction.value = null;
-    // Query cache will be automatically invalidated
-  }
-}
+  editError: transactionError,
+  handleTransactionClick,
+  handleUpdateTransaction,
+  handleDeleteClick: handleDeleteTransactionClick,
+  handleDeleteTransaction,
+} = useTransactionEditFlow(userId);
 
 function goBack() {
   navigateBack();
@@ -531,7 +502,7 @@ async function handleSetAsDefault() {
               description="Добавьте первую транзакцию по этому счету"
               :action="{
                 label: 'Добавить',
-                onClick: () => router.push('/transactions/new'),
+                onClick: () => router.push({ name: ROUTE_NAMES.NEW_TRANSACTION }),
               }"
             />
           </UCard>

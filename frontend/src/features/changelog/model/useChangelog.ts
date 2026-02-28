@@ -1,9 +1,13 @@
 import { computed } from 'vue';
 import { useLocalStorage } from '@vueuse/core';
 import { CURRENT_VERSION, CHANGELOG_ENTRIES } from './changelogData';
+import { STORAGE_KEYS } from '@/shared/config/storageKeys';
 
 export function useChangelog() {
-  const lastSeenVersion = useLocalStorage<string | null>('lastSeenChangelogVersion', null);
+  const lastSeenVersion = useLocalStorage<string | null>(
+    STORAGE_KEYS.CHANGELOG_LAST_SEEN_VERSION,
+    null,
+  );
 
   const hasUnseenChanges = computed(() => lastSeenVersion.value !== CURRENT_VERSION);
 

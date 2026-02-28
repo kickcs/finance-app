@@ -1,4 +1,6 @@
 import { ref, computed } from 'vue';
+import { CATEGORY_IDS } from '@/entities/category';
+import { DEFAULT_CURRENCY } from '@/entities/currency';
 
 export interface TransactionFormData {
   accountId: string | null;
@@ -17,7 +19,7 @@ const DEFAULT_FORM_DATA: Omit<TransactionFormData, 'date'> = {
   accountId: null,
   categoryId: '',
   amount: 0,
-  currency: 'UZS',
+  currency: DEFAULT_CURRENCY,
   type: 'expense',
   description: '',
   toAccountId: null,
@@ -61,7 +63,7 @@ export function useTransactionForm() {
 
   function setType(type: 'income' | 'expense' | 'transfer') {
     formData.value.type = type;
-    formData.value.categoryId = type === 'transfer' ? 'transfer' : '';
+    formData.value.categoryId = type === 'transfer' ? CATEGORY_IDS.TRANSFER : '';
     if (type !== 'transfer') {
       formData.value.toAccountId = null;
       formData.value.toAmount = null;

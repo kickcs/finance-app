@@ -1,9 +1,8 @@
-import { ref } from 'vue';
-import type { Ref, ComputedRef } from 'vue';
+import { ref, type MaybeRefOrGetter, toValue } from 'vue';
 import { debtsApi } from '@/entities/debt';
 import type { Transaction } from '@/shared/api/database.types';
 
-export function useTransactionSelection(userId: Ref<string> | ComputedRef<string>) {
+export function useTransactionSelection(userId: MaybeRefOrGetter<string>) {
   const selectedTransaction = ref<Transaction | null>(null);
   const hasSplitDebts = ref(false);
   const showEditModal = ref(false);
@@ -12,9 +11,9 @@ export function useTransactionSelection(userId: Ref<string> | ComputedRef<string
     selectedTransaction.value = transaction;
     hasSplitDebts.value = false;
 
-    if (!transaction.is_debt_related && userId.value) {
+    if (!transaction.is_debt_related && toValue(userId)) {
       try {
-        const allDebts = await debtsApi.getAll(userId.value);
+        const allDebts = await debtsApi.getAll(toValue(userId));
         const linked = allDebts.filter(
           (d) => d.source_transaction_id === transaction.id && !d.is_closed,
         );

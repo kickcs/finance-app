@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { UIcon, ConfirmDeleteModal } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
+import { pluralize } from '@/shared/lib/format/pluralize';
 import type { Account, AccountWithBalances } from '@/shared/api/database.types';
 
 const props = defineProps<{
@@ -39,12 +40,12 @@ const warningText = computed(() => {
     parts.push('Подсчёт транзакций...');
   } else if (props.transactionsCount > 0) {
     const n = props.transactionsCount;
-    const word =
-      n === 1
-        ? 'транзакция будет удалена'
-        : n < 5
-          ? 'транзакции будут удалены'
-          : 'транзакций будут удалены';
+    const word = pluralize(
+      n,
+      'транзакция будет удалена',
+      'транзакции будут удалены',
+      'транзакций будут удалены',
+    );
     parts.push(`${n} ${word}.`);
   }
   parts.push('Это действие нельзя отменить.');

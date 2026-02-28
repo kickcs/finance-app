@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { UCard, UIcon, USpinner } from '@/shared/ui';
+import { ROUTE_NAMES } from '@/app/router/routeNames';
 
 const router = useRouter();
 const route = useRoute();
@@ -35,7 +36,7 @@ onMounted(async () => {
 });
 
 function goToLogin() {
-  router.push({ name: 'login' });
+  router.push({ name: ROUTE_NAMES.LOGIN });
 }
 </script>
 

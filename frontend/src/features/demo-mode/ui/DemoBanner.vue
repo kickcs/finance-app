@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
+import { ROUTE_NAMES } from '@/shared/config/routeNames';
 import { UButton } from '@/shared/ui/button';
 import { UIcon } from '@/shared/ui/icon';
 import { useAuth } from '@/shared/api/composables/useAuth';
@@ -14,7 +15,7 @@ const { signOut } = useAuth();
 async function handleRegister() {
   // Sign out from demo account and redirect to login
   await signOut();
-  router.push({ name: 'login' });
+  router.push({ name: ROUTE_NAMES.LOGIN });
 }
 </script>
 

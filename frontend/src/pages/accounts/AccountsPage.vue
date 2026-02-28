@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useRouter } from 'vue-router';
+import { ROUTE_NAMES } from '@/app/router/routeNames';
 import { AppHeader } from '@/widgets/header';
 import { navigateBack } from '@/app/router';
 import { AccountCard, useAccounts, type AccountWithBalances } from '@/entities/account';
@@ -34,11 +35,11 @@ const totalBalance = computed(() => {
 });
 
 function handleAccountClick(account: AccountWithBalances) {
-  router.push(`/accounts/${account.id}`);
+  router.push({ name: ROUTE_NAMES.ACCOUNT_DETAIL, params: { id: account.id } });
 }
 
 function handleAddAccount() {
-  router.push('/accounts/new');
+  router.push({ name: ROUTE_NAMES.NEW_ACCOUNT });
 }
 </script>
 

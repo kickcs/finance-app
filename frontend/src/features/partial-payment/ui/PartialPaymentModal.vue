@@ -3,8 +3,10 @@ import { ref, computed, watch } from 'vue';
 import { UModal, UButton, UIcon, UInput } from '@/shared/ui';
 import { CategoryChips, INCOME_CATEGORIES, EXPENSE_CATEGORIES } from '@/entities/category';
 import { formatCurrency } from '@/shared/lib/format/currency';
+import { DEFAULT_CURRENCY } from '@/entities/currency/model/constants';
 import type { Debt } from '@/shared/api/database.types';
 import type { AccountWithBalances } from '@/entities/account';
+import { useDebtPaymentForm, ForgivenessToggle } from '@/entities/debt';
 
 const props = defineProps<{
   modelValue: boolean;
@@ -23,32 +25,33 @@ const emit = defineEmits<{
   cancel: [];
 }>();
 
-const paymentAmount = ref(0);
 const selectedAccountId = ref<string | null>(null);
-const forgiveRemainder = ref(false);
-const excessCategoryId = ref('gifts_income');
+
+const {
+  paymentAmount,
+  forgiveRemainder,
+  excessCategoryId,
+  isOverpayment,
+  excess,
+  remainder,
+  reset,
+} = useDebtPaymentForm({
+  remainingAmount: () => props.debt?.remaining_amount ?? 0,
+  debtType: () => (props.debt?.debt_type === 'given' ? 'given' : 'taken'),
+});
 
 // Reset when modal opens
 watch(
   () => props.modelValue,
   (isOpen) => {
     if (isOpen && props.debt) {
-      paymentAmount.value = props.debt.remaining_amount;
       selectedAccountId.value = props.debt.account_id;
-      forgiveRemainder.value = false;
-      excessCategoryId.value = props.debt.debt_type === 'given' ? 'gifts_income' : 'gifts';
+      reset(props.debt.remaining_amount);
     }
   },
 );
 
-const debtCurrency = computed(() => props.debt?.currency || 'UZS');
-
-const excess = computed(() => {
-  if (!props.debt) return 0;
-  return Math.max(0, paymentAmount.value - props.debt.remaining_amount);
-});
-
-const isOverpayment = computed(() => excess.value > 0);
+const debtCurrency = computed(() => props.debt?.currency || DEFAULT_CURRENCY);
 
 const isValid = computed(() => {
   if (!props.debt || !selectedAccountId.value) return false;
@@ -65,11 +68,6 @@ const paidAmount = computed(() => {
 const excessCategories = computed(() => {
   if (!props.debt) return INCOME_CATEGORIES;
   return props.debt.debt_type === 'given' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
-});
-
-// Disable forgiveness toggle when overpaying
-watch(isOverpayment, (over) => {
-  if (over) forgiveRemainder.value = false;
 });
 
 function close() {
@@ -183,41 +181,11 @@ function setForgiveOnly() {
 
       <!-- Forgiveness Toggle (only when amount < remaining) -->
       <div v-if="!isOverpayment && paymentAmount < debt.remaining_amount" class="space-y-2">
-        <button
-          type="button"
-          class="flex items-center gap-3 w-full p-3 rounded-xl transition-colors"
-          :class="
-            forgiveRemainder
-              ? 'bg-primary/5 border border-primary/20'
-              : 'bg-surface-light dark:bg-surface-dark border border-transparent'
-          "
-          @click="forgiveRemainder = !forgiveRemainder"
-        >
-          <div
-            class="w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors shrink-0"
-            :class="
-              forgiveRemainder
-                ? 'bg-primary border-primary'
-                : 'border-gray-300 dark:border-gray-600'
-            "
-          >
-            <UIcon v-if="forgiveRemainder" name="check" size="xs" class="text-white" />
-          </div>
-          <div class="flex-1 text-left">
-            <p class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
-              Простить остаток
-            </p>
-            <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
-              {{ formatCurrency(debt.remaining_amount - paymentAmount, debtCurrency) }} будет
-              списано как подарок
-            </p>
-          </div>
-          <UIcon
-            name="volunteer_activism"
-            size="sm"
-            class="text-text-tertiary-light dark:text-text-tertiary-dark shrink-0"
-          />
-        </button>
+        <ForgivenessToggle
+          v-model="forgiveRemainder"
+          :remainder-amount="remainder"
+          :currency="debtCurrency"
+        />
       </div>
 
       <!-- Forgiveness-only info (when amount = 0 and forgiving) -->

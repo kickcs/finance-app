@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
+import { ROUTE_NAMES } from '@/app/router/routeNames';
 import { AppHeader } from '@/widgets/header';
 import { UButton, UIcon, UCard } from '@/shared/ui';
 import { navigateBack } from '@/app/router';
@@ -38,11 +39,11 @@ function formatAmount(amount: number): string {
 }
 
 function goToTransactions() {
-  router.push('/history');
+  router.push({ name: ROUTE_NAMES.HISTORY });
 }
 
 function goHome() {
-  router.push('/');
+  router.push({ name: ROUTE_NAMES.DASHBOARD });
 }
 </script>
 

@@ -6,12 +6,14 @@
  * only access token is stored in localStorage.
  */
 
+import { STORAGE_KEYS } from '@/shared/config/storageKeys';
+
 const BASE_URL = import.meta.env.VITE_API_URL ?? '';
 const API_URL = `${BASE_URL}/api`;
 
 // Token storage - only access token is in localStorage
 // Refresh token is in httpOnly cookie (not accessible to JS)
-const TOKEN_KEY = 'access_token';
+const TOKEN_KEY = STORAGE_KEYS.ACCESS_TOKEN;
 
 export function getAccessToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);

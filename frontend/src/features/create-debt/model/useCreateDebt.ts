@@ -4,6 +4,9 @@ import { debtsApi, debtQueryKeys } from '@/entities/debt';
 import { queryClient } from '@/shared/api/queryClient';
 import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
 import { useToast } from '@/shared/ui';
+import { getTodayISO } from '@/shared/lib/date';
+import { CATEGORY_IDS } from '@/entities/category';
+import { DEFAULT_CURRENCY } from '@/entities/currency';
 import type { DebtDirection } from '@/entities/debt';
 
 export interface DebtFormData {
@@ -21,9 +24,9 @@ const initialFormData: DebtFormData = {
   debt_type: 'taken',
   person_name: '',
   amount: 0,
-  currency: 'UZS',
+  currency: DEFAULT_CURRENCY,
   account_id: null,
-  debt_date: new Date().toISOString().split('T')[0],
+  debt_date: getTodayISO(),
   description: '',
   skipTransaction: false,
 };
@@ -62,7 +65,7 @@ export function useCreateDebt() {
       // Given = you lent money = expense (balance decreases)
       // Taken = you borrowed = income (balance increases)
       const transactionType = isGiven ? 'expense' : 'income';
-      const categoryId = isGiven ? 'debt_given' : 'debt_taken';
+      const categoryId = isGiven ? CATEGORY_IDS.DEBT_GIVEN : CATEGORY_IDS.DEBT_TAKEN;
 
       // 1. Create the linked transaction (backend handles balance update) — unless skipTransaction
       if (!formData.value.skipTransaction) {

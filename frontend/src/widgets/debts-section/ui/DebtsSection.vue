@@ -5,6 +5,7 @@ import { UBadge, UTabs, SectionHeader, IconBadge, EmptyState } from '@/shared/ui
 import { formatMasked } from '@/shared/lib/format/currency';
 import { formatDate } from '@/shared/lib/format/date';
 import { useExchangeRates } from '@/shared/api';
+import { DEFAULT_CURRENCY } from '@/entities/currency/model/constants';
 
 interface DebtByPerson {
   personName: string;
@@ -67,7 +68,10 @@ const debtsByPerson = computed<DebtByPerson[]>(() => {
     }
 
     grouped[key].debts.push(debt);
-    grouped[key].totalRemaining += convert(debt.remaining_amount, debt.currency || 'UZS');
+    grouped[key].totalRemaining += convert(
+      debt.remaining_amount,
+      debt.currency || DEFAULT_CURRENCY,
+    );
 
     if (debt.next_payment_date) {
       if (

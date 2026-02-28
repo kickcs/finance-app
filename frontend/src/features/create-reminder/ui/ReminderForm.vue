@@ -35,8 +35,6 @@ const dateError = computed(() => {
   }
   return null;
 });
-
-const _isFormValid = props.formData.name.trim().length > 0 && props.formData.amount > 0;
 </script>
 
 <template>

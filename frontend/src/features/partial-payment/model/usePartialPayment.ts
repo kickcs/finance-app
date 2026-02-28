@@ -4,6 +4,8 @@ import { debtsApi, debtQueryKeys } from '@/entities/debt';
 import { queryClient } from '@/shared/api/queryClient';
 import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
 import { useToast } from '@/shared/ui';
+import { CATEGORY_IDS } from '@/entities/category';
+import { DEFAULT_CURRENCY } from '@/entities/currency/model/constants';
 import type { Debt } from '@/shared/api/database.types';
 
 interface PartialPaymentOptions {
@@ -45,12 +47,14 @@ export function usePartialPayment() {
     isPaying.value = true;
     error.value = null;
 
-    const debtCurrency = debt.currency || 'UZS';
+    const debtCurrency = debt.currency || DEFAULT_CURRENCY;
 
     try {
       const isGiven = debt.debt_type === 'given';
       const transactionType = isGiven ? 'income' : 'expense';
-      const categoryId = isGiven ? 'debt_return_to_me' : 'debt_return_from_me';
+      const categoryId = isGiven
+        ? CATEGORY_IDS.DEBT_RETURN_TO_ME
+        : CATEGORY_IDS.DEBT_RETURN_FROM_ME;
       const hadBalanceEffect = !!debt.transaction_id || !!debt.source_transaction_id;
 
       const actualPayment = isOverpayment ? debt.remaining_amount : paymentAmount;
@@ -107,7 +111,7 @@ export function usePartialPayment() {
         const forgivenAmount = debt.remaining_amount - actualPayment;
         if (forgivenAmount > 0) {
           const giftType = isGiven ? 'expense' : 'income';
-          const giftCategoryId = isGiven ? 'gifts' : 'gifts_income';
+          const giftCategoryId = isGiven ? CATEGORY_IDS.GIFTS : CATEGORY_IDS.GIFTS_INCOME;
           const tx = await transactionsApi.create({
             user_id: userId,
             account_id: selectedAccountId,

@@ -1,5 +1,6 @@
 import { ref, computed } from 'vue';
 import { useMediaQuery, useLocalStorage, useEventListener } from '@vueuse/core';
+import { STORAGE_KEYS } from '@/shared/config/storageKeys';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -25,7 +26,7 @@ function isRunningStandalone(): boolean {
 let deferredPrompt: BeforeInstallPromptEvent | null = null;
 const canUseNativePrompt = ref(false);
 const showModal = ref(false);
-const isDismissed = useLocalStorage('pwa-install-dismissed', false);
+const isDismissed = useLocalStorage(STORAGE_KEYS.PWA_INSTALL_DISMISSED, false);
 
 useEventListener(window, 'beforeinstallprompt', (e) => {
   e.preventDefault();

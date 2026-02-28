@@ -172,6 +172,9 @@ export const DEBT_CATEGORIES: Category[] = [
   },
 ];
 
+// Re-export from shared for backwards compatibility (canonical source: shared/config/categoryIds.ts)
+export { CATEGORY_IDS } from '@/shared/config/categoryIds';
+
 // Transfer category (special - auto-assigned for transfers)
 export const TRANSFER_CATEGORY: Category = {
   id: 'transfer',

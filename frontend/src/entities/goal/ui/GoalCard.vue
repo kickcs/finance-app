@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { UIcon, UProgressBar } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
+import { DEFAULT_CURRENCY } from '@/shared/config/currency';
 import type { Goal } from '../model/types';
 
 const props = defineProps<{
@@ -74,10 +75,10 @@ const daysLeft = computed(() => {
         <!-- Amount Info -->
         <div class="flex items-center justify-between text-sm">
           <span class="text-text-secondary-light dark:text-text-secondary-dark">
-            {{ formatCurrency(goal.current_amount, currency || 'UZS') }}
+            {{ formatCurrency(goal.current_amount, currency || DEFAULT_CURRENCY) }}
           </span>
           <span class="text-text-tertiary-light dark:text-text-tertiary-dark">
-            из {{ formatCurrency(goal.target_amount, currency || 'UZS') }}
+            из {{ formatCurrency(goal.target_amount, currency || DEFAULT_CURRENCY) }}
           </span>
         </div>
       </div>

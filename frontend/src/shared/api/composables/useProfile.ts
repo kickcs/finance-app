@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import { queryKeys } from '../queryKeys';
 import { profileApi } from '../services/profileApi';
 import type { Profile, DashboardSettings } from '../database.types';
+import { STORAGE_KEYS } from '@/shared/config/storageKeys';
 
 export function useProfile(userId: MaybeRefOrGetter<string | null>) {
   const queryClient = useQueryClient();
@@ -65,13 +66,13 @@ export function useProfile(userId: MaybeRefOrGetter<string | null>) {
 
   async function setCurrency(currency: string) {
     const result = await updateProfile({ currency });
-    localStorage.setItem('selectedCurrency', currency);
+    localStorage.setItem(STORAGE_KEYS.SELECTED_CURRENCY, currency);
     return result;
   }
 
   async function completeOnboarding() {
     const result = await updateProfile({ has_completed_onboarding: true });
-    localStorage.setItem('onboardingComplete', 'true');
+    localStorage.setItem(STORAGE_KEYS.ONBOARDING_COMPLETE, 'true');
     return result;
   }
 

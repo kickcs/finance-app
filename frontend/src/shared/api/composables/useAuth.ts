@@ -2,6 +2,9 @@ import { ref, computed, readonly } from 'vue';
 import { http, setTokens, clearTokens, getAccessToken, HttpError } from '../http';
 import { queryClient, clearPersistedCache } from '../queryClient';
 import { resetOnboardingVerified } from '@/app/router';
+import { DEFAULT_CURRENCY } from '@/shared/config/currency';
+import { STORAGE_KEYS } from '@/shared/config/storageKeys';
+import { ROUTE_NAMES } from '@/shared/config/routeNames';
 
 // User type matching Profile entity from backend
 export interface User {
@@ -68,8 +71,8 @@ function createOptimisticUser(token: string): User | null {
     id: payload.sub,
     name: null,
     email: payload.email ?? null,
-    currency: localStorage.getItem('selectedCurrency') || 'UZS',
-    hasCompletedOnboarding: localStorage.getItem('onboardingComplete') === 'true',
+    currency: localStorage.getItem(STORAGE_KEYS.SELECTED_CURRENCY) || DEFAULT_CURRENCY,
+    hasCompletedOnboarding: localStorage.getItem(STORAGE_KEYS.ONBOARDING_COMPLETE) === 'true',
     defaultAccountId: null,
     createdAt: '',
     isDemo: payload.isDemo ?? false,
@@ -123,13 +126,13 @@ export async function initializeAuth(): Promise<User | null> {
           user.value = userData;
           // Sync localStorage with authoritative data
           if (userData.currency) {
-            localStorage.setItem('selectedCurrency', userData.currency);
+            localStorage.setItem(STORAGE_KEYS.SELECTED_CURRENCY, userData.currency);
           }
           if (userData.hasCompletedOnboarding) {
-            localStorage.setItem('onboardingComplete', 'true');
+            localStorage.setItem(STORAGE_KEYS.ONBOARDING_COMPLETE, 'true');
           }
           if (userData.demoExpiresAt) {
-            localStorage.setItem('demoExpiresAt', userData.demoExpiresAt);
+            localStorage.setItem(STORAGE_KEYS.DEMO_EXPIRES_AT, userData.demoExpiresAt);
           }
         })
         .catch((err) => {
@@ -141,7 +144,7 @@ export async function initializeAuth(): Promise<User | null> {
             import('@/app/router').then(({ router }) => {
               const currentRoute = router.currentRoute.value;
               if (currentRoute.meta.requiresAuth) {
-                router.push({ name: 'login' });
+                router.push({ name: ROUTE_NAMES.LOGIN });
               }
             });
           }
@@ -267,9 +270,9 @@ export function useAuth() {
       clearPersistedCache();
 
       // Clear localStorage
-      localStorage.removeItem('onboardingComplete');
-      localStorage.removeItem('selectedCurrency');
-      localStorage.removeItem('demoExpiresAt');
+      localStorage.removeItem(STORAGE_KEYS.ONBOARDING_COMPLETE);
+      localStorage.removeItem(STORAGE_KEYS.SELECTED_CURRENCY);
+      localStorage.removeItem(STORAGE_KEYS.DEMO_EXPIRES_AT);
 
       // Reset in-memory onboarding flag
       resetOnboardingVerified();

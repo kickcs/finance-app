@@ -61,24 +61,17 @@ export class AccountBalanceRepository implements IAccountBalanceRepository {
     accountId: string,
     balances: { currency: string; balance: number }[],
   ): Promise<AccountBalanceData[]> {
-    const entities = balances.map((b) => {
-      const entity = new AccountBalanceOrmEntity();
-      entity.accountId = accountId;
-      entity.currency = b.currency;
-      entity.balance = b.balance;
-      return entity;
-    });
-
-    for (const entity of entities) {
-      await this.ormRepository.upsert(
-        {
-          accountId: entity.accountId,
-          currency: entity.currency,
-          balance: entity.balance,
-        },
-        ['accountId', 'currency'],
-      );
+    if (balances.length === 0) {
+      return this.findByAccountId(accountId);
     }
+
+    const records = balances.map((b) => ({
+      accountId,
+      currency: b.currency,
+      balance: b.balance,
+    }));
+
+    await this.ormRepository.upsert(records, ['accountId', 'currency']);
 
     return this.findByAccountId(accountId);
   }

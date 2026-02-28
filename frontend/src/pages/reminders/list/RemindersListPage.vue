@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
+import { ROUTE_NAMES } from '@/app/router/routeNames';
 import { AppHeader } from '@/widgets/header';
 import { ReminderCard, useReminders, type Reminder } from '@/entities/reminder';
 import { UButton, UIcon, UCard, EmptyState } from '@/shared/ui';
@@ -62,11 +63,11 @@ function goBack() {
 }
 
 function handleReminderClick(reminder: Reminder) {
-  router.push({ name: 'reminder-detail', params: { id: reminder.id } });
+  router.push({ name: ROUTE_NAMES.REMINDER_DETAIL, params: { id: reminder.id } });
 }
 
 function handleAddReminder() {
-  router.push({ name: 'new-reminder' });
+  router.push({ name: ROUTE_NAMES.NEW_REMINDER });
 }
 </script>
 

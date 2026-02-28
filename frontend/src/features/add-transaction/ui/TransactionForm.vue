@@ -3,6 +3,7 @@ import { computed, ref, onUnmounted, nextTick, watch } from 'vue';
 import { useResizeObserver } from '@vueuse/core';
 import { useMountedAnimation } from '@/shared/lib/hooks/useMountedAnimation';
 import { UInput, UButton, UTabs, UIcon } from '@/shared/ui';
+import { CATEGORY_IDS } from '@/entities/category';
 import type { Category } from '@/entities/category';
 import type { AccountWithBalances } from '@/entities/account';
 import type { SplitExpenseData, SplitMethod } from '@/features/split-expense';
@@ -62,7 +63,7 @@ function applyTypeChange(newType: string) {
   emit('update:formData', {
     ...props.formData,
     type: newType as 'income' | 'expense' | 'transfer',
-    categoryId: newType === 'transfer' ? 'transfer' : '',
+    categoryId: newType === 'transfer' ? CATEGORY_IDS.TRANSFER : '',
     toAccountId: null,
     toAmount: null,
     toCurrency: null,

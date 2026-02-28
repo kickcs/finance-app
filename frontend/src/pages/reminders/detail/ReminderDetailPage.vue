@@ -1,11 +1,18 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
+import { ROUTE_NAMES } from '@/app/router/routeNames';
 import { UButton, UIcon, UCard, USpinner, NotFoundState } from '@/shared/ui';
 import { AppHeader } from '@/widgets/header';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { formatDate } from '@/shared/lib/format/date';
-import { useReminders, FREQUENCY_LABELS, type Reminder } from '@/entities/reminder';
+import {
+  useReminders,
+  FREQUENCY_LABELS,
+  isReminderUpcoming,
+  isReminderOverdue,
+  type Reminder,
+} from '@/entities/reminder';
 import { EditReminderModal, DeleteReminderModal, useEditReminder } from '@/features/edit-reminder';
 import { navigateBack } from '@/app/router';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
@@ -26,17 +33,8 @@ const reminder = computed<Reminder | null>(() => {
 });
 
 // Check status
-const isUpcoming = computed(() => {
-  if (!reminder.value) return false;
-  const nextDateMs = new Date(reminder.value.next_date).getTime();
-  const threeDays = 3 * 24 * 60 * 60 * 1000;
-  return nextDateMs - Date.now() < threeDays && nextDateMs > Date.now();
-});
-
-const isOverdue = computed(() => {
-  if (!reminder.value) return false;
-  return new Date(reminder.value.next_date).getTime() < Date.now();
-});
+const isUpcoming = computed(() => !!reminder.value && isReminderUpcoming(reminder.value));
+const isOverdue = computed(() => !!reminder.value && isReminderOverdue(reminder.value));
 
 // Modal states
 const showEditModal = ref(false);
@@ -60,7 +58,7 @@ async function handleDelete() {
   const success = await remove(reminder.value.id);
   if (success) {
     showDeleteModal.value = false;
-    router.push({ name: 'dashboard' });
+    router.push({ name: ROUTE_NAMES.DASHBOARD });
   }
 }
 

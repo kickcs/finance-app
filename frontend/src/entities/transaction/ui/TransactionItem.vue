@@ -5,6 +5,7 @@ import { formatCurrency, COMPACT_FORMAT } from '@/shared/lib/format/currency';
 import { formatRelativeDate } from '@/shared/lib/format/date';
 import { getCategoryById as getCategoryByIdStatic } from '@/entities/category';
 import type { Category } from '@/entities/category';
+import { DEFAULT_CURRENCY } from '@/shared/config/currency';
 import type { Transaction } from '../model/types';
 
 const props = defineProps<{
@@ -64,22 +65,25 @@ const formattedAmount = computed(() => {
     if (props.viewingAccountId) {
       if (isIncomingTransfer.value) {
         const amount = props.transaction.to_amount ?? props.transaction.amount;
-        const curr = props.transaction.to_currency || props.transaction.currency || 'UZS';
+        const curr =
+          props.transaction.to_currency || props.transaction.currency || DEFAULT_CURRENCY;
         return `+${formatCurrency(amount, curr, compact)}`;
       }
-      const curr = props.transaction.currency || props.currency || 'UZS';
+      const curr = props.transaction.currency || props.currency || DEFAULT_CURRENCY;
       return `-${formatCurrency(props.transaction.amount, curr, compact)}`;
     }
-    const curr = props.transaction.currency || props.currency || 'UZS';
+    const curr = props.transaction.currency || props.currency || DEFAULT_CURRENCY;
     return formatCurrency(props.transaction.amount, curr, compact);
   }
 
   const prefix = props.transaction.type === 'income' ? '+' : '-';
-  const curr = props.transaction.currency || props.currency || 'UZS';
+  const curr = props.transaction.currency || props.currency || DEFAULT_CURRENCY;
   return `${prefix}${formatCurrency(displayAmount.value, curr, compact)}`;
 });
 
-const displayCurrency = computed(() => props.transaction.currency || props.currency || 'UZS');
+const displayCurrency = computed(
+  () => props.transaction.currency || props.currency || DEFAULT_CURRENCY,
+);
 
 const formattedDate = computed(() =>
   formatRelativeDate(new Date(props.transaction.date).getTime()),

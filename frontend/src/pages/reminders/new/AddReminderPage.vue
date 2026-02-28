@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
+import { ROUTE_NAMES } from '@/app/router/routeNames';
 import { ReminderForm, useCreateReminder } from '@/features/create-reminder';
 import { navigateBack } from '@/app/router';
 import { AppHeader } from '@/widgets/header';
@@ -24,7 +25,7 @@ async function handleSubmit() {
   const reminderId = await createReminder(userId.value);
 
   if (reminderId) {
-    router.push({ name: 'dashboard' });
+    router.push({ name: ROUTE_NAMES.DASHBOARD });
   }
 }
 

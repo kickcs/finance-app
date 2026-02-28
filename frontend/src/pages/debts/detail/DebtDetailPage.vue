@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
+import { ROUTE_NAMES } from '@/app/router/routeNames';
 import {
   UButton,
   UIcon,
@@ -20,6 +21,7 @@ import { DeleteDebtModal, useCloseDebt } from '@/features/close-debt';
 import { PartialPaymentModal, usePartialPayment } from '@/features/partial-payment';
 import { navigateBack } from '@/app/router';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
+import { DEFAULT_CURRENCY } from '@/entities/currency/model/constants';
 
 const router = useRouter();
 const route = useRoute();
@@ -36,7 +38,7 @@ const debt = computed<Debt | null>(() => {
 });
 
 // Use debt's own currency
-const debtCurrency = computed(() => debt.value?.currency || 'UZS');
+const debtCurrency = computed(() => debt.value?.currency || DEFAULT_CURRENCY);
 
 // Find linked account
 const linkedAccount = computed(() => {
@@ -67,7 +69,7 @@ async function handleDeleteDebt() {
   const success = await deleteDebt(debt.value, userId.value);
   if (success) {
     showDeleteModal.value = false;
-    router.push({ name: 'dashboard' });
+    router.push({ name: ROUTE_NAMES.DASHBOARD });
   }
 }
 
@@ -83,7 +85,7 @@ async function handlePartialPayment(
   if (success) {
     showPartialPaymentModal.value = false;
     if (willClose) {
-      router.push({ name: 'debts-list' });
+      router.push({ name: ROUTE_NAMES.DEBTS_LIST });
     }
   }
 }

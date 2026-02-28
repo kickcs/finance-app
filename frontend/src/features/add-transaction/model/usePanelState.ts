@@ -1,5 +1,5 @@
 import { computed, watch } from 'vue';
-import { getCurrencyByCode } from '@/entities/currency';
+import { getCurrencyByCode, DEFAULT_CURRENCY } from '@/entities/currency';
 import type { AccountWithBalances } from '@/entities/account';
 import type { TransactionFormData } from './useTransactionForm';
 
@@ -48,7 +48,7 @@ export function usePanelState(props: PanelProps, emit: PanelEmit) {
 
   function handleAccountChange(accountId: string) {
     const account = props.accounts.find((a) => a.id === accountId);
-    const firstCurrency = account?.balances[0]?.currency || 'UZS';
+    const firstCurrency = account?.balances[0]?.currency || DEFAULT_CURRENCY;
     emit('update:formData', {
       ...props.formData,
       accountId,

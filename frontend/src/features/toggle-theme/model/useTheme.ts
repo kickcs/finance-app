@@ -1,16 +1,17 @@
 import { ref, watch } from 'vue';
 import { usePreferredDark, useLocalStorage } from '@vueuse/core';
+import { STORAGE_KEYS } from '@/shared/config/storageKeys';
 
 export type Theme = 'light' | 'dark' | 'system';
 
 // VueUse useLocalStorage with string default uses raw serializer (no JSON wrapping).
 // Clean up any legacy JSON-wrapped values (e.g. "\"dark\"" → "dark")
-const raw = localStorage.getItem('theme');
+const raw = localStorage.getItem(STORAGE_KEYS.THEME);
 if (raw && raw.startsWith('"')) {
   try {
     const parsed = JSON.parse(raw);
     if (typeof parsed === 'string') {
-      localStorage.setItem('theme', parsed);
+      localStorage.setItem(STORAGE_KEYS.THEME, parsed);
     }
   } catch {
     /* ignore malformed values */
@@ -18,7 +19,7 @@ if (raw && raw.startsWith('"')) {
 }
 
 // Singleton state - shared across all useTheme() calls
-const theme = useLocalStorage<Theme>('theme', 'system');
+const theme = useLocalStorage<Theme>(STORAGE_KEYS.THEME, 'system');
 const isDark = ref(false);
 let initialized = false;
 let stopPrefersDarkWatch: (() => void) | null = null;

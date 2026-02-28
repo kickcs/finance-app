@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
+import { ROUTE_NAMES } from '@/shared/config/routeNames';
 import { UTabs } from '@/shared/ui';
 import type { AnalyticsMode } from '../model/types';
 
@@ -16,9 +17,9 @@ const items = [
 
 function handleChange(value: string | number) {
   if (value === 'lite') {
-    router.push('/analytics');
+    router.push({ name: ROUTE_NAMES.ANALYTICS });
   } else {
-    router.push('/analytics/full');
+    router.push({ name: ROUTE_NAMES.ANALYTICS_FULL });
   }
 }
 </script>

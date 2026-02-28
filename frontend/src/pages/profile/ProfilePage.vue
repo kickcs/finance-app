@@ -3,6 +3,7 @@ import { computed, inject, ref } from 'vue';
 import type { Ref } from 'vue';
 import type { User } from '@/shared/api/composables/useAuth';
 import { useRouter } from 'vue-router';
+import { ROUTE_NAMES } from '@/app/router/routeNames';
 import { AppHeader } from '@/widgets/header';
 import { UButton, UIcon, UCard, UModal, IconBadge } from '@/shared/ui';
 import { getCurrencyByCode } from '@/entities/currency';
@@ -82,22 +83,22 @@ function handleMenuClick(itemId: string) {
   switch (itemId) {
     case 'whats-new':
       markAsSeen();
-      router.push('/changelog');
+      router.push({ name: ROUTE_NAMES.CHANGELOG });
       break;
     case 'import':
-      router.push('/settings/import');
+      router.push({ name: ROUTE_NAMES.SETTINGS_IMPORT });
       break;
     case 'currency':
-      router.push('/settings/currency');
+      router.push({ name: ROUTE_NAMES.SETTINGS_CURRENCY });
       break;
     case 'categories':
-      router.push('/settings/categories');
+      router.push({ name: ROUTE_NAMES.SETTINGS_CATEGORIES });
       break;
     case 'people':
-      router.push('/people');
+      router.push({ name: ROUTE_NAMES.PEOPLE_LIST });
       break;
     case 'quick-actions':
-      router.push('/settings/quick-actions');
+      router.push({ name: ROUTE_NAMES.SETTINGS_QUICK_ACTIONS });
       break;
     case 'about':
       openInstallModal();
@@ -116,7 +117,7 @@ function closeLogoutModal() {
 async function confirmLogout() {
   try {
     await signOut();
-    router.push({ name: 'login' });
+    router.push({ name: ROUTE_NAMES.LOGIN });
   } catch (err) {
     console.error('Logout failed:', err);
   }

@@ -1,3 +1,15 @@
+/**
+ * DEMO DATA CONFIGURATION
+ * ⚠️ Keep in sync with: backend/src/modules/identity/application/services/demo-initialization.service.ts
+ * Both files use identical constants for demo data generation.
+ * If you change amounts, descriptions, or weights here, update the backend counterpart too.
+ *
+ * Note: EXPENSE_CATEGORIES and INCOME_CATEGORIES here use CATEGORY_IDS constants
+ * (e.g. CATEGORY_IDS.GIFTS, CATEGORY_IDS.GIFTS_INCOME) instead of raw string literals.
+ * The backend uses plain strings ('gifts', 'gifts_income'). Both resolve to the same values.
+ */
+import { CATEGORY_IDS } from '@/entities/category';
+
 export interface DemoAccountData {
   name: string;
   icon: string;
@@ -106,7 +118,7 @@ const EXPENSE_CATEGORIES: Array<{ id: string; weight: number }> = [
   { id: 'entertainment', weight: 10 },
   { id: 'health', weight: 5 },
   { id: 'housing', weight: 8 },
-  { id: 'gifts', weight: 3 },
+  { id: CATEGORY_IDS.GIFTS, weight: 3 },
   { id: 'education', weight: 5 },
   { id: 'family', weight: 5 },
   { id: 'sport', weight: 5 },
@@ -118,7 +130,7 @@ const EXPENSE_CATEGORIES: Array<{ id: string; weight: number }> = [
 const INCOME_CATEGORIES: Array<{ id: string; weight: number }> = [
   { id: 'freelance', weight: 40 },
   { id: 'cashback', weight: 30 },
-  { id: 'gifts_income', weight: 15 },
+  { id: CATEGORY_IDS.GIFTS_INCOME, weight: 15 },
   { id: 'investments', weight: 10 },
   { id: 'other_income', weight: 5 },
 ];

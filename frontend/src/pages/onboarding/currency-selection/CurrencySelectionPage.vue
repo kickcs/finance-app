@@ -3,10 +3,12 @@ import { ref, inject } from 'vue';
 import type { Ref } from 'vue';
 import type { User } from '@/shared/api/composables/useAuth';
 import { useRouter } from 'vue-router';
+import { ROUTE_NAMES } from '@/app/router/routeNames';
 import { UButton, UIcon, UProgressBar } from '@/shared/ui';
 import { CurrencyList } from '@/widgets/currency-list';
 import type { Currency } from '@/entities/currency';
 import { profileApi } from '@/shared/api/services/profileApi';
+import { STORAGE_KEYS } from '@/shared/config/storageKeys';
 
 const router = useRouter();
 const selectedCurrency = ref<Currency | null>(null);
@@ -21,7 +23,7 @@ function handleSelect(currency: Currency) {
 async function handleContinue() {
   if (selectedCurrency.value) {
     // Store selected currency in localStorage
-    localStorage.setItem('selectedCurrency', selectedCurrency.value.code);
+    localStorage.setItem(STORAGE_KEYS.SELECTED_CURRENCY, selectedCurrency.value.code);
 
     // Also update in database if user is authenticated
     if (user?.value?.id) {
@@ -34,7 +36,7 @@ async function handleContinue() {
       }
     }
 
-    router.push('/onboarding/first-account');
+    router.push({ name: ROUTE_NAMES.FIRST_ACCOUNT });
   }
 }
 </script>

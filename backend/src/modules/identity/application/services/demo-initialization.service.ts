@@ -1,3 +1,13 @@
+/**
+ * DEMO DATA CONFIGURATION
+ * ⚠️ Keep in sync with: frontend/src/features/demo-mode/model/demoDataGenerator.ts
+ * Both files use identical constants for demo data generation.
+ * If you change amounts, descriptions, or weights here, update the frontend counterpart too.
+ *
+ * Note: EXPENSE_CATEGORIES and INCOME_CATEGORIES here use plain string literals
+ * ('gifts', 'gifts_income'). The frontend uses CATEGORY_IDS constants that resolve
+ * to the same values. This is intentional — the backend has no need for that import.
+ */
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import {
   IAccountRepository,

@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useLocalStorage } from '@vueuse/core';
+import { STORAGE_KEYS } from '@/shared/config/storageKeys';
 import { queryClient } from '@/shared/api/queryClient';
+import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
+import { debtQueryKeys } from '@/entities/debt';
+import { reminderQueryKeys } from '@/entities/reminder';
 import { PullToRefresh, UIcon } from '@/shared/ui';
 import { InstallPwaBanner, InstallPwaModal, usePwaInstall } from '@/features/install-pwa';
 import { QuickActionModal } from '@/features/configure-quick-action';
@@ -62,8 +66,8 @@ const { staggerClass } = useStaggerAnimation();
 
 const { showModal: showInstallModal } = usePwaInstall();
 onMounted(() => usePwaUpdateToast());
-const isHidden = useLocalStorage('balance_hidden', false);
-const quickActionsHintDismissed = useLocalStorage('quick_actions_hint_dismissed', false);
+const isHidden = useLocalStorage(STORAGE_KEYS.BALANCE_HIDDEN, false);
+const quickActionsHintDismissed = useLocalStorage(STORAGE_KEYS.QUICK_ACTIONS_HINT_DISMISSED, false);
 const mobileTransactions = computed(() => recentTransactions.value.slice(0, 5));
 
 // Scroll tracking
@@ -80,7 +84,14 @@ function onScroll(e: Event) {
 }
 
 async function handleRefresh() {
-  await queryClient.invalidateQueries();
+  const uid = userId.value;
+  if (!uid) return;
+  await Promise.all([
+    invalidateTransactionRelated(queryClient, uid),
+    invalidateAccountRelated(queryClient, uid),
+    queryClient.invalidateQueries({ queryKey: debtQueryKeys.list(uid) }),
+    queryClient.invalidateQueries({ queryKey: reminderQueryKeys.list(uid) }),
+  ]);
 }
 
 function handleScanReceipt() {

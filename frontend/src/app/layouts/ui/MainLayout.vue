@@ -3,6 +3,7 @@ import { RouterView, useRouter } from 'vue-router';
 import { SidebarNav } from '@/widgets/sidebar-nav';
 import { BottomNav } from '@/widgets/bottom-nav';
 import { transitionName } from '@/app/router';
+import { ROUTE_NAMES } from '@/app/router/routeNames';
 import { useLayoutData } from '../model/useLayoutData';
 
 import { computed } from 'vue';
@@ -13,10 +14,10 @@ const route = useRoute();
 const { userName, greeting, totalBalance, currency, isHidden, toggleHidden, isLoading } =
   useLayoutData();
 
-const hideBottomNav = computed(() => route.name === 'scan-receipt');
+const hideBottomNav = computed(() => route.name === ROUTE_NAMES.SCAN_RECEIPT);
 
 function handleAddTransaction() {
-  router.push('/transactions/new');
+  router.push({ name: ROUTE_NAMES.NEW_TRANSACTION });
 }
 </script>
 

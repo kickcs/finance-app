@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
+import { ROUTE_NAMES } from '@/app/router/routeNames';
 import { UButton, UIcon, USpinner } from '@/shared/ui';
 import { DebtForm, useCreateDebt } from '@/features/create-debt';
 import { useAccounts } from '@/entities/account';
@@ -25,7 +26,7 @@ async function handleSubmit() {
   const debtId = await createDebt(userId.value);
 
   if (debtId) {
-    router.push({ name: 'dashboard' });
+    router.push({ name: ROUTE_NAMES.DASHBOARD });
   }
 }
 
@@ -62,7 +63,7 @@ function goBack() {
         <p class="text-text-secondary-light dark:text-text-secondary-dark mb-4">
           Сначала создайте счёт
         </p>
-        <UButton variant="primary" @click="router.push({ name: 'new-account' })">
+        <UButton variant="primary" @click="router.push({ name: ROUTE_NAMES.NEW_ACCOUNT })">
           Создать счёт
         </UButton>
       </div>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
+import { ROUTE_NAMES } from '@/app/router/routeNames';
 import { AppHeader } from '@/widgets/header';
 import { DebtCard, useDebts, type Debt } from '@/entities/debt';
 import { useAccounts } from '@/entities/account';
@@ -20,6 +21,7 @@ import { useExchangeRates } from '@/shared/api';
 import { navigateBack } from '@/app/router';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
+import { DEFAULT_CURRENCY } from '@/entities/currency/model/constants';
 import { listTransition } from '@/shared/lib/transitions';
 import { haptics } from '@/shared/lib/haptics';
 
@@ -94,13 +96,13 @@ function clearFilter() {
 const totalGivenDebts = computed(() => {
   return activeDebts.value
     .filter((d) => d.debt_type === 'given')
-    .reduce((sum, d) => sum + convert(d.remaining_amount, d.currency || 'UZS'), 0);
+    .reduce((sum, d) => sum + convert(d.remaining_amount, d.currency || DEFAULT_CURRENCY), 0);
 });
 
 const totalTakenDebts = computed(() => {
   return activeDebts.value
     .filter((d) => d.debt_type === 'taken')
-    .reduce((sum, d) => sum + convert(d.remaining_amount, d.currency || 'UZS'), 0);
+    .reduce((sum, d) => sum + convert(d.remaining_amount, d.currency || DEFAULT_CURRENCY), 0);
 });
 
 function goBack() {
@@ -108,11 +110,11 @@ function goBack() {
 }
 
 function handleDebtClick(debt: Debt) {
-  router.push({ name: 'debt-detail', params: { id: debt.id } });
+  router.push({ name: ROUTE_NAMES.DEBT_DETAIL, params: { id: debt.id } });
 }
 
 function handleAddDebt() {
-  router.push({ name: 'new-debt' });
+  router.push({ name: ROUTE_NAMES.NEW_DEBT });
 }
 
 // Close all debts for a person

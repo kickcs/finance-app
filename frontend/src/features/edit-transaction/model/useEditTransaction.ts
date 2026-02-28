@@ -1,4 +1,4 @@
-import { ref } from 'vue';
+import { ref, type MaybeRefOrGetter, toValue } from 'vue';
 import { transactionsApi } from '@/entities/transaction';
 import { debtsApi } from '@/entities/debt';
 import { queryClient } from '@/shared/api/queryClient';
@@ -6,7 +6,7 @@ import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared
 import { useToast } from '@/shared/ui';
 import type { Transaction } from '@/shared/api/database.types';
 
-export function useEditTransaction(userId: string) {
+export function useEditTransaction(userId: MaybeRefOrGetter<string>) {
   const { toast } = useToast();
   const isUpdating = ref(false);
   const isDeleting = ref(false);
@@ -36,8 +36,8 @@ export function useEditTransaction(userId: string) {
 
       // Invalidate all related caches
       await Promise.all([
-        invalidateTransactionRelated(queryClient, userId),
-        invalidateAccountRelated(queryClient, userId),
+        invalidateTransactionRelated(queryClient, toValue(userId)),
+        invalidateAccountRelated(queryClient, toValue(userId)),
       ]);
 
       toast({ title: 'Транзакция обновлена', variant: 'success' });
@@ -65,7 +65,7 @@ export function useEditTransaction(userId: string) {
     // Check if there are OPEN split debts linked to this transaction
     // Closed debts are OK - the transaction amount already reflects payments
     try {
-      const allDebts = await debtsApi.getAll(userId);
+      const allDebts = await debtsApi.getAll(toValue(userId));
       const linkedDebts = allDebts.filter(
         (d) => d.source_transaction_id === transaction.id && !d.is_closed,
       );
@@ -87,8 +87,8 @@ export function useEditTransaction(userId: string) {
 
       // Invalidate all related caches
       await Promise.all([
-        invalidateTransactionRelated(queryClient, userId),
-        invalidateAccountRelated(queryClient, userId),
+        invalidateTransactionRelated(queryClient, toValue(userId)),
+        invalidateAccountRelated(queryClient, toValue(userId)),
       ]);
 
       toast({ title: 'Транзакция удалена', variant: 'success' });

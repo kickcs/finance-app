@@ -12,6 +12,7 @@ import { useAccounts } from '@/entities/account';
 import { useCategories } from '@/entities/category';
 import { useProfile } from '@/shared/api';
 import { navigateBack } from '@/app/router';
+import { ROUTE_NAMES } from '@/app/router/routeNames';
 import { useSplitExpense } from '@/features/split-expense';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
@@ -188,7 +189,11 @@ async function handleSubmit() {
           <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark mb-3">
             У вас пока нет счетов
           </p>
-          <UButton variant="primary" size="sm" @click="router.push({ name: 'new-account' })">
+          <UButton
+            variant="primary"
+            size="sm"
+            @click="router.push({ name: ROUTE_NAMES.NEW_ACCOUNT })"
+          >
             Создать счёт
           </UButton>
         </div>

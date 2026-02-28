@@ -1,5 +1,6 @@
 import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import type { Ref } from 'vue';
+import { haptics } from '@/shared/lib/haptics';
 
 export const TRANSACTION_TYPE_ORDER = ['expense', 'income', 'transfer'] as const;
 export type TransactionType = (typeof TRANSACTION_TYPE_ORDER)[number];
@@ -119,7 +120,7 @@ export function useScrollableTabs(
     const newType = CYCLIC_PANEL_ORDER[clampedIndex];
 
     if (newType !== type.value) {
-      navigator.vibrate?.(10);
+      haptics.tap();
       isScrollingProgrammatically = true; // Prevent watch from triggering another scroll
       onTypeChange(newType);
       setTimeout(() => {

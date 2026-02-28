@@ -39,11 +39,13 @@ export class DeleteTransactionHandler implements ICommandHandler<DeleteTransacti
     }
 
     // Prevent deletion if transaction is linked to open debts (as source or direct transaction)
-    const hasOpenDebts = await this.debtRepository.hasOpenDebtsForTransaction(command.id);
-    if (hasOpenDebts) {
-      throw new BadRequestException(
-        'Нельзя удалить транзакцию, пока есть связанные открытые долги. Сначала закройте долги.',
-      );
+    if (!command.skipDebtCheck) {
+      const hasOpenDebts = await this.debtRepository.hasOpenDebtsForTransaction(command.id);
+      if (hasOpenDebts) {
+        throw new BadRequestException(
+          'Нельзя удалить транзакцию, пока есть связанные открытые долги. Сначала закройте долги.',
+        );
+      }
     }
 
     // Get the account and reverse the transaction effect

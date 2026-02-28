@@ -3,21 +3,21 @@ import { ref, computed } from 'vue';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 import { useRouter } from 'vue-router';
+import { ROUTE_NAMES } from '@/app/router/routeNames';
 import { queryClient } from '@/shared/api/queryClient';
+import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
 import { AppHeader } from '@/widgets/header';
 import {
   VirtualGroupedTransactionList,
   TransactionGroupSkeleton,
   useInfiniteTransactions,
   useGroupedTransactions,
-  type Transaction,
 } from '@/entities/transaction';
 import { SearchInput, useServerSearch } from '@/features/search-transactions';
 import {
   EditTransactionModal,
   DeleteTransactionModal,
-  useEditTransaction,
-  useTransactionSelection,
+  useTransactionEditFlow,
 } from '@/features/edit-transaction';
 import { useAccounts, AccountSelector } from '@/entities/account';
 import { CategoryChips } from '@/entities/category';
@@ -121,49 +121,24 @@ const { getBalanceAfter } = useBalanceAfter(
 );
 
 // Edit transaction modal state
-const showDeleteModal = ref(false);
-
 const {
   selectedTransaction,
   hasSplitDebts,
   showEditModal,
-  select: handleTransactionClick,
-  close: closeEditModal,
-} = useTransactionSelection(userId);
-
-const {
+  showDeleteModal,
   isUpdating,
   isDeleting,
-  error: editError,
-  update: updateTransactionFn,
-  remove: removeTransactionFn,
-} = useEditTransaction(userId.value);
-
-async function handleUpdateTransaction(updates: Partial<Transaction>) {
-  if (!selectedTransaction.value) return;
-  const success = await updateTransactionFn(selectedTransaction.value, updates);
-  if (success) {
-    closeEditModal();
-  }
-}
-
-async function handleDeleteTransaction() {
-  if (!selectedTransaction.value) return;
-  const success = await removeTransactionFn(selectedTransaction.value);
-  if (success) {
-    showDeleteModal.value = false;
-    closeEditModal();
-    selectedTransaction.value = null;
-  }
-}
-
-function handleDeleteClick() {
-  closeEditModal();
-  showDeleteModal.value = true;
-}
+  editError,
+  handleTransactionClick,
+  handleUpdateTransaction,
+  handleDeleteTransaction,
+  handleDeleteClick,
+  handleSwipeDelete,
+  closeEditModal,
+} = useTransactionEditFlow(userId);
 
 function handleAddTransaction() {
-  router.push('/transactions/new');
+  router.push({ name: ROUTE_NAMES.NEW_TRANSACTION });
 }
 
 function getAccountName(accountId: string | null): string {
@@ -172,16 +147,16 @@ function getAccountName(accountId: string | null): string {
   return account?.name ?? '';
 }
 
-function handleSwipeDelete(transaction: Transaction) {
-  selectedTransaction.value = transaction;
-  showDeleteModal.value = true;
-}
-
 const isRefreshing = ref(false);
 async function handleRefresh() {
+  const uid = userId.value;
+  if (!uid) return;
   isRefreshing.value = true;
   try {
-    await queryClient.invalidateQueries();
+    await Promise.all([
+      invalidateTransactionRelated(queryClient, uid),
+      invalidateAccountRelated(queryClient, uid),
+    ]);
   } finally {
     isRefreshing.value = false;
   }

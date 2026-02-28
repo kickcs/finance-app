@@ -1,4 +1,5 @@
 import Papa from 'papaparse';
+import { DEFAULT_CURRENCY } from '@/shared/config/currency';
 
 export interface ParsedTransaction {
   note: string | null;
@@ -89,7 +90,7 @@ export function parseMoneyLoverCsv(file: File): Promise<ParseResult> {
             amount,
             category_name: category,
             account_name: account,
-            currency: row.Currency?.trim() || 'UZS',
+            currency: row.Currency?.trim() || DEFAULT_CURRENCY,
             date: isoDate,
           });
         }

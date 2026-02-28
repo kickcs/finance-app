@@ -132,11 +132,12 @@ export class BulkImportHandler implements ICommandHandler<BulkImportCommand> {
 
     // Save everything in a single DB transaction
     await this.dataSource.transaction(async () => {
-      // Save new categories
-      for (const cat of categoryMap.values()) {
-        if (createdCategories.includes(cat.name)) {
-          await this.categoryRepository.save(cat);
-        }
+      // Save new categories in a single batch insert
+      const newCats = [...categoryMap.values()].filter((cat) =>
+        createdCategories.includes(cat.name),
+      );
+      if (newCats.length > 0) {
+        await this.categoryRepository.saveMany(newCats);
       }
 
       // Save all accounts (new + updated balances)

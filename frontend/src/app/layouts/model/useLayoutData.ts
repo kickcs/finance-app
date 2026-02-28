@@ -5,6 +5,7 @@ import { useExchangeRates } from '@/shared/api/composables/useExchangeRates';
 import { useAccounts } from '@/entities/account/api';
 import { useLocalStorage } from '@vueuse/core';
 import { getGreeting } from '@/shared/lib/format/greeting';
+import { STORAGE_KEYS } from '@/shared/config/storageKeys';
 
 export function useLayoutData() {
   const { userId } = useCurrentUser();
@@ -23,7 +24,7 @@ export function useLayoutData() {
     }, 0);
   });
 
-  const isHidden = useLocalStorage('balance_hidden', false);
+  const isHidden = useLocalStorage(STORAGE_KEYS.BALANCE_HIDDEN, false);
 
   function toggleHidden() {
     isHidden.value = !isHidden.value;

@@ -2,6 +2,8 @@
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { UButton } from '@/shared/ui';
+import { ROUTE_NAMES } from '@/app/router/routeNames';
+import { STORAGE_KEYS } from '@/shared/config/storageKeys';
 import WelcomeSlide from './slides/WelcomeSlide.vue';
 import AccountsSlide from './slides/AccountsSlide.vue';
 import DebtsSlide from './slides/DebtsSlide.vue';
@@ -40,8 +42,8 @@ function skip() {
 }
 
 function completeOnboarding() {
-  localStorage.setItem('hasSeenOnboarding', 'true');
-  router.push({ name: 'login' });
+  localStorage.setItem(STORAGE_KEYS.HAS_SEEN_ONBOARDING, 'true');
+  router.push({ name: ROUTE_NAMES.LOGIN });
 }
 
 function onTouchStart(e: TouchEvent) {

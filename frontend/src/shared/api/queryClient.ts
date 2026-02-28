@@ -1,9 +1,10 @@
 import { QueryClient } from '@tanstack/vue-query';
-import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
+import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
 import { persistQueryClient } from '@tanstack/query-persist-client-core';
 import { getAccessToken } from './http';
+import { STORAGE_KEYS } from '@/shared/config/storageKeys';
 
-const PERSIST_STORAGE_KEY = 'ouro-query-cache';
+const PERSIST_STORAGE_KEY = STORAGE_KEYS.QUERY_CACHE;
 const MAX_AGE = 1000 * 60 * 60 * 24; // 24 hours
 
 /**
@@ -50,7 +51,7 @@ export const queryClient = new QueryClient({
   },
 });
 
-const persister = createSyncStoragePersister({
+const persister = createAsyncStoragePersister({
   storage: window.localStorage,
   key: PERSIST_STORAGE_KEY,
 });

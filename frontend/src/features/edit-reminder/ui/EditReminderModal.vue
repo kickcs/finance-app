@@ -55,8 +55,6 @@ function confirm() {
     next_date: nextDate.value,
   });
 }
-
-const _isFormValid = name.value.trim().length > 0 && amount.value > 0;
 </script>
 
 <template>

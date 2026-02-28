@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { UIcon, UProgressBar } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { formatDate } from '@/shared/lib/format/date';
+import { DEFAULT_CURRENCY } from '@/shared/config/currency';
 import type { Debt } from '../model/types';
 import { DEBT_DIRECTION_COLORS } from '../model/types';
 
@@ -16,7 +17,7 @@ defineEmits<{
 }>();
 
 // Use debt's own currency
-const debtCurrency = computed(() => props.debt.currency || 'UZS');
+const debtCurrency = computed(() => props.debt.currency || DEFAULT_CURRENCY);
 
 const progress = computed(() => {
   if (props.debt.total_amount === 0) return 0;

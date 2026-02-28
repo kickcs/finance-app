@@ -5,9 +5,10 @@ import { UInput, UButton, UTabs, UIcon } from '@/shared/ui';
 import { Popover, PopoverTrigger, PopoverContent } from '@/shared/ui/primitives/popover';
 import { Calendar } from '@/shared/ui/primitives/calendar';
 import { DEBT_DIRECTION_LABELS, type DebtDirection } from '@/entities/debt';
-import { getCurrencyByCode } from '@/entities/currency';
+import { getCurrencyByCode, DEFAULT_CURRENCY } from '@/entities/currency';
 import { PersonSelector, usePeople } from '@/entities/person';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
+import { getTodayISO } from '@/shared/lib/date';
 import type { DebtFormData } from '../model/useCreateDebt';
 import type { AccountWithBalances } from '@/entities/account';
 
@@ -55,7 +56,7 @@ function updateField<K extends keyof DebtFormData>(field: K, value: DebtFormData
 
 function handleAccountChange(accountId: string) {
   const account = props.accounts.find((a) => a.id === accountId);
-  const firstCurrency = account?.balances[0]?.currency || 'UZS';
+  const firstCurrency = account?.balances[0]?.currency || DEFAULT_CURRENCY;
 
   emit('update:formData', {
     ...props.formData,
@@ -83,7 +84,7 @@ function parseDate(dateStr: string | null): DateValue | undefined {
 
 // Get current date value for calendar
 const calendarValue = computed(() => {
-  const dateStr = props.formData.debt_date || new Date().toISOString().split('T')[0];
+  const dateStr = props.formData.debt_date || getTodayISO();
   return parseDate(dateStr);
 });
 
@@ -100,7 +101,7 @@ function handleDateChange(value: DateValue | undefined) {
 
 // Format date for display
 const displayDate = computed(() => {
-  const dateStr = props.formData.debt_date || new Date().toISOString().split('T')[0];
+  const dateStr = props.formData.debt_date || getTodayISO();
   const [year, month, day] = dateStr.split('-').map(Number);
   const date = new Date(year, month - 1, day);
   return date.toLocaleDateString('ru-RU', {

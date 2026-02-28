@@ -3,6 +3,8 @@ import { computed } from 'vue';
 import { type Reminder } from '@/entities/reminder';
 import { UBadge, SectionHeader, IconBadge, EmptyState } from '@/shared/ui';
 import { formatMasked, COMPACT_FORMAT } from '@/shared/lib/format/currency';
+import { DEFAULT_CURRENCY } from '@/shared/config/currency';
+import { isReminderUpcoming, isReminderOverdue } from '@/entities/reminder';
 
 const props = defineProps<{
   reminders: Reminder[];
@@ -32,13 +34,11 @@ const todayCount = computed(() => {
 });
 
 function isUpcoming(reminder: Reminder): boolean {
-  const nextDateMs = new Date(reminder.next_date).getTime();
-  const threeDays = 3 * 24 * 60 * 60 * 1000;
-  return nextDateMs - Date.now() < threeDays && nextDateMs > Date.now();
+  return isReminderUpcoming(reminder);
 }
 
 function isOverdue(reminder: Reminder): boolean {
-  return new Date(reminder.next_date).getTime() < Date.now();
+  return isReminderOverdue(reminder);
 }
 
 function iconBgClass(reminder: Reminder): string {
@@ -86,7 +86,7 @@ function iconClass(reminder: Reminder): string {
         v-for="reminder in reminders.slice(0, 8)"
         :key="reminder.id"
         class="shrink-0 w-36 p-3 rounded-xl text-left bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark hover:bg-surface-light dark:hover:bg-surface-dark active:opacity-80 transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-        :aria-label="`${reminder.name}, ${formatMasked(reminder.amount, currency || 'UZS', hidden ?? false)}`"
+        :aria-label="`${reminder.name}, ${formatMasked(reminder.amount, currency || DEFAULT_CURRENCY, hidden ?? false)}`"
         @click="$emit('reminder-click', reminder)"
       >
         <!-- Icon -->
@@ -107,7 +107,14 @@ function iconClass(reminder: Reminder): string {
 
         <!-- Amount -->
         <p class="text-xs font-semibold text-text-primary-light dark:text-text-primary-dark">
-          {{ formatMasked(reminder.amount, currency || 'UZS', hidden ?? false, COMPACT_FORMAT) }}
+          {{
+            formatMasked(
+              reminder.amount,
+              currency || DEFAULT_CURRENCY,
+              hidden ?? false,
+              COMPACT_FORMAT,
+            )
+          }}
         </p>
       </button>
     </div>

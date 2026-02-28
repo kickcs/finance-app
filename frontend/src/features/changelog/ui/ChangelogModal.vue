@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { watch } from 'vue';
 import { useRouter } from 'vue-router';
+import { ROUTE_NAMES } from '@/shared/config/routeNames';
 import { UIcon, UButton } from '@/shared/ui';
 import {
   DialogRoot,
@@ -34,7 +35,7 @@ function handleClose() {
 
 function goToChangelog() {
   handleClose();
-  router.push({ name: 'changelog' });
+  router.push({ name: ROUTE_NAMES.CHANGELOG });
 }
 </script>
 

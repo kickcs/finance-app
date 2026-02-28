@@ -3,20 +3,28 @@ import { ref, computed } from 'vue';
 import { CurrencyList } from '@/widgets/currency-list';
 import { UButton, UIcon, UCard, SectionHeader } from '@/shared/ui';
 import { AppHeader } from '@/widgets/header';
-import { getCurrencyByCode, CURRENCIES, type Currency } from '@/entities/currency';
+import {
+  getCurrencyByCode,
+  CURRENCIES,
+  DEFAULT_CURRENCY,
+  type Currency,
+} from '@/entities/currency';
 import { navigateBack } from '@/app/router';
 import { useProfile, useAuth } from '@/shared/api';
+import { STORAGE_KEYS } from '@/shared/config/storageKeys';
 
 const { user } = useAuth();
 const { setCurrency: saveCurrency } = useProfile(computed(() => user.value?.id ?? null));
 
 // Get current currency from localStorage
-const currentCurrencyCode = computed(() => localStorage.getItem('selectedCurrency') || 'UZS');
+const currentCurrencyCode = computed(
+  () => localStorage.getItem(STORAGE_KEYS.SELECTED_CURRENCY) || DEFAULT_CURRENCY,
+);
 const selectedCurrency = ref<Currency | null>(getCurrencyByCode(currentCurrencyCode.value) ?? null);
 
 // Get account currencies from localStorage
 const initialAccountCurrencies = JSON.parse(
-  localStorage.getItem('accountCurrencies') || '[]',
+  localStorage.getItem(STORAGE_KEYS.ACCOUNT_CURRENCIES) || '[]',
 ) as string[];
 const accountCurrencies = ref<string[]>(initialAccountCurrencies);
 
@@ -48,7 +56,10 @@ async function handleSave() {
       // Save main currency to DB and localStorage
       await saveCurrency(selectedCurrency.value.code);
       // Save account currencies to localStorage
-      localStorage.setItem('accountCurrencies', JSON.stringify(accountCurrencies.value));
+      localStorage.setItem(
+        STORAGE_KEYS.ACCOUNT_CURRENCIES,
+        JSON.stringify(accountCurrencies.value),
+      );
       navigateBack();
     } catch (err) {
       console.error('Failed to save currency:', err);

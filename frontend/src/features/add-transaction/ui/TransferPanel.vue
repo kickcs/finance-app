@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch, nextTick } from 'vue';
 import { UIcon } from '@/shared/ui';
-import { getCurrencyByCode } from '@/entities/currency';
+import { getCurrencyByCode, DEFAULT_CURRENCY } from '@/entities/currency';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { useExchangeRates } from '@/shared/api';
 import type { AccountWithBalances } from '@/entities/account';
@@ -33,7 +33,7 @@ const {
 const sourceOpen = ref(false);
 const targetOpen = ref(false);
 
-const baseCurrency = computed(() => props.userCurrency || 'UZS');
+const baseCurrency = computed(() => props.userCurrency || DEFAULT_CURRENCY);
 const { convertBetween } = useExchangeRates(baseCurrency);
 
 // Target account state
@@ -89,7 +89,7 @@ function calculateConvertedAmount(
 
 function handleSourceSelect(accountId: string) {
   const account = props.accounts.find((a) => a.id === accountId);
-  const firstCurrency = account?.balances[0]?.currency || 'UZS';
+  const firstCurrency = account?.balances[0]?.currency || DEFAULT_CURRENCY;
 
   const updates: Partial<TransactionFormData> = {
     accountId,
@@ -123,9 +123,10 @@ function handleTargetSelect(accountId: string) {
   if (accountId === props.formData.accountId) {
     const otherCurrencies =
       account?.balances.filter((b) => b.currency !== props.formData.currency) || [];
-    firstCurrency = otherCurrencies[0]?.currency || account?.balances[0]?.currency || 'UZS';
+    firstCurrency =
+      otherCurrencies[0]?.currency || account?.balances[0]?.currency || DEFAULT_CURRENCY;
   } else {
-    firstCurrency = account?.balances[0]?.currency || 'UZS';
+    firstCurrency = account?.balances[0]?.currency || DEFAULT_CURRENCY;
   }
 
   const toAmount = calculateConvertedAmount(

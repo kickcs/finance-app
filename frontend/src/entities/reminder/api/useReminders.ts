@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import { reminderQueryKeys } from './queryKeys';
 import { remindersApi } from './remindersApi';
 import type { Reminder, ReminderInsert } from '@/shared/api/database.types';
+import { isReminderUpcoming, isReminderOverdue, SEVEN_DAYS_MS } from '../model/utils';
 
 export function useReminders(userId: MaybeRefOrGetter<string | null>) {
   const queryClient = useQueryClient();
@@ -117,24 +118,13 @@ export function useReminders(userId: MaybeRefOrGetter<string | null>) {
   // Computed values
   const activeReminders = computed(() => reminders.value.filter((r) => r.is_active));
 
-  const upcomingReminders = computed(() => {
-    const now = new Date();
-    const weekLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const upcomingReminders = computed(() =>
+    activeReminders.value.filter((r) => isReminderUpcoming(r, SEVEN_DAYS_MS)),
+  );
 
-    return activeReminders.value.filter((r) => {
-      const nextDate = new Date(r.next_date);
-      return nextDate >= now && nextDate <= weekLater;
-    });
-  });
-
-  const overdueReminders = computed(() => {
-    const now = new Date();
-
-    return activeReminders.value.filter((r) => {
-      const nextDate = new Date(r.next_date);
-      return nextDate < now;
-    });
-  });
+  const overdueReminders = computed(() =>
+    activeReminders.value.filter((r) => isReminderOverdue(r)),
+  );
 
   // Helper functions (same public API)
   async function createReminder(reminder: Omit<ReminderInsert, 'user_id'>) {

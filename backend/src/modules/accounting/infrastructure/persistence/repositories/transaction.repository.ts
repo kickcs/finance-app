@@ -481,153 +481,88 @@ export class TransactionRepository implements ITransactionRepository {
       return query;
     };
 
-    // 1. Regular income (non-debt-related, handles NULL as false)
-    const regularIncomeResult = await createBaseQuery()
-      .andWhere('t.type = :type', { type: 'income' })
-      .andWhere('(t.is_debt_related = false OR t.is_debt_related IS NULL)')
-      .andWhere(
-        "t.category_id NOT IN ('debt_given', 'debt_taken', 'debt_return_to_me', 'debt_return_from_me')",
-      )
-      .select('SUM(t.amount)', 'total')
-      .getRawOne<{ total: string | null }>();
+    // Single aggregation query replacing 12 sequential scalar/by-currency queries
+    const rows = await createBaseQuery()
+      .select('t.type', 'type')
+      .addSelect('t.category_id', 'categoryId')
+      .addSelect('t.currency', 'currency')
+      .addSelect('COALESCE(t.is_debt_related, false)', 'isDebtRelated')
+      .addSelect('SUM(t.amount)', 'total')
+      .groupBy('t.type')
+      .addGroupBy('t.category_id')
+      .addGroupBy('t.currency')
+      .addGroupBy('COALESCE(t.is_debt_related, false)')
+      .getRawMany<{
+        type: string;
+        categoryId: string;
+        currency: string;
+        isDebtRelated: boolean | string;
+        total: string | null;
+      }>();
 
-    // 2. Regular expense (non-debt-related, handles NULL as false)
-    const regularExpenseResult = await createBaseQuery()
-      .andWhere('t.type = :type', { type: 'expense' })
-      .andWhere('(t.is_debt_related = false OR t.is_debt_related IS NULL)')
-      .andWhere(
-        "t.category_id NOT IN ('debt_given', 'debt_taken', 'debt_return_to_me', 'debt_return_from_me')",
-      )
-      .select('SUM(t.amount)', 'total')
-      .getRawOne<{ total: string | null }>();
+    // Compute all scalar totals and by-currency breakdowns from the single result set
+    let regularIncome = 0,
+      regularExpense = 0;
+    let debtGiven = 0,
+      debtTaken = 0,
+      debtReturnsToMe = 0,
+      debtReturnsFromMe = 0;
+    const regularIncomeByCurrency: Record<string, number> = {};
+    const regularExpenseByCurrency: Record<string, number> = {};
+    const debtGivenByCurrency: Record<string, number> = {};
+    const debtTakenByCurrency: Record<string, number> = {};
+    const debtReturnsToMeByCurrency: Record<string, number> = {};
+    const debtReturnsFromMeByCurrency: Record<string, number> = {};
 
-    // 3. Debt given (counts as expense - money I lent out)
-    const debtGivenResult = await createBaseQuery()
-      .andWhere("t.category_id = 'debt_given'")
-      .select('SUM(t.amount)', 'total')
-      .getRawOne<{ total: string | null }>();
+    for (const row of rows) {
+      const amount = Number(row.total ?? 0);
+      const isDebt = row.isDebtRelated === true || row.isDebtRelated === 'true';
 
-    // 4. Debt taken (counts as income - money I borrowed)
-    const debtTakenResult = await createBaseQuery()
-      .andWhere("t.category_id = 'debt_taken'")
-      .select('SUM(t.amount)', 'total')
-      .getRawOne<{ total: string | null }>();
+      switch (row.categoryId) {
+        case 'debt_given':
+          debtGiven += amount;
+          debtGivenByCurrency[row.currency] = (debtGivenByCurrency[row.currency] || 0) + amount;
+          continue;
+        case 'debt_taken':
+          debtTaken += amount;
+          debtTakenByCurrency[row.currency] = (debtTakenByCurrency[row.currency] || 0) + amount;
+          continue;
+        case 'debt_return_to_me':
+          // Only counted when original debt affected balance (is_debt_related = true)
+          if (isDebt) {
+            debtReturnsToMe += amount;
+            debtReturnsToMeByCurrency[row.currency] =
+              (debtReturnsToMeByCurrency[row.currency] || 0) + amount;
+          }
+          continue;
+        case 'debt_return_from_me':
+          // Only counted when original debt affected balance (is_debt_related = true)
+          if (isDebt) {
+            debtReturnsFromMe += amount;
+            debtReturnsFromMeByCurrency[row.currency] =
+              (debtReturnsFromMeByCurrency[row.currency] || 0) + amount;
+          }
+          continue;
+      }
 
-    // 5. Debt returns TO ME (subtract from expenses - only if original debt affected balance)
-    const debtReturnsToMeResult = await createBaseQuery()
-      .andWhere("t.category_id = 'debt_return_to_me'")
-      .andWhere('t.is_debt_related = true')
-      .select('SUM(t.amount)', 'total')
-      .getRawOne<{ total: string | null }>();
-
-    // 6. Debt returns FROM ME (subtract from income - only if original debt affected balance)
-    const debtReturnsFromMeResult = await createBaseQuery()
-      .andWhere("t.category_id = 'debt_return_from_me'")
-      .andWhere('t.is_debt_related = true')
-      .select('SUM(t.amount)', 'total')
-      .getRawOne<{ total: string | null }>();
-
-    // Calculate NET values
-    const regularIncome = Number(regularIncomeResult?.total ?? 0);
-    const regularExpense = Number(regularExpenseResult?.total ?? 0);
-    const debtGiven = Number(debtGivenResult?.total ?? 0);
-    const debtTaken = Number(debtTakenResult?.total ?? 0);
-    const debtReturnsToMe = Number(debtReturnsToMeResult?.total ?? 0);
-    const debtReturnsFromMe = Number(debtReturnsFromMeResult?.total ?? 0);
+      // Regular (non-debt) transactions — debt categories already handled by switch/continue above
+      if (!isDebt) {
+        if (row.type === 'income') {
+          regularIncome += amount;
+          regularIncomeByCurrency[row.currency] =
+            (regularIncomeByCurrency[row.currency] || 0) + amount;
+        } else if (row.type === 'expense') {
+          regularExpense += amount;
+          regularExpenseByCurrency[row.currency] =
+            (regularExpenseByCurrency[row.currency] || 0) + amount;
+        }
+      }
+    }
 
     // Income = regular + debt_taken - returns_from_me
     const netIncome = Math.max(0, regularIncome + debtTaken - debtReturnsFromMe);
     // Expense = regular + debt_given - returns_to_me
     const netExpense = Math.max(0, regularExpense + debtGiven - debtReturnsToMe);
-
-    // 7. Regular income by currency
-    const regularIncomeByCurrencyResult = await createBaseQuery()
-      .andWhere('t.type = :type', { type: 'income' })
-      .andWhere('(t.is_debt_related = false OR t.is_debt_related IS NULL)')
-      .andWhere(
-        "t.category_id NOT IN ('debt_given', 'debt_taken', 'debt_return_to_me', 'debt_return_from_me')",
-      )
-      .select('t.currency', 'currency')
-      .addSelect('SUM(t.amount)', 'amount')
-      .groupBy('t.currency')
-      .getRawMany<{ currency: string; amount: string }>();
-
-    // 6. Regular expense by currency
-    const regularExpenseByCurrencyResult = await createBaseQuery()
-      .andWhere('t.type = :type', { type: 'expense' })
-      .andWhere('(t.is_debt_related = false OR t.is_debt_related IS NULL)')
-      .andWhere(
-        "t.category_id NOT IN ('debt_given', 'debt_taken', 'debt_return_to_me', 'debt_return_from_me')",
-      )
-      .select('t.currency', 'currency')
-      .addSelect('SUM(t.amount)', 'amount')
-      .groupBy('t.currency')
-      .getRawMany<{ currency: string; amount: string }>();
-
-    // 9. Debt given by currency
-    const debtGivenByCurrencyResult = await createBaseQuery()
-      .andWhere("t.category_id = 'debt_given'")
-      .select('t.currency', 'currency')
-      .addSelect('SUM(t.amount)', 'amount')
-      .groupBy('t.currency')
-      .getRawMany<{ currency: string; amount: string }>();
-
-    // 10. Debt taken by currency
-    const debtTakenByCurrencyResult = await createBaseQuery()
-      .andWhere("t.category_id = 'debt_taken'")
-      .select('t.currency', 'currency')
-      .addSelect('SUM(t.amount)', 'amount')
-      .groupBy('t.currency')
-      .getRawMany<{ currency: string; amount: string }>();
-
-    // 11. Debt returns TO ME by currency (only if original debt affected balance)
-    const debtReturnsToMeByCurrencyResult = await createBaseQuery()
-      .andWhere("t.category_id = 'debt_return_to_me'")
-      .andWhere('t.is_debt_related = true')
-      .select('t.currency', 'currency')
-      .addSelect('SUM(t.amount)', 'amount')
-      .groupBy('t.currency')
-      .getRawMany<{ currency: string; amount: string }>();
-
-    // 12. Debt returns FROM ME by currency (only if original debt affected balance)
-    const debtReturnsFromMeByCurrencyResult = await createBaseQuery()
-      .andWhere("t.category_id = 'debt_return_from_me'")
-      .andWhere('t.is_debt_related = true')
-      .select('t.currency', 'currency')
-      .addSelect('SUM(t.amount)', 'amount')
-      .groupBy('t.currency')
-      .getRawMany<{ currency: string; amount: string }>();
-
-    // Process by-currency data
-    const regularIncomeByCurrency: Record<string, number> = {};
-    for (const row of regularIncomeByCurrencyResult) {
-      regularIncomeByCurrency[row.currency] = Number(row.amount);
-    }
-
-    const regularExpenseByCurrency: Record<string, number> = {};
-    for (const row of regularExpenseByCurrencyResult) {
-      regularExpenseByCurrency[row.currency] = Number(row.amount);
-    }
-
-    const debtGivenByCurrency: Record<string, number> = {};
-    for (const row of debtGivenByCurrencyResult) {
-      debtGivenByCurrency[row.currency] = Number(row.amount);
-    }
-
-    const debtTakenByCurrency: Record<string, number> = {};
-    for (const row of debtTakenByCurrencyResult) {
-      debtTakenByCurrency[row.currency] = Number(row.amount);
-    }
-
-    const debtReturnsToMeByCurrency: Record<string, number> = {};
-    for (const row of debtReturnsToMeByCurrencyResult) {
-      debtReturnsToMeByCurrency[row.currency] = Number(row.amount);
-    }
-
-    const debtReturnsFromMeByCurrency: Record<string, number> = {};
-    for (const row of debtReturnsFromMeByCurrencyResult) {
-      debtReturnsFromMeByCurrency[row.currency] = Number(row.amount);
-    }
 
     // Calculate NET by currency
     const allCurrencies = new Set([
@@ -664,7 +599,7 @@ export class TransactionRepository implements ITransactionRepository {
     }
 
     // Get category breakdown (only regular transactions, without debt returns)
-    const categoryBreakdownResult = await createBaseQuery()
+    const categoryBreakdownQuery = createBaseQuery()
       .andWhere('t.type IN (:...types)', { types: ['income', 'expense'] })
       .andWhere('(t.is_debt_related = false OR t.is_debt_related IS NULL)')
       .andWhere(
@@ -683,8 +618,34 @@ export class TransactionRepository implements ITransactionRepository {
       .addGroupBy('c.icon')
       .addGroupBy('c.color')
       .addGroupBy('t.type')
-      .addGroupBy('t.currency')
-      .getRawMany<{
+      .addGroupBy('t.currency');
+
+    // Get category offsets from debt returns (debt_return_to_me → debt → source transaction → category)
+    // When someone returns money to me, subtract from the original expense category
+    let categoryOffsetsQuery = this.ormRepository
+      .createQueryBuilder('return_tx')
+      .innerJoin(DebtOrmEntity, 'd', 'd.close_transaction_id = return_tx.id')
+      .innerJoin(TransactionOrmEntity, 'source_tx', 'source_tx.id = d.source_transaction_id')
+      .where('return_tx.user_id = :userId', { userId })
+      .andWhere('return_tx.date >= :startDate', { startDate })
+      .andWhere('return_tx.date <= :endDate', { endDate })
+      .andWhere("return_tx.category_id = 'debt_return_to_me'")
+      .select('source_tx.category_id', 'categoryId')
+      .addSelect('source_tx.currency', 'currency')
+      .addSelect('SUM(return_tx.amount)', 'offsetAmount')
+      .groupBy('source_tx.category_id')
+      .addGroupBy('source_tx.currency');
+
+    if (accountIds && accountIds.length > 0) {
+      categoryOffsetsQuery = categoryOffsetsQuery.andWhere(
+        'return_tx.account_id IN (:...accountIds)',
+        { accountIds },
+      );
+    }
+
+    // Both queries are read-only and independent — run them in parallel
+    const [categoryBreakdownResult, categoryOffsetsResult] = await Promise.all([
+      categoryBreakdownQuery.getRawMany<{
         categoryId: string;
         categoryName: string | null;
         categoryIcon: string | null;
@@ -692,7 +653,13 @@ export class TransactionRepository implements ITransactionRepository {
         type: 'income' | 'expense';
         currency: string;
         amount: string;
-      }>();
+      }>(),
+      categoryOffsetsQuery.getRawMany<{
+        categoryId: string;
+        currency: string;
+        offsetAmount: string;
+      }>(),
+    ]);
 
     // Process category breakdown - aggregate by categoryId and type
     const categoryMap = new Map<string, CategoryBreakdown>();
@@ -731,35 +698,6 @@ export class TransactionRepository implements ITransactionRepository {
       }
     }
 
-    // Get category offsets from debt returns (debt_return_to_me → debt → source transaction → category)
-    // When someone returns money to me, subtract from the original expense category
-    let categoryOffsetsQuery = this.ormRepository
-      .createQueryBuilder('return_tx')
-      .innerJoin(DebtOrmEntity, 'd', 'd.close_transaction_id = return_tx.id')
-      .innerJoin(TransactionOrmEntity, 'source_tx', 'source_tx.id = d.source_transaction_id')
-      .where('return_tx.user_id = :userId', { userId })
-      .andWhere('return_tx.date >= :startDate', { startDate })
-      .andWhere('return_tx.date <= :endDate', { endDate })
-      .andWhere("return_tx.category_id = 'debt_return_to_me'")
-      .select('source_tx.category_id', 'categoryId')
-      .addSelect('source_tx.currency', 'currency')
-      .addSelect('SUM(return_tx.amount)', 'offsetAmount')
-      .groupBy('source_tx.category_id')
-      .addGroupBy('source_tx.currency');
-
-    if (accountIds && accountIds.length > 0) {
-      categoryOffsetsQuery = categoryOffsetsQuery.andWhere(
-        'return_tx.account_id IN (:...accountIds)',
-        { accountIds },
-      );
-    }
-
-    const categoryOffsetsResult = await categoryOffsetsQuery.getRawMany<{
-      categoryId: string;
-      currency: string;
-      offsetAmount: string;
-    }>();
-
     // Apply offsets to expense categories
     for (const offset of categoryOffsetsResult) {
       const key = `${offset.categoryId}-expense`;
@@ -793,27 +731,18 @@ export class TransactionRepository implements ITransactionRepository {
   }
 
   async getHashtags(userId: string): Promise<HashtagResult[]> {
-    const rows = await this.ormRepository
-      .createQueryBuilder('t')
-      .select('t.description', 'description')
-      .where('t.user_id = :userId', { userId })
-      .andWhere('t.description IS NOT NULL')
-      .andWhere("t.description LIKE '%#%'")
-      .getRawMany<{ description: string }>();
+    const result: HashtagResult[] = await this.ormRepository.query(
+      `SELECT sub.tag, COUNT(*)::int as count
+       FROM (
+         SELECT lower(unnest(regexp_matches(description, '#[^\\s#.,;:!?)]+', 'g'))) as tag
+         FROM transactions
+         WHERE user_id = $1 AND description LIKE '%#%'
+       ) sub
+       GROUP BY sub.tag
+       ORDER BY count DESC`,
+      [userId],
+    );
 
-    const tagCounts = new Map<string, number>();
-
-    for (const row of rows) {
-      const tags = row.description.match(/#[\p{L}\p{N}_]+/gu);
-      if (!tags) continue;
-      for (const tag of tags) {
-        const normalized = tag.toLowerCase();
-        tagCounts.set(normalized, (tagCounts.get(normalized) ?? 0) + 1);
-      }
-    }
-
-    return Array.from(tagCounts.entries())
-      .map(([tag, count]) => ({ tag, count }))
-      .sort((a, b) => b.count - a.count);
+    return result;
   }
 }

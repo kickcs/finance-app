@@ -9,6 +9,7 @@ import { transactionsApi, transactionQueryKeys } from '@/entities/transaction';
 import { accountQueryKeys } from '@/entities/account';
 import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
 import { useToast } from '@/shared/ui';
+import { CATEGORY_IDS } from '@/entities/category';
 import type { TransactionFormData } from './useTransactionForm';
 import type { Transaction, AccountWithBalances } from '@/shared/api/database.types';
 import type { MonthlyStats, PaginatedResult } from '@/entities/transaction/api/transactionsApi';
@@ -41,7 +42,7 @@ interface OptimisticSnapshots {
 
 function buildApiPayload(userId: string, formData: TransactionFormData) {
   const isTransfer = formData.type === 'transfer';
-  const categoryId = isTransfer ? 'transfer' : formData.categoryId;
+  const categoryId = isTransfer ? CATEGORY_IDS.TRANSFER : formData.categoryId;
 
   return {
     user_id: userId,

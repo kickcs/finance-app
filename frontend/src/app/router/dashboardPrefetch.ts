@@ -4,6 +4,8 @@ import { accountQueryKeys } from '@/entities/account';
 import { transactionQueryKeys } from '@/entities/transaction';
 import { debtQueryKeys } from '@/entities/debt';
 import { reminderQueryKeys } from '@/entities/reminder';
+import { DEFAULT_CURRENCY } from '@/entities/currency';
+import { STORAGE_KEYS } from '@/shared/config/storageKeys';
 
 /**
  * Fire-and-forget prefetch of dashboard data.
@@ -11,7 +13,7 @@ import { reminderQueryKeys } from '@/entities/reminder';
  * If any prefetch fails, Dashboard composables will fetch as usual.
  */
 export function prefetchDashboardData(userId: string) {
-  const currency = localStorage.getItem('selectedCurrency') || 'UZS';
+  const currency = localStorage.getItem(STORAGE_KEYS.SELECTED_CURRENCY) || DEFAULT_CURRENCY;
   const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth() + 1;

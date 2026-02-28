@@ -89,17 +89,13 @@ export class AccountRepository implements IAccountRepository {
 
     // Upsert balances
     if (ormEntity.balances && ormEntity.balances.length > 0) {
-      for (const balance of ormEntity.balances) {
-        await this.balanceOrmRepository.upsert(
-          {
-            id: balance.id,
-            accountId: savedAccount.id,
-            currency: balance.currency,
-            balance: balance.balance,
-          },
-          ['accountId', 'currency'],
-        );
-      }
+      const balanceRecords = ormEntity.balances.map((balance) => ({
+        id: balance.id,
+        accountId: savedAccount.id,
+        currency: balance.currency,
+        balance: balance.balance,
+      }));
+      await this.balanceOrmRepository.upsert(balanceRecords, ['accountId', 'currency']);
     }
 
     // Return with balances

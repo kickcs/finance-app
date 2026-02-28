@@ -2,8 +2,11 @@
 import { ref, watch, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { UButton, UInput, UIcon } from '@/shared/ui';
+import { ROUTE_NAMES } from '@/app/router/routeNames';
 import { useAuth } from '@/shared/api/composables/useAuth';
 import { profileApi } from '@/shared/api/services/profileApi';
+import { STORAGE_KEYS } from '@/shared/config/storageKeys';
+import { DEFAULT_CURRENCY } from '@/entities/currency/model/constants';
 
 const router = useRouter();
 const { signIn, signUp, signInAnonymously, isLoading, error: _error } = useAuth();
@@ -116,7 +119,7 @@ async function handleSubmit() {
       // With NestJS backend, registration returns user directly
       if (data.user) {
         // Navigate to onboarding
-        router.push({ name: 'first-account' });
+        router.push({ name: ROUTE_NAMES.FIRST_ACCOUNT });
       }
     } else {
       const data = await signIn(email.value, password.value);
@@ -127,14 +130,14 @@ async function handleSubmit() {
 
         if (profile?.has_completed_onboarding) {
           // Синхронизируем localStorage
-          localStorage.setItem('onboardingComplete', 'true');
+          localStorage.setItem(STORAGE_KEYS.ONBOARDING_COMPLETE, 'true');
           if (profile.currency) {
-            localStorage.setItem('selectedCurrency', profile.currency);
+            localStorage.setItem(STORAGE_KEYS.SELECTED_CURRENCY, profile.currency);
           }
-          router.push({ name: 'dashboard' });
+          router.push({ name: ROUTE_NAMES.DASHBOARD });
         } else {
           // Не завершил onboarding - отправляем на создание первого счёта
-          router.push({ name: 'first-account' });
+          router.push({ name: ROUTE_NAMES.FIRST_ACCOUNT });
         }
       }
     }
@@ -187,11 +190,11 @@ async function handleDemoMode() {
     if (user) {
       // Demo data is now initialized on the backend automatically
       // Just set localStorage flags and navigate to dashboard
-      localStorage.setItem('onboardingComplete', 'true');
-      localStorage.setItem('selectedCurrency', 'UZS');
+      localStorage.setItem(STORAGE_KEYS.ONBOARDING_COMPLETE, 'true');
+      localStorage.setItem(STORAGE_KEYS.SELECTED_CURRENCY, DEFAULT_CURRENCY);
 
       // Navigate directly to dashboard
-      router.push({ name: 'dashboard' });
+      router.push({ name: ROUTE_NAMES.DASHBOARD });
     }
   } catch (err) {
     console.error('Demo mode error:', err);

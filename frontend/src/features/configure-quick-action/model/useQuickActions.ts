@@ -1,12 +1,13 @@
 import { computed } from 'vue';
 import { useLocalStorage } from '@vueuse/core';
 import type { QuickAction } from './types';
+import { STORAGE_KEYS } from '@/shared/config/storageKeys';
 
 const MAX_SLOTS = 4;
 
 export function useQuickActions() {
-  const actions = useLocalStorage<QuickAction[]>('quick_actions', []);
-  const hidden = useLocalStorage<boolean>('quick_actions_hidden', false);
+  const actions = useLocalStorage<QuickAction[]>(STORAGE_KEYS.QUICK_ACTIONS, []);
+  const hidden = useLocalStorage<boolean>(STORAGE_KEYS.QUICK_ACTIONS_HIDDEN, false);
 
   const slots = computed(() => {
     const result: (QuickAction | null)[] = [];

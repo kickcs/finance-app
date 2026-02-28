@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
+import { ROUTE_NAMES } from '@/shared/config/routeNames';
 import { UButton, UIcon, InitialAvatar } from '@/shared/ui';
 import { AccountSelector } from '@/entities/account';
 import { CategoryChips, EXPENSE_CATEGORIES } from '@/entities/category';
@@ -242,7 +243,12 @@ const shareData = computed<ReceiptShareData>(() => ({
 
           <!-- Done button -->
           <div class="success-done">
-            <UButton variant="primary" size="xl" full-width @click="router.push('/')">
+            <UButton
+              variant="primary"
+              size="xl"
+              full-width
+              @click="router.push({ name: ROUTE_NAMES.DASHBOARD })"
+            >
               На главную
             </UButton>
           </div>
