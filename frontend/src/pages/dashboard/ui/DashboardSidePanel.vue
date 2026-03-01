@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent } from 'vue';
 import type { AccountWithBalances } from '@/entities/account';
+import type { CategoryBreakdown } from '@/entities/transaction';
 import type { Debt } from '@/entities/debt';
 import type { Reminder } from '@/entities/reminder';
 import type { QuickAction } from '@/features/configure-quick-action';
@@ -11,6 +12,7 @@ import { DebtsSectionSkeleton } from '@/widgets/debts-section';
 import { RemindersSectionSkeleton } from '@/widgets/reminders-section';
 import { UIcon } from '@/shared/ui';
 import DashboardQuickActions from './DashboardQuickActions.vue';
+import DashboardTopExpenses from './DashboardTopExpenses.vue';
 
 const props = withDefaults(
   defineProps<{
@@ -22,6 +24,9 @@ const props = withDefaults(
     // Accounts
     accounts: AccountWithBalances[];
     accountsLoading: boolean;
+    // Top Expenses
+    categoryBreakdown: CategoryBreakdown[];
+    analyticsLoading: boolean;
     // Debts
     debts: Debt[];
     currency: string;
@@ -65,7 +70,7 @@ const emit = defineEmits<{
 }>();
 
 const sidePanelWidgets = computed(() =>
-  (['quick_actions', 'accounts', 'debts', 'reminders'] as const).filter(
+  (['quick_actions', 'accounts', 'top_expenses', 'debts', 'reminders'] as const).filter(
     (id) => props.widgetOrder.includes(id) && !props.hiddenWidgets.has(id),
   ),
 );
@@ -117,6 +122,16 @@ const RemindersSection = defineAsyncComponent({
           @account-click="emit('account-click', $event)"
           @add-click="emit('add-account')"
           @view-all="emit('view-all-accounts')"
+        />
+      </section>
+
+      <!-- Top Expenses -->
+      <section v-if="widgetId === 'top_expenses'">
+        <DashboardTopExpenses
+          :category-breakdown="categoryBreakdown"
+          :currency="currency"
+          :loading="analyticsLoading"
+          :is-hidden="isHidden"
         />
       </section>
 

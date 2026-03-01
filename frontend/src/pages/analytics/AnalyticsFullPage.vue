@@ -7,6 +7,7 @@ import { UTabs, SectionHeader } from '@/shared/ui';
 import { formatCurrency, COMPACT_FORMAT } from '@/shared/lib/format/currency';
 import { useExchangeRates } from '@/shared/api';
 import { useAnalyticsStats } from '@/entities/transaction';
+import { toLocalISODate } from '@/shared/lib/date';
 import { useAccounts } from '@/entities/account';
 import { useDebts } from '@/entities/debt';
 import {
@@ -14,8 +15,8 @@ import {
   DateRangePicker,
   FilterChips,
   useAnalyticsFilters,
+  mapExpenseCategoryStats,
   type LitePeriod,
-  type CategoryStat,
 } from '@/features/analytics-filters';
 import {
   DonutChart,
@@ -41,15 +42,15 @@ const {
   clearAccountFilters,
 } = useAnalyticsFilters();
 
-// Convert date range to ISO strings for API
+// Convert date range to ISO strings for API (local timezone, not UTC)
 const startDateStr = computed(() => {
   const d = effectiveDateRange.value.startDate;
-  return d ? d.toISOString().split('T')[0] : null;
+  return d ? toLocalISODate(d) : null;
 });
 
 const endDateStr = computed(() => {
   const d = effectiveDateRange.value.endDate;
-  return d ? d.toISOString().split('T')[0] : null;
+  return d ? toLocalISODate(d) : null;
 });
 
 // Use analytics API for server-side calculations
@@ -104,25 +105,7 @@ const totalIOwe = computed(() => {
 });
 
 // Expense category statistics from server-side calculation (filtered by type)
-const expenseCategoryStats = computed<CategoryStat[]>(() => {
-  // Filter only expense categories
-  const filtered = categoryBreakdown.value.filter((c) => c.type === 'expense');
-
-  // Calculate total for percentages
-  const total = filtered.reduce((sum, c) => sum + c.amount, 0);
-
-  // Map to CategoryStat format - use category details from API response
-  return filtered
-    .map((c) => ({
-      id: c.categoryId,
-      name: c.categoryName,
-      icon: c.categoryIcon,
-      color: c.categoryColor,
-      amount: c.amount,
-      percent: total > 0 ? (c.amount / total) * 100 : 0,
-    }))
-    .sort((a, b) => b.amount - a.amount);
-});
+const expenseCategoryStats = computed(() => mapExpenseCategoryStats(categoryBreakdown.value));
 
 // Convert category stats to donut segments
 const donutSegments = computed<DonutSegment[]>(() => {

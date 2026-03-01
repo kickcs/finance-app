@@ -3,6 +3,7 @@ import { REMINDER_ICONS, remindersApi, reminderQueryKeys } from '@/entities/remi
 import { ENTITY_COLORS } from '@/shared/config/colors';
 import { queryClient } from '@/shared/api/queryClient';
 import { useToast } from '@/shared/ui';
+import { toLocalISODate } from '@/shared/lib/date';
 
 export interface ReminderFormData {
   name: string;
@@ -16,7 +17,7 @@ export interface ReminderFormData {
 function getDefaultNextDate(): string {
   const date = new Date();
   date.setMonth(date.getMonth() + 1);
-  return date.toISOString().split('T')[0];
+  return toLocalISODate(date);
 }
 
 export function useCreateReminder() {

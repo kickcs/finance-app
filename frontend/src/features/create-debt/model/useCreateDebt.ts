@@ -80,7 +80,7 @@ export function useCreateDebt() {
             formData.value.description ||
             `${isGiven ? 'Дал в долг' : 'Взял в долг'}: ${formData.value.person_name}`,
           date: formData.value.debt_date
-            ? new Date(formData.value.debt_date).toISOString()
+            ? `${formData.value.debt_date}T12:00:00.000Z`
             : new Date().toISOString(),
           is_debt_related: true,
         });

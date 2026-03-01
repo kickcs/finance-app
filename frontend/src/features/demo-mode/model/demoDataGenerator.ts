@@ -9,6 +9,7 @@
  * The backend uses plain strings ('gifts', 'gifts_income'). Both resolve to the same values.
  */
 import { CATEGORY_IDS } from '@/entities/category';
+import { toLocalISODate } from '@/shared/lib/date';
 
 export interface DemoAccountData {
   name: string;
@@ -159,9 +160,7 @@ function pickRandom<T>(items: T[]): T {
   return items[Math.floor(Math.random() * items.length)];
 }
 
-function formatDate(date: Date): string {
-  return date.toISOString().split('T')[0];
-}
+const formatDate = toLocalISODate;
 
 function getNextMonthDate(dayOfMonth: number): string {
   const now = new Date();

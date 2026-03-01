@@ -22,6 +22,7 @@ import DashboardMobileHeader from './ui/DashboardMobileHeader.vue';
 import DashboardHeroSection from './ui/DashboardHeroSection.vue';
 import DashboardQuickActions from './ui/DashboardQuickActions.vue';
 import DashboardActivityColumn from './ui/DashboardActivityColumn.vue';
+import DashboardTopExpenses from './ui/DashboardTopExpenses.vue';
 import DashboardSidePanel from './ui/DashboardSidePanel.vue';
 
 const {
@@ -36,14 +37,12 @@ const {
   allCategories,
   recentTransactions,
   totalBalance,
-  savedThisMonth,
-  spentThisMonth,
-  percentChange,
+  categoryBreakdown,
   accountsLoading,
   debtsLoading,
   remindersLoading,
   recentTxLoading,
-  statsLoading,
+  analyticsLoading,
   ratesLoading,
   widgetOrder,
   hiddenWidgets,
@@ -131,17 +130,9 @@ function handleScanReceipt() {
               <DashboardHeroSection
                 :total-balance="totalBalance"
                 :currency="currency"
-                :percent-change="percentChange"
-                :saved-this-month="savedThisMonth"
-                :spent-this-month="spentThisMonth"
-                :balance-loading="accountsLoading || statsLoading || ratesLoading"
-                :stats-loading="statsLoading"
+                :balance-loading="accountsLoading || ratesLoading"
                 :is-hidden="isHidden"
                 @toggle-hidden="isHidden = !isHidden"
-                @income-click="nav.toNewTransaction('income')"
-                @expense-click="nav.toNewTransaction('expense')"
-                @income-analytics="nav.toAnalytics('income')"
-                @expense-analytics="nav.toAnalytics('expense')"
                 @balance-click="nav.toAccounts"
               />
             </section>
@@ -176,6 +167,18 @@ function handleScanReceipt() {
                   @account-click="nav.toAccount"
                   @add-click="nav.toNewAccount"
                   @view-all="nav.toAccounts"
+                />
+              </section>
+
+              <section
+                v-if="widgetId === 'top_expenses' && !hiddenWidgets.has('top_expenses')"
+                :class="staggerClass('delay-300')"
+              >
+                <DashboardTopExpenses
+                  :category-breakdown="categoryBreakdown"
+                  :currency="currency"
+                  :loading="analyticsLoading"
+                  :is-hidden="isHidden"
                 />
               </section>
 
@@ -264,17 +267,9 @@ function handleScanReceipt() {
                 <DashboardHeroSection
                   :total-balance="totalBalance"
                   :currency="currency"
-                  :percent-change="percentChange"
-                  :saved-this-month="savedThisMonth"
-                  :spent-this-month="spentThisMonth"
-                  :balance-loading="accountsLoading || statsLoading || ratesLoading"
-                  :stats-loading="statsLoading"
+                  :balance-loading="accountsLoading || ratesLoading"
                   :is-hidden="isHidden"
                   @toggle-hidden="isHidden = !isHidden"
-                  @income-click="nav.toNewTransaction('income')"
-                  @expense-click="nav.toNewTransaction('expense')"
-                  @income-analytics="nav.toAnalytics('income')"
-                  @expense-analytics="nav.toAnalytics('expense')"
                 />
               </section>
 
@@ -316,6 +311,8 @@ function handleScanReceipt() {
                   :quick-actions-hidden="quickActionsHidden"
                   :accounts="accounts"
                   :accounts-loading="accountsLoading"
+                  :category-breakdown="categoryBreakdown"
+                  :analytics-loading="analyticsLoading"
                   :debts="debts"
                   :currency="currency"
                   :debts-loading="debtsLoading"

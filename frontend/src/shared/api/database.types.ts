@@ -1,7 +1,13 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 /** Keep in sync with backend: backend/src/modules/identity/domain/entities/profile.entity.ts */
-export type WidgetId = 'quick_actions' | 'accounts' | 'transactions' | 'debts' | 'reminders';
+export type WidgetId =
+  | 'quick_actions'
+  | 'accounts'
+  | 'top_expenses'
+  | 'transactions'
+  | 'debts'
+  | 'reminders';
 
 export interface DashboardSettings {
   widget_order: WidgetId[];

@@ -1,6 +1,6 @@
 import { computed } from 'vue';
 import { useAccounts } from '@/entities/account';
-import { useMonthlyStats, useRecentTransactions } from '@/entities/transaction';
+import { useRecentTransactions, useAnalyticsStats } from '@/entities/transaction';
 import { useDebts } from '@/entities/debt';
 import { useReminders } from '@/entities/reminder';
 import { useCategories } from '@/entities/category';
@@ -8,6 +8,7 @@ import { useProfile, useExchangeRates } from '@/shared/api';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { getGreeting } from '@/shared/lib/format/greeting';
+import { toLocalISODate } from '@/shared/lib/date';
 import type { WidgetId } from '@/shared/api/database.types';
 import { DEFAULT_WIDGET_ORDER } from '@/shared/config/dashboard';
 
@@ -26,25 +27,13 @@ export function useDashboardData() {
     10,
   );
 
-  // Monthly statistics
+  // Current month analytics (category breakdown for top expenses widget)
   const now = new Date();
-  const {
-    incomeByCurrency,
-    expenseByCurrency,
-    isLoading: statsLoading,
-  } = useMonthlyStats(userId, {
-    year: now.getFullYear(),
-    month: now.getMonth() + 1,
-  });
-
-  // Last month stats for percent change
-  const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const {
-    incomeByCurrency: lastMonthIncomeByCurrency,
-    expenseByCurrency: lastMonthExpenseByCurrency,
-  } = useMonthlyStats(userId, {
-    year: lastMonth.getFullYear(),
-    month: lastMonth.getMonth() + 1,
+  const monthStart = toLocalISODate(new Date(now.getFullYear(), now.getMonth(), 1));
+  const monthEnd = toLocalISODate(new Date(now.getFullYear(), now.getMonth() + 1, 0));
+  const { categoryBreakdown, isLoading: analyticsLoading } = useAnalyticsStats({
+    startDate: monthStart,
+    endDate: monthEnd,
   });
 
   // Greeting (static — doesn't need to be reactive)
@@ -55,15 +44,6 @@ export function useDashboardData() {
     if (!fullName) return '';
     return fullName.split(' ')[0];
   });
-
-  // Helper to sum currency map with conversion
-  function sumConverted(byCurrency: Record<string, number>): number {
-    let total = 0;
-    for (const [curr, amount] of Object.entries(byCurrency)) {
-      total += convert(amount, curr);
-    }
-    return total;
-  }
 
   // Dashboard customization settings
   const dashboardSettings = computed(() => profile.value?.dashboard_settings ?? null);
@@ -92,27 +72,11 @@ export function useDashboardData() {
           (filteredByCurrency[balance.currency] ?? 0) + balance.balance;
       }
     }
-    return sumConverted(filteredByCurrency);
-  });
-
-  const savedThisMonth = computed(() => sumConverted(incomeByCurrency.value));
-
-  const spentThisMonth = computed(() => sumConverted(expenseByCurrency.value));
-
-  const percentChange = computed(() => {
-    const lastIncome = sumConverted(lastMonthIncomeByCurrency.value);
-    const lastExpense = sumConverted(lastMonthExpenseByCurrency.value);
-
-    if (lastIncome === 0 && lastExpense === 0) return undefined;
-
-    const thisSavings = savedThisMonth.value - spentThisMonth.value;
-    const lastSavings = lastIncome - lastExpense;
-
-    if (lastSavings === 0) {
-      return thisSavings > 0 ? 100 : thisSavings < 0 ? -100 : 0;
+    let total = 0;
+    for (const [curr, amount] of Object.entries(filteredByCurrency)) {
+      total += convert(amount, curr);
     }
-
-    return ((thisSavings - lastSavings) / Math.abs(lastSavings)) * 100;
+    return total;
   });
 
   return {
@@ -127,14 +91,12 @@ export function useDashboardData() {
     allCategories,
     recentTransactions,
     totalBalance,
-    savedThisMonth,
-    spentThisMonth,
-    percentChange,
+    categoryBreakdown,
     accountsLoading,
     debtsLoading,
     remindersLoading,
     recentTxLoading,
-    statsLoading,
+    analyticsLoading,
     ratesLoading,
     widgetOrder,
     hiddenWidgets,

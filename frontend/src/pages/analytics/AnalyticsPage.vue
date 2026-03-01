@@ -12,7 +12,8 @@ import {
   EmptyState,
   IconBadge,
 } from '@/shared/ui';
-import { useAnalyticsStats, type CategoryBreakdown } from '@/entities/transaction';
+import { useAnalyticsStats } from '@/entities/transaction';
+import { toLocalISODate } from '@/shared/lib/date';
 import { useAccounts } from '@/entities/account';
 import { useDebts } from '@/entities/debt';
 import { formatCurrency, COMPACT_FORMAT } from '@/shared/lib/format/currency';
@@ -21,9 +22,9 @@ import {
   DateRangePicker,
   FilterChips,
   useAnalyticsFilters,
+  mapCategoryStats,
   type LitePeriod,
   type TransactionType,
-  type CategoryStat,
 } from '@/features/analytics-filters';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
@@ -46,15 +47,15 @@ const {
   clearAccountFilters,
 } = useAnalyticsFilters();
 
-// Convert date range to ISO strings for API
+// Convert date range to ISO strings for API (local timezone, not UTC)
 const startDateStr = computed(() => {
   const d = effectiveDateRange.value.startDate;
-  return d ? d.toISOString().split('T')[0] : null;
+  return d ? toLocalISODate(d) : null;
 });
 
 const endDateStr = computed(() => {
   const d = effectiveDateRange.value.endDate;
-  return d ? d.toISOString().split('T')[0] : null;
+  return d ? toLocalISODate(d) : null;
 });
 
 // Use analytics API for server-side calculations
@@ -108,29 +109,9 @@ const totalIOwe = computed(() => {
 });
 
 // Category statistics from server-side calculation
-const categoryStats = computed<CategoryStat[]>(() => {
-  // Filter by type
-  let filtered: CategoryBreakdown[];
-  if (filters.value.type === 'all') {
-    filtered = categoryBreakdown.value;
-  } else {
-    filtered = categoryBreakdown.value.filter((c) => c.type === filters.value.type);
-  }
-
-  // Calculate total for percentages
-  const total = filtered.reduce((sum, c) => sum + c.amount, 0);
-
-  // Map to CategoryStat format - use category details from API response
-  return filtered
-    .map((c) => ({
-      id: c.categoryId,
-      name: c.categoryName,
-      icon: c.categoryIcon,
-      color: c.categoryColor,
-      amount: c.amount,
-      percent: total > 0 ? (c.amount / total) * 100 : 0,
-    }))
-    .sort((a, b) => b.amount - a.amount);
+const categoryStats = computed(() => {
+  const type = filters.value.type === 'all' ? undefined : filters.value.type;
+  return mapCategoryStats(categoryBreakdown.value, type);
 });
 
 // Prepare filter chips data

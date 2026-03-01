@@ -73,7 +73,7 @@ const emit = defineEmits<{
             @click="emit('balance-click')"
           >
             <div
-              class="w-9 h-9 rounded-xl flex items-center justify-center bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark shrink-0"
+              class="w-9 h-9 rounded-xl flex items-center justify-center bg-primary/10 dark:bg-primary/20 shrink-0 border border-primary/10"
             >
               <UIcon name="account_balance_wallet" size="sm" class="text-primary" />
             </div>

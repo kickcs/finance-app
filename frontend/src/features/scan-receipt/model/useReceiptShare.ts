@@ -3,6 +3,7 @@ import { useToast } from '@/shared/ui';
 import { haptics } from '@/shared/lib/haptics';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { getInitial } from '@/shared/lib/format/text';
+import { toLocalISODate } from '@/shared/lib/date';
 import type { ParticipantSummary } from './types';
 
 export interface ReceiptShareData {
@@ -388,7 +389,7 @@ function buildFilename(data: ReceiptShareData): string {
     .toLowerCase()
     .replace(/[^a-zа-яё0-9]+/gi, '-')
     .replace(/^-|-$/g, '');
-  const date = new Date(data.date).toISOString().slice(0, 10);
+  const date = toLocalISODate(new Date(data.date));
   return `ouro-${name}-${date}.png`;
 }
 

@@ -38,8 +38,20 @@ export function isFutureDate(dateString: string): boolean {
 }
 
 /**
- * Get today's date as ISO string (YYYY-MM-DD)
+ * Format a Date to YYYY-MM-DD in local timezone.
+ * Unlike toISOString().split('T')[0], this avoids UTC offset issues
+ * (e.g. midnight UTC+5 becoming the previous day in UTC).
+ */
+export function toLocalISODate(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+/**
+ * Get today's date as ISO string (YYYY-MM-DD) in local timezone
  */
 export function getTodayISO(): string {
-  return new Date().toISOString().split('T')[0];
+  return toLocalISODate(new Date());
 }

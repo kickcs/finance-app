@@ -4,7 +4,13 @@ import { Password } from '../value-objects/password.vo';
 import { ProfileCreatedEvent } from '../events/profile-created.event';
 import { ProfileUpdatedEvent } from '../events/profile-updated.event';
 
-export type WidgetId = 'quick_actions' | 'accounts' | 'transactions' | 'debts' | 'reminders';
+export type WidgetId =
+  | 'quick_actions'
+  | 'accounts'
+  | 'top_expenses'
+  | 'transactions'
+  | 'debts'
+  | 'reminders';
 
 export interface DashboardSettings {
   widgetOrder: WidgetId[];

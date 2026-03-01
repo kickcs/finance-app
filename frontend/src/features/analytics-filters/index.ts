@@ -8,6 +8,9 @@ export type {
   CategoryStat,
 } from './model/types';
 
+// Helpers
+export { mapCategoryStats, mapExpenseCategoryStats } from './model/mapCategoryBreakdown';
+
 // Composable
 export { useAnalyticsFilters } from './model/useAnalyticsFilters';
 
