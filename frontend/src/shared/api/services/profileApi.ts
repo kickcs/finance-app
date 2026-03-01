@@ -17,6 +17,8 @@ interface ProfileResponse {
     hiddenWidgets: string[];
     hiddenAccountIds: string[];
   } | null;
+  quickActionsHidden: boolean;
+  quickActionsHintDismissed: boolean;
 }
 
 function transformProfile(profile: ProfileResponse): Profile {
@@ -37,6 +39,8 @@ function transformProfile(profile: ProfileResponse): Profile {
           hidden_account_ids: profile.dashboardSettings.hiddenAccountIds,
         }
       : null,
+    quick_actions_hidden: profile.quickActionsHidden,
+    quick_actions_hint_dismissed: profile.quickActionsHintDismissed,
   };
 }
 
@@ -72,6 +76,8 @@ export const profileApi = {
             hiddenAccountIds: updates.dashboard_settings.hidden_account_ids,
           }
         : updates.dashboard_settings,
+      quickActionsHidden: updates.quick_actions_hidden,
+      quickActionsHintDismissed: updates.quick_actions_hint_dismissed,
     });
     return transformProfile(data);
   },

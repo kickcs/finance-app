@@ -45,4 +45,10 @@ export class ProfileOrmEntity {
 
   @Column({ name: 'dashboard_settings', type: 'jsonb', nullable: true })
   dashboardSettings: Record<string, unknown> | null;
+
+  @Column({ name: 'quick_actions_hidden', default: false })
+  quickActionsHidden: boolean;
+
+  @Column({ name: 'quick_actions_hint_dismissed', default: false })
+  quickActionsHintDismissed: boolean;
 }

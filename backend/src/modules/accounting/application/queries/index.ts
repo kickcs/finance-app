@@ -32,6 +32,10 @@ export * from './get-categories/get-categories.handler';
 export * from './get-hashtags/get-hashtags.query';
 export * from './get-hashtags/get-hashtags.handler';
 
+// Quick Action queries
+export * from './get-quick-actions/get-quick-actions.query';
+export * from './get-quick-actions/get-quick-actions.handler';
+
 // Account Balance queries
 export * from './get-balances-by-account/get-balances-by-account.query';
 export * from './get-balances-by-account/get-balances-by-account.handler';
@@ -54,6 +58,7 @@ import { GetBalancesByAccountHandler } from './get-balances-by-account/get-balan
 import { GetBalancesByAccountsHandler } from './get-balances-by-accounts/get-balances-by-accounts.handler';
 import { CountTransactionsByAccountHandler } from './count-transactions-by-account/count-transactions-by-account.handler';
 import { GetHashtagsHandler } from './get-hashtags/get-hashtags.handler';
+import { GetQuickActionsHandler } from './get-quick-actions/get-quick-actions.handler';
 
 export const QueryHandlers = [
   GetAccountsHandler,
@@ -71,4 +76,5 @@ export const QueryHandlers = [
   GetBalancesByAccountsHandler,
   CountTransactionsByAccountHandler,
   GetHashtagsHandler,
+  GetQuickActionsHandler,
 ];

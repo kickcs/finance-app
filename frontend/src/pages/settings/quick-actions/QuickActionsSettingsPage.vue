@@ -1,14 +1,10 @@
 <script setup lang="ts">
-import { ref, computed, inject } from 'vue';
+import { computed, inject } from 'vue';
 import type { Ref } from 'vue';
 import type { User } from '@/shared/api/composables/useAuth';
 import { AppHeader } from '@/widgets/header';
 import { UIcon, UToggle } from '@/shared/ui';
-import {
-  QuickActionModal,
-  useQuickActions,
-  type QuickAction,
-} from '@/features/configure-quick-action';
+import { QuickActionModal, useQuickActions } from '@/features/configure-quick-action';
 import { useAccounts } from '@/entities/account';
 import { useCategories } from '@/entities/category';
 import { navigateBack } from '@/app/router';
@@ -17,30 +13,12 @@ const user = inject<Ref<User | null>>('user');
 const userId = computed(() => user?.value?.id ?? '');
 const { accounts } = useAccounts(userId);
 const { expenseCategories, getCategoryById } = useCategories(userId);
-const { slots, addAction, updateAction, removeAction, hidden, toggleHidden } = useQuickActions();
+const { slots, editingAction, showModal, handleSave, handleDelete, hidden, toggleHidden } =
+  useQuickActions(userId);
 
-const showModal = ref(false);
-const editingAction = ref<QuickAction | null>(null);
-
-function handleSlotClick(action: QuickAction | null) {
+function handleSlotClick(action: (typeof slots.value)[number]) {
   editingAction.value = action;
   showModal.value = true;
-}
-
-function handleSave(data: { label: string; categoryId: string; accountId: string }) {
-  if (editingAction.value) {
-    updateAction(editingAction.value.id, data);
-  } else {
-    addAction(data);
-  }
-  editingAction.value = null;
-}
-
-function handleDelete() {
-  if (editingAction.value) {
-    removeAction(editingAction.value.id);
-  }
-  editingAction.value = null;
 }
 </script>
 

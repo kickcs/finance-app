@@ -30,6 +30,8 @@ export interface ProfileProps {
   demoExpiresAt: Date | null;
   refreshToken: string | null;
   dashboardSettings: DashboardSettings | null;
+  quickActionsHidden: boolean;
+  quickActionsHintDismissed: boolean;
   createdAt: Date;
 }
 
@@ -48,6 +50,8 @@ export class Profile extends AggregateRoot<string> {
   private _demoExpiresAt: Date | null;
   private _refreshToken: string | null;
   private _dashboardSettings: DashboardSettings | null;
+  private _quickActionsHidden: boolean;
+  private _quickActionsHintDismissed: boolean;
   private _createdAt: Date;
 
   private constructor(props: ProfileProps) {
@@ -62,6 +66,8 @@ export class Profile extends AggregateRoot<string> {
     this._demoExpiresAt = props.demoExpiresAt;
     this._refreshToken = props.refreshToken;
     this._dashboardSettings = props.dashboardSettings;
+    this._quickActionsHidden = props.quickActionsHidden;
+    this._quickActionsHintDismissed = props.quickActionsHintDismissed;
     this._createdAt = props.createdAt;
   }
 
@@ -87,6 +93,8 @@ export class Profile extends AggregateRoot<string> {
       demoExpiresAt: null,
       refreshToken: null,
       dashboardSettings: null,
+      quickActionsHidden: false,
+      quickActionsHintDismissed: false,
       createdAt: new Date(),
     });
 
@@ -113,6 +121,8 @@ export class Profile extends AggregateRoot<string> {
       demoExpiresAt: expiresAt,
       refreshToken: null,
       dashboardSettings: null,
+      quickActionsHidden: false,
+      quickActionsHintDismissed: false,
       createdAt: new Date(),
     });
 
@@ -173,6 +183,14 @@ export class Profile extends AggregateRoot<string> {
     return this._dashboardSettings;
   }
 
+  get quickActionsHidden(): boolean {
+    return this._quickActionsHidden;
+  }
+
+  get quickActionsHintDismissed(): boolean {
+    return this._quickActionsHintDismissed;
+  }
+
   get createdAt(): Date {
     return this._createdAt;
   }
@@ -184,6 +202,8 @@ export class Profile extends AggregateRoot<string> {
     hasCompletedOnboarding?: boolean;
     defaultAccountId?: string | null;
     dashboardSettings?: DashboardSettings | null;
+    quickActionsHidden?: boolean;
+    quickActionsHintDismissed?: boolean;
   }): void {
     const changes: Record<string, unknown> = {};
 
@@ -210,6 +230,16 @@ export class Profile extends AggregateRoot<string> {
     if (data.dashboardSettings !== undefined) {
       this._dashboardSettings = data.dashboardSettings;
       changes.dashboardSettings = data.dashboardSettings;
+    }
+
+    if (data.quickActionsHidden !== undefined) {
+      this._quickActionsHidden = data.quickActionsHidden;
+      changes.quickActionsHidden = data.quickActionsHidden;
+    }
+
+    if (data.quickActionsHintDismissed !== undefined) {
+      this._quickActionsHintDismissed = data.quickActionsHintDismissed;
+      changes.quickActionsHintDismissed = data.quickActionsHintDismissed;
     }
 
     if (Object.keys(changes).length > 0) {

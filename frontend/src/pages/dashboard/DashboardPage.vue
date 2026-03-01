@@ -51,6 +51,8 @@ const {
 const {
   quickActionSlots,
   quickActionsHidden,
+  quickActionsHintDismissed,
+  dismissHint: dismissQuickActionsHint,
   showQuickActionModal,
   editingAction,
   categoryMap,
@@ -58,7 +60,7 @@ const {
   handleLongPress: handleQuickActionLongPress,
   handleSave: handleQuickActionSave,
   handleDelete: handleQuickActionDelete,
-} = useDashboardQuickActions(allCategories);
+} = useDashboardQuickActions(allCategories, userId);
 
 const nav = useDashboardNavigation();
 const { staggerClass } = useStaggerAnimation();
@@ -66,7 +68,6 @@ const { staggerClass } = useStaggerAnimation();
 const { showModal: showInstallModal } = usePwaInstall();
 onMounted(() => usePwaUpdateToast());
 const isHidden = useLocalStorage(STORAGE_KEYS.BALANCE_HIDDEN, false);
-const quickActionsHintDismissed = useLocalStorage(STORAGE_KEYS.QUICK_ACTIONS_HINT_DISMISSED, false);
 const mobileTransactions = computed(() => recentTransactions.value.slice(0, 5));
 
 // Scroll tracking
@@ -150,7 +151,7 @@ function handleScanReceipt() {
                   show-scan-button
                   @click="handleQuickActionClick"
                   @long-press="handleQuickActionLongPress"
-                  @dismiss-hint="quickActionsHintDismissed = true"
+                  @dismiss-hint="dismissQuickActionsHint"
                   @settings-click="nav.toQuickActionsSettings"
                   @scan-click="handleScanReceipt"
                 />
@@ -323,7 +324,7 @@ function handleScanReceipt() {
                   :widget-order="widgetOrder"
                   @quick-action-click="handleQuickActionClick"
                   @quick-action-long-press="handleQuickActionLongPress"
-                  @dismiss-hint="quickActionsHintDismissed = true"
+                  @dismiss-hint="dismissQuickActionsHint"
                   @settings-click="nav.toQuickActionsSettings"
                   @scan-click="handleScanReceipt"
                   @account-click="nav.toAccount"

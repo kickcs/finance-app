@@ -13,6 +13,7 @@ import {
   AccountBalanceOrmEntity,
   TransactionOrmEntity,
   CategoryOrmEntity,
+  QuickActionOrmEntity,
 } from '../modules/accounting/infrastructure/persistence/typeorm';
 import { DebtOrmEntity } from '../modules/debt/infrastructure/persistence/typeorm';
 import {
@@ -40,6 +41,7 @@ export const dataSourceOptions: DataSourceOptions = {
     AccountBalanceOrmEntity,
     TransactionOrmEntity,
     CategoryOrmEntity,
+    QuickActionOrmEntity,
     DebtOrmEntity,
     GoalOrmEntity,
     ReminderOrmEntity,

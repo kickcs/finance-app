@@ -30,6 +30,8 @@ export type Database = {
           is_demo: boolean;
           demo_expires_at: string | null;
           dashboard_settings: DashboardSettings | null;
+          quick_actions_hidden: boolean;
+          quick_actions_hint_dismissed: boolean;
         };
         Insert: {
           id: string;
@@ -42,6 +44,8 @@ export type Database = {
           is_demo?: boolean;
           demo_expires_at?: string | null;
           dashboard_settings?: DashboardSettings | null;
+          quick_actions_hidden?: boolean;
+          quick_actions_hint_dismissed?: boolean;
         };
         Update: {
           id?: string;
@@ -54,6 +58,8 @@ export type Database = {
           is_demo?: boolean;
           demo_expires_at?: string | null;
           dashboard_settings?: DashboardSettings | null;
+          quick_actions_hidden?: boolean;
+          quick_actions_hint_dismissed?: boolean;
         };
         Relationships: [];
       };
@@ -421,6 +427,39 @@ export type Database = {
         };
         Relationships: [];
       };
+      quick_actions: {
+        Row: {
+          id: string;
+          user_id: string;
+          category_id: string;
+          account_id: string;
+          label: string;
+          position: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          category_id: string;
+          account_id: string;
+          label: string;
+          position?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          category_id?: string;
+          account_id?: string;
+          label?: string;
+          position?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -475,6 +514,8 @@ export type DebtInsert = Database['public']['Tables']['debts']['Insert'];
 export type ReminderInsert = Database['public']['Tables']['reminders']['Insert'];
 export type UserCategory = Database['public']['Tables']['categories']['Row'];
 export type UserCategoryInsert = Database['public']['Tables']['categories']['Insert'];
+export type QuickAction = Database['public']['Tables']['quick_actions']['Row'];
+export type QuickActionInsert = Database['public']['Tables']['quick_actions']['Insert'];
 
 // Extended types for multi-currency accounts
 export interface AccountWithBalances extends Omit<Account, 'balance' | 'currency'> {

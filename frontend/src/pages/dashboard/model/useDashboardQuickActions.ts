@@ -1,22 +1,23 @@
-import { ref, computed, type ComputedRef } from 'vue';
+import { computed, type ComputedRef, type MaybeRefOrGetter } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuickActions, type QuickAction } from '@/features/configure-quick-action';
 
 export function useDashboardQuickActions(
   allCategories: ComputedRef<Array<{ id: string; icon: string; color: string }>>,
+  userId: MaybeRefOrGetter<string | null>,
 ) {
   const router = useRouter();
 
   const {
     slots: quickActionSlots,
-    addAction,
-    updateAction,
-    removeAction,
     hidden: quickActionsHidden,
-  } = useQuickActions();
-
-  const showQuickActionModal = ref(false);
-  const editingAction = ref<QuickAction | null>(null);
+    hintDismissed: quickActionsHintDismissed,
+    dismissHint,
+    editingAction,
+    showModal: showQuickActionModal,
+    handleSave,
+    handleDelete,
+  } = useQuickActions(userId);
 
   const categoryMap = computed(() => {
     const map = new Map<string, { icon: string; color: string }>();
@@ -47,25 +48,11 @@ export function useDashboardQuickActions(
     showQuickActionModal.value = true;
   }
 
-  function handleSave(data: { label: string; categoryId: string; accountId: string }) {
-    if (editingAction.value) {
-      updateAction(editingAction.value.id, data);
-    } else {
-      addAction(data);
-    }
-    editingAction.value = null;
-  }
-
-  function handleDelete() {
-    if (editingAction.value) {
-      removeAction(editingAction.value.id);
-    }
-    editingAction.value = null;
-  }
-
   return {
     quickActionSlots,
     quickActionsHidden,
+    quickActionsHintDismissed,
+    dismissHint,
     showQuickActionModal,
     editingAction,
     categoryMap,

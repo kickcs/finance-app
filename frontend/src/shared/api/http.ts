@@ -19,14 +19,52 @@ export function getAccessToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
 }
 
+// Cached token expiry — avoids decoding JWT on every request
+let cachedExpiryMs: number | null = null;
+
 export function setTokens(accessToken: string): void {
   localStorage.setItem(TOKEN_KEY, accessToken);
-  // Refresh token is set by backend via httpOnly cookie
+  const payload = decodeJwtPayload(accessToken);
+  cachedExpiryMs = typeof payload?.exp === 'number' ? payload.exp * 1000 : null;
 }
 
 export function clearTokens(): void {
   localStorage.removeItem(TOKEN_KEY);
-  // Cookie is cleared via /auth/logout endpoint
+  cachedExpiryMs = null;
+}
+
+// JWT payload decoder — single source of truth, handles URL-safe base64
+export function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join(''),
+    );
+    return JSON.parse(jsonPayload);
+  } catch {
+    return null;
+  }
+}
+
+// Proactive token expiry check — refresh before sending request if token is about to expire
+const EXPIRY_BUFFER_MS = 30_000; // refresh 30s before actual expiry
+
+function isTokenExpiringSoon(): boolean {
+  // Use cached expiry if available (set when token is stored)
+  if (cachedExpiryMs !== null) {
+    return cachedExpiryMs < Date.now() + EXPIRY_BUFFER_MS;
+  }
+  // Fallback: decode from localStorage (first request after page reload)
+  const token = getAccessToken();
+  if (!token) return false;
+  const payload = decodeJwtPayload(token);
+  if (!payload || typeof payload.exp !== 'number') return false;
+  cachedExpiryMs = payload.exp * 1000;
+  return cachedExpiryMs < Date.now() + EXPIRY_BUFFER_MS;
 }
 
 // Token refresh logic with subscriber pattern to prevent race conditions
@@ -96,10 +134,10 @@ export class HttpError extends Error {
   }
 }
 
-async function request<T>(endpoint: string, options: HttpOptions = {}): Promise<T> {
-  const { params, skipAuth, ...fetchOptions } = options;
-
-  // Build URL with query params
+function buildUrl(
+  endpoint: string,
+  params?: Record<string, string | number | boolean | undefined>,
+): string {
   let url = `${API_URL}${endpoint}`;
   if (params) {
     const searchParams = new URLSearchParams();
@@ -113,14 +151,15 @@ async function request<T>(endpoint: string, options: HttpOptions = {}): Promise<
       url += `?${queryString}`;
     }
   }
+  return url;
+}
 
-  // Build headers
+function buildHeaders(fetchHeaders?: HeadersInit, skipAuth?: boolean): Record<string, string> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...(fetchOptions.headers as Record<string, string>),
+    ...(fetchHeaders as Record<string, string>),
   };
 
-  // Add auth token
   if (!skipAuth) {
     const token = getAccessToken();
     if (token) {
@@ -128,26 +167,43 @@ async function request<T>(endpoint: string, options: HttpOptions = {}): Promise<
     }
   }
 
-  // Make request with credentials for cookie support
+  return headers;
+}
+
+async function request<T>(endpoint: string, options: HttpOptions = {}): Promise<T> {
+  const { params, skipAuth, ...fetchOptions } = options;
+  const url = buildUrl(endpoint, params);
+
+  // Wait if refresh is already in progress, or proactively refresh if token is expired/expiring
+  if (!skipAuth) {
+    if (isRefreshing) {
+      const refreshed = await waitForRefresh();
+      if (!refreshed) {
+        throw new HttpError(401, 'Unauthorized');
+      }
+    } else if (isTokenExpiringSoon()) {
+      await refreshTokens();
+    }
+  }
+
+  const headers = buildHeaders(fetchOptions.headers, skipAuth);
+
   let response = await fetch(url, {
     ...fetchOptions,
-    credentials: 'include', // Send cookies with requests
+    credentials: 'include',
     headers,
   });
 
-  // Handle 401 - try to refresh token
+  // Handle 401 - try to refresh token once
   if (response.status === 401 && !skipAuth) {
     const refreshed = await refreshTokens();
     if (refreshed) {
       // Retry with new token
-      const newToken = getAccessToken();
-      if (newToken) {
-        headers['Authorization'] = `Bearer ${newToken}`;
-      }
+      const retryHeaders = buildHeaders(fetchOptions.headers, skipAuth);
       response = await fetch(url, {
         ...fetchOptions,
         credentials: 'include',
-        headers,
+        headers: retryHeaders,
       });
     }
   }
@@ -161,7 +217,6 @@ async function request<T>(endpoint: string, options: HttpOptions = {}): Promise<
     data = await response.text();
   }
 
-  // Handle errors
   if (!response.ok) {
     throw new HttpError(response.status, response.statusText, data);
   }

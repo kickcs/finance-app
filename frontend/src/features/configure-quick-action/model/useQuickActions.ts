@@ -1,46 +1,53 @@
-import { computed } from 'vue';
-import { useLocalStorage } from '@vueuse/core';
+import { ref, computed, type MaybeRefOrGetter } from 'vue';
+import { useQuickActions as useQuickActionsApi } from '@/entities/quick-action';
 import type { QuickAction } from './types';
-import { STORAGE_KEYS } from '@/shared/config/storageKeys';
 
-const MAX_SLOTS = 4;
+export function useQuickActions(userId: MaybeRefOrGetter<string | null>) {
+  const api = useQuickActionsApi(userId);
 
-export function useQuickActions() {
-  const actions = useLocalStorage<QuickAction[]>(STORAGE_KEYS.QUICK_ACTIONS, []);
-  const hidden = useLocalStorage<boolean>(STORAGE_KEYS.QUICK_ACTIONS_HIDDEN, false);
+  // Transform snake_case DB type to camelCase view type
+  const slots = computed<(QuickAction | null)[]>(() =>
+    api.slots.value.map((a) =>
+      a
+        ? {
+            id: a.id,
+            label: a.label,
+            categoryId: a.category_id,
+            accountId: a.account_id,
+          }
+        : null,
+    ),
+  );
 
-  const slots = computed(() => {
-    const result: (QuickAction | null)[] = [];
-    for (let i = 0; i < MAX_SLOTS; i++) {
-      result.push(actions.value[i] ?? null);
+  const editingAction = ref<QuickAction | null>(null);
+  const showModal = ref(false);
+
+  async function handleSave(data: { label: string; categoryId: string; accountId: string }) {
+    if (editingAction.value) {
+      await api.updateAction(editingAction.value.id, data);
+    } else {
+      await api.addAction(data);
     }
-    return result;
-  });
-
-  function addAction(action: Omit<QuickAction, 'id'>) {
-    if (actions.value.length >= MAX_SLOTS) return;
-    actions.value = [...actions.value, { ...action, id: crypto.randomUUID() }];
+    editingAction.value = null;
   }
 
-  function updateAction(id: string, updates: Partial<Omit<QuickAction, 'id'>>) {
-    actions.value = actions.value.map((a) => (a.id === id ? { ...a, ...updates } : a));
-  }
-
-  function removeAction(id: string) {
-    actions.value = actions.value.filter((a) => a.id !== id);
-  }
-
-  function toggleHidden() {
-    hidden.value = !hidden.value;
+  async function handleDelete() {
+    if (editingAction.value) {
+      await api.removeAction(editingAction.value.id);
+    }
+    editingAction.value = null;
   }
 
   return {
     slots,
-    actions,
-    hidden,
-    addAction,
-    updateAction,
-    removeAction,
-    toggleHidden,
+    hidden: api.hidden,
+    hintDismissed: api.hintDismissed,
+    isLoading: api.isLoading,
+    editingAction,
+    showModal,
+    handleSave,
+    handleDelete,
+    toggleHidden: api.toggleHidden,
+    dismissHint: api.dismissHint,
   };
 }

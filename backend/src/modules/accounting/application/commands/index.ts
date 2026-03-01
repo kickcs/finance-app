@@ -32,6 +32,16 @@ export * from './initialize-default-categories/initialize-default-categories.han
 export * from './bulk-import/bulk-import.command';
 export * from './bulk-import/bulk-import.handler';
 
+// Quick Action commands
+export * from './create-quick-action/create-quick-action.command';
+export * from './create-quick-action/create-quick-action.handler';
+export * from './update-quick-action/update-quick-action.command';
+export * from './update-quick-action/update-quick-action.handler';
+export * from './delete-quick-action/delete-quick-action.command';
+export * from './delete-quick-action/delete-quick-action.handler';
+export * from './reorder-quick-actions/reorder-quick-actions.command';
+export * from './reorder-quick-actions/reorder-quick-actions.handler';
+
 // Account Balance commands
 export * from './upsert-balance/upsert-balance.command';
 export * from './upsert-balance/upsert-balance.handler';
@@ -63,6 +73,10 @@ import { UpdateBalanceByDeltaHandler } from './update-balance-by-delta/update-ba
 import { DeleteBalanceHandler } from './delete-balance/delete-balance.handler';
 import { DeleteBalancesByAccountHandler } from './delete-balances-by-account/delete-balances-by-account.handler';
 import { BulkImportHandler } from './bulk-import/bulk-import.handler';
+import { CreateQuickActionHandler } from './create-quick-action/create-quick-action.handler';
+import { UpdateQuickActionHandler } from './update-quick-action/update-quick-action.handler';
+import { DeleteQuickActionHandler } from './delete-quick-action/delete-quick-action.handler';
+import { ReorderQuickActionsHandler } from './reorder-quick-actions/reorder-quick-actions.handler';
 
 export const CommandHandlers = [
   CreateAccountHandler,
@@ -83,4 +97,8 @@ export const CommandHandlers = [
   DeleteBalanceHandler,
   DeleteBalancesByAccountHandler,
   BulkImportHandler,
+  CreateQuickActionHandler,
+  UpdateQuickActionHandler,
+  DeleteQuickActionHandler,
+  ReorderQuickActionsHandler,
 ];

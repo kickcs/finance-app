@@ -1,5 +1,5 @@
 import { ref, computed, readonly } from 'vue';
-import { http, setTokens, clearTokens, getAccessToken, HttpError } from '../http';
+import { http, setTokens, clearTokens, getAccessToken, decodeJwtPayload, HttpError } from '../http';
 import { queryClient, clearPersistedCache } from '../queryClient';
 import { resetOnboardingVerified } from '@/app/router';
 import { DEFAULT_CURRENCY } from '@/shared/config/currency';
@@ -32,39 +32,24 @@ const isLoading = ref(true);
 const isInitialized = ref(false);
 const error = ref<Error | null>(null);
 
-// JWT payload decoder
-function decodeJwtPayload(token: string): {
+// Typed JWT payload for auth
+interface JwtAuthPayload {
   sub: string;
   email?: string;
   isAnonymous?: boolean;
   isDemo?: boolean;
   exp: number;
-} | null {
-  try {
-    const base64Url = token.split('.')[1];
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split('')
-        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-        .join(''),
-    );
-    return JSON.parse(jsonPayload);
-  } catch {
-    return null;
-  }
 }
 
-// Check if token is expired
 function isTokenExpired(token: string): boolean {
-  const payload = decodeJwtPayload(token);
+  const payload = decodeJwtPayload(token) as JwtAuthPayload | null;
   if (!payload) return true;
   return payload.exp * 1000 < Date.now();
 }
 
 // Build an optimistic User from JWT payload + localStorage cache
 function createOptimisticUser(token: string): User | null {
-  const payload = decodeJwtPayload(token);
+  const payload = decodeJwtPayload(token) as JwtAuthPayload | null;
   if (!payload) return null;
 
   return {

@@ -10,6 +10,8 @@ export interface ProfileResponse {
   isDemo: boolean;
   demoExpiresAt: Date | null;
   dashboardSettings: DashboardSettings | null;
+  quickActionsHidden: boolean;
+  quickActionsHintDismissed: boolean;
   createdAt: Date;
 }
 

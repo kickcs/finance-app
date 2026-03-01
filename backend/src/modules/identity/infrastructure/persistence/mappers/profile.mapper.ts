@@ -23,6 +23,8 @@ export class ProfileMapper {
       demoExpiresAt: ormEntity.demoExpiresAt,
       refreshToken: ormEntity.refreshToken,
       dashboardSettings: ormEntity.dashboardSettings as DashboardSettings | null,
+      quickActionsHidden: ormEntity.quickActionsHidden,
+      quickActionsHintDismissed: ormEntity.quickActionsHintDismissed,
       createdAt: ormEntity.createdAt,
     });
   }
@@ -44,6 +46,8 @@ export class ProfileMapper {
     ormEntity.demoExpiresAt = domainEntity.demoExpiresAt;
     ormEntity.refreshToken = domainEntity.refreshToken;
     ormEntity.dashboardSettings = domainEntity.dashboardSettings as Record<string, unknown> | null;
+    ormEntity.quickActionsHidden = domainEntity.quickActionsHidden;
+    ormEntity.quickActionsHintDismissed = domainEntity.quickActionsHintDismissed;
     ormEntity.createdAt = domainEntity.createdAt;
 
     return ormEntity;

@@ -1,7 +1,7 @@
 import { QueryClient } from '@tanstack/vue-query';
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
 import { persistQueryClient } from '@tanstack/query-persist-client-core';
-import { getAccessToken } from './http';
+import { getAccessToken, decodeJwtPayload } from './http';
 import { STORAGE_KEYS } from '@/shared/config/storageKeys';
 
 const PERSIST_STORAGE_KEY = STORAGE_KEYS.QUERY_CACHE;
@@ -28,12 +28,8 @@ function shouldPersistQuery(queryKey: readonly unknown[]): boolean {
 function getCurrentUserId(): string {
   const token = getAccessToken();
   if (!token) return '';
-  try {
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    return payload.sub ?? '';
-  } catch {
-    return '';
-  }
+  const payload = decodeJwtPayload(token);
+  return (payload?.sub as string) ?? '';
 }
 
 export const queryClient = new QueryClient({

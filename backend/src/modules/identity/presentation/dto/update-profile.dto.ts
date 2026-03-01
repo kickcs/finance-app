@@ -46,4 +46,12 @@ export class UpdateProfileDto {
   @ValidateNested()
   @Type(() => DashboardSettingsDto)
   dashboardSettings?: DashboardSettingsDto | null;
+
+  @IsOptional()
+  @IsBoolean()
+  quickActionsHidden?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  quickActionsHintDismissed?: boolean;
 }

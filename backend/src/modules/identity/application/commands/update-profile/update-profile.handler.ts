@@ -43,6 +43,8 @@ export class UpdateProfileHandler implements ICommandHandler<UpdateProfileComman
       isDemo: profile.isDemo,
       demoExpiresAt: profile.demoExpiresAt,
       dashboardSettings: profile.dashboardSettings,
+      quickActionsHidden: profile.quickActionsHidden,
+      quickActionsHintDismissed: profile.quickActionsHintDismissed,
       createdAt: profile.createdAt,
     };
   }

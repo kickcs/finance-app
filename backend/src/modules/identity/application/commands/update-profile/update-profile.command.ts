@@ -9,6 +9,8 @@ export class UpdateProfileCommand {
       hasCompletedOnboarding?: boolean;
       defaultAccountId?: string | null;
       dashboardSettings?: DashboardSettings | null;
+      quickActionsHidden?: boolean;
+      quickActionsHintDismissed?: boolean;
     },
   ) {}
 }

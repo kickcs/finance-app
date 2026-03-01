@@ -8,6 +8,7 @@ import {
   TRANSACTION_REPOSITORY,
   CATEGORY_REPOSITORY,
   ACCOUNT_BALANCE_REPOSITORY,
+  QUICK_ACTION_REPOSITORY,
 } from './domain/repositories';
 
 // Application
@@ -20,12 +21,14 @@ import {
   AccountBalanceOrmEntity,
   TransactionOrmEntity,
   CategoryOrmEntity,
+  QuickActionOrmEntity,
 } from './infrastructure/persistence/typeorm';
 import {
   AccountRepository,
   TransactionRepository,
   CategoryRepository,
   AccountBalanceRepository,
+  QuickActionRepository,
 } from './infrastructure/persistence/repositories';
 
 // Cross-module
@@ -38,6 +41,7 @@ import {
   CategoriesController,
   AccountBalancesController,
   ImportController,
+  QuickActionsController,
 } from './presentation/controllers';
 
 @Module({
@@ -49,6 +53,7 @@ import {
       AccountBalanceOrmEntity,
       TransactionOrmEntity,
       CategoryOrmEntity,
+      QuickActionOrmEntity,
     ]),
   ],
   controllers: [
@@ -57,6 +62,7 @@ import {
     CategoriesController,
     AccountBalancesController,
     ImportController,
+    QuickActionsController,
   ],
   providers: [
     // Repositories
@@ -76,6 +82,10 @@ import {
       provide: ACCOUNT_BALANCE_REPOSITORY,
       useClass: AccountBalanceRepository,
     },
+    {
+      provide: QUICK_ACTION_REPOSITORY,
+      useClass: QuickActionRepository,
+    },
 
     // Command Handlers
     ...CommandHandlers,
@@ -88,6 +98,7 @@ import {
     TRANSACTION_REPOSITORY,
     CATEGORY_REPOSITORY,
     ACCOUNT_BALANCE_REPOSITORY,
+    QUICK_ACTION_REPOSITORY,
   ],
 })
 export class AccountingModule {}
