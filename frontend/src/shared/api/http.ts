@@ -67,22 +67,30 @@ function isTokenExpiringSoon(): boolean {
   return cachedExpiryMs < Date.now() + EXPIRY_BUFFER_MS;
 }
 
+/**
+ * Refresh result:
+ * - 'success' — new access token obtained
+ * - 'auth_error' — 401/403, refresh token is invalid → must re-login
+ * - 'network_error' — server unreachable or 5xx → keep existing tokens, retry later
+ */
+export type RefreshResult = 'success' | 'auth_error' | 'network_error';
+
 // Token refresh logic with subscriber pattern to prevent race conditions
 let isRefreshing = false;
-let refreshSubscribers: Array<(success: boolean) => void> = [];
+let refreshSubscribers: Array<(result: RefreshResult) => void> = [];
 
-function onRefreshComplete(success: boolean) {
-  refreshSubscribers.forEach((callback) => callback(success));
+function onRefreshComplete(result: RefreshResult) {
+  refreshSubscribers.forEach((cb) => cb(result));
   refreshSubscribers = [];
 }
 
-function waitForRefresh(): Promise<boolean> {
+function waitForRefresh(): Promise<RefreshResult> {
   return new Promise((resolve) => {
     refreshSubscribers.push(resolve);
   });
 }
 
-export async function refreshTokens(): Promise<boolean> {
+export async function refreshTokensWithReason(): Promise<RefreshResult> {
   if (isRefreshing) {
     return waitForRefresh();
   }
@@ -95,23 +103,29 @@ export async function refreshTokens(): Promise<boolean> {
       method: 'POST',
       credentials: 'include', // Send cookies
       headers: { 'Content-Type': 'application/json' },
-      // No body needed - refresh token is in cookie
     });
 
-    if (!response.ok) {
-      clearTokens();
-      onRefreshComplete(false);
-      return false;
+    if (response.ok) {
+      const data = await response.json();
+      setTokens(data.accessToken);
+      onRefreshComplete('success');
+      return 'success';
     }
 
-    const data = await response.json();
-    setTokens(data.accessToken); // Only access token in response
-    onRefreshComplete(true);
-    return true;
+    // 401/403 = token truly invalid → clear and force re-login
+    if (response.status === 401 || response.status === 403) {
+      clearTokens();
+      onRefreshComplete('auth_error');
+      return 'auth_error';
+    }
+
+    // 5xx or other server error — keep tokens, backend may be restarting
+    onRefreshComplete('network_error');
+    return 'network_error';
   } catch {
-    clearTokens();
-    onRefreshComplete(false);
-    return false;
+    // Network error (fetch failed) — backend unreachable, keep tokens intact
+    onRefreshComplete('network_error');
+    return 'network_error';
   } finally {
     isRefreshing = false;
   }
@@ -177,12 +191,13 @@ async function request<T>(endpoint: string, options: HttpOptions = {}): Promise<
   // Wait if refresh is already in progress, or proactively refresh if token is expired/expiring
   if (!skipAuth) {
     if (isRefreshing) {
-      const refreshed = await waitForRefresh();
-      if (!refreshed) {
+      const result = await waitForRefresh();
+      if (result === 'auth_error') {
         throw new HttpError(401, 'Unauthorized');
       }
+      // On network_error — proceed with existing token, request may still work
     } else if (isTokenExpiringSoon()) {
-      await refreshTokens();
+      await refreshTokensWithReason();
     }
   }
 
@@ -196,8 +211,8 @@ async function request<T>(endpoint: string, options: HttpOptions = {}): Promise<
 
   // Handle 401 - try to refresh token once
   if (response.status === 401 && !skipAuth) {
-    const refreshed = await refreshTokens();
-    if (refreshed) {
+    const result = await refreshTokensWithReason();
+    if (result === 'success') {
       // Retry with new token
       const retryHeaders = buildHeaders(fetchOptions.headers, skipAuth);
       response = await fetch(url, {
@@ -206,6 +221,7 @@ async function request<T>(endpoint: string, options: HttpOptions = {}): Promise<
         headers: retryHeaders,
       });
     }
+    // On network_error — proceed with original 401 response (will throw below)
   }
 
   // Parse response

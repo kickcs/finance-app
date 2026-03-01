@@ -1,5 +1,13 @@
 import { ref, computed, readonly } from 'vue';
-import { http, setTokens, clearTokens, getAccessToken, decodeJwtPayload, HttpError } from '../http';
+import {
+  http,
+  setTokens,
+  clearTokens,
+  getAccessToken,
+  decodeJwtPayload,
+  HttpError,
+  refreshTokensWithReason,
+} from '../http';
 import { queryClient, clearPersistedCache } from '../queryClient';
 import { resetOnboardingVerified } from '@/app/router';
 import { DEFAULT_CURRENCY } from '@/shared/config/currency';
@@ -41,17 +49,23 @@ interface JwtAuthPayload {
   exp: number;
 }
 
+function parseJwtAuth(token: string): JwtAuthPayload | null {
+  return decodeJwtPayload(token) as JwtAuthPayload | null;
+}
+
 function isTokenExpired(token: string): boolean {
-  const payload = decodeJwtPayload(token) as JwtAuthPayload | null;
+  const payload = parseJwtAuth(token);
   if (!payload) return true;
   return payload.exp * 1000 < Date.now();
 }
 
 // Build an optimistic User from JWT payload + localStorage cache
 function createOptimisticUser(token: string): User | null {
-  const payload = decodeJwtPayload(token) as JwtAuthPayload | null;
-  if (!payload) return null;
+  const payload = parseJwtAuth(token);
+  return payload ? optimisticUserFromPayload(payload) : null;
+}
 
+function optimisticUserFromPayload(payload: JwtAuthPayload): User {
   return {
     id: payload.sub,
     name: null,
@@ -77,23 +91,26 @@ export async function initializeAuth(): Promise<User | null> {
 
     let token = getAccessToken();
     if (!token) {
-      // No token at all, user is not authenticated
       user.value = null;
-      isInitialized.value = true;
       return null;
     }
 
     // If token is expired, try refreshing via httpOnly cookie before giving up
     if (isTokenExpired(token)) {
-      const { refreshTokens } = await import('../http');
-      const refreshed = await refreshTokens();
-      if (!refreshed) {
+      const result = await refreshTokensWithReason();
+      if (result === 'auth_error') {
         clearTokens();
         user.value = null;
-        isInitialized.value = true;
         return null;
       }
-      // Use the refreshed token
+      if (result === 'network_error') {
+        // Backend unreachable (deploying/restarting) — use optimistic user
+        // Tokens are kept; next request will retry refresh automatically
+        const payload = parseJwtAuth(token);
+        user.value = payload ? optimisticUserFromPayload(payload) : null;
+        return user.value;
+      }
+      // success — use the refreshed token
       token = getAccessToken()!;
     }
 
@@ -101,7 +118,6 @@ export async function initializeAuth(): Promise<User | null> {
     const optimisticUser = createOptimisticUser(token);
     if (optimisticUser) {
       user.value = optimisticUser;
-      isInitialized.value = true;
       isLoading.value = false;
 
       // Verify with /auth/me in background (non-blocking)
@@ -141,17 +157,14 @@ export async function initializeAuth(): Promise<User | null> {
     // Fallback: JWT decode failed, fetch synchronously
     const userData = await http.get<User>('/auth/me');
     user.value = userData;
-
-    isInitialized.value = true;
     return user.value;
   } catch (err) {
-    // Token might be invalid, clear it
     clearTokens();
     user.value = null;
     error.value = err as Error;
-    isInitialized.value = true;
     return null;
   } finally {
+    isInitialized.value = true;
     isLoading.value = false;
   }
 }

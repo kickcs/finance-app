@@ -1,4 +1,4 @@
-import { API_URL, getAccessToken, refreshTokens } from '@/shared/api/http';
+import { API_URL, getAccessToken, refreshTokensWithReason } from '@/shared/api/http';
 
 export interface ReceiptItemResponse {
   name: string;
@@ -35,10 +35,11 @@ export const receiptApi = {
     let response = await doFetch(getAccessToken());
 
     if (response.status === 401) {
-      const refreshed = await refreshTokens();
-      if (refreshed) {
+      const result = await refreshTokensWithReason();
+      if (result === 'success') {
         response = await doFetch(getAccessToken());
       }
+      // network_error — proceed with original 401 response (will throw below)
     }
 
     if (!response.ok) {

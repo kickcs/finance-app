@@ -15,7 +15,7 @@ export class AddQuickActions1772500000000 implements MigrationInterface {
         "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
         "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
         CONSTRAINT "PK_quick_actions" PRIMARY KEY ("id"),
-        CONSTRAINT "FK_quick_actions_user" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE,
+        CONSTRAINT "FK_quick_actions_user" FOREIGN KEY ("user_id") REFERENCES "profiles"("id") ON DELETE CASCADE,
         CONSTRAINT "FK_quick_actions_category" FOREIGN KEY ("category_id") REFERENCES "categories"("id") ON DELETE CASCADE,
         CONSTRAINT "FK_quick_actions_account" FOREIGN KEY ("account_id") REFERENCES "accounts"("id") ON DELETE CASCADE
       )
