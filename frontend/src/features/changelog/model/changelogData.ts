@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.25';
+export const CURRENT_VERSION = '1.0.26';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,33 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.26',
+    date: '2026-03-01',
+    title: 'Топ расходов и порядок счетов',
+    items: [
+      {
+        type: 'feature',
+        text: 'Виджет «Расходы за месяц» на главной — показывает топ-3 категории расходов с прогресс-барами',
+      },
+      {
+        type: 'feature',
+        text: 'Перетаскивание счетов — меняйте порядок счетов на странице «Все счета» простым перетаскиванием',
+      },
+      {
+        type: 'improvement',
+        text: 'Обновлённый дизайн карточки баланса с плавной подсветкой и кнопкой «К счетам» на десктопе',
+      },
+      {
+        type: 'fix',
+        text: 'Исправлен баг с датами в аналитике и создании долгов — данные за 1-е число месяца больше не пропадают',
+      },
+      {
+        type: 'improvement',
+        text: 'Скелетон загрузки на странице контактов — больше нет пустого экрана при загрузке',
+      },
+    ],
+  },
   {
     version: '1.0.25',
     date: '2026-02-28',
