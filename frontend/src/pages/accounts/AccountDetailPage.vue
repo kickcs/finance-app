@@ -547,6 +547,7 @@ async function handleSetAsDefault() {
     <EditTransactionModal
       v-model="showEditTransactionModal"
       :transaction="selectedTransaction"
+      :accounts="accounts"
       :currency="currency"
       :is-updating="isUpdatingTransaction"
       :error="transactionError"

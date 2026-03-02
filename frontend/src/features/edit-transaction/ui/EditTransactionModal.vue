@@ -3,6 +3,8 @@ import { ref, watch, computed, inject } from 'vue';
 import type { Ref } from 'vue';
 import { UModal, UInput, UButton, UTabs, UIcon } from '@/shared/ui';
 import { CategoryChips, useCategories } from '@/entities/category';
+import { AccountSelector } from '@/entities/account';
+import type { AccountWithBalances } from '@/entities/account';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import type { Transaction } from '@/shared/api/database.types';
 import type { User } from '@/shared/api/composables/useAuth';
@@ -10,6 +12,7 @@ import type { User } from '@/shared/api/composables/useAuth';
 const props = defineProps<{
   modelValue: boolean;
   transaction: Transaction | null;
+  accounts: AccountWithBalances[];
   currency: string;
   isUpdating?: boolean;
   error?: string | null;
@@ -43,6 +46,7 @@ const isProtected = computed(() => isDebtRelated.value || hasSplitDebts.value);
 // Local form state (only for non-transfer)
 const type = ref<'expense' | 'income'>('expense');
 const amount = ref(0);
+const accountId = ref('');
 const categoryId = ref('');
 const description = ref('');
 const date = ref('');
@@ -54,6 +58,7 @@ watch(
     if (t && t.type !== 'transfer') {
       type.value = t.type as 'expense' | 'income';
       amount.value = t.amount;
+      accountId.value = t.account_id;
       categoryId.value = t.category_id;
       description.value = t.description || '';
       date.value = t.date ? t.date.split('T')[0] : '';
@@ -66,6 +71,13 @@ const tabItems = [
   { id: 'expense', label: 'Расход' },
   { id: 'income', label: 'Доход' },
 ];
+
+// Filter accounts that have a balance in the transaction's currency
+const compatibleAccounts = computed(() => {
+  const txCurrency = props.transaction?.currency;
+  if (!txCurrency) return props.accounts;
+  return props.accounts.filter((a) => a.balances.some((b) => b.currency === txCurrency));
+});
 
 const categories = computed(() => getCategoriesByType(type.value));
 
@@ -87,6 +99,7 @@ function confirm() {
   emit('confirm', {
     type: type.value,
     amount: amount.value,
+    account_id: accountId.value,
     category_id: categoryId.value,
     description: description.value || null,
     date: date.value,
@@ -94,7 +107,7 @@ function confirm() {
 }
 
 const isFormValid = computed(() => {
-  return categoryId.value && amount.value > 0;
+  return accountId.value && categoryId.value && amount.value > 0;
 });
 </script>
 
@@ -226,6 +239,14 @@ const isFormValid = computed(() => {
       <!-- Type Tabs -->
       <UTabs :model-value="type" :items="tabItems" @update:model-value="handleTypeChange" />
 
+      <!-- Account Selector -->
+      <AccountSelector
+        :accounts="compatibleAccounts"
+        :selected-id="accountId"
+        label="Счёт"
+        @select="accountId = $event"
+      />
+
       <!-- Amount -->
       <UInput
         :model-value="String(amount)"
@@ -233,7 +254,7 @@ const isFormValid = computed(() => {
         placeholder="0"
         variant="currency"
         type="number"
-        :suffix="currency"
+        :suffix="transaction!.currency"
         @update:model-value="amount = Number($event) || 0"
       />
 

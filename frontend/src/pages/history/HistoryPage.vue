@@ -343,6 +343,7 @@ async function handleRefresh() {
     <EditTransactionModal
       v-model="showEditModal"
       :transaction="selectedTransaction"
+      :accounts="accounts"
       :currency="currency"
       :is-updating="isUpdating"
       :error="editError"
