@@ -35,6 +35,8 @@ This is a **personal finance management backend** built with NestJS using **Doma
 | **debt** | Debt | Debt tracking with payments |
 | **planning** | Goal, Reminder | Financial goals and reminders |
 | **exchange** | ExchangeRate | Currency conversion |
+| **subscription** | UserSubscription | Premium plans, LemonSqueezy payments |
+| **person** | Person | Shared contacts for debts |
 
 ### Module Structure (each bounded context follows this pattern)
 
@@ -90,6 +92,8 @@ All routes prefixed with `/api` (configured in main.ts):
 - `/api/goals/*` - Goals
 - `/api/reminders/*` - Reminders
 - `/api/exchange-rates/*` - Exchange rates
+- `/api/subscription/*` - Subscription & premium
+- `/api/quick-actions/*` - Quick actions
 
 ### TypeScript Configuration
 

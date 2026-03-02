@@ -265,7 +265,7 @@ async function handleRefresh() {
       <!-- Loading State with Skeleton -->
       <div
         v-if="currentIsLoading && displayedTransactions.length === 0"
-        class="flex-1 space-y-4 overflow-y-auto"
+        class="flex-1 space-y-4 overflow-hidden"
       >
         <TransactionGroupSkeleton v-for="i in 3" :key="i" :count="3" />
       </div>
@@ -276,7 +276,8 @@ async function handleRefresh() {
         :class="[
           'flex-1 min-h-0 transition-opacity duration-300',
           {
-            'opacity-50 pointer-events-none': currentIsFetching && displayedTransactions.length > 0,
+            'opacity-50 pointer-events-none':
+              currentIsFetching && !currentIsFetchingNextPage && displayedTransactions.length > 0,
           },
         ]"
       >

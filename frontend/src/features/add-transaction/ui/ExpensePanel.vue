@@ -66,6 +66,7 @@ const {
     <CategoryChips
       :categories="categories"
       :selected-id="formData.categoryId"
+      :rows="4"
       label="Категория"
       @select="updateField('categoryId', $event)"
     />

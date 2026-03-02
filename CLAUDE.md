@@ -208,12 +208,13 @@ Update `frontend/src/features/changelog/model/changelogData.ts`:
 
 ## Common Gotchas
 
+- **TypeORM entity registration**: New ORM entities MUST be added in **TWO** places: `backend/src/config/data-source.ts` (for CLI migrations) AND the `entities` array in `TypeOrmModule.forRootAsync` in `backend/src/app.module.ts` (for NestJS runtime). Missing either causes "No metadata for X was found" errors.
 - **isolatedModules**: Backend requires `false` in tsconfig (interface usage with @Inject)
 - **API field naming**: Backend camelCase → frontend snake_case. Transform in `*Api.ts` files
 - **Profile fields**: When adding new fields, update `ProfileResponse` + all handlers (get-profile, update-profile, create-demo-user)
 - **Icons**: `<UIcon name="material_symbol_name" />` — add new mappings to `shared/ui/icon/iconMap.ts`
 - **Global state**: User auth via Vue `provide/inject` from `App.vue`
-- **TypeORM**: `synchronize: false` — always use migrations. New entities must be registered in `backend/src/config/data-source.ts`
+- **TypeORM**: `synchronize: false` — always use migrations
 - **PullToRefresh**: Breaks flex chains — wrap in separate `flex-1 overflow-y-auto` div
 - **Design tokens**: Always use semantic tokens (`bg-surface-light dark:bg-surface-dark`) not raw Tailwind colors. See `frontend/DESIGN_SYSTEM.md` § Anti-Patterns
 - **Multi-currency**: Account balances stored in separate `account_balances` table

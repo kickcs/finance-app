@@ -2,7 +2,7 @@
 import { ref, watch, computed, inject } from 'vue';
 import type { Ref } from 'vue';
 import { UModal, UInput, UButton, UTabs, UIcon } from '@/shared/ui';
-import { CategoryCard, useCategories } from '@/entities/category';
+import { CategoryChips, useCategories } from '@/entities/category';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import type { Transaction } from '@/shared/api/database.types';
 import type { User } from '@/shared/api/composables/useAuth';
@@ -237,28 +237,14 @@ const isFormValid = computed(() => {
         @update:model-value="amount = Number($event) || 0"
       />
 
-      <!-- Category Grid -->
-      <div class="space-y-2">
-        <label class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark">
-          Категория
-        </label>
-        <div
-          role="listbox"
-          aria-label="Выберите категорию"
-          class="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto"
-        >
-          <CategoryCard
-            v-for="category in categories"
-            :key="category.id"
-            :category="category"
-            :selected="categoryId === category.id"
-            size="medium"
-            role="option"
-            :aria-selected="categoryId === category.id"
-            @click="categoryId = category.id"
-          />
-        </div>
-      </div>
+      <!-- Category Chips -->
+      <CategoryChips
+        :categories="categories"
+        :selected-id="categoryId"
+        :rows="type === 'expense' ? 4 : 2"
+        label="Категория"
+        @select="categoryId = $event"
+      />
 
       <!-- Description & Date Row -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">

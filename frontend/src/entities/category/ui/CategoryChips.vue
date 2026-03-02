@@ -4,19 +4,32 @@ import { UIcon } from '@/shared/ui';
 import type { Category } from '@/entities/category';
 import { useSlidingIndicator } from '@/shared/lib/hooks/useSlidingIndicator';
 
-const props = defineProps<{
-  categories: Category[];
-  selectedId: string;
-  label?: string;
-}>();
+const props = withDefaults(
+  defineProps<{
+    categories: Category[];
+    selectedId: string;
+    label?: string;
+    rows?: number;
+  }>(),
+  { rows: 2 },
+);
 
 const emit = defineEmits<{
   select: [categoryId: string];
 }>();
 
-const firstRow = computed(() => props.categories.slice(0, Math.ceil(props.categories.length / 2)));
-
-const secondRow = computed(() => props.categories.slice(Math.ceil(props.categories.length / 2)));
+const categoryRows = computed(() => {
+  const total = props.categories.length;
+  const rowCount = Math.max(1, props.rows);
+  const result: Category[][] = [];
+  for (let i = 0; i < rowCount; i++) {
+    const start = Math.floor((i * total) / rowCount);
+    const end = Math.floor(((i + 1) * total) / rowCount);
+    const slice = props.categories.slice(start, end);
+    if (slice.length) result.push(slice);
+  }
+  return result;
+});
 
 const containerRef = ref<HTMLElement | null>(null);
 
@@ -75,29 +88,9 @@ function getChipStyle(category: Category) {
       />
 
       <div class="flex flex-col gap-1.5 w-max">
-        <div class="flex gap-1.5">
+        <div v-for="(row, rowIdx) in categoryRows" :key="rowIdx" class="flex gap-1.5">
           <button
-            v-for="category in firstRow"
-            :key="category.id"
-            :ref="(el) => setChipRef(category.id, el as HTMLElement)"
-            type="button"
-            class="relative z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm border active:scale-95 transition-colors duration-300 whitespace-nowrap"
-            :class="
-              category.id !== selectedId
-                ? 'border-border-light dark:border-border-dark text-text-secondary-light dark:text-text-secondary-dark hover:text-text-primary-light dark:hover:text-text-primary-dark'
-                : ''
-            "
-            :style="getChipStyle(category)"
-            @click="emit('select', category.id)"
-          >
-            <UIcon :name="category.icon" size="sm" :style="{ color: category.color }" />
-            {{ category.name }}
-          </button>
-        </div>
-
-        <div class="flex gap-1.5">
-          <button
-            v-for="category in secondRow"
+            v-for="category in row"
             :key="category.id"
             :ref="(el) => setChipRef(category.id, el as HTMLElement)"
             type="button"

@@ -59,14 +59,14 @@ function handleSlotClick(action: (typeof slots.value)[number]) {
         <button
           v-for="(action, index) in slots"
           :key="action?.id ?? `empty-${index}`"
-          class="w-full flex items-center gap-3 p-4 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark hover:opacity-80 active:scale-[0.98] transition-all duration-150"
+          class="group w-full flex items-center gap-4 p-4 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark hover:border-primary/30 hover:shadow-md active:scale-[0.98] transition-all duration-200"
           @click="handleSlotClick(action)"
         >
           <template v-if="action">
             <div
-              class="w-10 h-10 shrink-0 rounded-lg flex items-center justify-center"
+              class="w-12 h-12 shrink-0 rounded-xl flex items-center justify-center transition-transform duration-200 group-hover:scale-105"
               :style="{
-                backgroundColor: (getCategoryById(action.categoryId)?.color ?? '#64748b') + '1A',
+                backgroundColor: (getCategoryById(action.categoryId)?.color ?? '#64748b') + '26',
               }"
             >
               <UIcon
@@ -78,31 +78,40 @@ function handleSlotClick(action: (typeof slots.value)[number]) {
               />
             </div>
             <div class="flex-1 text-left">
-              <p class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
+              <p
+                class="text-base font-semibold text-text-primary-light dark:text-text-primary-dark group-hover:text-primary transition-colors"
+              >
                 {{ action.label }}
               </p>
-              <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
-                {{ accounts?.find((a) => a.id === action.accountId)?.name || 'Счёт не найден' }}
-              </p>
+              <div
+                class="flex items-center gap-1.5 mt-0.5 text-text-secondary-light dark:text-text-secondary-dark"
+              >
+                <UIcon name="account_balance_wallet" size="xs" class="opacity-70" />
+                <p class="text-sm font-medium">
+                  {{ accounts?.find((a) => a.id === action.accountId)?.name || 'Счёт не найден' }}
+                </p>
+              </div>
             </div>
             <UIcon
               name="chevron_right"
               size="sm"
-              class="text-text-tertiary-light dark:text-text-tertiary-dark"
+              class="text-text-tertiary-light dark:text-text-tertiary-dark group-hover:text-text-secondary-light dark:group-hover:text-text-secondary-dark group-hover:translate-x-1 transition-all"
             />
           </template>
           <template v-else>
             <div
-              class="w-10 h-10 shrink-0 rounded-lg bg-border-light dark:bg-border-dark flex items-center justify-center"
+              class="w-12 h-12 shrink-0 rounded-xl bg-surface-light dark:bg-surface-dark border-2 border-dashed border-border-light dark:border-border-dark flex items-center justify-center transition-colors group-hover:border-primary/50 group-hover:bg-primary/5"
             >
               <UIcon
                 name="add"
                 size="sm"
-                class="text-text-tertiary-light dark:text-text-tertiary-dark"
+                class="text-text-tertiary-light dark:text-text-tertiary-dark group-hover:text-primary transition-colors"
               />
             </div>
-            <span class="text-sm text-text-tertiary-light dark:text-text-tertiary-dark">
-              Слот {{ index + 1 }} — нажмите чтобы настроить
+            <span
+              class="text-sm font-medium text-text-tertiary-light dark:text-text-tertiary-dark group-hover:text-text-secondary-light dark:group-hover:text-text-secondary-dark transition-colors"
+            >
+              Настроить слот {{ index + 1 }}
             </span>
           </template>
         </button>

@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import { UModal, UButton, UIcon } from '@/shared/ui';
+import { haptics } from '@/shared/lib/haptics';
 import type { Category } from '@/entities/category';
+import { CategoryChips } from '@/entities/category';
 import type { AccountWithBalances } from '@/entities/account';
+import { AccountSelector } from '@/entities/account';
 import type { QuickAction } from '../model/types';
 
 const props = defineProps<{
@@ -40,8 +43,19 @@ watch(
   },
 );
 
+function selectCategory(id: string) {
+  selectedCategoryId.value = id;
+  haptics.tap();
+}
+
+function selectAccount(id: string) {
+  selectedAccountId.value = id;
+  haptics.tap();
+}
+
 function handleSave() {
   if (!canSave.value) return;
+  haptics.success();
   const cat = props.expenseCategories.find((c) => c.id === selectedCategoryId.value);
   emit('save', {
     label: cat?.name || 'Расход',
@@ -52,6 +66,7 @@ function handleSave() {
 }
 
 function handleDelete() {
+  haptics.warning();
   emit('delete');
   emit('update:modelValue', false);
 }
@@ -64,84 +79,38 @@ function handleDelete() {
     @update:model-value="emit('update:modelValue', $event)"
   >
     <div class="space-y-4">
-      <!-- Category grid -->
-      <div>
-        <p class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
-          Категория
-        </p>
-        <div class="grid grid-cols-4 gap-2">
-          <button
-            v-for="cat in expenseCategories"
-            :key="cat.id"
-            class="flex flex-col items-center gap-1 py-2 px-1 rounded-xl transition-all duration-150"
-            :class="[
-              selectedCategoryId === cat.id
-                ? 'bg-primary/10 ring-1 ring-primary'
-                : 'hover:bg-surface-light dark:hover:bg-surface-dark',
-            ]"
-            @click="selectedCategoryId = cat.id"
-          >
-            <div
-              class="w-9 h-9 rounded-lg flex items-center justify-center"
-              :style="{ backgroundColor: cat.color + '1A' }"
-            >
-              <UIcon :name="cat.icon" size="sm" :style="{ color: cat.color }" />
-            </div>
-            <span
-              class="text-caption-sm leading-tight font-medium truncate w-full text-center"
-              :class="[
-                selectedCategoryId === cat.id
-                  ? 'text-primary'
-                  : 'text-text-secondary-light dark:text-text-secondary-dark',
-              ]"
-            >
-              {{ cat.name }}
-            </span>
-          </button>
-        </div>
-      </div>
+      <CategoryChips
+        :categories="expenseCategories"
+        :selected-id="selectedCategoryId"
+        :rows="4"
+        label="Категория"
+        @select="selectCategory"
+      />
 
-      <!-- Account selector -->
-      <div>
-        <p class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
-          Счёт
-        </p>
-        <div class="flex gap-2 flex-wrap">
-          <button
-            v-for="account in accounts"
-            :key="account.id"
-            class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150"
-            :class="[
-              selectedAccountId === account.id
-                ? 'bg-primary/10 text-primary ring-1 ring-primary'
-                : 'bg-surface-light dark:bg-surface-dark text-text-primary-light dark:text-text-primary-dark hover:opacity-80',
-            ]"
-            @click="selectedAccountId = account.id"
-          >
-            <UIcon
-              name="account_balance_wallet"
-              size="xs"
-              :class="
-                selectedAccountId === account.id
-                  ? 'text-primary'
-                  : 'text-text-tertiary-light dark:text-text-tertiary-dark'
-              "
-            />
-            {{ account.name }}
-          </button>
-        </div>
-      </div>
+      <AccountSelector
+        :accounts="accounts"
+        :selected-id="selectedAccountId"
+        label="Счёт списания"
+        @select="selectAccount"
+      />
     </div>
 
     <template #actions>
-      <UButton v-if="isEditing" variant="ghost" size="sm" class="text-danger" @click="handleDelete">
-        <UIcon name="delete" size="xs" class="mr-1" />
-        Удалить
-      </UButton>
-      <div v-else />
-      <UButton variant="primary" size="sm" :disabled="!canSave" @click="handleSave">
-        {{ isEditing ? 'Сохранить' : 'Добавить' }}
-      </UButton>
+      <div class="flex gap-3 w-full">
+        <UButton
+          v-if="isEditing"
+          variant="secondary"
+          class="flex-1 !bg-danger/10 !text-danger hover:!bg-danger/20 border-none"
+          @click="handleDelete"
+        >
+          <UIcon name="delete" size="sm" class="mr-1.5" />
+          Удалить
+        </UButton>
+        <UButton variant="primary" class="flex-1" :disabled="!canSave" @click="handleSave">
+          <UIcon v-if="!isEditing" name="add" size="sm" class="mr-1.5" />
+          {{ isEditing ? 'Сохранить изменения' : 'Добавить действие' }}
+        </UButton>
+      </div>
     </template>
   </UModal>
 </template>
