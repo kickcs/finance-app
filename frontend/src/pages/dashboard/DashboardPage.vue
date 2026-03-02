@@ -52,6 +52,7 @@ const {
   quickActionSlots,
   quickActionsHidden,
   quickActionsHintDismissed,
+  quickActionsLoading,
   dismissHint: dismissQuickActionsHint,
   showQuickActionModal,
   editingAction,
@@ -148,6 +149,7 @@ function handleScanReceipt() {
                   :category-map="categoryMap"
                   :hint-dismissed="quickActionsHintDismissed"
                   :hidden="quickActionsHidden"
+                  :loading="quickActionsLoading"
                   show-scan-button
                   @click="handleQuickActionClick"
                   @long-press="handleQuickActionLongPress"
@@ -310,6 +312,7 @@ function handleScanReceipt() {
                   :category-map="categoryMap"
                   :hint-dismissed="quickActionsHintDismissed"
                   :quick-actions-hidden="quickActionsHidden"
+                  :quick-actions-loading="quickActionsLoading"
                   :accounts="accounts"
                   :accounts-loading="accountsLoading"
                   :category-breakdown="categoryBreakdown"

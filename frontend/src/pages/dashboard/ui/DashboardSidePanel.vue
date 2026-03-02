@@ -21,6 +21,7 @@ const props = withDefaults(
     categoryMap: Map<string, { icon: string; color: string }>;
     hintDismissed: boolean;
     quickActionsHidden: boolean;
+    quickActionsLoading?: boolean;
     // Accounts
     accounts: AccountWithBalances[];
     accountsLoading: boolean;
@@ -103,6 +104,7 @@ const RemindersSection = defineAsyncComponent({
           :category-map="categoryMap"
           :hint-dismissed="hintDismissed"
           :hidden="quickActionsHidden"
+          :loading="quickActionsLoading"
           show-scan-button
           @click="emit('quick-action-click', $event)"
           @long-press="emit('quick-action-long-press', $event)"

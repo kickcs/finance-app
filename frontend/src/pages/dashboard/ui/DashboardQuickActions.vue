@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { UIcon } from '@/shared/ui';
+import { UIcon, Skeleton } from '@/shared/ui';
 import type { QuickAction } from '@/features/configure-quick-action';
 
 defineProps<{
@@ -7,6 +7,7 @@ defineProps<{
   categoryMap: Map<string, { icon: string; color: string }>;
   hintDismissed: boolean;
   hidden: boolean;
+  loading?: boolean;
   showScanButton?: boolean;
 }>();
 
@@ -21,7 +22,16 @@ const emit = defineEmits<{
 
 <template>
   <section v-if="!hidden">
-    <div class="flex gap-3 md:gap-4 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-1">
+    <!-- Loading skeleton -->
+    <div v-if="loading" class="flex gap-3 md:gap-4 pb-1">
+      <Skeleton
+        v-for="i in showScanButton ? 5 : 4"
+        :key="i"
+        class="shrink-0 w-[calc((100%-36px)/4)] h-[76px] md:h-[88px] rounded-xl md:rounded-2xl"
+      />
+    </div>
+
+    <div v-else class="flex gap-3 md:gap-4 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-1">
       <!-- Scan receipt button (first item) -->
       <button
         v-if="showScanButton"
@@ -108,7 +118,7 @@ const emit = defineEmits<{
       </button>
     </div>
     <!-- Hint — shown once until dismissed -->
-    <div v-if="!hintDismissed" class="mt-3 flex items-start gap-2 px-1">
+    <div v-if="!loading && !hintDismissed" class="mt-3 flex items-start gap-2 px-1">
       <p class="text-caption-xs leading-snug text-text-tertiary-light dark:text-text-tertiary-dark">
         Удерживайте (или правый клик) для редактирования. Настроить или скрыть — в
         <button
