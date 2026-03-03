@@ -1,18 +1,36 @@
 import { ref, watch, onMounted, nextTick } from 'vue';
 import type { Ref, MaybeRefOrGetter } from 'vue';
 import { toValue } from 'vue';
-import { useResizeObserver } from '@vueuse/core';
+import { useResizeObserver, useEventListener } from '@vueuse/core';
 
-interface IndicatorStyle {
+export interface IndicatorStyle {
   [key: string]: string | number;
 }
 
-type StyleBuilder = (
+export type StyleBuilder = (
   containerRect: DOMRect,
   activeRect: DOMRect,
   scrollLeft: number,
   scrollTop: number,
 ) => IndicatorStyle;
+
+/**
+ * Computes the base rect (left, top, width, height) for a sliding indicator,
+ * accounting for container scroll offset. Spread additional style properties on top.
+ */
+export function buildIndicatorRect(
+  containerRect: DOMRect,
+  activeRect: DOMRect,
+  scrollLeft: number,
+  scrollTop: number,
+): IndicatorStyle {
+  return {
+    left: `${activeRect.left - containerRect.left + scrollLeft}px`,
+    top: `${activeRect.top - containerRect.top + scrollTop}px`,
+    width: `${activeRect.width}px`,
+    height: `${activeRect.height}px`,
+  };
+}
 
 export function useSlidingIndicator(
   containerRef: Ref<HTMLElement | null>,
@@ -50,7 +68,18 @@ export function useSlidingIndicator(
     };
   }
 
+  // Throttle scroll updates to one per animation frame
+  let scrollRafId = 0;
+  function onScroll() {
+    if (scrollRafId) return;
+    scrollRafId = requestAnimationFrame(() => {
+      scrollRafId = 0;
+      updateIndicator();
+    });
+  }
+
   useResizeObserver(containerRef, updateIndicator);
+  useEventListener(containerRef, 'scroll', onScroll, { passive: true });
 
   onMounted(() => {
     nextTick(updateIndicator);

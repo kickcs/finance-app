@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, defineAsyncComponent } from 'vue';
-import { UButton, UIcon, UCard, UTabs, UModal, Skeleton, EmptyState, IconBadge } from '@/shared/ui';
+import { UButton, UIcon, UCard, UModal, Skeleton, EmptyState, IconBadge } from '@/shared/ui';
+import { useSlidingIndicator, buildIndicatorRect } from '@/shared/lib/hooks/useSlidingIndicator';
 import { AppHeader } from '@/widgets/header';
 
 const draggable = defineAsyncComponent(() => import('vuedraggable'));
@@ -20,11 +21,23 @@ const { categories, createCategory, updateCategory, deleteCategory, reorderCateg
 const { formData, isValid, isSubmitting, resetForm, updateField } = useManageCategories();
 
 const tabItems = [
-  { id: 'expense', label: 'Расходы' },
-  { id: 'income', label: 'Доходы' },
+  { id: 'expense', label: 'Расходы', icon: 'trending_down' },
+  { id: 'income', label: 'Доходы', icon: 'trending_up' },
 ];
 
 const activeTab = ref<'expense' | 'income'>('expense');
+
+// Sliding indicator for type chips
+const typeChipsRef = ref<HTMLElement | null>(null);
+const { setChipRef: setTypeChipRef, indicatorStyle: typeIndicatorStyle } = useSlidingIndicator(
+  typeChipsRef,
+  () => activeTab.value,
+  (containerRect, activeRect, scrollLeft, scrollTop) => ({
+    ...buildIndicatorRect(containerRect, activeRect, scrollLeft, scrollTop),
+    backgroundColor: 'var(--color-primary)',
+    borderRadius: '9999px',
+  }),
+);
 
 // Modal states
 const showFormModal = ref(false);
@@ -154,8 +167,35 @@ async function confirmDelete() {
 
     <!-- Content -->
     <main class="flex-1 overflow-y-auto px-5 pt-8 pb-10 space-y-4">
-      <!-- Tabs -->
-      <UTabs v-model="activeTab" :items="tabItems" />
+      <!-- Type Chips -->
+      <div ref="typeChipsRef" class="relative flex gap-2">
+        <!-- Sliding Indicator -->
+        <span
+          class="absolute rounded-full pointer-events-none transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] z-0 shadow-sm"
+          :style="typeIndicatorStyle"
+        />
+
+        <button
+          v-for="tab in tabItems"
+          :key="tab.id"
+          :ref="(el) => setTypeChipRef(tab.id, el as HTMLElement)"
+          :class="[
+            'relative z-10 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium',
+            'transition-colors duration-300',
+            activeTab === tab.id
+              ? 'text-white'
+              : [
+                  'bg-surface-light dark:bg-surface-dark',
+                  'text-text-primary-light dark:text-text-primary-dark',
+                  'active:bg-border-light dark:active:bg-border-dark',
+                ],
+          ]"
+          @click="activeTab = tab.id as 'expense' | 'income'"
+        >
+          <UIcon :name="tab.icon" size="sm" />
+          {{ tab.label }}
+        </button>
+      </div>
 
       <!-- Loading state -->
       <div v-if="isLoading" class="flex justify-center py-8">

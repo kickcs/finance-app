@@ -2,7 +2,7 @@
 import { computed, ref, watch, nextTick } from 'vue';
 import { UIcon } from '@/shared/ui';
 import type { Category } from '@/entities/category';
-import { useSlidingIndicator } from '@/shared/lib/hooks/useSlidingIndicator';
+import { useSlidingIndicator, buildIndicatorRect } from '@/shared/lib/hooks/useSlidingIndicator';
 
 const props = withDefaults(
   defineProps<{
@@ -39,10 +39,7 @@ const { setChipRef, indicatorStyle, updateIndicator } = useSlidingIndicator(
   (containerRect, activeRect, scrollLeft, scrollTop) => {
     const category = props.categories.find((c) => c.id === props.selectedId);
     return {
-      left: `${activeRect.left - containerRect.left + scrollLeft}px`,
-      top: `${activeRect.top - containerRect.top + scrollTop}px`,
-      width: `${activeRect.width}px`,
-      height: `${activeRect.height}px`,
+      ...buildIndicatorRect(containerRect, activeRect, scrollLeft, scrollTop),
       backgroundColor: category ? `${category.color}15` : 'transparent',
       borderColor: category ? category.color : 'transparent',
     };
