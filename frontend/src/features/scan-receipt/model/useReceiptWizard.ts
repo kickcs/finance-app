@@ -5,7 +5,7 @@ import { transactionsApi } from '@/entities/transaction';
 import { debtsApi, debtQueryKeys } from '@/entities/debt';
 import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
 import { useQueryClient } from '@tanstack/vue-query';
-import { haptics } from '@/shared/lib/haptics';
+import { useHaptics } from '@/shared/lib/haptics';
 import { calcLineTotal, calcLineTotalWithService } from './calcLineTotal';
 import { ALL_PARTICIPANTS_ID } from './constants';
 import type {
@@ -22,6 +22,7 @@ function uid(): string {
 }
 
 export function useReceiptWizard(userId: () => string | null) {
+  const { trigger } = useHaptics();
   const queryClient = useQueryClient();
 
   // Step state
@@ -116,7 +117,7 @@ export function useReceiptWizard(userId: () => string | null) {
     if (currentStep.value < 4) {
       direction.value = 'forward';
       currentStep.value++;
-      haptics.tap();
+      trigger('selection');
     }
   }
 
@@ -124,7 +125,7 @@ export function useReceiptWizard(userId: () => string | null) {
     if (currentStep.value > 1) {
       direction.value = 'back';
       currentStep.value--;
-      haptics.tap();
+      trigger('selection');
     }
   }
 
@@ -184,7 +185,7 @@ export function useReceiptWizard(userId: () => string | null) {
         formData.value.date = new Date(result.date).getTime();
       }
       isOcrSuccess.value = true;
-      haptics.success();
+      trigger('success');
       // Auto-advance after 600ms
       setTimeout(() => goNext(), 600);
     } catch (error: unknown) {
@@ -193,7 +194,7 @@ export function useReceiptWizard(userId: () => string | null) {
         ? `[${selectedFile.value.type || 'unknown'}, ${Math.round(selectedFile.value.size / 1024)}KB]`
         : '';
       ocrError.value = `${msg} ${fileInfo}`.trim();
-      haptics.error();
+      trigger('error');
     } finally {
       isOcrLoading.value = false;
     }
@@ -213,7 +214,7 @@ export function useReceiptWizard(userId: () => string | null) {
 
   function deleteItem(id: string) {
     items.value = items.value.filter((i) => i.id !== id);
-    haptics.warning();
+    trigger('warning');
   }
 
   function addItem(): string {
@@ -226,7 +227,7 @@ export function useReceiptWizard(userId: () => string | null) {
       ocrTotalPrice: null,
       assignedParticipantIds: [],
     });
-    haptics.tap();
+    trigger('selection');
     return id;
   }
 
@@ -239,7 +240,7 @@ export function useReceiptWizard(userId: () => string | null) {
       isMe,
       color: ENTITY_COLORS[colorIndex] as string,
     });
-    haptics.tap();
+    trigger('selection');
   }
 
   function removeParticipant(id: string) {
@@ -248,7 +249,7 @@ export function useReceiptWizard(userId: () => string | null) {
     items.value.forEach((item) => {
       item.assignedParticipantIds = item.assignedParticipantIds.filter((pid) => pid !== id);
     });
-    haptics.warning();
+    trigger('warning');
   }
 
   function toggleItemParticipant(itemId: string, participantId: string) {
@@ -271,7 +272,7 @@ export function useReceiptWizard(userId: () => string | null) {
         item.assignedParticipantIds.splice(idx, 1);
       }
     }
-    haptics.tap();
+    trigger('selection');
   }
 
   const hasMe = computed(() => participants.value.some((p) => p.isMe));
@@ -321,11 +322,11 @@ export function useReceiptWizard(userId: () => string | null) {
       queryClient.invalidateQueries({ queryKey: debtQueryKeys.list(uid_) });
 
       isSuccess.value = true;
-      haptics.success();
+      trigger('success');
     } catch (error: unknown) {
       console.error('Receipt submit failed:', error);
       submitError.value = error instanceof Error ? error.message : 'Произошла ошибка';
-      haptics.error();
+      trigger('error');
     } finally {
       isSubmitting.value = false;
     }

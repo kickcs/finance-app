@@ -10,9 +10,11 @@ import { UButton, UIcon, UCard, EmptyState, IconBadge, SectionHeader, Skeleton }
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { useExchangeRates } from '@/shared/api';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
-import { haptics } from '@/shared/lib/haptics';
+import { useHaptics } from '@/shared/lib/haptics';
 
 const draggable = defineAsyncComponent(() => import('vuedraggable'));
+
+const { trigger } = useHaptics();
 
 const router = useRouter();
 
@@ -57,7 +59,7 @@ function handleAddAccount() {
 }
 
 function handleDragStart() {
-  haptics.tap();
+  trigger('selection');
 }
 
 async function handleDragEnd() {

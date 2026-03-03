@@ -19,7 +19,9 @@ import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { usePeople, type Person } from '@/entities/person';
 import { listTransition } from '@/shared/lib/transitions';
 import { ENTITY_COLORS, getRandomEntityColor } from '@/shared/config/colors';
-import { haptics } from '@/shared/lib/haptics';
+import { useHaptics } from '@/shared/lib/haptics';
+
+const { trigger } = useHaptics();
 
 const { userId } = useCurrentUser();
 const { people, isLoading, createPerson, updatePerson, deletePerson } = usePeople(userId);
@@ -45,7 +47,7 @@ function openAddModal() {
   formName.value = '';
   formColor.value = getRandomEntityColor();
   showModal.value = true;
-  haptics.tap();
+  trigger('selection');
 }
 
 function openEditModal(person: Person) {
@@ -53,7 +55,7 @@ function openEditModal(person: Person) {
   formName.value = person.name;
   formColor.value = person.color;
   showModal.value = true;
-  haptics.tap();
+  trigger('selection');
 }
 
 async function handleSave() {
@@ -70,10 +72,8 @@ async function handleSave() {
       toast({ title: 'Контакт добавлен', variant: 'success' });
     }
     showModal.value = false;
-    haptics.success();
   } catch {
     toast({ title: 'Не удалось сохранить', variant: 'error' });
-    haptics.error();
   } finally {
     isSaving.value = false;
   }
@@ -83,11 +83,9 @@ async function handleDelete() {
   if (!personToDelete.value) return;
   try {
     await deletePerson(personToDelete.value.id);
-    haptics.success();
     toast({ title: 'Контакт удалён', variant: 'success' });
   } catch {
     toast({ title: 'Не удалось удалить', variant: 'error' });
-    haptics.error();
   } finally {
     personToDelete.value = null;
   }

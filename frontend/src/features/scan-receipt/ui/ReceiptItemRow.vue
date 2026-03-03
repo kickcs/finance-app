@@ -3,7 +3,7 @@ import { ref, computed, useTemplateRef } from 'vue';
 import { UIcon, SwipeableItem } from '@/shared/ui';
 import { formatCurrency, getCurrencySymbol } from '@/shared/lib/format/currency';
 import { cn } from '@/shared/lib/utils';
-import { haptics } from '@/shared/lib/haptics';
+import { useHaptics } from '@/shared/lib/haptics';
 import { calcLineTotal, calcLineTotalWithService } from '../model/calcLineTotal';
 import type { ReceiptItem } from '../model/types';
 
@@ -20,6 +20,8 @@ const emit = defineEmits<{
   delete: [];
   focusNext: [currentField: 'name' | 'price' | 'qty'];
 }>();
+
+const { trigger } = useHaptics();
 
 const isEditing = ref(false);
 
@@ -47,13 +49,13 @@ const hasServiceCharge = computed(
 );
 
 function decrementQty() {
-  haptics.tap();
+  trigger('selection');
   const newQty = Math.max(0.01, Math.round((props.item.qty - 1) * 100) / 100);
   emit('update', { qty: newQty });
 }
 
 function incrementQty() {
-  haptics.tap();
+  trigger('selection');
   const newQty = Math.round((props.item.qty + 1) * 100) / 100;
   emit('update', { qty: newQty });
 }

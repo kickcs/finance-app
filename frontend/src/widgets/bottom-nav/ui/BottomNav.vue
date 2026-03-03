@@ -2,12 +2,14 @@
 import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { UIcon } from '@/shared/ui';
-import { haptics } from '@/shared/lib/haptics/haptics';
+import { useHaptics } from '@/shared/lib/haptics';
 import { MAIN_NAV_ITEMS, CHILD_ROUTE_MAP, type NavItem } from '@/shared/config/navigation';
 
 const emit = defineEmits<{
   'add-click': [];
 }>();
+
+const { trigger } = useHaptics();
 
 const route = useRoute();
 const router = useRouter();
@@ -39,14 +41,14 @@ const activeItem = computed(() => {
 });
 
 function handleAddClick() {
-  haptics.tap();
+  trigger('selection');
   emit('add-click');
 }
 
 function handleNavClick(item: (typeof navItems)[0]) {
   if (item.path === '') return;
   if (item.id === activeItem.value && item.id !== 'home') return;
-  haptics.tap();
+  trigger('selection');
   router.push(item.path);
 }
 </script>

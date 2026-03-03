@@ -1,1 +1,1 @@
-export { haptics, type HapticPattern } from './haptics';
+export { useHaptics, trigger, cancel, isSupported } from './haptics';

@@ -1,5 +1,5 @@
 import { ref, computed } from 'vue';
-import { haptics } from '../haptics';
+import { trigger } from '../haptics';
 
 export type ToastVariant = 'default' | 'success' | 'error' | 'warning';
 
@@ -33,18 +33,6 @@ function genId() {
   return count.toString();
 }
 
-function triggerHaptics(variant?: ToastVariant) {
-  if (variant === 'success') {
-    haptics.success();
-  } else if (variant === 'error') {
-    haptics.error();
-  } else if (variant === 'warning') {
-    haptics.warning();
-  } else {
-    haptics.tap();
-  }
-}
-
 function addToast(toast: Toast) {
   const id = toast.id || genId();
 
@@ -53,8 +41,6 @@ function addToast(toast: Toast) {
     id,
     open: true,
   };
-
-  triggerHaptics(toast.variant);
 
   toasts.value = [newToast, ...toasts.value].slice(0, TOAST_LIMIT);
 
@@ -79,11 +65,28 @@ function dismissAll() {
   });
 }
 
+function triggerHaptics(variant?: ToastVariant) {
+  if (variant === 'success') {
+    trigger('success');
+  } else if (variant === 'error') {
+    trigger('error');
+  } else if (variant === 'warning') {
+    trigger('warning');
+  } else {
+    trigger('selection');
+  }
+}
+
+function addToastWithHaptics(toast: Toast) {
+  triggerHaptics(toast.variant);
+  return addToast(toast);
+}
+
 export function useToast() {
   return {
     toasts: computed(() => toasts.value),
     toast: (props: Omit<Toast, 'id'>) => {
-      const id = addToast({ ...props, id: genId() });
+      const id = addToastWithHaptics({ ...props, id: genId() });
       return {
         id,
         dismiss: () => dismissToast(id),

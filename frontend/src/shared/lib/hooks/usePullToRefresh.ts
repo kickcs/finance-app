@@ -1,5 +1,5 @@
 import { ref, watch, onMounted, onUnmounted, type Ref } from 'vue';
-import { haptics } from '@/shared/lib/haptics';
+import { useHaptics } from '@/shared/lib/haptics';
 
 export interface PullToRefreshConfig {
   /** Pull distance threshold to trigger refresh (default: 64px) */
@@ -13,6 +13,7 @@ export interface PullToRefreshConfig {
 }
 
 export function usePullToRefresh(config: PullToRefreshConfig) {
+  const { trigger } = useHaptics();
   const { threshold = 64, maxPull = 128, onRefresh, containerRef } = config;
 
   const pullDistance = ref(0);
@@ -82,7 +83,7 @@ export function usePullToRefresh(config: PullToRefreshConfig) {
 
       const reached = pullDistance.value >= threshold;
       if (reached && !hasTriggeredHaptic) {
-        haptics.pullThreshold();
+        trigger('light');
         hasTriggeredHaptic = true;
         isThresholdReached.value = true;
       } else if (!reached && hasTriggeredHaptic) {
@@ -105,7 +106,7 @@ export function usePullToRefresh(config: PullToRefreshConfig) {
       try {
         await onRefresh();
         if (!isPulling.value) {
-          haptics.success();
+          trigger('success');
         }
       } catch {
         // Silently handle — old data remains visible

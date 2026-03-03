@@ -10,7 +10,7 @@ import { PullToRefresh, UIcon } from '@/shared/ui';
 import { InstallPwaBanner, InstallPwaModal, usePwaInstall } from '@/features/install-pwa';
 import { QuickActionModal } from '@/features/configure-quick-action';
 import { AccountStack } from '@/widgets/account-stack';
-import { haptics } from '@/shared/lib/haptics';
+import { useHaptics } from '@/shared/lib/haptics';
 import { usePwaUpdateToast } from '@/shared/lib/composables/usePwaUpdate';
 
 import { useDashboardData } from './model/useDashboardData';
@@ -24,6 +24,8 @@ import DashboardQuickActions from './ui/DashboardQuickActions.vue';
 import DashboardActivityColumn from './ui/DashboardActivityColumn.vue';
 import DashboardTopExpenses from './ui/DashboardTopExpenses.vue';
 import DashboardSidePanel from './ui/DashboardSidePanel.vue';
+
+const { trigger } = useHaptics();
 
 const {
   userId,
@@ -96,7 +98,7 @@ async function handleRefresh() {
 }
 
 function handleScanReceipt() {
-  haptics.tap();
+  trigger('selection');
   // TODO: re-enable after beta — premium gate for scan receipt
   nav.toScanReceipt();
 }

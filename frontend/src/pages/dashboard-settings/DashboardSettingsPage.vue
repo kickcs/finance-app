@@ -10,10 +10,11 @@ import { UIcon, UToggle, useToast } from '@/shared/ui';
 import { useProfile } from '@/shared/api';
 import { useAccounts } from '@/entities/account';
 import { navigateBack } from '@/app/router';
-import { haptics } from '@/shared/lib/haptics';
+import { useHaptics } from '@/shared/lib/haptics';
 import { DEFAULT_WIDGET_ORDER, WIDGET_LABELS, WIDGET_ICONS } from './model/constants';
 
 const { toast } = useToast();
+const { trigger } = useHaptics();
 
 const user = inject<Ref<User | null>>('user');
 const userId = computed(() => user?.value?.id ?? null);
@@ -55,24 +56,23 @@ const debouncedSave = useDebounceFn(async () => {
       hidden_account_ids: Array.from(hiddenAccountIds.value),
     };
     await updateDashboardSettings(settings);
-    haptics.success();
+    trigger('success');
   } catch {
     toast({ title: 'Ошибка', description: 'Не удалось сохранить настройки', variant: 'error' });
-    haptics.error();
   }
 }, 500);
 
 function onDragStart() {
-  haptics.tap();
+  trigger('selection');
 }
 
 function onDragEnd() {
-  haptics.tap();
+  trigger('selection');
   debouncedSave();
 }
 
 function toggleWidget(id: WidgetId) {
-  haptics.tap();
+  trigger('selection');
   const item = widgetList.value.find((w) => w.id === id);
   if (item) {
     item.visible = !item.visible;
@@ -81,7 +81,7 @@ function toggleWidget(id: WidgetId) {
 }
 
 function toggleAccount(accountId: string) {
-  haptics.tap();
+  trigger('selection');
   if (hiddenAccountIds.value.has(accountId)) {
     hiddenAccountIds.value.delete(accountId);
   } else {

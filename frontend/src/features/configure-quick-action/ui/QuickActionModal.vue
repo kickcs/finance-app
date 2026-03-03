@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import { UModal, UButton, UIcon } from '@/shared/ui';
-import { haptics } from '@/shared/lib/haptics';
+import { useHaptics } from '@/shared/lib/haptics';
 import type { Category } from '@/entities/category';
 import { CategoryChips } from '@/entities/category';
 import type { AccountWithBalances } from '@/entities/account';
@@ -20,6 +20,8 @@ const emit = defineEmits<{
   save: [action: { label: string; categoryId: string; accountId: string }];
   delete: [];
 }>();
+
+const { trigger } = useHaptics();
 
 const selectedCategoryId = ref('');
 const selectedAccountId = ref('');
@@ -45,17 +47,17 @@ watch(
 
 function selectCategory(id: string) {
   selectedCategoryId.value = id;
-  haptics.tap();
+  trigger('selection');
 }
 
 function selectAccount(id: string) {
   selectedAccountId.value = id;
-  haptics.tap();
+  trigger('selection');
 }
 
 function handleSave() {
   if (!canSave.value) return;
-  haptics.success();
+  trigger('success');
   const cat = props.expenseCategories.find((c) => c.id === selectedCategoryId.value);
   emit('save', {
     label: cat?.name || 'Расход',
@@ -66,7 +68,7 @@ function handleSave() {
 }
 
 function handleDelete() {
-  haptics.warning();
+  trigger('warning');
   emit('delete');
   emit('update:modelValue', false);
 }

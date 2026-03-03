@@ -1,5 +1,5 @@
 import { ref, onUnmounted } from 'vue';
-import { haptics } from '@/shared/lib/haptics';
+import { useHaptics } from '@/shared/lib/haptics';
 
 export interface SwipeConfig {
   /** Threshold to reveal action (default: 80px) */
@@ -15,6 +15,7 @@ export interface SwipeConfig {
 export type SwipeState = 'idle' | 'swiping' | 'left' | 'right';
 
 export function useSwipe(config?: SwipeConfig) {
+  const { trigger } = useHaptics();
   const { threshold = 80, maxSwipe = 100, leftEnabled = true, rightEnabled = true } = config || {};
 
   const translateX = ref(0);
@@ -86,7 +87,7 @@ export function useSwipe(config?: SwipeConfig) {
       // Trigger haptic when crossing threshold
       const crossed = Math.abs(newTranslateX) >= threshold;
       if (crossed && !hasTriggeredHaptic) {
-        haptics.swipeThreshold();
+        trigger('light');
         hasTriggeredHaptic = true;
       } else if (!crossed && hasTriggeredHaptic) {
         // Reset if user swipes back below threshold

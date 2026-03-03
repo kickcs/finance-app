@@ -23,8 +23,6 @@ import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 import { DEFAULT_CURRENCY } from '@/entities/currency/model/constants';
 import { listTransition } from '@/shared/lib/transitions';
-import { haptics } from '@/shared/lib/haptics';
-
 const router = useRouter();
 const route = useRoute();
 
@@ -130,7 +128,6 @@ async function handleCloseAll(
   const success = await closeAllDebts(activeDebts.value, accountId, userId.value, options);
   if (success) {
     showCloseAllModal.value = false;
-    haptics.success();
     toast({
       title:
         options.forgiveRemainder && options.paymentAmount === 0
@@ -142,7 +139,6 @@ async function handleCloseAll(
     });
     clearFilter();
   } else {
-    haptics.error();
     toast({ title: 'Ошибка при закрытии долгов', variant: 'error' });
   }
 }

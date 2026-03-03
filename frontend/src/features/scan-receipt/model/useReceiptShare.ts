@@ -1,6 +1,6 @@
 import { ref } from 'vue';
 import { useToast } from '@/shared/ui';
-import { haptics } from '@/shared/lib/haptics';
+import { useHaptics } from '@/shared/lib/haptics';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { getInitial } from '@/shared/lib/format/text';
 import { toLocalISODate } from '@/shared/lib/date';
@@ -394,6 +394,7 @@ function buildFilename(data: ReceiptShareData): string {
 }
 
 export function useReceiptShare() {
+  const { trigger } = useHaptics();
   const isSharing = ref(false);
   const { toast } = useToast();
 
@@ -407,18 +408,16 @@ export function useReceiptShare() {
 
       if (navigator.canShare?.({ files: [file] })) {
         await navigator.share({ files: [file], text });
-        haptics.success();
+        trigger('success');
       } else {
         downloadBlob(blob, buildFilename(data));
         toast({ title: 'Изображение сохранено', variant: 'success' });
-        haptics.success();
       }
     } catch (e) {
       // User cancelled share — not an error
       if (e instanceof Error && e.name === 'AbortError') return;
       console.error('Share image failed:', e);
       toast({ title: 'Не удалось поделиться', variant: 'error' });
-      haptics.error();
     } finally {
       isSharing.value = false;
     }
@@ -430,11 +429,10 @@ export function useReceiptShare() {
     try {
       if (navigator.share) {
         await navigator.share({ text });
-        haptics.success();
+        trigger('success');
       } else {
         await navigator.clipboard.writeText(text);
         toast({ title: 'Скопировано', variant: 'success' });
-        haptics.success();
       }
     } catch (e) {
       if (e instanceof Error && e.name === 'AbortError') return;
@@ -442,10 +440,8 @@ export function useReceiptShare() {
       try {
         await navigator.clipboard.writeText(text);
         toast({ title: 'Скопировано', variant: 'success' });
-        haptics.success();
       } catch {
         toast({ title: 'Не удалось скопировать', variant: 'error' });
-        haptics.error();
       }
     } finally {
       isSharing.value = false;
@@ -459,11 +455,9 @@ export function useReceiptShare() {
       const blob = await canvasToBlob(canvas);
       downloadBlob(blob, buildFilename(data));
       toast({ title: 'Изображение сохранено', variant: 'success' });
-      haptics.success();
     } catch (e) {
       console.error('Save to gallery failed:', e);
       toast({ title: 'Не удалось сохранить', variant: 'error' });
-      haptics.error();
     } finally {
       isSharing.value = false;
     }

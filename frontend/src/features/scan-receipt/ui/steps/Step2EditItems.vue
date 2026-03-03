@@ -2,7 +2,7 @@
 import { ref, useTemplateRef } from 'vue';
 import { UButton, UBadge, UIcon } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
-import { haptics } from '@/shared/lib/haptics';
+import { useHaptics } from '@/shared/lib/haptics';
 import ReceiptItemRow from '../ReceiptItemRow.vue';
 import type { ReceiptItem } from '../../model/types';
 
@@ -23,6 +23,8 @@ const emit = defineEmits<{
   back: [];
 }>();
 
+const { trigger } = useHaptics();
+
 const itemRowRefs = useTemplateRef<InstanceType<typeof ReceiptItemRow>[]>('itemRows');
 
 const validationError = ref<string | null>(null);
@@ -39,7 +41,7 @@ function validateAndNext() {
     validationError.value = !firstInvalid.name.trim()
       ? 'Заполните название позиции'
       : 'Цена позиции должна быть больше нуля';
-    haptics.error();
+    trigger('error');
     return;
   }
 

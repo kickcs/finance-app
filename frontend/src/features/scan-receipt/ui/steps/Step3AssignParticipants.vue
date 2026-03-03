@@ -2,7 +2,7 @@
 import { ref, computed, watch, nextTick } from 'vue';
 import { UButton, UIcon, UModal, UInput, UProgressBar, InitialAvatar } from '@/shared/ui';
 import { pluralize } from '@/shared/lib/format/pluralize';
-import { haptics } from '@/shared/lib/haptics';
+import { useHaptics } from '@/shared/lib/haptics';
 import { usePeople } from '@/entities/person';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import type { ReceiptItem, Participant } from '../../model/types';
@@ -25,6 +25,7 @@ const emit = defineEmits<{
   next: [];
   back: [];
 }>();
+const { trigger } = useHaptics();
 const { userId } = useCurrentUser();
 const { people, createPerson } = usePeople(userId);
 
@@ -52,7 +53,7 @@ const allParticipantChip = computed<Participant>(() => ({
 
 function setActiveParticipant(participantId: string) {
   activeParticipantId.value = participantId;
-  haptics.tap();
+  trigger('selection');
 }
 
 // Assignment progress
@@ -103,11 +104,11 @@ function toggleContactSelection(contactId: string) {
     next.add(contactId);
   }
   selectedContactIds.value = next;
-  haptics.tap();
+  trigger('selection');
 }
 
 function addMe() {
-  haptics.tap();
+  trigger('selection');
   emit('addParticipant', 'Я', true);
 }
 
@@ -122,7 +123,7 @@ function confirmAddManual() {
   emit('addParticipant', trimmed, false);
   newName.value = '';
   nameError.value = '';
-  haptics.tap();
+  trigger('selection');
   nextTick(() => {
     manualInputRef.value?.focus();
   });
@@ -136,14 +137,14 @@ function confirmAddAll() {
       emit('addParticipant', person.name, false);
     }
   }
-  haptics.success();
+  trigger('success');
   addParticipantOpen.value = false;
 }
 
 async function handleSaveAndAdd(name: string) {
   await createPerson({ name });
   // Person will appear in availableContacts on next tick
-  haptics.tap();
+  trigger('selection');
 }
 
 function handleRemoveParticipant(id: string) {
@@ -160,20 +161,20 @@ function assignAllTo(participantId: string) {
       emit('toggleItemParticipant', item.id, participantId);
     }
   }
-  haptics.tap();
+  trigger('selection');
 }
 
 function handleNext() {
-  haptics.tap();
+  trigger('selection');
   emit('next');
 }
 
 function handleTapRow(item: ReceiptItem) {
   if (!activeParticipantId.value) {
-    haptics.error();
+    trigger('error');
     return;
   }
-  haptics.success();
+  trigger('success');
   emit('toggleItemParticipant', item.id, activeParticipantId.value);
 }
 </script>

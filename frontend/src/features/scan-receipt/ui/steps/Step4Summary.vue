@@ -10,7 +10,7 @@ import { Calendar } from '@/shared/ui/primitives/calendar';
 import { CalendarDate, type DateValue } from '@internationalized/date';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { pluralize } from '@/shared/lib/format/pluralize';
-import { haptics } from '@/shared/lib/haptics';
+import { useHaptics } from '@/shared/lib/haptics';
 import type { ParticipantSummary, ScanReceiptFormData } from '../../model/types';
 import type { AccountWithBalances } from '@/entities/account';
 import { useReceiptShare, type ReceiptShareData } from '../../model/useReceiptShare';
@@ -38,6 +38,7 @@ const emit = defineEmits<{
   back: [];
 }>();
 
+const { trigger } = useHaptics();
 const router = useRouter();
 
 // Calendar / date picker
@@ -80,7 +81,7 @@ const debtCount = computed(
 );
 
 function handleSubmit() {
-  haptics.tap();
+  trigger('selection');
   emit('submit');
 }
 

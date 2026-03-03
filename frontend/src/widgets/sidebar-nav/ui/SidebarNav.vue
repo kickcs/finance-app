@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 import { useRoute, RouterLink } from 'vue-router';
 import { UIcon, Skeleton } from '@/shared/ui';
-import { haptics } from '@/shared/lib/haptics/haptics';
+import { useHaptics } from '@/shared/lib/haptics';
 import { formatMasked, COMPACT_FORMAT } from '@/shared/lib/format/currency';
 import { ThemeToggle } from '@/features/toggle-theme';
 import { MAIN_NAV_ITEMS } from '@/shared/config/navigation';
@@ -21,6 +21,8 @@ defineEmits<{
   'toggle-hidden': [];
 }>();
 
+const { trigger } = useHaptics();
+
 const route = useRoute();
 
 const activeItem = computed(() => {
@@ -34,7 +36,7 @@ const activeItem = computed(() => {
 
 function handleNavClick(item: (typeof MAIN_NAV_ITEMS)[number]) {
   if (item.id === activeItem.value) return;
-  haptics.tap();
+  trigger('selection');
 }
 </script>
 

@@ -114,7 +114,7 @@ Custom component library wrapping Reka UI headless primitives (CVA-based variant
 - **Date** (`date/`): `isToday`, `isPastDate`, `isFutureDate`, `getTodayISO`; timestamp boundaries in `format/date.ts`
 - **Utils** (`utils.ts`): `cn()` (clsx + tailwind-merge — always use for dynamic classes), `cleanUndefined(obj)`
 - **Transitions** (`transitions.ts`): `listTransition` preset for `<TransitionGroup>`
-- **Haptics** (`haptics/`): `haptics.tap()`, `.success()`, `.error()`, `.warning()`, `.swipeThreshold()`, `.pullThreshold()` — Navigator Vibration API with graceful fallback
+- **Haptics** (`haptics/`): `useHaptics()` composable wrapping `web-haptics` singleton. Use `const { trigger } = useHaptics()` in setup, then `trigger('selection')` (tap), `trigger('success')`, `trigger('error')`, `trigger('warning')`, `trigger('light')` (threshold). Also exportable as bare `trigger` function for non-component code
 - **CSV** (`csv/`): `parseMoneyLoverCsv` — import parser for Money Lover format
 
 ### Frontend Composables
