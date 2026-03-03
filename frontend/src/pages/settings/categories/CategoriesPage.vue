@@ -166,7 +166,7 @@ async function confirmDelete() {
     </AppHeader>
 
     <!-- Content -->
-    <main class="flex-1 overflow-y-auto px-5 pt-8 pb-10 space-y-4">
+    <main class="flex-1 overflow-y-auto px-5 pt-8 pb-28 space-y-4">
       <!-- Type Chips -->
       <div ref="typeChipsRef" class="relative flex gap-2">
         <!-- Sliding Indicator -->
