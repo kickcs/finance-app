@@ -1,5 +1,5 @@
 /**
- * Shared color palette for entities (accounts, reminders, etc.)
+ * Shared color palette for entities (accounts, people, reminders, etc.)
  */
 export const ENTITY_COLORS = [
   '#3b82f6', // Blue
@@ -7,6 +7,17 @@ export const ENTITY_COLORS = [
   '#f43f5e', // Rose
   '#a855f7', // Purple
   '#f59e0b', // Amber
+  '#f97316', // Orange
+  '#06b6d4', // Cyan
+  '#ec4899', // Hot Pink
+  '#84cc16', // Lime
+  '#6366f1', // Indigo
+  '#14b8a6', // Teal
+  '#64748b', // Slate
+  '#ef4444', // Red
+  '#8b5cf6', // Violet
+  '#0ea5e9', // Sky
+  '#d946ef', // Fuchsia
   '#1f2937', // Dark
 ] as const;
 
