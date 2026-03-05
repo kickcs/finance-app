@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import { UButton, UIcon, USpinner } from '@/shared/ui';
+import { UButton, UIcon } from '@/shared/ui';
 import { AppHeader } from '@/widgets/header';
 import {
   TransactionForm,
@@ -176,11 +176,7 @@ async function handleSubmit() {
       <div
         class="md:max-w-xl md:mx-auto md:bg-card-light md:dark:bg-card-dark md:rounded-3xl md:shadow-sm md:border md:border-border-light md:dark:border-border-dark md:p-8 md:mt-2"
       >
-        <div v-if="accountsLoading" class="flex items-center justify-center py-8">
-          <USpinner size="sm" />
-        </div>
-
-        <div v-else-if="accounts.length === 0" class="text-center py-8">
+        <div v-if="!accountsLoading && accounts.length === 0" class="text-center py-8">
           <UIcon
             name="account_balance_wallet"
             size="lg"
