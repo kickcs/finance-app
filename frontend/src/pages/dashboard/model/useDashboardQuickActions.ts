@@ -1,12 +1,14 @@
 import { computed, type ComputedRef, type MaybeRefOrGetter } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuickActions, type QuickAction } from '@/features/configure-quick-action';
+import { useKeyboardTrigger } from '@/shared/lib/composables';
 
 export function useDashboardQuickActions(
   allCategories: ComputedRef<Array<{ id: string; icon: string; color: string }>>,
   userId: MaybeRefOrGetter<string | null>,
 ) {
   const router = useRouter();
+  const { trigger: triggerKeyboard } = useKeyboardTrigger();
 
   const {
     slots: quickActionSlots,
@@ -35,17 +37,7 @@ export function useDashboardQuickActions(
       return;
     }
 
-    // Pre-focus a temporary numeric input to open the keyboard within the user gesture chain.
-    // Mobile browsers block programmatic focus() outside tap handlers, so we open the keyboard
-    // here and HeroAmount.onMounted will transfer focus to the real input, keeping it open.
-    const tmp = document.createElement('input');
-    tmp.type = 'number';
-    tmp.inputMode = 'numeric';
-    tmp.style.cssText = 'position:fixed;opacity:0;top:0;left:0;width:1px;height:1px';
-    document.body.appendChild(tmp);
-    tmp.focus();
-    setTimeout(() => tmp.remove(), 2000);
-
+    triggerKeyboard();
     router.push(
       `/transactions/new?type=expense&categoryId=${action.categoryId}&accountId=${action.accountId}`,
     );
