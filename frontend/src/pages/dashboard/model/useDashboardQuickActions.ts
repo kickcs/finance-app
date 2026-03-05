@@ -34,6 +34,18 @@ export function useDashboardQuickActions(
       showQuickActionModal.value = true;
       return;
     }
+
+    // Pre-focus a temporary numeric input to open the keyboard within the user gesture chain.
+    // Mobile browsers block programmatic focus() outside tap handlers, so we open the keyboard
+    // here and HeroAmount.onMounted will transfer focus to the real input, keeping it open.
+    const tmp = document.createElement('input');
+    tmp.type = 'number';
+    tmp.inputMode = 'numeric';
+    tmp.style.cssText = 'position:fixed;opacity:0;top:0;left:0;width:1px;height:1px';
+    document.body.appendChild(tmp);
+    tmp.focus();
+    setTimeout(() => tmp.remove(), 2000);
+
     router.push(
       `/transactions/new?type=expense&categoryId=${action.categoryId}&accountId=${action.accountId}`,
     );
