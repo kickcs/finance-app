@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, nextTick, computed } from 'vue';
+import { useEventListener } from '@vueuse/core';
 import { UIcon } from '@/shared/ui';
 import { getCurrencyByCode } from '@/entities/currency';
 import { formatNumberWithSpaces, formatCurrency } from '@/shared/lib/format/currency';
@@ -25,6 +26,10 @@ const emit = defineEmits<{
 const hiddenInputRef = ref<HTMLInputElement | null>(null);
 const currencyOpen = ref(false);
 const amountBounce = ref(false);
+const isFocused = ref(false);
+
+useEventListener(hiddenInputRef, 'focus', () => (isFocused.value = true));
+useEventListener(hiddenInputRef, 'blur', () => (isFocused.value = false));
 
 const displayAmount = computed(() => {
   if (!props.amount) return '0';
@@ -85,17 +90,32 @@ onMounted(() => {
           @input="onInput"
           @keydown.enter.prevent
         />
-        <span
-          class="text-4xl font-semibold tabular-nums transition-[color,transform,opacity] duration-200 group-hover:opacity-80"
-          :class="[
-            amount
-              ? 'text-text-primary-light dark:text-text-primary-dark'
-              : 'text-text-tertiary-light dark:text-text-tertiary-dark',
-            amountBounce && 'scale-105',
-          ]"
-        >
-          {{ displayAmount }}
+        <span class="inline-flex items-center justify-center">
+          <span
+            class="text-4xl font-semibold tabular-nums transition-[color,transform] duration-200 group-hover:opacity-80"
+            :class="[
+              amount
+                ? 'text-text-primary-light dark:text-text-primary-dark'
+                : 'text-text-tertiary-light dark:text-text-tertiary-dark',
+              amountBounce && 'scale-105',
+            ]"
+          >
+            {{ displayAmount }}
+          </span>
+          <!-- Blinking caret -->
+          <span
+            class="inline-block w-[2px] h-8 ml-0.5 rounded-full transition-opacity duration-150"
+            :class="isFocused ? 'bg-primary animate-caret-blink' : 'opacity-0'"
+          />
         </span>
+
+        <!-- Focus underline -->
+        <div
+          class="absolute bottom-0 left-1/2 h-[2px] rounded-full bg-primary transition-all duration-300 ease-out"
+          :class="
+            isFocused ? 'w-16 -translate-x-1/2 opacity-100' : 'w-0 -translate-x-1/2 opacity-0'
+          "
+        />
       </div>
 
       <!-- Currency selector (absolute right) -->
@@ -160,3 +180,18 @@ onMounted(() => {
     </div>
   </div>
 </template>
+
+<style scoped>
+@keyframes caret-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+.animate-caret-blink {
+  animation: caret-blink 1s step-end infinite;
+}
+</style>
