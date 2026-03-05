@@ -152,10 +152,8 @@ export function useScrollableTabs(
   }
 
   onMounted(() => {
-    nextTick(() => {
-      const index = getRealIndex(type.value);
-      scrollToIndex(index, false);
-    });
+    const index = getRealIndex(type.value);
+    scrollToIndex(index, false);
   });
 
   onUnmounted(() => {
