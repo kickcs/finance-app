@@ -204,6 +204,39 @@ export class Transaction extends AggregateRoot<string> {
     return transaction;
   }
 
+  static createAdjustment(
+    id: string,
+    userId: string,
+    accountId: string,
+    amount: number,
+    currency: string,
+    date: Date,
+    isNegative: boolean,
+    description?: string,
+  ): Transaction {
+    const transaction = new Transaction({
+      id,
+      userId,
+      accountId,
+      categoryId: 'balance_adjustment',
+      amount: Money.create(amount, currency),
+      type: TransactionType.ADJUSTMENT,
+      description: description || null,
+      date,
+      isDebtRelated: isNegative,
+      debtId: null,
+      toAccountId: null,
+      toAmount: null,
+      createdAt: new Date(),
+    });
+
+    transaction.addDomainEvent(
+      new TransactionCreatedEvent(id, userId, accountId, amount, currency, 'adjustment', false),
+    );
+
+    return transaction;
+  }
+
   static reconstitute(props: TransactionProps): Transaction {
     return new Transaction(props);
   }
@@ -385,7 +418,7 @@ export class Transaction extends AggregateRoot<string> {
         this._accountId,
         this._amount.amount,
         this._amount.currencyCode,
-        this._type.value as 'income' | 'expense' | 'transfer',
+        this._type.value as 'income' | 'expense' | 'transfer' | 'adjustment',
         this._isDebtRelated,
         this._toAccountId,
         this._toAmount?.amount ?? null,

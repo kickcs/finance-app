@@ -21,6 +21,12 @@ export class BalanceCalculationService {
     } else if (type === 'transfer') {
       // For transfers, this handles the source account (debit)
       account.debit(amount, currency);
+    } else if (type === 'adjustment') {
+      if (!transaction.isDebtRelated) {
+        account.credit(amount, currency);
+      } else {
+        account.debit(amount, currency);
+      }
     }
   }
 
@@ -50,6 +56,12 @@ export class BalanceCalculationService {
     } else if (type === 'transfer') {
       // For transfers, this reverses the source account (credit back)
       account.credit(amount, currency);
+    } else if (type === 'adjustment') {
+      if (!transaction.isDebtRelated) {
+        account.debit(amount, currency);
+      } else {
+        account.credit(amount, currency);
+      }
     }
   }
 

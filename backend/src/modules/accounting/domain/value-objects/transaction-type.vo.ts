@@ -1,6 +1,6 @@
 import { ValueObject } from '../../../../shared/domain/base';
 
-type TransactionTypeValue = 'income' | 'expense' | 'transfer';
+type TransactionTypeValue = 'income' | 'expense' | 'transfer' | 'adjustment';
 
 interface TransactionTypeProps {
   value: TransactionTypeValue;
@@ -13,8 +13,14 @@ export class TransactionType extends ValueObject<TransactionTypeProps> {
   static readonly INCOME = new TransactionType({ value: 'income' });
   static readonly EXPENSE = new TransactionType({ value: 'expense' });
   static readonly TRANSFER = new TransactionType({ value: 'transfer' });
+  static readonly ADJUSTMENT = new TransactionType({ value: 'adjustment' });
 
-  private static readonly VALID_TYPES: TransactionTypeValue[] = ['income', 'expense', 'transfer'];
+  private static readonly VALID_TYPES: TransactionTypeValue[] = [
+    'income',
+    'expense',
+    'transfer',
+    'adjustment',
+  ];
 
   private constructor(props: TransactionTypeProps) {
     super(props);
@@ -43,6 +49,10 @@ export class TransactionType extends ValueObject<TransactionTypeProps> {
 
   isTransfer(): boolean {
     return this.props.value === 'transfer';
+  }
+
+  isAdjustment(): boolean {
+    return this.props.value === 'adjustment';
   }
 
   toString(): string {

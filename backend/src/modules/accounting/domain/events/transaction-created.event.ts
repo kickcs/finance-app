@@ -7,7 +7,7 @@ export class TransactionCreatedEvent extends DomainEvent {
     public readonly accountId: string,
     public readonly amount: number,
     public readonly currency: string,
-    public readonly type: 'income' | 'expense' | 'transfer',
+    public readonly type: 'income' | 'expense' | 'transfer' | 'adjustment',
     public readonly isDebtRelated: boolean,
     public readonly toAccountId: string | null = null,
     public readonly toAmount: number | null = null,

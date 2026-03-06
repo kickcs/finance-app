@@ -3,7 +3,7 @@ export interface DefaultCategory {
   name: string;
   icon: string;
   color: string;
-  type: 'expense' | 'income' | 'transfer';
+  type: 'expense' | 'income' | 'transfer' | 'adjustment';
 }
 
 export const EXPENSE_CATEGORIES: DefaultCategory[] = [
@@ -177,11 +177,20 @@ export const TRANSFER_CATEGORY: DefaultCategory = {
   type: 'transfer',
 };
 
+export const ADJUSTMENT_CATEGORY: DefaultCategory = {
+  id: 'balance_adjustment',
+  name: 'Коррекция баланса',
+  icon: 'tune',
+  color: '#64748b',
+  type: 'adjustment',
+};
+
 export const ALL_DEFAULT_CATEGORIES: DefaultCategory[] = [
   ...EXPENSE_CATEGORIES,
   ...INCOME_CATEGORIES,
   ...DEBT_CATEGORIES,
   TRANSFER_CATEGORY,
+  ADJUSTMENT_CATEGORY,
 ];
 
 // Map for quick lookup by ID
