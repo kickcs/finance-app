@@ -3,7 +3,7 @@ import { ref, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { ROUTE_NAMES } from '@/app/router/routeNames';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
-import { UButton, UIcon, UCard, EmptyState, USpinner, NotFoundState } from '@/shared/ui';
+import { UButton, UIcon, UCard, EmptyState, USpinner, NotFoundState, useToast } from '@/shared/ui';
 import { AppHeader } from '@/widgets/header';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { useAccounts, getAccountTypeLabel, type AccountWithBalances } from '@/entities/account';
@@ -165,6 +165,12 @@ async function handleSetAsDefault() {
 
 const queryClient = useQueryClient();
 const showAdjustBalanceModal = ref(false);
+const { toast } = useToast();
+
+// Use the account's first balance currency for adjustment (not profile currency)
+const adjustBalanceCurrency = computed(() => {
+  return account.value?.balances?.[0]?.currency ?? currency.value;
+});
 
 async function handleAdjustBalance(data: {
   accountId: string;
@@ -189,6 +195,7 @@ async function handleAdjustBalance(data: {
     }
   } catch (e) {
     console.error('Failed to adjust balance:', e);
+    toast({ title: 'Ошибка', description: 'Не удалось скорректировать баланс', variant: 'error' });
   }
 }
 </script>
@@ -605,7 +612,7 @@ async function handleAdjustBalance(data: {
     <AdjustBalanceModal
       v-model="showAdjustBalanceModal"
       :account="account"
-      :currency="currency"
+      :currency="adjustBalanceCurrency"
       @confirm="handleAdjustBalance"
     />
   </div>
