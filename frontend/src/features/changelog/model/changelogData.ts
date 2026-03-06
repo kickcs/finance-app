@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.27';
+export const CURRENT_VERSION = '1.0.28';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,25 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.28',
+    date: '2026-03-07',
+    title: 'Разделение расходов',
+    items: [
+      {
+        type: 'improvement',
+        text: 'Новый интерфейс разделения расходов — теперь открывается удобная шторка вместо встроенной формы',
+      },
+      {
+        type: 'improvement',
+        text: 'Можно добавить участника без сохранения в контакты — удобно для разовых трат',
+      },
+      {
+        type: 'improvement',
+        text: 'Быстрый выбор контактов чипсами и плавные анимации добавления/удаления участников',
+      },
+    ],
+  },
   {
     version: '1.0.27',
     date: '2026-03-06',
