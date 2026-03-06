@@ -31,8 +31,9 @@ const user = inject<Ref<User | null>>('user');
 const userId = computed(() => user?.value?.id ?? null);
 const { getCategoriesByType } = useCategories(userId);
 
-// Check if transaction is a transfer
+// Check if transaction is a transfer or adjustment
 const isTransfer = computed(() => props.transaction?.type === 'transfer');
+const isAdjustment = computed(() => props.transaction?.type === 'adjustment');
 
 // Check if transaction is debt-related (cannot be edited)
 const isDebtRelated = computed(() => props.transaction?.is_debt_related === true);
@@ -114,7 +115,7 @@ const isFormValid = computed(() => {
 <template>
   <UModal
     :model-value="modelValue"
-    :title="isTransfer ? 'Перевод' : 'Редактировать'"
+    :title="isTransfer ? 'Перевод' : isAdjustment ? 'Коррекция баланса' : 'Редактировать'"
     @update:model-value="emit('update:modelValue', $event)"
   >
     <!-- Error Message -->
@@ -234,6 +235,50 @@ const isFormValid = computed(() => {
       </div>
     </div>
 
+    <!-- Adjustment Mode: Delete Only -->
+    <div v-else-if="isAdjustment && transaction" class="py-2">
+      <div class="text-center mb-4">
+        <div
+          class="w-12 h-12 mx-auto mb-3 rounded-xl bg-slate-100 dark:bg-slate-800/30 flex items-center justify-center"
+        >
+          <UIcon name="tune" size="md" class="text-slate-500" />
+        </div>
+        <p class="text-sm text-text-primary-light dark:text-text-primary-dark font-medium mb-0.5">
+          Это коррекция баланса
+        </p>
+        <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
+          Коррекции можно только удалить
+        </p>
+      </div>
+
+      <!-- Adjustment Details -->
+      <div class="space-y-2 p-3 rounded-lg bg-surface-light dark:bg-surface-dark">
+        <div class="flex justify-between items-center">
+          <span class="text-xs text-text-secondary-light dark:text-text-secondary-dark">Сумма</span>
+          <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
+            {{ transaction.is_debt_related ? '-' : '+'
+            }}{{ formatCurrency(transaction.amount, transaction.currency) }}
+          </span>
+        </div>
+        <div v-if="transaction.description" class="flex justify-between items-center">
+          <span class="text-xs text-text-secondary-light dark:text-text-secondary-dark">
+            Описание
+          </span>
+          <span class="text-xs text-text-primary-light dark:text-text-primary-dark">
+            {{ transaction.description }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Warning -->
+      <div class="mt-3 p-2.5 rounded-lg bg-danger/10 border border-danger/20">
+        <div class="flex gap-1.5">
+          <UIcon name="warning" size="xs" class="text-danger shrink-0 mt-0.5" />
+          <p class="text-xs text-danger">При удалении баланс счёта будет восстановлен</p>
+        </div>
+      </div>
+    </div>
+
     <!-- Regular Edit Mode (expense/income) -->
     <div v-else-if="transaction" class="space-y-4">
       <!-- Type Tabs -->
@@ -280,8 +325,8 @@ const isFormValid = computed(() => {
         <UButton variant="secondary" size="sm" full-width @click="close">Закрыть</UButton>
       </div>
 
-      <!-- Transfer Actions: Cancel + Delete -->
-      <div v-else-if="isTransfer" class="flex gap-2 w-full">
+      <!-- Transfer/Adjustment Actions: Cancel + Delete -->
+      <div v-else-if="isTransfer || isAdjustment" class="flex gap-2 w-full">
         <UButton variant="secondary" size="sm" full-width @click="close">Отмена</UButton>
         <UButton
           variant="primary"

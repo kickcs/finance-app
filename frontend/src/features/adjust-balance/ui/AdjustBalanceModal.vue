@@ -33,10 +33,17 @@ const currentBalance = computed(() => {
   return bal?.balance ?? 0;
 });
 
-// Parse input: handle comma as decimal separator, strip spaces
+// Parse input: handle comma/period as decimal or thousands separator
 function parseInput(value: string): number | null {
   if (!value.trim()) return null;
-  const cleaned = value.replace(/\s/g, '').replace(',', '.');
+  let cleaned = value.replace(/\s/g, '');
+  if (cleaned.includes('.') && cleaned.includes(',')) {
+    // Both separators: period is thousands, comma is decimal (e.g. "1.234,56")
+    cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+  } else {
+    // Single separator: comma as decimal (e.g. "1234,56") or period (e.g. "1234.56")
+    cleaned = cleaned.replace(',', '.');
+  }
   const num = parseFloat(cleaned);
   return isNaN(num) ? null : num;
 }
@@ -111,7 +118,7 @@ function handleConfirm() {
           )
         "
       >
-        {{ diff > 0 ? '+' : '' }}{{ formatCurrency(Math.abs(diff), currency) }}
+        {{ diff > 0 ? '+' : '−' }}{{ formatCurrency(Math.abs(diff), currency) }}
         <span class="font-normal opacity-70">
           {{ diff > 0 ? 'будет добавлено' : 'будет списано' }}
         </span>

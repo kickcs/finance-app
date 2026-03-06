@@ -231,7 +231,15 @@ export class Transaction extends AggregateRoot<string> {
     });
 
     transaction.addDomainEvent(
-      new TransactionCreatedEvent(id, userId, accountId, amount, currency, 'adjustment', false),
+      new TransactionCreatedEvent(
+        id,
+        userId,
+        accountId,
+        amount,
+        currency,
+        'adjustment',
+        isNegative,
+      ),
     );
 
     return transaction;

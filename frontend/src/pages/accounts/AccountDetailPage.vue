@@ -162,12 +162,14 @@ async function handleSetAsDefault() {
 }
 
 const showAdjustBalanceModal = ref(false);
+const adjustBalanceCurrency = ref('');
 const { adjustBalance } = useAdjustBalance(() => userId.value);
 
-// Use the account's first balance currency for adjustment (not profile currency)
-const adjustBalanceCurrency = computed(() => {
-  return account.value?.balances?.[0]?.currency ?? currency.value;
-});
+function openAdjustBalance(balanceCurrency?: string) {
+  adjustBalanceCurrency.value =
+    balanceCurrency ?? account.value?.balances?.[0]?.currency ?? currency.value;
+  showAdjustBalanceModal.value = true;
+}
 
 async function handleAdjustBalance(data: {
   accountId: string;
@@ -339,16 +341,28 @@ async function handleAdjustBalance(data: {
                 <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
                   {{ balance.currency }}
                 </span>
-                <span class="text-xl font-bold text-text-primary-light dark:text-text-primary-dark">
-                  {{ formatCurrency(balance.balance, balance.currency) }}
-                </span>
+                <div class="flex items-center gap-2">
+                  <span
+                    class="text-xl font-bold text-text-primary-light dark:text-text-primary-dark"
+                  >
+                    {{ formatCurrency(balance.balance, balance.currency) }}
+                  </span>
+                  <button
+                    v-if="account.balances.length > 1"
+                    class="shrink-0 w-7 h-7 rounded-md flex items-center justify-center text-text-tertiary-light dark:text-text-tertiary-dark hover:bg-surface-light dark:hover:bg-surface-dark transition-colors"
+                    aria-label="Скорректировать баланс"
+                    @click="openAdjustBalance(balance.currency)"
+                  >
+                    <UIcon name="tune" size="xs" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
 
           <!-- Inline Actions -->
           <div class="flex gap-2 mt-4">
-            <UButton variant="secondary" class="flex-1" @click="showAdjustBalanceModal = true">
+            <UButton variant="secondary" class="flex-1" @click="openAdjustBalance()">
               <UIcon name="tune" size="sm" class="mr-1.5" />
               Скорректировать
             </UButton>

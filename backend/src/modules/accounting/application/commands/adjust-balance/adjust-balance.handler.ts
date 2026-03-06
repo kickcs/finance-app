@@ -39,7 +39,7 @@ export class AdjustBalanceHandler implements ICommandHandler<AdjustBalanceComman
     const currentBalance = account.getBalance(currency)?.balanceAmount ?? 0;
     const diff = targetBalance - currentBalance;
 
-    if (diff === 0) {
+    if (Math.abs(diff) < 0.01) {
       throw new BadRequestException('Balance is already correct');
     }
 
