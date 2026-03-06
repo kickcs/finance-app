@@ -13,8 +13,8 @@ export function useEditTransaction(userId: MaybeRefOrGetter<string>) {
   const error = ref<string | null>(null);
 
   async function update(transaction: Transaction, updates: Partial<Transaction>) {
-    // Debt-related transactions cannot be edited
-    if (transaction.is_debt_related) {
+    // Debt-related transactions cannot be edited (exclude adjustments which reuse is_debt_related as direction flag)
+    if (transaction.is_debt_related && transaction.type !== 'adjustment') {
       error.value = 'Транзакции долгов нельзя редактировать. Управляйте долгом в разделе "Долги"';
       return false;
     }
@@ -53,8 +53,8 @@ export function useEditTransaction(userId: MaybeRefOrGetter<string>) {
   }
 
   async function remove(transaction: Transaction) {
-    // Debt-related transactions cannot be deleted directly
-    if (transaction.is_debt_related) {
+    // Debt-related transactions cannot be deleted directly (exclude adjustments which reuse is_debt_related as direction flag)
+    if (transaction.is_debt_related && transaction.type !== 'adjustment') {
       error.value = 'Транзакции долгов нельзя удалять. Удалите долг в разделе "Долги"';
       return false;
     }
