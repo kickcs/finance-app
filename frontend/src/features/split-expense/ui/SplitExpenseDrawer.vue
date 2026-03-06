@@ -184,31 +184,17 @@ watch(
 
           <!-- Quick contact chips -->
           <Transition v-bind="sectionFade">
-            <div
-              v-if="quickContacts.length > 0 && splitData.participants.length === 0"
-              class="space-y-1.5"
-            >
-              <span
-                class="text-xs font-medium text-text-tertiary-light dark:text-text-tertiary-dark"
+            <div v-if="quickContacts.length > 0" class="flex gap-1.5 overflow-x-auto no-scrollbar">
+              <button
+                v-for="person in quickContacts"
+                :key="person.id"
+                type="button"
+                class="flex items-center gap-1 px-2.5 py-1 rounded-full border border-dashed border-border-light dark:border-border-dark hover:border-primary hover:bg-primary-light text-text-tertiary-light dark:text-text-tertiary-dark hover:text-primary transition-all duration-150 shrink-0 active:scale-95"
+                @click="handleQuickAdd(person)"
               >
-                Быстрый выбор
-              </span>
-              <div class="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-                <button
-                  v-for="person in quickContacts"
-                  :key="person.id"
-                  type="button"
-                  class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark hover:border-primary hover:bg-primary-light transition-all duration-150 shrink-0 active:scale-95"
-                  @click="handleQuickAdd(person)"
-                >
-                  <InitialAvatar :name="person.name" :color="person.color" size="xs" />
-                  <span
-                    class="text-xs font-medium text-text-primary-light dark:text-text-primary-dark whitespace-nowrap"
-                  >
-                    {{ person.name }}
-                  </span>
-                </button>
-              </div>
+                <UIcon name="add" size="xs" />
+                <span class="text-xs whitespace-nowrap">{{ person.name }}</span>
+              </button>
             </div>
           </Transition>
 
@@ -350,25 +336,6 @@ watch(
                   </button>
                 </div>
               </TransitionGroup>
-
-              <!-- Quick contacts (when participants already exist) -->
-              <Transition v-bind="sectionFade">
-                <div
-                  v-if="quickContacts.length > 0 && splitData.participants.length > 0"
-                  class="flex gap-1.5 overflow-x-auto no-scrollbar pt-1"
-                >
-                  <button
-                    v-for="person in quickContacts"
-                    :key="person.id"
-                    type="button"
-                    class="flex items-center gap-1 px-2.5 py-1 rounded-full border border-dashed border-border-light dark:border-border-dark hover:border-primary hover:bg-primary-light text-text-tertiary-light dark:text-text-tertiary-dark hover:text-primary transition-all duration-150 shrink-0 active:scale-95"
-                    @click="handleQuickAdd(person)"
-                  >
-                    <UIcon name="add" size="xs" />
-                    <span class="text-xs whitespace-nowrap">{{ person.name }}</span>
-                  </button>
-                </div>
-              </Transition>
             </div>
           </Transition>
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, nextTick } from 'vue';
 import { UIcon, UInput, InitialAvatar } from '@/shared/ui';
 import type { Person } from '../model/types';
 
@@ -25,6 +25,7 @@ const emit = defineEmits<{
 }>();
 
 const isFocused = ref(false);
+const rootRef = ref<HTMLDivElement>();
 
 const sortedPeople = computed(() => {
   return [...props.people].sort((a, b) => a.name.localeCompare(b.name, 'ru'));
@@ -53,6 +54,9 @@ function handleInput(val: string | number) {
 
 function handleFocus() {
   isFocused.value = true;
+  nextTick(() => {
+    rootRef.value?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
 }
 
 function handleBlur() {
@@ -85,7 +89,7 @@ function handleSaveAndAdd() {
 </script>
 
 <template>
-  <div class="w-full">
+  <div ref="rootRef" class="w-full">
     <div v-if="label" class="mb-2">
       <span class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark">
         {{ label }}
@@ -117,55 +121,57 @@ function handleSaveAndAdd() {
       enter-from-class="person-list-enter-from"
       enter-to-class="person-list-enter-to"
       leave-active-class="transition-all duration-200 ease-in"
-      leave-from-class="opacity-100 max-h-72 scale-y-100 origin-top"
+      leave-from-class="opacity-100 max-h-36 scale-y-100 origin-top"
       leave-to-class="opacity-0 max-h-0 scale-y-95 origin-top"
     >
       <div
         v-if="showList"
-        class="mt-2 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl max-h-72 overflow-y-auto overflow-x-hidden overscroll-contain"
+        class="mt-2 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl max-h-36 overflow-y-auto overflow-x-hidden overscroll-contain"
       >
-        <div class="py-1 flex flex-col min-w-0">
-          <!-- Existing Contacts -->
-          <button
-            v-for="(person, i) in filteredPeople"
-            :key="person.id"
-            type="button"
-            class="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-surface-hover-light dark:hover:bg-surface-hover-dark transition-all active:bg-surface-light dark:active:bg-surface-dark"
-            :style="{ animationDelay: `${i * 30}ms` }"
-            style="animation: person-item-in 200ms ease-out both"
-            @mousedown.prevent
-            @touchend.prevent="selectPerson(person)"
-            @click="selectPerson(person)"
-          >
-            <InitialAvatar :name="person.name" :color="person.color" size="md" class="shrink-0" />
-            <span
-              class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark truncate text-left"
+        <div class="p-2">
+          <!-- Existing Contacts (2-column grid) -->
+          <div class="grid grid-cols-2 gap-1.5">
+            <button
+              v-for="(person, i) in filteredPeople"
+              :key="person.id"
+              type="button"
+              class="flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-surface-hover-light dark:hover:bg-surface-hover-dark transition-all active:bg-surface-light dark:active:bg-surface-dark"
+              :style="{ animationDelay: `${i * 30}ms` }"
+              style="animation: person-item-in 200ms ease-out both"
+              @mousedown.prevent
+              @touchend.prevent="selectPerson(person)"
+              @click="selectPerson(person)"
             >
-              {{ person.name }}
-            </span>
-          </button>
+              <InitialAvatar :name="person.name" :color="person.color" size="sm" class="shrink-0" />
+              <span
+                class="text-xs font-medium text-text-primary-light dark:text-text-primary-dark truncate text-left"
+              >
+                {{ person.name }}
+              </span>
+            </button>
+          </div>
 
           <!-- Add / Create actions (at bottom) -->
           <template v-if="canSave">
+            <div
+              v-if="filteredPeople.length > 0"
+              class="border-t border-border-light/50 dark:border-border-dark/50 mt-1.5 pt-1.5"
+            />
             <!-- When autoSave=false: "Add" (no contact creation) -->
             <button
               v-if="!autoSave"
               type="button"
-              class="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-surface-hover-light dark:hover:bg-surface-hover-dark transition-colors active:bg-surface-light dark:active:bg-surface-dark"
-              :class="
-                filteredPeople.length > 0 &&
-                'border-t border-border-light/50 dark:border-border-dark/50'
-              "
+              class="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-surface-hover-light dark:hover:bg-surface-hover-dark transition-colors active:bg-surface-light dark:active:bg-surface-dark"
               @mousedown.prevent
               @touchend.prevent="handleAdd"
               @click="handleAdd"
             >
               <div
-                class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0"
+                class="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0"
               >
-                <UIcon name="add" size="sm" class="text-primary" />
+                <UIcon name="add" size="xs" class="text-primary" />
               </div>
-              <span class="text-sm font-medium text-primary truncate text-left">
+              <span class="text-xs font-medium text-primary truncate text-left">
                 Добавить «{{ modelValue.trim() }}»
               </span>
             </button>
@@ -173,26 +179,22 @@ function handleSaveAndAdd() {
             <!-- Save as contact (secondary when autoSave=false, primary when autoSave=true) -->
             <button
               type="button"
-              class="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-surface-hover-light dark:hover:bg-surface-hover-dark transition-colors active:bg-surface-light dark:active:bg-surface-dark"
-              :class="
-                (filteredPeople.length > 0 || !autoSave) &&
-                'border-t border-border-light/50 dark:border-border-dark/50'
-              "
+              class="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-surface-hover-light dark:hover:bg-surface-hover-dark transition-colors active:bg-surface-light dark:active:bg-surface-dark"
               @mousedown.prevent
               @touchend.prevent="autoSave ? handleAdd() : handleSaveAndAdd()"
               @click="autoSave ? handleAdd() : handleSaveAndAdd()"
             >
               <div
-                class="w-8 h-8 rounded-full bg-surface-light dark:bg-surface-dark flex items-center justify-center shrink-0"
+                class="w-7 h-7 rounded-full bg-surface-light dark:bg-surface-dark flex items-center justify-center shrink-0"
               >
                 <UIcon
                   :name="autoSave ? 'add' : 'person_add'"
-                  size="sm"
+                  size="xs"
                   class="text-text-secondary-light dark:text-text-secondary-dark"
                 />
               </div>
               <span
-                class="text-sm text-text-secondary-light dark:text-text-secondary-dark truncate text-left"
+                class="text-xs text-text-secondary-light dark:text-text-secondary-dark truncate text-left"
               >
                 {{
                   autoSave
@@ -223,7 +225,7 @@ function handleSaveAndAdd() {
 }
 .person-list-enter-to {
   opacity: 1;
-  max-height: 18rem;
+  max-height: 9rem;
   margin-top: 0.5rem;
 }
 
