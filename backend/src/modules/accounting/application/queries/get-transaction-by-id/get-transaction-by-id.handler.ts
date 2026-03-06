@@ -5,6 +5,7 @@ import {
   ITransactionRepository,
   TRANSACTION_REPOSITORY,
 } from '../../../domain/repositories/transaction.repository.interface';
+import { toTransactionResponse } from '../../helpers/to-transaction-response';
 
 @QueryHandler(GetTransactionByIdQuery)
 export class GetTransactionByIdHandler implements IQueryHandler<GetTransactionByIdQuery> {
@@ -24,22 +25,6 @@ export class GetTransactionByIdHandler implements IQueryHandler<GetTransactionBy
       throw new NotFoundException(`Transaction with id ${query.id} not found`);
     }
 
-    return {
-      id: transaction.id,
-      userId: transaction.userId,
-      accountId: transaction.accountId,
-      categoryId: transaction.categoryId,
-      amount: transaction.amountValue,
-      currency: transaction.currency,
-      type: transaction.typeValue,
-      description: transaction.description,
-      date: transaction.date,
-      isDebtRelated: transaction.isDebtRelated,
-      debtId: transaction.debtId,
-      toAccountId: transaction.toAccountId,
-      toAmount: transaction.toAmountValue,
-      toCurrency: transaction.toCurrency,
-      createdAt: transaction.createdAt,
-    };
+    return toTransactionResponse(transaction);
   }
 }

@@ -11,6 +11,7 @@ import {
   ACCOUNT_REPOSITORY,
 } from '../../../domain/repositories/account.repository.interface';
 import { DomainEventPublisher } from '../../../../../shared';
+import { toTransactionResponse } from '../../helpers/to-transaction-response';
 
 @CommandHandler(UpdateTransactionCommand)
 export class UpdateTransactionHandler implements ICommandHandler<UpdateTransactionCommand> {
@@ -143,23 +144,7 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
 
     await this.eventPublisher.publishEvents(transaction);
 
-    return {
-      id: transaction.id,
-      userId: transaction.userId,
-      accountId: transaction.accountId,
-      categoryId: transaction.categoryId,
-      amount: transaction.amountValue,
-      currency: transaction.currency,
-      type: transaction.typeValue,
-      description: transaction.description,
-      date: transaction.date,
-      isDebtRelated: transaction.isDebtRelated,
-      debtId: transaction.debtId,
-      toAccountId: transaction.toAccountId,
-      toAmount: transaction.toAmountValue,
-      toCurrency: transaction.toCurrency,
-      createdAt: transaction.createdAt,
-    };
+    return toTransactionResponse(transaction);
   }
 
   private async validateAccountOwnership(accountId: string, userId: string) {

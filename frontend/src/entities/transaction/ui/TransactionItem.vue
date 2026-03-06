@@ -100,25 +100,21 @@ const formattedDate = computed(() =>
 <template>
   <button
     class="w-full flex items-center gap-3 p-3 rounded-lg transition-all duration-150 hover:bg-surface-light dark:hover:bg-surface-dark active:opacity-80 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-none"
-    :aria-label="`${isTransfer ? 'Перевод' : isAdjustment ? 'Коррекция баланса' : category?.name || 'Транзакция'}, ${formattedAmount}`"
+    :aria-label="`${isTransfer ? 'Перевод' : category?.name || 'Транзакция'}, ${formattedAmount}`"
     @click="$emit('click')"
   >
     <!-- Category/Transfer Icon -->
     <div
       class="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center"
       :style="{
-        backgroundColor: isAdjustment
-          ? '#64748b12'
-          : isTransfer
-            ? '#4F46E512'
-            : `${category?.color || '#64748b'}12`,
+        backgroundColor: isTransfer ? '#4F46E512' : `${category?.color || '#64748b'}12`,
       }"
     >
       <UIcon
-        :name="isAdjustment ? 'tune' : isTransfer ? 'swap_horiz' : category?.icon || 'receipt_long'"
+        :name="isTransfer ? 'swap_horiz' : category?.icon || 'receipt_long'"
         size="sm"
         :style="{
-          color: isAdjustment ? '#64748b' : isTransfer ? '#4F46E5' : category?.color || '#64748b',
+          color: isTransfer ? '#4F46E5' : category?.color || '#64748b',
         }"
       />
     </div>
@@ -126,13 +122,7 @@ const formattedDate = computed(() =>
     <!-- Content -->
     <div class="flex-1 text-left min-w-0">
       <p class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark truncate">
-        {{
-          isTransfer
-            ? 'Перевод'
-            : isAdjustment
-              ? 'Коррекция баланса'
-              : category?.name || 'Транзакция'
-        }}
+        {{ isTransfer ? 'Перевод' : category?.name || 'Транзакция' }}
       </p>
       <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark truncate">
         <template v-if="isTransfer">{{ transferLabel }}</template>

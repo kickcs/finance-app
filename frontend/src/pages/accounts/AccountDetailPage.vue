@@ -3,7 +3,7 @@ import { ref, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { ROUTE_NAMES } from '@/app/router/routeNames';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
-import { UButton, UIcon, UCard, EmptyState, USpinner, NotFoundState, useToast } from '@/shared/ui';
+import { UButton, UIcon, UCard, EmptyState, USpinner, NotFoundState } from '@/shared/ui';
 import { AppHeader } from '@/widgets/header';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { useAccounts, getAccountTypeLabel, type AccountWithBalances } from '@/entities/account';
@@ -23,13 +23,11 @@ import {
   DeleteTransactionModal,
   useTransactionEditFlow,
 } from '@/features/edit-transaction';
-import { AdjustBalanceModal } from '@/features/adjust-balance';
+import { AdjustBalanceModal, useAdjustBalance } from '@/features/adjust-balance';
 import type { Account } from '@/shared/api/database.types';
 import { navigateBack } from '@/app/router';
 import { useProfile } from '@/shared/api';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
-import { useQueryClient } from '@tanstack/vue-query';
-import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
 
 const router = useRouter();
 const route = useRoute();
@@ -163,9 +161,8 @@ async function handleSetAsDefault() {
   }
 }
 
-const queryClient = useQueryClient();
 const showAdjustBalanceModal = ref(false);
-const { toast } = useToast();
+const { adjustBalance } = useAdjustBalance(() => userId.value);
 
 // Use the account's first balance currency for adjustment (not profile currency)
 const adjustBalanceCurrency = computed(() => {
@@ -178,24 +175,9 @@ async function handleAdjustBalance(data: {
   currency: string;
   description: string;
 }) {
-  try {
-    await transactionsApi.adjustBalance({
-      accountId: data.accountId,
-      targetBalance: data.targetBalance,
-      currency: data.currency,
-      description: data.description || undefined,
-    });
+  const success = await adjustBalance(data);
+  if (success) {
     showAdjustBalanceModal.value = false;
-    // Invalidate both transactions and accounts caches
-    if (userId.value) {
-      await Promise.all([
-        invalidateTransactionRelated(queryClient, userId.value),
-        invalidateAccountRelated(queryClient, userId.value),
-      ]);
-    }
-  } catch (e) {
-    console.error('Failed to adjust balance:', e);
-    toast({ title: 'Ошибка', description: 'Не удалось скорректировать баланс', variant: 'error' });
   }
 }
 </script>
