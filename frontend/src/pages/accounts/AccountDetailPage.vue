@@ -23,10 +23,13 @@ import {
   DeleteTransactionModal,
   useTransactionEditFlow,
 } from '@/features/edit-transaction';
+import { AdjustBalanceModal } from '@/features/adjust-balance';
 import type { Account } from '@/shared/api/database.types';
 import { navigateBack } from '@/app/router';
 import { useProfile } from '@/shared/api';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
+import { useQueryClient } from '@tanstack/vue-query';
+import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
 
 const router = useRouter();
 const route = useRoute();
@@ -157,6 +160,35 @@ async function handleSetAsDefault() {
     await setDefaultAccount(account.value.id);
   } finally {
     isSettingDefault.value = false;
+  }
+}
+
+const queryClient = useQueryClient();
+const showAdjustBalanceModal = ref(false);
+
+async function handleAdjustBalance(data: {
+  accountId: string;
+  targetBalance: number;
+  currency: string;
+  description: string;
+}) {
+  try {
+    await transactionsApi.adjustBalance({
+      accountId: data.accountId,
+      targetBalance: data.targetBalance,
+      currency: data.currency,
+      description: data.description || undefined,
+    });
+    showAdjustBalanceModal.value = false;
+    // Invalidate both transactions and accounts caches
+    if (userId.value) {
+      await Promise.all([
+        invalidateTransactionRelated(queryClient, userId.value),
+        invalidateAccountRelated(queryClient, userId.value),
+      ]);
+    }
+  } catch (e) {
+    console.error('Failed to adjust balance:', e);
   }
 }
 </script>
@@ -327,6 +359,10 @@ async function handleSetAsDefault() {
 
           <!-- Inline Actions -->
           <div class="flex gap-2 mt-4">
+            <UButton variant="secondary" class="flex-1" @click="showAdjustBalanceModal = true">
+              <UIcon name="tune" size="sm" class="mr-1.5" />
+              Скорректировать
+            </UButton>
             <UButton variant="secondary" class="flex-1" @click="showEditAccountModal = true">
               <UIcon name="edit" size="sm" class="mr-1.5" />
               Изменить
@@ -563,6 +599,14 @@ async function handleSetAsDefault() {
       :currency="currency"
       :is-deleting="isDeletingTransaction"
       @confirm="handleDeleteTransaction"
+    />
+
+    <!-- Adjust Balance Modal -->
+    <AdjustBalanceModal
+      v-model="showAdjustBalanceModal"
+      :account="account"
+      :currency="currency"
+      @confirm="handleAdjustBalance"
     />
   </div>
 </template>
