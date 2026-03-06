@@ -35,8 +35,10 @@ const { getCategoriesByType } = useCategories(userId);
 const isTransfer = computed(() => props.transaction?.type === 'transfer');
 const isAdjustment = computed(() => props.transaction?.type === 'adjustment');
 
-// Check if transaction is debt-related (cannot be edited)
-const isDebtRelated = computed(() => props.transaction?.is_debt_related === true);
+// Check if transaction is debt-related (cannot be edited) — exclude adjustments which reuse is_debt_related as direction flag
+const isDebtRelated = computed(
+  () => props.transaction?.is_debt_related === true && !isAdjustment.value,
+);
 
 // Check if transaction has split debts linked to it (cannot be edited)
 const hasSplitDebts = computed(() => props.hasSplitDebts === true);
@@ -241,7 +243,7 @@ const isFormValid = computed(() => {
         <div
           class="w-12 h-12 mx-auto mb-3 rounded-xl bg-slate-100 dark:bg-slate-800/30 flex items-center justify-center"
         >
-          <UIcon name="tune" size="md" class="text-slate-500" />
+          <UIcon name="balance" size="md" class="text-slate-500" />
         </div>
         <p class="text-sm text-text-primary-light dark:text-text-primary-dark font-medium mb-0.5">
           Это коррекция баланса

@@ -8,6 +8,7 @@ import {
   ArrowUpDown,
   ArrowUpRight,
   Baby,
+  Scale,
   Camera,
   CameraOff,
   Images,
@@ -126,6 +127,7 @@ import {
 
 export const iconMap: Record<string, Component> = {
   account_balance: Landmark,
+  balance: Scale,
   photo_camera: Camera,
   photo_library: Images,
   crop_free: Crop,

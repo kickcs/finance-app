@@ -180,7 +180,7 @@ export const TRANSFER_CATEGORY: DefaultCategory = {
 export const ADJUSTMENT_CATEGORY: DefaultCategory = {
   id: 'balance_adjustment',
   name: 'Коррекция баланса',
-  icon: 'tune',
+  icon: 'balance',
   color: '#64748b',
   type: 'adjustment',
 };

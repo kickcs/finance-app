@@ -353,7 +353,7 @@ async function handleAdjustBalance(data: {
                     aria-label="Скорректировать баланс"
                     @click="openAdjustBalance(balance.currency)"
                   >
-                    <UIcon name="tune" size="xs" />
+                    <UIcon name="balance" size="xs" />
                   </button>
                 </div>
               </div>
@@ -373,7 +373,7 @@ async function handleAdjustBalance(data: {
               title="Скорректировать баланс"
               @click="openAdjustBalance()"
             >
-              <UIcon name="tune" size="sm" />
+              <UIcon name="balance" size="sm" />
             </UButton>
             <UButton
               variant="icon"

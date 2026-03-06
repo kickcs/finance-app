@@ -197,7 +197,7 @@ export const COMMISSION_CATEGORY: Category = {
 export const ADJUSTMENT_CATEGORY: Category = {
   id: 'balance_adjustment',
   name: 'Коррекция баланса',
-  icon: 'tune',
+  icon: 'balance',
   color: '#64748b',
   type: 'adjustment',
 };
