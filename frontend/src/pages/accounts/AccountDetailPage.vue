@@ -163,7 +163,7 @@ async function handleSetAsDefault() {
 
 const showAdjustBalanceModal = ref(false);
 const adjustBalanceCurrency = ref('');
-const { adjustBalance } = useAdjustBalance(() => userId.value);
+const { adjustBalance, isAdjusting } = useAdjustBalance(() => userId.value);
 
 function openAdjustBalance(balanceCurrency?: string) {
   adjustBalanceCurrency.value =
@@ -362,13 +362,17 @@ async function handleAdjustBalance(data: {
 
           <!-- Inline Actions -->
           <div class="flex gap-2 mt-4">
-            <UButton variant="secondary" class="flex-1" @click="openAdjustBalance()">
-              <UIcon name="tune" size="sm" class="mr-1.5" />
-              Скорректировать
-            </UButton>
             <UButton variant="secondary" class="flex-1" @click="showEditAccountModal = true">
               <UIcon name="edit" size="sm" class="mr-1.5" />
               Изменить
+            </UButton>
+            <UButton
+              variant="icon"
+              class="w-11 shrink-0 hover:bg-surface-light dark:hover:bg-surface-dark"
+              aria-label="Скорректировать баланс"
+              @click="openAdjustBalance()"
+            >
+              <UIcon name="tune" size="sm" />
             </UButton>
             <UButton
               variant="icon"
@@ -609,6 +613,7 @@ async function handleAdjustBalance(data: {
       v-model="showAdjustBalanceModal"
       :account="account"
       :currency="adjustBalanceCurrency"
+      :is-loading="isAdjusting"
       @confirm="handleAdjustBalance"
     />
   </div>

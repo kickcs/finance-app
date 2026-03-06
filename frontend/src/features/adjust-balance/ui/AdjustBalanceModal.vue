@@ -9,6 +9,7 @@ const props = defineProps<{
   modelValue: boolean;
   account: AccountWithBalances | null;
   currency: string;
+  isLoading?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -136,7 +137,13 @@ function handleConfirm() {
       <UButton variant="secondary" full-width @click="emit('update:modelValue', false)">
         Отмена
       </UButton>
-      <UButton variant="primary" full-width :disabled="!canSubmit" @click="handleConfirm">
+      <UButton
+        variant="primary"
+        full-width
+        :disabled="!canSubmit"
+        :loading="isLoading"
+        @click="handleConfirm"
+      >
         Скорректировать
       </UButton>
     </template>
