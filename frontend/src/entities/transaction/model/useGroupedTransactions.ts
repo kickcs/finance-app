@@ -88,7 +88,7 @@ function defaultSortTransactions(a: Transaction, b: Transaction): number {
 function defaultComputeTotal(txs: Transaction[]): number {
   return txs.reduce((sum, tx) => {
     if (DEBT_CATEGORY_IDS.has(tx.category_id)) return sum;
-    if (tx.type === 'transfer') return sum;
+    if (tx.type === 'transfer' || tx.type === 'adjustment') return sum;
     return sum + (tx.type === 'income' ? tx.amount : -tx.amount);
   }, 0);
 }

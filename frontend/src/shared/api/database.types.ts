@@ -188,7 +188,7 @@ export type Database = {
           category_id: string;
           amount: number;
           currency: string;
-          type: 'income' | 'expense' | 'transfer';
+          type: 'income' | 'expense' | 'transfer' | 'adjustment';
           description: string | null;
           date: string;
           created_at: string;
@@ -208,7 +208,7 @@ export type Database = {
           category_id: string;
           amount: number;
           currency: string;
-          type: 'income' | 'expense' | 'transfer';
+          type: 'income' | 'expense' | 'transfer' | 'adjustment';
           description?: string | null;
           date: string;
           created_at?: string;
@@ -226,7 +226,7 @@ export type Database = {
           category_id?: string;
           amount?: number;
           currency?: string;
-          type?: 'income' | 'expense' | 'transfer';
+          type?: 'income' | 'expense' | 'transfer' | 'adjustment';
           description?: string | null;
           date?: string;
           created_at?: string;

@@ -3,7 +3,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import { categoryQueryKeys } from './queryKeys';
 import { categoriesApi } from './categoriesApi';
 import type { UserCategory, UserCategoryInsert } from '@/shared/api/database.types';
-import { TRANSFER_CATEGORY, DEBT_CATEGORIES, COMMISSION_CATEGORY } from '../model/constants';
+import {
+  TRANSFER_CATEGORY,
+  DEBT_CATEGORIES,
+  COMMISSION_CATEGORY,
+  ADJUSTMENT_CATEGORY,
+} from '../model/constants';
 import type { Category } from '../model/types';
 
 export function useCategories(userId: MaybeRefOrGetter<string | null>) {
@@ -153,6 +158,7 @@ export function useCategories(userId: MaybeRefOrGetter<string | null>) {
     ...DEBT_CATEGORIES,
     TRANSFER_CATEGORY,
     COMMISSION_CATEGORY,
+    ADJUSTMENT_CATEGORY,
   ]);
 
   // Get category by ID
@@ -171,12 +177,16 @@ export function useCategories(userId: MaybeRefOrGetter<string | null>) {
     // Check commission category
     if (id === COMMISSION_CATEGORY.id) return COMMISSION_CATEGORY;
 
+    // Check adjustment category
+    if (id === ADJUSTMENT_CATEGORY.id) return ADJUSTMENT_CATEGORY;
+
     return undefined;
   }
 
   // Get categories by type
-  function getCategoriesByType(type: 'expense' | 'income' | 'transfer'): Category[] {
+  function getCategoriesByType(type: 'expense' | 'income' | 'transfer' | 'adjustment'): Category[] {
     if (type === 'transfer') return [TRANSFER_CATEGORY];
+    if (type === 'adjustment') return [ADJUSTMENT_CATEGORY];
     return type === 'expense' ? expenseCategories.value : incomeCategories.value;
   }
 

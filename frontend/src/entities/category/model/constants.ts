@@ -193,19 +193,32 @@ export const COMMISSION_CATEGORY: Category = {
   type: 'expense',
 };
 
+// Balance adjustment category (special - auto-assigned for balance adjustments)
+export const ADJUSTMENT_CATEGORY: Category = {
+  id: 'balance_adjustment',
+  name: 'Коррекция баланса',
+  icon: 'tune',
+  color: '#64748b',
+  type: 'adjustment',
+};
+
 export const ALL_CATEGORIES = [
   ...EXPENSE_CATEGORIES,
   ...INCOME_CATEGORIES,
   ...DEBT_CATEGORIES,
   TRANSFER_CATEGORY,
   COMMISSION_CATEGORY,
+  ADJUSTMENT_CATEGORY,
 ];
 
 export function getCategoryById(id: string): Category | undefined {
   return ALL_CATEGORIES.find((cat) => cat.id === id);
 }
 
-export function getCategoriesByType(type: 'expense' | 'income' | 'transfer'): Category[] {
+export function getCategoriesByType(
+  type: 'expense' | 'income' | 'transfer' | 'adjustment',
+): Category[] {
   if (type === 'transfer') return [TRANSFER_CATEGORY];
+  if (type === 'adjustment') return [ADJUSTMENT_CATEGORY];
   return type === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
 }

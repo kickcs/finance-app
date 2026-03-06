@@ -13,7 +13,7 @@ export interface PaginatedResult<T> {
 }
 
 export interface TransactionFilters {
-  type?: 'income' | 'expense' | 'transfer' | 'debt';
+  type?: 'income' | 'expense' | 'transfer' | 'debt' | 'adjustment';
   accountId?: string;
   categoryId?: string;
   search?: string;
@@ -58,7 +58,7 @@ interface TransactionResponse {
   categoryId: string;
   amount: number;
   currency: string;
-  type: 'income' | 'expense' | 'transfer';
+  type: 'income' | 'expense' | 'transfer' | 'adjustment';
   description: string | null;
   date: string;
   createdAt: string;
@@ -165,6 +165,23 @@ export const transactionsApi = {
       toAmount: transaction.to_amount,
       toCurrency: transaction.to_currency,
       feeAmount: transaction.fee_amount,
+    });
+    return transformTransaction(data);
+  },
+
+  async adjustBalance(params: {
+    accountId: string;
+    targetBalance: number;
+    currency: string;
+    date?: string;
+    description?: string;
+  }): Promise<Transaction> {
+    const data = await http.post<TransactionResponse>('/transactions/adjust-balance', {
+      accountId: params.accountId,
+      targetBalance: params.targetBalance,
+      currency: params.currency,
+      date: params.date,
+      description: params.description,
     });
     return transformTransaction(data);
   },

@@ -8,4 +8,5 @@ export const CATEGORY_IDS = {
   GIFTS_INCOME: 'gifts_income',
   TRANSFER: 'transfer',
   COMMISSION: 'commission',
+  BALANCE_ADJUSTMENT: 'balance_adjustment',
 } as const;
