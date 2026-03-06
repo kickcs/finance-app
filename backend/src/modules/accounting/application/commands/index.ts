@@ -28,6 +28,10 @@ export * from './reorder-categories/reorder-categories.handler';
 export * from './initialize-default-categories/initialize-default-categories.command';
 export * from './initialize-default-categories/initialize-default-categories.handler';
 
+// Adjust balance commands
+export * from './adjust-balance/adjust-balance.command';
+export * from './adjust-balance/adjust-balance.handler';
+
 // Bulk import commands
 export * from './bulk-import/bulk-import.command';
 export * from './bulk-import/bulk-import.handler';
@@ -77,6 +81,7 @@ import { CreateQuickActionHandler } from './create-quick-action/create-quick-act
 import { UpdateQuickActionHandler } from './update-quick-action/update-quick-action.handler';
 import { DeleteQuickActionHandler } from './delete-quick-action/delete-quick-action.handler';
 import { ReorderQuickActionsHandler } from './reorder-quick-actions/reorder-quick-actions.handler';
+import { AdjustBalanceHandler } from './adjust-balance/adjust-balance.handler';
 
 export const CommandHandlers = [
   CreateAccountHandler,
@@ -101,4 +106,5 @@ export const CommandHandlers = [
   UpdateQuickActionHandler,
   DeleteQuickActionHandler,
   ReorderQuickActionsHandler,
+  AdjustBalanceHandler,
 ];

@@ -19,11 +19,13 @@ import {
   DateRangeDto,
   AccountPaginationDto,
   AnalyticsQueryDto,
+  AdjustBalanceDto,
 } from '../dto';
 import {
   CreateTransactionCommand,
   UpdateTransactionCommand,
   DeleteTransactionCommand,
+  AdjustBalanceCommand,
 } from '../../application/commands';
 import {
   GetTransactionsPaginatedQuery,
@@ -151,6 +153,23 @@ export class TransactionsController {
   @Get(':id')
   async findOne(@CurrentUser('sub') userId: string, @Param('id') id: string): Promise<unknown> {
     return this.queryBus.execute(new GetTransactionByIdQuery(id, userId));
+  }
+
+  @Post('adjust-balance')
+  async adjustBalance(
+    @CurrentUser('sub') userId: string,
+    @Body() dto: AdjustBalanceDto,
+  ): Promise<unknown> {
+    return this.commandBus.execute(
+      new AdjustBalanceCommand(
+        userId,
+        dto.accountId,
+        dto.targetBalance,
+        dto.currency,
+        dto.date ? new Date(dto.date) : new Date(),
+        dto.description,
+      ),
+    );
   }
 
   @Post()
