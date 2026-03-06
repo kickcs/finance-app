@@ -43,7 +43,6 @@ const {
   addParticipant,
   removeParticipant,
   updateParticipantAmount,
-  updateParticipantName,
   setMethod: setSplitMethod,
   setMyShare,
   setIsIncluded,
@@ -211,7 +210,6 @@ async function handleSubmit() {
           @add-participant="addParticipant"
           @remove-participant="removeParticipant"
           @update-participant-amount="updateParticipantAmount"
-          @update-participant-name="updateParticipantName"
           @set-split-method="setSplitMethod"
           @set-my-share="setMyShare"
           @set-is-included="setIsIncluded"

@@ -44,7 +44,6 @@ const emit = defineEmits<{
   addParticipant: [name: string, fromContacts: boolean, personColor?: string];
   removeParticipant: [id: string];
   updateParticipantAmount: [id: string, amount: number];
-  updateParticipantName: [id: string, name: string];
   setSplitMethod: [method: SplitMethod];
   setMyShare: [amount: number];
   setIsIncluded: [included: boolean];
@@ -251,7 +250,6 @@ const { isMounted } = useMountedAnimation();
             @update-participant-amount="
               (id, amount) => $emit('updateParticipantAmount', id, amount)
             "
-            @update-participant-name="(id, name) => $emit('updateParticipantName', id, name)"
             @set-split-method="$emit('setSplitMethod', $event)"
             @set-my-share="$emit('setMyShare', $event)"
             @set-is-included="$emit('setIsIncluded', $event)"
