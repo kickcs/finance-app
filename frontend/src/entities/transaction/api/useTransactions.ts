@@ -42,8 +42,8 @@ export function useTransactions(userId: MaybeRefOrGetter<string | null>) {
         user_id: uid,
       });
 
-      // Update account balance (skip for transfers - handled separately)
-      if (transaction.type !== 'transfer') {
+      // Update account balance (skip for transfers and adjustments - handled separately)
+      if (transaction.type !== 'transfer' && transaction.type !== 'adjustment') {
         const balanceChange =
           transaction.type === 'income' ? transaction.amount : -transaction.amount;
         await updateBalance(transaction.account_id, balanceChange);
@@ -97,8 +97,8 @@ export function useTransactions(userId: MaybeRefOrGetter<string | null>) {
 
       await transactionsApi.delete(id);
 
-      // Revert balance (skip for transfers - they need special handling)
-      if (transaction.type !== 'transfer') {
+      // Revert balance (skip for transfers and adjustments - they need special handling)
+      if (transaction.type !== 'transfer' && transaction.type !== 'adjustment') {
         const balanceRevert =
           transaction.type === 'income' ? -transaction.amount : transaction.amount;
         await updateBalance(transaction.account_id, balanceRevert);
@@ -157,7 +157,9 @@ export function useTransactions(userId: MaybeRefOrGetter<string | null>) {
     const data = await getByDateRange(startDate, endDate);
 
     // Filter out debt-related transactions and transfers from money flow calculations
-    const nonDebtTransactions = data.filter((t) => !t.is_debt_related && t.type !== 'transfer');
+    const nonDebtTransactions = data.filter(
+      (t) => !t.is_debt_related && t.type !== 'transfer' && t.type !== 'adjustment',
+    );
 
     const income = nonDebtTransactions
       .filter((t) => t.type === 'income')

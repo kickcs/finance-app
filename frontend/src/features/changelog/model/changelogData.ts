@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.26';
+export const CURRENT_VERSION = '1.0.27';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,17 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.27',
+    date: '2026-03-06',
+    title: 'Коррекция баланса',
+    items: [
+      {
+        type: 'feature',
+        text: 'Коррекция баланса — можно привести баланс счёта в соответствие с реальным. Откройте счёт и нажмите «Скорректировать»',
+      },
+    ],
+  },
   {
     version: '1.0.26',
     date: '2026-03-01',
