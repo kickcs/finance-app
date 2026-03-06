@@ -31,6 +31,10 @@ export function useAdjustBalance(userId: () => string | null) {
           invalidateAccountRelated(queryClient, uid),
         ]);
       }
+      toast({
+        title: 'Баланс скорректирован',
+        variant: 'success',
+      });
       return true;
     } catch (e) {
       console.error('Failed to adjust balance:', e);

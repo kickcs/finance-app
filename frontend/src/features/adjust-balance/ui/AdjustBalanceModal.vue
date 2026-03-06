@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import { UModal, UButton, UInput } from '@/shared/ui';
-import { formatCurrency } from '@/shared/lib/format/currency';
+import { formatCurrency, getCurrencySymbol } from '@/shared/lib/format/currency';
 import { cn } from '@/shared/lib/utils';
 import type { AccountWithBalances } from '@/shared/api/database.types';
 
@@ -60,6 +60,11 @@ const hasDiff = computed(() => targetBalance.value !== null && Math.abs(diff.val
 
 const canSubmit = computed(() => targetBalance.value !== null && hasDiff.value);
 
+const modalTitle = computed(() => {
+  const symbol = getCurrencySymbol(props.currency);
+  return `Коррекция баланса · ${symbol}`;
+});
+
 // Reset form when modal opens
 watch(
   () => props.modelValue,
@@ -85,7 +90,8 @@ function handleConfirm() {
 <template>
   <UModal
     :model-value="modelValue"
-    title="Коррекция баланса"
+    :title="modalTitle"
+    :closeable="!isLoading"
     @update:model-value="emit('update:modelValue', $event)"
   >
     <div v-if="account" class="space-y-5">
@@ -134,7 +140,12 @@ function handleConfirm() {
     </div>
 
     <template #actions>
-      <UButton variant="secondary" full-width @click="emit('update:modelValue', false)">
+      <UButton
+        variant="secondary"
+        full-width
+        :disabled="isLoading"
+        @click="emit('update:modelValue', false)"
+      >
         Отмена
       </UButton>
       <UButton

@@ -370,6 +370,7 @@ async function handleAdjustBalance(data: {
               variant="icon"
               class="w-11 shrink-0 hover:bg-surface-light dark:hover:bg-surface-dark"
               aria-label="Скорректировать баланс"
+              title="Скорректировать баланс"
               @click="openAdjustBalance()"
             >
               <UIcon name="tune" size="sm" />
