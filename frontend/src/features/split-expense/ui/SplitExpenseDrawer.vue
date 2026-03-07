@@ -61,6 +61,7 @@ function setupKeyboardListener() {
     const offset = Math.max(0, window.innerHeight - vv.height);
     const keyboardVisible = offset > 0;
     drawerEl.style.bottom = offset > 0 ? `${offset}px` : '';
+    drawerEl.style.top = offset > 0 ? 'env(safe-area-inset-top, 0px)' : '';
     drawerEl.style.maxHeight = offset > 0 ? `${window.innerHeight - offset}px` : '';
     if (footerEl) {
       footerEl.style.paddingBottom = offset > 0 ? '0.75rem' : '';
@@ -80,6 +81,7 @@ function setupKeyboardListener() {
     vv.removeEventListener('resize', onResize);
     vv.removeEventListener('scroll', onResize);
     drawerEl.style.bottom = '';
+    drawerEl.style.top = '';
     drawerEl.style.maxHeight = '';
     if (footerEl) footerEl.style.paddingBottom = '';
     if (scrollEl) scrollEl.style.paddingBottom = '';
@@ -479,7 +481,7 @@ onBeforeUnmount(() => {
         <!-- Footer -->
         <div
           ref="footerRef"
-          class="px-5 pt-3 border-t border-border-light dark:border-border-dark"
+          class="px-5 py-3 border-t border-border-light dark:border-border-dark"
           style="padding-bottom: calc(env(safe-area-inset-bottom, 16px) + 1.5rem)"
         >
           <UButton
