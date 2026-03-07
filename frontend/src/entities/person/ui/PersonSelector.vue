@@ -64,7 +64,7 @@ function handleFocus() {
 function handleBlur() {
   blurTimeout = setTimeout(() => {
     isFocused.value = false;
-  }, 150);
+  }, 300);
 }
 
 function selectPerson(person: Person) {

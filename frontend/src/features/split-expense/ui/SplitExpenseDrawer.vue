@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, type ComponentPublicInstance } from 'vue';
+import { ref, computed, watch, nextTick, onBeforeUnmount, type ComponentPublicInstance } from 'vue';
 import {
   DrawerRoot,
   DrawerPortal,
@@ -38,18 +38,50 @@ const { people, createPerson } = usePeople(userId);
 
 const newParticipantName = ref('');
 
-// Fix iOS keyboard pushing drawer content off-screen.
-// iOS scrolls the document body instead of the drawer's overflow container.
-function handleScrollToFocused(e: FocusEvent) {
-  const target = e.target as HTMLElement;
-  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
-    setTimeout(() => {
+// Track iOS virtual keyboard via visualViewport to position drawer above it
+const keyboardOffset = ref(0);
+let cleanupViewport: (() => void) | null = null;
+
+function setupKeyboardListener() {
+  const vv = window.visualViewport;
+  if (!vv) return;
+
+  const onResize = () => {
+    const offset = Math.max(0, window.innerHeight - vv.height);
+    keyboardOffset.value = offset;
+    // Reset any body scroll iOS may have caused
+    if (offset > 0) {
       document.documentElement.scrollTop = 0;
       document.body.scrollTop = 0;
-      target.scrollIntoView({ block: 'center', behavior: 'smooth' });
-    }, 300);
-  }
+    }
+  };
+
+  vv.addEventListener('resize', onResize);
+  vv.addEventListener('scroll', onResize);
+  cleanupViewport = () => {
+    vv.removeEventListener('resize', onResize);
+    vv.removeEventListener('scroll', onResize);
+    keyboardOffset.value = 0;
+  };
 }
+
+function cleanupKeyboardListener() {
+  cleanupViewport?.();
+  cleanupViewport = null;
+}
+
+onBeforeUnmount(() => cleanupKeyboardListener());
+
+const drawerStyle = computed(() => {
+  if (keyboardOffset.value > 0) {
+    const available = window.innerHeight - keyboardOffset.value;
+    return {
+      bottom: `${keyboardOffset.value}px`,
+      maxHeight: `${available}px`,
+    };
+  }
+  return { maxHeight: '90dvh' };
+});
 
 const availablePeople = computed(() => {
   const addedNames = new Set(props.splitData.participants.map((p) => p.personName.toLowerCase()));
@@ -143,12 +175,17 @@ function handleOpenChange(open: boolean) {
   emit('update:open', open);
 }
 
-// Auto-enable split when drawer opens
+// Auto-enable split when drawer opens + setup keyboard listener
 watch(
   () => props.open,
   (isOpen) => {
-    if (isOpen && !props.splitData.enabled) {
-      emit('setEnabled', true);
+    if (isOpen) {
+      if (!props.splitData.enabled) {
+        emit('setEnabled', true);
+      }
+      setupKeyboardListener();
+    } else {
+      cleanupKeyboardListener();
     }
   },
 );
@@ -160,7 +197,7 @@ watch(
       <DrawerOverlay class="fixed inset-0 z-50 bg-black/40" />
       <DrawerContent
         class="fixed bottom-0 left-0 right-0 z-50 flex flex-col rounded-t-2xl bg-card-light dark:bg-card-dark border-t border-border-light dark:border-border-dark"
-        :style="{ maxHeight: '90dvh' }"
+        :style="drawerStyle"
       >
         <!-- Handle -->
         <div class="flex justify-center pt-3 pb-1">
@@ -186,7 +223,7 @@ watch(
         <!-- Scrollable content -->
         <div
           class="flex-1 overflow-y-auto px-5 pb-5 space-y-4 overscroll-contain"
-          @focusin="handleScrollToFocused"
+          data-vaul-no-drag
         >
           <!-- Person search -->
           <PersonSelector
