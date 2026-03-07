@@ -735,6 +735,10 @@ export class TransactionRepository implements ITransactionRepository {
   async getDailyStats(userId: string, options: DailyStatsOptions): Promise<DailyStatsEntry[]> {
     const { startDate, endDate, accountIds, groupBy = 'day' } = options;
 
+    // Defense-in-depth: validate groupBy before SQL interpolation
+    const allowedGroupBy = ['day', 'week', 'month'] as const;
+    const safeGroupBy = (allowedGroupBy as readonly string[]).includes(groupBy) ? groupBy : 'day';
+
     let query = this.ormRepository
       .createQueryBuilder('t')
       .where('t.user_id = :userId', { userId })
@@ -751,7 +755,7 @@ export class TransactionRepository implements ITransactionRepository {
     }
 
     const rows = await query
-      .select(`date_trunc('${groupBy}', t.date)`, 'period')
+      .select(`date_trunc('${safeGroupBy}', t.date)`, 'period')
       .addSelect('t.type', 'type')
       .addSelect('t.currency', 'currency')
       .addSelect('SUM(t.amount)', 'total')
@@ -794,11 +798,11 @@ export class TransactionRepository implements ITransactionRepository {
     end.setHours(0, 0, 0, 0);
 
     // Truncate start to period boundary
-    if (groupBy === 'week') {
+    if (safeGroupBy === 'week') {
       const day = current.getDay();
       const diff = day === 0 ? 6 : day - 1; // Monday = start of week
       current.setDate(current.getDate() - diff);
-    } else if (groupBy === 'month') {
+    } else if (safeGroupBy === 'month') {
       current.setDate(1);
     }
 
@@ -812,9 +816,9 @@ export class TransactionRepository implements ITransactionRepository {
       result.push(entry);
 
       // Advance to next period
-      if (groupBy === 'week') {
+      if (safeGroupBy === 'week') {
         current.setDate(current.getDate() + 7);
-      } else if (groupBy === 'month') {
+      } else if (safeGroupBy === 'month') {
         current.setMonth(current.getMonth() + 1);
       } else {
         current.setDate(current.getDate() + 1);
