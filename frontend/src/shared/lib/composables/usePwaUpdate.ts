@@ -7,6 +7,7 @@ const UPDATE_CHECK_INTERVAL = 60 * 60 * 1000; // 1 hour
 // Singleton state — SW registration happens once in App.vue
 const needRefresh: Ref<boolean> = ref(false);
 const updateServiceWorker = ref<(reloadPage?: boolean) => Promise<void>>();
+let swRegistration: ServiceWorkerRegistration | undefined;
 
 let initialized = false;
 
@@ -16,6 +17,7 @@ export function usePwaUpdate() {
       immediate: true,
       onRegisteredSW(_swUrl, registration) {
         if (!registration) return;
+        swRegistration = registration;
         setInterval(() => {
           registration.update();
         }, UPDATE_CHECK_INTERVAL);
@@ -27,9 +29,25 @@ export function usePwaUpdate() {
     initialized = true;
   }
 
+  async function checkForUpdate(): Promise<boolean> {
+    if (needRefresh.value) {
+      await updateServiceWorker.value?.(true);
+      return true;
+    }
+    await swRegistration?.update();
+    // Give SW a moment to detect the new version
+    await new Promise((r) => setTimeout(r, 1000));
+    if (needRefresh.value) {
+      await updateServiceWorker.value?.(true);
+      return true;
+    }
+    return false;
+  }
+
   return {
     needRefresh,
     updateServiceWorker: updateServiceWorker.value!,
+    checkForUpdate,
   };
 }
 

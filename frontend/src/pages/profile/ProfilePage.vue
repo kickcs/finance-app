@@ -5,15 +5,17 @@ import type { User } from '@/shared/api/composables/useAuth';
 import { useRouter } from 'vue-router';
 import { ROUTE_NAMES } from '@/app/router/routeNames';
 import { AppHeader } from '@/widgets/header';
-import { UButton, UIcon, UCard, UModal, IconBadge } from '@/shared/ui';
+import { UButton, UIcon, UCard, UModal, IconBadge, useToast } from '@/shared/ui';
 import { getCurrencyByCode } from '@/entities/currency';
 import { useAuth, useProfile } from '@/shared/api';
 import { EditProfileModal } from '@/features/edit-profile';
-import { useChangelog } from '@/features/changelog';
+import { useChangelog, CURRENT_VERSION } from '@/features/changelog';
 import { InstallPwaModal, usePwaInstall } from '@/features/install-pwa';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
+import { useAsyncOperation } from '@/shared/lib/hooks/useAsyncOperation';
 import { SubscriptionSection } from '@/features/manage-subscription';
 import { usePremiumFeature } from '@/shared/lib/composables/usePremiumFeature';
+import { usePwaUpdate } from '@/shared/lib/composables/usePwaUpdate';
 
 const router = useRouter();
 const { signOut } = useAuth();
@@ -40,6 +42,16 @@ const { showModal: showInstallModal, openModal: openInstallModal } = usePwaInsta
 
 // Premium
 const { requirePremium } = usePremiumFeature();
+
+// PWA update
+const { toast } = useToast();
+const { checkForUpdate } = usePwaUpdate();
+const { execute: handleCheckUpdate } = useAsyncOperation(async () => {
+  const hasUpdate = await checkForUpdate();
+  if (!hasUpdate) {
+    toast({ title: 'Вы используете последнюю версию', variant: 'default' });
+  }
+});
 
 // Modal states
 const showLogoutModal = ref(false);
@@ -76,6 +88,13 @@ const appGroup = [
     badge: hasUnseenChanges,
     color: '#ec4899', // pink
   },
+  {
+    id: 'update',
+    icon: 'refresh',
+    label: 'Обновление',
+    value: () => `v${CURRENT_VERSION}`,
+    color: '#10b981', // success
+  },
   { id: 'about', icon: 'info', label: 'О приложении', color: '#64748b' }, // slate
 ];
 
@@ -99,6 +118,9 @@ function handleMenuClick(itemId: string) {
       break;
     case 'quick-actions':
       router.push({ name: ROUTE_NAMES.SETTINGS_QUICK_ACTIONS });
+      break;
+    case 'update':
+      handleCheckUpdate();
       break;
     case 'about':
       openInstallModal();
