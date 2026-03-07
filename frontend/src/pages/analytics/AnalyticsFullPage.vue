@@ -5,7 +5,6 @@ import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 import { AppHeader } from '@/widgets/header';
 import { UTabs, SectionHeader } from '@/shared/ui';
 import { formatCurrency, COMPACT_FORMAT } from '@/shared/lib/format/currency';
-import { useExchangeRates } from '@/shared/api';
 import { useAnalyticsStats } from '@/entities/transaction';
 import { toLocalISODate } from '@/shared/lib/date';
 import { useAccounts } from '@/entities/account';
@@ -65,17 +64,8 @@ const {
   accountIds: computed(() => filters.value.selectedAccountIds),
 });
 
-// Load accounts for filter chips and balance
-const { accounts, totalBalancesByCurrency } = useAccounts(userId);
-
-// Exchange rates for currency conversion
-const { convert } = useExchangeRates(currency);
-
-// Total balance converted to user's main currency
-const totalBalance = computed((): number => {
-  const balances: Record<string, number> = totalBalancesByCurrency.value;
-  return Object.entries(balances).reduce((sum, [curr, amount]) => sum + convert(amount, curr), 0);
-});
+// Load accounts for filter chips
+const { accounts } = useAccounts(userId);
 
 // Load debts for debt summary
 const { debts } = useDebts(userId);
@@ -211,7 +201,7 @@ function handlePeriodChange(value: string | number) {
         <!-- Daily Stats Cards -->
         <DailyStatsCards
           :total-expense="totalExpense"
-          :total-income="totalIncome"
+          :available-balance="totalIncome - totalExpense"
           :days-in-period="daysInPeriod"
           :days-remaining-in-month="daysRemainingInMonth"
           :currency="currency"
@@ -225,7 +215,6 @@ function handlePeriodChange(value: string | number) {
           :total-income="totalIncome"
           :total-expense="totalExpense"
           :currency="currency"
-          :total-balance="totalBalance"
         />
       </div>
 

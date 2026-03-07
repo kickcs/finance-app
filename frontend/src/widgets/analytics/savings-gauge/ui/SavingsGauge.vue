@@ -8,7 +8,6 @@ const props = defineProps<{
   totalIncome: number;
   totalExpense: number;
   currency: string;
-  totalBalance?: number;
 }>();
 
 // Animation state
@@ -19,15 +18,10 @@ useTimeoutFn(() => {
 }, 100);
 
 // Savings calculations
-const savings = computed(() =>
-  props.totalBalance !== undefined ? props.totalBalance : props.totalIncome - props.totalExpense,
-);
+const savings = computed(() => props.totalIncome - props.totalExpense);
 
 const savingsRate = computed(() => {
   if (props.totalIncome <= 0) return 0;
-  if (props.totalBalance !== undefined) {
-    return (props.totalBalance / props.totalIncome) * 100;
-  }
   return ((props.totalIncome - props.totalExpense) / props.totalIncome) * 100;
 });
 
@@ -201,7 +195,7 @@ const progressOffset = computed(() => {
             />
           </div>
           <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
-            {{ totalBalance !== undefined ? 'Текущий баланс' : 'Сбережения' }}
+            Сбережения
           </span>
         </div>
         <span class="font-bold text-lg" :class="savings >= 0 ? 'text-primary' : 'text-danger'">
@@ -216,7 +210,7 @@ const progressOffset = computed(() => {
       :style="{ backgroundColor: `${currentStatus.color}10` }"
     >
       <p class="text-sm font-medium" :style="{ color: currentStatus.color }">
-        {{ currentStatus.message }}
+        {{ totalIncome <= 0 ? 'Нет дохода за период' : currentStatus.message }}
       </p>
     </div>
   </UCard>

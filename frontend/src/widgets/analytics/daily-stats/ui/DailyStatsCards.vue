@@ -5,10 +5,12 @@ import { formatCurrency } from '@/shared/lib/format/currency';
 
 const props = defineProps<{
   totalExpense: number;
-  totalIncome: number;
+  availableBalance: number;
   daysInPeriod: number;
   daysRemainingInMonth: number;
   currency: string;
+  isPastPeriod?: boolean;
+  balanceLabel?: string;
 }>();
 
 // Average daily expense
@@ -19,9 +21,8 @@ const avgDailyExpense = computed(() => {
 
 // Safe daily spending (how much can be spent per remaining day)
 const safeDaily = computed(() => {
-  if (props.daysRemainingInMonth <= 0) return 0;
-  const remaining = props.totalIncome - props.totalExpense;
-  return remaining / props.daysRemainingInMonth;
+  if (props.daysRemainingInMonth <= 0) return props.availableBalance;
+  return props.availableBalance / props.daysRemainingInMonth;
 });
 
 // Status for safe daily spending
@@ -81,7 +82,7 @@ const statusConfig = {
     </UCard>
 
     <!-- Safe Daily Spending Card -->
-    <UCard padding="md">
+    <UCard v-if="!isPastPeriod" padding="md">
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-3">
           <div
@@ -95,7 +96,17 @@ const statusConfig = {
               Безопасный остаток
             </p>
             <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
-              осталось {{ daysRemainingInMonth }} дн.
+              {{
+                daysRemainingInMonth <= 0
+                  ? 'Последний день'
+                  : `осталось ${daysRemainingInMonth} дн.`
+              }}
+            </p>
+            <p
+              v-if="balanceLabel"
+              class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark mt-0.5"
+            >
+              {{ balanceLabel }}
             </p>
           </div>
         </div>
@@ -103,7 +114,12 @@ const statusConfig = {
           <p class="text-base font-semibold" :class="statusConfig[safeDailyStatus].text">
             {{ formatCurrency(Math.max(0, safeDaily), currency) }}
           </p>
-          <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">/день</p>
+          <p
+            v-if="daysRemainingInMonth > 0"
+            class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
+          >
+            /день
+          </p>
         </div>
       </div>
 
