@@ -145,8 +145,8 @@ function handleInputWrapperPointerDown(event: PointerEvent) {
         class="mt-2 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl max-h-36 overflow-y-auto overflow-x-hidden overscroll-contain"
       >
         <div class="p-2">
-          <!-- Existing Contacts (2-column grid) -->
-          <div class="grid grid-cols-2 gap-1.5">
+          <!-- Existing Contacts -->
+          <div class="grid grid-cols-1 gap-1">
             <button
               v-for="(person, i) in filteredPeople"
               :key="person.id"
