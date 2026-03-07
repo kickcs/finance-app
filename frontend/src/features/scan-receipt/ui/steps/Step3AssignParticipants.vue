@@ -5,7 +5,7 @@ import { pluralize } from '@/shared/lib/format/pluralize';
 import { useHaptics } from '@/shared/lib/haptics';
 import { usePeople } from '@/entities/person';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
-import type { ReceiptItem, Participant } from '../../model/types';
+import type { ReceiptItem, ReceiptCharge, Participant } from '../../model/types';
 import { ALL_PARTICIPANTS_ID, ALL_PARTICIPANTS_COLOR } from '../../model/constants';
 import ParticipantChip from '../ParticipantChip.vue';
 import AssignableItemRow from '../AssignableItemRow.vue';
@@ -16,7 +16,7 @@ const props = defineProps<{
   currency: string;
   hasMe: boolean;
   unassignedCount: number;
-  serviceChargePercent: number | null;
+  charges: ReceiptCharge[];
 }>();
 const emit = defineEmits<{
   addParticipant: [name: string, isMe: boolean];
@@ -332,7 +332,7 @@ function handleTapRow(item: ReceiptItem) {
           :item="item"
           :participants="participants"
           :currency="currency"
-          :service-charge-percent="serviceChargePercent"
+          :charges="charges"
           :active-brush-id="activeParticipantId"
           @tap-row="handleTapRow(item)"
         />

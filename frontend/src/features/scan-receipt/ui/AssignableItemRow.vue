@@ -4,15 +4,15 @@ import { UIcon } from '@/shared/ui';
 import { cn } from '@/shared/lib/utils';
 import { getInitial } from '@/shared/lib/format/text';
 import { formatCurrency } from '@/shared/lib/format/currency';
-import { calcLineTotalWithService } from '../model/calcLineTotal';
+import { calcLineTotalWithCharges } from '../model/calcLineTotal';
 import { ALL_PARTICIPANTS_ID } from '../model/constants';
-import type { ReceiptItem, Participant } from '../model/types';
+import type { ReceiptItem, ReceiptCharge, Participant } from '../model/types';
 
 const props = defineProps<{
   item: ReceiptItem;
   participants: Participant[];
   currency: string;
-  serviceChargePercent?: number | null;
+  charges?: ReceiptCharge[];
   activeBrushId?: string | null;
 }>();
 
@@ -39,7 +39,7 @@ function getParticipantColor(participantId: string): string {
 }
 
 const displayTotal = computed(() =>
-  calcLineTotalWithService(props.item, props.serviceChargePercent),
+  calcLineTotalWithCharges(props.item, props.charges ?? []),
 );
 
 const perPersonAmount = computed(() => {

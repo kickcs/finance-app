@@ -11,7 +11,7 @@ import { CalendarDate, type DateValue } from '@internationalized/date';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { pluralize } from '@/shared/lib/format/pluralize';
 import { useHaptics } from '@/shared/lib/haptics';
-import type { ParticipantSummary, ScanReceiptFormData } from '../../model/types';
+import type { ParticipantSummary, ReceiptCharge, ScanReceiptFormData } from '../../model/types';
 import type { AccountWithBalances } from '@/entities/account';
 import { useReceiptShare, type ReceiptShareData } from '../../model/useReceiptShare';
 import PersonSummaryCard from '../PersonSummaryCard.vue';
@@ -22,8 +22,8 @@ const props = defineProps<{
   formData: ScanReceiptFormData;
   accounts: AccountWithBalances[];
   subtotal: number;
-  serviceChargePercent: number | null;
-  serviceChargeAmount: number;
+  charges: ReceiptCharge[];
+  chargesAmount: number;
   totalAmount: number;
   storeName: string | null;
   isSubmitting: boolean;
@@ -94,14 +94,17 @@ const shareActions = computed(() => [
   { icon: 'download', label: 'Сохранить', action: () => saveToGallery(shareData.value) },
 ]);
 
+const enabledCharges = computed(() => props.charges.filter((c) => c.enabled));
+const hasCharges = computed(() => enabledCharges.value.length > 0 && props.chargesAmount > 0);
+
 const shareData = computed<ReceiptShareData>(() => ({
   storeName: props.storeName,
   date: props.formData.date,
   currency: props.currency,
   totalAmount: props.totalAmount,
   subtotal: props.subtotal,
-  serviceChargePercent: props.serviceChargePercent,
-  serviceChargeAmount: props.serviceChargeAmount,
+  charges: props.charges,
+  chargesAmount: props.chargesAmount,
   participants: props.participantSummaries,
 }));
 </script>
@@ -195,10 +198,11 @@ const shareData = computed<ReceiptShareData>(() => ({
             </div>
 
             <p
-              v-if="serviceChargePercent && serviceChargeAmount > 0"
+              v-if="hasCharges"
               class="text-[10px] text-text-tertiary-light dark:text-text-tertiary-dark text-center mt-6"
             >
-              Суммы включают {{ serviceChargePercent }}% за обслуживание
+              Суммы включают
+              {{ enabledCharges.map((c) => `${c.percent}% ${c.label.toLowerCase()}`).join(', ') }}
             </p>
 
             <!-- Watermark for shared image (hidden in UI via CSS, shown in canvas) -->
@@ -278,7 +282,7 @@ const shareData = computed<ReceiptShareData>(() => ({
         </div>
 
         <div class="relative z-10">
-          <template v-if="serviceChargePercent && serviceChargeAmount > 0">
+          <template v-if="hasCharges">
             <div class="flex justify-between items-baseline mb-1.5">
               <span
                 class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark uppercase tracking-wider font-medium"
@@ -291,12 +295,16 @@ const shareData = computed<ReceiptShareData>(() => ({
                 {{ formatCurrency(subtotal, currency) }}
               </span>
             </div>
-            <div class="flex justify-between items-baseline mb-3">
+            <div
+              v-for="charge in enabledCharges"
+              :key="charge.id"
+              class="flex justify-between items-baseline mb-1.5"
+            >
               <span class="text-xs text-primary uppercase tracking-wider font-medium">
-                Обсл. ({{ serviceChargePercent }}%)
+                {{ charge.label }} ({{ charge.percent }}%)
               </span>
               <span class="text-sm text-primary tabular-nums">
-                +{{ formatCurrency(serviceChargeAmount, currency) }}
+                +{{ formatCurrency(Math.round((subtotal * charge.percent) / 100), currency) }}
               </span>
             </div>
             <div
