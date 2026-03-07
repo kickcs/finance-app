@@ -45,9 +45,10 @@ const drawerContentRef = ref<InstanceType<typeof DrawerContent> | null>(null);
 const footerRef = ref<HTMLDivElement | null>(null);
 const scrollContainerRef = ref<HTMLDivElement | null>(null);
 let cleanupViewport: (() => void) | null = null;
-let cleanupBodyScrollLock: (() => void) | null = null;
 
 function setupKeyboardListener() {
+  cleanupKeyboardListener();
+
   const vv = window.visualViewport;
   if (!vv) return;
 
@@ -90,37 +91,6 @@ function setupKeyboardListener() {
 function cleanupKeyboardListener() {
   cleanupViewport?.();
   cleanupViewport = null;
-}
-
-function setupBodyScrollLock() {
-  const body = document.body;
-  const docEl = document.documentElement;
-  const scrollY = window.scrollY;
-  const previousBodyOverflow = body.style.overflow;
-  const previousBodyPosition = body.style.position;
-  const previousBodyTop = body.style.top;
-  const previousBodyWidth = body.style.width;
-  const previousDocOverscroll = docEl.style.overscrollBehavior;
-
-  body.style.overflow = 'hidden';
-  body.style.position = 'fixed';
-  body.style.top = `-${scrollY}px`;
-  body.style.width = '100%';
-  docEl.style.overscrollBehavior = 'none';
-
-  cleanupBodyScrollLock = () => {
-    body.style.overflow = previousBodyOverflow;
-    body.style.position = previousBodyPosition;
-    body.style.top = previousBodyTop;
-    body.style.width = previousBodyWidth;
-    docEl.style.overscrollBehavior = previousDocOverscroll;
-    window.scrollTo(0, scrollY);
-  };
-}
-
-function cleanupBodyLock() {
-  cleanupBodyScrollLock?.();
-  cleanupBodyScrollLock = null;
 }
 
 const availablePeople = computed(() => {
@@ -218,23 +188,22 @@ function handleOpenChange(open: boolean) {
 // Auto-enable split when drawer opens + setup keyboard listener
 watch(
   () => props.open,
-  (isOpen) => {
+  async (isOpen) => {
     if (isOpen) {
       if (!props.splitData.enabled) {
         emit('setEnabled', true);
       }
-      setupBodyScrollLock();
+      await nextTick();
+      if (!props.open) return;
       setupKeyboardListener();
     } else {
       cleanupKeyboardListener();
-      cleanupBodyLock();
     }
   },
 );
 
 onBeforeUnmount(() => {
   cleanupKeyboardListener();
-  cleanupBodyLock();
 });
 </script>
 
@@ -244,8 +213,7 @@ onBeforeUnmount(() => {
       <DrawerOverlay class="fixed inset-0 z-50 bg-black/40" />
       <DrawerContent
         ref="drawerContentRef"
-        class="fixed bottom-0 left-0 right-0 z-50 flex flex-col rounded-t-2xl bg-card-light dark:bg-card-dark border-t border-border-light dark:border-border-dark"
-        style="max-height: 90dvh"
+        class="fixed bottom-0 left-0 right-0 z-50 flex flex-col rounded-t-2xl bg-card-light dark:bg-card-dark border-t border-border-light dark:border-border-dark max-h-[90dvh]"
       >
         <!-- Handle -->
         <div class="flex justify-center pt-3 pb-1">
