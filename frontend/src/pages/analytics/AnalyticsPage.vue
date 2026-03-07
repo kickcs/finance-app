@@ -11,12 +11,10 @@ import {
   PeriodComparison,
   type DonutSegment,
 } from '@/widgets/analytics';
-import { UTabs, UCard, UProgressBar, EmptyState, Skeleton, IconBadge } from '@/shared/ui';
+import { UTabs, UCard, EmptyState, Skeleton } from '@/shared/ui';
 import { useDailyStats } from '@/entities/transaction';
 import { useAccounts } from '@/entities/account';
-import { useExchangeRates } from '@/shared/api';
-import { toLocalISODate } from '@/shared/lib/date';
-import { formatCurrency, COMPACT_FORMAT } from '@/shared/lib/format/currency';
+import { toLocalISODate, isPastDate } from '@/shared/lib/date';
 import {
   DateRangePicker,
   FilterChips,
@@ -105,9 +103,6 @@ const {
   isFetching: analyticsFetching,
 } = useConvertedAnalytics(analyticsOptions, currency);
 
-// --- Exchange rates for balance conversion ---
-const { convert } = useExchangeRates(currency);
-
 // --- Available balance (for safe daily spending) ---
 const availableBalance = computed(() => {
   const selectedIds = filters.value.selectedAccountIds;
@@ -121,7 +116,7 @@ const availableBalance = computed(() => {
       sum +
       acc.balances.reduce((bSum, b) => {
         const bal = acc.type === 'credit_card' ? Math.max(0, b.balance) : b.balance;
-        return bSum + convert(bal, b.currency);
+        return bSum + convertAmount(bal, b.currency);
       }, 0)
     );
   }, 0);
@@ -135,11 +130,7 @@ const balanceLabel = computed(() =>
 const isPastPeriod = computed(() => {
   const end = effectiveDateRange.value.endDate;
   if (!end) return false;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const endDay = new Date(end);
-  endDay.setHours(0, 0, 0, 0);
-  return endDay < today;
+  return isPastDate(toLocalISODate(end));
 });
 
 // --- Empty state ---
@@ -195,7 +186,7 @@ const chartEntries = computed(() =>
   dailyEntries.value.map((e) => ({
     date: e.date,
     expense: Object.entries(e.expenseByCurrency).reduce(
-      (sum, [curr, amt]) => sum + convert(amt, curr),
+      (sum, [curr, amt]) => sum + convertAmount(amt, curr),
       0,
     ),
   })),
@@ -264,15 +255,14 @@ onMounted(() => {
 
 <template>
   <div
-    class="h-full flex flex-col relative bg-background-light dark:bg-background-dark overflow-y-auto"
-    :style="{ paddingBottom: 'calc(2rem + env(safe-area-inset-bottom, 0px))' }"
+    class="h-full flex flex-col relative bg-background-light dark:bg-background-dark overflow-y-auto pb-28 md:pb-8"
   >
     <!-- Header -->
     <AppHeader title="Аналитика" />
 
     <!-- Sticky filters + tabs -->
     <div
-      class="sticky z-20 -mx-0 px-5 py-2 space-y-3 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-border-light/50 dark:border-border-dark/50 shadow-sm"
+      class="sticky z-20 px-5 py-2 space-y-3 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-border-light/50 dark:border-border-dark/50 shadow-sm"
       :style="{ top: 'calc(3rem + env(safe-area-inset-top, 0px))' }"
     >
       <!-- Period Tabs -->
@@ -358,6 +348,7 @@ onMounted(() => {
             <SavingsGauge
               :total-income="convertedIncome"
               :total-expense="convertedExpense"
+              :available-balance="availableBalance"
               :currency="currency"
             />
           </template>
@@ -395,33 +386,13 @@ onMounted(() => {
           </template>
 
           <template v-else>
-            <!-- Donut Chart -->
-            <div v-if="donutSegments.length > 0" class="flex justify-center py-2">
-              <DonutChart :segments="donutSegments" :total="donutTotal" :currency="currency" />
-            </div>
-
-            <!-- Category List -->
-            <div v-if="categoryStats.length > 0" class="space-y-3">
-              <UCard v-for="stat in categoryStats" :key="stat.id" class="p-4">
-                <div class="flex items-center gap-3 mb-3">
-                  <IconBadge :icon="stat.icon" size="md" :color="stat.color" class="shrink-0" />
-                  <div class="flex-1">
-                    <p class="font-medium text-text-primary-light dark:text-text-primary-dark">
-                      {{ stat.name }}
-                    </p>
-                    <p
-                      class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark"
-                    >
-                      {{ stat.percent.toFixed(1) }}%
-                    </p>
-                  </div>
-                  <p class="font-semibold text-text-primary-light dark:text-text-primary-dark">
-                    {{ formatCurrency(stat.amount, currency, COMPACT_FORMAT) }}
-                  </p>
-                </div>
-                <UProgressBar :value="stat.percent" :color="stat.color" size="sm" />
-              </UCard>
-            </div>
+            <!-- Donut Chart with legend -->
+            <DonutChart
+              v-if="donutSegments.length > 0"
+              :segments="donutSegments"
+              :total="donutTotal"
+              :currency="currency"
+            />
 
             <!-- Empty -->
             <UCard v-else variant="bordered" class="py-4">

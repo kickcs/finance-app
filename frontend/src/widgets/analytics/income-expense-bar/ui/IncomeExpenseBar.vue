@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { UCard, Skeleton } from '@/shared/ui';
+import { UCard, UProgressBar, Skeleton } from '@/shared/ui';
 import { formatCurrency, COMPACT_FORMAT } from '@/shared/lib/format/currency';
 
 const props = defineProps<{
@@ -46,12 +46,7 @@ const balance = computed(() => props.income - props.expense);
             +{{ formatCurrency(income, currency, COMPACT_FORMAT) }}
           </span>
         </div>
-        <div class="h-2.5 bg-surface-light dark:bg-surface-dark rounded-full overflow-hidden">
-          <div
-            class="h-full bg-success rounded-full transition-all duration-500 ease-out"
-            :style="{ width: `${incomeWidth}%` }"
-          />
-        </div>
+        <UProgressBar :value="incomeWidth" color="success" size="lg" />
       </div>
 
       <!-- Expense bar -->
@@ -64,12 +59,7 @@ const balance = computed(() => props.income - props.expense);
             -{{ formatCurrency(expense, currency, COMPACT_FORMAT) }}
           </span>
         </div>
-        <div class="h-2.5 bg-surface-light dark:bg-surface-dark rounded-full overflow-hidden">
-          <div
-            class="h-full bg-danger rounded-full transition-all duration-500 ease-out"
-            :style="{ width: `${expenseWidth}%` }"
-          />
-        </div>
+        <UProgressBar :value="expenseWidth" color="danger" size="lg" />
       </div>
 
       <!-- Balance -->

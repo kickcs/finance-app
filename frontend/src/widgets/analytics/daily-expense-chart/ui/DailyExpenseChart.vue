@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue';
 import { UCard, Skeleton } from '@/shared/ui';
 import { formatCurrency, COMPACT_FORMAT } from '@/shared/lib/format/currency';
+import { formatDate } from '@/shared/lib/format/date';
 
 const props = withDefaults(
   defineProps<{
@@ -16,6 +17,8 @@ const props = withDefaults(
 );
 
 const selectedIndex = ref<number | null>(null);
+
+const skeletonHeights = [35, 65, 50, 80, 45, 70, 30];
 
 const title = computed(() => {
   switch (props.groupBy) {
@@ -66,9 +69,6 @@ function formatLabel(dateStr: string): string {
   if (props.groupBy === 'month') {
     return date.toLocaleDateString('ru-RU', { month: 'short' });
   }
-  if (props.groupBy === 'week') {
-    return `${date.getDate()}`;
-  }
   return `${date.getDate()}`;
 }
 
@@ -91,11 +91,7 @@ const selectedEntry = computed(() => {
 });
 
 function formatTooltipDate(dateStr: string): string {
-  const date = new Date(dateStr + 'T00:00:00');
-  return date.toLocaleDateString('ru-RU', {
-    day: 'numeric',
-    month: 'short',
-  });
+  return formatDate(dateStr + 'T00:00:00', { format: 'short' });
 }
 </script>
 
@@ -108,10 +104,10 @@ function formatTooltipDate(dateStr: string): string {
     <!-- Loading skeleton -->
     <div v-if="loading" class="flex items-end gap-1 h-[160px]">
       <Skeleton
-        v-for="i in 7"
+        v-for="(h, i) in skeletonHeights"
         :key="i"
         class="flex-1 rounded-t"
-        :style="{ height: `${20 + Math.random() * 60}%` }"
+        :style="{ height: `${h}%` }"
       />
     </div>
 
