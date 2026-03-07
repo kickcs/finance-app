@@ -35,6 +35,21 @@ export const transactionQueryKeys = {
       accountIds.join(','),
     ] as const,
   analyticsStatsPrefix: () => [...transactionQueryKeys.all, 'analytics-stats'] as const,
+  dailyStats: (
+    startDate: string | null,
+    endDate: string | null,
+    accountIds: string[],
+    groupBy?: string,
+  ) =>
+    [
+      ...transactionQueryKeys.all,
+      'daily-stats',
+      startDate,
+      endDate,
+      accountIds.join(','),
+      groupBy,
+    ] as const,
+  dailyStatsPrefix: () => [...transactionQueryKeys.all, 'daily-stats'] as const,
   hashtags: (userId: string) => [...transactionQueryKeys.all, 'hashtags', userId] as const,
 };
 

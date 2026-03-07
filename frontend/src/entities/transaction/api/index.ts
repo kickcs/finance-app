@@ -15,4 +15,6 @@ export { useMonthlyStats } from './useMonthlyStats';
 export { useAnalyticsStats } from './useAnalyticsStats';
 export { useRecentTransactions } from './useRecentTransactions';
 export { useHashtags } from './useHashtags';
+export { useDailyStats } from './useDailyStats';
+export type { DailyStatsEntry, DailyStatsOptions } from './transactionsApi';
 export { transactionQueryKeys, type TransactionQueryKeys } from './queryKeys';
