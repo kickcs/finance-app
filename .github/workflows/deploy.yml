@@ -406,11 +406,32 @@ jobs:
               docker image prune -f > /dev/null 2>&1
             ' > /dev/null 2>&1 &
 
-      - name: Deployment notification
+      - name: Telegram notification
         if: always()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          DEPLOY_STATUS: ${{ job.status }}
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
         run: |
-          if [ "${{ job.status }}" == "success" ]; then
-            echo "Deployment successful!"
+          if [ "$DEPLOY_STATUS" == "success" ]; then
+            EMOJI="✅"
+            STATUS="Успешно"
           else
-            echo "Deployment failed!"
+            EMOJI="❌"
+            STATUS="Ошибка"
           fi
+
+          TEXT="${EMOJI} <b>Deploy ${STATUS}</b>
+          <b>Repo:</b> ${{ github.repository }}
+          <b>Branch:</b> ${{ github.ref_name }}
+          <b>Commit:</b> <code>${{ github.sha }}</code>
+          <b>Сообщение:</b> $(echo "$COMMIT_MSG" | head -1)
+          <b>Автор:</b> ${{ github.actor }}
+          <a href=\"https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\">Открыть в GitHub Actions</a>"
+
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d chat_id="${TELEGRAM_CHAT_ID}" \
+            -d parse_mode="HTML" \
+            -d text="$TEXT" \
+            -d disable_web_page_preview=true
