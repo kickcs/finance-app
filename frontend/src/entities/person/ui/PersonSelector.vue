@@ -25,6 +25,7 @@ const emit = defineEmits<{
 }>();
 
 const isFocused = ref(false);
+const inputRef = ref<InstanceType<typeof UInput> | null>(null);
 let blurTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const sortedPeople = computed(() => {
@@ -89,6 +90,14 @@ function handleSaveAndAdd() {
   emit('select', name);
   isFocused.value = false;
 }
+
+function handleInputWrapperPointerDown(event: PointerEvent) {
+  if (!event.isPrimary) return;
+  requestAnimationFrame(() => {
+    inputRef.value?.focus();
+    isFocused.value = true;
+  });
+}
 </script>
 
 <template>
@@ -100,23 +109,27 @@ function handleSaveAndAdd() {
     </div>
 
     <!-- Input -->
-    <UInput
-      :model-value="String(modelValue)"
-      type="text"
-      :placeholder="placeholder"
-      @update:model-value="handleInput"
-      @focus="handleFocus"
-      @blur="handleBlur"
-      @keydown="
-        (e: KeyboardEvent) => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            if (canSave) handleAdd();
-            else if (filteredPeople.length > 0) selectPerson(filteredPeople[0]);
+    <div data-vaul-no-drag @pointerdown.capture="handleInputWrapperPointerDown">
+      <UInput
+        ref="inputRef"
+        data-vaul-no-drag
+        :model-value="String(modelValue)"
+        type="text"
+        :placeholder="placeholder"
+        @update:model-value="handleInput"
+        @focus="handleFocus"
+        @blur="handleBlur"
+        @keydown="
+          (e: KeyboardEvent) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              if (canSave) handleAdd();
+              else if (filteredPeople.length > 0) selectPerson(filteredPeople[0]);
+            }
           }
-        }
-      "
-    />
+        "
+      />
+    </div>
 
     <!-- Inline list (in-flow, not absolute) -->
     <Transition

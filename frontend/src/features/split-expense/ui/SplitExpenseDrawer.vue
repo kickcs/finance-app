@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, type ComponentPublicInstance } from 'vue';
+import { ref, computed, watch, nextTick, onBeforeUnmount, type ComponentPublicInstance } from 'vue';
 import {
   DrawerRoot,
   DrawerPortal,
@@ -43,7 +43,9 @@ const newParticipantName = ref('');
 // that cause input focus loss when the keyboard appears.
 const drawerContentRef = ref<InstanceType<typeof DrawerContent> | null>(null);
 const footerRef = ref<HTMLDivElement | null>(null);
+const scrollContainerRef = ref<HTMLDivElement | null>(null);
 let cleanupViewport: (() => void) | null = null;
+let cleanupBodyScrollLock: (() => void) | null = null;
 
 function setupKeyboardListener() {
   const vv = window.visualViewport;
@@ -51,16 +53,21 @@ function setupKeyboardListener() {
 
   const drawerEl = drawerContentRef.value?.$el as HTMLElement | undefined;
   const footerEl = footerRef.value;
+  const scrollEl = scrollContainerRef.value;
   if (!drawerEl) return;
 
   const onResize = () => {
     const offset = Math.max(0, window.innerHeight - vv.height);
+    const keyboardVisible = offset > 0;
     drawerEl.style.bottom = offset > 0 ? `${offset}px` : '';
     drawerEl.style.maxHeight = offset > 0 ? `${window.innerHeight - offset}px` : '';
     if (footerEl) {
       footerEl.style.paddingBottom = offset > 0 ? '0.75rem' : '';
     }
-    if (offset > 0) {
+    if (scrollEl) {
+      scrollEl.style.paddingBottom = keyboardVisible ? '1rem' : '';
+    }
+    if (keyboardVisible) {
       document.documentElement.scrollTop = 0;
       document.body.scrollTop = 0;
     }
@@ -74,12 +81,46 @@ function setupKeyboardListener() {
     drawerEl.style.bottom = '';
     drawerEl.style.maxHeight = '';
     if (footerEl) footerEl.style.paddingBottom = '';
+    if (scrollEl) scrollEl.style.paddingBottom = '';
   };
+
+  onResize();
 }
 
 function cleanupKeyboardListener() {
   cleanupViewport?.();
   cleanupViewport = null;
+}
+
+function setupBodyScrollLock() {
+  const body = document.body;
+  const docEl = document.documentElement;
+  const scrollY = window.scrollY;
+  const previousBodyOverflow = body.style.overflow;
+  const previousBodyPosition = body.style.position;
+  const previousBodyTop = body.style.top;
+  const previousBodyWidth = body.style.width;
+  const previousDocOverscroll = docEl.style.overscrollBehavior;
+
+  body.style.overflow = 'hidden';
+  body.style.position = 'fixed';
+  body.style.top = `-${scrollY}px`;
+  body.style.width = '100%';
+  docEl.style.overscrollBehavior = 'none';
+
+  cleanupBodyScrollLock = () => {
+    body.style.overflow = previousBodyOverflow;
+    body.style.position = previousBodyPosition;
+    body.style.top = previousBodyTop;
+    body.style.width = previousBodyWidth;
+    docEl.style.overscrollBehavior = previousDocOverscroll;
+    window.scrollTo(0, scrollY);
+  };
+}
+
+function cleanupBodyLock() {
+  cleanupBodyScrollLock?.();
+  cleanupBodyScrollLock = null;
 }
 
 const availablePeople = computed(() => {
@@ -182,12 +223,19 @@ watch(
       if (!props.splitData.enabled) {
         emit('setEnabled', true);
       }
+      setupBodyScrollLock();
       setupKeyboardListener();
     } else {
       cleanupKeyboardListener();
+      cleanupBodyLock();
     }
   },
 );
+
+onBeforeUnmount(() => {
+  cleanupKeyboardListener();
+  cleanupBodyLock();
+});
 </script>
 
 <template>
@@ -222,6 +270,7 @@ watch(
 
         <!-- Scrollable content -->
         <div
+          ref="scrollContainerRef"
           class="flex-1 overflow-y-auto px-5 pb-5 space-y-4 overscroll-contain"
           data-vaul-no-drag
         >
