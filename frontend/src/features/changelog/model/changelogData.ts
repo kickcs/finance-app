@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.28';
+export const CURRENT_VERSION = '1.0.29';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,29 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.29',
+    date: '2026-03-08',
+    title: 'Новая аналитика',
+    items: [
+      {
+        type: 'feature',
+        text: 'Полностью переработана страница аналитики: три вкладки (Обзор, Категории, Тренды)',
+      },
+      {
+        type: 'feature',
+        text: 'График расходов по дням и сравнение с прошлым периодом',
+      },
+      {
+        type: 'fix',
+        text: 'Исправлена конвертация валют — все суммы теперь корректно отображаются в вашей валюте',
+      },
+      {
+        type: 'improvement',
+        text: 'Безопасный остаток теперь рассчитывается от реального баланса счетов',
+      },
+    ],
+  },
   {
     version: '1.0.28',
     date: '2026-03-07',
