@@ -19,6 +19,7 @@ import {
   DateRangeDto,
   AccountPaginationDto,
   AnalyticsQueryDto,
+  DailyStatsQueryDto,
   AdjustBalanceDto,
 } from '../dto';
 import {
@@ -38,6 +39,7 @@ import {
   GetTransactionsByAccountPaginatedQuery,
   CountTransactionsByAccountQuery,
   GetHashtagsQuery,
+  GetDailyStatsQuery,
 } from '../../application/queries';
 
 @Controller('transactions')
@@ -78,6 +80,20 @@ export class TransactionsController {
     @Query('month') month: string,
   ): Promise<unknown> {
     return this.queryBus.execute(new GetMonthlyStatsQuery(userId, parseInt(year), parseInt(month)));
+  }
+
+  @Get('stats/daily')
+  async getDailyStats(
+    @CurrentUser('sub') userId: string,
+    @Query() query: DailyStatsQueryDto,
+  ): Promise<unknown> {
+    const startDate = new Date(query.startDate);
+    const endDate = new Date(query.endDate);
+    endDate.setHours(23, 59, 59, 999);
+
+    return this.queryBus.execute(
+      new GetDailyStatsQuery(userId, startDate, endDate, query.accountIds, query.groupBy),
+    );
   }
 
   @Get('stats/analytics')

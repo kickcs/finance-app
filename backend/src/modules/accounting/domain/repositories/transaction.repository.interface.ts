@@ -49,6 +49,19 @@ export interface AnalyticsOptions {
   accountIds?: string[];
 }
 
+export interface DailyStatsOptions {
+  startDate: Date;
+  endDate: Date;
+  accountIds?: string[];
+  groupBy?: 'day' | 'week' | 'month';
+}
+
+export interface DailyStatsEntry {
+  date: string;
+  incomeByCurrency: Record<string, number>;
+  expenseByCurrency: Record<string, number>;
+}
+
 export interface HashtagResult {
   tag: string;
   count: number;
@@ -94,6 +107,8 @@ export interface ITransactionRepository {
   getMonthlyStats(userId: string, year: number, month: number): Promise<MonthlyStats>;
 
   getAnalyticsStats(userId: string, options: AnalyticsOptions): Promise<AnalyticsStats>;
+
+  getDailyStats(userId: string, options: DailyStatsOptions): Promise<DailyStatsEntry[]>;
 
   getHashtags(userId: string): Promise<HashtagResult[]>;
 }

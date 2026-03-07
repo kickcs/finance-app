@@ -11,6 +11,8 @@ export * from './get-monthly-stats/get-monthly-stats.query';
 export * from './get-monthly-stats/get-monthly-stats.handler';
 export * from './get-analytics-stats/get-analytics-stats.query';
 export * from './get-analytics-stats/get-analytics-stats.handler';
+export * from './get-daily-stats/get-daily-stats.query';
+export * from './get-daily-stats/get-daily-stats.handler';
 export * from './get-transaction-by-id/get-transaction-by-id.query';
 export * from './get-transaction-by-id/get-transaction-by-id.handler';
 export * from './get-transactions-by-date-range/get-transactions-by-date-range.query';
@@ -48,6 +50,7 @@ import { GetAccountByIdHandler } from './get-account-by-id/get-account-by-id.han
 import { GetTransactionsPaginatedHandler } from './get-transactions-paginated/get-transactions-paginated.handler';
 import { GetMonthlyStatsHandler } from './get-monthly-stats/get-monthly-stats.handler';
 import { GetAnalyticsStatsHandler } from './get-analytics-stats/get-analytics-stats.handler';
+import { GetDailyStatsHandler } from './get-daily-stats/get-daily-stats.handler';
 import { GetCategoriesHandler } from './get-categories/get-categories.handler';
 import { GetTransactionByIdHandler } from './get-transaction-by-id/get-transaction-by-id.handler';
 import { GetTransactionsByDateRangeHandler } from './get-transactions-by-date-range/get-transactions-by-date-range.handler';
@@ -66,6 +69,7 @@ export const QueryHandlers = [
   GetTransactionsPaginatedHandler,
   GetMonthlyStatsHandler,
   GetAnalyticsStatsHandler,
+  GetDailyStatsHandler,
   GetCategoriesHandler,
   GetTransactionByIdHandler,
   GetTransactionsByDateRangeHandler,
