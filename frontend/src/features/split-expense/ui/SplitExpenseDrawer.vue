@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onBeforeUnmount, type ComponentPublicInstance } from 'vue';
+import { ref, computed, watch, nextTick, type ComponentPublicInstance } from 'vue';
 import {
   DrawerRoot,
   DrawerPortal,
@@ -38,17 +38,10 @@ const { people, createPerson } = usePeople(userId);
 
 const newParticipantName = ref('');
 
-// Track iOS virtual keyboard via visualViewport to position drawer above it
-const keyboardOffset = ref(0);
+// Position drawer above iOS virtual keyboard via direct DOM manipulation.
+// Using direct DOM instead of reactive state to avoid Vue re-renders
+// that cause input focus loss when the keyboard appears.
 let cleanupViewport: (() => void) | null = null;
-let lastFocusedInput: HTMLElement | null = null;
-
-function handleContentFocusIn(e: FocusEvent) {
-  const target = e.target as HTMLElement;
-  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
-    lastFocusedInput = target;
-  }
-}
 
 function setupKeyboardListener() {
   const vv = window.visualViewport;
@@ -56,15 +49,19 @@ function setupKeyboardListener() {
 
   const onResize = () => {
     const offset = Math.max(0, window.innerHeight - vv.height);
-    keyboardOffset.value = offset;
-    // Reset any body scroll iOS may have caused
+    const drawerEl = document.querySelector('[data-split-drawer]') as HTMLElement;
+    const footerEl = document.querySelector('[data-split-drawer-footer]') as HTMLElement;
+
+    if (drawerEl) {
+      drawerEl.style.bottom = offset > 0 ? `${offset}px` : '';
+      drawerEl.style.maxHeight = offset > 0 ? `${window.innerHeight - offset}px` : '';
+    }
+    if (footerEl) {
+      footerEl.style.paddingBottom = offset > 0 ? '0.75rem' : '';
+    }
     if (offset > 0) {
       document.documentElement.scrollTop = 0;
       document.body.scrollTop = 0;
-    }
-    // Re-focus input after drawer repositions to prevent dropdown from closing
-    if (lastFocusedInput && offset > 0) {
-      requestAnimationFrame(() => lastFocusedInput?.focus());
     }
   };
 
@@ -73,30 +70,22 @@ function setupKeyboardListener() {
   cleanupViewport = () => {
     vv.removeEventListener('resize', onResize);
     vv.removeEventListener('scroll', onResize);
-    keyboardOffset.value = 0;
+    const drawerEl = document.querySelector('[data-split-drawer]') as HTMLElement;
+    const footerEl = document.querySelector('[data-split-drawer-footer]') as HTMLElement;
+    if (drawerEl) {
+      drawerEl.style.bottom = '';
+      drawerEl.style.maxHeight = '';
+    }
+    if (footerEl) {
+      footerEl.style.paddingBottom = '';
+    }
   };
 }
 
 function cleanupKeyboardListener() {
   cleanupViewport?.();
   cleanupViewport = null;
-  lastFocusedInput = null;
 }
-
-onBeforeUnmount(() => cleanupKeyboardListener());
-
-const isKeyboardVisible = computed(() => keyboardOffset.value > 0);
-
-const drawerStyle = computed(() => {
-  if (keyboardOffset.value > 0) {
-    const available = window.innerHeight - keyboardOffset.value;
-    return {
-      bottom: `${keyboardOffset.value}px`,
-      maxHeight: `${available}px`,
-    };
-  }
-  return { maxHeight: '90dvh' };
-});
 
 const availablePeople = computed(() => {
   const addedNames = new Set(props.splitData.participants.map((p) => p.personName.toLowerCase()));
@@ -211,8 +200,9 @@ watch(
     <DrawerPortal>
       <DrawerOverlay class="fixed inset-0 z-50 bg-black/40" />
       <DrawerContent
-        class="fixed bottom-0 left-0 right-0 z-50 flex flex-col rounded-t-2xl bg-card-light dark:bg-card-dark border-t border-border-light dark:border-border-dark transition-[bottom,max-height] duration-200 ease-out"
-        :style="drawerStyle"
+        data-split-drawer
+        class="fixed bottom-0 left-0 right-0 z-50 flex flex-col rounded-t-2xl bg-card-light dark:bg-card-dark border-t border-border-light dark:border-border-dark"
+        style="max-height: 90dvh"
       >
         <!-- Handle -->
         <div class="flex justify-center pt-3 pb-1">
@@ -239,8 +229,6 @@ watch(
         <div
           class="flex-1 overflow-y-auto px-5 pb-5 space-y-4 overscroll-contain"
           data-vaul-no-drag
-          @pointerdown.stop
-          @focusin="handleContentFocusIn"
         >
           <!-- Person search -->
           <PersonSelector
@@ -478,13 +466,9 @@ watch(
 
         <!-- Footer -->
         <div
+          data-split-drawer-footer
           class="px-5 pt-3 border-t border-border-light dark:border-border-dark"
-          :class="isKeyboardVisible ? 'pb-3' : ''"
-          :style="
-            isKeyboardVisible
-              ? undefined
-              : { paddingBottom: 'calc(env(safe-area-inset-bottom, 16px) + 1.5rem)' }
-          "
+          style="padding-bottom: calc(env(safe-area-inset-bottom, 16px) + 1.5rem)"
         >
           <UButton
             type="button"
