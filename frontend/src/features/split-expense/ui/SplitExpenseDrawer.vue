@@ -239,6 +239,7 @@ watch(
         <div
           class="flex-1 overflow-y-auto px-5 pb-5 space-y-4 overscroll-contain"
           data-vaul-no-drag
+          @pointerdown.stop
           @focusin="handleContentFocusIn"
         >
           <!-- Person search -->
