@@ -41,6 +41,14 @@ const newParticipantName = ref('');
 // Track iOS virtual keyboard via visualViewport to position drawer above it
 const keyboardOffset = ref(0);
 let cleanupViewport: (() => void) | null = null;
+let lastFocusedInput: HTMLElement | null = null;
+
+function handleContentFocusIn(e: FocusEvent) {
+  const target = e.target as HTMLElement;
+  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+    lastFocusedInput = target;
+  }
+}
 
 function setupKeyboardListener() {
   const vv = window.visualViewport;
@@ -53,6 +61,10 @@ function setupKeyboardListener() {
     if (offset > 0) {
       document.documentElement.scrollTop = 0;
       document.body.scrollTop = 0;
+    }
+    // Re-focus input after drawer repositions to prevent dropdown from closing
+    if (lastFocusedInput && offset > 0) {
+      requestAnimationFrame(() => lastFocusedInput?.focus());
     }
   };
 
@@ -68,9 +80,12 @@ function setupKeyboardListener() {
 function cleanupKeyboardListener() {
   cleanupViewport?.();
   cleanupViewport = null;
+  lastFocusedInput = null;
 }
 
 onBeforeUnmount(() => cleanupKeyboardListener());
+
+const isKeyboardVisible = computed(() => keyboardOffset.value > 0);
 
 const drawerStyle = computed(() => {
   if (keyboardOffset.value > 0) {
@@ -196,7 +211,7 @@ watch(
     <DrawerPortal>
       <DrawerOverlay class="fixed inset-0 z-50 bg-black/40" />
       <DrawerContent
-        class="fixed bottom-0 left-0 right-0 z-50 flex flex-col rounded-t-2xl bg-card-light dark:bg-card-dark border-t border-border-light dark:border-border-dark"
+        class="fixed bottom-0 left-0 right-0 z-50 flex flex-col rounded-t-2xl bg-card-light dark:bg-card-dark border-t border-border-light dark:border-border-dark transition-[bottom,max-height] duration-200 ease-out"
         :style="drawerStyle"
       >
         <!-- Handle -->
@@ -224,6 +239,7 @@ watch(
         <div
           class="flex-1 overflow-y-auto px-5 pb-5 space-y-4 overscroll-contain"
           data-vaul-no-drag
+          @focusin="handleContentFocusIn"
         >
           <!-- Person search -->
           <PersonSelector
@@ -462,7 +478,12 @@ watch(
         <!-- Footer -->
         <div
           class="px-5 pt-3 border-t border-border-light dark:border-border-dark"
-          style="padding-bottom: calc(env(safe-area-inset-bottom, 16px) + 1.5rem)"
+          :class="isKeyboardVisible ? 'pb-3' : ''"
+          :style="
+            isKeyboardVisible
+              ? undefined
+              : { paddingBottom: 'calc(env(safe-area-inset-bottom, 16px) + 1.5rem)' }
+          "
         >
           <UButton
             type="button"
