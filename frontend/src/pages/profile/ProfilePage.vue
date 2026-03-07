@@ -46,7 +46,7 @@ const { requirePremium } = usePremiumFeature();
 // PWA update
 const { toast } = useToast();
 const { checkForUpdate } = usePwaUpdate();
-const { execute: handleCheckUpdate } = useAsyncOperation(async () => {
+const { isLoading: isCheckingUpdate, execute: handleCheckUpdate } = useAsyncOperation(async () => {
   const hasUpdate = await checkForUpdate();
   if (!hasUpdate) {
     toast({ title: 'Вы используете последнюю версию', variant: 'default' });
@@ -92,7 +92,7 @@ const appGroup = [
     id: 'update',
     icon: 'refresh',
     label: 'Обновление',
-    value: () => `v${CURRENT_VERSION}`,
+    value: () => (isCheckingUpdate.value ? 'Проверка...' : `v${CURRENT_VERSION}`),
     color: '#10b981', // success
   },
   { id: 'about', icon: 'info', label: 'О приложении', color: '#64748b' }, // slate
@@ -263,7 +263,12 @@ async function confirmLogout() {
             @click="handleMenuClick(item.id)"
           >
             <div class="relative">
-              <IconBadge :icon="item.icon" size="sm" :color="item.color" />
+              <IconBadge
+                :icon="item.icon"
+                size="sm"
+                :color="item.color"
+                :class="item.id === 'update' && isCheckingUpdate ? 'animate-spin' : ''"
+              />
               <span
                 v-if="item.badge?.value"
                 class="absolute -top-0.5 -right-0.5 w-3 h-3 border-2 border-card-light dark:border-card-dark rounded-full bg-danger"
