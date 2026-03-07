@@ -41,14 +41,16 @@ const newParticipantName = ref('');
 // Position drawer above iOS virtual keyboard via direct DOM manipulation.
 // Using direct DOM instead of reactive state to avoid Vue re-renders
 // that cause input focus loss when the keyboard appears.
+const drawerContentRef = ref<InstanceType<typeof DrawerContent> | null>(null);
+const footerRef = ref<HTMLDivElement | null>(null);
 let cleanupViewport: (() => void) | null = null;
 
 function setupKeyboardListener() {
   const vv = window.visualViewport;
   if (!vv) return;
 
-  const drawerEl = document.querySelector('[data-split-drawer]') as HTMLElement;
-  const footerEl = document.querySelector('[data-split-drawer-footer]') as HTMLElement;
+  const drawerEl = drawerContentRef.value?.$el as HTMLElement | undefined;
+  const footerEl = footerRef.value;
   if (!drawerEl) return;
 
   const onResize = () => {
@@ -193,7 +195,7 @@ watch(
     <DrawerPortal>
       <DrawerOverlay class="fixed inset-0 z-50 bg-black/40" />
       <DrawerContent
-        data-split-drawer
+        ref="drawerContentRef"
         class="fixed bottom-0 left-0 right-0 z-50 flex flex-col rounded-t-2xl bg-card-light dark:bg-card-dark border-t border-border-light dark:border-border-dark"
         style="max-height: 90dvh"
       >
@@ -459,7 +461,7 @@ watch(
 
         <!-- Footer -->
         <div
-          data-split-drawer-footer
+          ref="footerRef"
           class="px-5 pt-3 border-t border-border-light dark:border-border-dark"
           style="padding-bottom: calc(env(safe-area-inset-bottom, 16px) + 1.5rem)"
         >
