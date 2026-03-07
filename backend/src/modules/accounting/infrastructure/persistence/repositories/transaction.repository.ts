@@ -9,6 +9,8 @@ import {
   MonthlyStats,
   AnalyticsStats,
   AnalyticsOptions,
+  DailyStatsOptions,
+  DailyStatsEntry,
   CategoryBreakdown,
   TransactionWithReturns,
   HashtagResult,
@@ -728,6 +730,102 @@ export class TransactionRepository implements ITransactionRepository {
       expenseByCurrency,
       categoryBreakdown: Array.from(categoryMap.values()),
     };
+  }
+
+  async getDailyStats(userId: string, options: DailyStatsOptions): Promise<DailyStatsEntry[]> {
+    const { startDate, endDate, accountIds, groupBy = 'day' } = options;
+
+    // Defense-in-depth: validate groupBy before SQL interpolation
+    const allowedGroupBy = ['day', 'week', 'month'] as const;
+    const safeGroupBy = (allowedGroupBy as readonly string[]).includes(groupBy) ? groupBy : 'day';
+
+    let query = this.ormRepository
+      .createQueryBuilder('t')
+      .where('t.user_id = :userId', { userId })
+      .andWhere('t.date >= :startDate', { startDate })
+      .andWhere('t.date <= :endDate', { endDate })
+      .andWhere('t.type IN (:...types)', { types: ['income', 'expense'] })
+      .andWhere('(t.is_debt_related = false OR t.is_debt_related IS NULL)')
+      .andWhere(
+        "t.category_id NOT IN ('debt_given', 'debt_taken', 'debt_return_to_me', 'debt_return_from_me')",
+      );
+
+    if (accountIds && accountIds.length > 0) {
+      query = query.andWhere('t.account_id IN (:...accountIds)', { accountIds });
+    }
+
+    const rows = await query
+      .select(`date_trunc('${safeGroupBy}', t.date)`, 'period')
+      .addSelect('t.type', 'type')
+      .addSelect('t.currency', 'currency')
+      .addSelect('SUM(t.amount)', 'total')
+      .groupBy('period')
+      .addGroupBy('t.type')
+      .addGroupBy('t.currency')
+      .orderBy('period', 'ASC')
+      .getRawMany<{
+        period: Date;
+        type: string;
+        currency: string;
+        total: string | null;
+      }>();
+
+    // Aggregate rows into a map keyed by period date string
+    const statsMap = new Map<string, DailyStatsEntry>();
+
+    for (const row of rows) {
+      const dateKey = new Date(row.period).toISOString().split('T')[0];
+      let entry = statsMap.get(dateKey);
+      if (!entry) {
+        entry = { date: dateKey, incomeByCurrency: {}, expenseByCurrency: {} };
+        statsMap.set(dateKey, entry);
+      }
+
+      const amount = Number(row.total ?? 0);
+      if (row.type === 'income') {
+        entry.incomeByCurrency[row.currency] = (entry.incomeByCurrency[row.currency] || 0) + amount;
+      } else if (row.type === 'expense') {
+        entry.expenseByCurrency[row.currency] =
+          (entry.expenseByCurrency[row.currency] || 0) + amount;
+      }
+    }
+
+    // Fill gaps: ensure every period in range has an entry
+    const result: DailyStatsEntry[] = [];
+    const current = new Date(startDate);
+    current.setHours(0, 0, 0, 0);
+    const end = new Date(endDate);
+    end.setHours(0, 0, 0, 0);
+
+    // Truncate start to period boundary
+    if (safeGroupBy === 'week') {
+      const day = current.getDay();
+      const diff = day === 0 ? 6 : day - 1; // Monday = start of week
+      current.setDate(current.getDate() - diff);
+    } else if (safeGroupBy === 'month') {
+      current.setDate(1);
+    }
+
+    while (current <= end) {
+      const dateKey = current.toISOString().split('T')[0];
+      const entry = statsMap.get(dateKey) ?? {
+        date: dateKey,
+        incomeByCurrency: {},
+        expenseByCurrency: {},
+      };
+      result.push(entry);
+
+      // Advance to next period
+      if (safeGroupBy === 'week') {
+        current.setDate(current.getDate() + 7);
+      } else if (safeGroupBy === 'month') {
+        current.setMonth(current.getMonth() + 1);
+      } else {
+        current.setDate(current.getDate() + 1);
+      }
+    }
+
+    return result;
   }
 
   async getHashtags(userId: string): Promise<HashtagResult[]> {

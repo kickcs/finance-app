@@ -21,8 +21,6 @@ const prefetchPages = () => {
     import('@/pages/analytics/AnalyticsPage.vue');
     import('@/pages/profile/ProfilePage.vue');
     import('@/pages/transactions/new/AddTransactionPage.vue');
-    // Analytics
-    import('@/pages/analytics/AnalyticsFullPage.vue');
     // Accounts
     import('@/pages/accounts/AccountsPage.vue');
     import('@/pages/accounts/AccountDetailPage.vue');
@@ -89,11 +87,6 @@ export const router = createRouter({
           path: 'analytics',
           name: ROUTE_NAMES.ANALYTICS,
           component: () => import('@/pages/analytics/AnalyticsPage.vue'),
-        },
-        {
-          path: 'analytics/full',
-          name: ROUTE_NAMES.ANALYTICS_FULL,
-          component: () => import('@/pages/analytics/AnalyticsFullPage.vue'),
         },
         {
           path: 'accounts',

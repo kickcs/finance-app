@@ -50,6 +50,19 @@ export interface AnalyticsOptions {
   accountIds?: string[];
 }
 
+export interface DailyStatsEntry {
+  date: string;
+  incomeByCurrency: Record<string, number>;
+  expenseByCurrency: Record<string, number>;
+}
+
+export interface DailyStatsOptions {
+  startDate: string;
+  endDate: string;
+  accountIds?: string[];
+  groupBy?: 'day' | 'week' | 'month';
+}
+
 // Response type from NestJS backend (camelCase)
 interface TransactionResponse {
   id: string;
@@ -311,6 +324,18 @@ export const transactionsApi = {
     return http.get<AnalyticsStats>('/transactions/stats/analytics', {
       params,
     });
+  },
+
+  async getDailyStats(options: DailyStatsOptions): Promise<DailyStatsEntry[]> {
+    const params: Record<string, string | undefined> = {
+      startDate: options.startDate,
+      endDate: options.endDate,
+      groupBy: options.groupBy,
+    };
+    if (options.accountIds && options.accountIds.length > 0) {
+      params.accountIds = options.accountIds.join(',');
+    }
+    return http.get<DailyStatsEntry[]>('/transactions/stats/daily', { params });
   },
 
   async getHashtags(): Promise<Hashtag[]> {

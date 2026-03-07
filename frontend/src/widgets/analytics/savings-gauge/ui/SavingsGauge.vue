@@ -7,8 +7,8 @@ import { formatCurrency, COMPACT_FORMAT } from '@/shared/lib/format/currency';
 const props = defineProps<{
   totalIncome: number;
   totalExpense: number;
+  availableBalance: number;
   currency: string;
-  totalBalance?: number;
 }>();
 
 // Animation state
@@ -18,17 +18,16 @@ useTimeoutFn(() => {
   isAnimated.value = true;
 }, 100);
 
-// Savings calculations
-const savings = computed(() =>
-  props.totalBalance !== undefined ? props.totalBalance : props.totalIncome - props.totalExpense,
-);
+// Savings = current available balance (what you actually have)
+const savings = computed(() => props.availableBalance);
 
+// Balance-aware savings rate:
+// totalAvailable = startBalance + income = (currentBalance - income + expense) + income = currentBalance + expense
+// retentionRate = currentBalance / totalAvailable
 const savingsRate = computed(() => {
-  if (props.totalIncome <= 0) return 0;
-  if (props.totalBalance !== undefined) {
-    return (props.totalBalance / props.totalIncome) * 100;
-  }
-  return ((props.totalIncome - props.totalExpense) / props.totalIncome) * 100;
+  const totalAvailable = props.availableBalance + props.totalExpense;
+  if (totalAvailable <= 0) return 0;
+  return (props.availableBalance / totalAvailable) * 100;
 });
 
 // Clamp savings rate between 0 and 100 for visualization
@@ -47,29 +46,25 @@ const statusZone = computed<StatusZone>(() => {
 
 const statusConfig = {
   critical: {
-    color: '#ef4444', // red
-    gradient: 'from-red-500 to-red-600',
+    color: 'var(--color-danger)',
     label: 'Критично',
     message: 'Попробуйте сократить расходы',
     icon: 'sentiment_very_dissatisfied',
   },
   normal: {
-    color: '#f59e0b', // amber
-    gradient: 'from-amber-400 to-amber-500',
+    color: 'var(--color-warning)',
     label: 'Норма',
     message: 'Попробуйте увеличить сбережения до 20%',
     icon: 'sentiment_neutral',
   },
   good: {
-    color: '#10b981', // green
-    gradient: 'from-emerald-400 to-emerald-500',
+    color: 'var(--color-success)',
     label: 'Отлично',
     message: 'Вы откладываете больше 20%!',
     icon: 'sentiment_satisfied',
   },
   excellent: {
-    color: '#3b82f6', // blue
-    gradient: 'from-blue-400 to-blue-500',
+    color: 'var(--color-primary)',
     label: 'Супер',
     message: 'Превосходный результат! Более 50%',
     icon: 'sentiment_very_satisfied',
@@ -158,7 +153,7 @@ const progressOffset = computed(() => {
       <!-- Income row -->
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-2">
-          <div class="w-8 h-8 rounded-lg bg-success/10 flex items-center justify-center">
+          <div class="w-8 h-8 rounded-lg bg-success-light flex items-center justify-center">
             <UIcon name="trending_up" size="sm" class="text-success" />
           </div>
           <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
@@ -173,7 +168,7 @@ const progressOffset = computed(() => {
       <!-- Expense row -->
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-2">
-          <div class="w-8 h-8 rounded-lg bg-danger/10 flex items-center justify-center">
+          <div class="w-8 h-8 rounded-lg bg-danger-light flex items-center justify-center">
             <UIcon name="trending_down" size="sm" class="text-danger" />
           </div>
           <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
@@ -192,7 +187,7 @@ const progressOffset = computed(() => {
         <div class="flex items-center gap-2">
           <div
             class="w-8 h-8 rounded-lg flex items-center justify-center"
-            :class="savings >= 0 ? 'bg-primary/10' : 'bg-danger/10'"
+            :class="savings >= 0 ? 'bg-primary-light' : 'bg-danger-light'"
           >
             <UIcon
               :name="savings >= 0 ? 'savings' : 'warning'"
@@ -201,7 +196,7 @@ const progressOffset = computed(() => {
             />
           </div>
           <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
-            {{ totalBalance !== undefined ? 'Текущий баланс' : 'Сбережения' }}
+            Сбережения
           </span>
         </div>
         <span class="font-bold text-lg" :class="savings >= 0 ? 'text-primary' : 'text-danger'">
@@ -211,12 +206,9 @@ const progressOffset = computed(() => {
     </div>
 
     <!-- Motivational message -->
-    <div
-      class="mt-3 p-3 rounded-xl text-center"
-      :style="{ backgroundColor: `${currentStatus.color}10` }"
-    >
+    <div class="mt-3 p-3 rounded-xl text-center bg-surface-light dark:bg-surface-dark">
       <p class="text-sm font-medium" :style="{ color: currentStatus.color }">
-        {{ currentStatus.message }}
+        {{ totalIncome <= 0 ? 'Нет дохода за период' : currentStatus.message }}
       </p>
     </div>
   </UCard>
