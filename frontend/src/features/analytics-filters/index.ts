@@ -13,6 +13,7 @@ export { mapCategoryStats, mapExpenseCategoryStats } from './model/mapCategoryBr
 
 // Composable
 export { useAnalyticsFilters } from './model/useAnalyticsFilters';
+export { useConvertedAnalytics } from './model/useConvertedAnalytics';
 
 // UI Components
 export { default as ModeToggle } from './ui/ModeToggle.vue';
