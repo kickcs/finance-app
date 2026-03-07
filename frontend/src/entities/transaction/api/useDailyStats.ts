@@ -25,7 +25,7 @@ export function useDailyStats(options: UseDailyStatsOptions) {
     return !!start && !!end;
   });
 
-  const { data, isLoading, isFetching, error } = useQuery({
+  const { data, isLoading, isFetching, error, refetch } = useQuery({
     queryKey,
     queryFn: async (): Promise<DailyStatsEntry[]> => {
       const start = toValue(options.startDate);
@@ -49,5 +49,5 @@ export function useDailyStats(options: UseDailyStatsOptions) {
 
   const entries = computed<DailyStatsEntry[]>(() => data.value ?? []);
 
-  return { entries, isLoading, isFetching, error };
+  return { entries, isLoading, isFetching, error, refetch };
 }

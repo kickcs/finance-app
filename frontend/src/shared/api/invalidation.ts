@@ -5,7 +5,7 @@ import { accountBalanceQueryKeys } from '@/entities/account-balance';
 
 /**
  * Invalidate all transaction-related caches.
- * Covers: list, infinite (all), monthlyStats, recent, search, count, analyticsStats.
+ * Covers: list, infinite (all), monthlyStats, recent, search, count, analyticsStats, dailyStats.
  *
  * Uses broad prefix keys (e.g. infinitePrefix covers both user-scoped and account-scoped infinite queries).
  */
@@ -35,6 +35,9 @@ export async function invalidateTransactionRelated(
     }),
     queryClient.invalidateQueries({
       queryKey: transactionQueryKeys.analyticsStatsPrefix(),
+    }),
+    queryClient.invalidateQueries({
+      queryKey: transactionQueryKeys.dailyStatsPrefix(),
     }),
     queryClient.invalidateQueries({
       queryKey: transactionQueryKeys.hashtags(userId),
