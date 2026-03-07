@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, nextTick } from 'vue';
+import { ref, computed } from 'vue';
 import { UIcon, UInput, InitialAvatar } from '@/shared/ui';
 import type { Person } from '../model/types';
 
@@ -26,6 +26,7 @@ const emit = defineEmits<{
 
 const isFocused = ref(false);
 const rootRef = ref<HTMLDivElement>();
+let blurTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const sortedPeople = computed(() => {
   return [...props.people].sort((a, b) => a.name.localeCompare(b.name, 'ru'));
@@ -53,14 +54,17 @@ function handleInput(val: string | number) {
 }
 
 function handleFocus() {
+  if (blurTimeout) {
+    clearTimeout(blurTimeout);
+    blurTimeout = null;
+  }
   isFocused.value = true;
-  nextTick(() => {
-    rootRef.value?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  });
 }
 
 function handleBlur() {
-  isFocused.value = false;
+  blurTimeout = setTimeout(() => {
+    isFocused.value = false;
+  }, 150);
 }
 
 function selectPerson(person: Person) {

@@ -38,11 +38,14 @@ const { people, createPerson } = usePeople(userId);
 
 const newParticipantName = ref('');
 
-// Fix iOS keyboard pushing drawer content off-screen
+// Fix iOS keyboard pushing drawer content off-screen.
+// iOS scrolls the document body instead of the drawer's overflow container.
 function handleScrollToFocused(e: FocusEvent) {
   const target = e.target as HTMLElement;
   if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
     setTimeout(() => {
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
       target.scrollIntoView({ block: 'center', behavior: 'smooth' });
     }, 300);
   }
