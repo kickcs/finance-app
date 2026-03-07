@@ -47,15 +47,14 @@ function setupKeyboardListener() {
   const vv = window.visualViewport;
   if (!vv) return;
 
+  const drawerEl = document.querySelector('[data-split-drawer]') as HTMLElement;
+  const footerEl = document.querySelector('[data-split-drawer-footer]') as HTMLElement;
+  if (!drawerEl) return;
+
   const onResize = () => {
     const offset = Math.max(0, window.innerHeight - vv.height);
-    const drawerEl = document.querySelector('[data-split-drawer]') as HTMLElement;
-    const footerEl = document.querySelector('[data-split-drawer-footer]') as HTMLElement;
-
-    if (drawerEl) {
-      drawerEl.style.bottom = offset > 0 ? `${offset}px` : '';
-      drawerEl.style.maxHeight = offset > 0 ? `${window.innerHeight - offset}px` : '';
-    }
+    drawerEl.style.bottom = offset > 0 ? `${offset}px` : '';
+    drawerEl.style.maxHeight = offset > 0 ? `${window.innerHeight - offset}px` : '';
     if (footerEl) {
       footerEl.style.paddingBottom = offset > 0 ? '0.75rem' : '';
     }
@@ -70,15 +69,9 @@ function setupKeyboardListener() {
   cleanupViewport = () => {
     vv.removeEventListener('resize', onResize);
     vv.removeEventListener('scroll', onResize);
-    const drawerEl = document.querySelector('[data-split-drawer]') as HTMLElement;
-    const footerEl = document.querySelector('[data-split-drawer-footer]') as HTMLElement;
-    if (drawerEl) {
-      drawerEl.style.bottom = '';
-      drawerEl.style.maxHeight = '';
-    }
-    if (footerEl) {
-      footerEl.style.paddingBottom = '';
-    }
+    drawerEl.style.bottom = '';
+    drawerEl.style.maxHeight = '';
+    if (footerEl) footerEl.style.paddingBottom = '';
   };
 }
 
