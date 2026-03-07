@@ -25,7 +25,6 @@ const emit = defineEmits<{
 }>();
 
 const isFocused = ref(false);
-const rootRef = ref<HTMLDivElement>();
 let blurTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const sortedPeople = computed(() => {
@@ -93,7 +92,7 @@ function handleSaveAndAdd() {
 </script>
 
 <template>
-  <div ref="rootRef" class="w-full">
+  <div class="w-full">
     <div v-if="label" class="mb-2">
       <span class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark">
         {{ label }}
