@@ -38,6 +38,16 @@ const { people, createPerson } = usePeople(userId);
 
 const newParticipantName = ref('');
 
+// Fix iOS keyboard pushing drawer content off-screen
+function handleScrollToFocused(e: FocusEvent) {
+  const target = e.target as HTMLElement;
+  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+    setTimeout(() => {
+      target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }, 300);
+  }
+}
+
 const availablePeople = computed(() => {
   const addedNames = new Set(props.splitData.participants.map((p) => p.personName.toLowerCase()));
   return people.value.filter((p) => !addedNames.has(p.name.toLowerCase()));
@@ -171,7 +181,10 @@ watch(
         </div>
 
         <!-- Scrollable content -->
-        <div class="flex-1 overflow-y-auto px-5 pb-5 space-y-4 overscroll-contain">
+        <div
+          class="flex-1 overflow-y-auto px-5 pb-5 space-y-4 overscroll-contain"
+          @focusin="handleScrollToFocused"
+        >
           <!-- Person search -->
           <PersonSelector
             v-model="newParticipantName"
