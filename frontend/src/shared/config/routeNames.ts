@@ -3,7 +3,6 @@ export const ROUTE_NAMES = {
   DASHBOARD: 'dashboard',
   HISTORY: 'history',
   ANALYTICS: 'analytics',
-  ANALYTICS_FULL: 'analytics-full',
   ACCOUNTS: 'accounts',
   NEW_ACCOUNT: 'new-account',
   ACCOUNT_DETAIL: 'account-detail',

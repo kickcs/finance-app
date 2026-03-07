@@ -1,5 +1,3 @@
-export type AnalyticsMode = 'lite' | 'full';
-
 export type LitePeriod = 'week-start' | 'month-start' | 'year-start' | 'custom';
 
 export type TransactionType = 'all' | 'expense' | 'income';

@@ -1,53 +1,49 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue';
+import { computed, ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { AppHeader } from '@/widgets/header';
-import { StatCard } from '@/widgets/analytics';
 import {
-  UTabs,
-  UCard,
-  UProgressBar,
-  Skeleton,
-  SectionHeader,
-  EmptyState,
-  IconBadge,
-} from '@/shared/ui';
-import { useAnalyticsStats } from '@/entities/transaction';
-import { toLocalISODate } from '@/shared/lib/date';
+  IncomeExpenseBar,
+  DailyStatsCards,
+  SavingsGauge,
+  DonutChart,
+  DailyExpenseChart,
+  PeriodComparison,
+  type DonutSegment,
+} from '@/widgets/analytics';
+import { UTabs, UCard, UProgressBar, EmptyState, Skeleton, IconBadge } from '@/shared/ui';
+import { useDailyStats } from '@/entities/transaction';
 import { useAccounts } from '@/entities/account';
-import { useDebts } from '@/entities/debt';
+import { useExchangeRates } from '@/shared/api';
+import { toLocalISODate } from '@/shared/lib/date';
 import { formatCurrency, COMPACT_FORMAT } from '@/shared/lib/format/currency';
 import {
-  ModeToggle,
   DateRangePicker,
   FilterChips,
   useAnalyticsFilters,
+  useConvertedAnalytics,
   mapCategoryStats,
   type LitePeriod,
-  type TransactionType,
 } from '@/features/analytics-filters';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 
 const route = useRoute();
-
 const { userId } = useCurrentUser();
-
-// Get user currency (profile-first, falls back to localStorage)
 const { currency } = useUserCurrency();
 
-// Analytics filters
+// --- Filters ---
 const {
   filters,
   effectiveDateRange,
+  daysInPeriod,
+  daysRemainingInMonth,
   setPeriod,
-  setType,
   setCustomDateRange,
   toggleAccount,
   clearAccountFilters,
 } = useAnalyticsFilters();
 
-// Convert date range to ISO strings for API (local timezone, not UTC)
 const startDateStr = computed(() => {
   const d = effectiveDateRange.value.startDate;
   return d ? toLocalISODate(d) : null;
@@ -58,86 +54,210 @@ const endDateStr = computed(() => {
   return d ? toLocalISODate(d) : null;
 });
 
-// Use analytics API for server-side calculations
-const {
-  totalExpense,
-  totalIncome,
-  categoryBreakdown,
-  isLoading: analyticsLoading,
-  isFetching: analyticsFetching,
-} = useAnalyticsStats({
-  startDate: startDateStr,
-  endDate: endDateStr,
-  accountIds: computed(() => filters.value.selectedAccountIds),
-});
+// --- Active tab ---
+type AnalyticsTab = 'overview' | 'categories' | 'trends';
+const activeTab = ref<AnalyticsTab>('overview');
 
-// Load accounts for filter chips
-const { accounts } = useAccounts(userId);
+const tabItems = [
+  { id: 'overview', label: 'Обзор' },
+  { id: 'categories', label: 'Категории' },
+  { id: 'trends', label: 'Тренды' },
+];
 
-// Load debts for debt summary
-const { debts, isLoading: debtsLoading } = useDebts(userId);
-
-// Period tabs
+// --- Period filter tabs ---
 const periodItems = [
-  { id: 'week-start', label: 'С начала недели' },
-  { id: 'month-start', label: 'С начала месяца' },
-  { id: 'year-start', label: 'С начала года' },
-  { id: 'custom', label: 'Свой период' },
+  { id: 'week-start', label: 'Неделя' },
+  { id: 'month-start', label: 'Месяц' },
+  { id: 'year-start', label: 'Год' },
+  { id: 'custom', label: 'Свой' },
 ];
 
-// Type tabs with "Все"
-const typeItems = [
-  { id: 'all', label: 'Все' },
-  { id: 'expense', label: 'Расходы' },
-  { id: 'income', label: 'Доходы' },
-];
-
-// Show custom date picker
 const showCustomDatePicker = computed(() => filters.value.period === 'custom');
 
-// Debt summaries
-const totalOwedToMe = computed(() => {
-  return debts.value
-    .filter((d) => d.debt_type === 'given' && !d.is_closed)
-    .reduce((sum, d) => sum + d.remaining_amount, 0);
-});
+// --- Accounts ---
+const { accounts } = useAccounts(userId);
 
-const totalIOwe = computed(() => {
-  return debts.value
-    .filter((d) => d.debt_type === 'taken' && !d.is_closed)
-    .reduce((sum, d) => sum + d.remaining_amount, 0);
-});
-
-// Category statistics from server-side calculation
-const categoryStats = computed(() => {
-  const type = filters.value.type === 'all' ? undefined : filters.value.type;
-  return mapCategoryStats(categoryBreakdown.value, type);
-});
-
-// Prepare filter chips data
-const accountChips = computed(() => {
-  return accounts.value.map((acc) => ({
+const accountChips = computed(() =>
+  accounts.value.map((acc) => ({
     id: acc.id,
     name: acc.name,
     icon: acc.icon,
     color: acc.color,
-  }));
+  })),
+);
+
+const showAccountFilter = computed(() => accountChips.value.length > 1);
+
+// --- Converted analytics (main data) ---
+const analyticsOptions = {
+  startDate: startDateStr,
+  endDate: endDateStr,
+  accountIds: computed(() => filters.value.selectedAccountIds),
+};
+
+const {
+  convertedIncome,
+  convertedExpense,
+  savingsRate,
+  categoryBreakdown,
+  convertAmount,
+  isLoading: analyticsLoading,
+  isFetching: analyticsFetching,
+} = useConvertedAnalytics(analyticsOptions, currency);
+
+// --- Exchange rates for balance conversion ---
+const { convert } = useExchangeRates(currency);
+
+// --- Available balance (for safe daily spending) ---
+const availableBalance = computed(() => {
+  const selectedIds = filters.value.selectedAccountIds;
+  const filtered =
+    selectedIds.length > 0
+      ? accounts.value.filter((a) => selectedIds.includes(a.id))
+      : accounts.value.filter((a) => a.type === 'basic');
+
+  return filtered.reduce((sum, acc) => {
+    return (
+      sum +
+      acc.balances.reduce((bSum, b) => {
+        const bal = acc.type === 'credit_card' ? Math.max(0, b.balance) : b.balance;
+        return bSum + convert(bal, b.currency);
+      }, 0)
+    );
+  }, 0);
 });
 
-// Handlers
+const balanceLabel = computed(() =>
+  filters.value.selectedAccountIds.length > 0 ? 'По выбранным счетам' : undefined,
+);
+
+// --- Is past period? ---
+const isPastPeriod = computed(() => {
+  const end = effectiveDateRange.value.endDate;
+  if (!end) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const endDay = new Date(end);
+  endDay.setHours(0, 0, 0, 0);
+  return endDay < today;
+});
+
+// --- Empty state ---
+const hasNoData = computed(
+  () => convertedIncome.value === 0 && convertedExpense.value === 0 && !analyticsLoading.value,
+);
+
+// --- Categories tab ---
+const categoryType = ref<'expense' | 'income'>('expense');
+const categoryTypeItems = [
+  { id: 'expense', label: 'Расходы' },
+  { id: 'income', label: 'Доходы' },
+];
+
+const categoryStats = computed(() =>
+  mapCategoryStats(categoryBreakdown.value, categoryType.value, convertAmount),
+);
+
+const donutTotal = computed(() => categoryStats.value.reduce((sum, s) => sum + s.amount, 0));
+
+const donutSegments = computed<DonutSegment[]>(() =>
+  categoryStats.value.map((s) => ({
+    id: s.id,
+    value: s.amount,
+    percent: s.percent,
+    color: s.color,
+    label: s.name,
+    icon: s.icon,
+  })),
+);
+
+// --- Trends tab ---
+const isTrendsActive = computed(() => activeTab.value === 'trends');
+
+// Auto groupBy based on period length
+const groupBy = computed<'day' | 'week' | 'month'>(() => {
+  const days = daysInPeriod.value;
+  if (days <= 31) return 'day';
+  if (days <= 90) return 'week';
+  return 'month';
+});
+
+// Daily stats — lazy loaded when trends tab is active
+const { entries: dailyEntries, isLoading: dailyLoading } = useDailyStats({
+  startDate: computed(() => (isTrendsActive.value ? startDateStr.value : null)),
+  endDate: computed(() => (isTrendsActive.value ? endDateStr.value : null)),
+  accountIds: computed(() => filters.value.selectedAccountIds),
+  groupBy,
+});
+
+// Convert daily entries to chart format
+const chartEntries = computed(() =>
+  dailyEntries.value.map((e) => ({
+    date: e.date,
+    expense: Object.entries(e.expenseByCurrency).reduce(
+      (sum, [curr, amt]) => sum + convert(amt, curr),
+      0,
+    ),
+  })),
+);
+
+// Previous period analytics — lazy loaded when trends tab is active
+const previousPeriodDates = computed(() => {
+  const start = effectiveDateRange.value.startDate;
+  const end = effectiveDateRange.value.endDate;
+  if (!start || !end) return { startDate: null, endDate: null };
+
+  const periodMs = end.getTime() - start.getTime();
+  const prevEnd = new Date(start.getTime() - 1);
+  prevEnd.setHours(23, 59, 59, 999);
+  const prevStart = new Date(prevEnd.getTime() - periodMs);
+  prevStart.setHours(0, 0, 0, 0);
+
+  return {
+    startDate: toLocalISODate(prevStart),
+    endDate: toLocalISODate(prevEnd),
+  };
+});
+
+const {
+  convertedIncome: prevIncome,
+  convertedExpense: prevExpense,
+  savingsRate: prevSavingsRate,
+  isLoading: prevLoading,
+} = useConvertedAnalytics(
+  {
+    startDate: computed(() => (isTrendsActive.value ? previousPeriodDates.value.startDate : null)),
+    endDate: computed(() => (isTrendsActive.value ? previousPeriodDates.value.endDate : null)),
+    accountIds: computed(() => filters.value.selectedAccountIds),
+  },
+  currency,
+);
+
+const showComparison = computed(() => daysInPeriod.value >= 3);
+const noPrevData = computed(() => prevIncome.value === 0 && prevExpense.value === 0);
+
+// --- Handlers ---
 function handlePeriodChange(value: string | number) {
   setPeriod(value as LitePeriod);
 }
 
-function handleTypeChange(value: string | number) {
-  setType(value as TransactionType);
+function handleTabChange(value: string | number) {
+  activeTab.value = value as AnalyticsTab;
+}
+
+function handleCategoryTypeChange(value: string | number) {
+  categoryType.value = value as 'expense' | 'income';
 }
 
 // Read initial type filter from query param
 onMounted(() => {
   const queryType = route.query.type as string | undefined;
-  if (queryType === 'income' || queryType === 'expense') {
-    setType(queryType);
+  if (queryType === 'income') {
+    categoryType.value = 'income';
+    activeTab.value = 'categories';
+  } else if (queryType === 'expense') {
+    categoryType.value = 'expense';
+    activeTab.value = 'categories';
   }
 });
 </script>
@@ -147,178 +267,199 @@ onMounted(() => {
     class="h-full flex flex-col relative bg-background-light dark:bg-background-dark overflow-y-auto"
     :style="{ paddingBottom: 'calc(2rem + env(safe-area-inset-bottom, 0px))' }"
   >
-    <!-- Header with Mode Toggle -->
-    <AppHeader title="Аналитика">
-      <template #actions>
-        <ModeToggle mode="lite" />
-      </template>
-    </AppHeader>
+    <!-- Header -->
+    <AppHeader title="Аналитика" />
+
+    <!-- Sticky filters + tabs -->
+    <div
+      class="sticky z-20 -mx-0 px-5 py-2 space-y-3 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-border-light/50 dark:border-border-dark/50 shadow-sm"
+      :style="{ top: 'calc(3rem + env(safe-area-inset-top, 0px))' }"
+    >
+      <!-- Period Tabs -->
+      <UTabs
+        :model-value="filters.period"
+        :items="periodItems"
+        @update:model-value="handlePeriodChange"
+      />
+
+      <!-- Custom Date Range Picker -->
+      <Transition
+        enter-active-class="transition-all duration-300 ease-out"
+        enter-from-class="opacity-0 -translate-y-2"
+        enter-to-class="opacity-100 translate-y-0"
+        leave-active-class="transition-all duration-200 ease-in"
+        leave-from-class="opacity-100 translate-y-0"
+        leave-to-class="opacity-0 -translate-y-2"
+      >
+        <DateRangePicker
+          v-if="showCustomDatePicker"
+          :model-value="filters.customDateRange"
+          @update:model-value="setCustomDateRange"
+        />
+      </Transition>
+
+      <!-- Account Filter Chips -->
+      <FilterChips
+        v-if="showAccountFilter"
+        :items="accountChips"
+        :selected-ids="filters.selectedAccountIds"
+        label="Счета"
+        @toggle="toggleAccount"
+        @clear="clearAccountFilters"
+      />
+
+      <!-- Section Tabs -->
+      <UTabs
+        :model-value="activeTab"
+        :items="tabItems"
+        variant="underline"
+        @update:model-value="handleTabChange"
+      />
+    </div>
 
     <!-- Content -->
-    <main class="px-5 pt-6 space-y-5">
-      <!-- Sticky Filters -->
-      <div
-        class="sticky z-20 -mx-5 px-5 py-2 space-y-3 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-border-light/50 dark:border-border-dark/50 shadow-sm"
-        :style="{ top: 'calc(3rem + env(safe-area-inset-top, 0px))' }"
-      >
-        <!-- Period Tabs -->
-        <UTabs
-          :model-value="filters.period"
-          :items="periodItems"
-          @update:model-value="handlePeriodChange"
-        />
-
-        <!-- Custom Date Range Picker -->
-        <Transition
-          enter-active-class="transition-all duration-300 ease-out"
-          enter-from-class="opacity-0 -translate-y-2"
-          enter-to-class="opacity-100 translate-y-0"
-          leave-active-class="transition-all duration-200 ease-in"
-          leave-from-class="opacity-100 translate-y-0"
-          leave-to-class="opacity-0 -translate-y-2"
+    <main class="px-5 pt-4 space-y-5">
+      <!-- ========== Tab: Overview ========== -->
+      <div v-show="activeTab === 'overview'">
+        <div
+          class="space-y-4 transition-opacity duration-300"
+          :class="{ 'opacity-50 pointer-events-none': analyticsFetching && !analyticsLoading }"
         >
-          <DateRangePicker
-            v-if="showCustomDatePicker"
-            :model-value="filters.customDateRange"
-            @update:model-value="setCustomDateRange"
-          />
-        </Transition>
-
-        <!-- Account Filter Chips -->
-        <FilterChips
-          v-if="accountChips.length > 0"
-          :items="accountChips"
-          :selected-ids="filters.selectedAccountIds"
-          label="Счета"
-          @toggle="toggleAccount"
-          @clear="clearAccountFilters"
-        />
-      </div>
-
-      <!-- Summary Cards - 2 Rows -->
-      <div
-        class="space-y-3 pt-2 transition-opacity duration-300"
-        :class="{ 'opacity-50 pointer-events-none': analyticsFetching }"
-      >
-        <StatCard
-          icon="trending_down"
-          label="Расходы"
-          :value="formatCurrency(totalExpense, currency, COMPACT_FORMAT)"
-          :loading="analyticsLoading"
-          icon-bg-class="bg-danger/10"
-          icon-class="text-danger"
-        />
-        <StatCard
-          icon="trending_up"
-          label="Доходы"
-          :value="formatCurrency(totalIncome, currency, COMPACT_FORMAT)"
-          :loading="analyticsLoading"
-          icon-bg-class="bg-success/10"
-          icon-class="text-success"
-        />
-      </div>
-
-      <!-- Debt Summary Cards -->
-      <div v-if="debtsLoading || totalOwedToMe > 0 || totalIOwe > 0" class="space-y-3">
-        <SectionHeader title="Долги" :show-add="false" :show-view-all="false" />
-
-        <!-- Debt Loading Skeleton -->
-        <template v-if="debtsLoading">
-          <UCard class="p-4">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-3">
-                <Skeleton class="w-10 h-10 rounded-xl" />
-                <Skeleton class="h-4 w-20 rounded" />
-              </div>
-              <Skeleton class="h-7 w-32 rounded" />
-            </div>
-          </UCard>
-        </template>
-
-        <template v-else>
-          <StatCard
-            v-if="totalOwedToMe > 0"
-            icon="arrow_upward"
-            label="Мне должны"
-            :value="formatCurrency(totalOwedToMe, currency, COMPACT_FORMAT)"
-            icon-bg-class="bg-debt-given-light"
-            icon-class="text-debt-given"
-          />
-          <StatCard
-            v-if="totalIOwe > 0"
-            icon="arrow_downward"
-            label="Я должен"
-            :value="formatCurrency(totalIOwe, currency, COMPACT_FORMAT)"
-            icon-bg-class="bg-debt-received-light"
-            icon-class="text-debt-received"
-          />
-        </template>
-      </div>
-
-      <!-- Category Breakdown -->
-      <div
-        class="space-y-3 transition-opacity duration-300"
-        :class="{
-          'opacity-50 pointer-events-none': analyticsFetching && categoryStats.length > 0,
-        }"
-      >
-        <div class="flex items-center justify-between">
-          <SectionHeader title="По категориям" :show-add="false" :show-view-all="false" />
-          <UTabs
-            :model-value="filters.type"
-            :items="typeItems"
-            size="sm"
-            @update:model-value="handleTypeChange"
-          />
-        </div>
-
-        <!-- Category Loading Skeleton -->
-        <template v-if="analyticsLoading">
-          <UCard v-for="i in 3" :key="i" class="p-4">
-            <div class="flex items-center gap-3 mb-3">
-              <Skeleton class="w-10 h-10 rounded-xl" />
-              <div class="flex-1">
-                <Skeleton class="h-4 w-24 rounded mb-1" />
-                <Skeleton class="h-3 w-12 rounded" />
-              </div>
-              <Skeleton class="h-5 w-28 rounded" />
-            </div>
-            <Skeleton class="h-2 rounded-full" />
-          </UCard>
-        </template>
-
-        <template v-else>
-          <div v-if="categoryStats.length > 0" class="space-y-3">
-            <UCard v-for="stat in categoryStats" :key="stat.id" class="p-4">
-              <div class="flex items-center gap-3 mb-3">
-                <IconBadge :icon="stat.icon" size="md" :color="stat.color" class="shrink-0" />
-                <div class="flex-1">
-                  <p class="font-medium text-text-primary-light dark:text-text-primary-dark">
-                    {{ stat.name }}
-                  </p>
-                  <p
-                    class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark"
-                  >
-                    {{ stat.percent.toFixed(1) }}%
-                  </p>
-                </div>
-                <p class="font-semibold text-text-primary-light dark:text-text-primary-dark">
-                  {{ formatCurrency(stat.amount, currency, COMPACT_FORMAT) }}
-                </p>
-              </div>
-              <UProgressBar :value="stat.percent" :color="stat.color" size="sm" />
-            </UCard>
-          </div>
-
-          <!-- Empty State -->
-          <UCard v-else variant="bordered" class="py-4">
+          <!-- Empty state -->
+          <UCard v-if="hasNoData" variant="bordered" class="py-8">
             <EmptyState
-              icon="pie_chart"
-              title="Нет данных"
-              description="Нет транзакций для анализа за выбранный период"
+              icon="bar_chart"
+              title="Нет транзакций"
+              description="Нет данных за выбранный период"
             />
           </UCard>
-        </template>
+
+          <template v-else>
+            <!-- Income/Expense Bars -->
+            <IncomeExpenseBar
+              :income="convertedIncome"
+              :expense="convertedExpense"
+              :currency="currency"
+              :loading="analyticsLoading"
+            />
+
+            <!-- Daily Stats Cards -->
+            <DailyStatsCards
+              :total-expense="convertedExpense"
+              :available-balance="availableBalance"
+              :days-in-period="daysInPeriod"
+              :days-remaining-in-month="daysRemainingInMonth"
+              :currency="currency"
+              :is-past-period="isPastPeriod"
+              :balance-label="balanceLabel"
+            />
+
+            <!-- Savings Gauge -->
+            <SavingsGauge
+              :total-income="convertedIncome"
+              :total-expense="convertedExpense"
+              :currency="currency"
+            />
+          </template>
+        </div>
+      </div>
+
+      <!-- ========== Tab: Categories ========== -->
+      <div v-show="activeTab === 'categories'">
+        <div
+          class="space-y-4 transition-opacity duration-300"
+          :class="{ 'opacity-50 pointer-events-none': analyticsFetching && !analyticsLoading }"
+        >
+          <!-- Local type filter -->
+          <UTabs
+            :model-value="categoryType"
+            :items="categoryTypeItems"
+            size="sm"
+            @update:model-value="handleCategoryTypeChange"
+          />
+
+          <!-- Loading -->
+          <template v-if="analyticsLoading">
+            <Skeleton class="h-48 w-48 mx-auto rounded-full" />
+            <UCard v-for="i in 3" :key="i" class="p-4">
+              <div class="flex items-center gap-3 mb-3">
+                <Skeleton class="w-10 h-10 rounded-xl" />
+                <div class="flex-1">
+                  <Skeleton class="h-4 w-24 rounded mb-1" />
+                  <Skeleton class="h-3 w-12 rounded" />
+                </div>
+                <Skeleton class="h-5 w-28 rounded" />
+              </div>
+              <Skeleton class="h-2 rounded-full" />
+            </UCard>
+          </template>
+
+          <template v-else>
+            <!-- Donut Chart -->
+            <div v-if="donutSegments.length > 0" class="flex justify-center py-2">
+              <DonutChart :segments="donutSegments" :total="donutTotal" :currency="currency" />
+            </div>
+
+            <!-- Category List -->
+            <div v-if="categoryStats.length > 0" class="space-y-3">
+              <UCard v-for="stat in categoryStats" :key="stat.id" class="p-4">
+                <div class="flex items-center gap-3 mb-3">
+                  <IconBadge :icon="stat.icon" size="md" :color="stat.color" class="shrink-0" />
+                  <div class="flex-1">
+                    <p class="font-medium text-text-primary-light dark:text-text-primary-dark">
+                      {{ stat.name }}
+                    </p>
+                    <p
+                      class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark"
+                    >
+                      {{ stat.percent.toFixed(1) }}%
+                    </p>
+                  </div>
+                  <p class="font-semibold text-text-primary-light dark:text-text-primary-dark">
+                    {{ formatCurrency(stat.amount, currency, COMPACT_FORMAT) }}
+                  </p>
+                </div>
+                <UProgressBar :value="stat.percent" :color="stat.color" size="sm" />
+              </UCard>
+            </div>
+
+            <!-- Empty -->
+            <UCard v-else variant="bordered" class="py-4">
+              <EmptyState
+                icon="pie_chart"
+                title="Нет данных"
+                description="Нет транзакций для анализа за выбранный период"
+              />
+            </UCard>
+          </template>
+        </div>
+      </div>
+
+      <!-- ========== Tab: Trends ========== -->
+      <div v-show="activeTab === 'trends'">
+        <div class="space-y-4">
+          <!-- Daily Expense Chart -->
+          <DailyExpenseChart
+            :entries="chartEntries"
+            :currency="currency"
+            :loading="dailyLoading"
+            :group-by="groupBy"
+          />
+
+          <!-- Period Comparison -->
+          <PeriodComparison
+            v-if="showComparison"
+            :current-expense="convertedExpense"
+            :previous-expense="prevExpense"
+            :current-income="convertedIncome"
+            :previous-income="prevIncome"
+            :current-savings-rate="savingsRate"
+            :previous-savings-rate="prevSavingsRate"
+            :currency="currency"
+            :loading="prevLoading"
+            :no-data="noPrevData"
+          />
+        </div>
       </div>
     </main>
   </div>
