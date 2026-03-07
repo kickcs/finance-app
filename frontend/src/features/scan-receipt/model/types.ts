@@ -42,4 +42,11 @@ export interface ScanReceiptFormData {
   currency: string;
 }
 
+export interface ReceiptCharge {
+  id: string;
+  label: string;
+  percent: number;
+  enabled: boolean;
+}
+
 export type WizardDirection = 'forward' | 'back';

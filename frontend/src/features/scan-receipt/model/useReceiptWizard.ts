@@ -6,10 +6,11 @@ import { debtsApi, debtQueryKeys } from '@/entities/debt';
 import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
 import { useQueryClient } from '@tanstack/vue-query';
 import { useHaptics } from '@/shared/lib/haptics';
-import { calcLineTotal, calcLineTotalWithService } from './calcLineTotal';
+import { calcLineTotal, calcLineTotalWithCharges, getTotalChargePercent } from './calcLineTotal';
 import { ALL_PARTICIPANTS_ID } from './constants';
 import type {
   ReceiptItem,
+  ReceiptCharge,
   Participant,
   ParticipantSummary,
   ScanReceiptFormData,
@@ -41,7 +42,7 @@ export function useReceiptWizard(userId: () => string | null) {
   const currency = ref('UZS');
   const storeName = ref<string | null>(null);
   const receiptDate = ref<string | null>(null);
-  const serviceChargePercent = ref<number | null>(null);
+  const charges = ref<ReceiptCharge[]>([]);
 
   // Step 3: Participants
   const participants = ref<Participant[]>([]);
@@ -62,16 +63,18 @@ export function useReceiptWizard(userId: () => string | null) {
   // Computed
   const subtotal = computed(() => items.value.reduce((sum, item) => sum + calcLineTotal(item), 0));
 
-  const serviceChargeAmount = computed(() => {
-    if (!serviceChargePercent.value) return 0;
-    return Math.round((subtotal.value * serviceChargePercent.value) / 100);
+  const totalChargePercent = computed(() => getTotalChargePercent(charges.value));
+
+  const chargesAmount = computed(() => {
+    if (!totalChargePercent.value) return 0;
+    return Math.round((subtotal.value * totalChargePercent.value) / 100);
   });
 
-  const totalAmount = computed(() => subtotal.value + serviceChargeAmount.value);
+  const totalAmount = computed(() => subtotal.value + chargesAmount.value);
 
-  // Per-item service-inclusive price (proportionally distributed)
-  function getItemWithServiceTotal(item: ReceiptItem): number {
-    return calcLineTotalWithService(item, serviceChargePercent.value);
+  // Per-item charge-inclusive price (proportionally distributed)
+  function getItemWithChargesTotal(item: ReceiptItem): number {
+    return calcLineTotalWithCharges(item, charges.value);
   }
 
   const unassignedCount = computed(
@@ -84,8 +87,8 @@ export function useReceiptWizard(userId: () => string | null) {
         .filter((item) => item.assignedParticipantIds.includes(p.id))
         .map((item) => {
           const sharedWith = item.assignedParticipantIds.length;
-          // Use service-inclusive total for splitting
-          const lineTotal = getItemWithServiceTotal(item);
+          // Use charge-inclusive total for splitting
+          const lineTotal = getItemWithChargesTotal(item);
           const isLast =
             item.assignedParticipantIds[item.assignedParticipantIds.length - 1] === p.id;
           const baseShare = Math.floor(lineTotal / sharedWith);
@@ -172,9 +175,16 @@ export function useReceiptWizard(userId: () => string | null) {
       storeName.value = result.storeName;
       receiptDate.value = result.date;
 
-      // Only use serviceChargePercent if it's meaningful (>= 0.1%)
+      // Seed charges from OCR serviceChargePercent
       const rawPercent = result.serviceChargePercent;
-      serviceChargePercent.value = rawPercent && rawPercent >= 0.1 ? rawPercent : null;
+      if (rawPercent && rawPercent >= 0.1) {
+        charges.value = [
+          { id: uid(), label: 'Обслуживание', percent: rawPercent, enabled: true },
+        ];
+      } else {
+        charges.value = [];
+      }
+
       // Use hashtags from OCR for description, fallback to store name
       if (result.hashtags?.length > 0) {
         formData.value.description = result.hashtags.join(' ');
@@ -229,6 +239,32 @@ export function useReceiptWizard(userId: () => string | null) {
     });
     trigger('selection');
     return id;
+  }
+
+  // Step 2: Charge management
+  function addCharge(label: string, percent: number) {
+    charges.value.push({ id: uid(), label, percent, enabled: true });
+    trigger('selection');
+  }
+
+  function removeCharge(id: string) {
+    charges.value = charges.value.filter((c) => c.id !== id);
+    trigger('warning');
+  }
+
+  function toggleCharge(id: string) {
+    const charge = charges.value.find((c) => c.id === id);
+    if (charge) {
+      charge.enabled = !charge.enabled;
+      trigger('selection');
+    }
+  }
+
+  function updateChargePercent(id: string, percent: number) {
+    const charge = charges.value.find((c) => c.id === id);
+    if (charge) {
+      charge.percent = percent;
+    }
   }
 
   // Step 3: Participants
@@ -364,13 +400,18 @@ export function useReceiptWizard(userId: () => string | null) {
     storeName,
     receiptDate,
     subtotal,
-    serviceChargePercent,
-    serviceChargeAmount,
+    charges,
+    chargesAmount,
+    totalChargePercent,
     totalAmount,
-    getItemWithServiceTotal,
+    getItemWithChargesTotal,
     updateItem,
     deleteItem,
     addItem,
+    addCharge,
+    removeCharge,
+    toggleCharge,
+    updateChargePercent,
     // Step 3
     participants,
     hasMe,

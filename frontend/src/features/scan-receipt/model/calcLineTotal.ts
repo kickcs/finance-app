@@ -1,4 +1,4 @@
-import type { ReceiptItem } from './types';
+import type { ReceiptItem, ReceiptCharge } from './types';
 
 /** Base line total: use OCR totalPrice when available, otherwise qty × unitPrice */
 export function calcLineTotal(
@@ -10,12 +10,18 @@ export function calcLineTotal(
   return item.qty * item.unitPrice;
 }
 
-/** Line total with proportional service charge applied */
-export function calcLineTotalWithService(
+/** Sum of enabled charge percentages */
+export function getTotalChargePercent(charges: ReceiptCharge[]): number {
+  return charges.filter((c) => c.enabled).reduce((sum, c) => sum + c.percent, 0);
+}
+
+/** Line total with proportional charges applied (additive: base × (1 + totalPercent/100)) */
+export function calcLineTotalWithCharges(
   item: Pick<ReceiptItem, 'qty' | 'unitPrice' | 'ocrTotalPrice'>,
-  serviceChargePercent: number | null | undefined,
+  charges: ReceiptCharge[],
 ): number {
   const base = calcLineTotal(item);
-  if (!serviceChargePercent) return base;
-  return Math.round(base * (1 + serviceChargePercent / 100));
+  const totalPercent = getTotalChargePercent(charges);
+  if (!totalPercent) return base;
+  return Math.round(base * (1 + totalPercent / 100));
 }

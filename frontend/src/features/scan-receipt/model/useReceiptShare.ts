@@ -4,7 +4,7 @@ import { useHaptics } from '@/shared/lib/haptics';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { getInitial } from '@/shared/lib/format/text';
 import { toLocalISODate } from '@/shared/lib/date';
-import type { ParticipantSummary } from './types';
+import type { ParticipantSummary, ReceiptCharge } from './types';
 
 export interface ReceiptShareData {
   storeName: string | null;
@@ -12,8 +12,8 @@ export interface ReceiptShareData {
   currency: string;
   totalAmount: number;
   subtotal: number;
-  serviceChargePercent: number | null;
-  serviceChargeAmount: number;
+  charges: ReceiptCharge[];
+  chargesAmount: number;
   participants: ParticipantSummary[];
 }
 
@@ -262,14 +262,15 @@ function renderCardToCanvas(data: ReceiptShareData): HTMLCanvasElement {
   const ctx = canvas.getContext('2d')!;
 
   const participantsHeight = calcParticipantsHeight(data);
-  const hasServiceCharge = data.serviceChargePercent && data.serviceChargeAmount > 0;
+  const enabledCharges = data.charges.filter((c) => c.enabled);
+  const hasCharges = enabledCharges.length > 0 && data.chargesAmount > 0;
 
   const totalHeight =
     PADDING_Y +
     HEADER_HEIGHT +
     DIVIDER_GAP +
     participantsHeight +
-    (hasServiceCharge ? SERVICE_CHARGE_HEIGHT : 0) +
+    (hasCharges ? SERVICE_CHARGE_HEIGHT * enabledCharges.length : 0) +
     PADDING_Y +
     WATERMARK_SECTION_HEIGHT;
 
@@ -302,15 +303,14 @@ function renderCardToCanvas(data: ReceiptShareData): HTMLCanvasElement {
   y = drawDivider(ctx, y);
   y = drawParticipants(ctx, data, y);
 
-  if (hasServiceCharge) {
+  if (hasCharges) {
     ctx.font = `500 13px ${FONT_FAMILY}`;
     ctx.fillStyle = TEXT_TERTIARY;
     ctx.textAlign = 'center';
-    ctx.fillText(
-      `Суммы включают ${data.serviceChargePercent}% за обслуживание`,
-      CARD_WIDTH / 2,
-      y + 24,
-    );
+    const chargeLabels = enabledCharges
+      .map((c) => `${c.percent}% ${c.label.toLowerCase()}`)
+      .join(', ');
+    ctx.fillText(`Суммы включают ${chargeLabels}`, CARD_WIDTH / 2, y + 24);
   }
 
   // Watermark: logo + brand name + URL
@@ -378,6 +378,14 @@ function buildShareText(data: ReceiptShareData): string {
     for (const item of p.items) {
       lines.push(`  ${formatItemName(item)} — ${formatCurrency(item.share, data.currency)}`);
     }
+  }
+
+  const enabledShareCharges = data.charges.filter((c) => c.enabled);
+  if (enabledShareCharges.length > 0 && data.chargesAmount > 0) {
+    const chargeLabels = enabledShareCharges
+      .map((c) => `${c.percent}% ${c.label.toLowerCase()}`)
+      .join(', ');
+    lines.push('', `Включает ${chargeLabels}`);
   }
 
   lines.push('', `Рассчитано в Ouro Finance — ${APP_URL}`);
