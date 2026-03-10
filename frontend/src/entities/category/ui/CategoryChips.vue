@@ -18,15 +18,48 @@ const emit = defineEmits<{
   select: [categoryId: string];
 }>();
 
+// Split into frequent and infrequent (only when isFrequent is explicitly set)
+const showInfrequent = ref(false);
+
+const hasInfrequent = computed(() => props.categories.some((c) => c.isFrequent === false));
+
+const frequentCategories = computed(() =>
+  hasInfrequent.value ? props.categories.filter((c) => c.isFrequent !== false) : props.categories,
+);
+
+const infrequentCategories = computed(() =>
+  hasInfrequent.value ? props.categories.filter((c) => c.isFrequent === false) : [],
+);
+
+// If selected category is infrequent, auto-expand
+watch(
+  () => props.selectedId,
+  (id) => {
+    if (infrequentCategories.value.some((c) => c.id === id)) {
+      showInfrequent.value = true;
+    }
+  },
+  { immediate: true },
+);
+
+const visibleCategories = computed(() =>
+  showInfrequent.value
+    ? [...frequentCategories.value, ...infrequentCategories.value]
+    : frequentCategories.value,
+);
+
 const categoryRows = computed(() => {
-  const total = props.categories.length;
-  const rowCount = Math.max(1, props.rows);
+  const total = visibleCategories.value.length;
+  const rowCount = Math.max(1, Math.min(props.rows, Math.ceil(total / 3)));
+  const baseSize = Math.floor(total / rowCount);
+  const remainder = total % rowCount;
   const result: Category[][] = [];
+  let idx = 0;
   for (let i = 0; i < rowCount; i++) {
-    const start = Math.floor((i * total) / rowCount);
-    const end = Math.floor(((i + 1) * total) / rowCount);
-    const slice = props.categories.slice(start, end);
-    if (slice.length) result.push(slice);
+    // Front-load: first rows get one extra item
+    const size = baseSize + (i < remainder ? 1 : 0);
+    result.push(visibleCategories.value.slice(idx, idx + size));
+    idx += size;
   }
   return result;
 });
@@ -52,6 +85,8 @@ watch(
   { deep: true },
 );
 
+watch(showInfrequent, () => nextTick(updateIndicator));
+
 function getChipStyle(category: Category) {
   if (category.id === props.selectedId) {
     return {
@@ -60,6 +95,10 @@ function getChipStyle(category: Category) {
     };
   }
   return {};
+}
+
+function toggleInfrequent() {
+  showInfrequent.value = !showInfrequent.value;
 }
 </script>
 
@@ -84,7 +123,7 @@ function getChipStyle(category: Category) {
         :style="indicatorStyle"
       />
 
-      <div class="flex flex-col gap-1.5 w-max">
+      <div class="flex flex-col gap-1.5 w-max chips-grid">
         <div v-for="(row, rowIdx) in categoryRows" :key="rowIdx" class="flex gap-1.5">
           <button
             v-for="category in row"
@@ -103,8 +142,25 @@ function getChipStyle(category: Category) {
             <UIcon :name="category.icon" size="sm" :style="{ color: category.color }" />
             {{ category.name }}
           </button>
+
+          <!-- Toggle infrequent chip at the end of the last row -->
+          <button
+            v-if="hasInfrequent && rowIdx === categoryRows.length - 1"
+            type="button"
+            class="relative z-10 flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm border border-dashed border-border-light dark:border-border-dark text-text-tertiary-light dark:text-text-tertiary-dark hover:text-text-secondary-light dark:hover:text-text-secondary-dark active:scale-95 transition-colors duration-300 whitespace-nowrap"
+            @click="toggleInfrequent"
+          >
+            <UIcon :name="showInfrequent ? 'expand_less' : 'expand_more'" size="sm" />
+            {{ showInfrequent ? 'Скрыть' : `Ещё ${infrequentCategories.length}` }}
+          </button>
         </div>
       </div>
     </div>
   </div>
 </template>
+
+<style scoped>
+.chips-grid {
+  transition: opacity 0.15s ease;
+}
+</style>

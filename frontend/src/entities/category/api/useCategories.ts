@@ -59,6 +59,7 @@ export function useCategories(userId: MaybeRefOrGetter<string | null>) {
         color: newCategory.color,
         type: newCategory.type,
         sort_order: maxSortOrder + 1,
+        is_frequent: true,
       };
 
       queryClient.setQueryData<UserCategory[]>(queryKey.value, (old) => [
@@ -140,6 +141,7 @@ export function useCategories(userId: MaybeRefOrGetter<string | null>) {
       icon: uc.icon,
       color: uc.color,
       type: uc.type,
+      isFrequent: uc.is_frequent,
     };
   }
 

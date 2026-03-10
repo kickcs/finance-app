@@ -32,6 +32,7 @@ export class InitializeDefaultCategoriesHandler implements ICommandHandler<Initi
         color: cat.color,
         type: cat.typeValue,
         sortOrder: cat.sortOrder,
+        isFrequent: cat.isFrequent,
         createdAt: cat.createdAt,
       }));
     }
@@ -60,6 +61,7 @@ export class InitializeDefaultCategoriesHandler implements ICommandHandler<Initi
       color: cat.color,
       type: cat.typeValue,
       sortOrder: cat.sortOrder,
+      isFrequent: cat.isFrequent,
       createdAt: cat.createdAt,
     }));
   }

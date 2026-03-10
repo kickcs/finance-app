@@ -43,7 +43,15 @@ export class CategoriesController {
     @Body() dto: CreateCategoryDto,
   ): Promise<unknown> {
     return this.commandBus.execute(
-      new CreateCategoryCommand(userId, dto.name, dto.icon, dto.color, dto.type, dto.sortOrder),
+      new CreateCategoryCommand(
+        userId,
+        dto.name,
+        dto.icon,
+        dto.color,
+        dto.type,
+        dto.sortOrder,
+        dto.isFrequent,
+      ),
     );
   }
 

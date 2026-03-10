@@ -26,6 +26,7 @@ export class GetCategoriesHandler implements IQueryHandler<GetCategoriesQuery> {
       color: c.color,
       type: c.typeValue,
       sortOrder: c.sortOrder,
+      isFrequent: c.isFrequent,
       createdAt: c.createdAt,
     }));
   }

@@ -1,33 +1,49 @@
 <script setup lang="ts">
-import { ref, computed, watch, defineAsyncComponent } from 'vue';
-import { UButton, UIcon, UCard, UModal, Skeleton, EmptyState, IconBadge } from '@/shared/ui';
+import { ref, defineAsyncComponent } from 'vue';
+import {
+  UButton,
+  UIcon,
+  UCard,
+  UModal,
+  SkeletonListItem,
+  EmptyState,
+  IconBadge,
+  SwipeableItem,
+} from '@/shared/ui';
 import { useSlidingIndicator, buildIndicatorRect } from '@/shared/lib/hooks/useSlidingIndicator';
 import { AppHeader } from '@/widgets/header';
+import { CategoryForm } from '@/features/manage-categories';
+import { useCategoriesPage, TAB_ITEMS } from './model/useCategoriesPage';
 
 const draggable = defineAsyncComponent(() => import('vuedraggable'));
-import { useCategories } from '@/entities/category';
-import type { UserCategory } from '@/shared/api/database.types';
-import { CategoryForm, useManageCategories } from '@/features/manage-categories';
-import { navigateBack } from '@/app/router';
-import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 
-const { userId } = useCurrentUser();
+const {
+  activeTab,
+  isLoading,
+  localFrequentCategories,
+  localInfrequentCategories,
+  showInfrequent,
+  infrequentCount,
+  showFormModal,
+  isEditMode,
+  modalTitle,
+  formData,
+  isValid,
+  isSubmitting,
+  updateField,
+  toggleFrequent,
+  handleDragEnd,
+  goBack,
+  openAddModal,
+  openEditModal,
+  closeFormModal,
+  handleSave,
+} = useCategoriesPage();
 
-// Categories composable - now all categories come from DB
-const { categories, createCategory, updateCategory, deleteCategory, reorderCategories, isLoading } =
-  useCategories(userId);
+const categoryCardClass =
+  'flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-card-light dark:bg-card-dark border border-border-light/50 dark:border-border-dark/50 shadow-sm';
 
-// Form state
-const { formData, isValid, isSubmitting, resetForm, updateField } = useManageCategories();
-
-const tabItems = [
-  { id: 'expense', label: 'Расходы', icon: 'trending_down' },
-  { id: 'income', label: 'Доходы', icon: 'trending_up' },
-];
-
-const activeTab = ref<'expense' | 'income'>('expense');
-
-// Sliding indicator for type chips
+// Sliding indicator (needs template ref — stays in component)
 const typeChipsRef = ref<HTMLElement | null>(null);
 const { setChipRef: setTypeChipRef, indicatorStyle: typeIndicatorStyle } = useSlidingIndicator(
   typeChipsRef,
@@ -38,120 +54,6 @@ const { setChipRef: setTypeChipRef, indicatorStyle: typeIndicatorStyle } = useSl
     borderRadius: '9999px',
   }),
 );
-
-// Modal states
-const showFormModal = ref(false);
-const showDeleteModal = ref(false);
-const editingCategory = ref<UserCategory | null>(null);
-const categoryToDelete = ref<{ id: string; name: string } | null>(null);
-
-// Mode: 'create' or 'edit'
-const isEditMode = computed(() => editingCategory.value !== null);
-const modalTitle = computed(() => {
-  if (isEditMode.value) {
-    return 'Редактирование категории';
-  }
-  return `Новая категория ${activeTab.value === 'expense' ? 'расходов' : 'доходов'}`;
-});
-
-// Local mutable list for draggable (filtered by type)
-const localCategories = ref<UserCategory[]>([]);
-
-// Watch categories and activeTab to update local list
-watch(
-  [categories, activeTab],
-  ([cats, tab]) => {
-    localCategories.value = cats.filter((c) => c.type === tab);
-  },
-  { immediate: true },
-);
-
-// Handle drag end - save new order
-async function handleDragEnd() {
-  // Get all category IDs in new order
-  const categoryIds = localCategories.value.map((c) => c.id);
-  try {
-    await reorderCategories(categoryIds);
-  } catch (error) {
-    console.error('Failed to reorder categories:', error);
-  }
-}
-
-function goBack() {
-  navigateBack();
-}
-
-function openAddModal() {
-  editingCategory.value = null;
-  resetForm(activeTab.value);
-  showFormModal.value = true;
-}
-
-function openEditModal(category: UserCategory) {
-  editingCategory.value = category;
-  formData.value = {
-    name: category.name,
-    icon: category.icon,
-    color: category.color,
-    type: category.type,
-  };
-  showFormModal.value = true;
-}
-
-function closeFormModal() {
-  showFormModal.value = false;
-  editingCategory.value = null;
-}
-
-async function handleSave() {
-  if (!isValid.value || isSubmitting.value) return;
-
-  isSubmitting.value = true;
-  try {
-    if (isEditMode.value && editingCategory.value) {
-      // Update existing category
-      await updateCategory(editingCategory.value.id, {
-        name: formData.value.name.trim(),
-        icon: formData.value.icon,
-        color: formData.value.color,
-      });
-    } else {
-      // Create new category
-      await createCategory({
-        name: formData.value.name.trim(),
-        icon: formData.value.icon,
-        color: formData.value.color,
-        type: formData.value.type,
-      });
-    }
-    closeFormModal();
-  } catch (error) {
-    console.error('Failed to save category:', error);
-  } finally {
-    isSubmitting.value = false;
-  }
-}
-
-function openDeleteModal(category: UserCategory) {
-  categoryToDelete.value = { id: category.id, name: category.name };
-  showDeleteModal.value = true;
-}
-
-function closeDeleteModal() {
-  showDeleteModal.value = false;
-  categoryToDelete.value = null;
-}
-
-async function confirmDelete() {
-  if (!categoryToDelete.value) return;
-
-  try {
-    await deleteCategory(categoryToDelete.value.id);
-    closeDeleteModal();
-  } catch (error) {
-    console.error('Failed to delete category:', error);
-  }
-}
 </script>
 
 <template>
@@ -176,7 +78,7 @@ async function confirmDelete() {
         />
 
         <button
-          v-for="tab in tabItems"
+          v-for="tab in TAB_ITEMS"
           :key="tab.id"
           :ref="(el) => setTypeChipRef(tab.id, el as HTMLElement)"
           :class="[
@@ -198,63 +100,102 @@ async function confirmDelete() {
       </div>
 
       <!-- Loading state -->
-      <div v-if="isLoading" class="flex justify-center py-8">
-        <Skeleton class="h-8 w-8 rounded-full" />
+      <div v-if="isLoading" class="space-y-2">
+        <div v-for="i in 5" :key="i" :class="categoryCardClass">
+          <SkeletonListItem :show-trailing="false" avatar-class="w-9 h-9 rounded-xl" />
+        </div>
       </div>
 
-      <!-- Categories List with Drag and Drop -->
-      <UCard v-else-if="localCategories.length > 0" variant="bordered" class="overflow-hidden">
+      <!-- Frequent Categories -->
+      <template
+        v-else-if="localFrequentCategories.length > 0 || localInfrequentCategories.length > 0"
+      >
         <draggable
-          v-model="localCategories"
+          v-if="localFrequentCategories.length > 0"
+          v-model="localFrequentCategories"
           item-key="id"
           handle=".drag-handle"
           ghost-class="opacity-50"
           animation="200"
-          class="divide-y divide-border-light dark:divide-border-dark"
+          class="space-y-2"
           @end="handleDragEnd"
         >
           <template #item="{ element: category }">
-            <div
-              class="flex items-center gap-3 p-4 bg-surface-light dark:bg-surface-dark transition-colors hover:bg-surface-light dark:hover:bg-surface-dark"
+            <SwipeableItem
+              :left-action="{ icon: 'visibility_off', color: '#f59e0b', label: 'Скрыть' }"
+              @action-left="toggleFrequent(category.id, false)"
+              @action-right="openEditModal(category)"
             >
-              <!-- Drag Handle -->
-              <div
-                class="drag-handle cursor-grab active:cursor-grabbing text-text-tertiary-light dark:text-text-tertiary-dark hover:text-text-secondary-light dark:hover:text-text-secondary-dark transition-colors"
-              >
-                <UIcon name="drag_indicator" size="sm" />
-              </div>
-
-              <!-- Category Icon -->
-              <IconBadge :icon="category.icon" size="sm" :color="category.color" class="shrink-0" />
-
-              <!-- Category Name -->
-              <span
-                class="flex-1 font-medium text-text-primary-light dark:text-text-primary-dark truncate"
-              >
-                {{ category.name }}
-              </span>
-
-              <!-- Action Buttons -->
-              <div class="flex shrink-0 gap-1 -mr-2">
-                <UButton
-                  variant="icon"
-                  class="text-text-secondary-light dark:text-text-secondary-dark hover:bg-border-light dark:hover:bg-border-dark rounded-xl"
-                  @click="openEditModal(category)"
+              <div :class="categoryCardClass">
+                <!-- Drag Handle -->
+                <div
+                  class="drag-handle cursor-grab active:cursor-grabbing text-text-tertiary-light dark:text-text-tertiary-dark"
                 >
-                  <UIcon name="edit" size="sm" />
-                </UButton>
-                <UButton
-                  variant="icon"
-                  class="text-danger hover:bg-danger/10 rounded-xl"
-                  @click="openDeleteModal(category)"
+                  <UIcon name="drag_indicator" size="sm" />
+                </div>
+
+                <!-- Category Icon -->
+                <IconBadge
+                  :icon="category.icon"
+                  size="sm"
+                  :color="category.color"
+                  class="shrink-0"
+                />
+
+                <!-- Category Name -->
+                <span
+                  class="flex-1 font-medium text-text-primary-light dark:text-text-primary-dark truncate"
                 >
-                  <UIcon name="delete" size="sm" />
-                </UButton>
+                  {{ category.name }}
+                </span>
               </div>
-            </div>
+            </SwipeableItem>
           </template>
         </draggable>
-      </UCard>
+
+        <!-- Infrequent Categories Section -->
+        <div v-if="infrequentCount > 0" class="space-y-2">
+          <button
+            class="flex items-center gap-2 w-full px-1 py-2 text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark"
+            @click="showInfrequent = !showInfrequent"
+          >
+            <UIcon
+              name="expand_more"
+              size="sm"
+              class="transition-transform duration-200"
+              :class="showInfrequent ? 'rotate-180' : ''"
+            />
+            Редко используемые ({{ infrequentCount }})
+          </button>
+
+          <div v-if="showInfrequent" class="space-y-2">
+            <SwipeableItem
+              v-for="category in localInfrequentCategories"
+              :key="category.id"
+              :left-action="{ icon: 'visibility', color: '#22c55e', label: 'Показать' }"
+              @action-left="toggleFrequent(category.id, true)"
+              @action-right="openEditModal(category)"
+            >
+              <div :class="[categoryCardClass, 'opacity-60']">
+                <!-- Category Icon -->
+                <IconBadge
+                  :icon="category.icon"
+                  size="sm"
+                  :color="category.color"
+                  class="shrink-0"
+                />
+
+                <!-- Category Name -->
+                <span
+                  class="flex-1 font-medium text-text-primary-light dark:text-text-primary-dark truncate"
+                >
+                  {{ category.name }}
+                </span>
+              </div>
+            </SwipeableItem>
+          </div>
+        </div>
+      </template>
 
       <!-- Empty state -->
       <UCard v-else variant="bordered" class="py-4">
@@ -297,25 +238,6 @@ async function confirmDelete() {
           @click="handleSave"
         >
           {{ isSubmitting ? 'Сохранение...' : isEditMode ? 'Сохранить' : 'Создать' }}
-        </UButton>
-      </template>
-    </UModal>
-
-    <!-- Delete Confirmation Modal -->
-    <UModal v-model="showDeleteModal" title="Удалить категорию" @close="closeDeleteModal">
-      <p class="text-text-secondary-light dark:text-text-secondary-dark">
-        Вы уверены, что хотите удалить категорию "{{ categoryToDelete?.name }}"?
-      </p>
-
-      <template #actions>
-        <UButton variant="secondary" full-width @click="closeDeleteModal">Отмена</UButton>
-        <UButton
-          variant="primary"
-          full-width
-          class="!bg-danger hover:!bg-danger/90"
-          @click="confirmDelete"
-        >
-          Удалить
         </UButton>
       </template>
     </UModal>

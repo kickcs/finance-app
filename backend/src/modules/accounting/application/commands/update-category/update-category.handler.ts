@@ -32,6 +32,7 @@ export class UpdateCategoryHandler implements ICommandHandler<UpdateCategoryComm
       color: savedCategory.color,
       type: savedCategory.typeValue,
       sortOrder: savedCategory.sortOrder,
+      isFrequent: savedCategory.isFrequent,
       createdAt: savedCategory.createdAt,
     };
   }

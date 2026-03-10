@@ -403,6 +403,7 @@ export type Database = {
           color: string;
           type: 'expense' | 'income';
           sort_order: number;
+          is_frequent: boolean;
           created_at: string;
         };
         Insert: {
@@ -413,6 +414,7 @@ export type Database = {
           color: string;
           type: 'expense' | 'income';
           sort_order?: number;
+          is_frequent?: boolean;
           created_at?: string;
         };
         Update: {
@@ -423,6 +425,7 @@ export type Database = {
           color?: string;
           type?: 'expense' | 'income';
           sort_order?: number;
+          is_frequent?: boolean;
           created_at?: string;
         };
         Relationships: [];

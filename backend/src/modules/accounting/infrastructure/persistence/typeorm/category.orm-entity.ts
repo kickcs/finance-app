@@ -23,6 +23,9 @@ export class CategoryOrmEntity {
   @Column({ name: 'sort_order', default: 0 })
   sortOrder: number;
 
+  @Column({ name: 'is_frequent', default: true })
+  isFrequent: boolean;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 }

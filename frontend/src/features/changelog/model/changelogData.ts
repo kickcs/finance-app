@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.29';
+export const CURRENT_VERSION = '1.0.30';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,25 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.30',
+    date: '2026-03-10',
+    title: 'Управление категориями',
+    items: [
+      {
+        type: 'feature',
+        text: 'Разделение категорий на часто и редко используемые — скройте ненужные свайпом влево',
+      },
+      {
+        type: 'feature',
+        text: 'Кнопка «Ещё» в выборе категорий — скрытые категории можно раскрыть при необходимости',
+      },
+      {
+        type: 'improvement',
+        text: 'Переработан дизайн страницы категорий — карточки вместо списка, скелетон при загрузке',
+      },
+    ],
+  },
   {
     version: '1.0.29',
     date: '2026-03-08',

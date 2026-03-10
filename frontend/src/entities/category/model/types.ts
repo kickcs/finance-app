@@ -4,4 +4,5 @@ export interface Category {
   icon: string;
   color: string;
   type: 'expense' | 'income' | 'transfer' | 'adjustment';
+  isFrequent?: boolean;
 }

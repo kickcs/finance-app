@@ -23,6 +23,7 @@ export class CreateCategoryHandler implements ICommandHandler<CreateCategoryComm
       command.color,
       command.type,
       command.sortOrder,
+      command.isFrequent,
     );
 
     const savedCategory = await this.categoryRepository.save(category);
@@ -35,6 +36,7 @@ export class CreateCategoryHandler implements ICommandHandler<CreateCategoryComm
       color: savedCategory.color,
       type: savedCategory.typeValue,
       sortOrder: savedCategory.sortOrder,
+      isFrequent: savedCategory.isFrequent,
       createdAt: savedCategory.createdAt,
     };
   }

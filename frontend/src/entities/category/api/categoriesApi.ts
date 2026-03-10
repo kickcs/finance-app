@@ -10,6 +10,7 @@ interface CategoryResponse {
   color: string;
   type: 'expense' | 'income';
   sortOrder: number;
+  isFrequent: boolean;
   createdAt: string;
 }
 
@@ -22,6 +23,7 @@ function transformCategory(cat: CategoryResponse): UserCategory {
     color: cat.color,
     type: cat.type,
     sort_order: cat.sortOrder,
+    is_frequent: cat.isFrequent ?? true,
     created_at: cat.createdAt,
   };
 }
@@ -56,6 +58,7 @@ export const categoriesApi = {
       color: category.color,
       type: category.type,
       sortOrder: category.sort_order ?? 0,
+      isFrequent: category.is_frequent,
     });
     return transformCategory(data);
   },
@@ -70,6 +73,7 @@ export const categoriesApi = {
       color: updates.color,
       type: updates.type,
       sortOrder: updates.sort_order,
+      isFrequent: updates.is_frequent,
     });
     return transformCategory(data);
   },

@@ -12,6 +12,7 @@ export class CategoryMapper {
       color: ormEntity.color,
       type: CategoryType.create(ormEntity.type),
       sortOrder: ormEntity.sortOrder,
+      isFrequent: ormEntity.isFrequent,
       createdAt: ormEntity.createdAt,
     });
   }
@@ -26,6 +27,7 @@ export class CategoryMapper {
     ormEntity.color = category.color;
     ormEntity.type = category.typeValue;
     ormEntity.sortOrder = category.sortOrder;
+    ormEntity.isFrequent = category.isFrequent;
     ormEntity.createdAt = category.createdAt;
 
     return ormEntity;

@@ -7,6 +7,7 @@ export class UpdateCategoryCommand {
       color?: string;
       type?: string;
       sortOrder?: number;
+      isFrequent?: boolean;
     },
   ) {}
 }

@@ -6,5 +6,6 @@ export class CreateCategoryCommand {
     public readonly color: string,
     public readonly type: 'income' | 'expense',
     public readonly sortOrder: number = 0,
+    public readonly isFrequent: boolean = true,
   ) {}
 }
