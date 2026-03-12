@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.30';
+export const CURRENT_VERSION = '1.0.31';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,17 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.31',
+    date: '2026-03-12',
+    title: 'Новый экран приветствия',
+    items: [
+      {
+        type: 'feature',
+        text: 'Полностью переработан экран приветствия — теперь это красивый лендинг с анимациями, адаптированный для веба и мобильных устройств',
+      },
+    ],
+  },
   {
     version: '1.0.30',
     date: '2026-03-10',
