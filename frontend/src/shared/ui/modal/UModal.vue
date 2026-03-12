@@ -10,14 +10,16 @@ import {
 import { cn } from '@/shared/lib/utils';
 import { UIcon } from '../icon';
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     modelValue: boolean;
     title?: string;
     closeable?: boolean;
+    size?: 'sm' | 'md' | 'lg';
   }>(),
   {
     closeable: true,
+    size: 'md',
   },
 );
 
@@ -25,6 +27,12 @@ const emit = defineEmits<{
   'update:modelValue': [value: boolean];
   close: [];
 }>();
+
+const sizeClasses: Record<string, string> = {
+  sm: 'max-w-sm',
+  md: 'max-w-lg',
+  lg: 'max-w-xl',
+};
 
 function handleOpenChange(open: boolean) {
   emit('update:modelValue', open);
@@ -43,7 +51,7 @@ function handleOpenChange(open: boolean) {
       <DialogContent
         :class="
           cn(
-            'fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2',
+            `fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] ${sizeClasses[props.size]} -translate-x-1/2 -translate-y-1/2`,
             'bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark',
             'data-[state=open]:animate-in data-[state=closed]:animate-out',
             'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
