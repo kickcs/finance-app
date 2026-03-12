@@ -11,7 +11,7 @@ import {
   PeriodComparison,
   type DonutSegment,
 } from '@/widgets/analytics';
-import { UTabs, UCard, EmptyState, Skeleton } from '@/shared/ui';
+import { PageContainer, UTabs, UCard, EmptyState, Skeleton } from '@/shared/ui';
 import { useDailyStats } from '@/entities/transaction';
 import { useAccounts } from '@/entities/account';
 import { toLocalISODate, isPastDate } from '@/shared/lib/date';
@@ -254,16 +254,15 @@ onMounted(() => {
 </script>
 
 <template>
-  <div
-    class="h-full flex flex-col relative bg-background-light dark:bg-background-dark overflow-y-auto pb-28 md:pb-8"
-  >
-    <!-- Header -->
-    <AppHeader title="Аналитика" />
+  <PageContainer class="relative bg-background-light dark:bg-background-dark">
+    <template #header>
+      <AppHeader title="Аналитика" />
+    </template>
 
     <!-- Sticky filters + tabs -->
     <div
-      class="sticky z-20 px-5 py-2 space-y-3 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-border-light/50 dark:border-border-dark/50 shadow-sm"
-      :style="{ top: 'calc(3rem + env(safe-area-inset-top, 0px))' }"
+      class="sticky z-20 -mx-5 lg:-mx-8 px-5 lg:px-8 py-2 space-y-3 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-border-light/50 dark:border-border-dark/50 shadow-sm"
+      :style="{ top: '0' }"
     >
       <!-- Period Tabs -->
       <UTabs
@@ -308,7 +307,7 @@ onMounted(() => {
     </div>
 
     <!-- Content -->
-    <main class="px-5 pt-4 space-y-5">
+    <main class="pt-4 pb-28 md:pb-8 space-y-5">
       <!-- ========== Tab: Overview ========== -->
       <div v-show="activeTab === 'overview'">
         <div
@@ -333,24 +332,31 @@ onMounted(() => {
               :loading="analyticsLoading"
             />
 
-            <!-- Daily Stats Cards -->
-            <DailyStatsCards
-              :total-expense="convertedExpense"
-              :available-balance="availableBalance"
-              :days-in-period="daysInPeriod"
-              :days-remaining-in-month="daysRemainingInMonth"
-              :currency="currency"
-              :is-past-period="isPastPeriod"
-              :balance-label="balanceLabel"
-            />
+            <!-- Daily Stats + Savings side-by-side on desktop -->
+            <div class="flex flex-col lg:flex-row lg:gap-4">
+              <!-- Daily Stats Cards -->
+              <div class="lg:flex-1">
+                <DailyStatsCards
+                  :total-expense="convertedExpense"
+                  :available-balance="availableBalance"
+                  :days-in-period="daysInPeriod"
+                  :days-remaining-in-month="daysRemainingInMonth"
+                  :currency="currency"
+                  :is-past-period="isPastPeriod"
+                  :balance-label="balanceLabel"
+                />
+              </div>
 
-            <!-- Savings Gauge -->
-            <SavingsGauge
-              :total-income="convertedIncome"
-              :total-expense="convertedExpense"
-              :available-balance="availableBalance"
-              :currency="currency"
-            />
+              <!-- Savings Gauge -->
+              <div class="mt-4 lg:mt-0 lg:flex-1">
+                <SavingsGauge
+                  :total-income="convertedIncome"
+                  :total-expense="convertedExpense"
+                  :available-balance="availableBalance"
+                  :currency="currency"
+                />
+              </div>
+            </div>
           </template>
         </div>
       </div>
@@ -408,30 +414,33 @@ onMounted(() => {
 
       <!-- ========== Tab: Trends ========== -->
       <div v-show="activeTab === 'trends'">
-        <div class="space-y-4">
+        <div class="flex flex-col lg:flex-row lg:gap-4 space-y-4 lg:space-y-0">
           <!-- Daily Expense Chart -->
-          <DailyExpenseChart
-            :entries="chartEntries"
-            :currency="currency"
-            :loading="dailyLoading"
-            :group-by="groupBy"
-          />
+          <div class="lg:flex-1">
+            <DailyExpenseChart
+              :entries="chartEntries"
+              :currency="currency"
+              :loading="dailyLoading"
+              :group-by="groupBy"
+            />
+          </div>
 
           <!-- Period Comparison -->
-          <PeriodComparison
-            v-if="showComparison"
-            :current-expense="convertedExpense"
-            :previous-expense="prevExpense"
-            :current-income="convertedIncome"
-            :previous-income="prevIncome"
-            :current-savings-rate="savingsRate"
-            :previous-savings-rate="prevSavingsRate"
-            :currency="currency"
-            :loading="prevLoading"
-            :no-data="noPrevData"
-          />
+          <div v-if="showComparison" class="lg:flex-1">
+            <PeriodComparison
+              :current-expense="convertedExpense"
+              :previous-expense="prevExpense"
+              :current-income="convertedIncome"
+              :previous-income="prevIncome"
+              :current-savings-rate="savingsRate"
+              :previous-savings-rate="prevSavingsRate"
+              :currency="currency"
+              :loading="prevLoading"
+              :no-data="noPrevData"
+            />
+          </div>
         </div>
       </div>
     </main>
-  </div>
+  </PageContainer>
 </template>

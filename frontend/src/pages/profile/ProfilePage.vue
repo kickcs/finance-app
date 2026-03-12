@@ -5,7 +5,7 @@ import type { User } from '@/shared/api/composables/useAuth';
 import { useRouter } from 'vue-router';
 import { ROUTE_NAMES } from '@/app/router/routeNames';
 import { AppHeader } from '@/widgets/header';
-import { UButton, UIcon, UCard, UModal, IconBadge, useToast } from '@/shared/ui';
+import { PageContainer, UButton, UIcon, UCard, UModal, IconBadge, useToast } from '@/shared/ui';
 import { getCurrencyByCode } from '@/entities/currency';
 import { useAuth, useProfile } from '@/shared/api';
 import { EditProfileModal } from '@/features/edit-profile';
@@ -147,14 +147,13 @@ async function confirmLogout() {
 </script>
 
 <template>
-  <div
-    class="h-full flex flex-col relative bg-background-light dark:bg-background-dark pb-28 md:pb-8 overflow-y-auto"
-  >
-    <!-- Header -->
-    <AppHeader title="Профиль" />
+  <PageContainer max-width="2xl" class="relative bg-background-light dark:bg-background-dark">
+    <template #header>
+      <AppHeader title="Профиль" />
+    </template>
 
     <!-- Content -->
-    <main class="px-5 pt-8 space-y-6">
+    <main class="pt-8 pb-28 md:pb-8 space-y-6">
       <!-- User Card -->
       <UCard class="p-5" variant="bordered">
         <div class="flex items-center gap-4">
@@ -327,5 +326,5 @@ async function confirmLogout() {
 
     <!-- Edit Profile Modal -->
     <EditProfileModal v-model="showEditProfileModal" :user-id="user?.id ?? null" />
-  </div>
+  </PageContainer>
 </template>

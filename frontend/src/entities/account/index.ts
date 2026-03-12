@@ -1,5 +1,6 @@
 // UI
 export { default as AccountCard } from './ui/AccountCard.vue';
+export { default as AccountDetailPanel } from './ui/AccountDetailPanel.vue';
 export { default as AccountTypeFields } from './ui/AccountTypeFields.vue';
 export type { AccountTypeFieldValues } from './model/types';
 

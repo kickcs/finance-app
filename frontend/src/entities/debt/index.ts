@@ -1,6 +1,7 @@
 // UI
 export { default as DebtCard } from './ui/DebtCard.vue';
 export { default as DebtCardSkeleton } from './ui/DebtCardSkeleton.vue';
+export { default as DebtDetailPanel } from './ui/DebtDetailPanel.vue';
 export { default as ForgivenessToggle } from './ui/ForgivenessToggle.vue';
 
 // Model/Types

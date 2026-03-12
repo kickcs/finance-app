@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
+import { useMediaQuery } from '@vueuse/core';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 import { useRouter } from 'vue-router';
@@ -10,9 +11,11 @@ import { AppHeader } from '@/widgets/header';
 import {
   VirtualGroupedTransactionList,
   TransactionGroupSkeleton,
+  TransactionDetailPanel,
   useInfiniteTransactions,
   useGroupedTransactions,
 } from '@/entities/transaction';
+import type { Transaction } from '@/entities/transaction';
 import { SearchInput, useServerSearch } from '@/features/search-transactions';
 import {
   EditTransactionModal,
@@ -21,7 +24,7 @@ import {
 } from '@/features/edit-transaction';
 import { useAccounts, AccountSelector } from '@/entities/account';
 import { CategoryChips } from '@/entities/category';
-import { UTabs, UIcon, UButton } from '@/shared/ui';
+import { UTabs, UIcon, UButton, MasterDetailLayout } from '@/shared/ui';
 import { useExchangeRates } from '@/shared/api';
 
 // Page composables
@@ -30,6 +33,7 @@ import { useBalanceAfter } from './model/useBalanceAfter';
 import { computeDayTotal } from './lib/computeDayTotal';
 
 const router = useRouter();
+const isDesktop = useMediaQuery('(min-width: 1024px)');
 
 const { userId } = useCurrentUser();
 const { currency } = useUserCurrency();
@@ -137,6 +141,47 @@ const {
   closeEditModal,
 } = useTransactionEditFlow(userId);
 
+// Desktop: selected transaction for detail panel
+const selectedTransactionId = ref<string | null>(null);
+
+const selectedDetailTransaction = computed(() => {
+  if (!selectedTransactionId.value) return null;
+  return displayedTransactions.value.find((t) => t.id === selectedTransactionId.value) ?? null;
+});
+
+// Reset selection when transactions change and selected one is no longer in the list
+watch(displayedTransactions, (txs) => {
+  if (selectedTransactionId.value && !txs.find((t) => t.id === selectedTransactionId.value)) {
+    selectedTransactionId.value = null;
+  }
+});
+
+function onTransactionClick(transaction: Transaction) {
+  if (isDesktop.value) {
+    selectedTransactionId.value = transaction.id;
+  } else {
+    handleTransactionClick(transaction);
+  }
+}
+
+function handleDetailEdit() {
+  if (!selectedDetailTransaction.value) return;
+  handleTransactionClick(selectedDetailTransaction.value);
+}
+
+function handleDetailDelete() {
+  if (!selectedDetailTransaction.value) return;
+  selectedTransaction.value = selectedDetailTransaction.value;
+  showDeleteModal.value = true;
+}
+
+// Wrap original delete handler to also clear detail selection
+const originalHandleDeleteTransaction = handleDeleteTransaction;
+async function handleDeleteTransactionAndClear() {
+  await originalHandleDeleteTransaction();
+  selectedTransactionId.value = null;
+}
+
 function handleAddTransaction() {
   router.push({ name: ROUTE_NAMES.NEW_TRANSACTION });
 }
@@ -211,133 +256,169 @@ async function handleRefresh() {
       </template>
     </AppHeader>
 
-    <!-- Fixed Controls -->
-    <div class="px-5 pt-4 shrink-0">
-      <!-- Type Filter Tabs (Always Visible) -->
-      <UTabs
-        :model-value="activeTypeFilter"
-        :items="TYPE_FILTER_ITEMS"
-        size="sm"
-        @update:model-value="handleTypeFilterChange"
-      />
-    </div>
-
-    <!-- Collapsible Filters -->
-    <div
-      id="filters-container"
-      class="px-5 shrink-0"
-      :class="isFiltersCollapsed ? 'hidden' : 'block'"
-      :inert="isFiltersCollapsed || undefined"
-    >
-      <div class="space-y-4 pt-4 pb-2">
-        <!-- Search -->
-        <div>
-          <SearchInput
-            :model-value="searchTerm"
-            placeholder="Поиск транзакций..."
-            @update:model-value="setQuery"
-            @clear="clearSearch"
+    <!-- Master-Detail Layout -->
+    <MasterDetailLayout :selected="selectedTransactionId" @close="selectedTransactionId = null">
+      <template #master>
+        <!-- Fixed Controls -->
+        <div class="pt-4 shrink-0 lg:pr-0 px-5 lg:px-0">
+          <!-- Type Filter Tabs (Always Visible) -->
+          <UTabs
+            :model-value="activeTypeFilter"
+            :items="TYPE_FILTER_ITEMS"
+            size="sm"
+            @update:model-value="handleTypeFilterChange"
           />
         </div>
 
-        <!-- Quick Filters -->
-        <div class="space-y-3">
-          <AccountSelector
-            v-if="accounts.length > 0"
-            :accounts="accounts"
-            :selected-id="selectedAccountId"
-            label="Счета"
-            @select="selectedAccountId = $event === selectedAccountId ? null : $event"
-          />
-          <CategoryChips
-            v-if="usedCategories.length > 0"
-            :categories="usedCategories"
-            :selected-id="selectedCategoryId ?? ''"
-            label="Категории"
-            @select="selectedCategoryId = $event === selectedCategoryId ? null : $event"
-          />
-        </div>
-      </div>
-    </div>
-
-    <!-- Content Area: flex column so virtualizer height is set by flex, not by % of padded parent -->
-    <div class="flex-1 min-h-0 px-5 pt-4 flex flex-col">
-      <!-- Loading State with Skeleton -->
-      <div
-        v-if="currentIsLoading && displayedTransactions.length === 0"
-        class="flex-1 space-y-4 overflow-hidden"
-      >
-        <TransactionGroupSkeleton v-for="i in 3" :key="i" :count="3" />
-      </div>
-
-      <!-- Virtualized Transaction Groups: flex-1 wrapper ensures virtualizer gets definite height from flex, not from % -->
-      <div
-        v-else-if="groupedTransactions.length > 0"
-        :class="[
-          'flex-1 min-h-0 transition-opacity duration-300',
-          {
-            'opacity-50 pointer-events-none':
-              currentIsFetching && !currentIsFetchingNextPage && displayedTransactions.length > 0,
-          },
-        ]"
-      >
-        <VirtualGroupedTransactionList
-          :groups="groupedTransactions"
-          :currency="currency"
-          :has-next-page="currentHasNextPage"
-          :is-fetching-next-page="currentIsFetchingNextPage"
-          :get-account-name="getAccountName"
-          :get-balance-after="getBalanceAfter"
-          swipe-enabled
-          height="100%"
-          @load-more="handleLoadMore"
-          @transaction-click="handleTransactionClick"
-          @transaction-edit="handleTransactionClick"
-          @transaction-delete="handleSwipeDelete"
-        />
-      </div>
-
-      <!-- Empty State -->
-      <div v-else class="py-16 text-center flex flex-col items-center">
+        <!-- Collapsible Filters -->
         <div
-          class="w-16 h-16 mb-4 rounded-full bg-surface-light dark:bg-surface-dark flex items-center justify-center"
+          id="filters-container"
+          class="shrink-0 px-5 lg:px-0"
+          :class="isFiltersCollapsed ? 'hidden' : 'block'"
+          :inert="isFiltersCollapsed || undefined"
         >
-          <UIcon
-            name="receipt_long"
-            size="lg"
-            class="text-text-tertiary-light dark:text-text-tertiary-dark"
-          />
-        </div>
-        <p class="text-text-secondary-light dark:text-text-secondary-dark mb-2 font-medium">
-          {{ isEmpty ? 'Ничего не найдено' : 'Нет транзакций' }}
-        </p>
-        <p class="text-sm text-text-tertiary-light dark:text-text-tertiary-dark mb-6">
-          {{
-            isEmpty
-              ? 'Попробуйте изменить параметры поиска'
-              : 'Добавьте свою первую транзакцию, чтобы начать вести учет'
-          }}
-        </p>
-        <UButton
-          v-if="isEmpty"
-          variant="secondary"
-          @click="
-            () => {
-              clearSearch();
-              resetAll();
-            }
-          "
-        >
-          Сбросить фильтры
-        </UButton>
-        <UButton v-else variant="primary" @click="handleAddTransaction">
-          Добавить транзакцию
-        </UButton>
-      </div>
+          <div class="space-y-4 pt-4 pb-2">
+            <!-- Search -->
+            <div>
+              <SearchInput
+                :model-value="searchTerm"
+                placeholder="Поиск транзакций..."
+                @update:model-value="setQuery"
+                @clear="clearSearch"
+              />
+            </div>
 
-      <!-- Spacer for fixed BottomNav — sits outside the flex-1 blocks so the virtualizer height excludes it -->
-      <div class="shrink-0 h-20 md:h-0" />
-    </div>
+            <!-- Quick Filters -->
+            <div class="space-y-3">
+              <AccountSelector
+                v-if="accounts.length > 0"
+                :accounts="accounts"
+                :selected-id="selectedAccountId"
+                label="Счета"
+                @select="selectedAccountId = $event === selectedAccountId ? null : $event"
+              />
+              <CategoryChips
+                v-if="usedCategories.length > 0"
+                :categories="usedCategories"
+                :selected-id="selectedCategoryId ?? ''"
+                label="Категории"
+                @select="selectedCategoryId = $event === selectedCategoryId ? null : $event"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Content Area: flex column so virtualizer height is set by flex, not by % of padded parent -->
+        <div class="flex-1 min-h-0 pt-4 flex flex-col px-5 lg:px-0">
+          <!-- Loading State with Skeleton -->
+          <div
+            v-if="currentIsLoading && displayedTransactions.length === 0"
+            class="flex-1 space-y-4 overflow-hidden"
+          >
+            <TransactionGroupSkeleton v-for="i in 3" :key="i" :count="3" />
+          </div>
+
+          <!-- Virtualized Transaction Groups: flex-1 wrapper ensures virtualizer gets definite height from flex, not from % -->
+          <div
+            v-else-if="groupedTransactions.length > 0"
+            :class="[
+              'flex-1 min-h-0 transition-opacity duration-300',
+              {
+                'opacity-50 pointer-events-none':
+                  currentIsFetching &&
+                  !currentIsFetchingNextPage &&
+                  displayedTransactions.length > 0,
+              },
+            ]"
+          >
+            <VirtualGroupedTransactionList
+              :groups="groupedTransactions"
+              :currency="currency"
+              :has-next-page="currentHasNextPage"
+              :is-fetching-next-page="currentIsFetchingNextPage"
+              :get-account-name="getAccountName"
+              :get-balance-after="getBalanceAfter"
+              swipe-enabled
+              height="100%"
+              @load-more="handleLoadMore"
+              @transaction-click="onTransactionClick"
+              @transaction-edit="onTransactionClick"
+              @transaction-delete="handleSwipeDelete"
+            />
+          </div>
+
+          <!-- Empty State -->
+          <div v-else class="py-16 text-center flex flex-col items-center">
+            <div
+              class="w-16 h-16 mb-4 rounded-full bg-surface-light dark:bg-surface-dark flex items-center justify-center"
+            >
+              <UIcon
+                name="receipt_long"
+                size="lg"
+                class="text-text-tertiary-light dark:text-text-tertiary-dark"
+              />
+            </div>
+            <p class="text-text-secondary-light dark:text-text-secondary-dark mb-2 font-medium">
+              {{ isEmpty ? 'Ничего не найдено' : 'Нет транзакций' }}
+            </p>
+            <p class="text-sm text-text-tertiary-light dark:text-text-tertiary-dark mb-6">
+              {{
+                isEmpty
+                  ? 'Попробуйте изменить параметры поиска'
+                  : 'Добавьте свою первую транзакцию, чтобы начать вести учет'
+              }}
+            </p>
+            <UButton
+              v-if="isEmpty"
+              variant="secondary"
+              @click="
+                () => {
+                  clearSearch();
+                  resetAll();
+                }
+              "
+            >
+              Сбросить фильтры
+            </UButton>
+            <UButton v-else variant="primary" @click="handleAddTransaction">
+              Добавить транзакцию
+            </UButton>
+          </div>
+
+          <!-- Spacer for fixed BottomNav — sits outside the flex-1 blocks so the virtualizer height excludes it -->
+          <div class="shrink-0 h-20 lg:h-0" />
+        </div>
+      </template>
+
+      <template #detail>
+        <TransactionDetailPanel
+          v-if="selectedDetailTransaction"
+          :transaction="selectedDetailTransaction"
+          :currency="currency"
+          :account-name="getAccountName(selectedDetailTransaction.account_id)"
+          :to-account-name="getAccountName(selectedDetailTransaction.to_account_id ?? null)"
+          @edit="handleDetailEdit"
+          @delete="handleDetailDelete"
+        />
+      </template>
+
+      <template #empty>
+        <div class="h-full flex flex-col items-center justify-center">
+          <div
+            class="w-14 h-14 mb-3 rounded-full bg-surface-light dark:bg-surface-dark flex items-center justify-center"
+          >
+            <UIcon
+              name="receipt_long"
+              size="lg"
+              class="text-text-tertiary-light dark:text-text-tertiary-dark"
+            />
+          </div>
+          <p class="text-sm text-text-tertiary-light dark:text-text-tertiary-dark">
+            Выберите транзакцию для просмотра деталей
+          </p>
+        </div>
+      </template>
+    </MasterDetailLayout>
 
     <!-- Edit Transaction Modal -->
     <EditTransactionModal
@@ -359,7 +440,7 @@ async function handleRefresh() {
       :transaction="selectedTransaction"
       :currency="currency"
       :is-deleting="isDeleting"
-      @confirm="handleDeleteTransaction"
+      @confirm="handleDeleteTransactionAndClear"
       @cancel="showDeleteModal = false"
     />
   </div>

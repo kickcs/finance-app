@@ -4,6 +4,7 @@ export { default as TransactionItemSkeleton } from './ui/TransactionItemSkeleton
 export { default as TransactionGroupSkeleton } from './ui/TransactionGroupSkeleton.vue';
 export { default as VirtualTransactionList } from './ui/VirtualTransactionList.vue';
 export { default as VirtualGroupedTransactionList } from './ui/VirtualGroupedTransactionList.vue';
+export { default as TransactionDetailPanel } from './ui/TransactionDetailPanel.vue';
 
 // Model/Types
 export * from './model/types';
