@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
-import { useRouter, useRoute } from 'vue-router';
-import { useMediaQuery } from '@vueuse/core';
+import { ref, computed } from 'vue';
+import { useRouter } from 'vue-router';
 import { ROUTE_NAMES } from '@/app/router/routeNames';
+import { useIsDesktop } from '@/shared/lib/composables/useIsDesktop';
 import { AppHeader } from '@/widgets/header';
 import {
   ReminderCard,
@@ -17,8 +17,7 @@ import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 
 const router = useRouter();
-const route = useRoute();
-const isDesktop = useMediaQuery('(min-width: 1024px)');
+const isDesktop = useIsDesktop();
 
 const { userId } = useCurrentUser();
 const { currency } = useUserCurrency();
@@ -27,17 +26,7 @@ const { currency } = useUserCurrency();
 const { reminders } = useReminders(userId);
 
 // Selected reminder for desktop detail panel
-const selectedReminderId = ref<string | null>((route.params.id as string) || null);
-
-// Watch route params for deep linking
-watch(
-  () => route.params.id,
-  (newId) => {
-    if (newId && isDesktop.value) {
-      selectedReminderId.value = newId as string;
-    }
-  },
-);
+const selectedReminderId = ref<string | null>(null);
 
 // Find selected reminder for detail panel modals
 const selectedReminder = computed<Reminder | null>(() => {
@@ -106,7 +95,7 @@ function handleAddReminder() {
 const showEditModal = ref(false);
 const showDeleteModal = ref(false);
 
-const { isUpdating, isDeleting, update, remove } = useEditReminder(userId.value!);
+const { isUpdating, isDeleting, update, remove } = useEditReminder(userId.value);
 
 function handleDetailEdit() {
   showEditModal.value = true;
@@ -162,7 +151,7 @@ function handleDetailClose() {
     <MasterDetailLayout :selected="selectedReminderId" @close="handleDetailClose">
       <template #master>
         <!-- Content -->
-        <div class="pt-8 space-y-6" :class="isDesktop ? '' : 'px-5'">
+        <div class="pt-8 space-y-6">
           <!-- Statistics Cards -->
           <div v-if="reminders.length > 0" class="grid grid-cols-2 gap-3">
             <!-- Today count -->

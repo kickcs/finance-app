@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch, defineAsyncComponent } from 'vue';
 import { useRouter } from 'vue-router';
-import { useMediaQuery } from '@vueuse/core';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { ROUTE_NAMES } from '@/app/router/routeNames';
 import { AppHeader } from '@/widgets/header';
@@ -22,6 +21,7 @@ import {
   Skeleton,
   MasterDetailLayout,
 } from '@/shared/ui';
+import { useIsDesktop } from '@/shared/lib/composables/useIsDesktop';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { useExchangeRates } from '@/shared/api';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
@@ -37,7 +37,7 @@ const { trigger } = useHaptics();
 
 const router = useRouter();
 
-const isDesktop = useMediaQuery('(min-width: 1024px)');
+const isDesktop = useIsDesktop();
 
 const { userId } = useCurrentUser();
 
@@ -171,10 +171,10 @@ function handleDetailClose() {
       </template>
     </AppHeader>
 
-    <!-- Desktop: Master-Detail Layout -->
-    <MasterDetailLayout v-if="isDesktop" :selected="selectedAccountId" @close="handleDetailClose">
+    <!-- Master-Detail Layout (desktop: split view, mobile: master only) -->
+    <MasterDetailLayout :selected="selectedAccountId" @close="handleDetailClose">
       <template #master>
-        <div class="py-8 space-y-6 pb-8">
+        <div class="py-8 space-y-6 pb-28 md:pb-8">
           <!-- Total Balance Card -->
           <UCard class="p-6 overflow-hidden relative" variant="bordered">
             <!-- Background decoration -->
@@ -240,7 +240,7 @@ function handleDetailClose() {
                       class="flex-1 transition-transform active:scale-[0.98]"
                       :class="{
                         'ring-2 ring-primary ring-offset-2 ring-offset-background-light dark:ring-offset-background-dark rounded-xl':
-                          selectedAccountId === account.id,
+                          isDesktop && selectedAccountId === account.id,
                       }"
                       @click="handleAccountClick(account)"
                     />
@@ -279,8 +279,8 @@ function handleDetailClose() {
           >
             <UIcon
               name="account_balance_wallet"
-              size="xl"
-              class="text-text-tertiary-light dark:text-text-tertiary-dark opacity-40"
+              size="lg"
+              class="text-text-tertiary-light dark:text-text-tertiary-dark"
             />
           </div>
           <p class="text-sm text-text-tertiary-light dark:text-text-tertiary-dark">
@@ -289,88 +289,6 @@ function handleDetailClose() {
         </div>
       </template>
     </MasterDetailLayout>
-
-    <!-- Mobile: Original layout -->
-    <main v-else class="flex-1 overflow-y-auto px-5 pt-8 space-y-6 pb-28">
-      <!-- Total Balance Card -->
-      <UCard class="p-6 overflow-hidden relative" variant="bordered">
-        <!-- Background decoration -->
-        <div
-          class="absolute -right-6 -top-6 w-32 h-32 bg-primary/5 rounded-full blur-2xl pointer-events-none"
-        />
-        <div
-          class="absolute -left-6 -bottom-6 w-24 h-24 bg-primary/5 rounded-full blur-xl pointer-events-none"
-        />
-
-        <div class="relative flex items-center justify-between">
-          <div class="space-y-1">
-            <p class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">
-              Общий баланс
-            </p>
-            <Skeleton v-if="isLoading" class="h-8 w-32 mt-1 rounded-lg" />
-            <p
-              v-else
-              class="text-3xl font-bold text-text-primary-light dark:text-text-primary-dark tracking-tight"
-            >
-              {{ formatCurrency(totalBalance, currency) }}
-            </p>
-          </div>
-          <IconBadge icon="account_balance_wallet" size="lg" color="#3b82f6" class="shrink-0" />
-        </div>
-      </UCard>
-
-      <!-- Accounts List -->
-      <div class="space-y-4">
-        <SectionHeader
-          title="Мои счета"
-          :count="!isLoading ? accounts.length : undefined"
-          show-add
-          @add-click="handleAddAccount"
-        />
-
-        <div v-if="isLoading" class="space-y-3">
-          <Skeleton v-for="i in 3" :key="i" class="h-[88px] w-full rounded-2xl" />
-        </div>
-
-        <div v-else-if="localAccounts.length > 0" class="space-y-3">
-          <draggable
-            v-model="localAccounts"
-            item-key="id"
-            handle=".drag-handle"
-            ghost-class="opacity-50"
-            animation="200"
-            class="space-y-3"
-            @start="handleDragStart"
-            @end="handleDragEnd"
-          >
-            <template #item="{ element: account }">
-              <div class="flex items-center gap-3">
-                <div
-                  class="drag-handle cursor-grab active:cursor-grabbing text-text-tertiary-light dark:text-text-tertiary-dark shrink-0 touch-none"
-                >
-                  <UIcon name="drag_indicator" size="sm" />
-                </div>
-                <AccountCard
-                  :account="account"
-                  class="flex-1 transition-transform active:scale-[0.98]"
-                  @click="handleAccountClick(account)"
-                />
-              </div>
-            </template>
-          </draggable>
-        </div>
-
-        <!-- Empty State -->
-        <UCard v-else class="py-4">
-          <EmptyState
-            icon="account_balance_wallet"
-            title="У вас пока нет счетов"
-            description="Добавьте свой первый счет для учета финансов"
-            :action="{ label: 'Создать счёт', onClick: handleAddAccount }"
-          />
-        </UCard>
-      </div>
-    </main>
 
     <!-- Edit Account Modal (desktop detail panel) -->
     <EditAccountModal

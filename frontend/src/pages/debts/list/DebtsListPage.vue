@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import { useMediaQuery } from '@vueuse/core';
 import { ROUTE_NAMES } from '@/app/router/routeNames';
+import { useIsDesktop } from '@/shared/lib/composables/useIsDesktop';
 import { AppHeader } from '@/widgets/header';
 import { DebtCard, DebtDetailPanel, useDebts, type Debt } from '@/entities/debt';
 import { useAccounts } from '@/entities/account';
@@ -29,7 +29,7 @@ import { DEFAULT_CURRENCY } from '@/entities/currency/model/constants';
 import { listTransition } from '@/shared/lib/transitions';
 const router = useRouter();
 const route = useRoute();
-const isDesktop = useMediaQuery('(min-width: 1024px)');
+const isDesktop = useIsDesktop();
 
 const { userId } = useCurrentUser();
 const { currency } = useUserCurrency();
@@ -56,17 +56,7 @@ const statusTabs = [
 ];
 
 // Selected debt for desktop detail panel
-const selectedDebtId = ref<string | null>((route.params.id as string) || null);
-
-// Watch route params for deep linking
-watch(
-  () => route.params.id,
-  (newId) => {
-    if (newId && isDesktop.value) {
-      selectedDebtId.value = newId as string;
-    }
-  },
-);
+const selectedDebtId = ref<string | null>(null);
 
 // Find selected debt for detail panel modals
 const selectedDebt = computed<Debt | null>(() => {
@@ -254,7 +244,7 @@ function handleDetailClose() {
     <MasterDetailLayout :selected="selectedDebtId" @close="handleDetailClose">
       <template #master>
         <!-- Content -->
-        <div class="pt-8 space-y-6" :class="isDesktop ? '' : 'px-5'">
+        <div class="pt-8 space-y-6">
           <!-- Status Tabs -->
           <UTabs v-model="statusFilter" :items="statusTabs" size="sm" />
 
@@ -545,7 +535,7 @@ function handleDetailClose() {
             class="w-16 h-16 rounded-2xl bg-surface-light dark:bg-surface-dark flex items-center justify-center"
           >
             <UIcon
-              name="account_balance_wallet"
+              name="handshake"
               size="lg"
               class="text-text-tertiary-light dark:text-text-tertiary-dark"
             />

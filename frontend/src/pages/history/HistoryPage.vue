@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
-import { useMediaQuery } from '@vueuse/core';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 import { useRouter } from 'vue-router';
@@ -25,6 +24,7 @@ import {
 import { useAccounts, AccountSelector } from '@/entities/account';
 import { CategoryChips } from '@/entities/category';
 import { UTabs, UIcon, UButton, MasterDetailLayout } from '@/shared/ui';
+import { useIsDesktop } from '@/shared/lib/composables/useIsDesktop';
 import { useExchangeRates } from '@/shared/api';
 
 // Page composables
@@ -33,7 +33,7 @@ import { useBalanceAfter } from './model/useBalanceAfter';
 import { computeDayTotal } from './lib/computeDayTotal';
 
 const router = useRouter();
-const isDesktop = useMediaQuery('(min-width: 1024px)');
+const isDesktop = useIsDesktop();
 
 const { userId } = useCurrentUser();
 const { currency } = useUserCurrency();
@@ -151,7 +151,8 @@ const selectedDetailTransaction = computed(() => {
 
 // Reset selection when transactions change and selected one is no longer in the list
 watch(displayedTransactions, (txs) => {
-  if (selectedTransactionId.value && !txs.find((t) => t.id === selectedTransactionId.value)) {
+  if (!selectedTransactionId.value) return;
+  if (!txs.find((t) => t.id === selectedTransactionId.value)) {
     selectedTransactionId.value = null;
   }
 });
@@ -175,10 +176,8 @@ function handleDetailDelete() {
   showDeleteModal.value = true;
 }
 
-// Wrap original delete handler to also clear detail selection
-const originalHandleDeleteTransaction = handleDeleteTransaction;
 async function handleDeleteTransactionAndClear() {
-  await originalHandleDeleteTransaction();
+  await handleDeleteTransaction();
   selectedTransactionId.value = null;
 }
 

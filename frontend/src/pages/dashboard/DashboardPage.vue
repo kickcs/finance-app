@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useLocalStorage, useEventListener } from '@vueuse/core';
 import { STORAGE_KEYS } from '@/shared/config/storageKeys';
 import { queryClient } from '@/shared/api/queryClient';
@@ -75,17 +75,9 @@ const mobileTransactions = computed(() => recentTransactions.value.slice(0, 5));
 
 // Scroll tracking
 const pageContainerRef = ref<InstanceType<typeof PageContainer>>();
-const scrollContainerRef = ref<HTMLElement>();
+const scrollContainerRef = computed(() => pageContainerRef.value?.scrollRef);
 const isScrolledPastBalance = ref(false);
 const BALANCE_SCROLL_THRESHOLD = 80;
-
-onMounted(async () => {
-  await nextTick();
-  const el = (pageContainerRef.value as any)?.$el;
-  if (el) {
-    scrollContainerRef.value = el.querySelector('.overflow-y-auto') ?? undefined;
-  }
-});
 
 useEventListener(scrollContainerRef, 'scroll', (e: Event) => {
   const scrollTop = (e.target as HTMLElement).scrollTop;

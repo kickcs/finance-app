@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { UButton, UIcon, UCard, USpinner } from '@/shared/ui';
+import { UButton, UIcon, UCard, USpinner, UBadge } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { formatDate } from '@/shared/lib/format/date';
 import {
@@ -84,27 +84,9 @@ const isOverdue = computed(() => !!reminder.value && isReminderOverdue(reminder.
           </div>
 
           <!-- Status Badge -->
-          <span
-            v-if="isOverdue"
-            role="alert"
-            class="px-3 py-1 rounded-full text-xs font-medium bg-danger/10 text-danger"
-          >
-            Просрочено
-          </span>
-          <span
-            v-else-if="isUpcoming"
-            role="status"
-            class="px-3 py-1 rounded-full text-xs font-medium bg-warning/10 text-warning"
-          >
-            Скоро
-          </span>
-          <span
-            v-else-if="!reminder.is_active"
-            role="status"
-            class="px-3 py-1 rounded-full text-xs font-medium bg-neutral-light text-neutral"
-          >
-            Неактивна
-          </span>
+          <UBadge v-if="isOverdue" variant="danger" shape="pill">Просрочено</UBadge>
+          <UBadge v-else-if="isUpcoming" variant="warning" shape="pill">Скоро</UBadge>
+          <UBadge v-else-if="!reminder.is_active" variant="neutral" shape="pill">Неактивна</UBadge>
         </div>
 
         <!-- Amount -->

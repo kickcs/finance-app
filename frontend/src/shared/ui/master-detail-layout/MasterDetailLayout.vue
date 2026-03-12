@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useMediaQuery } from '@vueuse/core';
+import { useIsDesktop } from '@/shared/lib/composables/useIsDesktop';
 
 defineProps<{
   selected?: string | null;
@@ -9,7 +9,7 @@ defineEmits<{
   close: [];
 }>();
 
-const isDesktop = useMediaQuery('(min-width: 1024px)');
+const isDesktop = useIsDesktop();
 </script>
 
 <template>
