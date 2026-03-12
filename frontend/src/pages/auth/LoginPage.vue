@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { UButton, UInput, UIcon } from '@/shared/ui';
 import { ROUTE_NAMES } from '@/app/router/routeNames';
 import { useAuth } from '@/shared/api/composables/useAuth';
@@ -9,9 +9,21 @@ import { STORAGE_KEYS } from '@/shared/config/storageKeys';
 import { DEFAULT_CURRENCY } from '@/entities/currency/model/constants';
 
 const router = useRouter();
+const route = useRoute();
 const { signIn, signUp, signInAnonymously, isLoading, error: _error } = useAuth();
 
 const isSignUp = ref(false);
+
+// Auto-switch to register form when coming from landing CTA
+watch(
+  () => route.query.mode,
+  (mode) => {
+    if (mode === 'register') {
+      isSignUp.value = true;
+    }
+  },
+  { immediate: true },
+);
 const email = ref('');
 const password = ref('');
 const confirmPassword = ref('');
