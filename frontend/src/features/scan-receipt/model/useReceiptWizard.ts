@@ -178,9 +178,7 @@ export function useReceiptWizard(userId: () => string | null) {
       // Seed charges from OCR serviceChargePercent
       const rawPercent = result.serviceChargePercent;
       if (rawPercent && rawPercent >= 0.1) {
-        charges.value = [
-          { id: uid(), label: 'Обслуживание', percent: rawPercent, enabled: true },
-        ];
+        charges.value = [{ id: uid(), label: 'Обслуживание', percent: rawPercent, enabled: true }];
       } else {
         charges.value = [];
       }

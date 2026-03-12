@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed, ref } from 'vue';
+import { useWindowScroll, useWindowSize, useResizeObserver } from '@vueuse/core';
 import {
   HeroSection,
   MultiCurrencySection,
@@ -8,10 +10,30 @@ import {
   FeaturesSection,
   CtaSection,
 } from './sections';
+
+const { y } = useWindowScroll();
+const { height } = useWindowSize();
+const documentHeight = ref(document.documentElement.scrollHeight);
+useResizeObserver(document.documentElement, () => {
+  documentHeight.value = document.documentElement.scrollHeight;
+});
+
+const scrollProgress = computed(() => {
+  const maxScroll = documentHeight.value - height.value;
+  return maxScroll > 0 ? (y.value / maxScroll) * 100 : 0;
+});
 </script>
 
 <template>
   <div class="dark">
+    <!-- Premium Scroll Progress Bar -->
+    <div class="fixed top-0 left-0 right-0 h-1 z-[100] bg-white/5 backdrop-blur-sm">
+      <div
+        class="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-fuchsia-500 shadow-[0_0_15px_rgba(168,85,247,0.8)] transition-all duration-150 ease-out"
+        :style="{ width: `${scrollProgress}%` }"
+      />
+    </div>
+
     <main class="welcome-landing">
       <div class="noise-overlay" aria-hidden="true" />
       <HeroSection />
@@ -26,17 +48,21 @@ import {
 </template>
 
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&subset=cyrillic&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;800;900&subset=cyrillic&display=swap');
 
 .welcome-landing {
   scroll-behavior: smooth;
   overflow-x: hidden;
+  background-color: #050505; /* Deep overarching background */
+  color: #fafafa;
 }
 
 .welcome-landing h1,
-.welcome-landing h2 {
+.welcome-landing h2,
+.welcome-landing h3,
+.welcome-landing h4 {
   font-family: 'Unbounded', 'Arial Black', sans-serif;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.04em;
 }
 
 .welcome-section {
@@ -44,23 +70,44 @@ import {
   isolation: isolate;
 }
 
+/* Base mesh overlay pattern for consistency */
 .welcome-section::before {
   content: '';
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px);
-  background-size: 28px 28px;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 32px 32px;
+  background-position: center;
   pointer-events: none;
   z-index: 0;
 }
 
-.glass-card {
-  background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+/* Scoped Webkit Scrollbar for landing page */
+.welcome-landing::-webkit-scrollbar {
+  width: 10px;
+}
+.welcome-landing::-webkit-scrollbar-track {
+  background: #050505;
+}
+.welcome-landing::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 5px;
+  border: 2px solid #050505;
+}
+.welcome-landing::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
 }
 
+/* Premium Glass Card */
+.glass-card {
+  background: rgba(20, 20, 22, 0.5);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* Enhanced Gradient Border for Cards */
 .gradient-border {
   position: relative;
 }
@@ -72,10 +119,11 @@ import {
   border-radius: inherit;
   padding: 1px;
   background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.12),
-    rgba(255, 255, 255, 0.02),
-    rgba(255, 255, 255, 0.08)
+    145deg,
+    rgba(255, 255, 255, 0.2),
+    rgba(255, 255, 255, 0.02) 40%,
+    rgba(255, 255, 255, 0.01) 60%,
+    rgba(255, 255, 255, 0.1)
   );
   mask:
     linear-gradient(#fff 0 0) content-box,
@@ -92,13 +140,13 @@ import {
   0%,
   100% {
     box-shadow:
-      0 0 20px rgba(99, 102, 241, 0.3),
-      0 0 60px rgba(99, 102, 241, 0.08);
+      0 0 20px rgba(99, 102, 241, 0.4),
+      0 0 60px rgba(99, 102, 241, 0.1);
   }
   50% {
     box-shadow:
-      0 0 30px rgba(99, 102, 241, 0.5),
-      0 0 80px rgba(99, 102, 241, 0.15);
+      0 0 35px rgba(99, 102, 241, 0.6),
+      0 0 90px rgba(99, 102, 241, 0.2);
   }
 }
 
@@ -128,22 +176,22 @@ import {
 </style>
 
 <style scoped>
+/* Subtle grain overlay */
 .noise-overlay {
   position: fixed;
   inset: 0;
   z-index: 50;
   pointer-events: none;
-  opacity: 0.02;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   mix-blend-mode: overlay;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .welcome-landing :deep(.transition-all),
-  .welcome-landing :deep([class*='transition-']),
-  .welcome-landing :deep([class*='duration-']) {
-    transition: none !important;
-    animation: none !important;
+  .welcome-landing * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
   }
 }
 </style>

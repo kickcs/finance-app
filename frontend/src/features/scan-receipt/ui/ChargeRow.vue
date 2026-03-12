@@ -5,7 +5,7 @@ import { formatCurrency } from '@/shared/lib/format/currency';
 import { cn } from '@/shared/lib/utils';
 import type { ReceiptCharge } from '../model/types';
 
-const props = defineProps<{
+defineProps<{
   charge: ReceiptCharge;
   amount: number;
   currency: string;
@@ -62,7 +62,9 @@ function handlePercentKeydown(event: KeyboardEvent) {
 
     <!-- Label + percent -->
     <div class="flex items-baseline gap-1 flex-1 min-w-0">
-      <span class="text-caption font-medium text-text-secondary-light dark:text-text-secondary-dark truncate">
+      <span
+        class="text-caption font-medium text-text-secondary-light dark:text-text-secondary-dark truncate"
+      >
         {{ charge.label }}
       </span>
       <button

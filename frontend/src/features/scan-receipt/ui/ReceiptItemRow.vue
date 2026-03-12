@@ -4,7 +4,11 @@ import { UIcon, SwipeableItem } from '@/shared/ui';
 import { formatCurrency, getCurrencySymbol } from '@/shared/lib/format/currency';
 import { cn } from '@/shared/lib/utils';
 import { useHaptics } from '@/shared/lib/haptics';
-import { calcLineTotal, calcLineTotalWithCharges, getTotalChargePercent } from '../model/calcLineTotal';
+import {
+  calcLineTotal,
+  calcLineTotalWithCharges,
+  getTotalChargePercent,
+} from '../model/calcLineTotal';
 import type { ReceiptItem, ReceiptCharge } from '../model/types';
 
 const props = defineProps<{
@@ -40,9 +44,7 @@ defineExpose({ focusField });
 
 const currencySymbol = computed(() => getCurrencySymbol(props.currency));
 const lineTotal = computed(() => calcLineTotal(props.item));
-const lineTotalWithCharges = computed(() =>
-  calcLineTotalWithCharges(props.item, props.charges),
-);
+const lineTotalWithCharges = computed(() => calcLineTotalWithCharges(props.item, props.charges));
 const chargesAmount = computed(() => lineTotalWithCharges.value - lineTotal.value);
 const hasCharges = computed(
   () => getTotalChargePercent(props.charges) > 0 && chargesAmount.value > 0,

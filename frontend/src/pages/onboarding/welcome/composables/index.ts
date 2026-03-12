@@ -1,2 +1,3 @@
 export { useCountUp } from './useCountUp';
-export { useScrollAnimation, useSectionAnimation } from './useScrollAnimations';
+export { useSectionAnimation } from './useScrollAnimations';
+export { SPRING_DEFAULT, SPRING_GENTLE, SPRING_BOUNCY } from './motionPresets';

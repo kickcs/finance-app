@@ -28,31 +28,85 @@ const expense = useCountUp(expenseTarget, visibleRef, {
 </script>
 
 <template>
-  <div class="glass-card gradient-border rounded-2xl p-6">
-    <div class="mb-1 flex items-center gap-2">
-      <div class="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]" />
-      <span class="text-[10px] font-medium uppercase tracking-[2px] text-white/40">
-        Общий баланс
-      </span>
-    </div>
-    <p class="mb-5 font-['Unbounded'] text-4xl font-bold tracking-tight text-white">
-      {{ balance }}
-      <span class="text-xl text-indigo-400/80">{{ balanceCents }}</span>
-    </p>
+  <div class="glass-card gradient-border relative rounded-3xl p-8 overflow-hidden">
+    <!-- Inner ambient glow -->
     <div
-      class="flex gap-2.5 transition-all duration-600"
-      :class="isVisible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'"
-      :style="{ transitionDelay: '0.4s' }"
-    >
-      <div class="flex-1 rounded-xl border border-emerald-500/10 bg-emerald-500/[0.07] p-3">
-        <p class="mb-0.5 text-[9px] font-medium uppercase tracking-wider text-emerald-400/60">
-          Доход
-        </p>
-        <p class="text-sm font-bold text-emerald-400">{{ income }}</p>
+      class="absolute inset-0 bg-gradient-to-br from-indigo-500/10 via-transparent to-purple-500/10 opacity-50 pointer-events-none"
+    />
+
+    <div class="relative z-10 flex items-center justify-between mb-8">
+      <div class="flex items-center gap-2.5">
+        <div
+          class="h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.8)] animate-pulse"
+        />
+        <span class="text-xs font-bold uppercase tracking-[3px] text-white/50">Ваш баланс</span>
       </div>
-      <div class="flex-1 rounded-xl border border-red-500/10 bg-red-500/[0.07] p-3">
-        <p class="mb-0.5 text-[9px] font-medium uppercase tracking-wider text-red-400/60">Расход</p>
-        <p class="text-sm font-bold text-red-400">{{ expense }}</p>
+      <div class="h-6 w-10 flex gap-1">
+        <div class="h-full w-full rounded bg-white/10" />
+        <div class="h-full w-full rounded bg-white/20" />
+      </div>
+    </div>
+
+    <p
+      class="mb-8 font-['Unbounded'] text-5xl font-black tracking-tighter text-white relative z-10 flex items-baseline filter drop-shadow-md"
+    >
+      {{ balance }}
+      <span class="text-2xl text-indigo-300/80 ml-1">{{ balanceCents }}</span>
+    </p>
+
+    <div
+      v-motion
+      class="flex gap-3 relative z-10"
+      :initial="{ opacity: 0, y: 15 }"
+      :enter="{
+        opacity: 1,
+        y: 0,
+        transition: { delay: 400, type: 'spring', stiffness: 250, damping: 25 },
+      }"
+    >
+      <div
+        class="flex-1 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4 relative overflow-hidden"
+      >
+        <div
+          class="absolute inset-0 bg-gradient-to-t from-emerald-500/5 to-transparent pointer-events-none"
+        />
+        <div class="flex items-center gap-2 mb-1">
+          <svg
+            class="w-3 h-3 text-emerald-400"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="3"
+              d="M5 10l7-7m0 0l7 7m-7-7v18"
+            />
+          </svg>
+          <p class="text-[10px] font-bold uppercase tracking-[2px] text-emerald-400/80">Доход</p>
+        </div>
+        <p class="text-base font-bold text-emerald-300 font-['Unbounded']">{{ income }}</p>
+      </div>
+
+      <div
+        class="flex-1 rounded-2xl border border-rose-500/20 bg-rose-500/10 p-4 relative overflow-hidden"
+      >
+        <div
+          class="absolute inset-0 bg-gradient-to-t from-rose-500/5 to-transparent pointer-events-none"
+        />
+        <div class="flex items-center gap-2 mb-1">
+          <svg class="w-3 h-3 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="3"
+              d="M19 14l-7 7m0 0l-7-7m7 7V3"
+            />
+          </svg>
+          <p class="text-[10px] font-bold uppercase tracking-[2px] text-rose-400/80">Расход</p>
+        </div>
+        <p class="text-base font-bold text-rose-300 font-['Unbounded']">{{ expense }}</p>
       </div>
     </div>
   </div>

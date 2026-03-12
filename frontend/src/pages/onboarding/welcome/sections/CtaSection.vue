@@ -4,11 +4,10 @@ import { useRouter } from 'vue-router';
 import { ROUTE_NAMES } from '@/app/router/routeNames';
 import { STORAGE_KEYS } from '@/shared/config/storageKeys';
 import { useAuth } from '@/shared/api/composables/useAuth';
-import { useSectionAnimation } from '../composables';
+import { SPRING_DEFAULT } from '../composables';
 
 const router = useRouter();
 const { signInAnonymously } = useAuth();
-const { sectionRef, isVisible } = useSectionAnimation();
 
 const isDemoLoading = ref(false);
 const demoError = ref('');
@@ -46,53 +45,86 @@ async function handleDemo() {
 
 <template>
   <section
-    ref="sectionRef"
-    class="welcome-section relative flex min-h-dvh items-center justify-center overflow-hidden px-6 py-20"
+    class="welcome-section relative flex min-h-dvh items-center justify-center overflow-hidden px-6 py-24"
     aria-label="Начать"
-    style="background: linear-gradient(180deg, #0c0820 0%, #1a1545 50%, #0c0820 100%)"
   >
     <!-- Ambient glows -->
     <div
-      class="absolute left-1/2 top-1/2 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-500/[0.06] blur-[150px]"
+      class="pointer-events-none absolute left-1/2 top-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-600/[0.08] blur-[180px]"
       aria-hidden="true"
     />
     <div
-      class="absolute left-[20%] top-[30%] h-[200px] w-[200px] rounded-full bg-violet-500/[0.04] blur-[80px]"
+      class="pointer-events-none absolute left-[10%] top-[20%] h-[300px] w-[300px] rounded-full bg-fuchsia-600/[0.05] blur-[120px]"
       aria-hidden="true"
     />
     <div
-      class="absolute bottom-[30%] right-[20%] h-[200px] w-[200px] rounded-full bg-indigo-400/[0.04] blur-[80px]"
+      class="pointer-events-none absolute bottom-[20%] right-[10%] h-[300px] w-[300px] rounded-full bg-violet-600/[0.06] blur-[120px]"
       aria-hidden="true"
     />
 
     <div
-      class="relative z-10 flex flex-col items-center text-center transition-all duration-800"
-      :class="isVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'"
+      v-motion
+      class="relative z-10 flex flex-col items-center text-center max-w-2xl mx-auto"
+      :initial="{ opacity: 0, y: 50 }"
+      :visible-once="{
+        opacity: 1,
+        y: 0,
+        transition: SPRING_DEFAULT,
+      }"
     >
-      <h2 class="mb-3 text-3xl font-black sm:text-4xl lg:text-5xl">
+      <h2 class="mb-5 text-4xl font-black sm:text-5xl lg:text-7xl">
         <span
           class="bg-gradient-to-r from-white via-indigo-100 to-violet-200 bg-clip-text text-transparent"
         >
           Готовы взять финансы
         </span>
         <br />
-        <span class="bg-gradient-to-r from-indigo-300 to-violet-400 bg-clip-text text-transparent">
+        <span
+          class="bg-gradient-to-r from-indigo-400 to-fuchsia-400 bg-clip-text text-transparent filter drop-shadow-[0_0_20px_rgba(129,140,248,0.3)]"
+        >
           под контроль?
         </span>
       </h2>
-      <p class="mb-10 max-w-sm text-sm text-white/35">
-        Присоединяйтесь бесплатно. Никаких скрытых платежей.
+      <p
+        v-motion
+        class="mb-12 max-w-sm text-base text-white/50"
+        :initial="{ opacity: 0, scale: 0.9 }"
+        :visible-once="{
+          opacity: 1,
+          scale: 1,
+          transition: { delay: 200, ...SPRING_DEFAULT },
+        }"
+      >
+        Присоединяйтесь бесплатно. Никаких скрытых платежей или сложных подписок.
       </p>
 
-      <div class="flex w-72 flex-col gap-3">
+      <div
+        v-motion
+        class="flex w-full max-w-xs flex-col gap-4"
+        :initial="{ opacity: 0, y: 20 }"
+        :visible-once="{
+          opacity: 1,
+          y: 0,
+          transition: { delay: 400, ...SPRING_DEFAULT },
+        }"
+      >
         <button
-          class="cta-glow w-full rounded-xl bg-gradient-to-r from-indigo-500 via-violet-500 to-purple-500 px-8 py-4 text-sm font-bold text-white transition-transform hover:scale-[1.02] active:scale-[0.98]"
+          class="group relative w-full overflow-hidden rounded-2xl bg-gradient-to-r from-indigo-500 via-violet-500 to-fuchsia-500 p-[1px] transition-transform hover:scale-[1.02] active:scale-[0.98]"
           @click="handleStart"
         >
-          Начать бесплатно
+          <span
+            class="absolute inset-0 bg-gradient-to-r from-indigo-500 via-violet-500 to-fuchsia-500 opacity-60 blur-xl group-hover:opacity-100 transition-opacity duration-500"
+          ></span>
+          <div
+            class="relative flex h-full w-full items-center justify-center rounded-2xl bg-black/50 px-8 py-4 backdrop-blur-sm transition-colors group-hover:bg-black/40"
+          >
+            <span class="text-[15px] font-bold text-white font-['Unbounded']">
+              Начать бесплатно
+            </span>
+          </div>
         </button>
         <button
-          class="glass-card w-full rounded-xl px-8 py-3 text-sm text-white/50 transition-colors hover:bg-white/[0.06] hover:text-white/70 disabled:opacity-40"
+          class="glass-card gradient-border w-full rounded-2xl px-8 py-4 text-[13px] font-bold font-['Unbounded'] text-white/70 transition-colors hover:text-white disabled:opacity-40"
           :disabled="isDemoLoading"
           @click="handleDemo"
         >
@@ -100,16 +132,15 @@ async function handleDemo() {
         </button>
       </div>
 
-      <p v-if="demoError" class="mt-4 text-xs text-red-400">{{ demoError }}</p>
-      <p class="mt-6 text-[10px] tracking-wider text-white/20">
-        Регистрация за 30 секунд · Без привязки карты
+      <p v-if="demoError" class="mt-4 text-xs text-rose-400 font-medium">{{ demoError }}</p>
+      <p
+        v-motion
+        class="mt-8 text-[11px] font-bold uppercase tracking-[4px] text-white/20"
+        :initial="{ opacity: 0 }"
+        :visible-once="{ opacity: 1, transition: { delay: 600, duration: 800 } }"
+      >
+        Регистрация за 30 секунд · Без карт
       </p>
     </div>
   </section>
 </template>
-
-<style scoped>
-.cta-glow {
-  animation: glow-pulse 3s ease-in-out infinite;
-}
-</style>
