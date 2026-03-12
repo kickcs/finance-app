@@ -14,3 +14,4 @@ coverage/
 .claude/
 scripts/
 .worktrees/
+.superpowers/

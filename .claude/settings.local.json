@@ -52,7 +52,8 @@
       "Bash(kill:*)",
       "Bash(git checkout:*)",
       "Bash(gh pr merge:*)",
-      "Bash(npx prettier:*)"
+      "Bash(npx prettier:*)",
+      "mcp__Claude_Preview__preview_start"
     ]
   }
 }
