@@ -33,10 +33,11 @@ async function handleDemo() {
       localStorage.setItem(STORAGE_KEYS.SELECTED_CURRENCY, result.user.currency);
       router.push({ name: ROUTE_NAMES.DASHBOARD });
     }
-  } catch (e: any) {
-    demoError.value = e?.message?.includes('429')
-      ? 'Слишком много попыток. Попробуйте позже.'
-      : 'Не удалось запустить демо. Попробуйте ещё раз.';
+  } catch (e: unknown) {
+    demoError.value =
+      e instanceof Error && e.message.includes('429')
+        ? 'Слишком много попыток. Попробуйте позже.'
+        : 'Не удалось запустить демо. Попробуйте ещё раз.';
   } finally {
     isDemoLoading.value = false;
   }

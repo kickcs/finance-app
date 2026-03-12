@@ -8,7 +8,7 @@ export const STORAGE_KEYS = {
   /** Flag set to 'true' once the user completes onboarding */
   ONBOARDING_COMPLETE: 'onboardingComplete',
 
-  /** Flag set to 'true' once the welcome slides have been shown */
+  /** Flag set to 'true' once the welcome landing page has been seen */
   HAS_SEEN_ONBOARDING: 'hasSeenOnboarding',
 
   /** ISO timestamp when a demo account expires */

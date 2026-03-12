@@ -12,7 +12,7 @@ import {
 
 <template>
   <div class="dark">
-    <main class="scroll-smooth">
+    <main class="welcome-landing scroll-smooth">
       <HeroSection />
       <MultiCurrencySection />
       <AnalyticsSection />
@@ -23,3 +23,12 @@ import {
     </main>
   </div>
 </template>
+
+<style scoped>
+@media (prefers-reduced-motion: reduce) {
+  .welcome-landing :deep(.transition-all),
+  .welcome-landing :deep([class*='transition-']) {
+    transition: none !important;
+  }
+}
+</style>
