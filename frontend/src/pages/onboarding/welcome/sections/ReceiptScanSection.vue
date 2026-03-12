@@ -8,30 +8,44 @@ const { sectionRef, isVisible } = useSectionAnimation();
 <template>
   <section
     ref="sectionRef"
-    class="flex min-h-dvh items-center justify-center px-6 py-16"
-    style="background: linear-gradient(180deg, #1a0a0a 0%, #1c0f0f 100%)"
+    class="welcome-section relative flex min-h-dvh items-center justify-center overflow-hidden px-6 py-20"
+    aria-label="Сканирование чеков"
+    style="background: linear-gradient(170deg, #150808 0%, #1a0a0a 40%, #1c0f0f 100%)"
   >
-    <div class="mx-auto w-full max-w-3xl text-center">
-      <p
-        class="mb-1.5 text-xs font-medium uppercase tracking-[3px] text-red-400 transition-all duration-500"
-        :class="isVisible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'"
-      >
-        Сканирование
-      </p>
-      <h2
-        class="mb-2 text-2xl font-extrabold text-white transition-all duration-500 sm:text-3xl"
-        :class="isVisible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'"
-        :style="{ transitionDelay: '0.1s' }"
-      >
-        Фото → Транзакция → Долги
-      </h2>
-      <p
-        class="mb-8 text-sm text-white/50 transition-all duration-500"
-        :class="isVisible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'"
-        :style="{ transitionDelay: '0.15s' }"
-      >
-        Сфотографируйте чек — мы распознаем сумму и создадим долги автоматически
-      </p>
+    <!-- Ambient glow -->
+    <div
+      class="absolute right-[10%] top-[20%] h-[400px] w-[400px] rounded-full bg-rose-500/[0.05] blur-[120px]"
+      aria-hidden="true"
+    />
+
+    <div class="relative z-10 mx-auto w-full max-w-4xl">
+      <!-- Header -->
+      <div class="mb-12 text-center">
+        <p
+          class="mb-3 text-[10px] font-medium uppercase tracking-[4px] text-rose-400/70 transition-all duration-600"
+          :class="isVisible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'"
+        >
+          Сканирование
+        </p>
+        <h2
+          class="mb-3 text-3xl font-black text-white transition-all duration-600 sm:text-4xl"
+          :class="isVisible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'"
+          :style="{ transitionDelay: '0.1s' }"
+        >
+          <span class="text-white/90">Фото</span>
+          <span class="mx-2 text-rose-400/40">→</span>
+          <span class="text-white/90">Транзакция</span>
+          <span class="mx-2 text-rose-400/40">→</span>
+          <span class="text-white/90">Долги</span>
+        </h2>
+        <p
+          class="text-sm text-white/35 transition-all duration-600"
+          :class="isVisible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'"
+          :style="{ transitionDelay: '0.15s' }"
+        >
+          Сфотографируйте чек — мы распознаем сумму и создадим долги автоматически
+        </p>
+      </div>
 
       <ReceiptFlow :is-visible="isVisible" />
     </div>

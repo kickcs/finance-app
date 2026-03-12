@@ -47,31 +47,52 @@ async function handleDemo() {
 <template>
   <section
     ref="sectionRef"
-    class="flex min-h-dvh items-center justify-center px-6 py-16"
-    style="background: linear-gradient(180deg, #0f0a2e 0%, #1e1b4b 50%, #0f0a2e 100%)"
+    class="welcome-section relative flex min-h-dvh items-center justify-center overflow-hidden px-6 py-20"
+    aria-label="Начать"
+    style="background: linear-gradient(180deg, #0c0820 0%, #1a1545 50%, #0c0820 100%)"
   >
+    <!-- Ambient glows -->
     <div
-      class="flex flex-col items-center text-center transition-all duration-700"
-      :class="isVisible ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'"
+      class="absolute left-1/2 top-1/2 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-500/[0.06] blur-[150px]"
+      aria-hidden="true"
+    />
+    <div
+      class="absolute left-[20%] top-[30%] h-[200px] w-[200px] rounded-full bg-violet-500/[0.04] blur-[80px]"
+      aria-hidden="true"
+    />
+    <div
+      class="absolute bottom-[30%] right-[20%] h-[200px] w-[200px] rounded-full bg-indigo-400/[0.04] blur-[80px]"
+      aria-hidden="true"
+    />
+
+    <div
+      class="relative z-10 flex flex-col items-center text-center transition-all duration-800"
+      :class="isVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'"
     >
-      <h2 class="mb-2 text-2xl font-extrabold text-white sm:text-3xl lg:text-4xl">
-        Готовы взять финансы
+      <h2 class="mb-3 text-3xl font-black sm:text-4xl lg:text-5xl">
+        <span
+          class="bg-gradient-to-r from-white via-indigo-100 to-violet-200 bg-clip-text text-transparent"
+        >
+          Готовы взять финансы
+        </span>
         <br />
-        под контроль?
+        <span class="bg-gradient-to-r from-indigo-300 to-violet-400 bg-clip-text text-transparent">
+          под контроль?
+        </span>
       </h2>
-      <p class="mb-7 max-w-sm text-sm text-white/50">
+      <p class="mb-10 max-w-sm text-sm text-white/35">
         Присоединяйтесь бесплатно. Никаких скрытых платежей.
       </p>
 
-      <div class="flex w-64 flex-col gap-2.5">
+      <div class="flex w-72 flex-col gap-3">
         <button
-          class="w-full rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 px-8 py-3.5 text-sm font-bold text-white shadow-lg shadow-indigo-500/30 transition-shadow hover:shadow-xl hover:shadow-indigo-500/40"
+          class="cta-glow w-full rounded-xl bg-gradient-to-r from-indigo-500 via-violet-500 to-purple-500 px-8 py-4 text-sm font-bold text-white transition-transform hover:scale-[1.02] active:scale-[0.98]"
           @click="handleStart"
         >
           Начать бесплатно
         </button>
         <button
-          class="w-full rounded-xl border border-white/10 bg-white/[0.03] px-8 py-2.5 text-sm text-white/60 transition-colors hover:bg-white/[0.06] disabled:opacity-50"
+          class="glass-card w-full rounded-xl px-8 py-3 text-sm text-white/50 transition-colors hover:bg-white/[0.06] hover:text-white/70 disabled:opacity-40"
           :disabled="isDemoLoading"
           @click="handleDemo"
         >
@@ -79,8 +100,16 @@ async function handleDemo() {
         </button>
       </div>
 
-      <p v-if="demoError" class="mt-3 text-xs text-red-400">{{ demoError }}</p>
-      <p class="mt-4 text-[10px] text-white/25">Регистрация за 30 секунд • Без привязки карты</p>
+      <p v-if="demoError" class="mt-4 text-xs text-red-400">{{ demoError }}</p>
+      <p class="mt-6 text-[10px] tracking-wider text-white/20">
+        Регистрация за 30 секунд · Без привязки карты
+      </p>
     </div>
   </section>
 </template>
+
+<style scoped>
+.cta-glow {
+  animation: glow-pulse 3s ease-in-out infinite;
+}
+</style>

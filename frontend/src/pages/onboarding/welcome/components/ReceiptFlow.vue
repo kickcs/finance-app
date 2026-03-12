@@ -11,73 +11,76 @@ const steps = [
 </script>
 
 <template>
-  <div class="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
+  <div class="flex flex-wrap items-start justify-center gap-3 sm:gap-4">
     <template v-for="(step, i) in steps" :key="i">
       <div
-        class="w-28 rounded-xl border border-white/[0.08] p-3 text-center transition-all duration-500 sm:w-32 sm:p-4"
-        :class="[
-          isVisible ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0',
-          step.type === 'processing' ? 'border-red-500/20 bg-red-500/10' : 'bg-white/[0.06]',
-          step.type === 'result' ? 'border-emerald-500/20' : '',
-        ]"
-        :style="{ transitionDelay: `${i * 0.3}s` }"
+        class="glass-card gradient-border w-32 rounded-2xl p-4 text-center transition-all duration-600 sm:w-36"
+        :class="isVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'"
+        :style="{ transitionDelay: `${0.2 + i * 0.25}s` }"
       >
-        <p class="mb-1.5 text-2xl">{{ step.icon }}</p>
+        <p class="mb-2 text-2xl">{{ step.icon }}</p>
         <p
-          class="text-[10px]"
+          class="mb-2 text-[11px] font-semibold"
           :class="{
-            'text-white/50': step.type === 'receipt',
-            'text-red-400': step.type === 'processing',
+            'text-white/60': step.type === 'receipt',
+            'text-rose-400': step.type === 'processing',
             'text-emerald-400': step.type === 'result',
           }"
         >
           {{ step.label }}
         </p>
 
+        <!-- Receipt mockup -->
         <div
           v-if="step.type === 'receipt'"
-          class="mt-2 rounded-md bg-white/[0.04] p-1.5 text-left text-[9px] text-white/40"
+          class="rounded-lg border border-white/[0.04] bg-white/[0.02] p-2 text-left text-[9px] text-white/35"
         >
-          <p>Магнит</p>
-          <p>Молоко...48₽</p>
-          <p>Хлеб...35₽</p>
-          <p class="mt-1 border-t border-dashed border-white/10 pt-1 font-semibold text-white">
-            Итого: 83₽
-          </p>
+          <p class="mb-1 text-[8px] font-medium text-white/20">МАГНИТ</p>
+          <p>Молоко · · · 48₽</p>
+          <p>Хлеб · · · · 35₽</p>
+          <div class="mt-1.5 border-t border-dashed border-white/[0.06] pt-1.5">
+            <p class="font-semibold text-white/60">Итого: 83₽</p>
+          </div>
         </div>
 
-        <div v-if="step.type === 'processing'" class="mt-2 space-y-1">
-          <div class="h-1 rounded-full bg-white/10">
+        <!-- Processing indicator -->
+        <div v-if="step.type === 'processing'" class="space-y-1.5">
+          <div class="h-1 overflow-hidden rounded-full bg-white/[0.06]">
             <div
-              class="h-1 rounded-full bg-red-400 transition-all duration-1000 ease-out"
-              :style="{ width: isVisible ? '80%' : '0%', transitionDelay: '0.8s' }"
+              class="h-full rounded-full bg-gradient-to-r from-rose-500 to-rose-400 transition-all duration-1200 ease-out"
+              :style="{
+                width: isVisible ? '85%' : '0%',
+                transitionDelay: '0.8s',
+                boxShadow: '0 0 10px rgba(251, 113, 133, 0.3)',
+              }"
             />
           </div>
-          <p class="text-[8px] text-white/40">Сумма, категория, дата</p>
+          <p class="text-[8px] text-white/25">Сумма, категория, дата</p>
         </div>
 
-        <div v-if="step.type === 'result'" class="mt-2 space-y-1.5">
-          <div class="rounded-md bg-emerald-500/10 p-1.5">
+        <!-- Result -->
+        <div v-if="step.type === 'result'" class="space-y-1.5">
+          <div class="rounded-lg border border-emerald-500/10 bg-emerald-500/[0.06] p-2">
             <p class="text-xs font-bold text-white">−83 ₽</p>
-            <p class="text-[9px] text-emerald-300">🛒 Продукты</p>
+            <p class="text-[9px] text-emerald-400/70">Продукты</p>
           </div>
           <div
-            class="rounded-md bg-amber-500/10 p-1 transition-all duration-500"
+            class="rounded-lg border border-amber-500/10 bg-amber-500/[0.05] p-1.5 transition-all duration-500"
             :class="isVisible ? 'scale-100 opacity-100' : 'scale-75 opacity-0'"
             :style="{ transitionDelay: '1.2s' }"
           >
-            <p class="text-[8px] text-amber-300">👥 Долги созданы</p>
+            <p class="text-[8px] font-medium text-amber-400/80">Долги созданы</p>
           </div>
         </div>
       </div>
 
-      <div
-        v-if="i < steps.length - 1"
-        class="text-xl text-red-400 transition-all duration-300"
-        :class="isVisible ? 'scale-100 opacity-100' : 'scale-50 opacity-0'"
-        :style="{ transitionDelay: `${0.15 + i * 0.3}s` }"
-      >
-        →
+      <!-- Connector line -->
+      <div v-if="i < steps.length - 1" class="hidden items-center sm:flex">
+        <div
+          class="h-px w-6 bg-gradient-to-r from-white/15 to-white/5 transition-all duration-500"
+          :class="isVisible ? 'scale-x-100 opacity-100' : 'scale-x-0 opacity-0'"
+          :style="{ transitionDelay: `${0.3 + i * 0.25}s` }"
+        />
       </div>
     </template>
   </div>
