@@ -19,7 +19,9 @@ export function useCountUp(
   function animate() {
     if (animationId) cancelAnimationFrame(animationId);
 
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const prefersReducedMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (prefersReducedMotion) {
       display.value = format(target.value);
       return;
