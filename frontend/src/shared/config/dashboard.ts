@@ -2,6 +2,7 @@ import type { WidgetId } from '@/shared/api/database.types';
 
 export const DEFAULT_WIDGET_ORDER: WidgetId[] = [
   'quick_actions',
+  'budget',
   'accounts',
   'top_expenses',
   'transactions',
@@ -11,6 +12,7 @@ export const DEFAULT_WIDGET_ORDER: WidgetId[] = [
 
 export const WIDGET_LABELS: Record<WidgetId, string> = {
   quick_actions: 'Быстрые действия',
+  budget: 'Бюджет',
   accounts: 'Счета',
   top_expenses: 'Топ расходов',
   transactions: 'Последние транзакции',
@@ -20,6 +22,7 @@ export const WIDGET_LABELS: Record<WidgetId, string> = {
 
 export const WIDGET_ICONS: Record<WidgetId, string> = {
   quick_actions: 'bolt',
+  budget: 'savings',
   accounts: 'account_balance_wallet',
   top_expenses: 'pie_chart',
   transactions: 'receipt_long',

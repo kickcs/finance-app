@@ -2,6 +2,7 @@ import type { QueryClient } from '@tanstack/vue-query';
 import { transactionQueryKeys } from '@/entities/transaction';
 import { accountQueryKeys } from '@/entities/account';
 import { accountBalanceQueryKeys } from '@/entities/account-balance';
+import { budgetQueryKeys } from '@/entities/budget';
 
 /**
  * Invalidate all transaction-related caches.
@@ -41,6 +42,9 @@ export async function invalidateTransactionRelated(
     }),
     queryClient.invalidateQueries({
       queryKey: transactionQueryKeys.hashtags(userId),
+    }),
+    queryClient.invalidateQueries({
+      queryKey: budgetQueryKeys.all,
     }),
   ]);
 }

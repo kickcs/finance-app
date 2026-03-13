@@ -4,6 +4,7 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export type WidgetId =
   | 'quick_actions'
   | 'accounts'
+  | 'budget'
   | 'top_expenses'
   | 'transactions'
   | 'debts'
