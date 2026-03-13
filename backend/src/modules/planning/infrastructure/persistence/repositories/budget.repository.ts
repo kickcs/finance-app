@@ -32,7 +32,6 @@ export class BudgetRepository implements IBudgetRepository {
   async findByUserId(userId: string): Promise<Budget[]> {
     const ormEntities = await this.ormRepository.find({
       where: { userId },
-      order: { createdAt: 'DESC' },
     });
     return ormEntities.map((entity) => BudgetMapper.toDomain(entity));
   }

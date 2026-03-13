@@ -11,7 +11,7 @@ import {
   EXCHANGE_RATE_CACHE,
 } from '../../../../exchange/application/services/exchange-rate-cache.service';
 import { BudgetResponseMapper } from '../../mappers';
-import { convertExpensesToCurrency } from '../convert-expenses';
+import { convertExpensesToCurrency, calcBudgetPercentage } from '../convert-expenses';
 
 @QueryHandler(GetBudgetForMonthQuery)
 export class GetBudgetForMonthHandler implements IQueryHandler<GetBudgetForMonthQuery> {
@@ -52,7 +52,7 @@ export class GetBudgetForMonthHandler implements IQueryHandler<GetBudgetForMonth
       budget: BudgetResponseMapper.toResponse(budget),
       spent,
       remaining: Math.round((budget.amount - spent) * 100) / 100,
-      percentage: Math.min(Math.round((spent / budget.amount) * 100), 999),
+      percentage: calcBudgetPercentage(spent, budget.amount),
     };
   }
 }

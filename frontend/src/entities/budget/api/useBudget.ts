@@ -6,14 +6,11 @@ import { budgetApi } from './budgetApi';
 export function useBudget(userId: MaybeRefOrGetter<string | null>) {
   const queryClient = useQueryClient();
 
-  const queryKey = computed(() => {
-    const uid = toValue(userId);
-    return uid ? budgetQueryKeys.current(uid) : budgetQueryKeys.all;
-  });
+  const invalidateBudgets = () => queryClient.invalidateQueries({ queryKey: budgetQueryKeys.all });
 
   // Main query — current budget (stale after 5 min; mutations invalidate immediately)
   const { data, isLoading } = useQuery({
-    queryKey: queryKey,
+    queryKey: computed(() => budgetQueryKeys.current(toValue(userId) ?? '')),
     queryFn: () => budgetApi.getCurrent(),
     enabled: computed(() => !!toValue(userId)),
     staleTime: 5 * 60 * 1000,
@@ -24,27 +21,21 @@ export function useBudget(userId: MaybeRefOrGetter<string | null>) {
   // Set default budget mutation
   const setDefaultMutation = useMutation({
     mutationFn: (amount: number) => budgetApi.setDefault(amount),
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: budgetQueryKeys.all });
-    },
+    onSettled: invalidateBudgets,
   });
 
   // Set monthly override mutation
   const setOverrideMutation = useMutation({
     mutationFn: ({ year, month, amount }: { year: number; month: number; amount: number }) =>
       budgetApi.setOverride(year, month, amount),
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: budgetQueryKeys.all });
-    },
+    onSettled: invalidateBudgets,
   });
 
   // Remove monthly override mutation
   const removeOverrideMutation = useMutation({
     mutationFn: ({ year, month }: { year: number; month: number }) =>
       budgetApi.removeOverride(year, month),
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: budgetQueryKeys.all });
-    },
+    onSettled: invalidateBudgets,
   });
 
   const isSaving = computed(

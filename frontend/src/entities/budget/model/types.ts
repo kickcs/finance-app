@@ -16,16 +16,3 @@ export interface BudgetCurrentResponse {
   remaining: number;
   percentage: number;
 }
-
-export interface BudgetHistoryItem {
-  year: number;
-  month: number;
-  amount: number;
-  currency: string;
-  spent: number;
-  percentage: number;
-}
-
-export interface BudgetHistoryResponse {
-  items: BudgetHistoryItem[];
-}

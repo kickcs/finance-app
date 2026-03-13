@@ -31,7 +31,9 @@ watch(
   },
 );
 
-const title = computed(() => (props.currentAmount ? 'Изменить бюджет' : 'Установить бюджет'));
+const title = computed(() =>
+  props.currentAmount !== undefined ? 'Изменить бюджет' : 'Установить бюджет',
+);
 
 const currencySymbol = computed(() => getCurrencySymbol(currency.value));
 

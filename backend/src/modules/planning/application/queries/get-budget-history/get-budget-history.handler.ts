@@ -10,7 +10,8 @@ import {
   IExchangeRateCache,
   EXCHANGE_RATE_CACHE,
 } from '../../../../exchange/application/services/exchange-rate-cache.service';
-import { convertExpensesToCurrency } from '../convert-expenses';
+import { convertExpensesToCurrency, calcBudgetPercentage } from '../convert-expenses';
+import { Budget } from '../../../domain/aggregates/budget';
 
 @QueryHandler(GetBudgetHistoryQuery)
 export class GetBudgetHistoryHandler implements IQueryHandler<GetBudgetHistoryQuery> {
@@ -45,7 +46,7 @@ export class GetBudgetHistoryHandler implements IQueryHandler<GetBudgetHistoryQu
         ...m,
         budget: overrideMap.get(`${m.year}-${m.month}`) ?? defaultBudget,
       }))
-      .filter((m) => m.budget !== null);
+      .filter((m): m is typeof m & { budget: Budget } => m.budget !== null);
 
     // Fetch all monthly stats in parallel
     const statsResults = await Promise.all(
@@ -58,17 +59,17 @@ export class GetBudgetHistoryHandler implements IQueryHandler<GetBudgetHistoryQu
       items: monthsWithBudgets.map((m, i) => {
         const spent = convertExpensesToCurrency(
           statsResults[i].expenseByCurrency,
-          m.budget!.currency,
+          m.budget.currency,
           this.exchangeRateCache,
         );
 
         return {
           year: m.year,
           month: m.month,
-          amount: m.budget!.amount,
-          currency: m.budget!.currency,
+          amount: m.budget.amount,
+          currency: m.budget.currency,
           spent,
-          percentage: Math.min(Math.round((spent / m.budget!.amount) * 100), 999),
+          percentage: calcBudgetPercentage(spent, m.budget.amount),
         };
       }),
     };

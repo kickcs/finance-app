@@ -1,13 +1,9 @@
 import { http } from '@/shared/api/http';
-import type { BudgetCurrentResponse, BudgetHistoryResponse, BudgetResponse } from '../model/types';
+import type { BudgetCurrentResponse, BudgetResponse } from '../model/types';
 
 export const budgetApi = {
   async getCurrent(): Promise<BudgetCurrentResponse | null> {
     return http.get<BudgetCurrentResponse | null>('/budgets/current');
-  },
-
-  async getHistory(months = 6): Promise<BudgetHistoryResponse> {
-    return http.get<BudgetHistoryResponse>(`/budgets/history?months=${months}`);
   },
 
   async setDefault(amount: number): Promise<{ budget: BudgetResponse }> {
