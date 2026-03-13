@@ -4,10 +4,9 @@ import { useRouter, useRoute } from 'vue-router';
 import { UButton, UInput, UIcon } from '@/shared/ui';
 import { ROUTE_NAMES } from '@/app/router/routeNames';
 import { useAuth } from '@/shared/api/composables/useAuth';
-import { DemoSetupScreen } from '@/features/demo-mode';
+import { DemoSetupScreen, useDemoSetup } from '@/features/demo-mode';
 import { profileApi } from '@/shared/api/services/profileApi';
 import { STORAGE_KEYS } from '@/shared/config/storageKeys';
-import { DEFAULT_CURRENCY } from '@/entities/currency/model/constants';
 
 const router = useRouter();
 const route = useRoute();
@@ -187,26 +186,18 @@ function backToLogin() {
 }
 
 // Demo mode
-const showDemoSetup = ref(false);
+const {
+  showDemoSetup,
+  startDemo: handleDemoMode,
+  onDemoComplete,
+  onDemoError: _onDemoError,
+} = useDemoSetup();
 
 // Combined loading state - blocks all buttons when any action is in progress
 const isAnyLoading = computed(() => isLoading.value || showDemoSetup.value);
 
-function handleDemoMode() {
-  if (showDemoSetup.value) return;
-  localError.value = null;
-  showDemoSetup.value = true;
-}
-
-function onDemoComplete() {
-  showDemoSetup.value = false;
-  localStorage.setItem(STORAGE_KEYS.ONBOARDING_COMPLETE, 'true');
-  localStorage.setItem(STORAGE_KEYS.SELECTED_CURRENCY, DEFAULT_CURRENCY);
-  router.push({ name: ROUTE_NAMES.DASHBOARD });
-}
-
 function onDemoError(error: string) {
-  showDemoSetup.value = false;
+  _onDemoError(error);
   localError.value = error;
 }
 </script>

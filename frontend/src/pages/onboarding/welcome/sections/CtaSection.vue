@@ -1,16 +1,12 @@
 <script setup lang="ts">
-import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { ROUTE_NAMES } from '@/app/router/routeNames';
 import { STORAGE_KEYS } from '@/shared/config/storageKeys';
-import { DEFAULT_CURRENCY } from '@/entities/currency/model/constants';
-import { DemoSetupScreen } from '@/features/demo-mode';
+import { DemoSetupScreen, useDemoSetup } from '@/features/demo-mode';
 import { SPRING_DEFAULT } from '../composables';
 
 const router = useRouter();
-
-const showDemoSetup = ref(false);
-const demoError = ref('');
+const { showDemoSetup, demoError, startDemo, onDemoComplete, onDemoError } = useDemoSetup();
 
 function markOnboardingSeen() {
   localStorage.setItem(STORAGE_KEYS.HAS_SEEN_ONBOARDING, 'true');
@@ -22,22 +18,8 @@ function handleStart() {
 }
 
 function handleDemo() {
-  if (showDemoSetup.value) return;
   markOnboardingSeen();
-  demoError.value = '';
-  showDemoSetup.value = true;
-}
-
-function onDemoComplete() {
-  showDemoSetup.value = false;
-  localStorage.setItem(STORAGE_KEYS.ONBOARDING_COMPLETE, 'true');
-  localStorage.setItem(STORAGE_KEYS.SELECTED_CURRENCY, DEFAULT_CURRENCY);
-  router.push({ name: ROUTE_NAMES.DASHBOARD });
-}
-
-function onDemoError(error: string) {
-  showDemoSetup.value = false;
-  demoError.value = error;
+  startDemo();
 }
 </script>
 

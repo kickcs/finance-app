@@ -3,6 +3,7 @@ import { ref, watch, computed, onUnmounted } from 'vue';
 import { useTimeoutFn } from '@vueuse/core';
 import { UProgressBar, UIcon } from '@/shared/ui';
 import { useAuth } from '@/shared/api/composables/useAuth';
+import { HttpError } from '@/shared/api/http';
 
 const props = defineProps<{
   visible: boolean;
@@ -103,7 +104,7 @@ watch(
     } catch (err) {
       stopAllTimers();
       const message =
-        err instanceof Error && err.message.includes('429')
+        err instanceof HttpError && err.status === 429
           ? 'Слишком много запросов. Попробуйте позже.'
           : 'Не удалось запустить демо режим';
       emit('error', message);
@@ -123,7 +124,7 @@ onUnmounted(() => stopAllTimers());
       <div class="flex flex-col items-center gap-8 px-6 w-full max-w-sm">
         <!-- Stepper circles -->
         <div class="flex items-center gap-0">
-          <template v-for="(step, index) in STEPS" :key="index">
+          <template v-for="(_, index) in STEPS" :key="index">
             <div
               v-if="index > 0"
               class="w-8 h-0.5 transition-colors duration-300"
