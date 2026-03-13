@@ -1,5 +1,5 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { Inject, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Inject, NotFoundException, ForbiddenException, ConflictException } from '@nestjs/common';
 import { UpdateDebtCommand } from './update-debt.command';
 import { IDebtRepository, DEBT_REPOSITORY } from '../../../domain/repositories';
 
@@ -18,6 +18,10 @@ export class UpdateDebtHandler implements ICommandHandler<UpdateDebtCommand> {
 
     if (debt.userId !== command.userId) {
       throw new ForbiddenException('Access denied');
+    }
+
+    if (debt.isClosed && command.data.isClosed === true) {
+      throw new ConflictException('Debt is already closed');
     }
 
     debt.update(command.data);

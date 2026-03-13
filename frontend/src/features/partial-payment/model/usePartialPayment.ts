@@ -15,6 +15,14 @@ interface PartialPaymentOptions {
   excessCategoryId?: string;
 }
 
+async function invalidateDebtRelated(userId: string) {
+  await Promise.all([
+    queryClient.invalidateQueries({ queryKey: debtQueryKeys.list(userId) }),
+    invalidateTransactionRelated(queryClient, userId),
+    invalidateAccountRelated(queryClient, userId),
+  ]);
+}
+
 export function usePartialPayment() {
   const { toast } = useToast();
   const isPaying = ref(false);
@@ -50,6 +58,21 @@ export function usePartialPayment() {
     const debtCurrency = debt.currency || DEFAULT_CURRENCY;
 
     try {
+      // In single-payment mode, re-fetch debt to prevent stale cache double-close.
+      // Skipped in bulk mode (skipInvalidation=true) where caller manages freshness.
+      if (!options?.skipInvalidation) {
+        const freshDebt = await debtsApi.getById(debt.id);
+        if (freshDebt?.is_closed) {
+          await invalidateDebtRelated(userId);
+          if (!options?.skipToast) toast({ title: 'Долг уже закрыт', variant: 'default' });
+          return true;
+        }
+        // Use fresh remaining_amount if available
+        if (freshDebt) {
+          debt = { ...debt, remaining_amount: freshDebt.remaining_amount };
+        }
+      }
+
       const isGiven = debt.debt_type === 'given';
       const transactionType = isGiven ? 'income' : 'expense';
       const categoryId = isGiven
@@ -107,9 +130,11 @@ export function usePartialPayment() {
       }
 
       // 3. Create forgiveness expense transaction (gift)
+      // Only create balance-affecting forgiveness when debt has no source transaction,
+      // otherwise the money was already accounted for in the original expense
       if (options?.forgiveRemainder) {
         const forgivenAmount = debt.remaining_amount - actualPayment;
-        if (forgivenAmount > 0) {
+        if (forgivenAmount > 0 && !hadBalanceEffect) {
           const giftType = isGiven ? 'expense' : 'income';
           const giftCategoryId = isGiven ? CATEGORY_IDS.GIFTS : CATEGORY_IDS.GIFTS_INCOME;
           const tx = await transactionsApi.create({
@@ -141,11 +166,7 @@ export function usePartialPayment() {
       });
 
       if (!options?.skipInvalidation) {
-        await Promise.all([
-          queryClient.invalidateQueries({ queryKey: debtQueryKeys.list(userId) }),
-          invalidateTransactionRelated(queryClient, userId),
-          invalidateAccountRelated(queryClient, userId),
-        ]);
+        await invalidateDebtRelated(userId);
       }
 
       if (!options?.skipToast) toast({ title: 'Платёж проведён', variant: 'success' });
