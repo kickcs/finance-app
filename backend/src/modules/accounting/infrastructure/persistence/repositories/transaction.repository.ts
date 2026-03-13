@@ -192,14 +192,21 @@ export class TransactionRepository implements ITransactionRepository {
     if (transactionIds.length > 0) {
       const returnedAmountsResult = await this.ormRepository
         .createQueryBuilder('return_tx')
-        .innerJoin(DebtOrmEntity, 'd', 'd.close_transaction_id = return_tx.id')
-        .where('d.source_transaction_id IN (:...transactionIds)', {
-          transactionIds,
-        })
+        .innerJoin(
+          DebtOrmEntity,
+          'd',
+          '(return_tx.debt_id IS NOT NULL AND return_tx.debt_id = d.id) OR (return_tx.debt_id IS NULL AND d.close_transaction_id = return_tx.id)',
+        )
+        .innerJoin(
+          TransactionOrmEntity,
+          'source_tx',
+          'source_tx.id = COALESCE(d.source_transaction_id, d.transaction_id)',
+        )
+        .where('source_tx.id IN (:...transactionIds)', { transactionIds })
         .andWhere("return_tx.category_id = 'debt_return_to_me'")
-        .select('d.source_transaction_id', 'sourceTransactionId')
+        .select('source_tx.id', 'sourceTransactionId')
         .addSelect('SUM(return_tx.amount)', 'returnedAmount')
-        .groupBy('d.source_transaction_id')
+        .groupBy('source_tx.id')
         .getRawMany<{ sourceTransactionId: string; returnedAmount: string }>();
 
       for (const row of returnedAmountsResult) {
@@ -626,8 +633,16 @@ export class TransactionRepository implements ITransactionRepository {
     // When someone returns money to me, subtract from the original expense category
     let categoryOffsetsQuery = this.ormRepository
       .createQueryBuilder('return_tx')
-      .innerJoin(DebtOrmEntity, 'd', 'd.close_transaction_id = return_tx.id')
-      .innerJoin(TransactionOrmEntity, 'source_tx', 'source_tx.id = d.source_transaction_id')
+      .innerJoin(
+        DebtOrmEntity,
+        'd',
+        '(return_tx.debt_id IS NOT NULL AND return_tx.debt_id = d.id) OR (return_tx.debt_id IS NULL AND d.close_transaction_id = return_tx.id)',
+      )
+      .innerJoin(
+        TransactionOrmEntity,
+        'source_tx',
+        'source_tx.id = COALESCE(d.source_transaction_id, d.transaction_id)',
+      )
       .where('return_tx.user_id = :userId', { userId })
       .andWhere('return_tx.date >= :startDate', { startDate })
       .andWhere('return_tx.date <= :endDate', { endDate })
@@ -754,22 +769,6 @@ export class TransactionRepository implements ITransactionRepository {
       query = query.andWhere('t.account_id IN (:...accountIds)', { accountIds });
     }
 
-    const rows = await query
-      .select(`date_trunc('${safeGroupBy}', t.date)`, 'period')
-      .addSelect('t.type', 'type')
-      .addSelect('t.currency', 'currency')
-      .addSelect('SUM(t.amount)', 'total')
-      .groupBy('period')
-      .addGroupBy('t.type')
-      .addGroupBy('t.currency')
-      .orderBy('period', 'ASC')
-      .getRawMany<{
-        period: Date;
-        type: string;
-        currency: string;
-        total: string | null;
-      }>();
-
     // Query debt returns, attributed to the date of the SOURCE expense (not return date).
     // This correctly offsets the original expense on the day it happened.
     // For returns without a source transaction, attribute to the return date.
@@ -779,7 +778,7 @@ export class TransactionRepository implements ITransactionRepository {
       .innerJoin(
         DebtOrmEntity,
         'd',
-        '(return_tx.debt_id IS NOT NULL AND return_tx.debt_id::text = d.id::text) OR (return_tx.debt_id IS NULL AND d.close_transaction_id = return_tx.id)',
+        '(return_tx.debt_id IS NOT NULL AND return_tx.debt_id = d.id) OR (return_tx.debt_id IS NULL AND d.close_transaction_id = return_tx.id)',
       )
       .leftJoin(
         TransactionOrmEntity,
@@ -801,20 +800,38 @@ export class TransactionRepository implements ITransactionRepository {
       });
     }
 
-    const debtReturnRows = await debtReturnsQuery
-      .select(`date_trunc('${safeGroupBy}', COALESCE(source_tx.date, return_tx.date))`, 'period')
-      .addSelect('return_tx.category_id', 'categoryId')
-      .addSelect('return_tx.currency', 'currency')
-      .addSelect('SUM(return_tx.amount)', 'total')
-      .groupBy('period')
-      .addGroupBy('return_tx.category_id')
-      .addGroupBy('return_tx.currency')
-      .getRawMany<{
-        period: Date;
-        categoryId: string;
-        currency: string;
-        total: string | null;
-      }>();
+    // Both queries are read-only and independent — run in parallel
+    const [rows, debtReturnRows] = await Promise.all([
+      query
+        .select(`date_trunc('${safeGroupBy}', t.date)`, 'period')
+        .addSelect('t.type', 'type')
+        .addSelect('t.currency', 'currency')
+        .addSelect('SUM(t.amount)', 'total')
+        .groupBy('period')
+        .addGroupBy('t.type')
+        .addGroupBy('t.currency')
+        .orderBy('period', 'ASC')
+        .getRawMany<{
+          period: Date;
+          type: string;
+          currency: string;
+          total: string | null;
+        }>(),
+      debtReturnsQuery
+        .select(`date_trunc('${safeGroupBy}', COALESCE(source_tx.date, return_tx.date))`, 'period')
+        .addSelect('return_tx.category_id', 'categoryId')
+        .addSelect('return_tx.currency', 'currency')
+        .addSelect('SUM(return_tx.amount)', 'total')
+        .groupBy('period')
+        .addGroupBy('return_tx.category_id')
+        .addGroupBy('return_tx.currency')
+        .getRawMany<{
+          period: Date;
+          categoryId: string;
+          currency: string;
+          total: string | null;
+        }>(),
+    ]);
 
     // Aggregate rows into a map keyed by period date string
     const statsMap = new Map<string, DailyStatsEntry>();
