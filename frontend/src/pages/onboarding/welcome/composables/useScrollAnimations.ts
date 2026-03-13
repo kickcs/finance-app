@@ -1,29 +1,35 @@
 import { ref, watchEffect } from 'vue';
 import { useIntersectionObserver, usePreferredReducedMotion } from '@vueuse/core';
 
-export function useSectionAnimation(options: { threshold?: number } = {}) {
-  const { threshold = 0.2 } = options;
-  const sectionRef = ref<HTMLElement | null>(null);
-  const isVisible = ref(false);
+function useIntersectOnce(observerOptions: { threshold?: number; rootMargin?: string } = {}) {
+  const targetRef = ref<HTMLElement | null>(null);
+  const triggered = ref(false);
   const prefersReducedMotion = usePreferredReducedMotion();
 
   watchEffect(() => {
     if (prefersReducedMotion.value === 'reduce') {
-      isVisible.value = true;
+      triggered.value = true;
     }
   });
 
   const { stop } = useIntersectionObserver(
-    sectionRef,
+    targetRef,
     ([entry]) => {
       if (entry?.isIntersecting) {
-        isVisible.value = true;
+        triggered.value = true;
         stop();
       }
     },
-    { threshold },
+    observerOptions,
   );
 
+  return { targetRef, triggered };
+}
+
+export function useSectionAnimation(options: { threshold?: number } = {}) {
+  const { targetRef: sectionRef, triggered: isVisible } = useIntersectOnce({
+    threshold: options.threshold ?? 0.2,
+  });
   return { sectionRef, isVisible };
 }
 
@@ -32,26 +38,6 @@ export function useSectionAnimation(options: { threshold?: number } = {}) {
  * Use with v-if="shouldRender" on the actual component and ref="sentinelRef" on a placeholder div.
  */
 export function useLazyRender(rootMargin = '200px') {
-  const sentinelRef = ref<HTMLElement | null>(null);
-  const shouldRender = ref(false);
-  const prefersReducedMotion = usePreferredReducedMotion();
-
-  watchEffect(() => {
-    if (prefersReducedMotion.value === 'reduce') {
-      shouldRender.value = true;
-    }
-  });
-
-  const { stop } = useIntersectionObserver(
-    sentinelRef,
-    ([entry]) => {
-      if (entry?.isIntersecting) {
-        shouldRender.value = true;
-        stop();
-      }
-    },
-    { rootMargin },
-  );
-
+  const { targetRef: sentinelRef, triggered: shouldRender } = useIntersectOnce({ rootMargin });
   return { sentinelRef, shouldRender };
 }

@@ -23,8 +23,11 @@ const { sentinelRef: featuresRef, shouldRender: showFeatures } = useLazyRender()
 const { sentinelRef: ctaRef, shouldRender: showCta } = useLazyRender();
 
 // Load Unbounded font asynchronously (non-blocking, replaces @import)
+const FONT_LINK_ID = 'unbounded-font';
 onMounted(() => {
+  if (document.getElementById(FONT_LINK_ID)) return;
   const link = document.createElement('link');
+  link.id = FONT_LINK_ID;
   link.rel = 'stylesheet';
   link.href =
     'https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;800;900&subset=cyrillic&display=swap';
