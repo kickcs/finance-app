@@ -25,7 +25,7 @@ import { useExchangeRates } from '@/shared/api';
 import { navigateBack } from '@/app/router';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
-import { DEFAULT_CURRENCY } from '@/entities/currency/model/constants';
+import { DEFAULT_CURRENCY } from '@/shared/config/currency';
 import { listTransition } from '@/shared/lib/transitions';
 const router = useRouter();
 const route = useRoute();
