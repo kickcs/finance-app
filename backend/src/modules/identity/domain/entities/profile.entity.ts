@@ -7,6 +7,7 @@ import { ProfileUpdatedEvent } from '../events/profile-updated.event';
 export type WidgetId =
   | 'quick_actions'
   | 'accounts'
+  | 'budget'
   | 'top_expenses'
   | 'transactions'
   | 'debts'

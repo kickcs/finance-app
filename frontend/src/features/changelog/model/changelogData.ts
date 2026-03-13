@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.31';
+export const CURRENT_VERSION = '1.0.32';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,17 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.32',
+    date: '2026-03-13',
+    title: 'Месячный бюджет',
+    items: [
+      {
+        type: 'feature',
+        text: 'Установите лимит расходов на месяц и отслеживайте прогресс прямо на дашборде',
+      },
+    ],
+  },
   {
     version: '1.0.31',
     date: '2026-03-12',
