@@ -6,8 +6,11 @@ import { transitionName } from '@/app/router';
 import { ROUTE_NAMES } from '@/app/router/routeNames';
 import { useLayoutData } from '../model/useLayoutData';
 
-import { computed } from 'vue';
+import { computed, inject, ref } from 'vue';
 import { useRoute } from 'vue-router';
+import type { Ref } from 'vue';
+
+const isDemo = inject<Ref<boolean>>('isDemo', ref(false));
 
 const router = useRouter();
 const route = useRoute();
@@ -22,7 +25,12 @@ function handleAddTransaction() {
 </script>
 
 <template>
-  <div class="h-dvh w-full flex overflow-hidden bg-background-light dark:bg-background-dark">
+  <div
+    :class="[
+      'w-full flex overflow-hidden bg-background-light dark:bg-background-dark',
+      isDemo ? 'flex-1 min-h-0' : 'h-dvh',
+    ]"
+  >
     <!-- Skip navigation link -->
     <a
       href="#main-content"

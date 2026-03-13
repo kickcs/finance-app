@@ -76,12 +76,16 @@ onMounted(async () => {
 provide('user', user);
 provide('isAuthenticated', isAuthenticated);
 provide('getCategoryById', getCategoryById);
+provide('isDemo', isDemo);
 </script>
 
 <template>
   <ToastProvider>
     <div
-      class="min-h-screen bg-background-light dark:bg-background-dark text-text-primary-light dark:text-text-primary-dark antialiased relative overflow-x-hidden"
+      :class="[
+        'bg-background-light dark:bg-background-dark text-text-primary-light dark:text-text-primary-dark antialiased relative',
+        isDemo ? 'h-dvh flex flex-col overflow-hidden' : 'min-h-screen overflow-x-hidden',
+      ]"
     >
       <!-- Navigation progress bar -->
       <NavigationProgress />
