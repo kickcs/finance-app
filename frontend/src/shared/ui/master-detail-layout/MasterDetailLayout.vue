@@ -58,7 +58,7 @@ const isDesktop = useIsDesktop();
       </div>
 
       <!-- Mobile: master only -->
-      <div v-else class="h-full overflow-y-auto">
+      <div v-else class="h-full overflow-y-auto overflow-x-hidden">
         <slot name="master" />
       </div>
     </div>
