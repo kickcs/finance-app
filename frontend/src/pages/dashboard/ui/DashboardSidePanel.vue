@@ -4,10 +4,12 @@ import type { AccountWithBalances } from '@/entities/account';
 import type { CategoryBreakdown } from '@/entities/transaction';
 import type { Debt } from '@/entities/debt';
 import type { Reminder } from '@/entities/reminder';
+import type { BudgetCurrentResponse } from '@/entities/budget';
 import type { QuickAction } from '@/features/configure-quick-action';
 import type { WidgetId } from '@/shared/api/database.types';
 import { DEFAULT_WIDGET_ORDER } from '@/shared/config/dashboard';
 import { AccountStack } from '@/widgets/account-stack';
+import { BudgetSection, BudgetSectionSkeleton } from '@/widgets/budget-section';
 import { DebtsSectionSkeleton } from '@/widgets/debts-section';
 import { RemindersSectionSkeleton } from '@/widgets/reminders-section';
 import { UIcon } from '@/shared/ui';
@@ -35,6 +37,9 @@ const props = withDefaults(
     // Reminders
     reminders: Reminder[];
     remindersLoading: boolean;
+    // Budget
+    budget: BudgetCurrentResponse | null;
+    budgetLoading: boolean;
     // Shared
     isHidden: boolean;
     // Dashboard settings
@@ -67,11 +72,14 @@ const emit = defineEmits<{
   'reminder-click': [reminder: Reminder];
   'add-reminder': [];
   'view-all-reminders': [];
+  // Budget
+  'budget-setup': [];
+  'budget-edit': [];
   'dashboard-settings-click': [];
 }>();
 
 const sidePanelWidgets = computed(() =>
-  (['quick_actions', 'accounts', 'top_expenses', 'debts', 'reminders'] as const).filter(
+  (['quick_actions', 'budget', 'accounts', 'top_expenses', 'debts', 'reminders'] as const).filter(
     (id) => props.widgetOrder.includes(id) && !props.hiddenWidgets.has(id),
   ),
 );
@@ -112,6 +120,24 @@ const RemindersSection = defineAsyncComponent({
           @settings-click="emit('settings-click')"
           @scan-click="emit('scan-click')"
         />
+      </section>
+
+      <!-- Budget -->
+      <section v-if="widgetId === 'budget'">
+        <Suspense>
+          <BudgetSection
+            :budget="budget"
+            :currency="currency"
+            :loading="budgetLoading"
+            :hidden="isHidden"
+            class="hover:-translate-y-0.5 hover:shadow-md transition-[transform,box-shadow] duration-300 rounded-2xl"
+            @setup="emit('budget-setup')"
+            @edit="emit('budget-edit')"
+          />
+          <template #fallback>
+            <BudgetSectionSkeleton />
+          </template>
+        </Suspense>
       </section>
 
       <!-- Accounts -->

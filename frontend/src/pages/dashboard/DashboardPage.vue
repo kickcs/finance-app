@@ -6,12 +6,15 @@ import { queryClient } from '@/shared/api/queryClient';
 import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
 import { debtQueryKeys } from '@/entities/debt';
 import { reminderQueryKeys } from '@/entities/reminder';
+import { budgetQueryKeys } from '@/entities/budget';
 import { PageContainer, PullToRefresh, UIcon } from '@/shared/ui';
 import { InstallPwaBanner, InstallPwaModal, usePwaInstall } from '@/features/install-pwa';
 import { QuickActionModal } from '@/features/configure-quick-action';
 import { AccountStack } from '@/widgets/account-stack';
+import { BudgetSection } from '@/widgets/budget-section';
 import { useHaptics } from '@/shared/lib/haptics';
 import { usePwaUpdateToast } from '@/shared/lib/composables/usePwaUpdate';
+import { SetBudgetSheet } from '@/features/set-budget';
 
 import { useDashboardData } from './model/useDashboardData';
 import { useDashboardQuickActions } from './model/useDashboardQuickActions';
@@ -48,6 +51,12 @@ const {
   ratesLoading,
   widgetOrder,
   hiddenWidgets,
+  budget,
+  budgetLoading,
+  budgetSaving,
+  setBudgetDefault,
+  setBudgetOverride,
+  removeBudgetOverride,
 } = useDashboardData();
 
 const {
@@ -69,6 +78,7 @@ const nav = useDashboardNavigation();
 const { staggerClass } = useStaggerAnimation();
 
 const { showModal: showInstallModal } = usePwaInstall();
+const showBudgetSheet = ref(false);
 onMounted(() => usePwaUpdateToast());
 const isHidden = useLocalStorage(STORAGE_KEYS.BALANCE_HIDDEN, false);
 const mobileTransactions = computed(() => recentTransactions.value.slice(0, 5));
@@ -95,7 +105,29 @@ async function handleRefresh() {
     invalidateAccountRelated(queryClient, uid),
     queryClient.invalidateQueries({ queryKey: debtQueryKeys.list(uid) }),
     queryClient.invalidateQueries({ queryKey: reminderQueryKeys.list(uid) }),
+    queryClient.invalidateQueries({ queryKey: budgetQueryKeys.all }),
   ]);
+}
+
+async function handleBudgetSave(amount: number) {
+  const hasBudget = !!budget.value;
+  const isOverride = budget.value?.budget?.isDefault === false;
+
+  if (hasBudget && !isOverride) {
+    await setBudgetDefault(amount);
+  } else if (hasBudget && isOverride) {
+    const now = new Date();
+    await setBudgetOverride(now.getFullYear(), now.getMonth() + 1, amount);
+  } else {
+    await setBudgetDefault(amount);
+  }
+  showBudgetSheet.value = false;
+}
+
+async function handleBudgetReset() {
+  const now = new Date();
+  await removeBudgetOverride(now.getFullYear(), now.getMonth() + 1);
+  showBudgetSheet.value = false;
 }
 
 function handleScanReceipt() {
@@ -253,6 +285,20 @@ function handleScanReceipt() {
                 @view-all-reminders="nav.toReminders"
               />
             </section>
+
+            <section
+              v-if="widgetId === 'budget' && !hiddenWidgets.has('budget')"
+              :class="staggerClass('delay-150')"
+            >
+              <BudgetSection
+                :budget="budget"
+                :currency="currency"
+                :loading="budgetLoading"
+                :hidden="isHidden"
+                @setup="showBudgetSheet = true"
+                @edit="showBudgetSheet = true"
+              />
+            </section>
           </template>
 
           <section class="flex justify-center mt-2 pb-4">
@@ -328,6 +374,8 @@ function handleScanReceipt() {
               :debts-loading="debtsLoading"
               :reminders="reminders"
               :reminders-loading="remindersLoading"
+              :budget="budget"
+              :budget-loading="budgetLoading"
               :is-hidden="isHidden"
               :hidden-widgets="hiddenWidgets"
               :widget-order="widgetOrder"
@@ -346,6 +394,8 @@ function handleScanReceipt() {
               @reminder-click="nav.toReminder"
               @add-reminder="nav.toNewReminder"
               @view-all-reminders="nav.toReminders"
+              @budget-setup="showBudgetSheet = true"
+              @budget-edit="showBudgetSheet = true"
               @dashboard-settings-click="nav.toDashboardSettings"
             />
           </section>
@@ -362,6 +412,15 @@ function handleScanReceipt() {
       :edit-action="editingAction"
       @save="handleQuickActionSave"
       @delete="handleQuickActionDelete"
+    />
+
+    <SetBudgetSheet
+      v-model="showBudgetSheet"
+      :current-amount="budget?.budget?.amount"
+      :is-override="budget?.budget?.isDefault === false"
+      :is-saving="budgetSaving"
+      @save="handleBudgetSave"
+      @reset="handleBudgetReset"
     />
   </PageContainer>
 </template>

@@ -4,6 +4,7 @@ import { useRecentTransactions, useAnalyticsStats } from '@/entities/transaction
 import { useDebts } from '@/entities/debt';
 import { useReminders } from '@/entities/reminder';
 import { useCategories } from '@/entities/category';
+import { useBudget } from '@/entities/budget';
 import { useProfile, useExchangeRates } from '@/shared/api';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
@@ -21,6 +22,14 @@ export function useDashboardData() {
   const { accounts, isLoading: accountsLoading } = useAccounts(userId);
   const { debts, isLoading: debtsLoading } = useDebts(userId);
   const { reminders, isLoading: remindersLoading } = useReminders(userId);
+  const {
+    budget,
+    isLoading: budgetLoading,
+    isSaving: budgetSaving,
+    setDefault,
+    setOverride,
+    removeOverride,
+  } = useBudget(userId);
   const { expenseCategories, allCategories } = useCategories(userId);
   const { transactions: recentTransactions, isLoading: recentTxLoading } = useRecentTransactions(
     userId,
@@ -100,5 +109,11 @@ export function useDashboardData() {
     ratesLoading,
     widgetOrder,
     hiddenWidgets,
+    budget,
+    budgetLoading,
+    budgetSaving,
+    setBudgetDefault: setDefault,
+    setBudgetOverride: setOverride,
+    removeBudgetOverride: removeOverride,
   };
 }
