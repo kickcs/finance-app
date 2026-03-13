@@ -11,11 +11,12 @@ export function useBudget(userId: MaybeRefOrGetter<string | null>) {
     return uid ? budgetQueryKeys.current(uid) : budgetQueryKeys.all;
   });
 
-  // Main query — current budget
+  // Main query — current budget (stale after 5 min; mutations invalidate immediately)
   const { data, isLoading } = useQuery({
     queryKey: queryKey,
     queryFn: () => budgetApi.getCurrent(),
     enabled: computed(() => !!toValue(userId)),
+    staleTime: 5 * 60 * 1000,
   });
 
   const budget = computed(() => data.value ?? null);

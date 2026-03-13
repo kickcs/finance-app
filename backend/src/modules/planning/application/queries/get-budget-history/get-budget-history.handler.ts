@@ -10,6 +10,7 @@ import {
   IExchangeRateCache,
   EXCHANGE_RATE_CACHE,
 } from '../../../../exchange/application/services/exchange-rate-cache.service';
+import { convertExpensesToCurrency } from '../convert-expenses';
 
 @QueryHandler(GetBudgetHistoryQuery)
 export class GetBudgetHistoryHandler implements IQueryHandler<GetBudgetHistoryQuery> {
@@ -23,55 +24,53 @@ export class GetBudgetHistoryHandler implements IQueryHandler<GetBudgetHistoryQu
   ) {}
 
   async execute(query: GetBudgetHistoryQuery) {
-    const defaultBudget = await this.budgetRepository.findDefault(query.userId);
+    // Fetch all budgets for user in one query (default + all overrides)
+    const allBudgets = await this.budgetRepository.findByUserId(query.userId);
+    const defaultBudget = allBudgets.find((b) => b.isDefault) ?? null;
+    const overrideMap = new Map(
+      allBudgets.filter((b) => !b.isDefault).map((b) => [`${b.year}-${b.month}`, b]),
+    );
+
     const now = new Date();
-    const items: Array<{
-      year: number;
-      month: number;
-      amount: number;
-      currency: string;
-      spent: number;
-      percentage: number;
-    }> = [];
+    const months: Array<{ year: number; month: number }> = [];
 
     for (let i = 0; i < query.months; i++) {
       const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const year = date.getFullYear();
-      const month = date.getMonth() + 1;
-
-      // Find override for this month, fallback to default
-      let budget = await this.budgetRepository.findOverride(query.userId, year, month);
-      if (!budget) {
-        budget = defaultBudget;
-      }
-      if (!budget) {
-        continue;
-      }
-
-      // Get monthly stats
-      const stats = await this.transactionRepository.getMonthlyStats(query.userId, year, month);
-
-      // Convert multi-currency expenses to budget's currency
-      let spent = 0;
-      for (const [currency, amount] of Object.entries(stats.expenseByCurrency)) {
-        if (currency === budget.currency) {
-          spent += amount;
-        } else {
-          const rateResult = this.exchangeRateCache.resolve(currency, budget.currency);
-          spent += rateResult ? amount * rateResult.rate : amount;
-        }
-      }
-
-      items.push({
-        year,
-        month,
-        amount: budget.amount,
-        currency: budget.currency,
-        spent: Math.round(spent * 100) / 100,
-        percentage: Math.min(Math.round((spent / budget.amount) * 100), 999),
-      });
+      months.push({ year: date.getFullYear(), month: date.getMonth() + 1 });
     }
 
-    return { items };
+    // Resolve budgets and filter months that have one
+    const monthsWithBudgets = months
+      .map((m) => ({
+        ...m,
+        budget: overrideMap.get(`${m.year}-${m.month}`) ?? defaultBudget,
+      }))
+      .filter((m) => m.budget !== null);
+
+    // Fetch all monthly stats in parallel
+    const statsResults = await Promise.all(
+      monthsWithBudgets.map((m) =>
+        this.transactionRepository.getMonthlyStats(query.userId, m.year, m.month),
+      ),
+    );
+
+    return {
+      items: monthsWithBudgets.map((m, i) => {
+        const spent = convertExpensesToCurrency(
+          statsResults[i].expenseByCurrency,
+          m.budget!.currency,
+          this.exchangeRateCache,
+        );
+
+        return {
+          year: m.year,
+          month: m.month,
+          amount: m.budget!.amount,
+          currency: m.budget!.currency,
+          spent,
+          percentage: Math.min(Math.round((spent / m.budget!.amount) * 100), 999),
+        };
+      }),
+    };
   }
 }

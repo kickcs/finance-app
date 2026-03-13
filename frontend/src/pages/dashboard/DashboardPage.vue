@@ -110,12 +110,7 @@ async function handleRefresh() {
 }
 
 async function handleBudgetSave(amount: number) {
-  const hasBudget = !!budget.value;
-  const isOverride = budget.value?.budget?.isDefault === false;
-
-  if (hasBudget && !isOverride) {
-    await setBudgetDefault(amount);
-  } else if (hasBudget && isOverride) {
+  if (budget.value?.budget?.isDefault === false) {
     const now = new Date();
     await setBudgetOverride(now.getFullYear(), now.getMonth() + 1, amount);
   } else {
@@ -292,7 +287,6 @@ function handleScanReceipt() {
             >
               <BudgetSection
                 :budget="budget"
-                :currency="currency"
                 :loading="budgetLoading"
                 :hidden="isHidden"
                 @setup="showBudgetSheet = true"

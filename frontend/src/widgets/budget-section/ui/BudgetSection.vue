@@ -7,7 +7,6 @@ import BudgetSectionSkeleton from './BudgetSectionSkeleton.vue';
 
 const props = defineProps<{
   budget: BudgetCurrentResponse | null;
-  currency: string;
   loading: boolean;
   hidden: boolean;
 }>();

@@ -11,6 +11,7 @@ import {
   EXCHANGE_RATE_CACHE,
 } from '../../../../exchange/application/services/exchange-rate-cache.service';
 import { BudgetResponseMapper } from '../../mappers';
+import { convertExpensesToCurrency } from '../convert-expenses';
 
 @QueryHandler(GetBudgetForMonthQuery)
 export class GetBudgetForMonthHandler implements IQueryHandler<GetBudgetForMonthQuery> {
@@ -24,11 +25,12 @@ export class GetBudgetForMonthHandler implements IQueryHandler<GetBudgetForMonth
   ) {}
 
   async execute(query: GetBudgetForMonthQuery) {
-    // Find override first, then default
-    let budget = await this.budgetRepository.findOverride(query.userId, query.year, query.month);
-    if (!budget) {
-      budget = await this.budgetRepository.findDefault(query.userId);
-    }
+    // Fetch override and default in parallel
+    const [override, defaultBudget] = await Promise.all([
+      this.budgetRepository.findOverride(query.userId, query.year, query.month),
+      this.budgetRepository.findDefault(query.userId),
+    ]);
+    const budget = override ?? defaultBudget;
     if (!budget) {
       return null;
     }
@@ -40,20 +42,15 @@ export class GetBudgetForMonthHandler implements IQueryHandler<GetBudgetForMonth
       query.month,
     );
 
-    // Convert multi-currency expenses to budget's currency
-    let spent = 0;
-    for (const [currency, amount] of Object.entries(stats.expenseByCurrency)) {
-      if (currency === budget.currency) {
-        spent += amount;
-      } else {
-        const rateResult = this.exchangeRateCache.resolve(currency, budget.currency);
-        spent += rateResult ? amount * rateResult.rate : amount;
-      }
-    }
+    const spent = convertExpensesToCurrency(
+      stats.expenseByCurrency,
+      budget.currency,
+      this.exchangeRateCache,
+    );
 
     return {
       budget: BudgetResponseMapper.toResponse(budget),
-      spent: Math.round(spent * 100) / 100,
+      spent,
       remaining: Math.round((budget.amount - spent) * 100) / 100,
       percentage: Math.min(Math.round((spent / budget.amount) * 100), 999),
     };

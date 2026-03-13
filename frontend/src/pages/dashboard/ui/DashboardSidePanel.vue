@@ -127,7 +127,6 @@ const RemindersSection = defineAsyncComponent({
         <Suspense>
           <BudgetSection
             :budget="budget"
-            :currency="currency"
             :loading="budgetLoading"
             :hidden="isHidden"
             class="hover:-translate-y-0.5 hover:shadow-md transition-[transform,box-shadow] duration-300 rounded-2xl"
