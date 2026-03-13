@@ -4,13 +4,14 @@ import { useRouter, useRoute } from 'vue-router';
 import { UButton, UInput, UIcon } from '@/shared/ui';
 import { ROUTE_NAMES } from '@/app/router/routeNames';
 import { useAuth } from '@/shared/api/composables/useAuth';
+import { DemoSetupScreen } from '@/features/demo-mode';
 import { profileApi } from '@/shared/api/services/profileApi';
 import { STORAGE_KEYS } from '@/shared/config/storageKeys';
 import { DEFAULT_CURRENCY } from '@/entities/currency/model/constants';
 
 const router = useRouter();
 const route = useRoute();
-const { signIn, signUp, signInAnonymously, isLoading, error: _error } = useAuth();
+const { signIn, signUp, isLoading, error: _error } = useAuth();
 
 const isSignUp = ref(false);
 
@@ -186,39 +187,27 @@ function backToLogin() {
 }
 
 // Demo mode
-const isDemoLoading = ref(false);
+const showDemoSetup = ref(false);
 
 // Combined loading state - blocks all buttons when any action is in progress
-const isAnyLoading = computed(() => isLoading.value || isDemoLoading.value);
+const isAnyLoading = computed(() => isLoading.value || showDemoSetup.value);
 
-async function handleDemoMode() {
-  if (isDemoLoading.value) return;
-  try {
-    isDemoLoading.value = true;
-    localError.value = null;
+function handleDemoMode() {
+  if (showDemoSetup.value) return;
+  localError.value = null;
+  showDemoSetup.value = true;
+}
 
-    const { user } = await signInAnonymously();
+function onDemoComplete() {
+  showDemoSetup.value = false;
+  localStorage.setItem(STORAGE_KEYS.ONBOARDING_COMPLETE, 'true');
+  localStorage.setItem(STORAGE_KEYS.SELECTED_CURRENCY, DEFAULT_CURRENCY);
+  router.push({ name: ROUTE_NAMES.DASHBOARD });
+}
 
-    if (user) {
-      // Demo data is now initialized on the backend automatically
-      // Just set localStorage flags and navigate to dashboard
-      localStorage.setItem(STORAGE_KEYS.ONBOARDING_COMPLETE, 'true');
-      localStorage.setItem(STORAGE_KEYS.SELECTED_CURRENCY, DEFAULT_CURRENCY);
-
-      // Navigate directly to dashboard
-      router.push({ name: ROUTE_NAMES.DASHBOARD });
-    }
-  } catch (err) {
-    console.error('Demo mode error:', err);
-    // Check for rate limiting error
-    if (err instanceof Error && err.message.includes('429')) {
-      localError.value = 'Слишком много запросов. Попробуйте позже.';
-    } else {
-      localError.value = 'Не удалось запустить демо режим';
-    }
-  } finally {
-    isDemoLoading.value = false;
-  }
+function onDemoError(error: string) {
+  showDemoSetup.value = false;
+  localError.value = error;
 }
 </script>
 
@@ -387,32 +376,12 @@ async function handleDemoMode() {
                 <div
                   class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors duration-300"
                 >
-                  <svg
-                    v-if="isDemoLoading"
-                    class="animate-spin h-4 w-4"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      class="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      stroke-width="4"
-                    />
-                    <path
-                      class="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    />
-                  </svg>
-                  <UIcon v-else name="play_arrow" size="sm" />
+                  <UIcon name="play_arrow" size="sm" />
                 </div>
                 <span
                   class="text-text-primary-light dark:text-text-primary-dark font-bold text-base"
                 >
-                  {{ isDemoLoading ? 'Создание демо...' : 'Попробовать демо' }}
+                  Попробовать демо
                 </span>
               </span>
               <UIcon
@@ -430,5 +399,8 @@ async function handleDemoMode() {
         </div>
       </template>
     </div>
+
+    <!-- Demo Setup Overlay -->
+    <DemoSetupScreen :visible="showDemoSetup" @complete="onDemoComplete" @error="onDemoError" />
   </div>
 </template>
