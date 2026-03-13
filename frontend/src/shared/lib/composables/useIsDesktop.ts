@@ -1,5 +1,11 @@
 import { useMediaQuery } from '@vueuse/core';
+import type { Ref } from 'vue';
 
-export function useIsDesktop() {
-  return useMediaQuery('(min-width: 1024px)');
+let cached: Ref<boolean> | null = null;
+
+export function useIsDesktop(): Ref<boolean> {
+  if (!cached) {
+    cached = useMediaQuery('(min-width: 1024px)');
+  }
+  return cached;
 }

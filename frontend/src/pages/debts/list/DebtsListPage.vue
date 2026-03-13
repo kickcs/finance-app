@@ -241,7 +241,12 @@ function handleDetailClose() {
       </template>
     </AppHeader>
 
-    <MasterDetailLayout :selected="selectedDebtId" @close="handleDetailClose">
+    <MasterDetailLayout
+      :selected="selectedDebtId"
+      empty-icon="handshake"
+      empty-text="Выберите долг для просмотра деталей"
+      @close="handleDetailClose"
+    >
       <template #master>
         <!-- Content -->
         <div class="pt-8 space-y-6">
@@ -527,23 +532,6 @@ function handleDetailClose() {
           @edit="handleDetailEdit"
           @delete="handleDetailDelete"
         />
-      </template>
-
-      <template #empty>
-        <div class="h-full flex flex-col items-center justify-center gap-3">
-          <div
-            class="w-16 h-16 rounded-2xl bg-surface-light dark:bg-surface-dark flex items-center justify-center"
-          >
-            <UIcon
-              name="handshake"
-              size="lg"
-              class="text-text-tertiary-light dark:text-text-tertiary-dark"
-            />
-          </div>
-          <p class="text-text-tertiary-light dark:text-text-tertiary-dark text-body-sm">
-            Выберите долг для просмотра деталей
-          </p>
-        </div>
       </template>
     </MasterDetailLayout>
 

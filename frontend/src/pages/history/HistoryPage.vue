@@ -256,7 +256,12 @@ async function handleRefresh() {
     </AppHeader>
 
     <!-- Master-Detail Layout -->
-    <MasterDetailLayout :selected="selectedTransactionId" @close="selectedTransactionId = null">
+    <MasterDetailLayout
+      :selected="selectedTransactionId"
+      empty-icon="receipt_long"
+      empty-text="Выберите транзакцию для просмотра деталей"
+      @close="selectedTransactionId = null"
+    >
       <template #master>
         <!-- Fixed Controls -->
         <div class="pt-4 shrink-0 lg:pr-0 px-5 lg:px-0">
@@ -399,23 +404,6 @@ async function handleRefresh() {
           @edit="handleDetailEdit"
           @delete="handleDetailDelete"
         />
-      </template>
-
-      <template #empty>
-        <div class="h-full flex flex-col items-center justify-center">
-          <div
-            class="w-14 h-14 mb-3 rounded-full bg-surface-light dark:bg-surface-dark flex items-center justify-center"
-          >
-            <UIcon
-              name="receipt_long"
-              size="lg"
-              class="text-text-tertiary-light dark:text-text-tertiary-dark"
-            />
-          </div>
-          <p class="text-sm text-text-tertiary-light dark:text-text-tertiary-dark">
-            Выберите транзакцию для просмотра деталей
-          </p>
-        </div>
       </template>
     </MasterDetailLayout>
 

@@ -64,15 +64,11 @@ const thisWeekReminders = computed(() => {
   });
 });
 
-// Check if reminder is due today
+// Set of today's reminder IDs for O(1) lookups
+const todayReminderIds = computed(() => new Set(todayReminders.value.map((r) => r.id)));
+
 function isDueToday(reminder: Reminder): boolean {
-  if (!reminder.next_date) return false;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const date = new Date(reminder.next_date);
-  return date >= today && date < tomorrow;
+  return todayReminderIds.value.has(reminder.id);
 }
 
 function goBack() {
@@ -148,7 +144,12 @@ function handleDetailClose() {
       </template>
     </AppHeader>
 
-    <MasterDetailLayout :selected="selectedReminderId" @close="handleDetailClose">
+    <MasterDetailLayout
+      :selected="selectedReminderId"
+      empty-icon="notifications"
+      empty-text="Выберите напоминание для просмотра деталей"
+      @close="handleDetailClose"
+    >
       <template #master>
         <!-- Content -->
         <div class="pt-8 space-y-6">
@@ -226,23 +227,6 @@ function handleDetailClose() {
           @edit="handleDetailEdit"
           @delete="handleDetailDelete"
         />
-      </template>
-
-      <template #empty>
-        <div class="h-full flex flex-col items-center justify-center gap-3">
-          <div
-            class="w-16 h-16 rounded-2xl bg-surface-light dark:bg-surface-dark flex items-center justify-center"
-          >
-            <UIcon
-              name="notifications"
-              size="lg"
-              class="text-text-tertiary-light dark:text-text-tertiary-dark"
-            />
-          </div>
-          <p class="text-text-tertiary-light dark:text-text-tertiary-dark text-body-sm">
-            Выберите напоминание для просмотра деталей
-          </p>
-        </div>
       </template>
     </MasterDetailLayout>
 

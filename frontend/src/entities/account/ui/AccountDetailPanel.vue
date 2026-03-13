@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { ROUTE_NAMES } from '@/app/router/routeNames';
-import { UButton, UIcon, UCard, EmptyState, USpinner } from '@/shared/ui';
+import { UButton, UIcon, UCard, UProgressBar, EmptyState, USpinner } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { useAccounts, getAccountTypeLabel } from '@/entities/account';
 import { DEBT_CATEGORY_IDS } from '@/entities/category';
@@ -162,35 +162,22 @@ const groupedTransactions = useGroupedTransactions(accountTransactions, {
             </div>
 
             <!-- Progress bar -->
-            <div v-if="balance.balance < 0 && account.credit_limit > 0" class="space-y-1">
-              <div
-                class="h-2 rounded-full bg-surface-light dark:bg-surface-dark overflow-hidden"
-                role="progressbar"
-                :aria-valuenow="
-                  Math.min(
-                    Math.round((Math.abs(balance.balance) / account.credit_limit) * 100),
-                    100,
-                  )
+            <div v-if="balance.balance < 0 && account.credit_limit > 0">
+              <UProgressBar
+                :value="Math.abs(balance.balance)"
+                :max="account.credit_limit"
+                :color="
+                  Math.abs(balance.balance) / account.credit_limit > 0.8 ? 'danger' : 'primary'
                 "
-                aria-valuemin="0"
-                aria-valuemax="100"
+                show-label
+                aria-label="Использование кредитного лимита"
               >
-                <div
-                  class="h-full rounded-full transition-all duration-300"
-                  :class="
-                    Math.abs(balance.balance) / account.credit_limit > 0.8
-                      ? 'bg-danger'
-                      : 'bg-primary'
-                  "
-                  :style="{
-                    width: `${Math.min((Math.abs(balance.balance) / account.credit_limit) * 100, 100)}%`,
-                  }"
-                />
-              </div>
-              <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark text-right">
-                {{ Math.round((Math.abs(balance.balance) / account.credit_limit) * 100) }}%
-                использовано
-              </p>
+                <template #label>
+                  <span class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
+                    использовано
+                  </span>
+                </template>
+              </UProgressBar>
             </div>
           </div>
         </div>

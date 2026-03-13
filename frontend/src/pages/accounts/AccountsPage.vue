@@ -172,7 +172,12 @@ function handleDetailClose() {
     </AppHeader>
 
     <!-- Master-Detail Layout (desktop: split view, mobile: master only) -->
-    <MasterDetailLayout :selected="selectedAccountId" @close="handleDetailClose">
+    <MasterDetailLayout
+      :selected="selectedAccountId"
+      empty-icon="account_balance_wallet"
+      empty-text="Выберите счёт для просмотра деталей"
+      @close="handleDetailClose"
+    >
       <template #master>
         <div class="py-8 space-y-6 pb-28 md:pb-8">
           <!-- Total Balance Card -->
@@ -270,23 +275,6 @@ function handleDetailClose() {
           @edit="handleEditFromPanel"
           @delete="handleDeleteFromPanel"
         />
-      </template>
-
-      <template #empty>
-        <div class="h-full flex flex-col items-center justify-center gap-3">
-          <div
-            class="w-16 h-16 rounded-2xl bg-surface-light dark:bg-surface-dark flex items-center justify-center"
-          >
-            <UIcon
-              name="account_balance_wallet"
-              size="lg"
-              class="text-text-tertiary-light dark:text-text-tertiary-dark"
-            />
-          </div>
-          <p class="text-sm text-text-tertiary-light dark:text-text-tertiary-dark">
-            Выберите счёт для просмотра деталей
-          </p>
-        </div>
       </template>
     </MasterDetailLayout>
 

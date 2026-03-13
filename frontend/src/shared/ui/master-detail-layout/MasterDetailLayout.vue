@@ -1,9 +1,18 @@
 <script setup lang="ts">
 import { useIsDesktop } from '@/shared/lib/composables/useIsDesktop';
+import { UIcon } from '@/shared/ui';
 
-defineProps<{
-  selected?: string | null;
-}>();
+withDefaults(
+  defineProps<{
+    selected?: string | null;
+    emptyIcon?: string;
+    emptyText?: string;
+  }>(),
+  {
+    emptyIcon: undefined,
+    emptyText: 'Выберите элемент',
+  },
+);
 
 defineEmits<{
   close: [];
@@ -29,9 +38,19 @@ const isDesktop = useIsDesktop();
         <div class="flex-[4] overflow-y-auto min-w-0 pl-4">
           <slot v-if="selected" name="detail" />
           <slot v-else name="empty">
-            <div class="h-full flex items-center justify-center">
+            <div class="h-full flex flex-col items-center justify-center gap-3">
+              <div
+                v-if="emptyIcon"
+                class="w-16 h-16 rounded-2xl bg-surface-light dark:bg-surface-dark flex items-center justify-center"
+              >
+                <UIcon
+                  :name="emptyIcon"
+                  size="lg"
+                  class="text-text-tertiary-light dark:text-text-tertiary-dark"
+                />
+              </div>
               <p class="text-text-tertiary-light dark:text-text-tertiary-dark text-body-sm">
-                Выберите элемент
+                {{ emptyText }}
               </p>
             </div>
           </slot>
