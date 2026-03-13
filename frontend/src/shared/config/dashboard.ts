@@ -2,10 +2,10 @@ import type { WidgetId } from '@/shared/api/database.types';
 
 export const DEFAULT_WIDGET_ORDER: WidgetId[] = [
   'quick_actions',
-  'budget',
   'accounts',
   'top_expenses',
   'transactions',
+  'budget',
   'debts',
   'reminders',
 ];
