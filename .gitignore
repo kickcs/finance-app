@@ -15,3 +15,7 @@ coverage/
 scripts/
 .worktrees/
 .superpowers/
+.agents/
+agents.md
+*.pen
+finance-app

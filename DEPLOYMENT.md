@@ -1,12 +1,12 @@
 # Deployment Guide
 
-Пошаговая инструкция по настройке CI/CD и деплою finance-app на VPS.
+Инструкция по настройке CI/CD и деплою Ouro Finance на VPS.
 
 ---
 
 ## Содержание
 
-1. [Подготовка GitHub репозитория](#1-подготовка-github-репозитория)
+1. [Архитектура деплоя](#1-архитектура-деплоя)
 2. [Настройка GitHub Secrets](#2-настройка-github-secrets)
 3. [Подготовка VPS сервера](#3-подготовка-vps-сервера)
 4. [Первый деплой](#4-первый-деплой)
@@ -16,65 +16,104 @@
 
 ---
 
-## 1. Подготовка GitHub репозитория
+## 1. Архитектура деплоя
 
-### 1.1 Создайте приватный репозиторий на GitHub
+### CI/CD Pipeline (`.github/workflows/deploy.yml`)
 
-```bash
-# Инициализируйте git (если еще не сделано)
-cd /path/to/finance-app
-git init
+Один файл `deploy.yml` объединяет CI и CD:
 
-# Добавьте remote
-git remote add origin git@github.com:YOUR_USERNAME/finance-app.git
-
-# Первый коммит
-git add .
-git commit -m "Initial commit: Docker + CI/CD setup"
-git branch -M master
-git push -u origin master
+```
+push в master
+  ├── 1. Detect changes (backend? frontend? infra?)
+  ├── 2. Build Backend (lint + test + Docker build/push) — только если backend/ изменился
+  ├── 3. Build Frontend (type-check + Vite build + Docker build/push) — только если frontend/ изменился
+  └── 4. Deploy — только изменённые сервисы
+       ├── rsync конфигов на сервер
+       ├── миграции БД (если backend обновился)
+       ├── docker compose up (selective)
+       └── Telegram-уведомление
 ```
 
-### 1.2 Включите GitHub Container Registry
+На PR: только lint + test + build (без Docker push и деплоя).
 
-GitHub Container Registry (GHCR) включен по умолчанию для всех репозиториев. Образы будут публиковаться в:
-- `ghcr.io/YOUR_USERNAME/finance-app/backend:latest`
-- `ghcr.io/YOUR_USERNAME/finance-app/frontend:latest`
+### Сервисы в продакшене (`docker-compose.prod.yml`)
+
+| Сервис | Образ | Порт | Назначение |
+|--------|-------|------|------------|
+| **postgres** | `postgres:16-alpine` | внутренний | PostgreSQL с uuid-ossp |
+| **backend** | `ghcr.io/.../backend:sha` | внутренний | NestJS API |
+| **frontend** | `ghcr.io/.../frontend:sha` | 8080→80 | Vue SPA + nginx (проксирует `/api/` на backend) |
+| **alloy** | `grafana/alloy:v1.13.2` | внутренний | Grafana Alloy — логи, метрики, трейсы |
+
+Frontend nginx проксирует `/api/` запросы на backend — отдельный reverse proxy для API не нужен.
+
+### Docker-образы
+
+Multi-stage builds, хранятся в GitHub Container Registry (GHCR):
+- **Backend**: `oven/bun` (deps + build) → `node:22-alpine` (runtime), non-root user `nestjs`
+- **Frontend**: `oven/bun` (deps + build) → `nginx:alpine` (runtime), non-root user
 
 ---
 
 ## 2. Настройка GitHub Secrets
 
-Перейдите в **Settings → Secrets and variables → Actions** вашего репозитория.
+**Settings → Secrets and variables → Actions**
 
-### 2.1 Создайте Environment "production"
+### Обязательные
 
-1. **Settings → Environments → New environment**
-2. Название: `production`
-3. (Опционально) Добавьте protection rules
+| Secret | Описание |
+|--------|----------|
+| `SERVER_HOST` | IP сервера |
+| `SERVER_USER` | SSH пользователь (`root` или `deploy`) |
+| `SSH_PRIVATE_KEY` | Полный приватный SSH ключ |
+| `DATABASE_PASSWORD` | Пароль PostgreSQL |
+| `JWT_SECRET` | Секрет JWT (32+ символов) |
+| `CORS_ORIGIN` | Разрешённый origin, например `https://app.ouro-finance.top` |
 
-### 2.2 Добавьте следующие секреты
+### Подписки (LemonSqueezy)
 
-| Secret | Описание | Пример |
-|--------|----------|--------|
-| `SERVER_HOST` | IP или hostname вашего VPS | `123.45.67.89` |
-| `SERVER_USER` | SSH пользователь | `deploy` или `root` |
-| `SSH_PRIVATE_KEY` | Приватный SSH ключ (полностью) | `-----BEGIN OPENSSH PRIVATE KEY-----...` |
-| `API_URL` | URL API для frontend (с /api) | `https://app.ouro-finance.top/api` |
-| `DATABASE_PASSWORD` | Пароль PostgreSQL | `your-secure-db-password` |
-| `JWT_SECRET` | Секрет для JWT токенов (32+ символов) | `your-super-secret-jwt-key-min-32-chars` |
-| `CORS_ORIGIN` | Разрешенный origin для CORS | `https://app.ouro-finance.top` |
+| Secret | Описание |
+|--------|----------|
+| `LEMONSQUEEZY_API_KEY` | API-ключ LemonSqueezy |
+| `LEMONSQUEEZY_WEBHOOK_SECRET` | Секрет для проверки вебхуков |
+| `LEMONSQUEEZY_STORE_ID` | ID магазина |
+| `LEMONSQUEEZY_PREMIUM_MONTHLY_VARIANT_ID` | ID месячной подписки |
+| `LEMONSQUEEZY_PREMIUM_YEARLY_VARIANT_ID` | ID годовой подписки |
 
-### 2.3 Генерация SSH ключа (если нужен новый)
+### AI (сканирование чеков)
+
+| Secret | Описание |
+|--------|----------|
+| `OPENAI_API_KEY` | API-ключ OpenAI |
+
+### Observability (Grafana Cloud)
+
+| Secret | Описание |
+|--------|----------|
+| `GRAFANA_CLOUD_API_KEY` | API-ключ Grafana Cloud |
+| `GRAFANA_CLOUD_PROMETHEUS_URL` | URL Prometheus endpoint |
+| `GRAFANA_CLOUD_PROMETHEUS_USER` | User ID Prometheus |
+| `GRAFANA_CLOUD_LOKI_URL` | URL Loki endpoint |
+| `GRAFANA_CLOUD_LOKI_USER` | User ID Loki |
+| `GRAFANA_CLOUD_TEMPO_URL` | URL Tempo endpoint |
+| `GRAFANA_CLOUD_TEMPO_USER` | User ID Tempo |
+
+### Уведомления
+
+| Secret | Описание |
+|--------|----------|
+| `TELEGRAM_BOT_TOKEN` | Токен Telegram-бота для нотификаций |
+| `TELEGRAM_CHAT_ID` | ID чата для уведомлений о деплое |
+
+### Генерация SSH ключа
 
 ```bash
-# На локальной машине
 ssh-keygen -t ed25519 -C "github-actions-deploy" -f ~/.ssh/github_deploy
 
-# Скопируйте приватный ключ в GitHub Secret SSH_PRIVATE_KEY
+# Приватный ключ → GitHub Secret SSH_PRIVATE_KEY
 cat ~/.ssh/github_deploy
 
-# Публичный ключ добавьте на сервер (см. раздел 3)
+# Публичный ключ → на сервер в authorized_keys
 cat ~/.ssh/github_deploy.pub
 ```
 
@@ -82,160 +121,141 @@ cat ~/.ssh/github_deploy.pub
 
 ## 3. Подготовка VPS сервера
 
-### 3.1 Минимальные требования
+### Минимальные требования
 
 - Ubuntu 22.04+ / Debian 12+
-- 2 GB RAM (минимум)
+- 2 GB RAM
 - 20 GB SSD
 - Docker и Docker Compose
 
-### 3.2 Установка Docker
+### Установка Docker
 
 ```bash
-# Подключитесь к серверу
 ssh user@YOUR_SERVER_IP
 
-# Обновите систему
 sudo apt update && sudo apt upgrade -y
-
-# Установите Docker
 curl -fsSL https://get.docker.com | sh
-
-# Добавьте пользователя в группу docker
 sudo usermod -aG docker $USER
 
-# Перелогиньтесь для применения изменений
-exit
-ssh user@YOUR_SERVER_IP
+# Перелогиньтесь
+exit && ssh user@YOUR_SERVER_IP
 
-# Проверьте установку
 docker --version
 docker compose version
 ```
 
-### 3.3 Создайте пользователя для деплоя (рекомендуется)
+### Настройка пользователя для деплоя (опционально)
 
 ```bash
-# Создайте пользователя
 sudo adduser deploy
 sudo usermod -aG docker deploy
 
-# Настройте SSH ключ
 sudo mkdir -p /home/deploy/.ssh
+# Вставьте публичный ключ github_deploy.pub:
 sudo nano /home/deploy/.ssh/authorized_keys
-# Вставьте публичный ключ (github_deploy.pub)
 
 sudo chmod 700 /home/deploy/.ssh
 sudo chmod 600 /home/deploy/.ssh/authorized_keys
 sudo chown -R deploy:deploy /home/deploy/.ssh
 ```
 
-### 3.4 Настройте firewall
+### Firewall
 
 ```bash
-# Разрешите SSH, HTTP, HTTPS
 sudo ufw allow 22
 sudo ufw allow 80
 sudo ufw allow 443
 sudo ufw enable
 ```
 
-### 3.5 Создайте директорию для приложения
+### Директория приложения
 
 ```bash
-# От имени deploy пользователя
-sudo -u deploy mkdir -p /home/deploy/finance-app
+mkdir -p ~/finance-app
 ```
 
 ---
 
 ## 4. Первый деплой
 
-### 4.1 Автоматический деплой (через GitHub Actions)
+### Автоматический (через GitHub Actions)
 
-После настройки секретов, просто сделайте push в master:
+После настройки всех секретов — push в master:
 
 ```bash
-git add .
-git commit -m "Configure deployment"
 git push origin master
 ```
 
-GitHub Actions автоматически:
-1. Соберет Docker образы
-2. Запушит их в GHCR
-3. Подключится к серверу по SSH
-4. Запустит контейнеры
+Pipeline автоматически:
+1. Соберёт Docker-образы
+2. Пушит в GHCR
+3. Скопирует конфиги на сервер (`docker-compose.prod.yml`, `init.sql`, `config.alloy`)
+4. Создаст `.env` из секретов
+5. Запустит миграции (если обновился backend)
+6. Поднимет/обновит контейнеры
+7. Отправит уведомление в Telegram
 
-### 4.2 Ручной деплой (первый раз или для отладки)
+### Ручной (для отладки)
 
 ```bash
-# На сервере
 cd ~/finance-app
 
-# Создайте .env файл
-cat > .env << EOF
-GITHUB_REPOSITORY=YOUR_USERNAME/finance-app
+# Создайте .env
+cat > .env << 'EOF'
+GITHUB_REPOSITORY=kickcs/finance-app
 GHCR_IMAGE_TAG=latest
 DATABASE_NAME=my_finance
 DATABASE_USERNAME=postgres
-DATABASE_PASSWORD=your-secure-db-password
-JWT_SECRET=your-super-secret-jwt-key-min-32-chars
+DATABASE_PASSWORD=your-secure-password
+JWT_SECRET=your-jwt-secret-min-32-chars
 JWT_EXPIRES_IN=15m
 JWT_REFRESH_EXPIRES_IN=7d
 CORS_ORIGIN=https://app.ouro-finance.top
+DATABASE_SYNCHRONIZE=false
 EOF
 
-# Скачайте docker-compose.prod.yml
-curl -fsSL https://raw.githubusercontent.com/YOUR_USERNAME/finance-app/master/docker-compose.prod.yml -o docker-compose.prod.yml
+chmod 600 .env
 
-# Создайте директорию для init.sql
-mkdir -p docker/postgres
-curl -fsSL https://raw.githubusercontent.com/YOUR_USERNAME/finance-app/master/docker/postgres/init.sql -o docker/postgres/init.sql
+# Скачайте конфиги
+curl -fsSL https://raw.githubusercontent.com/kickcs/finance-app/master/docker-compose.prod.yml -o docker-compose.prod.yml
+mkdir -p docker/postgres docker/alloy
+curl -fsSL https://raw.githubusercontent.com/kickcs/finance-app/master/docker/postgres/init.sql -o docker/postgres/init.sql
+curl -fsSL https://raw.githubusercontent.com/kickcs/finance-app/master/docker/alloy/config.alloy -o docker/alloy/config.alloy
 
-# Залогиньтесь в GHCR
+# Логин в GHCR
 echo "YOUR_GITHUB_PAT" | docker login ghcr.io -u YOUR_USERNAME --password-stdin
 
-# Запустите
+# Запуск
 docker compose -f docker-compose.prod.yml up -d
 
-# Проверьте статус
-docker compose -f docker-compose.prod.yml ps
-docker compose -f docker-compose.prod.yml logs -f
+# Миграции
+docker compose -f docker-compose.prod.yml run --rm --no-deps -T backend \
+  npx typeorm migration:run -d dist/config/data-source.js
 ```
 
-### 4.3 Проверка работоспособности
+### Проверка
 
 ```bash
 # Health check
-curl http://localhost/api/health
-
-# Ожидаемый ответ:
-# {"status":"ok","timestamp":"...","uptime":...,"database":{"status":"ok"}}
+curl http://localhost:8080/api/health
+# Ожидаемый ответ: {"status":"ok","timestamp":"...","uptime":...,"database":{"status":"ok"}}
 ```
 
 ---
 
 ## 5. Настройка домена и HTTPS
 
-### 5.1 Настройте DNS
+### DNS
 
-Добавьте A-запись в DNS вашего домена:
-```
-app.ouro-finance.top → YOUR_SERVER_IP
-```
+A-запись: `app.ouro-finance.top → YOUR_SERVER_IP`
 
-### 5.2 Установите Nginx как reverse proxy с SSL
+### Nginx + SSL (на хосте)
 
 ```bash
-# Установите Nginx и Certbot
 sudo apt install nginx certbot python3-certbot-nginx -y
 
-# Создайте конфиг для сайта
 sudo nano /etc/nginx/sites-available/app-ouro-finance
 ```
-
-Содержимое конфига:
 
 ```nginx
 server {
@@ -252,25 +272,19 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_cache_bypass $http_upgrade;
-
         client_max_body_size 10m;
     }
 }
 ```
 
 ```bash
-# Активируйте конфиг
 sudo ln -s /etc/nginx/sites-available/app-ouro-finance /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
 
-# Получите SSL сертификат
+# SSL
 sudo certbot --nginx -d app.ouro-finance.top
 ```
-
-### 5.3 Альтернатива: Traefik (рекомендуется для Docker)
-
-Для автоматического SSL с Let's Encrypt, рассмотрите использование Traefik. Это потребует модификации docker-compose.prod.yml.
 
 ---
 
@@ -279,153 +293,128 @@ sudo certbot --nginx -d app.ouro-finance.top
 ### Логи
 
 ```bash
-# Все логи
+# Все сервисы
 docker compose -f docker-compose.prod.yml logs -f
 
-# Логи конкретного сервиса
+# Конкретный сервис
 docker compose -f docker-compose.prod.yml logs -f backend
 docker compose -f docker-compose.prod.yml logs -f frontend
 docker compose -f docker-compose.prod.yml logs -f postgres
+docker compose -f docker-compose.prod.yml logs -f alloy
 ```
 
-### Управление контейнерами
+### Управление
 
 ```bash
-# Статус
-docker compose -f docker-compose.prod.yml ps
-
-# Перезапуск
-docker compose -f docker-compose.prod.yml restart
-
-# Остановка
-docker compose -f docker-compose.prod.yml down
-
-# Полная очистка (включая volumes!)
-docker compose -f docker-compose.prod.yml down -v
+docker compose -f docker-compose.prod.yml ps          # Статус
+docker compose -f docker-compose.prod.yml restart      # Перезапуск
+docker compose -f docker-compose.prod.yml down         # Остановка
+docker compose -f docker-compose.prod.yml down -v      # Остановка + удаление volumes (ДАННЫЕ!)
 ```
 
 ### Обновление вручную
 
 ```bash
-# Подтянуть новые образы
 docker compose -f docker-compose.prod.yml pull
-
-# Перезапустить с новыми образами
 docker compose -f docker-compose.prod.yml up -d
-
-# Очистить старые образы
 docker image prune -f
 ```
 
-### Миграции БД
+### Миграции
 
 ```bash
-# Подключиться к backend контейнеру
-docker compose -f docker-compose.prod.yml exec backend sh
-
-# Внутри контейнера (если нужно выполнить миграции)
-# Примечание: миграции должны быть скомпилированы и включены в образ
+docker compose -f docker-compose.prod.yml run --rm --no-deps -T backend \
+  npx typeorm migration:run -d dist/config/data-source.js
 ```
 
-### Backup базы данных
+### Backup БД
 
 ```bash
-# Создать backup
-docker compose -f docker-compose.prod.yml exec postgres pg_dump -U postgres my_finance > backup_$(date +%Y%m%d).sql
+# Создать
+docker compose -f docker-compose.prod.yml exec postgres \
+  pg_dump -U postgres my_finance > backup_$(date +%Y%m%d).sql
 
-# Восстановить из backup
-docker compose -f docker-compose.prod.yml exec -T postgres psql -U postgres my_finance < backup_20240101.sql
+# Восстановить
+docker compose -f docker-compose.prod.yml exec -T postgres \
+  psql -U postgres my_finance < backup_20260313.sql
+```
+
+### SQL-запрос к проду
+
+```bash
+ssh root@YOUR_SERVER_IP "docker exec \$(docker ps -q -f name=postgres) psql -U postgres -d my_finance -c \"SELECT ...\""
 ```
 
 ---
 
 ## 7. Troubleshooting
 
-### Проблема: Контейнеры не запускаются
+### Контейнеры не запускаются
 
 ```bash
-# Проверьте логи
 docker compose -f docker-compose.prod.yml logs
-
-# Проверьте, что образы скачались
 docker images | grep finance-app
 ```
 
-### Проблема: Cannot connect to database
+### Cannot connect to database
 
 ```bash
-# Проверьте, что postgres контейнер работает
 docker compose -f docker-compose.prod.yml ps postgres
-
-# Проверьте логи postgres
 docker compose -f docker-compose.prod.yml logs postgres
-
-# Проверьте переменные окружения
 docker compose -f docker-compose.prod.yml exec backend env | grep DATABASE
 ```
 
-### Проблема: Health check failed
+### Health check failed
 
 ```bash
-# Проверьте, что backend отвечает
 docker compose -f docker-compose.prod.yml exec backend wget -qO- http://localhost:3000/api/health
-
-# Проверьте логи backend
 docker compose -f docker-compose.prod.yml logs backend
 ```
 
-### Проблема: GitHub Actions не может подключиться к серверу
+### GitHub Actions не может подключиться к серверу
 
-1. Проверьте, что SSH ключ правильно добавлен в секреты
-2. Проверьте, что публичный ключ добавлен в `~/.ssh/authorized_keys` на сервере
-3. Проверьте права доступа:
-   ```bash
-   chmod 700 ~/.ssh
-   chmod 600 ~/.ssh/authorized_keys
-   ```
+1. Проверьте SSH ключ в секретах (полный, включая `-----BEGIN...` и `-----END...`)
+2. Публичный ключ в `~/.ssh/authorized_keys` на сервере
+3. Права: `chmod 700 ~/.ssh && chmod 600 ~/.ssh/authorized_keys`
 
-### Проблема: Permission denied при docker pull
+### Permission denied при docker pull
 
 ```bash
-# Убедитесь, что GHCR логин работает
 echo $GITHUB_TOKEN | docker login ghcr.io -u YOUR_USERNAME --password-stdin
-
-# Проверьте видимость пакетов в GitHub
-# Settings → Packages → Visibility должен быть доступен для репозитория
 ```
 
----
-
-## Чеклист перед деплоем
-
-- [ ] GitHub репозиторий создан
-- [ ] Все секреты добавлены в GitHub
-- [ ] SSH ключ настроен на сервере
-- [ ] Docker установлен на сервере
-- [ ] Firewall настроен (порты 22, 80, 443)
-- [ ] DNS записи настроены (если нужен домен)
-- [ ] Сделан push в master ветку
-- [ ] CI/CD pipeline прошел успешно
-- [ ] Health check возвращает `{"status":"ok"}`
+Проверьте видимость пакетов: GitHub → Settings → Packages.
 
 ---
 
 ## Структура файлов
 
 ```
-finance-app/
 ├── .github/workflows/
-│   ├── ci.yml              # CI: lint, test, build на PR
-│   └── deploy.yml          # CD: build → GHCR → deploy на push в master
+│   └── deploy.yml              # CI/CD: lint, test, build, deploy
 ├── docker/
-│   ├── backend/Dockerfile  # Multi-stage build для NestJS
+│   ├── backend/Dockerfile      # Multi-stage: bun → node:22-alpine
 │   ├── frontend/
-│   │   ├── Dockerfile      # Multi-stage build для Vue + nginx
-│   │   └── nginx.conf      # Nginx конфиг с proxy и SPA fallback
-│   └── postgres/init.sql   # Инициализация БД
-├── docker-compose.yml      # Для локальной разработки
-├── docker-compose.prod.yml # Для production (использует GHCR образы)
-├── .dockerignore
-├── .env.example
-└── DEPLOYMENT.md           # Эта инструкция
+│   │   ├── Dockerfile          # Multi-stage: bun → nginx:alpine
+│   │   └── nginx.conf          # Reverse proxy /api/ + SPA + rate limiting
+│   ├── postgres/init.sql       # uuid-ossp extension
+│   └── alloy/config.alloy      # Grafana Alloy (метрики, логи, трейсы)
+├── docker-compose.yml          # Для локальной разработки
+├── docker-compose.prod.yml     # Production (GHCR образы)
+├── backend/.env.example        # Шаблон переменных
+└── DEPLOYMENT.md               # Эта инструкция
 ```
+
+---
+
+## Чеклист
+
+- [ ] GitHub Secrets настроены (минимум: SERVER_HOST, SERVER_USER, SSH_PRIVATE_KEY, DATABASE_PASSWORD, JWT_SECRET, CORS_ORIGIN)
+- [ ] SSH ключ добавлен на сервер
+- [ ] Docker установлен на сервере
+- [ ] Firewall: порты 22, 80, 443
+- [ ] DNS A-запись настроена
+- [ ] Push в master → pipeline прошёл
+- [ ] Health check: `curl http://YOUR_SERVER:8080/api/health` → `{"status":"ok"}`
+- [ ] SSL сертификат получен (certbot)
+- [ ] Telegram-уведомления приходят
