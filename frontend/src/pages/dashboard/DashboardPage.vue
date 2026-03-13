@@ -319,6 +319,7 @@ function handleScanReceipt() {
               :balance-loading="accountsLoading || ratesLoading"
               :is-hidden="isHidden"
               @toggle-hidden="isHidden = !isHidden"
+              @balance-click="nav.toAccounts"
             />
           </section>
 

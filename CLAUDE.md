@@ -44,7 +44,7 @@ GitHub Actions (`deploy.yml`): build-backend (lint + test + Docker build/push) +
 ### Backend (NestJS + DDD + CQRS)
 
 - **Tech**: NestJS 11, TypeORM, PostgreSQL, JWT + Passport, @nestjs/cqrs
-- **Bounded Contexts** (`backend/src/modules/`): `identity` (auth, profiles), `accounting` (accounts, transactions, categories), `debt`, `planning` (goals, reminders), `exchange` (currency conversion), `subscription` (premium plans, LemonSqueezy payments)
+- **Bounded Contexts** (`backend/src/modules/`): `identity` (auth, profiles), `accounting` (accounts, transactions, categories, quick-actions), `debt`, `planning` (goals, reminders, budgets), `exchange` (currency conversion), `subscription` (premium plans, LemonSqueezy payments), `person` (shared contacts), `receipt` (OCR via OpenAI)
 
 **Module Structure**: `domain/` → `application/` (commands + queries) → `infrastructure/` (TypeORM, mappers) → `presentation/` (controllers, DTOs)
 
@@ -102,15 +102,17 @@ GitHub Actions (`deploy.yml`): build-backend (lint + test + Docker build/push) +
 
 Custom component library wrapping Reka UI headless primitives (CVA-based variants). All exported from `shared/ui/index.ts`. Read component source for props — see `frontend/DESIGN_SYSTEM.md` for full docs.
 
-**Core**: `UButton`, `UBadge`, `UInput` (variants: default/search/currency), `UCard`, `UModal`, `UTabs` (pills with sliding indicator / underline), `UIcon` (Material Symbol name → Lucide mapping via `shared/ui/icon/iconMap.ts`), `UProgressBar`, `USpinner`
+**Core**: `UButton`, `UBadge`, `UInput` (variants: default/search/currency), `UCard`, `UModal`, `UTabs` (pills with sliding indicator / underline), `UIcon` (Material Symbol name → Lucide mapping via `shared/ui/icon/iconMap.ts`), `UProgressBar`, `USpinner`, `UToggle`
 
-**Composite**: `EmptyState` (default/inline), `SwipeableItem`, `PullToRefresh`, `Skeleton`/`SkeletonListItem`, `IconBadge`, `SectionHeader`, `ConfirmDeleteModal`, `UColorPicker`, `UIconSelector`, `NotFoundState`, `ViewAllButton`, `NavigationProgress`
+**Layout**: `PageContainer`, `MasterDetailLayout`
+
+**Composite**: `EmptyState` (default/inline), `SwipeableItem`, `PullToRefresh`, `Skeleton`/`SkeletonListItem`, `IconBadge`, `InitialAvatar`, `SectionHeader`, `ConfirmDeleteModal`, `UColorPicker`, `UIconSelector`, `NotFoundState`, `ViewAllButton`, `NavigationProgress`
 
 **Toast System**: Source at `shared/lib/composables/useToast.ts`, re-exported via `shared/ui`. Call `toast({ title, description, variant, action?: {label, onClick} })`. `<Toaster />` placed in app root.
 
 ### Frontend Shared Utilities (`shared/lib/`)
 
-- **Format** (`format/`): `formatCurrency`, `formatMasked`, `formatNumberWithSpaces`/`parseFormattedNumber`, `getCurrencySymbol`, `formatPercentage`, `formatDate` (ru-RU), `formatRelativeDate`, `formatDateGroup`, `formatLocalDate`
+- **Format** (`format/`): `formatCurrency`, `formatMasked`, `formatNumberWithSpaces`, `getCurrencySymbol`, `formatPercentage`, `formatDate` (ru-RU), `formatRelativeDate`, `formatDateGroup`, `formatLocalDate`, `greeting.ts`, `text.ts`, `pluralize.ts`
 - **Date** (`date/`): `isToday`, `isPastDate`, `isFutureDate`, `getTodayISO`; timestamp boundaries in `format/date.ts`
 - **Utils** (`utils.ts`): `cn()` (clsx + tailwind-merge — always use for dynamic classes), `cleanUndefined(obj)`
 - **Transitions** (`transitions.ts`): `listTransition` preset for `<TransitionGroup>`
@@ -122,12 +124,14 @@ Custom component library wrapping Reka UI headless primitives (CVA-based variant
 **VueUse** (`@vueuse/core`): Prefer VueUse composables over custom implementations. Already used: `useLocalStorage`, `useResizeObserver`, `useTimeoutFn`, `useTimestamp`, `usePreferredDark`, `useMediaQuery`, `useEventListener`, `useDebounceFn`.
 
 **Hooks** (`shared/lib/hooks/`):
-`useCurrentUser`, `useAsyncOperation`, `useUserCurrency`, `usePullToRefresh`, `useSwipe`, `useSlidingIndicator`
+`useCurrentUser`, `useAsyncOperation`, `useUserCurrency`, `usePullToRefresh`, `useSwipe`, `useSlidingIndicator`, `useMountedAnimation`
 
 **Composables** (`shared/lib/composables/`):
 - `useToast()` — custom reactive toast store with haptics (re-exported via `shared/ui`)
 - `usePwaUpdate()` — auto-detects SW updates, shows persistent toast with "Обновить" action
 - `usePremiumFeature()` — singleton for soft paywall: `requirePremium(name)`, `isPremium`, `showUpgradeModal`. Must call `init()` in `App.vue`
+- `useIsDesktop()` — desktop viewport detection
+- `useKeyboardTrigger()` — keyboard event handler
 
 **API composables** (`shared/api/composables/`):
 - `useAuth()` — singleton: signUp, signIn, signInAnonymously, signOut, refreshUser
@@ -153,22 +157,27 @@ All accept `userId: MaybeRefOrGetter<string|null>`, auto-disable when falsy, inc
 - `useCategories` — expense/income categories, reorder
 - `useHashtags` — transaction hashtag suggestions
 - `useSubscription(userId)` — subscription status, isPremium, refreshSubscription
+- `useAccountBalances` — multi-currency account balances
+- `useBudget` — budget CRUD
+- `useDailyStats` — daily income/expense statistics
+- `usePeople` — shared contacts/persons
+- `useQuickActions` — quick action shortcuts for transactions
 
 ### Frontend Entities
 
-`account`, `account-balance` (multi-currency balances), `category`, `currency`, `debt`, `goal`, `reminder`, `subscription`, `transaction`
+`account`, `account-balance` (multi-currency balances), `budget`, `category`, `currency`, `debt`, `goal`, `person`, `quick-action`, `reminder`, `subscription`, `transaction`
 
-**Key constants**: `EXPENSE_CATEGORIES` (12), `INCOME_CATEGORIES` (6), `DEBT_CATEGORIES` (4), `TRANSFER_CATEGORY` in `entities/category/model/constants.ts`. `CURRENCIES` (USD, EUR, RUB, UZS, GBP, CNY). `VISIBLE_ACCOUNT_TYPES` (basic, savings, credit_card). `ENTITY_COLORS` in `shared/config/colors.ts`.
+**Key constants**: `EXPENSE_CATEGORIES` (12), `INCOME_CATEGORIES` (6), `DEBT_CATEGORIES` (4), `TRANSFER_CATEGORY`, `COMMISSION_CATEGORY`, `ADJUSTMENT_CATEGORY` in `entities/category/model/constants.ts`. `CURRENCIES` (USD, EUR, RUB, UZS, GBP, CNY). `VISIBLE_ACCOUNT_TYPES` (basic, savings, credit_card). `ENTITY_COLORS` in `shared/config/colors.ts`.
 
 **Entity UI**: `AccountCard`, `AccountSelector`, `TransactionItem`, `VirtualGroupedTransactionList` (@tanstack/vue-virtual — set `height` with `calc()`), `VirtualTransactionList` (flat non-grouped variant), `DebtCard`, `GoalCard`, `ReminderCard`, `CategoryCard`, `CategoryChips`, `CurrencyBadge`. `useGroupedTransactions()` for transaction grouping.
 
 ### Frontend Widgets (`widgets/`)
 
-`AppHeader`, `BottomNav`, `BalanceCard`, `AccountStack`, `SaveSpendSection`, `RecentTransactions`, `DebtsSection`, `GoalsSection`, `RemindersSection`, `CurrencyList`. Analytics: `StatCard`, `DonutChart`, `DailyStatsCards`, `TopCategories`, `SavingsGauge`. Each widget with `loading` has a `*Skeleton.vue` companion.
+`AppHeader`, `BottomNav`, `SidebarNav`, `BalanceCard`, `AccountStack`, `SaveSpendSection`, `RecentTransactions`, `DebtsSection`, `GoalsSection`, `RemindersSection`, `BudgetSection`, `OnboardingProgress`, `CurrencyList`. Analytics: `StatCard`, `DonutChart`, `DailyStatsCards`, `TopCategories`, `SavingsGauge`. Each widget with `loading` has a `*Skeleton.vue` companion.
 
 ### Frontend Features (`features/`)
 
-`add-transaction` (HeroAmount, TransactionForm, panels), `analytics-filters` (FilterChips, DateRangePicker, ModeToggle), `changelog`, `close-debt`, `configure-quick-action`, `create-account`, `create-debt`, `create-reminder`, `demo-mode`, `edit-account`, `edit-profile`, `edit-reminder`, `edit-transaction`, `import-data`, `install-pwa`, `manage-categories`, `manage-subscription` (SubscriptionSection), `partial-payment`, `search-transactions` (SearchInput), `select-currency` (CurrencyItem), `split-expense`, `toggle-theme` (ThemeToggle), `upgrade-to-premium` (PremiumBadge, PremiumUpgradeModal, useUpgrade)
+`add-transaction` (HeroAmount, TransactionForm, panels), `adjust-balance`, `analytics-filters` (FilterChips, DateRangePicker, ModeToggle), `changelog`, `close-debt`, `configure-quick-action`, `create-account`, `create-debt`, `create-reminder`, `demo-mode`, `edit-account`, `edit-profile`, `edit-reminder`, `edit-transaction`, `import-data`, `install-pwa`, `manage-categories`, `manage-subscription` (SubscriptionSection), `partial-payment`, `scan-receipt` (OCR via OpenAI), `search-transactions` (SearchInput), `select-currency` (CurrencyItem), `set-budget`, `split-expense`, `toggle-theme` (ThemeToggle), `upgrade-to-premium` (PremiumBadge, PremiumUpgradeModal, useUpgrade)
 
 ### Page Layout Pattern
 
@@ -182,6 +191,7 @@ DATABASE_HOST, DATABASE_PORT, DATABASE_NAME, DATABASE_USERNAME, DATABASE_PASSWOR
 JWT_SECRET, JWT_EXPIRES_IN, PORT
 LEMONSQUEEZY_API_KEY, LEMONSQUEEZY_WEBHOOK_SECRET, LEMONSQUEEZY_STORE_ID
 LEMONSQUEEZY_PREMIUM_MONTHLY_VARIANT_ID, LEMONSQUEEZY_PREMIUM_YEARLY_VARIANT_ID
+OPENAI_API_KEY  # Receipt OCR
 
 # Frontend (.env)
 VITE_API_URL=http://localhost:3000

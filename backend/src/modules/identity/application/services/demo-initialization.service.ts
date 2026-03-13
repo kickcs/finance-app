@@ -151,22 +151,22 @@ export class DemoInitializationService {
     try {
       // 1. Create accounts
       const accounts = await this.createAccounts(userId);
-      const walletId = accounts[0].id;
-      const cardId = accounts[1].id;
+      const mainId = accounts[0].id;
+      const savingsId = accounts[1].id;
 
       // 2. Update profile with default account and onboarding flags
       profile.updateProfile({
         currency: 'UZS',
         hasCompletedOnboarding: true,
-        defaultAccountId: walletId,
+        defaultAccountId: mainId,
       });
       await this.profileRepository.save(profile);
 
       // 3. Create transactions
-      await this.createTransactions(userId, [walletId, cardId]);
+      await this.createTransactions(userId, [mainId, savingsId]);
 
-      // 4. Create debt
-      await this.createDebt(userId, walletId);
+      // 4. Create debts
+      await this.createDebts(userId, mainId);
 
       // 5. Create reminders
       await this.createReminders(userId);
@@ -175,7 +175,7 @@ export class DemoInitializationService {
       await this.createPeople(userId);
 
       this.logger.log(`Demo data initialized for user ${userId}`);
-      return walletId;
+      return mainId;
     } catch (error) {
       this.logger.error(`Failed to initialize demo data for user ${userId}`, error);
       throw error;
@@ -183,10 +183,8 @@ export class DemoInitializationService {
   }
 
   private async createAccounts(userId: string): Promise<Account[]> {
-    const walletBalance = this.roundToThousand(this.randomBetween(800000, 2000000));
-    const cardBalanceUZS = this.roundToThousand(this.randomBetween(3000000, 8000000));
-    const cardBalanceUSD = this.randomBetween(100, 500);
-    const savingsBalance = this.roundToThousand(this.randomBetween(5000000, 15000000));
+    const mainBalance = this.roundToThousand(this.randomBetween(3000000, 8000000));
+    const savingsBalance = this.roundToThousand(this.randomBetween(8000000, 15000000));
 
     const accountsData: Array<{
       name: string;
@@ -197,82 +195,18 @@ export class DemoInitializationService {
       typeFields?: AccountTypeFields;
     }> = [
       {
-        name: 'Кошелёк',
-        icon: 'account_balance_wallet',
-        color: '#3b82f6',
-        type: 'cash',
-        balances: [{ currency: 'UZS', balance: walletBalance }],
-      },
-      {
-        name: 'Карта Visa',
+        name: 'Основной',
         icon: 'credit_card',
-        color: '#10b981',
+        color: '#3b82f6',
         type: 'basic',
-        balances: [
-          { currency: 'UZS', balance: cardBalanceUZS },
-          { currency: 'USD', balance: cardBalanceUSD },
-        ],
+        balances: [{ currency: 'UZS', balance: mainBalance }],
       },
       {
-        name: 'Накопления',
+        name: 'Накопительный',
         icon: 'savings',
         color: '#a855f7',
         type: 'savings',
         balances: [{ currency: 'UZS', balance: savingsBalance }],
-      },
-      {
-        name: 'Visa Gold',
-        icon: 'credit_card',
-        color: '#f59e0b',
-        type: 'credit_card',
-        balances: [
-          {
-            currency: 'UZS',
-            balance: this.roundToThousand(this.randomBetween(-1000000, 0)),
-          },
-        ],
-        typeFields: {
-          creditLimit: 20000000,
-          gracePeriodDays: 55,
-          billingDay: 15,
-        },
-      },
-      {
-        name: 'Ипотека',
-        icon: 'account_balance',
-        color: '#ef4444',
-        type: 'loan',
-        balances: [
-          {
-            currency: 'UZS',
-            balance: -this.roundToThousand(this.randomBetween(150000000, 250000000)),
-          },
-        ],
-        typeFields: {
-          totalAmount: 300000000,
-          interestRate: 22,
-          monthlyPayment: 4500000,
-          startDate: new Date('2024-01-15'),
-          endDate: new Date('2034-01-15'),
-        },
-      },
-      {
-        name: 'Срочный вклад',
-        icon: 'savings',
-        color: '#6366f1',
-        type: 'deposit',
-        balances: [
-          {
-            currency: 'UZS',
-            balance: this.roundToThousand(this.randomBetween(10000000, 30000000)),
-          },
-        ],
-        typeFields: {
-          interestRate: 23,
-          maturityDate: new Date('2026-06-01'),
-          isReplenishable: true,
-          isWithdrawable: false,
-        },
       },
     ];
 
@@ -300,10 +234,10 @@ export class DemoInitializationService {
 
   private async createTransactions(userId: string, accountIds: string[]): Promise<void> {
     const transactions = this.generateTransactionsData();
-    const [walletId, cardId] = accountIds;
+    const [mainId, savingsId] = accountIds;
 
     for (const txData of transactions) {
-      const accountId = txData.accountIndex === 0 ? walletId : cardId;
+      const accountId = txData.accountIndex === 0 ? mainId : savingsId;
 
       let transaction: Transaction;
       if (txData.type === 'income') {
@@ -335,20 +269,39 @@ export class DemoInitializationService {
     }
   }
 
-  private async createDebt(userId: string, accountId: string): Promise<void> {
-    const debt = Debt.create(
-      crypto.randomUUID(),
-      userId,
-      'Долг Ахмеду',
-      500000,
-      'UZS',
-      'given',
-      'Ахмед',
-      accountId,
+  private async createDebts(userId: string, accountId: string): Promise<void> {
+    const debtsData: Array<{
+      name: string;
+      amount: number;
+      currency: string;
+      type: string;
+      personName: string;
+    }> = [
+      // Given (user lent money)
+      { name: 'На ремонт', amount: 500000, currency: 'UZS', type: 'given', personName: 'Ахмед' },
+      { name: 'На поездку', amount: 200, currency: 'USD', type: 'given', personName: 'Ахмед' },
+      { name: 'На свадьбу', amount: 1500000, currency: 'UZS', type: 'given', personName: 'Анна' },
+      { name: 'До зарплаты', amount: 300000, currency: 'UZS', type: 'given', personName: 'Коля' },
+      // Taken (user borrowed money)
+      { name: 'На мебель', amount: 2000000, currency: 'UZS', type: 'taken', personName: 'Анна' },
+      { name: 'За ноутбук', amount: 100, currency: 'USD', type: 'taken', personName: 'Дима' },
+    ];
+
+    const debts = debtsData.map((data) =>
+      Debt.create(
+        crypto.randomUUID(),
+        userId,
+        data.name,
+        data.amount,
+        data.currency,
+        data.type,
+        data.personName,
+        accountId,
+      ),
     );
 
-    await this.debtRepository.save(debt);
-    await this.eventPublisher.publishEvents(debt);
+    await Promise.all(debts.map((debt) => this.debtRepository.save(debt)));
+    await this.eventPublisher.publishEventsFromMultiple(debts);
   }
 
   private async createReminders(userId: string): Promise<void> {
@@ -406,6 +359,7 @@ export class DemoInitializationService {
       { name: 'Ахмед', color: '#3b82f6' },
       { name: 'Анна', color: '#f43f5e' },
       { name: 'Коля', color: '#10b981' },
+      { name: 'Дима', color: '#f59e0b' },
     ];
 
     for (const data of peopleData) {
@@ -437,7 +391,7 @@ export class DemoInitializationService {
           const descriptions = CATEGORY_DESCRIPTIONS[category.id];
 
           transactions.push({
-            accountIndex: Math.random() < 0.6 ? 1 : 0, // 60% card, 40% wallet
+            accountIndex: 0, // All expenses from main account
             categoryId: category.id,
             amount,
             currency: 'UZS',
@@ -452,7 +406,7 @@ export class DemoInitializationService {
           const descriptions = CATEGORY_DESCRIPTIONS[category.id];
 
           transactions.push({
-            accountIndex: Math.random() < 0.7 ? 1 : 0, // 70% to card
+            accountIndex: 0, // All income to main account
             categoryId: category.id,
             amount,
             currency: 'UZS',
@@ -471,7 +425,7 @@ export class DemoInitializationService {
     const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     if (firstOfMonth <= now) {
       transactions.push({
-        accountIndex: 1,
+        accountIndex: 0,
         categoryId: 'salary',
         amount: salaryAmount,
         currency: 'UZS',
@@ -485,7 +439,7 @@ export class DemoInitializationService {
     const fifteenthOfMonth = new Date(now.getFullYear(), now.getMonth(), 15);
     if (fifteenthOfMonth <= now) {
       transactions.push({
-        accountIndex: 1,
+        accountIndex: 0,
         categoryId: 'salary',
         amount: salaryAmount,
         currency: 'UZS',
@@ -503,7 +457,7 @@ export class DemoInitializationService {
 
     if (prevMonth1st >= thirtyDaysAgo) {
       transactions.push({
-        accountIndex: 1,
+        accountIndex: 0,
         categoryId: 'salary',
         amount: salaryAmount,
         currency: 'UZS',
@@ -515,7 +469,7 @@ export class DemoInitializationService {
 
     if (prevMonth15th >= thirtyDaysAgo) {
       transactions.push({
-        accountIndex: 1,
+        accountIndex: 0,
         categoryId: 'salary',
         amount: salaryAmount,
         currency: 'UZS',

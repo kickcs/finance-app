@@ -13,7 +13,6 @@ import {
   useGroupedTransactions,
 } from '@/entities/transaction';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
-import { formatDateGroup } from '@/shared/lib/format/date';
 
 const props = defineProps<{
   accountId: string;
@@ -38,9 +37,11 @@ const account = computed(() => {
 const {
   transactions: accountTransactions,
   isLoading: isLoadingTransactions,
+  error: transactionsError,
   hasNextPage,
   isFetchingNextPage,
   fetchNextPage,
+  refetch: refetchTransactions,
 } = useInfiniteAccountTransactions(() => props.accountId);
 
 // Helper to get account name by id
@@ -232,6 +233,20 @@ const groupedTransactions = useGroupedTransactions(accountTransactions, {
           <TransactionGroupSkeleton :count="2" />
         </div>
 
+        <!-- Error -->
+        <UCard
+          v-else-if="transactionsError && accountTransactions.length === 0"
+          variant="bordered"
+          class="py-6"
+        >
+          <EmptyState
+            icon="error"
+            title="Не удалось загрузить транзакции"
+            :description="transactionsError?.message || 'Проверьте соединение и попробуйте снова'"
+            :action="{ label: 'Повторить', onClick: () => refetchTransactions() }"
+          />
+        </UCard>
+
         <!-- Empty -->
         <UCard v-else-if="accountTransactions.length === 0" variant="bordered" class="py-6">
           <EmptyState
@@ -253,7 +268,7 @@ const groupedTransactions = useGroupedTransactions(accountTransactions, {
               <span
                 class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark"
               >
-                {{ formatDateGroup(group.date) }}
+                {{ group.date }}
               </span>
               <span
                 class="text-xs font-medium"

@@ -270,6 +270,7 @@ function handleDetailClose() {
       <template #detail>
         <AccountDetailPanel
           v-if="selectedAccountId && userId"
+          :key="selectedAccountId"
           :account-id="selectedAccountId"
           :user-id="userId"
           @edit="handleEditFromPanel"

@@ -49,6 +49,11 @@ export interface DemoDebtData {
   person_name: string;
 }
 
+export interface DemoPersonData {
+  name: string;
+  color: string;
+}
+
 export interface DemoReminderData {
   name: string;
   amount: number;
@@ -61,7 +66,8 @@ export interface DemoReminderData {
 export interface GeneratedDemoData {
   accounts: DemoAccountData[];
   transactions: DemoTransactionData[];
-  debt: DemoDebtData;
+  debts: DemoDebtData[];
+  people: DemoPersonData[];
   reminders: DemoReminderData[];
 }
 
@@ -198,7 +204,7 @@ function generateTransactions(): DemoTransactionData[] {
         const descriptions = CATEGORY_DESCRIPTIONS[category.id];
 
         transactions.push({
-          accountIndex: Math.random() < 0.6 ? 1 : 0, // 60% card, 40% wallet
+          accountIndex: 0, // All expenses from main account
           category_id: category.id,
           amount,
           currency: 'UZS',
@@ -213,7 +219,7 @@ function generateTransactions(): DemoTransactionData[] {
         const descriptions = CATEGORY_DESCRIPTIONS[category.id];
 
         transactions.push({
-          accountIndex: Math.random() < 0.7 ? 1 : 0, // 70% to card
+          accountIndex: 0, // All income to main account
           category_id: category.id,
           amount,
           currency: 'UZS',
@@ -232,7 +238,7 @@ function generateTransactions(): DemoTransactionData[] {
   const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   if (firstOfMonth <= now) {
     transactions.push({
-      accountIndex: 1, // Card
+      accountIndex: 0,
       category_id: 'salary',
       amount: salaryAmount,
       currency: 'UZS',
@@ -246,7 +252,7 @@ function generateTransactions(): DemoTransactionData[] {
   const fifteenthOfMonth = new Date(now.getFullYear(), now.getMonth(), 15);
   if (fifteenthOfMonth <= now) {
     transactions.push({
-      accountIndex: 1, // Card
+      accountIndex: 0,
       category_id: 'salary',
       amount: salaryAmount,
       currency: 'UZS',
@@ -264,7 +270,7 @@ function generateTransactions(): DemoTransactionData[] {
 
   if (prevMonth1st >= thirtyDaysAgo) {
     transactions.push({
-      accountIndex: 1,
+      accountIndex: 0,
       category_id: 'salary',
       amount: salaryAmount,
       currency: 'UZS',
@@ -276,7 +282,7 @@ function generateTransactions(): DemoTransactionData[] {
 
   if (prevMonth15th >= thirtyDaysAgo) {
     transactions.push({
-      accountIndex: 1,
+      accountIndex: 0,
       category_id: 'salary',
       amount: salaryAmount,
       currency: 'UZS',
@@ -292,97 +298,85 @@ function generateTransactions(): DemoTransactionData[] {
 export function generateDemoData(): GeneratedDemoData {
   const transactions = generateTransactions();
 
-  // Calculate realistic balances based on transactions
-  // Start with base amounts and adjust
-  const walletBalance = randomBetween(800000, 2000000);
-  const cardBalanceUZS = randomBetween(3000000, 8000000);
-  const cardBalanceUSD = randomBetween(100, 500);
-  const savingsBalance = randomBetween(5000000, 15000000);
+  const mainBalance = randomBetween(3000000, 8000000);
+  const savingsBalance = randomBetween(8000000, 15000000);
 
   return {
     accounts: [
       {
-        name: 'Кошелёк',
-        icon: 'account_balance_wallet',
-        color: '#3b82f6',
-        type: 'cash',
-        balances: [{ currency: 'UZS', balance: roundToThousand(walletBalance) }],
-      },
-      {
-        name: 'Карта Visa',
+        name: 'Основной',
         icon: 'credit_card',
-        color: '#10b981',
+        color: '#3b82f6',
         type: 'basic',
-        balances: [
-          { currency: 'UZS', balance: roundToThousand(cardBalanceUZS) },
-          { currency: 'USD', balance: cardBalanceUSD },
-        ],
+        balances: [{ currency: 'UZS', balance: roundToThousand(mainBalance) }],
       },
       {
-        name: 'Накопления',
+        name: 'Накопительный',
         icon: 'savings',
         color: '#a855f7',
         type: 'savings',
         balances: [{ currency: 'UZS', balance: roundToThousand(savingsBalance) }],
       },
-      {
-        name: 'Visa Gold',
-        icon: 'credit_card',
-        color: '#f59e0b',
-        type: 'credit_card',
-        balances: [
-          {
-            currency: 'UZS',
-            balance: roundToThousand(randomBetween(-1000000, 0)),
-          },
-        ],
-        creditLimit: 20000000,
-        gracePeriodDays: 55,
-        billingDay: 15,
-      },
-      {
-        name: 'Ипотека',
-        icon: 'account_balance',
-        color: '#ef4444',
-        type: 'loan',
-        balances: [
-          {
-            currency: 'UZS',
-            balance: -roundToThousand(randomBetween(150000000, 250000000)),
-          },
-        ],
-        totalAmount: 300000000,
-        interestRate: 22,
-        monthlyPayment: 4500000,
-        startDate: '2024-01-15',
-        endDate: '2034-01-15',
-      },
-      {
-        name: 'Срочный вклад',
-        icon: 'savings',
-        color: '#6366f1',
-        type: 'deposit',
-        balances: [
-          {
-            currency: 'UZS',
-            balance: roundToThousand(randomBetween(10000000, 30000000)),
-          },
-        ],
-        interestRate: 23,
-        maturityDate: '2026-06-01',
-        isReplenishable: true,
-        isWithdrawable: false,
-      },
     ],
     transactions,
-    debt: {
-      name: 'Долг Ахмеду',
-      total_amount: 500000,
-      remaining_amount: 500000,
-      currency: 'UZS',
-      debt_type: 'given',
-      person_name: 'Ахмед',
-    },
+    debts: [
+      // Given (user lent money)
+      {
+        name: 'На ремонт',
+        total_amount: 500000,
+        remaining_amount: 500000,
+        currency: 'UZS',
+        debt_type: 'given',
+        person_name: 'Ахмед',
+      },
+      {
+        name: 'На поездку',
+        total_amount: 200,
+        remaining_amount: 200,
+        currency: 'USD',
+        debt_type: 'given',
+        person_name: 'Ахмед',
+      },
+      {
+        name: 'На свадьбу',
+        total_amount: 1500000,
+        remaining_amount: 1500000,
+        currency: 'UZS',
+        debt_type: 'given',
+        person_name: 'Анна',
+      },
+      {
+        name: 'До зарплаты',
+        total_amount: 300000,
+        remaining_amount: 300000,
+        currency: 'UZS',
+        debt_type: 'given',
+        person_name: 'Коля',
+      },
+      // Taken (user borrowed money)
+      {
+        name: 'На мебель',
+        total_amount: 2000000,
+        remaining_amount: 2000000,
+        currency: 'UZS',
+        debt_type: 'taken',
+        person_name: 'Анна',
+      },
+      {
+        name: 'За ноутбук',
+        total_amount: 100,
+        remaining_amount: 100,
+        currency: 'USD',
+        debt_type: 'taken',
+        person_name: 'Дима',
+      },
+    ],
+    people: [
+      { name: 'Ахмед', color: '#3b82f6' },
+      { name: 'Анна', color: '#f43f5e' },
+      { name: 'Коля', color: '#10b981' },
+      { name: 'Дима', color: '#f59e0b' },
+    ],
     reminders: [
       {
         name: 'Аренда квартиры',
