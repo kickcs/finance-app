@@ -54,7 +54,7 @@ const remainingColor = computed(() => {
     variant="inline"
     icon="savings"
     title="Нет бюджета на месяц"
-    description="Установить лимит расходов"
+    description="Контролируйте свои траты"
     icon-bg-class="bg-surface-light dark:bg-surface-dark"
     :action="{ label: 'Установить лимит расходов', onClick: () => $emit('setup') }"
   />
@@ -113,7 +113,7 @@ const remainingColor = computed(() => {
     <!-- Footer -->
     <div class="flex items-center justify-between">
       <span class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
-        Потрачено {{ Math.min(Math.round(percentage), 100) }}%
+        Потрачено {{ percentage }}%
       </span>
       <span class="text-xs font-medium" :class="remainingColor">
         <template v-if="isOverspent">
