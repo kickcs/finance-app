@@ -1,15 +1,35 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, defineAsyncComponent, onMounted } from 'vue';
 import { useWindowScroll, useWindowSize, useResizeObserver } from '@vueuse/core';
-import {
-  HeroSection,
-  MultiCurrencySection,
-  AnalyticsSection,
-  DebtsSection,
-  ReceiptScanSection,
-  FeaturesSection,
-  CtaSection,
-} from './sections';
+import { HeroSection } from './sections';
+import { useLazyRender } from './composables';
+
+// Lazy-loaded sections (code-split)
+const MultiCurrencySection = defineAsyncComponent(
+  () => import('./sections/MultiCurrencySection.vue'),
+);
+const AnalyticsSection = defineAsyncComponent(() => import('./sections/AnalyticsSection.vue'));
+const DebtsSection = defineAsyncComponent(() => import('./sections/DebtsSection.vue'));
+const ReceiptScanSection = defineAsyncComponent(() => import('./sections/ReceiptScanSection.vue'));
+const FeaturesSection = defineAsyncComponent(() => import('./sections/FeaturesSection.vue'));
+const CtaSection = defineAsyncComponent(() => import('./sections/CtaSection.vue'));
+
+// Lazy render sentinels
+const { sentinelRef: multiCurrencyRef, shouldRender: showMultiCurrency } = useLazyRender();
+const { sentinelRef: analyticsRef, shouldRender: showAnalytics } = useLazyRender();
+const { sentinelRef: debtsRef, shouldRender: showDebts } = useLazyRender();
+const { sentinelRef: receiptRef, shouldRender: showReceipt } = useLazyRender();
+const { sentinelRef: featuresRef, shouldRender: showFeatures } = useLazyRender();
+const { sentinelRef: ctaRef, shouldRender: showCta } = useLazyRender();
+
+// Load Unbounded font asynchronously (non-blocking, replaces @import)
+onMounted(() => {
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href =
+    'https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;800;900&subset=cyrillic&display=swap';
+  document.head.appendChild(link);
+});
 
 const { y } = useWindowScroll();
 const { height } = useWindowSize();
@@ -37,19 +57,29 @@ const scrollProgress = computed(() => {
     <main class="welcome-landing">
       <div class="noise-overlay" aria-hidden="true" />
       <HeroSection />
-      <MultiCurrencySection />
-      <AnalyticsSection />
-      <DebtsSection />
-      <ReceiptScanSection />
-      <FeaturesSection />
-      <CtaSection />
+
+      <div ref="multiCurrencyRef" />
+      <MultiCurrencySection v-if="showMultiCurrency" />
+
+      <div ref="analyticsRef" />
+      <AnalyticsSection v-if="showAnalytics" />
+
+      <div ref="debtsRef" />
+      <DebtsSection v-if="showDebts" />
+
+      <div ref="receiptRef" />
+      <ReceiptScanSection v-if="showReceipt" />
+
+      <div ref="featuresRef" />
+      <FeaturesSection v-if="showFeatures" />
+
+      <div ref="ctaRef" />
+      <CtaSection v-if="showCta" />
     </main>
   </div>
 </template>
 
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;800;900&subset=cyrillic&display=swap');
-
 .welcome-landing {
   scroll-behavior: smooth;
   overflow-x: hidden;
