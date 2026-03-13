@@ -27,7 +27,7 @@ const isDesktop = useIsDesktop();
       <!-- Desktop: split view -->
       <div v-if="isDesktop" class="flex h-full gap-0">
         <!-- Master panel -->
-        <div class="flex-[5] overflow-y-auto min-w-0 pr-4">
+        <div class="flex-[5] overflow-y-auto overflow-x-hidden min-w-0 pr-4">
           <slot name="master" />
         </div>
 

@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.33';
+export const CURRENT_VERSION = '1.0.34';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,17 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.34',
+    date: '2026-03-13',
+    title: 'Исправление прокрутки',
+    items: [
+      {
+        type: 'fix',
+        text: 'Исправлен горизонтальный скролл на странице истории транзакций',
+      },
+    ],
+  },
   {
     version: '1.0.33',
     date: '2026-03-13',
