@@ -3,13 +3,13 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { ROUTE_NAMES } from '@/app/router/routeNames';
 import { STORAGE_KEYS } from '@/shared/config/storageKeys';
-import { useAuth } from '@/shared/api/composables/useAuth';
+import { DEFAULT_CURRENCY } from '@/entities/currency/model/constants';
+import { DemoSetupScreen } from '@/features/demo-mode';
 import { SPRING_DEFAULT } from '../composables';
 
 const router = useRouter();
-const { signInAnonymously } = useAuth();
 
-const isDemoLoading = ref(false);
+const showDemoSetup = ref(false);
 const demoError = ref('');
 
 function markOnboardingSeen() {
@@ -21,25 +21,23 @@ function handleStart() {
   router.push({ name: ROUTE_NAMES.LOGIN, query: { mode: 'register' } });
 }
 
-async function handleDemo() {
+function handleDemo() {
+  if (showDemoSetup.value) return;
   markOnboardingSeen();
-  isDemoLoading.value = true;
   demoError.value = '';
-  try {
-    const result = await signInAnonymously();
-    if (result?.user) {
-      localStorage.setItem(STORAGE_KEYS.ONBOARDING_COMPLETE, 'true');
-      localStorage.setItem(STORAGE_KEYS.SELECTED_CURRENCY, result.user.currency);
-      router.push({ name: ROUTE_NAMES.DASHBOARD });
-    }
-  } catch (e: unknown) {
-    demoError.value =
-      e instanceof Error && e.message.includes('429')
-        ? 'Слишком много попыток. Попробуйте позже.'
-        : 'Не удалось запустить демо. Попробуйте ещё раз.';
-  } finally {
-    isDemoLoading.value = false;
-  }
+  showDemoSetup.value = true;
+}
+
+function onDemoComplete() {
+  showDemoSetup.value = false;
+  localStorage.setItem(STORAGE_KEYS.ONBOARDING_COMPLETE, 'true');
+  localStorage.setItem(STORAGE_KEYS.SELECTED_CURRENCY, DEFAULT_CURRENCY);
+  router.push({ name: ROUTE_NAMES.DASHBOARD });
+}
+
+function onDemoError(error: string) {
+  showDemoSetup.value = false;
+  demoError.value = error;
 }
 </script>
 
@@ -125,10 +123,10 @@ async function handleDemo() {
         </button>
         <button
           class="glass-card gradient-border w-full rounded-2xl px-8 py-4 text-[13px] font-bold font-['Unbounded'] text-white/70 transition-colors hover:text-white disabled:opacity-40"
-          :disabled="isDemoLoading"
+          :disabled="showDemoSetup"
           @click="handleDemo"
         >
-          {{ isDemoLoading ? 'Загрузка...' : 'Попробовать демо' }}
+          Попробовать демо
         </button>
       </div>
 
@@ -142,5 +140,8 @@ async function handleDemo() {
         Регистрация за 30 секунд · Без карт
       </p>
     </div>
+
+    <!-- Demo Setup Overlay -->
+    <DemoSetupScreen :visible="showDemoSetup" @complete="onDemoComplete" @error="onDemoError" />
   </section>
 </template>
