@@ -68,7 +68,7 @@ const quickActions = [
         <p class="mb-4 text-xs font-bold uppercase tracking-[6px] text-fuchsia-400">
           Больше возможностей
         </p>
-        <h2 class="mb-4 text-4xl font-black text-white sm:text-5xl lg:text-6xl">
+        <h2 class="mb-4 text-3xl font-black text-white sm:text-4xl lg:text-5xl">
           Спроектировано для
           <br />
           <span
