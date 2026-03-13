@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.32';
+export const CURRENT_VERSION = '1.0.33';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,17 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.33',
+    date: '2026-03-13',
+    title: 'Улучшение демо-режима',
+    items: [
+      {
+        type: 'improvement',
+        text: 'Новый экран подготовки демо с пошаговым прогрессом вместо простого спиннера',
+      },
+    ],
+  },
   {
     version: '1.0.32',
     date: '2026-03-13',
