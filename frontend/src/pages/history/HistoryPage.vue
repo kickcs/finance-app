@@ -264,7 +264,7 @@ async function handleRefresh() {
     >
       <template #master>
         <!-- Fixed Controls -->
-        <div class="pt-4 shrink-0 lg:pr-0 px-5 lg:px-0">
+        <div class="pt-4 shrink-0 lg:pr-0">
           <!-- Type Filter Tabs (Always Visible) -->
           <UTabs
             :model-value="activeTypeFilter"
@@ -277,7 +277,7 @@ async function handleRefresh() {
         <!-- Collapsible Filters -->
         <div
           id="filters-container"
-          class="shrink-0 px-5 lg:px-0"
+          class="shrink-0"
           :class="isFiltersCollapsed ? 'hidden' : 'block'"
           :inert="isFiltersCollapsed || undefined"
         >
@@ -313,7 +313,7 @@ async function handleRefresh() {
         </div>
 
         <!-- Content Area: flex column so virtualizer height is set by flex, not by % of padded parent -->
-        <div class="flex-1 min-h-0 pt-4 flex flex-col px-5 lg:px-0">
+        <div class="flex-1 min-h-0 pt-4 flex flex-col">
           <!-- Loading State with Skeleton -->
           <div
             v-if="currentIsLoading && displayedTransactions.length === 0"
