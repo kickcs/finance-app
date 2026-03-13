@@ -770,6 +770,52 @@ export class TransactionRepository implements ITransactionRepository {
         total: string | null;
       }>();
 
+    // Query debt returns, attributed to the date of the SOURCE expense (not return date).
+    // This correctly offsets the original expense on the day it happened.
+    // For returns without a source transaction, attribute to the return date.
+    // Join via debt_id (set on partial payments) with fallback to close_transaction_id.
+    let debtReturnsQuery = this.ormRepository
+      .createQueryBuilder('return_tx')
+      .innerJoin(
+        DebtOrmEntity,
+        'd',
+        '(return_tx.debt_id IS NOT NULL AND return_tx.debt_id::text = d.id::text) OR (return_tx.debt_id IS NULL AND d.close_transaction_id = return_tx.id)',
+      )
+      .leftJoin(
+        TransactionOrmEntity,
+        'source_tx',
+        'source_tx.id = COALESCE(d.source_transaction_id, d.transaction_id)',
+      )
+      .where('return_tx.user_id = :userId', { userId })
+      .andWhere('return_tx.is_debt_related = true')
+      .andWhere("return_tx.category_id IN ('debt_return_to_me', 'debt_return_from_me')")
+      // Include returns where either the source expense or the return itself falls in date range
+      .andWhere(
+        '(COALESCE(source_tx.date, return_tx.date) >= :startDate AND COALESCE(source_tx.date, return_tx.date) <= :endDate)',
+        { startDate, endDate },
+      );
+
+    if (accountIds && accountIds.length > 0) {
+      debtReturnsQuery = debtReturnsQuery.andWhere('return_tx.account_id IN (:...accountIds)', {
+        accountIds,
+      });
+    }
+
+    const debtReturnRows = await debtReturnsQuery
+      .select(`date_trunc('${safeGroupBy}', COALESCE(source_tx.date, return_tx.date))`, 'period')
+      .addSelect('return_tx.category_id', 'categoryId')
+      .addSelect('return_tx.currency', 'currency')
+      .addSelect('SUM(return_tx.amount)', 'total')
+      .groupBy('period')
+      .addGroupBy('return_tx.category_id')
+      .addGroupBy('return_tx.currency')
+      .getRawMany<{
+        period: Date;
+        categoryId: string;
+        currency: string;
+        total: string | null;
+      }>();
+
     // Aggregate rows into a map keyed by period date string
     const statsMap = new Map<string, DailyStatsEntry>();
 
@@ -787,6 +833,31 @@ export class TransactionRepository implements ITransactionRepository {
       } else if (row.type === 'expense') {
         entry.expenseByCurrency[row.currency] =
           (entry.expenseByCurrency[row.currency] || 0) + amount;
+      }
+    }
+
+    // Offset expenses by debt returns (same formula as monthly stats)
+    for (const row of debtReturnRows) {
+      const dateKey = new Date(row.period).toISOString().split('T')[0];
+      let entry = statsMap.get(dateKey);
+      if (!entry) {
+        entry = { date: dateKey, incomeByCurrency: {}, expenseByCurrency: {} };
+        statsMap.set(dateKey, entry);
+      }
+
+      const amount = Number(row.total ?? 0);
+      if (row.categoryId === 'debt_return_to_me') {
+        // Someone returned money to me → subtract from expenses
+        entry.expenseByCurrency[row.currency] = Math.max(
+          0,
+          (entry.expenseByCurrency[row.currency] || 0) - amount,
+        );
+      } else if (row.categoryId === 'debt_return_from_me') {
+        // I returned money to someone → subtract from income
+        entry.incomeByCurrency[row.currency] = Math.max(
+          0,
+          (entry.incomeByCurrency[row.currency] || 0) - amount,
+        );
       }
     }
 
