@@ -6,6 +6,7 @@ import { formatLocalDate } from '@/shared/lib/format/date';
 import { getCategoryById as getCategoryByIdStatic } from '@/entities/category';
 import type { Category } from '@/entities/category';
 import { DEFAULT_CURRENCY } from '@/shared/config/currency';
+import { TRANSFER_COLOR } from '@/shared/config/colors';
 import type { Transaction } from '../model/types';
 
 const props = defineProps<{
@@ -77,7 +78,7 @@ const categoryIcon = computed(() => {
 });
 
 const categoryColor = computed(() => {
-  if (isTransfer.value) return '#4F46E5';
+  if (isTransfer.value) return TRANSFER_COLOR;
   return category.value?.color || '#64748b';
 });
 
@@ -220,7 +221,12 @@ const cleanDescription = computed(() => {
         <UIcon name="edit" size="sm" class="mr-1.5" />
         Редактировать
       </UButton>
-      <UButton variant="ghost" class="!text-danger hover:!bg-danger/10" @click="$emit('delete')">
+      <UButton
+        variant="ghost"
+        class="!text-danger hover:!bg-danger/10"
+        aria-label="Удалить транзакцию"
+        @click="$emit('delete')"
+      >
         <UIcon name="delete" size="sm" />
       </UButton>
     </div>

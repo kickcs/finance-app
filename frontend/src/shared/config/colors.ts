@@ -21,6 +21,9 @@ export const ENTITY_COLORS = [
   '#1f2937', // Dark
 ] as const;
 
+/** Default color for transfer transactions (Indigo 600) */
+export const TRANSFER_COLOR = '#4F46E5';
+
 /** Pick a random color from ENTITY_COLORS */
 export function getRandomEntityColor(): string {
   return ENTITY_COLORS[Math.floor(Math.random() * ENTITY_COLORS.length)];

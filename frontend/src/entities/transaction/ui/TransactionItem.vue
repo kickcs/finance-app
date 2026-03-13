@@ -6,6 +6,7 @@ import { formatRelativeDate } from '@/shared/lib/format/date';
 import { getCategoryById as getCategoryByIdStatic } from '@/entities/category';
 import type { Category } from '@/entities/category';
 import { DEFAULT_CURRENCY } from '@/shared/config/currency';
+import { TRANSFER_COLOR } from '@/shared/config/colors';
 import type { Transaction } from '../model/types';
 
 const props = defineProps<{
@@ -107,14 +108,14 @@ const formattedDate = computed(() =>
     <div
       class="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center"
       :style="{
-        backgroundColor: isTransfer ? '#4F46E512' : `${category?.color || '#64748b'}12`,
+        backgroundColor: isTransfer ? `${TRANSFER_COLOR}12` : `${category?.color || '#64748b'}12`,
       }"
     >
       <UIcon
         :name="isTransfer ? 'swap_horiz' : category?.icon || 'receipt_long'"
         size="sm"
         :style="{
-          color: isTransfer ? '#4F46E5' : category?.color || '#64748b',
+          color: isTransfer ? TRANSFER_COLOR : category?.color || '#64748b',
         }"
       />
     </div>

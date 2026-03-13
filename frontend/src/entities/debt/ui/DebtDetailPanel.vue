@@ -5,7 +5,7 @@ import { formatCurrency } from '@/shared/lib/format/currency';
 import { formatDate } from '@/shared/lib/format/date';
 import { useDebts, DEBT_DIRECTION_LABELS, DEBT_DIRECTION_COLORS } from '@/entities/debt';
 import { useAccounts } from '@/entities/account';
-import { DEFAULT_CURRENCY } from '@/entities/currency/model/constants';
+import { DEFAULT_CURRENCY } from '@/shared/config/currency';
 
 const props = defineProps<{
   debtId: string;
