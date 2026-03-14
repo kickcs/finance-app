@@ -49,6 +49,7 @@ const allParticipantChip = computed<Participant>(() => ({
   name: 'На всех',
   color: ALL_PARTICIPANTS_COLOR,
   isMe: false,
+  paidById: null,
 }));
 
 function setActiveParticipant(participantId: string) {

@@ -13,6 +13,7 @@ export interface Participant {
   name: string;
   isMe: boolean;
   color: string;
+  paidById: string | null;
 }
 
 export interface ParticipantSummaryItem {
@@ -31,6 +32,7 @@ export interface ParticipantSummary {
   itemCount: number;
   total: number;
   items: ParticipantSummaryItem[];
+  paidByName?: string;
 }
 
 export interface ScanReceiptFormData {
