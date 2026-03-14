@@ -83,6 +83,33 @@ const debtCount = computed(
     props.participantSummaries.filter((p) => !p.isMe && p.itemCount > 0 && !p.paidByName).length,
 );
 
+// Grouped by payer: payer card + their dependents
+interface PayerGroup {
+  payer: ParticipantSummary;
+  dependents: ParticipantSummary[];
+}
+
+const payerGroups = computed<PayerGroup[]>(() => {
+  const groups: PayerGroup[] = [];
+  const paidForIds = new Set<string>();
+
+  // Find paid-for participants
+  for (const p of props.participantSummaries) {
+    if (p.paidByName) paidForIds.add(p.id);
+  }
+
+  // Build groups for self-paying participants
+  for (const p of props.participantSummaries) {
+    if (paidForIds.has(p.id)) continue;
+    const dependents = props.participantSummaries.filter(
+      (dep) => dep.paidByName === p.name && dep.id !== p.id,
+    );
+    groups.push({ payer: p, dependents });
+  }
+
+  return groups;
+});
+
 function handleSubmit() {
   trigger('selection');
   emit('submit');
@@ -330,7 +357,7 @@ const shareData = computed<ReceiptShareData>(() => ({
         </div>
       </div>
 
-      <!-- Per-person breakdown -->
+      <!-- Per-person breakdown (grouped by payer) -->
       <section aria-label="Разбивка по участникам">
         <h2
           class="text-xs font-semibold text-text-tertiary-light dark:text-text-tertiary-dark uppercase tracking-wide mb-2.5"
@@ -338,12 +365,42 @@ const shareData = computed<ReceiptShareData>(() => ({
           Кто сколько
         </h2>
         <div class="space-y-2">
-          <PersonSummaryCard
-            v-for="p in participantSummaries"
-            :key="p.id"
-            :participant="p"
-            :currency="currency"
-          />
+          <template v-for="group in payerGroups" :key="group.payer.id">
+            <!-- Payer card -->
+            <PersonSummaryCard :participant="group.payer" :currency="currency" />
+            <!-- Dependents (paid-for by this payer) -->
+            <div v-for="dep in group.dependents" :key="dep.id" class="ml-6 relative">
+              <!-- Connector line -->
+              <div
+                class="absolute -left-3 top-4 w-3 border-t border-border-light dark:border-border-dark"
+              />
+              <div
+                class="absolute -left-3 -top-1 bottom-1/2 border-l border-border-light dark:border-border-dark"
+              />
+              <div
+                class="rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-4 py-2.5 flex items-center gap-3"
+              >
+                <InitialAvatar :name="dep.name" :color="dep.color" size="sm" translucent />
+                <div class="flex-1 min-w-0">
+                  <p
+                    class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark truncate"
+                  >
+                    {{ dep.name }}
+                  </p>
+                  <p class="text-[11px] text-text-tertiary-light dark:text-text-tertiary-dark">
+                    {{ dep.itemCount }}
+                    {{ pluralize(dep.itemCount, 'позиция', 'позиции', 'позиций') }}
+                    · платит {{ dep.paidByName }}
+                  </p>
+                </div>
+                <span
+                  class="text-sm font-semibold tabular-nums text-text-secondary-light dark:text-text-secondary-dark"
+                >
+                  {{ formatCurrency(dep.total, currency) }}
+                </span>
+              </div>
+            </div>
+          </template>
         </div>
       </section>
 
