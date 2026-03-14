@@ -119,6 +119,16 @@ const payerTree = computed<PayerTreeNode[]>(() => {
     });
 });
 
+// Track which participant detail lists are expanded (separate from tree expand)
+const expandedDetails = ref<Set<string>>(new Set());
+
+function toggleDetails(id: string) {
+  const next = new Set(expandedDetails.value);
+  if (next.has(id)) next.delete(id);
+  else next.add(id);
+  expandedDetails.value = next;
+}
+
 function handleSubmit() {
   trigger('selection');
   emit('submit');
@@ -384,15 +394,22 @@ const shareData = computed<ReceiptShareData>(() => ({
               v-for="item in flattenItems"
               :key="item._id"
               v-bind="item.bind"
-              v-slot="{ isExpanded }"
               class="outline-none"
             >
               <!-- Payer (root level) -->
               <template v-if="!item.value.isDependent">
                 <div
                   class="rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark overflow-hidden"
+                  :class="
+                    expandedDetails.has(item.value.id) &&
+                    'ring-1 ring-border-light dark:ring-border-dark'
+                  "
                 >
-                  <div class="flex items-center gap-3 px-4 py-3">
+                  <button
+                    type="button"
+                    class="flex items-center gap-3 px-4 py-3 w-full text-left"
+                    @click.stop="toggleDetails(item.value.id)"
+                  >
                     <InitialAvatar
                       :name="item.value.participant.name"
                       :color="item.value.participant.color"
@@ -436,12 +453,48 @@ const shareData = computed<ReceiptShareData>(() => ({
                       {{ formatCurrency(item.value.participant.total, currency) }}
                     </span>
                     <UIcon
-                      v-if="item.hasChildren"
-                      :name="isExpanded ? 'expand_less' : 'expand_more'"
+                      :name="expandedDetails.has(item.value.id) ? 'expand_less' : 'expand_more'"
                       size="xs"
                       class="text-text-tertiary-light dark:text-text-tertiary-dark flex-shrink-0"
                     />
-                  </div>
+                  </button>
+
+                  <!-- Expandable item list -->
+                  <Transition name="expand">
+                    <div
+                      v-if="expandedDetails.has(item.value.id)"
+                      class="border-t border-border-light dark:border-border-dark"
+                    >
+                      <div
+                        v-for="(itm, idx) in item.value.participant.items"
+                        :key="itm.id"
+                        class="flex items-center justify-between px-4 py-2.5"
+                        :class="
+                          idx < item.value.participant.items.length - 1 &&
+                          'border-b border-border-light/50 dark:border-border-dark/50'
+                        "
+                      >
+                        <div class="flex-1 min-w-0 mr-3">
+                          <p
+                            class="text-sm text-text-primary-light dark:text-text-primary-dark truncate"
+                          >
+                            {{ itm.name }}
+                          </p>
+                          <p
+                            v-if="itm.sharedWith > 1"
+                            class="text-[11px] text-text-tertiary-light dark:text-text-tertiary-dark"
+                          >
+                            1/{{ itm.sharedWith }} от {{ formatCurrency(itm.lineTotal, currency) }}
+                          </p>
+                        </div>
+                        <span
+                          class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark tabular-nums"
+                        >
+                          {{ formatCurrency(itm.share, currency) }}
+                        </span>
+                      </div>
+                    </div>
+                  </Transition>
                 </div>
               </template>
 
@@ -455,38 +508,93 @@ const shareData = computed<ReceiptShareData>(() => ({
                     class="absolute -left-3 -top-1 bottom-1/2 border-l border-border-light dark:border-border-dark"
                   />
                   <div
-                    class="rounded-xl border border-border-light/60 dark:border-border-dark/60 bg-card-light/70 dark:bg-card-dark/70 px-4 py-2.5 flex items-center gap-3"
+                    class="rounded-xl border border-border-light/60 dark:border-border-dark/60 bg-card-light/70 dark:bg-card-dark/70 overflow-hidden"
+                    :class="
+                      expandedDetails.has(item.value.id) &&
+                      'ring-1 ring-border-light/50 dark:ring-border-dark/50'
+                    "
                   >
-                    <InitialAvatar
-                      :name="item.value.participant.name"
-                      :color="item.value.participant.color"
-                      size="sm"
-                      translucent
-                    />
-                    <div class="flex-1 min-w-0">
-                      <p
-                        class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark truncate"
-                      >
-                        {{ item.value.participant.name }}
-                      </p>
-                      <p class="text-[11px] text-text-tertiary-light dark:text-text-tertiary-dark">
-                        {{ item.value.participant.itemCount }}
-                        {{
-                          pluralize(
-                            item.value.participant.itemCount,
-                            'позиция',
-                            'позиции',
-                            'позиций',
-                          )
-                        }}
-                        · платит {{ item.value.participant.paidByName }}
-                      </p>
-                    </div>
-                    <span
-                      class="text-sm font-semibold tabular-nums text-text-secondary-light dark:text-text-secondary-dark"
+                    <button
+                      type="button"
+                      class="w-full text-left px-4 py-2.5 flex items-center gap-3"
+                      @click.stop="toggleDetails(item.value.id)"
                     >
-                      {{ formatCurrency(item.value.participant.total, currency) }}
-                    </span>
+                      <InitialAvatar
+                        :name="item.value.participant.name"
+                        :color="item.value.participant.color"
+                        size="sm"
+                        translucent
+                      />
+                      <div class="flex-1 min-w-0">
+                        <p
+                          class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark truncate"
+                        >
+                          {{ item.value.participant.name }}
+                        </p>
+                        <p
+                          class="text-[11px] text-text-tertiary-light dark:text-text-tertiary-dark"
+                        >
+                          {{ item.value.participant.itemCount }}
+                          {{
+                            pluralize(
+                              item.value.participant.itemCount,
+                              'позиция',
+                              'позиции',
+                              'позиций',
+                            )
+                          }}
+                          · платит {{ item.value.participant.paidByName }}
+                        </p>
+                      </div>
+                      <span
+                        class="text-sm font-semibold tabular-nums text-text-secondary-light dark:text-text-secondary-dark"
+                      >
+                        {{ formatCurrency(item.value.participant.total, currency) }}
+                      </span>
+                      <UIcon
+                        :name="expandedDetails.has(item.value.id) ? 'expand_less' : 'expand_more'"
+                        size="xs"
+                        class="text-text-tertiary-light dark:text-text-tertiary-dark flex-shrink-0"
+                      />
+                    </button>
+
+                    <!-- Expandable item list -->
+                    <Transition name="expand">
+                      <div
+                        v-if="expandedDetails.has(item.value.id)"
+                        class="border-t border-border-light/50 dark:border-border-dark/50"
+                      >
+                        <div
+                          v-for="(itm, idx) in item.value.participant.items"
+                          :key="itm.id"
+                          class="flex items-center justify-between px-4 py-2"
+                          :class="
+                            idx < item.value.participant.items.length - 1 &&
+                            'border-b border-border-light/30 dark:border-border-dark/30'
+                          "
+                        >
+                          <div class="flex-1 min-w-0 mr-3">
+                            <p
+                              class="text-xs text-text-primary-light dark:text-text-primary-dark truncate"
+                            >
+                              {{ itm.name }}
+                            </p>
+                            <p
+                              v-if="itm.sharedWith > 1"
+                              class="text-[10px] text-text-tertiary-light dark:text-text-tertiary-dark"
+                            >
+                              1/{{ itm.sharedWith }} от
+                              {{ formatCurrency(itm.lineTotal, currency) }}
+                            </p>
+                          </div>
+                          <span
+                            class="text-xs font-medium text-text-primary-light dark:text-text-primary-dark tabular-nums"
+                          >
+                            {{ formatCurrency(itm.share, currency) }}
+                          </span>
+                        </div>
+                      </div>
+                    </Transition>
                   </div>
                 </div>
               </template>
@@ -680,6 +788,22 @@ const shareData = computed<ReceiptShareData>(() => ({
 </style>
 
 <style scoped>
+.expand-enter-active,
+.expand-leave-active {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+.expand-enter-from,
+.expand-leave-to {
+  opacity: 0;
+  max-height: 0;
+}
+.expand-enter-to,
+.expand-leave-from {
+  opacity: 1;
+  max-height: 500px;
+}
+
 .receipt-slide-up-enter-active,
 .receipt-slide-up-leave-active {
   transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
