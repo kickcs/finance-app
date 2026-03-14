@@ -82,17 +82,15 @@ export function useReceiptWizard(userId: () => string | null) {
   );
 
   const participantSummaries = computed<ParticipantSummary[]>(() => {
-    return participants.value.map((p) => {
+    const summaries = participants.value.map((p) => {
       const assignedItems = items.value
         .filter((item) => item.assignedParticipantIds.includes(p.id))
         .map((item) => {
           const sharedWith = item.assignedParticipantIds.length;
-          // Use charge-inclusive total for splitting
           const lineTotal = getItemWithChargesTotal(item);
           const isLast =
             item.assignedParticipantIds[item.assignedParticipantIds.length - 1] === p.id;
           const baseShare = Math.floor(lineTotal / sharedWith);
-          // Last participant absorbs the remainder to preserve exact total
           const share = isLast ? lineTotal - baseShare * (sharedWith - 1) : baseShare;
           return {
             id: item.id,
@@ -111,8 +109,22 @@ export function useReceiptWizard(userId: () => string | null) {
         itemCount: assignedItems.length,
         total: assignedItems.reduce((sum, i) => sum + i.share, 0),
         items: assignedItems,
-      };
+      } as ParticipantSummary;
     });
+
+    // Redistribute paidBy amounts: add paid-for participant's total to their payer
+    for (const summary of summaries) {
+      const participant = participants.value.find((p) => p.id === summary.id);
+      if (participant?.paidById) {
+        const payer = summaries.find((s) => s.id === participant.paidById);
+        if (payer) {
+          payer.total += summary.total;
+          summary.paidByName = payer.name;
+        }
+      }
+    }
+
+    return summaries;
   });
 
   // Step navigation
@@ -239,6 +251,39 @@ export function useReceiptWizard(userId: () => string | null) {
     return id;
   }
 
+  function splitItem(id: string, firstQty: number) {
+    const idx = items.value.findIndex((i) => i.id === id);
+    if (idx === -1) return;
+    const original = items.value[idx];
+    const secondQty = original.qty - firstQty;
+    if (firstQty <= 0 || secondQty <= 0) return;
+
+    const ratio1 = firstQty / original.qty;
+
+    const item1: ReceiptItem = {
+      id: uid(),
+      name: `${original.name} (1/2)`,
+      qty: firstQty,
+      unitPrice: original.unitPrice,
+      ocrTotalPrice: original.ocrTotalPrice ? Math.round(original.ocrTotalPrice * ratio1) : null,
+      assignedParticipantIds: [],
+    };
+
+    const item2: ReceiptItem = {
+      id: uid(),
+      name: `${original.name} (2/2)`,
+      qty: secondQty,
+      unitPrice: original.unitPrice,
+      ocrTotalPrice: original.ocrTotalPrice
+        ? original.ocrTotalPrice - Math.round(original.ocrTotalPrice * ratio1)
+        : null,
+      assignedParticipantIds: [],
+    };
+
+    items.value.splice(idx, 1, item1, item2);
+    trigger('success');
+  }
+
   // Step 2: Charge management
   function addCharge(label: string, percent: number) {
     charges.value.push({ id: uid(), label, percent, enabled: true });
@@ -266,19 +311,24 @@ export function useReceiptWizard(userId: () => string | null) {
   }
 
   // Step 3: Participants
-  function addParticipant(name: string, isMe = false) {
+  function addParticipant(name: string, isMe = false, paidById: string | null = null) {
     const colorIndex = participants.value.length % ENTITY_COLORS.length;
     participants.value.push({
       id: uid(),
       name,
       isMe,
       color: ENTITY_COLORS[colorIndex] as string,
+      paidById,
     });
     trigger('selection');
   }
 
   function removeParticipant(id: string) {
     participants.value = participants.value.filter((p) => p.id !== id);
+    // Clear paidById references to the removed participant
+    participants.value.forEach((p) => {
+      if (p.paidById === id) p.paidById = null;
+    });
     // Remove from all item assignments
     items.value.forEach((item) => {
       item.assignedParticipantIds = item.assignedParticipantIds.filter((pid) => pid !== id);
@@ -334,7 +384,13 @@ export function useReceiptWizard(userId: () => string | null) {
 
       // Create debts for non-me participants
       if (formData.value.createDebts) {
-        const nonMeSummaries = participantSummaries.value.filter((p) => !p.isMe && p.total > 0);
+        const nonMeSummaries = participantSummaries.value.filter((p) => {
+          if (p.isMe) return false;
+          if (p.total <= 0) return false;
+          const participant = participants.value.find((pp) => pp.id === p.id);
+          if (participant?.paidById) return false;
+          return true;
+        });
         for (const summary of nonMeSummaries) {
           await debtsApi.create({
             user_id: uid_,
@@ -406,6 +462,7 @@ export function useReceiptWizard(userId: () => string | null) {
     updateItem,
     deleteItem,
     addItem,
+    splitItem,
     addCharge,
     removeCharge,
     toggleCharge,
