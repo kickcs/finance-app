@@ -89,7 +89,7 @@ export function formatDateGroup(timestamp: number | string | Date): string {
 /**
  * Format date for display in locale format (e.g. "19 февраля 2026")
  */
-export function formatLocalDate(dateStr: string, locale = 'ru-RU'): string {
+export function formatLocalDate(dateStr: string | number, locale = 'ru-RU'): string {
   return new Date(dateStr).toLocaleDateString(locale, {
     day: 'numeric',
     month: 'long',

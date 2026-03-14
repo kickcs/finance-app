@@ -2,6 +2,7 @@ import { ref } from 'vue';
 import { useToast } from '@/shared/ui';
 import { useHaptics } from '@/shared/lib/haptics';
 import { formatCurrency } from '@/shared/lib/format/currency';
+import { formatLocalDate } from '@/shared/lib/format/date';
 import { getInitial } from '@/shared/lib/format/text';
 import { toLocalISODate } from '@/shared/lib/date';
 import type { ParticipantSummary, ReceiptCharge } from './types';
@@ -65,14 +66,6 @@ const LOGO_SIZE = 24;
 
 function formatItemName(item: { name: string; sharedWith: number }): string {
   return item.sharedWith > 1 ? `${item.name} (1/${item.sharedWith})` : item.name;
-}
-
-function formatShareDate(timestamp: number): string {
-  return new Date(timestamp).toLocaleDateString('ru-RU', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
 }
 
 // --- Logo drawing (programmatic — gold ring from favicon.svg) ---
@@ -151,7 +144,7 @@ function drawHeader(ctx: CanvasRenderingContext2D, data: ReceiptShareData, y: nu
   ctx.font = `500 14px ${FONT_FAMILY}`;
   ctx.fillStyle = TEXT_SECONDARY;
   ctx.textAlign = 'center';
-  ctx.fillText(formatShareDate(data.date), CARD_WIDTH / 2, y + 14);
+  ctx.fillText(formatLocalDate(data.date), CARD_WIDTH / 2, y + 14);
   y += 36;
 
   return y;
