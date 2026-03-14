@@ -53,6 +53,23 @@ const splitValid = computed(() => {
   return splitFirstQty.value > 0 && splitSecondQty.value > 0;
 });
 
+/** Preview amounts matching actual splitItem logic (uses ocrTotalPrice when available) */
+const splitPreviewAmount1 = computed(() => {
+  if (!splitItem.value || !splitValid.value) return 0;
+  const item = splitItem.value;
+  const ratio1 = splitFirstQty.value / item.qty;
+  if (item.ocrTotalPrice) return Math.round(item.ocrTotalPrice * ratio1);
+  return Math.round(item.unitPrice * splitFirstQty.value);
+});
+
+const splitPreviewAmount2 = computed(() => {
+  if (!splitItem.value || !splitValid.value) return 0;
+  const item = splitItem.value;
+  const ratio1 = splitFirstQty.value / item.qty;
+  if (item.ocrTotalPrice) return item.ocrTotalPrice - Math.round(item.ocrTotalPrice * ratio1);
+  return Math.round(item.unitPrice * splitSecondQty.value);
+});
+
 function openSplitModal(item: ReceiptItem) {
   splitItem.value = item;
   splitFirstQty.value = Math.floor(item.qty / 2);
@@ -64,7 +81,6 @@ function confirmSplit() {
   emit('splitItem', splitItem.value.id, splitFirstQty.value);
   splitModalOpen.value = false;
   splitItem.value = null;
-  trigger('success');
 }
 
 const enabledCharges = computed(() => props.charges.filter((c) => c.enabled));
@@ -382,7 +398,7 @@ function handleFocusNext(index: number, currentField: 'name' | 'price' | 'qty') 
             <span
               class="font-medium text-text-primary-light dark:text-text-primary-dark tabular-nums"
             >
-              {{ formatCurrency(Math.round(splitItem.unitPrice * splitFirstQty), currency) }}
+              {{ formatCurrency(splitPreviewAmount1, currency) }}
             </span>
           </div>
           <div class="flex justify-between text-xs">
@@ -392,7 +408,7 @@ function handleFocusNext(index: number, currentField: 'name' | 'price' | 'qty') 
             <span
               class="font-medium text-text-primary-light dark:text-text-primary-dark tabular-nums"
             >
-              {{ formatCurrency(Math.round(splitItem.unitPrice * splitSecondQty), currency) }}
+              {{ formatCurrency(splitPreviewAmount2, currency) }}
             </span>
           </div>
         </div>
