@@ -18,13 +18,7 @@ defineProps<{
       v-for="i in totalSteps"
       :key="i"
       class="flex-1 h-1 rounded-full overflow-hidden transition-colors duration-300"
-      :class="
-        i < currentStep
-          ? 'bg-primary'
-          : i > currentStep
-            ? 'bg-border-light dark:bg-border-dark'
-            : 'bg-border-light dark:bg-border-dark'
-      "
+      :class="i < currentStep ? 'bg-primary' : 'bg-border-light dark:bg-border-dark'"
     >
       <div
         v-if="i === currentStep"
