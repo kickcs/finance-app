@@ -35,10 +35,16 @@ model/
 
 **Key constraint:** The external return API of `useReceiptWizard` stays **identical** — `ScanReceiptPage.vue` requires zero changes.
 
+**Sub-composable signatures:**
+- `usePhotoStep(goNext: () => void)` — receives `goNext` callback from orchestrator for auto-advance after OCR success (`setTimeout(() => goNext(), 600)`)
+- `useItemsStep()` — owns `items` ref and `charges` ref, all CRUD. Realistically ~130 lines (items CRUD + charges CRUD + subtotal/chargesAmount/totalAmount computeds)
+- `useParticipantsStep(items: Ref<ReceiptItem[]>)` — receives `items` ref from `useItemsStep` to modify `assignedParticipantIds` on removal
+- `useSubmitStep(items, participants, charges, storeName, goNext)` — receives refs from other steps. `storeName` from `usePhotoStep` is needed for debt naming (`Чек: ${storeName}`)
+
 **Dependencies between sub-composables:**
-- `useSubmitStep` receives `items`, `participants`, `charges` refs from other steps
+- `useSubmitStep` receives `items`, `participants`, `charges`, `storeName` refs from other steps
 - `useItemsStep` and `useParticipantsStep` share `items` ref (participants step modifies `assignedParticipantIds`)
-- `usePhotoStep` calls `goNext()` from wizard after OCR success
+- `usePhotoStep` receives `goNext` callback — calls it after OCR success via `setTimeout`
 
 ### 2. Step4Summary (850 → ~250 lines)
 
@@ -46,7 +52,7 @@ Extract 4 components:
 
 | Component | Lines | Props |
 |-----------|-------|-------|
-| `SuccessOverlay.vue` | ~170 | `isSuccess, totalAmount, currency, storeName, displayDate, owers, hasCharges, enabledCharges, isSharing, shareActions` |
+| `SuccessOverlay.vue` | ~170 | `isSuccess, totalAmount, currency, storeName, displayDate` (pre-formatted string from parent), `owers, hasCharges, enabledCharges, isSharing, shareActions` |
 | `ReceiptTotalCard.vue` | ~80 | `subtotal, charges, chargesAmount, totalAmount, currency` |
 | `TransactionFormSection.vue` | ~100 | `formData, accounts`, emit `update:formData` |
 | `CreateDebtsToggle.vue` | ~70 | `v-model:createDebts, debtCount, participantSummaries` |
@@ -57,7 +63,7 @@ Extract 4 components:
 
 `ReceiptTotalCard` includes: skeuomorphic receipt with zigzag border, subtotal/charges/total breakdown, receipt-edge CSS.
 
-`TransactionFormSection` includes: AccountSelector, CategoryChips, date Popover with Calendar, description input.
+`TransactionFormSection` includes: AccountSelector, CategoryChips, date Popover with Calendar, description input. Owns `calendarOpen` state internally (not surfaced to parent).
 
 `CreateDebtsToggle` includes: iOS-style toggle card, debt count, info hint text.
 
@@ -72,7 +78,7 @@ Extract 2 components:
 
 **Remaining in Step3 (~250 lines):** empty state, assignment progress bar, items list with AssignableItemRow, footer warning + button.
 
-`AddParticipantModal` encapsulates: selectedContactIds, newName, nameError, selectedPaidById, resolvePaidById logic, "Я" quick-add, contacts multi-select, manual input, paidBy selector, already-added preview.
+`AddParticipantModal` encapsulates: selectedContactIds, newName, nameError, selectedPaidById, resolvePaidById logic, "Я" quick-add, contacts multi-select, manual input, paidBy selector, already-added preview. **Timing note:** `resolvePaidById()` emits `addParticipant('Я')` then immediately reads `participants` prop to find the new ID — this works because Vue emits are synchronous and the wizard mutates `participants` in-place. The `participants` prop must be reactive (not a stale copy).
 
 `ParticipantsBar` encapsulates: horizontal scrollable chips with TransitionGroup, "Добавить" button, "Назначить все пустые" / "Убрать" action row.
 
@@ -83,11 +89,13 @@ Extract 2 components:
 | Component | Lines | Props |
 |-----------|-------|-------|
 | `SplitItemModal.vue` | ~90 | `v-model:open, item, currency`, emit `confirm(firstQty)` |
-| `TotalFooter.vue` | ~120 | `subtotal, charges, chargesAmount, totalAmount, currency, itemCount, validationError`, emits `addCharge, removeCharge, toggleCharge, updateChargePercent, next` |
+| `TotalFooter.vue` | ~120 | `subtotal, charges, chargesAmount, totalAmount, currency, itemCount, validationError, disabled`, emits `addCharge, removeCharge, toggleCharge, updateChargePercent, requestNext` |
 
-**Remaining in Step2 (~250 lines):** items list with TransitionGroup, empty state, add button, validation logic.
+**Remaining in Step2 (~250 lines):** items list with TransitionGroup, empty state, add button, validation logic (`validateAndNext` + `invalidItemId` state).
 
-`SplitItemModal` encapsulates: splitFirstQty, splitSecondQty, splitValid, splitPreviewAmounts computed values.
+**Validation flow:** `TotalFooter` emits `requestNext` when button clicked. `Step2` intercepts, runs `validateAndNext()` which sets `validationError` + `invalidItemId`, then emits `next` to wizard only if valid. `validationError` is passed as prop to `TotalFooter` for display. `invalidItemId` stays in `Step2` to highlight the invalid `ReceiptItemRow`.
+
+`SplitItemModal` encapsulates: splitFirstQty, splitSecondQty, splitValid, splitPreviewAmounts computed values. Imports `calcSplitAmounts` from `calcLineTotal.ts`.
 
 `TotalFooter` encapsulates: sticky glass footer with subtotal, ChargeRow list, add-charge Popover with presets, total display, validation error, next button.
 
@@ -107,7 +115,7 @@ features/scan-receipt/
 │   ├── types.ts
 │   ├── useReceiptWizard.ts       (orchestrator, ~120 lines)
 │   ├── usePhotoStep.ts           (NEW, ~80 lines)
-│   ├── useItemsStep.ts           (NEW, ~100 lines)
+│   ├── useItemsStep.ts           (NEW, ~130 lines)
 │   ├── useParticipantsStep.ts    (NEW, ~60 lines)
 │   ├── useSubmitStep.ts          (NEW, ~120 lines)
 │   └── useReceiptShare.ts
