@@ -4,13 +4,15 @@ import { useRouter } from 'vue-router';
 import { UIcon } from '@/shared/ui';
 import { PremiumBadge } from '@/features/upgrade-to-premium';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
-import { useReceiptWizard } from '@/features/scan-receipt';
+import {
+  useReceiptWizard,
+  StepProgressIndicator,
+  Step1PhotoCapture,
+  Step2EditItems,
+  Step3AssignParticipants,
+  Step4Summary,
+} from '@/features/scan-receipt';
 import { useAccounts } from '@/entities/account';
-import StepProgressIndicator from '@/features/scan-receipt/ui/StepProgressIndicator.vue';
-import Step1PhotoCapture from '@/features/scan-receipt/ui/steps/Step1PhotoCapture.vue';
-import Step2EditItems from '@/features/scan-receipt/ui/steps/Step2EditItems.vue';
-import Step3AssignParticipants from '@/features/scan-receipt/ui/steps/Step3AssignParticipants.vue';
-import Step4Summary from '@/features/scan-receipt/ui/steps/Step4Summary.vue';
 
 const STEP_LABELS = ['Фото чека', 'Позиции', 'Участники', 'Итог'];
 const TOTAL_STEPS = STEP_LABELS.length;

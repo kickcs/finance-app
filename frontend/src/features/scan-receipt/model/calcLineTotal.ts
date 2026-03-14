@@ -4,7 +4,7 @@ import type { ReceiptItem, ReceiptCharge } from './types';
 export function calcLineTotal(
   item: Pick<ReceiptItem, 'qty' | 'unitPrice' | 'ocrTotalPrice'>,
 ): number {
-  if (item.ocrTotalPrice !== null && item.ocrTotalPrice !== undefined && item.ocrTotalPrice > 0) {
+  if (item.ocrTotalPrice !== null && item.ocrTotalPrice > 0) {
     return item.ocrTotalPrice;
   }
   return item.qty * item.unitPrice;
