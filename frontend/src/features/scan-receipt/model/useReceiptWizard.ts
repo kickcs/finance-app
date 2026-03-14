@@ -119,6 +119,7 @@ export function useReceiptWizard(userId: () => string | null) {
         const payer = summaries.find((s) => s.id === participant.paidById);
         if (payer) {
           payer.total += summary.total;
+          summary.paidById = participant.paidById;
           summary.paidByName = payer.name;
         }
       }

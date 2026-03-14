@@ -32,6 +32,7 @@ export interface ParticipantSummary {
   itemCount: number;
   total: number;
   items: ParticipantSummaryItem[];
+  paidById?: string;
   paidByName?: string;
 }
 

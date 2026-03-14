@@ -92,9 +92,6 @@ const selectedPaidById = ref<string | null>(null);
 /** Special constant for "Я" as payer when not yet added as participant */
 const ME_PAYER_ID = '__ME__';
 
-/** All participants shown as potential payers */
-const availablePayers = computed(() => props.participants);
-
 const manualInputRef = ref<InstanceType<typeof UInput> | null>(null);
 
 function openAddParticipantSheet() {
@@ -551,7 +548,7 @@ function handleTapRow(item: ReceiptItem) {
               Я
             </button>
             <button
-              v-for="payer in availablePayers"
+              v-for="payer in participants"
               :key="payer.id"
               type="button"
               class="px-3 py-1.5 rounded-full text-xs font-medium transition-all active:scale-95"

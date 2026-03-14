@@ -15,6 +15,21 @@ export function getTotalChargePercent(charges: ReceiptCharge[]): number {
   return charges.filter((c) => c.enabled).reduce((sum, c) => sum + c.percent, 0);
 }
 
+/** Preview amounts for splitting an item by quantity. Returns [firstAmount, secondAmount]. */
+export function calcSplitAmounts(
+  item: Pick<ReceiptItem, 'qty' | 'unitPrice' | 'ocrTotalPrice'>,
+  firstQty: number,
+): [number, number] {
+  const secondQty = item.qty - firstQty;
+  if (firstQty <= 0 || secondQty <= 0) return [0, 0];
+  const ratio1 = firstQty / item.qty;
+  if (item.ocrTotalPrice) {
+    const first = Math.round(item.ocrTotalPrice * ratio1);
+    return [first, item.ocrTotalPrice - first];
+  }
+  return [Math.round(item.unitPrice * firstQty), Math.round(item.unitPrice * secondQty)];
+}
+
 /** Line total with proportional charges applied (additive: base × (1 + totalPercent/100)) */
 export function calcLineTotalWithCharges(
   item: Pick<ReceiptItem, 'qty' | 'unitPrice' | 'ocrTotalPrice'>,

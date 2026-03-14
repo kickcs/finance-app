@@ -101,9 +101,7 @@ const payerTree = computed<PayerTreeNode[]>(() => {
   return props.participantSummaries
     .filter((p) => !paidForIds.has(p.id))
     .map((p) => {
-      const deps = props.participantSummaries.filter(
-        (dep) => dep.paidByName === p.name && dep.id !== p.id,
-      );
+      const deps = props.participantSummaries.filter((dep) => dep.paidById === p.id);
       return {
         id: p.id,
         participant: p,
@@ -788,22 +786,6 @@ const shareData = computed<ReceiptShareData>(() => ({
 </style>
 
 <style scoped>
-.expand-enter-active,
-.expand-leave-active {
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  overflow: hidden;
-}
-.expand-enter-from,
-.expand-leave-to {
-  opacity: 0;
-  max-height: 0;
-}
-.expand-enter-to,
-.expand-leave-from {
-  opacity: 1;
-  max-height: 500px;
-}
-
 .receipt-slide-up-enter-active,
 .receipt-slide-up-leave-active {
   transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);

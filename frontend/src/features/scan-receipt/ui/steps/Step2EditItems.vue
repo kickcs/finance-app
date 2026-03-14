@@ -7,6 +7,7 @@ import { useHaptics } from '@/shared/lib/haptics';
 import ReceiptItemRow from '../ReceiptItemRow.vue';
 import ChargeRow from '../ChargeRow.vue';
 import { CHARGE_PRESETS } from '../../model/constants';
+import { calcSplitAmounts } from '../../model/calcLineTotal';
 import type { ReceiptItem, ReceiptCharge } from '../../model/types';
 
 const props = defineProps<{
@@ -53,21 +54,9 @@ const splitValid = computed(() => {
   return splitFirstQty.value > 0 && splitSecondQty.value > 0;
 });
 
-/** Preview amounts matching actual splitItem logic (uses ocrTotalPrice when available) */
-const splitPreviewAmount1 = computed(() => {
-  if (!splitItem.value || !splitValid.value) return 0;
-  const item = splitItem.value;
-  const ratio1 = splitFirstQty.value / item.qty;
-  if (item.ocrTotalPrice) return Math.round(item.ocrTotalPrice * ratio1);
-  return Math.round(item.unitPrice * splitFirstQty.value);
-});
-
-const splitPreviewAmount2 = computed(() => {
-  if (!splitItem.value || !splitValid.value) return 0;
-  const item = splitItem.value;
-  const ratio1 = splitFirstQty.value / item.qty;
-  if (item.ocrTotalPrice) return item.ocrTotalPrice - Math.round(item.ocrTotalPrice * ratio1);
-  return Math.round(item.unitPrice * splitSecondQty.value);
+const splitPreviewAmounts = computed(() => {
+  if (!splitItem.value || !splitValid.value) return [0, 0] as [number, number];
+  return calcSplitAmounts(splitItem.value, splitFirstQty.value);
 });
 
 function openSplitModal(item: ReceiptItem) {
@@ -398,7 +387,7 @@ function handleFocusNext(index: number, currentField: 'name' | 'price' | 'qty') 
             <span
               class="font-medium text-text-primary-light dark:text-text-primary-dark tabular-nums"
             >
-              {{ formatCurrency(splitPreviewAmount1, currency) }}
+              {{ formatCurrency(splitPreviewAmounts[0], currency) }}
             </span>
           </div>
           <div class="flex justify-between text-xs">
@@ -408,7 +397,7 @@ function handleFocusNext(index: number, currentField: 'name' | 'price' | 'qty') 
             <span
               class="font-medium text-text-primary-light dark:text-text-primary-dark tabular-nums"
             >
-              {{ formatCurrency(splitPreviewAmount2, currency) }}
+              {{ formatCurrency(splitPreviewAmounts[1], currency) }}
             </span>
           </div>
         </div>
