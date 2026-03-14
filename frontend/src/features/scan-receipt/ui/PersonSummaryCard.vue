@@ -39,6 +39,12 @@ const isExpanded = ref(false);
           >
             (вы)
           </span>
+          <span
+            v-if="participant.paidByName"
+            class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark font-normal"
+          >
+            · платит {{ participant.paidByName }}
+          </span>
         </p>
         <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
           {{ participant.itemCount }}

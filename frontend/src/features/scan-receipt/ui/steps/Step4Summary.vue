@@ -72,12 +72,15 @@ const createDebts = computed({
   },
 });
 
-// Участники, которые должны (не «я» и с суммой > 0)
-const owers = computed(() => props.participantSummaries.filter((p) => !p.isMe && p.total > 0));
+// Участники, которые должны (не «я» и с суммой > 0 и не оплачены другим)
+const owers = computed(() =>
+  props.participantSummaries.filter((p) => !p.isMe && p.total > 0 && !p.paidByName),
+);
 
-// Debt count = non-me participants with items
+// Debt count = non-me participants with items (excluding paid-for participants)
 const debtCount = computed(
-  () => props.participantSummaries.filter((p) => !p.isMe && p.itemCount > 0).length,
+  () =>
+    props.participantSummaries.filter((p) => !p.isMe && p.itemCount > 0 && !p.paidByName).length,
 );
 
 function handleSubmit() {
