@@ -39,7 +39,7 @@ model/
 - `usePhotoStep(goNext: () => void)` — receives `goNext` callback from orchestrator for auto-advance after OCR success (`setTimeout(() => goNext(), 600)`)
 - `useItemsStep()` — owns `items` ref and `charges` ref, all CRUD. Realistically ~130 lines (items CRUD + charges CRUD + subtotal/chargesAmount/totalAmount computeds)
 - `useParticipantsStep(items: Ref<ReceiptItem[]>)` — receives `items` ref from `useItemsStep` to modify `assignedParticipantIds` on removal
-- `useSubmitStep(items, participants, charges, storeName, goNext)` — receives refs from other steps. `storeName` from `usePhotoStep` is needed for debt naming (`Чек: ${storeName}`)
+- `useSubmitStep(items, participants, charges, storeName)` — receives refs from other steps. `storeName` from `usePhotoStep` is needed for debt naming (`Чек: ${storeName}`). Does NOT receive `goNext` — submit terminates by setting `isSuccess = true`, not advancing steps
 
 **Dependencies between sub-composables:**
 - `useSubmitStep` receives `items`, `participants`, `charges`, `storeName` refs from other steps
@@ -73,7 +73,7 @@ Extract 2 components:
 
 | Component | Lines | Props |
 |-----------|-------|-------|
-| `AddParticipantModal.vue` | ~200 | `v-model:open, participants, hasMe, people`, emits `addParticipant, removeParticipant, saveAndAdd` |
+| `AddParticipantModal.vue` | ~200 | `v-model:open, participants, hasMe`, emits `addParticipant, removeParticipant`. Calls `usePeople(userId)` internally (FSD-compliant: entities/person is valid dependency from features/) |
 | `ParticipantsBar.vue` | ~100 | `participants, activeParticipantId, unassignedCount`, emits `setActive, remove, assignAll, openAdd` |
 
 **Remaining in Step3 (~250 lines):** empty state, assignment progress bar, items list with AssignableItemRow, footer warning + button.
