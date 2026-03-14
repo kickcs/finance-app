@@ -30,6 +30,12 @@ export function calcSplitAmounts(
   return [Math.round(item.unitPrice * firstQty), Math.round(item.unitPrice * secondQty)];
 }
 
+/** Individual charge amount for a given subtotal */
+export function calcChargeAmount(subtotal: number, charge: ReceiptCharge): number {
+  if (!charge.enabled) return 0;
+  return Math.round((subtotal * charge.percent) / 100);
+}
+
 /** Line total with proportional charges applied (additive: base × (1 + totalPercent/100)) */
 export function calcLineTotalWithCharges(
   item: Pick<ReceiptItem, 'qty' | 'unitPrice' | 'ocrTotalPrice'>,

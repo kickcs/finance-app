@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import { UButton, UIcon, InitialAvatar } from '@/shared/ui';
 import { TreeRoot, TreeItem } from 'reka-ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
+import { formatDate } from '@/shared/lib/format/date';
 import { pluralize } from '@/shared/lib/format/pluralize';
 import { useHaptics } from '@/shared/lib/haptics';
 import type { ParticipantSummary, ReceiptCharge, ScanReceiptFormData } from '../../model/types';
@@ -37,11 +38,7 @@ const emit = defineEmits<{
 
 const { trigger } = useHaptics();
 
-// Display date for SuccessOverlay
-const displayDate = computed(() => {
-  const d = new Date(props.formData.date);
-  return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
-});
+const displayDate = computed(() => formatDate(props.formData.date));
 
 // Create debts toggle
 const createDebts = computed({

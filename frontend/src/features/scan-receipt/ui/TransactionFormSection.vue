@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { UIcon } from '@/shared/ui';
+import { formatDate } from '@/shared/lib/format/date';
 import { AccountSelector } from '@/entities/account';
 import { CategoryChips, EXPENSE_CATEGORIES } from '@/entities/category';
 import { Popover, PopoverTrigger, PopoverContent } from '@/shared/ui/primitives/popover';
@@ -25,10 +26,7 @@ const calendarValue = computed(() => {
   return new CalendarDate(d.getFullYear(), d.getMonth() + 1, d.getDate());
 });
 
-const displayDate = computed(() => {
-  const d = new Date(props.formData.date);
-  return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
-});
+const displayDate = computed(() => formatDate(props.formData.date));
 
 function onDateSelect(value: DateValue | undefined) {
   if (!value) return;

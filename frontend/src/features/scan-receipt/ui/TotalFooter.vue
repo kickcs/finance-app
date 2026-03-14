@@ -6,6 +6,7 @@ import { formatCurrency } from '@/shared/lib/format/currency';
 import { useHaptics } from '@/shared/lib/haptics';
 import ChargeRow from './ChargeRow.vue';
 import { CHARGE_PRESETS } from '../model/constants';
+import { calcChargeAmount } from '../model/calcLineTotal';
 import type { ReceiptCharge } from '../model/types';
 
 const props = defineProps<{
@@ -14,7 +15,6 @@ const props = defineProps<{
   chargesAmount: number;
   totalAmount: number;
   currency: string;
-  itemCount: number;
   validationError: string | null;
   disabled: boolean;
 }>();
@@ -41,8 +41,7 @@ const availablePresets = computed(() => {
 });
 
 function getChargeAmount(charge: ReceiptCharge): number {
-  if (!charge.enabled) return 0;
-  return Math.round((props.subtotal * charge.percent) / 100);
+  return calcChargeAmount(props.subtotal, charge);
 }
 
 function handleAddPreset(preset: (typeof CHARGE_PRESETS)[number]) {

@@ -225,13 +225,8 @@ const router = useRouter();
     opacity: 1;
   }
 }
+</style>
 
-.receipt-edge {
-  -webkit-mask-image: radial-gradient(circle at 6px 12px, transparent 6px, black 6px);
-  mask-image: radial-gradient(circle at 6px 12px, transparent 6px, black 6px);
-  -webkit-mask-size: 12px 12px;
-  mask-size: 12px 12px;
-  -webkit-mask-repeat: repeat-x;
-  mask-repeat: repeat-x;
-}
+<style>
+@import './transitions.css';
 </style>

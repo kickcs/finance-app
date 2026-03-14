@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { formatCurrency } from '@/shared/lib/format/currency';
+import { calcChargeAmount } from '../model/calcLineTotal';
 import type { ReceiptCharge } from '../model/types';
 
 const props = defineProps<{
@@ -53,7 +54,7 @@ const hasCharges = computed(() => enabledCharges.value.length > 0 && props.charg
             {{ charge.label }} ({{ charge.percent }}%)
           </span>
           <span class="text-sm text-primary tabular-nums">
-            +{{ formatCurrency(Math.round((subtotal * charge.percent) / 100), currency) }}
+            +{{ formatCurrency(calcChargeAmount(subtotal, charge), currency) }}
           </span>
         </div>
         <div
@@ -77,13 +78,6 @@ const hasCharges = computed(() => enabledCharges.value.length > 0 && props.charg
   </div>
 </template>
 
-<style scoped>
-.receipt-edge {
-  -webkit-mask-image: radial-gradient(circle at 6px 12px, transparent 6px, black 6px);
-  mask-image: radial-gradient(circle at 6px 12px, transparent 6px, black 6px);
-  -webkit-mask-size: 12px 12px;
-  mask-size: 12px 12px;
-  -webkit-mask-repeat: repeat-x;
-  mask-repeat: repeat-x;
-}
+<style>
+@import './transitions.css';
 </style>

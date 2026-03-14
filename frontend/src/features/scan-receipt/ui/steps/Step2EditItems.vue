@@ -182,7 +182,6 @@ function handleFocusNext(index: number, currentField: 'name' | 'price' | 'qty') 
       :charges-amount="chargesAmount"
       :total-amount="totalAmount"
       :currency="currency"
-      :item-count="items.length"
       :validation-error="validationError"
       :disabled="items.length === 0"
       @add-charge="(label, percent) => emit('addCharge', label, percent)"
