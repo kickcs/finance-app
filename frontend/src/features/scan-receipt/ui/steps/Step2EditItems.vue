@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { ref, computed, useTemplateRef } from 'vue';
-import { UButton, UBadge, UIcon, UModal } from '@/shared/ui';
+import { UButton, UBadge, UIcon } from '@/shared/ui';
 import { Popover, PopoverTrigger, PopoverContent } from '@/shared/ui/primitives/popover';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { useHaptics } from '@/shared/lib/haptics';
 import ReceiptItemRow from '../ReceiptItemRow.vue';
 import ChargeRow from '../ChargeRow.vue';
+import SplitItemModal from '../SplitItemModal.vue';
 import { CHARGE_PRESETS } from '../../model/constants';
-import { calcSplitAmounts } from '../../model/calcLineTotal';
 import type { ReceiptItem, ReceiptCharge } from '../../model/types';
 
 const props = defineProps<{
@@ -43,33 +43,10 @@ const addChargeOpen = ref(false);
 // Split modal state
 const splitModalOpen = ref(false);
 const splitItem = ref<ReceiptItem | null>(null);
-const splitFirstQty = ref(0);
-
-const splitSecondQty = computed(() => {
-  if (!splitItem.value) return 0;
-  return splitItem.value.qty - splitFirstQty.value;
-});
-
-const splitValid = computed(() => {
-  return splitFirstQty.value > 0 && splitSecondQty.value > 0;
-});
-
-const splitPreviewAmounts = computed(() => {
-  if (!splitItem.value || !splitValid.value) return [0, 0] as [number, number];
-  return calcSplitAmounts(splitItem.value, splitFirstQty.value);
-});
 
 function openSplitModal(item: ReceiptItem) {
   splitItem.value = item;
-  splitFirstQty.value = Math.floor(item.qty / 2);
   splitModalOpen.value = true;
-}
-
-function confirmSplit() {
-  if (!splitItem.value || !splitValid.value) return;
-  emit('splitItem', splitItem.value.id, splitFirstQty.value);
-  splitModalOpen.value = false;
-  splitItem.value = null;
 }
 
 const enabledCharges = computed(() => props.charges.filter((c) => c.enabled));
@@ -326,96 +303,18 @@ function handleFocusNext(index: number, currentField: 'name' | 'price' | 'qty') 
     </div>
 
     <!-- Split Modal -->
-    <UModal v-model="splitModalOpen" title="Разделить позицию">
-      <div v-if="splitItem" class="space-y-4">
-        <!-- Item being split -->
-        <div class="px-3 py-2.5 rounded-xl bg-surface-light dark:bg-surface-dark">
-          <p class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
-            {{ splitItem.name }}
-          </p>
-          <p class="text-xs text-text-secondary-light dark:text-text-secondary-dark mt-0.5">
-            Количество: {{ splitItem.qty }}
-          </p>
-        </div>
-
-        <!-- First part input -->
-        <div>
-          <label
-            class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-1.5 block"
-          >
-            Первая часть
-          </label>
-          <input
-            v-model.number="splitFirstQty"
-            type="number"
-            inputmode="decimal"
-            step="0.01"
-            min="0.01"
-            :max="splitItem.qty - 0.01"
-            class="w-full px-3 py-2.5 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-sm font-medium text-text-primary-light dark:text-text-primary-dark outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 tabular-nums"
-          />
-        </div>
-
-        <!-- Second part (auto-calculated) -->
-        <div>
-          <label
-            class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-1.5 block"
-          >
-            Вторая часть
-          </label>
-          <div
-            class="w-full px-3 py-2.5 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-sm font-medium tabular-nums"
-            :class="
-              splitSecondQty > 0
-                ? 'text-text-primary-light dark:text-text-primary-dark'
-                : 'text-danger'
-            "
-          >
-            {{ splitSecondQty > 0 ? splitSecondQty : 'Некорректное значение' }}
-          </div>
-        </div>
-
-        <!-- Preview of amounts -->
-        <div
-          v-if="splitValid"
-          class="space-y-1.5 px-3 py-2.5 rounded-xl bg-primary/5 border border-primary/10"
-        >
-          <div class="flex justify-between text-xs">
-            <span class="text-text-secondary-light dark:text-text-secondary-dark">
-              Часть 1 ({{ splitFirstQty }})
-            </span>
-            <span
-              class="font-medium text-text-primary-light dark:text-text-primary-dark tabular-nums"
-            >
-              {{ formatCurrency(splitPreviewAmounts[0], currency) }}
-            </span>
-          </div>
-          <div class="flex justify-between text-xs">
-            <span class="text-text-secondary-light dark:text-text-secondary-dark">
-              Часть 2 ({{ splitSecondQty }})
-            </span>
-            <span
-              class="font-medium text-text-primary-light dark:text-text-primary-dark tabular-nums"
-            >
-              {{ formatCurrency(splitPreviewAmounts[1], currency) }}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <template #actions>
-        <UButton
-          variant="primary"
-          size="lg"
-          full-width
-          :disabled="!splitValid"
-          @click="confirmSplit"
-        >
-          <UIcon name="call_split" size="sm" class="mr-2" />
-          Разделить
-        </UButton>
-      </template>
-    </UModal>
+    <SplitItemModal
+      v-model:open="splitModalOpen"
+      :item="splitItem"
+      :currency="currency"
+      @confirm="
+        (firstQty) => {
+          emit('splitItem', splitItem!.id, firstQty);
+          splitModalOpen = false;
+          splitItem = null;
+        }
+      "
+    />
   </div>
 </template>
 
