@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, useTemplateRef } from 'vue';
-import { useIntervalFn } from '@vueuse/core';
+import { useIntervalFn, useEventListener } from '@vueuse/core';
 import { UButton, UIcon, USpinner } from '@/shared/ui';
 
 const props = defineProps<{
@@ -92,12 +92,7 @@ function toJpeg(file: File): Promise<File> {
   });
 }
 
-async function handleFileChange(e: Event) {
-  const input = e.target as HTMLInputElement;
-  const rawFile = input.files?.[0];
-  input.value = '';
-  if (!rawFile) return;
-
+async function processFile(rawFile: File) {
   if (!rawFile.type.startsWith('image/')) {
     fileError.value = 'Неверный формат файла. Поддерживаются JPG, PNG, HEIC.';
     return;
@@ -109,7 +104,6 @@ async function handleFileChange(e: Event) {
 
   fileError.value = null;
 
-  // Always convert through canvas to ensure compatible format + reasonable size
   try {
     const file = await toJpeg(rawFile);
     emit('selectFile', file);
@@ -118,6 +112,24 @@ async function handleFileChange(e: Event) {
     fileError.value = `Ошибка обработки (${rawFile.type}, ${Math.round(rawFile.size / 1024)}KB): ${msg}`;
   }
 }
+
+async function handleFileChange(e: Event) {
+  const input = e.target as HTMLInputElement;
+  const rawFile = input.files?.[0];
+  input.value = '';
+  if (!rawFile) return;
+  await processFile(rawFile);
+}
+
+// Ctrl+V paste support
+useEventListener(document, 'paste', (e: ClipboardEvent) => {
+  if (props.previewUrl || props.isOcrLoading) return;
+  const file = Array.from(e.clipboardData?.files ?? []).find((f) => f.type.startsWith('image/'));
+  if (file) {
+    e.preventDefault();
+    processFile(file);
+  }
+});
 </script>
 
 <template>
