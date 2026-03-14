@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { ROUTE_NAMES } from '@/shared/config/routeNames';
 import { UButton, UIcon, InitialAvatar } from '@/shared/ui';
+import { TreeRoot, TreeItem } from 'reka-ui';
 import { AccountSelector } from '@/entities/account';
 import { CategoryChips, EXPENSE_CATEGORIES } from '@/entities/category';
 import { Popover, PopoverTrigger, PopoverContent } from '@/shared/ui/primitives/popover';
@@ -14,7 +15,7 @@ import { useHaptics } from '@/shared/lib/haptics';
 import type { ParticipantSummary, ReceiptCharge, ScanReceiptFormData } from '../../model/types';
 import type { AccountWithBalances } from '@/entities/account';
 import { useReceiptShare, type ReceiptShareData } from '../../model/useReceiptShare';
-import PersonSummaryCard from '../PersonSummaryCard.vue';
+// PersonSummaryCard no longer used — tree view inlines participant display
 
 const props = defineProps<{
   participantSummaries: ParticipantSummary[];
@@ -83,31 +84,39 @@ const debtCount = computed(
     props.participantSummaries.filter((p) => !p.isMe && p.itemCount > 0 && !p.paidByName).length,
 );
 
-// Grouped by payer: payer card + their dependents
-interface PayerGroup {
-  payer: ParticipantSummary;
-  dependents: ParticipantSummary[];
+// Tree structure for payer → dependents hierarchy
+interface PayerTreeNode {
+  id: string;
+  participant: ParticipantSummary;
+  isDependent: boolean;
+  children?: PayerTreeNode[];
 }
 
-const payerGroups = computed<PayerGroup[]>(() => {
-  const groups: PayerGroup[] = [];
+const payerTree = computed<PayerTreeNode[]>(() => {
   const paidForIds = new Set<string>();
-
-  // Find paid-for participants
   for (const p of props.participantSummaries) {
     if (p.paidByName) paidForIds.add(p.id);
   }
 
-  // Build groups for self-paying participants
-  for (const p of props.participantSummaries) {
-    if (paidForIds.has(p.id)) continue;
-    const dependents = props.participantSummaries.filter(
-      (dep) => dep.paidByName === p.name && dep.id !== p.id,
-    );
-    groups.push({ payer: p, dependents });
-  }
-
-  return groups;
+  return props.participantSummaries
+    .filter((p) => !paidForIds.has(p.id))
+    .map((p) => {
+      const deps = props.participantSummaries.filter(
+        (dep) => dep.paidByName === p.name && dep.id !== p.id,
+      );
+      return {
+        id: p.id,
+        participant: p,
+        isDependent: false,
+        children: deps.length
+          ? deps.map((dep) => ({
+              id: dep.id,
+              participant: dep,
+              isDependent: true,
+            }))
+          : undefined,
+      };
+    });
 });
 
 function handleSubmit() {
@@ -357,51 +366,133 @@ const shareData = computed<ReceiptShareData>(() => ({
         </div>
       </div>
 
-      <!-- Per-person breakdown (grouped by payer) -->
+      <!-- Per-person breakdown (tree: payer → dependents) -->
       <section aria-label="Разбивка по участникам">
         <h2
           class="text-xs font-semibold text-text-tertiary-light dark:text-text-tertiary-dark uppercase tracking-wide mb-2.5"
         >
           Кто сколько
         </h2>
-        <div class="space-y-2">
-          <template v-for="group in payerGroups" :key="group.payer.id">
-            <!-- Payer card -->
-            <PersonSummaryCard :participant="group.payer" :currency="currency" />
-            <!-- Dependents (paid-for by this payer) -->
-            <div v-for="dep in group.dependents" :key="dep.id" class="ml-6 relative">
-              <!-- Connector line -->
-              <div
-                class="absolute -left-3 top-4 w-3 border-t border-border-light dark:border-border-dark"
-              />
-              <div
-                class="absolute -left-3 -top-1 bottom-1/2 border-l border-border-light dark:border-border-dark"
-              />
-              <div
-                class="rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-4 py-2.5 flex items-center gap-3"
-              >
-                <InitialAvatar :name="dep.name" :color="dep.color" size="sm" translucent />
-                <div class="flex-1 min-w-0">
-                  <p
-                    class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark truncate"
-                  >
-                    {{ dep.name }}
-                  </p>
-                  <p class="text-[11px] text-text-tertiary-light dark:text-text-tertiary-dark">
-                    {{ dep.itemCount }}
-                    {{ pluralize(dep.itemCount, 'позиция', 'позиции', 'позиций') }}
-                    · платит {{ dep.paidByName }}
-                  </p>
-                </div>
-                <span
-                  class="text-sm font-semibold tabular-nums text-text-secondary-light dark:text-text-secondary-dark"
+        <TreeRoot
+          v-slot="{ flattenItems }"
+          :items="payerTree"
+          :get-key="(item) => item.id"
+          :default-expanded="payerTree.filter((n) => n.children?.length).map((n) => n.id)"
+        >
+          <div class="space-y-2">
+            <TreeItem
+              v-for="item in flattenItems"
+              :key="item._id"
+              v-bind="item.bind"
+              v-slot="{ isExpanded }"
+              class="outline-none"
+            >
+              <!-- Payer (root level) -->
+              <template v-if="!item.value.isDependent">
+                <div
+                  class="rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark overflow-hidden"
                 >
-                  {{ formatCurrency(dep.total, currency) }}
-                </span>
-              </div>
-            </div>
-          </template>
-        </div>
+                  <div class="flex items-center gap-3 px-4 py-3">
+                    <InitialAvatar
+                      :name="item.value.participant.name"
+                      :color="item.value.participant.color"
+                      size="md"
+                      translucent
+                    />
+                    <div class="flex-1 min-w-0">
+                      <p
+                        class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark leading-tight"
+                      >
+                        {{ item.value.participant.name }}
+                        <span
+                          v-if="item.value.participant.isMe"
+                          class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark font-normal"
+                        >
+                          (вы)
+                        </span>
+                      </p>
+                      <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
+                        {{ item.value.participant.itemCount }}
+                        {{
+                          pluralize(
+                            item.value.participant.itemCount,
+                            'позиция',
+                            'позиции',
+                            'позиций',
+                          )
+                        }}
+                        <template v-if="item.hasChildren">
+                          · платит за {{ item.value.children!.length }}
+                          {{
+                            pluralize(item.value.children!.length, 'человека', 'человек', 'человек')
+                          }}
+                        </template>
+                      </p>
+                    </div>
+                    <span
+                      class="text-base font-bold tabular-nums flex-shrink-0"
+                      :style="{ color: item.value.participant.color }"
+                    >
+                      {{ formatCurrency(item.value.participant.total, currency) }}
+                    </span>
+                    <UIcon
+                      v-if="item.hasChildren"
+                      :name="isExpanded ? 'expand_less' : 'expand_more'"
+                      size="xs"
+                      class="text-text-tertiary-light dark:text-text-tertiary-dark flex-shrink-0"
+                    />
+                  </div>
+                </div>
+              </template>
+
+              <!-- Dependent (child level) -->
+              <template v-else>
+                <div class="ml-6 relative">
+                  <div
+                    class="absolute -left-3 top-4 w-3 border-t border-border-light dark:border-border-dark"
+                  />
+                  <div
+                    class="absolute -left-3 -top-1 bottom-1/2 border-l border-border-light dark:border-border-dark"
+                  />
+                  <div
+                    class="rounded-xl border border-border-light/60 dark:border-border-dark/60 bg-card-light/70 dark:bg-card-dark/70 px-4 py-2.5 flex items-center gap-3"
+                  >
+                    <InitialAvatar
+                      :name="item.value.participant.name"
+                      :color="item.value.participant.color"
+                      size="sm"
+                      translucent
+                    />
+                    <div class="flex-1 min-w-0">
+                      <p
+                        class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark truncate"
+                      >
+                        {{ item.value.participant.name }}
+                      </p>
+                      <p class="text-[11px] text-text-tertiary-light dark:text-text-tertiary-dark">
+                        {{ item.value.participant.itemCount }}
+                        {{
+                          pluralize(
+                            item.value.participant.itemCount,
+                            'позиция',
+                            'позиции',
+                            'позиций',
+                          )
+                        }}
+                        · платит {{ item.value.participant.paidByName }}
+                      </p>
+                    </div>
+                    <span
+                      class="text-sm font-semibold tabular-nums text-text-secondary-light dark:text-text-secondary-dark"
+                    >
+                      {{ formatCurrency(item.value.participant.total, currency) }}
+                    </span>
+                  </div>
+                </div>
+              </template>
+            </TreeItem>
+          </div>
+        </TreeRoot>
       </section>
 
       <!-- Divider -->
