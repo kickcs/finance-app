@@ -5,22 +5,15 @@ import { debtsApi, debtQueryKeys } from '@/entities/debt';
 import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
 import { useQueryClient } from '@tanstack/vue-query';
 import { useHaptics } from '@/shared/lib/haptics';
-import { calcLineTotal, calcLineTotalWithCharges, getTotalChargePercent } from './calcLineTotal';
 import { ALL_PARTICIPANTS_ID } from './constants';
 import { usePhotoStep, type OcrResult } from './usePhotoStep';
+import { useItemsStep, uid } from './useItemsStep';
 import type {
-  ReceiptItem,
-  ReceiptCharge,
   Participant,
   ParticipantSummary,
   ScanReceiptFormData,
   WizardDirection,
 } from './types';
-
-let nextId = 0;
-function uid(): string {
-  return `ri_${++nextId}_${Date.now()}`;
-}
 
 export function useReceiptWizard(userId: () => string | null) {
   const { trigger } = useHaptics();
@@ -30,11 +23,9 @@ export function useReceiptWizard(userId: () => string | null) {
   const currentStep = ref(1);
   const direction = ref<WizardDirection>('forward');
 
-  // Step 2: Items
-  const items = ref<ReceiptItem[]>([]);
-  const currency = ref('UZS');
-  const storeName = ref<string | null>(null);
-  const charges = ref<ReceiptCharge[]>([]);
+  // Step 2: Items (delegated to useItemsStep)
+  const itemsStep = useItemsStep();
+  const { items, currency, storeName, charges, totalAmount, getItemWithChargesTotal } = itemsStep;
 
   // Step 3: Participants
   const participants = ref<Participant[]>([]);
@@ -51,23 +42,6 @@ export function useReceiptWizard(userId: () => string | null) {
   const isSubmitting = ref(false);
   const submitError = ref<string | null>(null);
   const isSuccess = ref(false);
-
-  // Computed
-  const subtotal = computed(() => items.value.reduce((sum, item) => sum + calcLineTotal(item), 0));
-
-  const totalChargePercent = computed(() => getTotalChargePercent(charges.value));
-
-  const chargesAmount = computed(() => {
-    if (!totalChargePercent.value) return 0;
-    return Math.round((subtotal.value * totalChargePercent.value) / 100);
-  });
-
-  const totalAmount = computed(() => subtotal.value + chargesAmount.value);
-
-  // Per-item charge-inclusive price (proportionally distributed)
-  function getItemWithChargesTotal(item: ReceiptItem): number {
-    return calcLineTotalWithCharges(item, charges.value);
-  }
 
   const unassignedCount = computed(
     () => items.value.filter((item) => item.assignedParticipantIds.length === 0).length,
@@ -171,96 +145,6 @@ export function useReceiptWizard(userId: () => string | null) {
   }
 
   const photoStep = usePhotoStep(handleOcrResult, goNext);
-
-  // Step 2: Item editing
-  function updateItem(id: string, updates: Partial<ReceiptItem>) {
-    const idx = items.value.findIndex((i) => i.id === id);
-    if (idx !== -1) {
-      // Clear OCR total when user manually edits qty or price — recalculate from qty × unitPrice
-      if ('qty' in updates || 'unitPrice' in updates) {
-        updates.ocrTotalPrice = null;
-      }
-      items.value[idx] = { ...items.value[idx], ...updates };
-    }
-  }
-
-  function deleteItem(id: string) {
-    items.value = items.value.filter((i) => i.id !== id);
-    trigger('warning');
-  }
-
-  function addItem(): string {
-    const id = uid();
-    items.value.push({
-      id,
-      name: '',
-      qty: 1,
-      unitPrice: 0,
-      ocrTotalPrice: null,
-      assignedParticipantIds: [],
-    });
-    trigger('selection');
-    return id;
-  }
-
-  function splitItem(id: string, firstQty: number) {
-    const idx = items.value.findIndex((i) => i.id === id);
-    if (idx === -1) return;
-    const original = items.value[idx];
-    const secondQty = original.qty - firstQty;
-    if (firstQty <= 0 || secondQty <= 0) return;
-
-    const ratio1 = firstQty / original.qty;
-
-    const item1: ReceiptItem = {
-      id: uid(),
-      name: `${original.name} (1/2)`,
-      qty: firstQty,
-      unitPrice: original.unitPrice,
-      ocrTotalPrice: original.ocrTotalPrice ? Math.round(original.ocrTotalPrice * ratio1) : null,
-      assignedParticipantIds: [],
-    };
-
-    const item2: ReceiptItem = {
-      id: uid(),
-      name: `${original.name} (2/2)`,
-      qty: secondQty,
-      unitPrice: original.unitPrice,
-      ocrTotalPrice: original.ocrTotalPrice
-        ? original.ocrTotalPrice - Math.round(original.ocrTotalPrice * ratio1)
-        : null,
-      assignedParticipantIds: [],
-    };
-
-    items.value.splice(idx, 1, item1, item2);
-    trigger('success');
-  }
-
-  // Step 2: Charge management
-  function addCharge(label: string, percent: number) {
-    charges.value.push({ id: uid(), label, percent, enabled: true });
-    trigger('selection');
-  }
-
-  function removeCharge(id: string) {
-    charges.value = charges.value.filter((c) => c.id !== id);
-    trigger('warning');
-  }
-
-  function toggleCharge(id: string) {
-    const charge = charges.value.find((c) => c.id === id);
-    if (charge) {
-      charge.enabled = !charge.enabled;
-      trigger('selection');
-    }
-  }
-
-  function updateChargePercent(id: string, percent: number) {
-    const charge = charges.value.find((c) => c.id === id);
-    if (charge) {
-      charge.percent = percent;
-    }
-  }
 
   // Step 3: Participants
   function addParticipant(name: string, isMe = false, paidById: string | null = null) {
@@ -387,24 +271,7 @@ export function useReceiptWizard(userId: () => string | null) {
     // Step 1
     ...photoStep,
     // Step 2
-    items,
-    currency,
-    storeName,
-
-    subtotal,
-    charges,
-    chargesAmount,
-    totalChargePercent,
-    totalAmount,
-    getItemWithChargesTotal,
-    updateItem,
-    deleteItem,
-    addItem,
-    splitItem,
-    addCharge,
-    removeCharge,
-    toggleCharge,
-    updateChargePercent,
+    ...itemsStep,
     // Step 3
     participants,
     hasMe,
