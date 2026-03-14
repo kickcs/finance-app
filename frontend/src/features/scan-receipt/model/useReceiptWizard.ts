@@ -1,6 +1,5 @@
-import { ref, computed, onUnmounted } from 'vue';
+import { ref, computed } from 'vue';
 import { ENTITY_COLORS } from '@/shared/config/colors';
-import { receiptApi, type ScanReceiptResponse } from '../api/receiptApi';
 import { transactionsApi } from '@/entities/transaction';
 import { debtsApi, debtQueryKeys } from '@/entities/debt';
 import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
@@ -8,6 +7,7 @@ import { useQueryClient } from '@tanstack/vue-query';
 import { useHaptics } from '@/shared/lib/haptics';
 import { calcLineTotal, calcLineTotalWithCharges, getTotalChargePercent } from './calcLineTotal';
 import { ALL_PARTICIPANTS_ID } from './constants';
+import { usePhotoStep, type OcrResult } from './usePhotoStep';
 import type {
   ReceiptItem,
   ReceiptCharge,
@@ -29,13 +29,6 @@ export function useReceiptWizard(userId: () => string | null) {
   // Step state
   const currentStep = ref(1);
   const direction = ref<WizardDirection>('forward');
-
-  // Step 1: Photo
-  const selectedFile = ref<File | null>(null);
-  const previewUrl = ref<string | null>(null);
-  const isOcrLoading = ref(false);
-  const isOcrSuccess = ref(false);
-  const ocrError = ref<string | null>(null);
 
   // Step 2: Items
   const items = ref<ReceiptItem[]>([]);
@@ -144,80 +137,40 @@ export function useReceiptWizard(userId: () => string | null) {
     }
   }
 
-  // Step 1: Photo handling
-  function selectFile(file: File) {
-    selectedFile.value = file;
-    previewUrl.value = URL.createObjectURL(file);
-    ocrError.value = null;
-    scanReceipt();
-  }
+  // Step 1: Photo (delegated to usePhotoStep)
+  function handleOcrResult(result: OcrResult) {
+    items.value = result.items.map((item) => ({
+      id: uid(),
+      name: item.name,
+      qty: item.quantity,
+      unitPrice: item.unitPrice,
+      ocrTotalPrice: item.totalPrice ?? null,
+      assignedParticipantIds: [],
+    }));
+    currency.value = result.currency;
+    formData.value.currency = result.currency;
+    storeName.value = result.storeName;
 
-  function resetPhoto() {
-    if (previewUrl.value) URL.revokeObjectURL(previewUrl.value);
-    selectedFile.value = null;
-    previewUrl.value = null;
-    isOcrLoading.value = false;
-    isOcrSuccess.value = false;
-    ocrError.value = null;
-  }
+    // Seed charges from OCR serviceChargePercent
+    const rawPercent = result.serviceChargePercent;
+    if (rawPercent && rawPercent >= 0.1) {
+      charges.value = [{ id: uid(), label: 'Обслуживание', percent: rawPercent, enabled: true }];
+    } else {
+      charges.value = [];
+    }
 
-  async function scanReceipt() {
-    if (!selectedFile.value) return;
-    isOcrLoading.value = true;
-    ocrError.value = null;
-
-    try {
-      const result: ScanReceiptResponse = await receiptApi.scan(selectedFile.value);
-
-      // Filter out service charge / tax / discount line items that GPT may still return
-      const serviceKeywords =
-        /обслуживание|service|чаевые|tip|ндс|vat|tax|скидка|discount|delivery|доставка/i;
-      const productItems = result.items.filter((item) => !serviceKeywords.test(item.name));
-
-      items.value = productItems.map((item) => ({
-        id: uid(),
-        name: item.name,
-        qty: item.quantity,
-        unitPrice: item.unitPrice,
-        ocrTotalPrice: item.totalPrice ?? null,
-        assignedParticipantIds: [],
-      }));
-      currency.value = result.currency;
-      formData.value.currency = result.currency;
-      storeName.value = result.storeName;
-
-      // Seed charges from OCR serviceChargePercent
-      const rawPercent = result.serviceChargePercent;
-      if (rawPercent && rawPercent >= 0.1) {
-        charges.value = [{ id: uid(), label: 'Обслуживание', percent: rawPercent, enabled: true }];
-      } else {
-        charges.value = [];
-      }
-
-      // Use hashtags from OCR for description, fallback to store name
-      if (result.hashtags?.length > 0) {
-        formData.value.description = result.hashtags.join(' ');
-      } else if (result.storeName) {
-        formData.value.description = `#${result.storeName.replace(/[^a-zа-яёA-ZА-ЯЁ0-9]/g, '').toLowerCase()}`;
-      }
-      if (result.date) {
-        formData.value.date = new Date(result.date).getTime();
-      }
-      isOcrSuccess.value = true;
-      trigger('success');
-      // Auto-advance after 600ms
-      setTimeout(() => goNext(), 600);
-    } catch (error: unknown) {
-      const msg = error instanceof Error ? error.message : String(error);
-      const fileInfo = selectedFile.value
-        ? `[${selectedFile.value.type || 'unknown'}, ${Math.round(selectedFile.value.size / 1024)}KB]`
-        : '';
-      ocrError.value = `${msg} ${fileInfo}`.trim();
-      trigger('error');
-    } finally {
-      isOcrLoading.value = false;
+    // Use hashtags from OCR for description, fallback to store name
+    if (result.hashtags?.length > 0) {
+      formData.value.description = result.hashtags.join(' ');
+    } else if (result.storeName) {
+      formData.value.description = `#${result.storeName.replace(/[^a-zа-яёA-ZА-ЯЁ0-9]/g, '').toLowerCase()}`;
+    }
+    if (result.date) {
+      formData.value.date = new Date(result.date).getTime();
     }
   }
+
+  const photoStep = usePhotoStep(handleOcrResult, goNext);
 
   // Step 2: Item editing
   function updateItem(id: string, updates: Partial<ReceiptItem>) {
@@ -425,13 +378,6 @@ export function useReceiptWizard(userId: () => string | null) {
     () => !!formData.value.accountId && !!formData.value.categoryId && totalAmount.value > 0,
   );
 
-  onUnmounted(() => {
-    if (previewUrl.value) {
-      URL.revokeObjectURL(previewUrl.value);
-      previewUrl.value = null;
-    }
-  });
-
   return {
     // Step state
     currentStep,
@@ -439,14 +385,7 @@ export function useReceiptWizard(userId: () => string | null) {
     goNext,
     goBack,
     // Step 1
-    selectedFile,
-    previewUrl,
-    isOcrLoading,
-    isOcrSuccess,
-    ocrError,
-    selectFile,
-    resetPhoto,
-    scanReceipt,
+    ...photoStep,
     // Step 2
     items,
     currency,
