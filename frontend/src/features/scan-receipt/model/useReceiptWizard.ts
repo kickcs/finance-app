@@ -41,7 +41,6 @@ export function useReceiptWizard(userId: () => string | null) {
   const items = ref<ReceiptItem[]>([]);
   const currency = ref('UZS');
   const storeName = ref<string | null>(null);
-  const receiptDate = ref<string | null>(null);
   const charges = ref<ReceiptCharge[]>([]);
 
   // Step 3: Participants
@@ -186,7 +185,6 @@ export function useReceiptWizard(userId: () => string | null) {
       currency.value = result.currency;
       formData.value.currency = result.currency;
       storeName.value = result.storeName;
-      receiptDate.value = result.date;
 
       // Seed charges from OCR serviceChargePercent
       const rawPercent = result.serviceChargePercent;
@@ -453,7 +451,7 @@ export function useReceiptWizard(userId: () => string | null) {
     items,
     currency,
     storeName,
-    receiptDate,
+
     subtotal,
     charges,
     chargesAmount,

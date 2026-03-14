@@ -11,7 +11,7 @@ defineProps<{
     role="progressbar"
     :aria-valuenow="currentStep"
     aria-valuemin="1"
-    aria-valuemax="4"
+    :aria-valuemax="totalSteps"
     :aria-label="`Шаг ${currentStep} из ${totalSteps}`"
   >
     <div

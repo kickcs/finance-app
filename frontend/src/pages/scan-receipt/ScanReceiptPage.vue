@@ -13,6 +13,7 @@ import Step3AssignParticipants from '@/features/scan-receipt/ui/steps/Step3Assig
 import Step4Summary from '@/features/scan-receipt/ui/steps/Step4Summary.vue';
 
 const STEP_LABELS = ['Фото чека', 'Позиции', 'Участники', 'Итог'];
+const TOTAL_STEPS = STEP_LABELS.length;
 
 const router = useRouter();
 const { userId } = useCurrentUser();
@@ -63,7 +64,7 @@ function handleBack() {
               :key="wizard.currentStep.value"
               class="absolute inset-x-0 top-0 text-caption text-text-tertiary-light dark:text-text-tertiary-dark"
             >
-              Шаг {{ wizard.currentStep.value }} из 4 ·
+              Шаг {{ wizard.currentStep.value }} из {{ TOTAL_STEPS }} ·
               {{ STEP_LABELS[wizard.currentStep.value - 1] }}
             </p>
           </Transition>
@@ -74,7 +75,7 @@ function handleBack() {
     </header>
 
     <!-- Step Progress Indicator -->
-    <StepProgressIndicator :current-step="wizard.currentStep.value" :total-steps="4" />
+    <StepProgressIndicator :current-step="wizard.currentStep.value" :total-steps="TOTAL_STEPS" />
 
     <!-- Step content area -->
     <div class="flex-1 overflow-hidden relative">

@@ -15,7 +15,6 @@ import { useHaptics } from '@/shared/lib/haptics';
 import type { ParticipantSummary, ReceiptCharge, ScanReceiptFormData } from '../../model/types';
 import type { AccountWithBalances } from '@/entities/account';
 import { useReceiptShare, type ReceiptShareData } from '../../model/useReceiptShare';
-// PersonSummaryCard no longer used — tree view inlines participant display
 
 const props = defineProps<{
   participantSummaries: ParticipantSummary[];
