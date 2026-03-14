@@ -4,6 +4,7 @@ import { UIcon, SwipeableItem } from '@/shared/ui';
 import { formatCurrency, getCurrencySymbol } from '@/shared/lib/format/currency';
 import { cn } from '@/shared/lib/utils';
 import { useHaptics } from '@/shared/lib/haptics';
+import { useIsDesktop } from '@/shared/lib/composables/useIsDesktop';
 import {
   calcLineTotal,
   calcLineTotalWithCharges,
@@ -22,10 +23,12 @@ const props = defineProps<{
 const emit = defineEmits<{
   update: [updates: Partial<ReceiptItem>];
   delete: [];
+  split: [];
   focusNext: [currentField: 'name' | 'price' | 'qty'];
 }>();
 
 const { trigger } = useHaptics();
+const isDesktop = useIsDesktop();
 
 const isEditing = ref(false);
 
@@ -66,8 +69,9 @@ function incrementQty() {
 <template>
   <SwipeableItem
     :left-action="{ icon: 'delete', color: '#ef4444', label: 'Удалить' }"
-    :right-action="undefined"
+    :right-action="{ icon: 'call_split', color: '#8b5cf6', label: 'Разделить' }"
     @action-left="emit('delete')"
+    @action-right="emit('split')"
   >
     <div
       :class="
@@ -111,6 +115,25 @@ function incrementQty() {
         <span class="text-body-sm font-bold tabular-nums shrink-0 text-primary">
           {{ formatCurrency(hasCharges ? lineTotalWithCharges : lineTotal, currency) }}
         </span>
+        <!-- Desktop action buttons -->
+        <div v-if="isDesktop" class="flex items-center gap-0.5 shrink-0">
+          <button
+            type="button"
+            :aria-label="`Разделить позицию ${index + 1}`"
+            class="w-7 h-7 rounded-lg flex items-center justify-center text-text-tertiary-light dark:text-text-tertiary-dark hover:text-primary hover:bg-primary/5 active:scale-90 transition-all"
+            @click.stop="emit('split')"
+          >
+            <UIcon name="call_split" size="xs" />
+          </button>
+          <button
+            type="button"
+            :aria-label="`Удалить позицию ${index + 1}`"
+            class="w-7 h-7 rounded-lg flex items-center justify-center text-text-tertiary-light dark:text-text-tertiary-dark hover:text-danger hover:bg-danger/5 active:scale-90 transition-all"
+            @click.stop="emit('delete')"
+          >
+            <UIcon name="delete" size="xs" />
+          </button>
+        </div>
       </div>
 
       <!-- Row 2: qty stepper × unit price -->

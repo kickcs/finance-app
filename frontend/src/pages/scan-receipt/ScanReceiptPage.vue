@@ -102,6 +102,7 @@ function handleBack() {
           @update-item="wizard.updateItem"
           @delete-item="wizard.deleteItem"
           @add-item="wizard.addItem"
+          @split-item="wizard.splitItem"
           @add-charge="wizard.addCharge"
           @remove-charge="wizard.removeCharge"
           @toggle-charge="wizard.toggleCharge"
