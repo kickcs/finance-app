@@ -146,7 +146,7 @@ function handleAddPreset(preset: (typeof CHARGE_PRESETS)[number]) {
     <UButton
       variant="primary"
       size="lg"
-      :full-width="true"
+      full-width
       :disabled="disabled"
       aria-label="Перейти к назначению участников"
       @click="emit('requestNext')"

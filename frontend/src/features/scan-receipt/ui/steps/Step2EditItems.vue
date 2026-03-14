@@ -106,11 +106,11 @@ function handleFocusNext(index: number, currentField: 'name' | 'price' | 'qty') 
             </p>
           </div>
           <div class="flex flex-col gap-2 w-full">
-            <UButton variant="primary" size="lg" :full-width="true" @click="emit('addItem')">
+            <UButton variant="primary" size="lg" full-width @click="emit('addItem')">
               <UIcon name="add" size="sm" class="mr-2" />
               Добавить вручную
             </UButton>
-            <UButton variant="ghost" size="md" :full-width="true" @click="emit('back')">
+            <UButton variant="ghost" size="md" full-width @click="emit('back')">
               Переснять чек
             </UButton>
           </div>

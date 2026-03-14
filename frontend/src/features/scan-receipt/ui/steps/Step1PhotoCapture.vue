@@ -349,14 +349,14 @@ useEventListener(document, 'paste', (e: ClipboardEvent) => {
               </p>
             </div>
             <div class="flex flex-col gap-2 w-full max-w-[250px]">
-              <UButton variant="primary" size="md" :full-width="true" @click="emit('retryOcr')">
+              <UButton variant="primary" size="md" full-width @click="emit('retryOcr')">
                 <UIcon name="refresh" size="sm" class="mr-2" />
                 Попробовать снова
               </UButton>
               <UButton
                 variant="ghost"
                 size="md"
-                :full-width="true"
+                full-width
                 class="text-white/70"
                 @click="emit('resetPhoto')"
               >
@@ -395,19 +395,12 @@ useEventListener(document, 'paste', (e: ClipboardEvent) => {
 
       <!-- Action row below preview -->
       <div class="flex-shrink-0 mt-3">
-        <UButton
-          v-if="isOcrLoading"
-          variant="primary"
-          size="lg"
-          :full-width="true"
-          :disabled="true"
-          :loading="true"
-        >
+        <UButton v-if="isOcrLoading" variant="primary" size="lg" full-width disabled loading>
           Распознаём...
         </UButton>
 
         <template v-if="!isOcrLoading && !ocrError && !isOcrSuccess">
-          <UButton variant="ghost" size="md" :full-width="true" @click="emit('resetPhoto')">
+          <UButton variant="ghost" size="md" full-width @click="emit('resetPhoto')">
             Переснять
           </UButton>
         </template>
