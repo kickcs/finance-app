@@ -80,11 +80,21 @@ Note: second part's `ocrTotalPrice` is calculated as `original - first` to avoid
 - "Разделить" button
 - Validation: both parts > 0
 
+### Emit Chain
+
+`ReceiptItemRow` emits `split` → `Step2EditItems` emits `splitItem: [id: string, firstQty: number]` → `ScanReceiptPage` calls `wizard.splitItem(id, firstQty)`.
+
+`splitItem` must be added to the `return {}` object of `useReceiptWizard`.
+
+### Split input
+
+The split input field uses `inputmode="decimal"` and `step="0.01"` to support fractional quantities (e.g., splitting qty=1 into 0.5 + 0.5).
+
 ### Files Changed
-- `model/useReceiptWizard.ts` — add `splitItem()`, expose in return
-- `ui/ReceiptItemRow.vue` — add split icon button (desktop), right swipe action (mobile)
-- `ui/steps/Step2EditItems.vue` — add split modal, emit `splitItem`, handle modal state
-- `pages/scan-receipt/ScanReceiptPage.vue` — wire `splitItem` event
+- `model/useReceiptWizard.ts` — add `splitItem()`, add to `return {}` object
+- `ui/ReceiptItemRow.vue` — add split icon button (desktop), right swipe action (mobile), new `split` emit
+- `ui/steps/Step2EditItems.vue` — add `splitItem: [id: string, firstQty: number]` emit, split modal with state management
+- `pages/scan-receipt/ScanReceiptPage.vue` — add `@split-item="wizard.splitItem"` on `<Step2EditItems>`
 
 ## 3. "Paid By" (paidBy)
 
@@ -152,7 +162,7 @@ const nonMeSummaries = participantSummaries.value.filter(p => {
 
 ### UI
 
-**Step 3 — Add Participant Modal**: When adding a new participant and there are already other participants present, show an optional select/dropdown: "Кто платит?" with options being existing participants + "Сам" (default, = null). Only shown when `participants.length > 0`.
+**Step 3 — Add Participant Modal**: When adding a new participant and there are already other participants present, show an optional select/dropdown: "Кто платит?" with options being existing participants (excluding those who themselves have `paidById`) + "Сам" (default, = null). Only shown when `participants.length > 1` (at least one non-self participant exists as a potential payer).
 
 **ParticipantChip**: If participant has `paidById`, show a small label "→ Имя" below or beside the participant name.
 
@@ -175,7 +185,7 @@ export interface ParticipantSummary {
 
 ### Files Changed
 - `model/types.ts` — add `paidById` to `Participant`, `paidByName` to `ParticipantSummary`
-- `model/useReceiptWizard.ts` — update `addParticipant` signature, update `participantSummaries`, update `handleSubmit`
+- `model/useReceiptWizard.ts` — update `addParticipant` signature, update `removeParticipant` (clear stale `paidById` refs), update `participantSummaries`, update `handleSubmit`
 - `ui/steps/Step3AssignParticipants.vue` — "Кто платит?" select in add modal
 - `ui/ParticipantChip.vue` — show "→ Name" for paidBy participants
 - `ui/steps/Step4Summary.vue` — "Платит X" label, combined debt display
@@ -184,7 +194,12 @@ export interface ParticipantSummary {
 
 - **Split validation**: both parts must be > 0; sum must equal original qty
 - **paidBy chain**: A pays for B who pays for C — not supported, only one level deep. UI should not offer participants who themselves have a `paidById` as payer options
-- **Remove payer**: if Artem is removed, Malika's `paidById` is cleared (she becomes self-paying)
+- **Remove payer**: if Artem is removed, Malika's `paidById` is cleared (she becomes self-paying). Implementation: update `removeParticipant` in `useReceiptWizard.ts` to clear `paidById` for all participants referencing the removed ID:
+  ```typescript
+  participants.value.forEach(p => {
+    if (p.paidById === id) p.paidById = null;
+  });
+  ```
 - **Remove paid-for participant**: standard removal, payer's total recalculates automatically
 - **Split + paidBy interaction**: split items are independent lines, can be assigned to any participant including paidBy participants — no special handling needed
 - **"Я" as paidBy target**: allowed — e.g., user pays for friend, friend's share doesn't create a debt
