@@ -19,7 +19,7 @@ const props = defineProps<{
   charges: ReceiptCharge[];
 }>();
 const emit = defineEmits<{
-  addParticipant: [name: string, isMe: boolean];
+  addParticipant: [name: string, isMe: boolean, paidById: string | null];
   removeParticipant: [id: string];
   toggleItemParticipant: [itemId: string, participantId: string];
   next: [];
@@ -87,6 +87,11 @@ const availableContacts = computed(() =>
 /** Selected contact IDs in the modal */
 const selectedContactIds = ref<Set<string>>(new Set());
 
+const selectedPaidById = ref<string | null>(null);
+
+/** Participants eligible to be a payer (not themselves paid-for) */
+const availablePayers = computed(() => props.participants.filter((p) => !p.paidById));
+
 const manualInputRef = ref<InstanceType<typeof UInput> | null>(null);
 
 function openAddParticipantSheet() {
@@ -94,6 +99,7 @@ function openAddParticipantSheet() {
   nameError.value = '';
   selectedContactIds.value = new Set();
   pendingNames.value = new Set();
+  selectedPaidById.value = null;
   addParticipantOpen.value = true;
 }
 
@@ -110,7 +116,7 @@ function toggleContactSelection(contactId: string) {
 
 function addMe() {
   trigger('selection');
-  emit('addParticipant', 'Я', true);
+  emit('addParticipant', 'Я', true, null);
 }
 
 function confirmAddManual() {
@@ -121,9 +127,10 @@ function confirmAddManual() {
     return;
   }
   pendingNames.value.add(trimmed.toLowerCase());
-  emit('addParticipant', trimmed, false);
+  emit('addParticipant', trimmed, false, selectedPaidById.value);
   newName.value = '';
   nameError.value = '';
+  selectedPaidById.value = null;
   trigger('selection');
   nextTick(() => {
     manualInputRef.value?.focus();
@@ -135,10 +142,11 @@ function confirmAddAll() {
   for (const contactId of selectedContactIds.value) {
     const person = people.value.find((p) => p.id === contactId);
     if (person && !existingNames.value.has(person.name.toLowerCase())) {
-      emit('addParticipant', person.name, false);
+      emit('addParticipant', person.name, false, selectedPaidById.value);
     }
   }
   trigger('success');
+  selectedPaidById.value = null;
   addParticipantOpen.value = false;
 }
 
@@ -212,6 +220,9 @@ function handleTapRow(item: ReceiptItem) {
             :key="p.id"
             :participant="p"
             :is-active="activeParticipantId === p.id"
+            :paid-by-name="
+              p.paidById ? participants.find((pp) => pp.id === p.paidById)?.name : undefined
+            "
             @click="setActiveParticipant(p.id)"
           />
         </TransitionGroup>
@@ -480,6 +491,44 @@ function handleTapRow(item: ReceiptItem) {
               @click="handleSaveAndAdd(newName.trim())"
             >
               <UIcon name="person_add" size="sm" />
+            </button>
+          </div>
+        </div>
+
+        <!-- "Кто платит?" selector -->
+        <div v-if="participants.length > 1">
+          <p
+            class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2"
+          >
+            Кто платит?
+          </p>
+          <div class="flex flex-wrap gap-1.5">
+            <button
+              type="button"
+              class="px-3 py-1.5 rounded-full text-xs font-medium transition-all active:scale-95"
+              :class="
+                selectedPaidById === null
+                  ? 'bg-primary text-white'
+                  : 'bg-surface-light dark:bg-surface-dark text-text-secondary-light dark:text-text-secondary-dark border border-border-light dark:border-border-dark'
+              "
+              @click="selectedPaidById = null"
+            >
+              Сам
+            </button>
+            <button
+              v-for="payer in availablePayers"
+              :key="payer.id"
+              type="button"
+              class="px-3 py-1.5 rounded-full text-xs font-medium transition-all active:scale-95"
+              :class="
+                selectedPaidById === payer.id
+                  ? 'text-white'
+                  : 'bg-surface-light dark:bg-surface-dark text-text-secondary-light dark:text-text-secondary-dark border border-border-light dark:border-border-dark'
+              "
+              :style="selectedPaidById === payer.id ? { backgroundColor: payer.color } : {}"
+              @click="selectedPaidById = payer.id"
+            >
+              {{ payer.name }}
             </button>
           </div>
         </div>
