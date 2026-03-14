@@ -89,8 +89,11 @@ const selectedContactIds = ref<Set<string>>(new Set());
 
 const selectedPaidById = ref<string | null>(null);
 
-/** Participants eligible to be a payer (not themselves paid-for) */
-const availablePayers = computed(() => props.participants.filter((p) => !p.paidById));
+/** Special constant for "Я" as payer when not yet added as participant */
+const ME_PAYER_ID = '__ME__';
+
+/** All participants shown as potential payers */
+const availablePayers = computed(() => props.participants);
 
 const manualInputRef = ref<InstanceType<typeof UInput> | null>(null);
 
@@ -119,6 +122,22 @@ function addMe() {
   emit('addParticipant', 'Я', true, null);
 }
 
+/** Resolve paidById — if ME_PAYER_ID selected, auto-add "Я" if not present and return their ID */
+function resolvePaidById(): string | null {
+  if (selectedPaidById.value === null) return null;
+  if (selectedPaidById.value === ME_PAYER_ID) {
+    // Auto-add "Я" if not yet a participant
+    if (!props.hasMe) {
+      emit('addParticipant', 'Я', true, null);
+    }
+    // Return the "Я" participant ID (will be available after next tick, but we need it now)
+    // Since addParticipant is synchronous in the wizard, the participant is already added
+    const me = props.participants.find((p) => p.isMe);
+    return me?.id ?? null;
+  }
+  return selectedPaidById.value;
+}
+
 function confirmAddManual() {
   const trimmed = newName.value.trim();
   if (!trimmed) return;
@@ -127,7 +146,8 @@ function confirmAddManual() {
     return;
   }
   pendingNames.value.add(trimmed.toLowerCase());
-  emit('addParticipant', trimmed, false, selectedPaidById.value);
+  const paidById = resolvePaidById();
+  emit('addParticipant', trimmed, false, paidById);
   newName.value = '';
   nameError.value = '';
   selectedPaidById.value = null;
@@ -138,11 +158,12 @@ function confirmAddManual() {
 }
 
 function confirmAddAll() {
+  const paidById = resolvePaidById();
   // Add selected saved contacts
   for (const contactId of selectedContactIds.value) {
     const person = people.value.find((p) => p.id === contactId);
     if (person && !existingNames.value.has(person.name.toLowerCase())) {
-      emit('addParticipant', person.name, false, selectedPaidById.value);
+      emit('addParticipant', person.name, false, paidById);
     }
   }
   trigger('success');
@@ -496,7 +517,7 @@ function handleTapRow(item: ReceiptItem) {
         </div>
 
         <!-- "Кто платит?" selector -->
-        <div v-if="participants.length > 1">
+        <div v-if="participants.length > 0">
           <p
             class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2"
           >
@@ -514,6 +535,20 @@ function handleTapRow(item: ReceiptItem) {
               @click="selectedPaidById = null"
             >
               Сам
+            </button>
+            <!-- "Я" as payer (always available) -->
+            <button
+              v-if="!participants.some((p) => p.isMe)"
+              type="button"
+              class="px-3 py-1.5 rounded-full text-xs font-medium transition-all active:scale-95"
+              :class="
+                selectedPaidById === ME_PAYER_ID
+                  ? 'bg-primary text-white'
+                  : 'bg-surface-light dark:bg-surface-dark text-text-secondary-light dark:text-text-secondary-dark border border-border-light dark:border-border-dark'
+              "
+              @click="selectedPaidById = ME_PAYER_ID"
+            >
+              Я
             </button>
             <button
               v-for="payer in availablePayers"
