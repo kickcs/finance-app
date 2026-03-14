@@ -8,6 +8,7 @@ import type { Participant } from '../model/types';
 defineProps<{
   participant: Participant;
   isActive: boolean;
+  paidByName?: string;
 }>();
 
 const emit = defineEmits<{
@@ -53,6 +54,13 @@ const emit = defineEmits<{
     </div>
     <span class="text-sm font-medium whitespace-nowrap">
       {{ participant.name }}
+    </span>
+    <span
+      v-if="paidByName"
+      class="text-[10px] opacity-70 whitespace-nowrap"
+      :class="isActive ? 'text-white/70' : 'text-text-tertiary-light dark:text-text-tertiary-dark'"
+    >
+      → {{ paidByName }}
     </span>
   </button>
 </template>
