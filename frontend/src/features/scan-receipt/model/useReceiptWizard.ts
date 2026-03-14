@@ -1,19 +1,13 @@
 import { ref, computed } from 'vue';
-import { ENTITY_COLORS } from '@/shared/config/colors';
 import { transactionsApi } from '@/entities/transaction';
 import { debtsApi, debtQueryKeys } from '@/entities/debt';
 import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
 import { useQueryClient } from '@tanstack/vue-query';
 import { useHaptics } from '@/shared/lib/haptics';
-import { ALL_PARTICIPANTS_ID } from './constants';
 import { usePhotoStep, type OcrResult } from './usePhotoStep';
 import { useItemsStep, uid } from './useItemsStep';
-import type {
-  Participant,
-  ParticipantSummary,
-  ScanReceiptFormData,
-  WizardDirection,
-} from './types';
+import { useParticipantsStep } from './useParticipantsStep';
+import type { ParticipantSummary, ScanReceiptFormData, WizardDirection } from './types';
 
 export function useReceiptWizard(userId: () => string | null) {
   const { trigger } = useHaptics();
@@ -27,8 +21,9 @@ export function useReceiptWizard(userId: () => string | null) {
   const itemsStep = useItemsStep();
   const { items, currency, storeName, charges, totalAmount, getItemWithChargesTotal } = itemsStep;
 
-  // Step 3: Participants
-  const participants = ref<Participant[]>([]);
+  // Step 3: Participants (delegated to useParticipantsStep)
+  const participantsStep = useParticipantsStep(items);
+  const { participants } = participantsStep;
 
   // Step 4: Form
   const formData = ref<ScanReceiptFormData>({
@@ -42,10 +37,6 @@ export function useReceiptWizard(userId: () => string | null) {
   const isSubmitting = ref(false);
   const submitError = ref<string | null>(null);
   const isSuccess = ref(false);
-
-  const unassignedCount = computed(
-    () => items.value.filter((item) => item.assignedParticipantIds.length === 0).length,
-  );
 
   const participantSummaries = computed<ParticipantSummary[]>(() => {
     const summaries = participants.value.map((p) => {
@@ -146,57 +137,6 @@ export function useReceiptWizard(userId: () => string | null) {
 
   const photoStep = usePhotoStep(handleOcrResult, goNext);
 
-  // Step 3: Participants
-  function addParticipant(name: string, isMe = false, paidById: string | null = null) {
-    const colorIndex = participants.value.length % ENTITY_COLORS.length;
-    participants.value.push({
-      id: uid(),
-      name,
-      isMe,
-      color: ENTITY_COLORS[colorIndex] as string,
-      paidById,
-    });
-    trigger('selection');
-  }
-
-  function removeParticipant(id: string) {
-    participants.value = participants.value.filter((p) => p.id !== id);
-    // Clear paidById references to the removed participant
-    participants.value.forEach((p) => {
-      if (p.paidById === id) p.paidById = null;
-    });
-    // Remove from all item assignments
-    items.value.forEach((item) => {
-      item.assignedParticipantIds = item.assignedParticipantIds.filter((pid) => pid !== id);
-    });
-    trigger('warning');
-  }
-
-  function toggleItemParticipant(itemId: string, participantId: string) {
-    const item = items.value.find((i) => i.id === itemId);
-    if (!item) return;
-
-    if (participantId === ALL_PARTICIPANTS_ID) {
-      const allIds = participants.value.map((p) => p.id);
-      const isAssignedToAll = allIds.every((id) => item.assignedParticipantIds.includes(id));
-      if (isAssignedToAll) {
-        item.assignedParticipantIds = [];
-      } else {
-        item.assignedParticipantIds = [...allIds];
-      }
-    } else {
-      const idx = item.assignedParticipantIds.indexOf(participantId);
-      if (idx === -1) {
-        item.assignedParticipantIds.push(participantId);
-      } else {
-        item.assignedParticipantIds.splice(idx, 1);
-      }
-    }
-    trigger('selection');
-  }
-
-  const hasMe = computed(() => participants.value.some((p) => p.isMe));
-
   // Step 4: Submit
   async function handleSubmit() {
     const uid_ = userId();
@@ -273,12 +213,7 @@ export function useReceiptWizard(userId: () => string | null) {
     // Step 2
     ...itemsStep,
     // Step 3
-    participants,
-    hasMe,
-    unassignedCount,
-    addParticipant,
-    removeParticipant,
-    toggleItemParticipant,
+    ...participantsStep,
     // Step 4
     formData,
     participantSummaries,
