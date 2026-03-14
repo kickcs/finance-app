@@ -93,6 +93,10 @@ const payerTree = computed<PayerTreeNode[]>(() => {
 });
 
 // Track which participant detail lists are expanded (separate from tree expand)
+const defaultExpandedIds = computed(() =>
+  payerTree.value.filter((n) => n.children?.length).map((n) => n.id),
+);
+
 const expandedDetails = ref<Set<string>>(new Set());
 
 function toggleDetails(id: string) {
@@ -172,7 +176,7 @@ const shareActions = computed(() => [
           v-slot="{ flattenItems }"
           :items="payerTree"
           :get-key="(item) => item.id"
-          :default-expanded="payerTree.filter((n) => n.children?.length).map((n) => n.id)"
+          :default-expanded="defaultExpandedIds"
         >
           <div class="space-y-2">
             <TreeItem

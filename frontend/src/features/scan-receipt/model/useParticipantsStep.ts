@@ -1,13 +1,9 @@
 import { ref, computed, type Ref } from 'vue';
 import { ENTITY_COLORS } from '@/shared/config/colors';
 import { useHaptics } from '@/shared/lib/haptics';
+import { uid } from './uid';
 import { ALL_PARTICIPANTS_ID } from './constants';
 import type { ReceiptItem, Participant } from './types';
-
-let nextPuid = 0;
-function puid(): string {
-  return `rp_${++nextPuid}_${Date.now()}`;
-}
 
 export function useParticipantsStep(items: Ref<ReceiptItem[]>) {
   const { trigger } = useHaptics();
@@ -17,7 +13,7 @@ export function useParticipantsStep(items: Ref<ReceiptItem[]>) {
   function addParticipant(name: string, isMe = false, paidById: string | null = null) {
     const colorIndex = participants.value.length % ENTITY_COLORS.length;
     participants.value.push({
-      id: puid(),
+      id: uid(),
       name,
       isMe,
       color: ENTITY_COLORS[colorIndex] as string,

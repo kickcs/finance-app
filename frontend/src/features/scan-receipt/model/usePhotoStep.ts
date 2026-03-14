@@ -14,6 +14,7 @@ export interface OcrResult {
 export function usePhotoStep(onOcrSuccess: (result: OcrResult) => void, goNext: () => void) {
   const { trigger } = useHaptics();
 
+  let autoAdvanceTimer: ReturnType<typeof setTimeout> | null = null;
   const selectedFile = ref<File | null>(null);
   const previewUrl = ref<string | null>(null);
   const isOcrLoading = ref(false);
@@ -61,7 +62,7 @@ export function usePhotoStep(onOcrSuccess: (result: OcrResult) => void, goNext: 
       isOcrSuccess.value = true;
       trigger('success');
       // Auto-advance after 600ms
-      setTimeout(() => goNext(), 600);
+      autoAdvanceTimer = setTimeout(() => goNext(), 600);
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : String(error);
       const fileInfo = selectedFile.value
@@ -75,6 +76,7 @@ export function usePhotoStep(onOcrSuccess: (result: OcrResult) => void, goNext: 
   }
 
   onUnmounted(() => {
+    if (autoAdvanceTimer !== null) clearTimeout(autoAdvanceTimer);
     if (previewUrl.value) {
       URL.revokeObjectURL(previewUrl.value);
       previewUrl.value = null;

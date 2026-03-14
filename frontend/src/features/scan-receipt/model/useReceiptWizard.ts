@@ -1,7 +1,8 @@
 import { ref } from 'vue';
 import { useHaptics } from '@/shared/lib/haptics';
 import { usePhotoStep, type OcrResult } from './usePhotoStep';
-import { useItemsStep, uid } from './useItemsStep';
+import { useItemsStep } from './useItemsStep';
+import { uid } from './uid';
 import { useParticipantsStep } from './useParticipantsStep';
 import { useSubmitStep } from './useSubmitStep';
 import type { WizardDirection } from './types';

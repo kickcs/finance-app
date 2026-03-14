@@ -1,12 +1,8 @@
 import { ref, computed } from 'vue';
 import { useHaptics } from '@/shared/lib/haptics';
 import { calcLineTotal, calcLineTotalWithCharges, getTotalChargePercent } from './calcLineTotal';
+import { uid } from './uid';
 import type { ReceiptItem, ReceiptCharge } from './types';
-
-let nextId = 0;
-export function uid(): string {
-  return `ri_${++nextId}_${Date.now()}`;
-}
 
 export function useItemsStep() {
   const { trigger } = useHaptics();
