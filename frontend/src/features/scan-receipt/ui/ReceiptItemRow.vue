@@ -158,7 +158,7 @@ function incrementQty() {
             min="0.01"
             step="0.01"
             :aria-label="`Количество позиции ${index + 1}`"
-            class="w-8 h-6 text-center bg-transparent border-none outline-none text-caption font-semibold rounded text-text-primary-light dark:text-text-primary-dark tabular-nums focus:bg-background-light dark:focus:bg-background-dark"
+            class="w-12 h-6 text-center bg-transparent border-none outline-none text-caption font-semibold rounded text-text-primary-light dark:text-text-primary-dark tabular-nums focus:bg-background-light dark:focus:bg-background-dark"
             @input="
               emit('update', { qty: parseFloat(($event.target as HTMLInputElement).value) || 1 })
             "
