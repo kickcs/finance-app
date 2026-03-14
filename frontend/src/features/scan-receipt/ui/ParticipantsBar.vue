@@ -81,7 +81,6 @@ const allParticipantChip = computed<Participant>(() => ({
           <UIcon name="done_all" size="xs" />
           Назначить все пустые
         </button>
-        <span v-else />
       </Transition>
 
       <Transition name="section-slide">

@@ -1,4 +1,5 @@
 import { ref, onUnmounted } from 'vue';
+import { useTimeoutFn } from '@vueuse/core';
 import { receiptApi, type ScanReceiptResponse } from '../api/receiptApi';
 import { useHaptics } from '@/shared/lib/haptics';
 
@@ -14,7 +15,9 @@ export interface OcrResult {
 export function usePhotoStep(onOcrSuccess: (result: OcrResult) => void, goNext: () => void) {
   const { trigger } = useHaptics();
 
-  let autoAdvanceTimer: ReturnType<typeof setTimeout> | null = null;
+  const { start: scheduleAdvance, stop: cancelAdvance } = useTimeoutFn(goNext, 600, {
+    immediate: false,
+  });
   const selectedFile = ref<File | null>(null);
   const previewUrl = ref<string | null>(null);
   const isOcrLoading = ref(false);
@@ -62,7 +65,7 @@ export function usePhotoStep(onOcrSuccess: (result: OcrResult) => void, goNext: 
       isOcrSuccess.value = true;
       trigger('success');
       // Auto-advance after 600ms
-      autoAdvanceTimer = setTimeout(() => goNext(), 600);
+      scheduleAdvance();
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : String(error);
       const fileInfo = selectedFile.value
@@ -76,7 +79,7 @@ export function usePhotoStep(onOcrSuccess: (result: OcrResult) => void, goNext: 
   }
 
   onUnmounted(() => {
-    if (autoAdvanceTimer !== null) clearTimeout(autoAdvanceTimer);
+    cancelAdvance();
     if (previewUrl.value) {
       URL.revokeObjectURL(previewUrl.value);
       previewUrl.value = null;
