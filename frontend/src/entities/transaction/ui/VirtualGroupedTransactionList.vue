@@ -243,6 +243,7 @@ function getTransactionItemProps(index: number) {
         >
           <SwipeableItem
             v-if="getTransactionData(virtualRow.index) && swipeEnabled"
+            full-swipe
             @action-left="emit('transactionDelete', getTransactionData(virtualRow.index)!)"
             @action-right="emit('transactionEdit', getTransactionData(virtualRow.index)!)"
           >

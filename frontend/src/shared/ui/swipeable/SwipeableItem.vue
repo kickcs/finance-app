@@ -12,11 +12,14 @@ const props = withDefaults(
     rightAction?: SwipeAction;
     /** Disable swipe functionality */
     disabled?: boolean;
+    /** Enable full-swipe auto-fire at 200px */
+    fullSwipe?: boolean;
   }>(),
   {
     leftAction: () => ({ icon: 'delete', color: '#ef4444', label: 'Удалить' }),
-    rightAction: () => ({ icon: 'edit', color: '#3b82f6', label: 'Изменить' }),
+    rightAction: () => ({ icon: 'edit', color: '#4F46E5', label: 'Изменить' }),
     disabled: false,
+    fullSwipe: false,
   },
 );
 const emit = defineEmits<{
@@ -26,6 +29,9 @@ const emit = defineEmits<{
 const { translateX, isDragging, resetSwipe, handlers } = useSwipe({
   leftEnabled: !!props.leftAction && !props.disabled,
   rightEnabled: !!props.rightAction && !props.disabled,
+  fullSwipeThreshold: props.fullSwipe ? 200 : undefined,
+  onFullSwipeLeft: () => emit('action-left'),
+  onFullSwipeRight: () => emit('action-right'),
 });
 
 // Calculate action button opacity based on swipe distance

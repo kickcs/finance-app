@@ -10,13 +10,27 @@ export interface SwipeConfig {
   leftEnabled?: boolean;
   /** Enable right swipe action */
   rightEnabled?: boolean;
+  /** Distance threshold for full-swipe auto-fire */
+  fullSwipeThreshold?: number;
+  /** Callback when full-swipe left is triggered */
+  onFullSwipeLeft?: () => void;
+  /** Callback when full-swipe right is triggered */
+  onFullSwipeRight?: () => void;
 }
 
 export type SwipeState = 'idle' | 'swiping' | 'left' | 'right';
 
 export function useSwipe(config?: SwipeConfig) {
   const { trigger } = useHaptics();
-  const { threshold = 80, maxSwipe = 100, leftEnabled = true, rightEnabled = true } = config || {};
+  const {
+    threshold = 80,
+    maxSwipe = 100,
+    leftEnabled = true,
+    rightEnabled = true,
+    fullSwipeThreshold,
+    onFullSwipeLeft,
+    onFullSwipeRight,
+  } = config || {};
 
   const translateX = ref(0);
   const isDragging = ref(false);
@@ -64,20 +78,25 @@ export function useSwipe(config?: SwipeConfig) {
 
       let newTranslateX = diffX;
 
+      // When full-swipe is enabled, allow longer swipe distance
+      const effectiveMaxSwipe = fullSwipeThreshold
+        ? Math.max(maxSwipe, fullSwipeThreshold + 20)
+        : maxSwipe;
+
       // Apply resistance and limits
       if (newTranslateX > 0) {
         // Swiping right (edit action)
         if (!rightEnabled) {
           newTranslateX = 0;
         } else {
-          newTranslateX = Math.min(newTranslateX, maxSwipe);
+          newTranslateX = Math.min(newTranslateX, effectiveMaxSwipe);
         }
       } else {
         // Swiping left (delete action)
         if (!leftEnabled) {
           newTranslateX = 0;
         } else {
-          newTranslateX = Math.max(newTranslateX, -maxSwipe);
+          newTranslateX = Math.max(newTranslateX, -effectiveMaxSwipe);
         }
       }
 
@@ -87,7 +106,7 @@ export function useSwipe(config?: SwipeConfig) {
       // Trigger haptic when crossing threshold
       const crossed = Math.abs(newTranslateX) >= threshold;
       if (crossed && !hasTriggeredHaptic) {
-        trigger('light');
+        trigger('selection');
         hasTriggeredHaptic = true;
       } else if (!crossed && hasTriggeredHaptic) {
         // Reset if user swipes back below threshold
@@ -102,6 +121,20 @@ export function useSwipe(config?: SwipeConfig) {
     isDragging.value = false;
 
     const absTranslate = Math.abs(translateX.value);
+
+    // Full-swipe auto-fire
+    if (fullSwipeThreshold && absTranslate >= fullSwipeThreshold) {
+      if (translateX.value < 0 && leftEnabled && onFullSwipeLeft) {
+        onFullSwipeLeft();
+        animateToZero();
+        return;
+      }
+      if (translateX.value > 0 && rightEnabled && onFullSwipeRight) {
+        onFullSwipeRight();
+        animateToZero();
+        return;
+      }
+    }
 
     if (absTranslate >= threshold) {
       // Snap to revealed state
