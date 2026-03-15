@@ -15,6 +15,7 @@ import { useAsyncOperation } from '@/shared/lib/hooks/useAsyncOperation';
 import { SubscriptionSection } from '@/features/manage-subscription';
 import { usePremiumFeature } from '@/shared/lib/composables/usePremiumFeature';
 import { usePwaUpdate } from '@/shared/lib/composables/usePwaUpdate';
+import { usePrimaryColor, PRIMARY_COLORS } from '@/features/select-primary-color';
 
 const router = useRouter();
 const { signOut } = useAuth();
@@ -41,6 +42,12 @@ const { showModal: showInstallModal, openModal: openInstallModal } = usePwaInsta
 // Premium
 const { requirePremium } = usePremiumFeature();
 
+// Primary color
+const { colorName: primaryColorName } = usePrimaryColor();
+const currentPrimaryColor = computed(
+  () => PRIMARY_COLORS[primaryColorName.value]?.base ?? '#4F46E5',
+);
+
 // PWA update
 const { toast } = useToast();
 const { checkForUpdate } = usePwaUpdate();
@@ -64,6 +71,12 @@ const settingsGroup = [
     value: () => currency.value?.code,
     color: '#10b981', // success
   },
+  {
+    id: 'color',
+    icon: 'palette',
+    label: 'Основной цвет',
+    color: '#a855f7',
+  }, // purple
   { id: 'categories', icon: 'category', label: 'Категории', color: '#f59e0b' }, // warning
   { id: 'people', icon: 'group', label: 'Люди', color: '#06b6d4' }, // cyan
   {
@@ -116,6 +129,9 @@ function handleMenuClick(itemId: string) {
       break;
     case 'quick-actions':
       router.push({ name: ROUTE_NAMES.SETTINGS_QUICK_ACTIONS });
+      break;
+    case 'color':
+      router.push({ name: ROUTE_NAMES.SETTINGS_COLOR });
       break;
     case 'update':
       handleCheckUpdate();
@@ -204,6 +220,11 @@ async function confirmLogout() {
             >
               {{ item.value() }}
             </span>
+            <span
+              v-if="item.id === 'color'"
+              class="w-5 h-5 rounded-full border border-border-light dark:border-border-dark mr-2 shrink-0"
+              :style="{ backgroundColor: currentPrimaryColor }"
+            />
             <UIcon
               name="chevron_right"
               size="sm"
