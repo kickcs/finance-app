@@ -126,7 +126,7 @@ async function handleDeleteAccount() {
   const success = await removeAccountFn(account.value.id);
   if (success) {
     showDeleteAccountModal.value = false;
-    router.push({ name: ROUTE_NAMES.ACCOUNTS });
+    router.replace({ name: ROUTE_NAMES.ACCOUNTS });
   }
 }
 

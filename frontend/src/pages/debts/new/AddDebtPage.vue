@@ -26,7 +26,7 @@ async function handleSubmit() {
   const debtId = await createDebt(userId.value);
 
   if (debtId) {
-    router.push({ name: ROUTE_NAMES.DASHBOARD });
+    router.replace({ name: ROUTE_NAMES.DEBTS_LIST });
   }
 }
 

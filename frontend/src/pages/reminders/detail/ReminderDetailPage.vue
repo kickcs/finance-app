@@ -58,7 +58,7 @@ async function handleDelete() {
   const success = await remove(reminder.value.id);
   if (success) {
     showDeleteModal.value = false;
-    router.push({ name: ROUTE_NAMES.DASHBOARD });
+    router.replace({ name: ROUTE_NAMES.REMINDERS_LIST });
   }
 }
 

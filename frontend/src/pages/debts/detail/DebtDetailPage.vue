@@ -69,7 +69,7 @@ async function handleDeleteDebt() {
   const success = await deleteDebt(debt.value, userId.value);
   if (success) {
     showDeleteModal.value = false;
-    router.push({ name: ROUTE_NAMES.DASHBOARD });
+    router.replace({ name: ROUTE_NAMES.DEBTS_LIST });
   }
 }
 
@@ -85,7 +85,7 @@ async function handlePartialPayment(
   if (success) {
     showPartialPaymentModal.value = false;
     if (willClose) {
-      router.push({ name: ROUTE_NAMES.DEBTS_LIST });
+      router.replace({ name: ROUTE_NAMES.DEBTS_LIST });
     }
   }
 }

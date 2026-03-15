@@ -25,7 +25,7 @@ async function handleSubmit() {
   const reminderId = await createReminder(userId.value);
 
   if (reminderId) {
-    router.push({ name: ROUTE_NAMES.DASHBOARD });
+    router.replace({ name: ROUTE_NAMES.REMINDERS_LIST });
   }
 }
 
