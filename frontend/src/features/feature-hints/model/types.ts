@@ -1,5 +1,7 @@
 export type HintId = 'split-expense' | 'scan-receipt' | 'dashboard-settings';
 
+export type DotId = 'add-button' | 'dashboard-settings' | 'scan-receipt';
+
 export type CounterKey = 'expenses_count' | 'transactions_count' | 'dashboard_visits';
 
 export interface HintConfig {

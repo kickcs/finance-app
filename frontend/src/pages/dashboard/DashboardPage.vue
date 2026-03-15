@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
-import { useLocalStorage, useEventListener } from '@vueuse/core';
+import { useLocalStorage, useEventListener, useTimeoutFn } from '@vueuse/core';
 import { STORAGE_KEYS } from '@/shared/config/storageKeys';
 import { ACTIVITY_WIDGET_IDS } from '@/shared/config/dashboard';
 import { queryClient } from '@/shared/api/queryClient';
@@ -53,19 +53,31 @@ const settingsHintConfig = getHintConfig('dashboard-settings');
 const showScanHint = ref(false);
 const scanHintConfig = getHintConfig('scan-receipt');
 
+const { start: showSettingsHintDelayed } = useTimeoutFn(
+  () => {
+    showSettingsHint.value = true;
+    markHintShown();
+  },
+  1000,
+  { immediate: false },
+);
+
+const { start: showScanHintDelayed } = useTimeoutFn(
+  () => {
+    showScanHint.value = true;
+    markHintShown();
+  },
+  1000,
+  { immediate: false },
+);
+
 onMounted(() => {
   incrementCounter('dashboard_visits');
 
   if (shouldShowHint('dashboard-settings')) {
-    setTimeout(() => {
-      showSettingsHint.value = true;
-      markHintShown();
-    }, 1000);
+    showSettingsHintDelayed();
   } else if (shouldShowHint('scan-receipt')) {
-    setTimeout(() => {
-      showScanHint.value = true;
-      markHintShown();
-    }, 1000);
+    showScanHintDelayed();
   }
 });
 

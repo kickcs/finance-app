@@ -32,6 +32,10 @@ export function useSwipe(config?: SwipeConfig) {
     onFullSwipeRight,
   } = config || {};
 
+  const effectiveMaxSwipe = fullSwipeThreshold
+    ? Math.max(maxSwipe, fullSwipeThreshold + 20)
+    : maxSwipe;
+
   const translateX = ref(0);
   const isDragging = ref(false);
   const swipeState = ref<SwipeState>('idle');
@@ -77,11 +81,6 @@ export function useSwipe(config?: SwipeConfig) {
       e.preventDefault();
 
       let newTranslateX = diffX;
-
-      // When full-swipe is enabled, allow longer swipe distance
-      const effectiveMaxSwipe = fullSwipeThreshold
-        ? Math.max(maxSwipe, fullSwipeThreshold + 20)
-        : maxSwipe;
 
       // Apply resistance and limits
       if (newTranslateX > 0) {

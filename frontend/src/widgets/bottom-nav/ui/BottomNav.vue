@@ -3,16 +3,21 @@ import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { UIcon, DiscoveryDot } from '@/shared/ui';
 import { useHaptics } from '@/shared/lib/haptics';
-import { useFeatureHints } from '@/features/feature-hints';
 import { MAIN_NAV_ITEMS, CHILD_ROUTE_MAP, type NavItem } from '@/shared/config/navigation';
+
+const props = withDefaults(
+  defineProps<{
+    showAddDot?: boolean;
+  }>(),
+  { showAddDot: false },
+);
 
 const emit = defineEmits<{
   'add-click': [];
+  'add-dot-dismiss': [];
 }>();
 
 const { trigger } = useHaptics();
-const { dismissDot, isDotDismissed } = useFeatureHints();
-const showAddDot = computed(() => !isDotDismissed('add-button'));
 
 const route = useRoute();
 const router = useRouter();
@@ -44,7 +49,7 @@ const activeItem = computed(() => {
 });
 
 function handleAddClick() {
-  dismissDot('add-button');
+  emit('add-dot-dismiss');
   trigger('selection');
   emit('add-click');
 }
@@ -72,7 +77,7 @@ function handleNavClick(item: (typeof navItems)[0]) {
           >
             <UIcon name="add" size="md" />
           </button>
-          <DiscoveryDot :show="showAddDot" size="md" />
+          <DiscoveryDot :show="props.showAddDot" size="md" />
         </div>
 
         <!-- Nav Item -->

@@ -9,8 +9,11 @@ import { useLayoutData } from '../model/useLayoutData';
 import { computed, inject, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import type { Ref } from 'vue';
+import { useFeatureHints } from '@/features/feature-hints';
 
 const isDemo = inject<Ref<boolean>>('isDemo', ref(false));
+const { isDotDismissed, dismissDot } = useFeatureHints();
+const showAddDot = computed(() => !isDotDismissed('add-button'));
 
 const router = useRouter();
 const route = useRoute();
@@ -78,7 +81,11 @@ function handleAddTransaction() {
         v-if="!hideBottomNav"
         class="md:hidden shrink-0 border-t border-border-light dark:border-border-dark relative z-40 bg-background-light dark:bg-background-dark"
       >
-        <BottomNav @add-click="handleAddTransaction" />
+        <BottomNav
+          :show-add-dot="showAddDot"
+          @add-click="handleAddTransaction"
+          @add-dot-dismiss="dismissDot('add-button')"
+        />
       </div>
     </div>
   </div>

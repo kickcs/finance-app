@@ -1,6 +1,4 @@
 import { computed, type MaybeRefOrGetter, toValue } from 'vue';
-import { useQueryClient } from '@tanstack/vue-query';
-import { transactionQueryKeys } from '@/entities/transaction';
 import type { Transaction } from '@/shared/api/database.types';
 
 interface SmartDefaults {
@@ -8,29 +6,20 @@ interface SmartDefaults {
   defaultAccountId: string | null;
 }
 
+const EMPTY: SmartDefaults = { defaultCategoryId: null, defaultAccountId: null };
+
 export function useSmartDefaults(
-  userId: MaybeRefOrGetter<string | null>,
+  transactions: MaybeRefOrGetter<Transaction[] | undefined>,
   type: MaybeRefOrGetter<'expense' | 'income' | 'transfer'>,
 ) {
-  const queryClient = useQueryClient();
-
   const defaults = computed<SmartDefaults>(() => {
-    const uid = toValue(userId);
+    const cached = toValue(transactions);
     const txType = toValue(type);
 
-    if (!uid) return { defaultCategoryId: null, defaultAccountId: null };
-
-    const cached = queryClient.getQueryData<Transaction[]>(transactionQueryKeys.list(uid));
-
-    if (!cached || cached.length < 5) {
-      return { defaultCategoryId: null, defaultAccountId: null };
-    }
+    if (!cached || cached.length < 5) return EMPTY;
 
     const relevant = cached.filter((tx) => tx.type === txType).slice(0, 20);
-
-    if (relevant.length === 0) {
-      return { defaultCategoryId: null, defaultAccountId: null };
-    }
+    if (relevant.length === 0) return EMPTY;
 
     if (txType === 'transfer') {
       const accountFreq = new Map<string, number>();
@@ -53,7 +42,6 @@ export function useSmartDefaults(
     }
 
     const topPair = [...pairFreq.values()].sort((a, b) => b.count - a.count)[0];
-
     return {
       defaultCategoryId: topPair?.categoryId ?? null,
       defaultAccountId: topPair?.accountId ?? null,

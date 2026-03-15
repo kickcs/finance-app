@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, onUnmounted, onMounted, nextTick, watch } from 'vue';
-import { useResizeObserver } from '@vueuse/core';
+import { useResizeObserver, useTimeoutFn } from '@vueuse/core';
 import { useMountedAnimation } from '@/shared/lib/hooks/useMountedAnimation';
 import { formatDate } from '@/shared/lib/format/date';
 import { UInput, UButton, UTabs, UIcon } from '@/shared/ui';
@@ -15,7 +15,7 @@ import {
   TRANSACTION_TYPE_ORDER,
   type TransactionType,
 } from '../model/useScrollableTabs';
-import { useHashtags } from '@/entities/transaction';
+import { useHashtags, useTransactions } from '@/entities/transaction';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useHashtagSuggestions } from '../model/useHashtagSuggestions';
 import { FeatureHintPopover, useFeatureHints } from '@/features/feature-hints';
@@ -198,14 +198,21 @@ const showSplitHint = ref(false);
 const splitHintConfig = getHintConfig('split-expense');
 
 // Smart defaults
-const { defaults } = useSmartDefaults(userId, () => props.formData.type);
+const { transactions } = useTransactions(userId);
+const { defaults } = useSmartDefaults(transactions, () => props.formData.type);
+
+const { start: showSplitHintDelayed } = useTimeoutFn(
+  () => {
+    showSplitHint.value = true;
+    markHintShown();
+  },
+  500,
+  { immediate: false },
+);
 
 onMounted(() => {
   if (shouldShowHint('split-expense')) {
-    setTimeout(() => {
-      showSplitHint.value = true;
-      markHintShown();
-    }, 500);
+    showSplitHintDelayed();
   }
 
   // Apply smart defaults if form is empty
@@ -229,6 +236,7 @@ function dismissSplitHint() {
 function handleSplitHintAction() {
   showSplitHint.value = false;
   dismissHint('split-expense');
+  emit('setSplitEnabled', true);
 }
 
 // Haptic feedback on validation error
