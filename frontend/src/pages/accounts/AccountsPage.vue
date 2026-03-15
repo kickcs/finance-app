@@ -255,7 +255,7 @@ function handleDetailClose() {
             </div>
 
             <!-- Empty State -->
-            <UCard v-else class="py-4">
+            <UCard v-else class="py-4" data-testid="accounts-empty-state">
               <EmptyState
                 icon="account_balance_wallet"
                 title="У вас пока нет счетов"
