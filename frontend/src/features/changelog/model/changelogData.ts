@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.36';
+export const CURRENT_VERSION = '1.0.37';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,17 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.37',
+    date: '2026-03-15',
+    title: 'Выбор цвета приложения',
+    items: [
+      {
+        type: 'feature',
+        text: 'Выбор основного цвета приложения в настройках профиля — 12 цветов на выбор',
+      },
+    ],
+  },
   {
     version: '1.0.36',
     date: '2026-03-15',
