@@ -34,7 +34,7 @@ No additional DOM elements needed. The two existing glow `<div>`s are removed. T
 ### `::before` — Morphing Blob
 
 - Position: absolute, centered, ~60-70% of card size
-- Background: `radial-gradient(circle, primary/20, primary/5)`
+- Background: `radial-gradient(circle, color-mix(in srgb, var(--color-primary) 20%, transparent), color-mix(in srgb, var(--color-primary) 5%, transparent))`
 - Filter: `blur(45px)` for soft glow
 - `will-change: transform` + `transform: translateZ(0)` for GPU layer promotion
 - Animation: `border-radius` morphing via keyframes (12s cycle)
@@ -77,7 +77,7 @@ Uses `conic-gradient` with `@property` for rotation, masked to show only the bor
   background: conic-gradient(
     from var(--border-angle),
     transparent 0%,
-    oklch(var(--color-primary) / 0.4) 25%,
+    color-mix(in srgb, var(--color-primary) 40%, transparent) 25%,
     transparent 50%
   );
   mask:
@@ -105,10 +105,12 @@ Uses `conic-gradient` with `@property` for rotation, masked to show only the bor
 
 ### Dark/Light Mode
 
-| Mode  | Blob `background`                                    | Blob `opacity` | Border gradient peak |
-|-------|------------------------------------------------------|---------------|---------------------|
-| Light | `radial-gradient(circle, primary/15, primary/5)`     | `0.5`         | `primary/30`        |
-| Dark  | `radial-gradient(circle, primary/25, primary/10)`    | `0.6`         | `primary/40`        |
+| Mode  | Blob `background` | Blob `opacity` | Border gradient peak |
+|-------|-------------------|---------------|---------------------|
+| Light | `radial-gradient(circle, color-mix(in srgb, var(--color-primary) 15%, transparent), color-mix(in srgb, var(--color-primary) 5%, transparent))` | `0.5` | `color-mix(in srgb, var(--color-primary) 30%, transparent)` |
+| Dark  | `radial-gradient(circle, color-mix(in srgb, var(--color-primary) 25%, transparent), color-mix(in srgb, var(--color-primary) 10%, transparent))` | `0.6` | `color-mix(in srgb, var(--color-primary) 40%, transparent)` |
+
+> Note: `color-mix()` is used because `--color-primary` is defined as hex (`#4f46e5`), not as oklch/rgb components. `color-mix(in srgb, ...)` has 95%+ browser support (Chrome 111+, Safari 16.2+, Firefox 113+).
 
 ### Reduced Motion
 
