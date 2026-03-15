@@ -37,7 +37,10 @@ const selectedValue = computed({
           Выберите цвет
         </h2>
 
-        <ColorSwatchPickerRoot v-model="selectedValue" class="flex flex-wrap gap-3">
+        <ColorSwatchPickerRoot
+          v-model="selectedValue"
+          class="grid grid-cols-6 gap-3 justify-items-center"
+        >
           <ColorSwatchPickerItem
             v-for="name in COLOR_NAMES"
             :key="name"
