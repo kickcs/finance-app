@@ -2,6 +2,7 @@ import { computed, toValue, type MaybeRefOrGetter } from 'vue';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import { transactionQueryKeys } from './queryKeys';
 import { transactionsApi } from './transactionsApi';
+import { trigger } from '@/shared/lib/haptics';
 import type { Transaction, TransactionInsert } from '@/shared/api/database.types';
 
 export function useTransactions(userId: MaybeRefOrGetter<string | null>) {
@@ -73,6 +74,9 @@ export function useTransactions(userId: MaybeRefOrGetter<string | null>) {
 
       return { previousTransactions };
     },
+    onSuccess: () => {
+      trigger('success');
+    },
     onError: (_err, _variables, context) => {
       if (context?.previousTransactions) {
         queryClient.setQueryData(queryKey.value, context.previousTransactions);
@@ -113,6 +117,9 @@ export function useTransactions(userId: MaybeRefOrGetter<string | null>) {
       );
 
       return { previousTransactions };
+    },
+    onSuccess: () => {
+      trigger('warning');
     },
     onError: (_err, _variables, context) => {
       if (context?.previousTransactions) {

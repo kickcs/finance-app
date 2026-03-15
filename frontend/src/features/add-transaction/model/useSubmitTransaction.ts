@@ -9,6 +9,7 @@ import { transactionsApi, transactionQueryKeys } from '@/entities/transaction';
 import { accountQueryKeys } from '@/entities/account';
 import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
 import { useToast } from '@/shared/ui';
+import { useFeatureHints } from '@/features/feature-hints';
 import { CATEGORY_IDS, getCategoryById } from '@/entities/category';
 import type { TransactionFormData } from './useTransactionForm';
 import type { Transaction, AccountWithBalances } from '@/shared/api/database.types';
@@ -254,6 +255,7 @@ function rollbackFromSnapshots(queryClient: QueryClient, snapshots: OptimisticSn
 export function useSubmitTransaction() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { incrementCounter } = useFeatureHints();
 
   const mutation = useMutation({
     mutationFn: async ({ userId, formData }: SubmitPayload) => {
@@ -289,6 +291,12 @@ export function useSubmitTransaction() {
     },
 
     onSuccess: (data, { userId, formData }) => {
+      // Increment hint counters
+      incrementCounter('transactions_count');
+      if (formData.type === 'expense') {
+        incrementCounter('expenses_count');
+      }
+
       const transactionId = data.id;
       const onUndo = async () => {
         await rollbackTransaction(transactionId, userId);

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, onUnmounted, nextTick, watch } from 'vue';
+import { computed, ref, onUnmounted, onMounted, nextTick, watch } from 'vue';
 import { useResizeObserver } from '@vueuse/core';
 import { useMountedAnimation } from '@/shared/lib/hooks/useMountedAnimation';
 import { formatDate } from '@/shared/lib/format/date';
@@ -18,6 +18,9 @@ import {
 import { useHashtags } from '@/entities/transaction';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useHashtagSuggestions } from '../model/useHashtagSuggestions';
+import { FeatureHintPopover, useFeatureHints } from '@/features/feature-hints';
+import { useSmartDefaults } from '../model/useSmartDefaults';
+import { useHaptics } from '@/shared/lib/haptics';
 import { Popover, PopoverTrigger, PopoverContent } from '@/shared/ui/primitives/popover';
 import { Calendar } from '@/shared/ui/primitives/calendar';
 import { CalendarDate, type DateValue } from '@internationalized/date';
@@ -186,6 +189,58 @@ function onCalendarSelect(value: DateValue | undefined) {
   calendarOpen.value = false;
 }
 
+// Haptic feedback
+const { trigger } = useHaptics();
+
+// Feature hints — split expense hint
+const { shouldShowHint, dismissHint, markHintShown, getHintConfig } = useFeatureHints();
+const showSplitHint = ref(false);
+const splitHintConfig = getHintConfig('split-expense');
+
+// Smart defaults
+const { defaults } = useSmartDefaults(userId, () => props.formData.type);
+
+onMounted(() => {
+  if (shouldShowHint('split-expense')) {
+    setTimeout(() => {
+      showSplitHint.value = true;
+      markHintShown();
+    }, 500);
+  }
+
+  // Apply smart defaults if form is empty
+  if (!props.formData.categoryId && !props.formData.accountId) {
+    const { defaultCategoryId, defaultAccountId } = defaults.value;
+    if (defaultCategoryId || defaultAccountId) {
+      emit('update:formData', {
+        ...props.formData,
+        ...(defaultCategoryId && { categoryId: defaultCategoryId }),
+        ...(defaultAccountId && { accountId: defaultAccountId }),
+      });
+    }
+  }
+});
+
+function dismissSplitHint() {
+  showSplitHint.value = false;
+  dismissHint('split-expense');
+}
+
+function handleSplitHintAction() {
+  showSplitHint.value = false;
+  dismissHint('split-expense');
+}
+
+// Haptic feedback on validation error
+watch(
+  () => props.error,
+  (newError) => {
+    if (newError) {
+      trigger('error');
+    }
+  },
+);
+
 // Staggered entrance animation control
 const { isMounted } = useMountedAnimation();
 </script>
@@ -228,8 +283,38 @@ const { isMounted } = useMountedAnimation();
           :key="`${panelType}-${idx}`"
           class="min-w-full snap-start px-4 md:px-0"
         >
+          <FeatureHintPopover
+            v-if="panelType === 'expense' && splitHintConfig"
+            :config="splitHintConfig"
+            :open="showSplitHint"
+            side="top"
+            @dismiss="dismissSplitHint"
+            @action="handleSplitHintAction"
+          >
+            <ExpensePanel
+              :form-data="formData"
+              :accounts="accounts"
+              :categories="expenseCategories"
+              :split-data="splitData"
+              :split-validation-error="splitValidationError"
+              :autofocus-amount="autofocusAmount && realPanelIndices.has(idx)"
+              @update:form-data="$emit('update:formData', $event)"
+              @add-participant="
+                (name: string, fromContacts: boolean, color?: string) =>
+                  $emit('addParticipant', name, fromContacts, color)
+              "
+              @remove-participant="$emit('removeParticipant', $event)"
+              @update-participant-amount="
+                (id, amount) => $emit('updateParticipantAmount', id, amount)
+              "
+              @set-split-method="$emit('setSplitMethod', $event)"
+              @set-my-share="$emit('setMyShare', $event)"
+              @set-is-included="$emit('setIsIncluded', $event)"
+              @set-split-enabled="$emit('setSplitEnabled', $event)"
+            />
+          </FeatureHintPopover>
           <ExpensePanel
-            v-if="panelType === 'expense'"
+            v-else-if="panelType === 'expense'"
             :form-data="formData"
             :accounts="accounts"
             :categories="expenseCategories"

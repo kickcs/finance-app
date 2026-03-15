@@ -16,7 +16,7 @@ import { BudgetSection } from '@/widgets/budget-section';
 import { useHaptics } from '@/shared/lib/haptics';
 import { usePwaUpdateToast } from '@/shared/lib/composables/usePwaUpdate';
 import { usePremiumFeature } from '@/shared/lib/composables/usePremiumFeature';
-import { useFeatureHints } from '@/features/feature-hints';
+import { useFeatureHints, FeatureHintPopover } from '@/features/feature-hints';
 import { SetBudgetSheet } from '@/features/set-budget';
 
 import { useDashboardData } from './model/useDashboardData';
@@ -35,9 +35,61 @@ import DashboardSidePanel from './ui/DashboardSidePanel.vue';
 
 const { trigger } = useHaptics();
 const { requirePremium } = usePremiumFeature();
-const { isDotDismissed, dismissDot } = useFeatureHints();
+const {
+  isDotDismissed,
+  dismissDot,
+  incrementCounter,
+  shouldShowHint,
+  dismissHint,
+  markHintShown,
+  getHintConfig,
+} = useFeatureHints();
 const showSettingsDot = computed(() => !isDotDismissed('dashboard-settings'));
 const showScanDot = computed(() => !isDotDismissed('scan-receipt'));
+
+// Feature hints
+const showSettingsHint = ref(false);
+const settingsHintConfig = getHintConfig('dashboard-settings');
+const showScanHint = ref(false);
+const scanHintConfig = getHintConfig('scan-receipt');
+
+onMounted(() => {
+  incrementCounter('dashboard_visits');
+
+  if (shouldShowHint('dashboard-settings')) {
+    setTimeout(() => {
+      showSettingsHint.value = true;
+      markHintShown();
+    }, 1000);
+  } else if (shouldShowHint('scan-receipt')) {
+    setTimeout(() => {
+      showScanHint.value = true;
+      markHintShown();
+    }, 1000);
+  }
+});
+
+function dismissSettingsHint() {
+  showSettingsHint.value = false;
+  dismissHint('dashboard-settings');
+}
+
+function handleSettingsHintAction() {
+  showSettingsHint.value = false;
+  dismissHint('dashboard-settings');
+  nav.toDashboardSettings();
+}
+
+function dismissScanHint() {
+  showScanHint.value = false;
+  dismissHint('scan-receipt');
+}
+
+function handleScanHintAction() {
+  showScanHint.value = false;
+  dismissHint('scan-receipt');
+  handleScanReceipt();
+}
 
 const greeting = getGreeting();
 
@@ -89,7 +141,9 @@ const { staggerClass } = useStaggerAnimation();
 
 const { showModal: showInstallModal } = usePwaInstall();
 const showBudgetSheet = ref(false);
-onMounted(() => usePwaUpdateToast());
+onMounted(() => {
+  usePwaUpdateToast();
+});
 const isHidden = useLocalStorage(STORAGE_KEYS.BALANCE_HIDDEN, false);
 const mobileTransactions = computed(() => recentTransactions.value.slice(0, 5));
 
@@ -198,20 +252,29 @@ function handleSettingsClick() {
               v-if="widgetId === 'quick_actions' && !hiddenWidgets.has('quick_actions')"
               :class="staggerClass('delay-150')"
             >
-              <DashboardQuickActions
-                :slots="quickActionSlots"
-                :category-map="categoryMap"
-                :hint-dismissed="quickActionsHintDismissed"
-                :hidden="quickActionsHidden"
-                :loading="quickActionsLoading"
-                :show-scan-dot="showScanDot"
-                show-scan-button
-                @click="handleQuickActionClick"
-                @long-press="handleQuickActionLongPress"
-                @dismiss-hint="dismissQuickActionsHint"
-                @settings-click="nav.toQuickActionsSettings"
-                @scan-click="handleScanReceipt"
-              />
+              <FeatureHintPopover
+                v-if="scanHintConfig"
+                :config="scanHintConfig"
+                :open="showScanHint"
+                side="bottom"
+                @dismiss="dismissScanHint"
+                @action="handleScanHintAction"
+              >
+                <DashboardQuickActions
+                  :slots="quickActionSlots"
+                  :category-map="categoryMap"
+                  :hint-dismissed="quickActionsHintDismissed"
+                  :hidden="quickActionsHidden"
+                  :loading="quickActionsLoading"
+                  :show-scan-dot="showScanDot"
+                  show-scan-button
+                  @click="handleQuickActionClick"
+                  @long-press="handleQuickActionLongPress"
+                  @dismiss-hint="dismissQuickActionsHint"
+                  @settings-click="nav.toQuickActionsSettings"
+                  @scan-click="handleScanReceipt"
+                />
+              </FeatureHintPopover>
             </section>
 
             <section
@@ -282,17 +345,26 @@ function handleSettingsClick() {
           </template>
 
           <section class="flex justify-center mt-2 pb-4">
-            <div class="relative">
-              <button
-                type="button"
-                class="flex items-center gap-2 text-body-sm font-medium text-text-tertiary-light dark:text-text-tertiary-dark hover:text-text-secondary-light dark:hover:text-text-secondary-dark transition-colors px-4 py-2 rounded-xl hover:bg-surface-light dark:hover:bg-surface-dark"
-                @click="handleSettingsClick"
-              >
-                <UIcon name="tune" size="sm" />
-                Настроить вид дашборда
-              </button>
-              <DiscoveryDot :show="showSettingsDot" />
-            </div>
+            <FeatureHintPopover
+              v-if="settingsHintConfig"
+              :config="settingsHintConfig"
+              :open="showSettingsHint"
+              side="top"
+              @dismiss="dismissSettingsHint"
+              @action="handleSettingsHintAction"
+            >
+              <div class="relative">
+                <button
+                  type="button"
+                  class="flex items-center gap-2 text-body-sm font-medium text-text-tertiary-light dark:text-text-tertiary-dark hover:text-text-secondary-light dark:hover:text-text-secondary-dark transition-colors px-4 py-2 rounded-xl hover:bg-surface-light dark:hover:bg-surface-dark"
+                  @click="handleSettingsClick"
+                >
+                  <UIcon name="tune" size="sm" />
+                  Настроить вид дашборда
+                </button>
+                <DiscoveryDot :show="showSettingsDot" />
+              </div>
+            </FeatureHintPopover>
           </section>
         </div>
       </PullToRefresh>
