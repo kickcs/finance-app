@@ -7,6 +7,8 @@ import {
   IsBoolean,
   IsDateString,
   IsPositive,
+  IsNotEmpty,
+  Max,
 } from 'class-validator';
 
 export class CreateTransactionDto {
@@ -14,13 +16,16 @@ export class CreateTransactionDto {
   accountId: string;
 
   @IsString()
+  @IsNotEmpty()
   categoryId: string;
 
   @IsNumber()
   @IsPositive({ message: 'Amount must be positive' })
+  @Max(1_000_000_000_000)
   amount: number;
 
   @IsString()
+  @IsNotEmpty()
   currency: string;
 
   @IsIn(['income', 'expense', 'transfer'])
@@ -44,10 +49,12 @@ export class CreateTransactionDto {
   @IsOptional()
   @IsNumber()
   @IsPositive({ message: 'To amount must be positive' })
+  @Max(1_000_000_000_000)
   toAmount?: number;
 
   @IsOptional()
   @IsString()
+  @IsNotEmpty()
   toCurrency?: string;
 
   @IsOptional()
@@ -57,5 +64,6 @@ export class CreateTransactionDto {
   @IsOptional()
   @IsNumber()
   @IsPositive({ message: 'Fee amount must be positive' })
+  @Max(1_000_000_000_000)
   feeAmount?: number;
 }

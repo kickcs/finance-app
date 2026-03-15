@@ -81,6 +81,7 @@ export interface ITransactionRepository {
   findByAccountIdWithIncoming(accountId: string, limit?: number): Promise<Transaction[]>;
   findByDateRange(userId: string, startDate: Date, endDate: Date): Promise<Transaction[]>;
   save(transaction: Transaction): Promise<Transaction>;
+  saveMany(transactions: Transaction[]): Promise<Transaction[]>;
   delete(id: string): Promise<void>;
   deleteByAccountId(accountId: string): Promise<void>;
   countByAccountId(accountId: string): Promise<number>;

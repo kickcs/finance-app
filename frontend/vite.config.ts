@@ -21,7 +21,8 @@ export default defineConfig({
         navigateFallbackAllowlist: [/^(?!\/?api\/).*/],
         runtimeCaching: [
           {
-            urlPattern: /\/api\/(?!auth\/).*/,
+            urlPattern: ({ request, url }) =>
+              request.method === 'GET' && /\/api\/(?!auth\/)/.test(url.pathname),
             handler: 'NetworkFirst',
             options: {
               cacheName: 'api-cache',

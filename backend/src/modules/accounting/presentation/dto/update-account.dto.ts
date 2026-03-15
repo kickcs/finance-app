@@ -37,6 +37,7 @@ export class UpdateAccountDto {
   @ValidateIf((o: UpdateAccountDto) => o.creditLimit !== null)
   @IsNumber()
   @Min(0)
+  @Max(1_000_000_000_000)
   creditLimit?: number | null;
 
   @IsOptional()
@@ -58,6 +59,7 @@ export class UpdateAccountDto {
   @ValidateIf((o: UpdateAccountDto) => o.totalAmount !== null)
   @IsNumber()
   @Min(0)
+  @Max(1_000_000_000_000)
   totalAmount?: number | null;
 
   @IsOptional()
@@ -71,6 +73,7 @@ export class UpdateAccountDto {
   @ValidateIf((o: UpdateAccountDto) => o.monthlyPayment !== null)
   @IsNumber()
   @Min(0)
+  @Max(1_000_000_000_000)
   monthlyPayment?: number | null;
 
   @IsOptional()

@@ -12,5 +12,6 @@ export class SetMonthlyOverrideDto {
 
   @IsNumber()
   @Min(1)
+  @Max(1_000_000_000_000)
   amount: number;
 }

@@ -1,4 +1,4 @@
-import { ref } from 'vue';
+import { ref, toValue, type MaybeRefOrGetter } from 'vue';
 import { useAccounts } from '@/entities/account';
 import { useProfile } from '@/shared/api';
 import type { Account } from '@/shared/api/database.types';
@@ -6,7 +6,7 @@ import { queryClient } from '@/shared/api/queryClient';
 import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
 import { useToast } from '@/shared/ui';
 
-export function useEditAccount(userId: string) {
+export function useEditAccount(userId: MaybeRefOrGetter<string | null>) {
   const { toast } = useToast();
   const { updateAccount, deleteAccount } = useAccounts(userId);
   const { defaultAccountId } = useProfile(userId);
@@ -46,9 +46,10 @@ export function useEditAccount(userId: string) {
     try {
       await deleteAccount(accountId);
       // Invalidate all related caches (accounts, balances, transactions, monthly stats)
+      const uid = toValue(userId) ?? '';
       await Promise.all([
-        invalidateAccountRelated(queryClient, userId),
-        invalidateTransactionRelated(queryClient, userId),
+        invalidateAccountRelated(queryClient, uid),
+        invalidateTransactionRelated(queryClient, uid),
       ]);
       toast({ title: 'Счёт удалён', variant: 'success' });
       return true;

@@ -1,10 +1,10 @@
-import { computed } from 'vue';
+import { computed, type MaybeRefOrGetter } from 'vue';
 import { useAsyncOperation } from '@/shared/lib/hooks/useAsyncOperation';
 import { useReminders } from '@/entities/reminder';
 import { useToast } from '@/shared/ui';
 import type { Reminder } from '@/shared/api/database.types';
 
-export function useEditReminder(userId: string) {
+export function useEditReminder(userId: MaybeRefOrGetter<string | null>) {
   const { toast } = useToast();
   const { updateReminder, deleteReminder } = useReminders(userId);
 

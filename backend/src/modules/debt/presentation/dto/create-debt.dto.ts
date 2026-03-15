@@ -7,6 +7,7 @@ import {
   IsUUID,
   IsDateString,
   Min,
+  Max,
 } from 'class-validator';
 
 export class CreateDebtDto {
@@ -16,14 +17,18 @@ export class CreateDebtDto {
 
   @IsNumber()
   @Min(0)
+  @Max(1_000_000_000_000)
   totalAmount: number;
 
   @IsNumber()
   @Min(0)
+  @Max(1_000_000_000_000)
   remainingAmount: number;
 
   @IsOptional()
   @IsNumber()
+  @Min(0)
+  @Max(1_000_000_000_000)
   monthlyPayment?: number;
 
   @IsOptional()

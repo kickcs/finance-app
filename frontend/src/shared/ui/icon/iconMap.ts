@@ -1,3 +1,4 @@
+// TODO: consider lazy-loading icons to reduce main chunk size.
 import type { Component } from 'vue';
 import {
   ArrowDown,

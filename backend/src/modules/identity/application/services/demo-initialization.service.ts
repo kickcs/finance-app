@@ -233,15 +233,14 @@ export class DemoInitializationService {
   }
 
   private async createTransactions(userId: string, accountIds: string[]): Promise<void> {
-    const transactions = this.generateTransactionsData();
+    const transactionsData = this.generateTransactionsData();
     const [mainId, savingsId] = accountIds;
 
-    for (const txData of transactions) {
+    const transactions: Transaction[] = transactionsData.map((txData) => {
       const accountId = txData.accountIndex === 0 ? mainId : savingsId;
 
-      let transaction: Transaction;
       if (txData.type === 'income') {
-        transaction = Transaction.createIncome(
+        return Transaction.createIncome(
           crypto.randomUUID(),
           userId,
           accountId,
@@ -252,7 +251,7 @@ export class DemoInitializationService {
           txData.description,
         );
       } else {
-        transaction = Transaction.createExpense(
+        return Transaction.createExpense(
           crypto.randomUUID(),
           userId,
           accountId,
@@ -263,10 +262,11 @@ export class DemoInitializationService {
           txData.description,
         );
       }
+    });
 
-      await this.transactionRepository.save(transaction);
-      // Skip event publishing for bulk transactions to improve performance
-    }
+    // Batch insert all transactions in a single call
+    await this.transactionRepository.saveMany(transactions);
+    // Skip event publishing for bulk transactions to improve performance
   }
 
   private async createDebts(userId: string, accountId: string): Promise<void> {
@@ -339,8 +339,8 @@ export class DemoInitializationService {
       },
     ];
 
-    for (const data of remindersData) {
-      const reminder = Reminder.create(
+    const reminders = remindersData.map((data) =>
+      Reminder.create(
         crypto.randomUUID(),
         userId,
         data.name,
@@ -349,9 +349,10 @@ export class DemoInitializationService {
         data.nextDate,
         data.icon,
         data.color,
-      );
-      await this.reminderRepository.save(reminder);
-    }
+      ),
+    );
+
+    await Promise.all(reminders.map((r) => this.reminderRepository.save(r)));
   }
 
   private async createPeople(userId: string): Promise<void> {
@@ -362,10 +363,11 @@ export class DemoInitializationService {
       { name: 'Дима', color: '#f59e0b' },
     ];
 
-    for (const data of peopleData) {
-      const person = Person.create(crypto.randomUUID(), userId, data.name, data.color);
-      await this.personRepository.save(person);
-    }
+    const people = peopleData.map((data) =>
+      Person.create(crypto.randomUUID(), userId, data.name, data.color),
+    );
+
+    await Promise.all(people.map((p) => this.personRepository.save(p)));
   }
 
   private generateTransactionsData(): DemoTransactionData[] {

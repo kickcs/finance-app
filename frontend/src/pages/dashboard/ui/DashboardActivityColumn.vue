@@ -4,6 +4,7 @@ import type { Transaction } from '@/entities/transaction';
 import type { Debt } from '@/entities/debt';
 import type { Reminder } from '@/entities/reminder';
 import type { WidgetId } from '@/shared/api/database.types';
+import { ACTIVITY_WIDGET_IDS } from '@/shared/config/dashboard';
 import { DebtsSectionSkeleton } from '@/widgets/debts-section';
 import { RemindersSectionSkeleton } from '@/widgets/reminders-section';
 import { RecentTransactionsSkeleton } from '@/widgets/recent-transactions';
@@ -41,18 +42,11 @@ const emit = defineEmits<{
   'view-all-reminders': [];
 }>();
 
-const activityWidgets = computed(() =>
-  (['transactions', 'debts', 'reminders'] as const).filter(
-    (id) => props.widgetOrder.includes(id) && !props.hiddenWidgets.has(id),
-  ),
-);
-
 const orderedWidgets = computed(() =>
-  activityWidgets.value.slice().sort((a, b) => {
-    const orderA = props.widgetOrder.indexOf(a);
-    const orderB = props.widgetOrder.indexOf(b);
-    return orderA - orderB;
-  }),
+  props.widgetOrder.filter(
+    (id): id is 'transactions' | 'debts' | 'reminders' =>
+      ACTIVITY_WIDGET_IDS.has(id) && !props.hiddenWidgets.has(id),
+  ),
 );
 
 const RecentTransactions = defineAsyncComponent({

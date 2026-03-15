@@ -93,12 +93,11 @@ export function useTransactions(userId: MaybeRefOrGetter<string | null>) {
       updateBalance: (accountId: string, amount: number) => Promise<void>;
     }) => {
       const transaction = transactions.value.find((t) => t.id === id);
-      if (!transaction) throw new Error('Transaction not found');
-
       await transactionsApi.delete(id);
 
-      // Revert balance (skip for transfers and adjustments - they need special handling)
-      if (transaction.type !== 'transfer' && transaction.type !== 'adjustment') {
+      // Revert balance when we have the transaction data locally
+      // (skip transfers and adjustments - they need special handling)
+      if (transaction && transaction.type !== 'transfer' && transaction.type !== 'adjustment') {
         const balanceRevert =
           transaction.type === 'income' ? -transaction.amount : transaction.amount;
         await updateBalance(transaction.account_id, balanceRevert);
@@ -150,51 +149,6 @@ export function useTransactions(userId: MaybeRefOrGetter<string | null>) {
     return transactionsApi.getByDateRange(uid, startDate.toISOString(), endDate.toISOString());
   }
 
-  async function getMonthlySummary(year: number, month: number) {
-    const startDate = new Date(year, month, 1);
-    const endDate = new Date(year, month + 1, 0, 23, 59, 59, 999);
-
-    const data = await getByDateRange(startDate, endDate);
-
-    // Filter out debt-related transactions and transfers from money flow calculations
-    const nonDebtTransactions = data.filter(
-      (t) => !t.is_debt_related && t.type !== 'transfer' && t.type !== 'adjustment',
-    );
-
-    const income = nonDebtTransactions
-      .filter((t) => t.type === 'income')
-      .reduce((sum, t) => sum + t.amount, 0);
-
-    const expense = nonDebtTransactions
-      .filter((t) => t.type === 'expense')
-      .reduce((sum, t) => sum + t.amount, 0);
-
-    return { income, expense, net: income - expense };
-  }
-
-  async function getCategoryBreakdown(
-    year: number,
-    month: number,
-    type: 'income' | 'expense' = 'expense',
-  ) {
-    const startDate = new Date(year, month, 1);
-    const endDate = new Date(year, month + 1, 0, 23, 59, 59, 999);
-
-    const data = await getByDateRange(startDate, endDate);
-
-    // Filter out debt-related transactions from category breakdown
-    const filtered = data.filter((t) => t.type === type && !t.is_debt_related);
-
-    const breakdown: Record<string, number> = {};
-
-    for (const transaction of filtered) {
-      const categoryId = transaction.category_id;
-      breakdown[categoryId] = (breakdown[categoryId] || 0) + transaction.amount;
-    }
-
-    return breakdown;
-  }
-
   return {
     transactions,
     isLoading,
@@ -203,8 +157,6 @@ export function useTransactions(userId: MaybeRefOrGetter<string | null>) {
     deleteTransaction,
     getByAccount,
     getByDateRange,
-    getMonthlySummary,
-    getCategoryBreakdown,
     refetch,
   };
 }

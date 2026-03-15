@@ -7,6 +7,8 @@ import {
   IsBoolean,
   IsDateString,
   ValidateIf,
+  Min,
+  Max,
 } from 'class-validator';
 
 export class UpdateDebtDto {
@@ -16,15 +18,21 @@ export class UpdateDebtDto {
 
   @IsOptional()
   @IsNumber()
+  @Min(0)
+  @Max(1_000_000_000_000)
   totalAmount?: number;
 
   @IsOptional()
   @IsNumber()
+  @Min(0)
+  @Max(1_000_000_000_000)
   remainingAmount?: number;
 
   @IsOptional()
   @ValidateIf((o: UpdateDebtDto) => o.monthlyPayment !== null)
   @IsNumber()
+  @Min(0)
+  @Max(1_000_000_000_000)
   monthlyPayment?: number | null;
 
   @IsOptional()

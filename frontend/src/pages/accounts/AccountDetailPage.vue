@@ -99,7 +99,7 @@ const {
   update: updateAccountFn,
   remove: removeAccountFn,
   isDefaultAccount,
-} = useEditAccount(userId.value);
+} = useEditAccount(userId);
 
 // Total transaction count for this account (lazy - only fetched when delete modal opens)
 const { data: accountTransactionsCount, isLoading: isLoadingTransactionsCount } = useQuery({

@@ -81,22 +81,34 @@ export class AccountBalanceRepository implements IAccountBalanceRepository {
     currency: string,
     delta: number,
   ): Promise<AccountBalanceData | null> {
-    const existing = await this.ormRepository.findOne({
-      where: { accountId, currency },
-    });
+    // Atomic update to avoid race conditions
+    const result = await this.ormRepository
+      .createQueryBuilder()
+      .update(AccountBalanceOrmEntity)
+      .set({ balance: () => `balance + :delta` })
+      .where('accountId = :accountId AND currency = :currency', { accountId, currency, delta })
+      .returning('*')
+      .execute();
 
-    if (!existing) {
+    const rows = result.raw as Array<{
+      id: string;
+      account_id: string;
+      currency: string;
+      balance: string;
+      created_at: Date;
+    }>;
+    const raw = rows[0];
+    if (!raw) {
       return null;
     }
 
-    const newBalance = Number(existing.balance) + delta;
-    await this.ormRepository.update({ accountId, currency }, { balance: newBalance });
-
-    const updated = await this.ormRepository.findOne({
-      where: { accountId, currency },
-    });
-
-    return updated ? this.toData(updated) : null;
+    return {
+      id: raw.id,
+      accountId: raw.account_id,
+      currency: raw.currency,
+      balance: Number(raw.balance),
+      createdAt: raw.created_at,
+    };
   }
 
   async delete(accountId: string, currency: string): Promise<void> {

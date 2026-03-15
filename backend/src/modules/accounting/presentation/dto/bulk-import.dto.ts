@@ -6,7 +6,9 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Max,
   MaxLength,
+  Min,
   ValidateNested,
 } from 'class-validator';
 
@@ -17,6 +19,8 @@ export class ImportTransactionItemDto {
   note: string | null;
 
   @IsNumber()
+  @Min(-1_000_000_000_000)
+  @Max(1_000_000_000_000)
   amount: number;
 
   @IsString()

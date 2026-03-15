@@ -140,15 +140,13 @@ export class BulkImportHandler implements ICommandHandler<BulkImportCommand> {
         await this.categoryRepository.saveMany(newCats);
       }
 
-      // Save all accounts (new + updated balances)
-      for (const account of accountsToSave.values()) {
-        await this.accountRepository.save(account);
-      }
+      // Save all accounts (new + updated balances) in parallel
+      await Promise.all(
+        [...accountsToSave.values()].map((account) => this.accountRepository.save(account)),
+      );
 
-      // Save transactions
-      for (const transaction of transactionsToSave) {
-        await this.transactionRepository.save(transaction);
-      }
+      // Batch save all transactions in a single call
+      await this.transactionRepository.saveMany(transactionsToSave);
     });
 
     // Publish domain events after commit

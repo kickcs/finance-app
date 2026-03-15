@@ -1,4 +1,12 @@
-import { IsString, IsNotEmpty, IsNumber, IsOptional, IsDateString, Min } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsDateString,
+  Min,
+  Max,
+} from 'class-validator';
 
 export class CreateGoalDto {
   @IsString()
@@ -7,6 +15,7 @@ export class CreateGoalDto {
 
   @IsNumber()
   @Min(0)
+  @Max(1_000_000_000_000)
   targetAmount: number;
 
   @IsString()
@@ -22,5 +31,6 @@ export class CreateGoalDto {
   @IsOptional()
   @IsNumber()
   @Min(0)
+  @Max(1_000_000_000_000)
   currentAmount?: number;
 }

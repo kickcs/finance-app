@@ -13,34 +13,37 @@ export const transitionName = ref<
   'slide-forward' | 'slide-back' | 'slide-tab-forward' | 'slide-tab-backward' | 'fade' | 'none'
 >('fade');
 
-// Prefetch all page components for instant navigation
+// Prefetch page components in two tiers: primary nav pages first, secondary pages later.
 const prefetchPages = () => {
-  const prefetch = () => {
-    // Main navigation pages
+  const prefetchPrimary = () => {
     import('@/pages/history/HistoryPage.vue');
     import('@/pages/analytics/AnalyticsPage.vue');
     import('@/pages/profile/ProfilePage.vue');
     import('@/pages/transactions/new/AddTransactionPage.vue');
-    // Accounts
+  };
+
+  const prefetchSecondary = () => {
     import('@/pages/accounts/AccountsPage.vue');
     import('@/pages/accounts/AccountDetailPage.vue');
-    // Debts
     import('@/pages/debts/list/DebtsListPage.vue');
     import('@/pages/debts/detail/DebtDetailPage.vue');
     import('@/pages/debts/new/AddDebtPage.vue');
-    // Reminders
     import('@/pages/reminders/list/RemindersListPage.vue');
     import('@/pages/reminders/detail/ReminderDetailPage.vue');
     import('@/pages/reminders/new/AddReminderPage.vue');
-    // Settings & misc
     import('@/pages/changelog/ChangelogPage.vue');
     import('@/pages/settings/currency/CurrencySettingsPage.vue');
     import('@/pages/settings/categories/CategoriesPage.vue');
     import('@/pages/settings/import/ImportPage.vue');
   };
-  const idle = requestIdleCallback?.(prefetch);
-  if (idle === undefined) {
-    setTimeout(prefetch, 2000);
+
+  // Primary pages prefetch when browser is idle, secondary after a longer delay
+  if (typeof requestIdleCallback !== 'undefined') {
+    requestIdleCallback(prefetchPrimary);
+    requestIdleCallback(prefetchSecondary, { timeout: 8000 });
+  } else {
+    setTimeout(prefetchPrimary, 2000);
+    setTimeout(prefetchSecondary, 5000);
   }
 };
 

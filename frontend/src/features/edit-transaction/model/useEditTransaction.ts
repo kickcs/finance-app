@@ -6,7 +6,7 @@ import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared
 import { useToast } from '@/shared/ui';
 import type { Transaction } from '@/shared/api/database.types';
 
-export function useEditTransaction(userId: MaybeRefOrGetter<string>) {
+export function useEditTransaction(userId: MaybeRefOrGetter<string | null>) {
   const { toast } = useToast();
   const isUpdating = ref(false);
   const isDeleting = ref(false);
@@ -36,8 +36,8 @@ export function useEditTransaction(userId: MaybeRefOrGetter<string>) {
 
       // Invalidate all related caches
       await Promise.all([
-        invalidateTransactionRelated(queryClient, toValue(userId)),
-        invalidateAccountRelated(queryClient, toValue(userId)),
+        invalidateTransactionRelated(queryClient, toValue(userId) ?? ''),
+        invalidateAccountRelated(queryClient, toValue(userId) ?? ''),
       ]);
 
       toast({ title: 'Транзакция обновлена', variant: 'success' });
@@ -65,7 +65,7 @@ export function useEditTransaction(userId: MaybeRefOrGetter<string>) {
     // Check if there are OPEN split debts linked to this transaction
     // Closed debts are OK - the transaction amount already reflects payments
     try {
-      const allDebts = await debtsApi.getAll(toValue(userId));
+      const allDebts = await debtsApi.getAll(toValue(userId) ?? '');
       const linkedDebts = allDebts.filter(
         (d) => d.source_transaction_id === transaction.id && !d.is_closed,
       );
@@ -87,8 +87,8 @@ export function useEditTransaction(userId: MaybeRefOrGetter<string>) {
 
       // Invalidate all related caches
       await Promise.all([
-        invalidateTransactionRelated(queryClient, toValue(userId)),
-        invalidateAccountRelated(queryClient, toValue(userId)),
+        invalidateTransactionRelated(queryClient, toValue(userId) ?? ''),
+        invalidateAccountRelated(queryClient, toValue(userId) ?? ''),
       ]);
 
       toast({ title: 'Транзакция удалена', variant: 'success' });

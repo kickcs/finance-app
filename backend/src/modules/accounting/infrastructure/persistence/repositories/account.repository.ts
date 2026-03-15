@@ -64,7 +64,7 @@ export class AccountRepository implements IAccountRepository {
     const ormEntity = AccountMapper.toOrm(account);
 
     // Save account first
-    const savedAccount = await this.ormRepository.save({
+    await this.ormRepository.save({
       id: ormEntity.id,
       userId: ormEntity.userId,
       name: ormEntity.name,
@@ -87,20 +87,19 @@ export class AccountRepository implements IAccountRepository {
       isWithdrawable: ormEntity.isWithdrawable,
     });
 
-    // Upsert balances
-    if (ormEntity.balances && ormEntity.balances.length > 0) {
+    // Only upsert balances if they are present
+    if (ormEntity.balances?.length > 0) {
       const balanceRecords = ormEntity.balances.map((balance) => ({
         id: balance.id,
-        accountId: savedAccount.id,
+        accountId: ormEntity.id,
         currency: balance.currency,
         balance: balance.balance,
       }));
       await this.balanceOrmRepository.upsert(balanceRecords, ['accountId', 'currency']);
     }
 
-    // Return with balances
-    const result = await this.findByIdWithBalances(savedAccount.id);
-    return result!;
+    // Return the domain object directly instead of re-fetching from DB
+    return account;
   }
 
   async delete(id: string): Promise<void> {

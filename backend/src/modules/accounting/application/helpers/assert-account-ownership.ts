@@ -4,8 +4,6 @@ import { type IAccountRepository } from '../../domain/repositories/account.repos
 /**
  * Verifies that the account exists and belongs to the given user.
  * Uses a lightweight COUNT query instead of full entity hydration.
- * Throws NotFoundException if the account doesn't exist.
- * Throws ForbiddenException if the account belongs to a different user.
  */
 export async function assertAccountOwnership(
   accountRepository: IAccountRepository,

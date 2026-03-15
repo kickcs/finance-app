@@ -1,4 +1,4 @@
-import { IsString, IsNumber, IsOptional, IsDateString, Min } from 'class-validator';
+import { IsString, IsNumber, IsOptional, IsDateString, Min, Max } from 'class-validator';
 
 export class UpdateGoalDto {
   @IsOptional()
@@ -8,11 +8,13 @@ export class UpdateGoalDto {
   @IsOptional()
   @IsNumber()
   @Min(0)
+  @Max(1_000_000_000_000)
   targetAmount?: number;
 
   @IsOptional()
   @IsNumber()
   @Min(0)
+  @Max(1_000_000_000_000)
   currentAmount?: number;
 
   @IsOptional()

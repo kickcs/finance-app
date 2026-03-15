@@ -16,9 +16,12 @@ import { Type } from 'class-transformer';
 
 class BalanceDto {
   @IsString()
+  @IsNotEmpty()
   currency: string;
 
   @IsNumber()
+  @Min(-1_000_000_000_000)
+  @Max(1_000_000_000_000)
   balance: number;
 }
 
@@ -51,6 +54,7 @@ export class CreateAccountDto {
   @IsOptional()
   @IsNumber()
   @Min(0)
+  @Max(1_000_000_000_000)
   creditLimit?: number;
 
   @IsOptional()
@@ -69,6 +73,7 @@ export class CreateAccountDto {
   @IsOptional()
   @IsNumber()
   @Min(0)
+  @Max(1_000_000_000_000)
   totalAmount?: number;
 
   @IsOptional()
@@ -80,6 +85,7 @@ export class CreateAccountDto {
   @IsOptional()
   @IsNumber()
   @Min(0)
+  @Max(1_000_000_000_000)
   monthlyPayment?: number;
 
   @IsOptional()

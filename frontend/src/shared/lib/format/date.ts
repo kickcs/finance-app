@@ -2,6 +2,8 @@
  * Date formatting utilities
  */
 
+import { getCachedDateFormat } from './intlCache';
+
 /**
  * Format date
  */
@@ -17,7 +19,7 @@ export function formatDate(
 
   switch (format) {
     case 'full':
-      return new Intl.DateTimeFormat(locale, {
+      return getCachedDateFormat(locale, {
         weekday: 'long',
         year: 'numeric',
         month: 'long',
@@ -25,7 +27,7 @@ export function formatDate(
       }).format(date);
 
     case 'short':
-      return new Intl.DateTimeFormat(locale, {
+      return getCachedDateFormat(locale, {
         day: 'numeric',
         month: 'short',
       }).format(date);
@@ -34,7 +36,7 @@ export function formatDate(
       return formatRelativeDate(date);
 
     case 'time':
-      return new Intl.DateTimeFormat(locale, {
+      return getCachedDateFormat(locale, {
         hour: '2-digit',
         minute: '2-digit',
       }).format(date);
@@ -73,13 +75,13 @@ export function formatDateGroup(timestamp: number | string | Date): string {
   const isThisYear = date.getFullYear() === now.getFullYear();
 
   if (isThisYear) {
-    return new Intl.DateTimeFormat('ru-RU', {
+    return getCachedDateFormat('ru-RU', {
       day: 'numeric',
       month: 'long',
     }).format(date);
   }
 
-  return new Intl.DateTimeFormat('ru-RU', {
+  return getCachedDateFormat('ru-RU', {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
@@ -90,9 +92,9 @@ export function formatDateGroup(timestamp: number | string | Date): string {
  * Format date for display in locale format (e.g. "19 февраля 2026")
  */
 export function formatLocalDate(dateStr: string | number, locale = 'ru-RU'): string {
-  return new Date(dateStr).toLocaleDateString(locale, {
+  return getCachedDateFormat(locale, {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
-  });
+  }).format(new Date(dateStr));
 }

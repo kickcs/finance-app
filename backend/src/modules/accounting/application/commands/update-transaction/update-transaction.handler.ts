@@ -12,6 +12,7 @@ import {
 } from '../../../domain/repositories/account.repository.interface';
 import { DomainEventPublisher } from '../../../../../shared';
 import { toTransactionResponse } from '../../helpers/to-transaction-response';
+import { Account } from '../../../domain/aggregates/account';
 
 @CommandHandler(UpdateTransactionCommand)
 export class UpdateTransactionHandler implements ICommandHandler<UpdateTransactionCommand> {
@@ -71,11 +72,16 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
       date: command.data.date ? new Date(command.data.date) : undefined,
     });
 
+    // Local array to collect accounts whose events should be published after commit.
+    // Must NOT be a class field — this handler is a singleton shared across requests.
+    const pendingAccounts: Account[] = [];
+
     // Wrap all balance + transaction updates in a DB transaction
     await this.dataSource.transaction(async () => {
       if (balanceChanged) {
         if (oldType !== 'transfer' && newType !== 'transfer') {
           await this.handleNonTransferBalanceUpdate(
+            pendingAccounts,
             command.userId,
             oldAccountId,
             newAccountId,
@@ -88,6 +94,7 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
           );
         } else if (oldType === 'transfer' && newType === 'transfer') {
           await this.handleTransferBalanceUpdate(
+            pendingAccounts,
             command.userId,
             oldAccountId,
             newAccountId,
@@ -104,6 +111,7 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
           );
         } else if (oldType === 'transfer' && newType !== 'transfer') {
           await this.reverseTransfer(
+            pendingAccounts,
             command.userId,
             oldAccountId,
             oldAmount,
@@ -113,6 +121,7 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
             oldToCurrency!,
           );
           await this.applyNonTransfer(
+            pendingAccounts,
             command.userId,
             newAccountId,
             newAmount,
@@ -121,6 +130,7 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
           );
         } else {
           await this.reverseNonTransfer(
+            pendingAccounts,
             command.userId,
             oldAccountId,
             oldAmount,
@@ -128,6 +138,7 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
             oldType,
           );
           await this.applyTransfer(
+            pendingAccounts,
             command.userId,
             newAccountId,
             newAmount,
@@ -142,6 +153,10 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
       await this.transactionRepository.save(transaction);
     });
 
+    // Publish events AFTER the DB transaction commits
+    for (const account of pendingAccounts) {
+      await this.eventPublisher.publishEvents(account);
+    }
     await this.eventPublisher.publishEvents(transaction);
 
     return toTransactionResponse(transaction);
@@ -159,6 +174,7 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
   }
 
   private async handleNonTransferBalanceUpdate(
+    pendingAccounts: Account[],
     userId: string,
     oldAccountId: string,
     newAccountId: string,
@@ -188,15 +204,30 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
       }
 
       await this.accountRepository.save(account);
-      await this.eventPublisher.publishEvents(account);
+      pendingAccounts.push(account);
     } else {
       // Different accounts or currencies - reverse on old, apply on new
-      await this.reverseNonTransfer(userId, oldAccountId, oldAmount, oldCurrency, oldType);
-      await this.applyNonTransfer(userId, newAccountId, newAmount, newCurrency, newType);
+      await this.reverseNonTransfer(
+        pendingAccounts,
+        userId,
+        oldAccountId,
+        oldAmount,
+        oldCurrency,
+        oldType,
+      );
+      await this.applyNonTransfer(
+        pendingAccounts,
+        userId,
+        newAccountId,
+        newAmount,
+        newCurrency,
+        newType,
+      );
     }
   }
 
   private async handleTransferBalanceUpdate(
+    pendingAccounts: Account[],
     userId: string,
     oldFromAccountId: string,
     newFromAccountId: string,
@@ -214,6 +245,7 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
     // Reverse old transfer
     if (oldToAccountId && oldToAmount !== null && oldToCurrency) {
       await this.reverseTransfer(
+        pendingAccounts,
         userId,
         oldFromAccountId,
         oldFromAmount,
@@ -227,6 +259,7 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
     // Apply new transfer
     if (newToAccountId && newToAmount !== null && newToCurrency) {
       await this.applyTransfer(
+        pendingAccounts,
         userId,
         newFromAccountId,
         newFromAmount,
@@ -239,6 +272,7 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
   }
 
   private async reverseNonTransfer(
+    pendingAccounts: Account[],
     userId: string,
     accountId: string,
     amount: number,
@@ -254,10 +288,11 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
     }
 
     await this.accountRepository.save(account);
-    await this.eventPublisher.publishEvents(account);
+    pendingAccounts.push(account);
   }
 
   private async applyNonTransfer(
+    pendingAccounts: Account[],
     userId: string,
     accountId: string,
     amount: number,
@@ -273,10 +308,11 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
     }
 
     await this.accountRepository.save(account);
-    await this.eventPublisher.publishEvents(account);
+    pendingAccounts.push(account);
   }
 
   private async reverseTransfer(
+    pendingAccounts: Account[],
     userId: string,
     fromAccountId: string,
     fromAmount: number,
@@ -285,21 +321,29 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
     toAmount: number,
     toCurrency: string,
   ): Promise<void> {
-    const fromAccount = await this.validateAccountOwnership(fromAccountId, userId);
-    const toAccount = await this.validateAccountOwnership(toAccountId, userId);
+    // Load both accounts in parallel since they are independent
+    const [fromAccount, toAccount] = await Promise.all([
+      this.validateAccountOwnership(fromAccountId, userId),
+      this.validateAccountOwnership(toAccountId, userId),
+    ]);
 
     // Reverse debit from source (credit it back)
     fromAccount.credit(fromAmount, fromCurrency);
-    await this.accountRepository.save(fromAccount);
-    await this.eventPublisher.publishEvents(fromAccount);
 
     // Reverse credit to destination (debit it back)
     toAccount.debit(toAmount, toCurrency);
-    await this.accountRepository.save(toAccount);
-    await this.eventPublisher.publishEvents(toAccount);
+
+    // Save both accounts in parallel
+    await Promise.all([
+      this.accountRepository.save(fromAccount),
+      this.accountRepository.save(toAccount),
+    ]);
+
+    pendingAccounts.push(fromAccount, toAccount);
   }
 
   private async applyTransfer(
+    pendingAccounts: Account[],
     userId: string,
     fromAccountId: string,
     fromAmount: number,
@@ -308,17 +352,24 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
     toAmount: number,
     toCurrency: string,
   ): Promise<void> {
-    const fromAccount = await this.validateAccountOwnership(fromAccountId, userId);
-    const toAccount = await this.validateAccountOwnership(toAccountId, userId);
+    // Load both accounts in parallel since they are independent
+    const [fromAccount, toAccount] = await Promise.all([
+      this.validateAccountOwnership(fromAccountId, userId),
+      this.validateAccountOwnership(toAccountId, userId),
+    ]);
 
     // Debit source account
     fromAccount.debit(fromAmount, fromCurrency);
-    await this.accountRepository.save(fromAccount);
-    await this.eventPublisher.publishEvents(fromAccount);
 
     // Credit destination account
     toAccount.credit(toAmount, toCurrency);
-    await this.accountRepository.save(toAccount);
-    await this.eventPublisher.publishEvents(toAccount);
+
+    // Save both accounts in parallel
+    await Promise.all([
+      this.accountRepository.save(fromAccount),
+      this.accountRepository.save(toAccount),
+    ]);
+
+    pendingAccounts.push(fromAccount, toAccount);
   }
 }

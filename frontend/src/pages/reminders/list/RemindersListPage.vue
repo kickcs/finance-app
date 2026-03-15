@@ -91,7 +91,7 @@ function handleAddReminder() {
 const showEditModal = ref(false);
 const showDeleteModal = ref(false);
 
-const { isUpdating, isDeleting, update, remove } = useEditReminder(userId.value);
+const { isUpdating, isDeleting, update, remove } = useEditReminder(userId);
 
 function handleDetailEdit() {
   showEditModal.value = true;

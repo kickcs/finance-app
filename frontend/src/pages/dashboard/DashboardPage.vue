@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { useLocalStorage, useEventListener } from '@vueuse/core';
 import { STORAGE_KEYS } from '@/shared/config/storageKeys';
+import { ACTIVITY_WIDGET_IDS } from '@/shared/config/dashboard';
 import { queryClient } from '@/shared/api/queryClient';
 import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
 import { debtQueryKeys } from '@/entities/debt';
@@ -14,6 +15,7 @@ import { AccountStack } from '@/widgets/account-stack';
 import { BudgetSection } from '@/widgets/budget-section';
 import { useHaptics } from '@/shared/lib/haptics';
 import { usePwaUpdateToast } from '@/shared/lib/composables/usePwaUpdate';
+import { usePremiumFeature } from '@/shared/lib/composables/usePremiumFeature';
 import { SetBudgetSheet } from '@/features/set-budget';
 
 import { useDashboardData } from './model/useDashboardData';
@@ -21,19 +23,23 @@ import { useDashboardQuickActions } from './model/useDashboardQuickActions';
 import { useDashboardNavigation } from './model/useDashboardNavigation';
 import { useStaggerAnimation } from './model/useStaggerAnimation';
 
+import { getGreeting } from '@/shared/lib/format/greeting';
+import { BalanceCard } from '@/widgets/balance-card';
+
 import DashboardMobileHeader from './ui/DashboardMobileHeader.vue';
-import DashboardHeroSection from './ui/DashboardHeroSection.vue';
 import DashboardQuickActions from './ui/DashboardQuickActions.vue';
 import DashboardActivityColumn from './ui/DashboardActivityColumn.vue';
 import DashboardTopExpenses from './ui/DashboardTopExpenses.vue';
 import DashboardSidePanel from './ui/DashboardSidePanel.vue';
 
 const { trigger } = useHaptics();
+const { requirePremium } = usePremiumFeature();
+
+const greeting = getGreeting();
 
 const {
   userId,
   currency,
-  greeting,
   userName,
   accounts,
   debts,
@@ -83,6 +89,11 @@ onMounted(() => usePwaUpdateToast());
 const isHidden = useLocalStorage(STORAGE_KEYS.BALANCE_HIDDEN, false);
 const mobileTransactions = computed(() => recentTransactions.value.slice(0, 5));
 
+// First visible activity widget ID - renders the single combined DashboardActivityColumn
+const firstActivityWidgetId = computed(() =>
+  widgetOrder.value.find((id) => ACTIVITY_WIDGET_IDS.has(id) && !hiddenWidgets.value.has(id)),
+);
+
 // Scroll tracking
 const pageContainerRef = ref<InstanceType<typeof PageContainer>>();
 const scrollContainerRef = computed(() => pageContainerRef.value?.scrollRef);
@@ -127,7 +138,7 @@ async function handleBudgetReset() {
 
 function handleScanReceipt() {
   trigger('selection');
-  // TODO: re-enable after beta — premium gate for scan receipt
+  if (!requirePremium('Сканирование чека')) return;
   nav.toScanReceipt();
 }
 </script>
@@ -161,11 +172,11 @@ function handleScanReceipt() {
       >
         <div class="flex flex-col space-y-6 md:hidden">
           <section :class="staggerClass('delay-75')">
-            <DashboardHeroSection
+            <BalanceCard
               :total-balance="totalBalance"
               :currency="currency"
-              :balance-loading="accountsLoading || ratesLoading"
-              :is-hidden="isHidden"
+              :loading="accountsLoading || ratesLoading"
+              :hidden="isHidden"
               @toggle-hidden="isHidden = !isHidden"
               @balance-click="nav.toAccounts"
             />
@@ -217,64 +228,27 @@ function handleScanReceipt() {
               />
             </section>
 
-            <section
-              v-if="widgetId === 'transactions' && !hiddenWidgets.has('transactions')"
-              :class="staggerClass('delay-300')"
-            >
+            <!-- Single DashboardActivityColumn for transactions/debts/reminders on mobile -->
+            <section v-if="widgetId === firstActivityWidgetId" :class="staggerClass('delay-300')">
               <DashboardActivityColumn
                 :transactions="mobileTransactions"
-                :debts="[]"
-                :reminders="[]"
-                :user-id="userId"
-                :currency="currency"
-                :is-hidden="isHidden"
-                :recent-tx-loading="recentTxLoading"
-                :debts-loading="false"
-                :reminders-loading="false"
-                :widget-order="['transactions']"
-                @transaction-click="nav.toHistory"
-                @add-transaction="nav.toNewTransaction()"
-                @view-all-transactions="nav.toHistory"
-              />
-            </section>
-
-            <section
-              v-if="widgetId === 'debts' && !hiddenWidgets.has('debts')"
-              :class="staggerClass('delay-300')"
-            >
-              <DashboardActivityColumn
-                :transactions="[]"
                 :debts="debts"
-                :reminders="[]"
-                :user-id="userId"
-                :currency="currency"
-                :is-hidden="isHidden"
-                :recent-tx-loading="false"
-                :debts-loading="debtsLoading"
-                :reminders-loading="false"
-                :widget-order="['debts']"
-                @debt-click="nav.toDebt"
-                @person-click="nav.toDebts"
-                @add-debt="nav.toNewDebt"
-                @view-all-debts="nav.toDebts"
-              />
-            </section>
-
-            <section
-              v-if="widgetId === 'reminders' && !hiddenWidgets.has('reminders')"
-              :class="staggerClass('delay-300')"
-            >
-              <DashboardActivityColumn
-                :transactions="[]"
-                :debts="[]"
                 :reminders="reminders"
                 :user-id="userId"
                 :currency="currency"
                 :is-hidden="isHidden"
-                :recent-tx-loading="false"
-                :debts-loading="false"
+                :recent-tx-loading="recentTxLoading"
+                :debts-loading="debtsLoading"
                 :reminders-loading="remindersLoading"
-                :widget-order="['reminders']"
+                :widget-order="widgetOrder"
+                :hidden-widgets="hiddenWidgets"
+                @transaction-click="nav.toHistory"
+                @add-transaction="nav.toNewTransaction()"
+                @view-all-transactions="nav.toHistory"
+                @debt-click="nav.toDebt"
+                @person-click="nav.toDebts"
+                @add-debt="nav.toNewDebt"
+                @view-all-debts="nav.toDebts"
                 @reminder-click="nav.toReminder"
                 @add-reminder="nav.toNewReminder"
                 @view-all-reminders="nav.toReminders"
@@ -313,11 +287,11 @@ function handleScanReceipt() {
         <!-- Left Column: Hero + Transactions -->
         <div class="md:col-span-8 flex flex-col gap-6">
           <section :class="staggerClass('delay-75')">
-            <DashboardHeroSection
+            <BalanceCard
               :total-balance="totalBalance"
               :currency="currency"
-              :balance-loading="accountsLoading || ratesLoading"
-              :is-hidden="isHidden"
+              :loading="accountsLoading || ratesLoading"
+              :hidden="isHidden"
               @toggle-hidden="isHidden = !isHidden"
               @balance-click="nav.toAccounts"
             />

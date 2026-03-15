@@ -33,13 +33,25 @@ export class RefreshHandler implements ICommandHandler<RefreshCommand> {
         throw new UnauthorizedException('Demo account has expired');
       }
 
-      // No hash comparison — JWT signature + expiry verified above; null check detects logout.
-      return await this.tokenService.generateTokens({
+      // Compare incoming token hash against stored hash to detect reuse of rotated tokens
+      const incomingHash = this.tokenService.hashToken(command.refreshToken);
+      if (incomingHash !== profile.refreshToken) {
+        throw new UnauthorizedException('Invalid refresh token');
+      }
+
+      const tokens = await this.tokenService.generateTokens({
         sub: profile.id,
         email: profile.emailValue ?? undefined,
         isAnonymous: payload.isAnonymous,
         isDemo: profile.isDemo,
       });
+
+      // Rotate refresh token: write new hashed token so the old one is invalidated
+      const hashedRefreshToken = this.tokenService.hashToken(tokens.refreshToken);
+      profile.setRefreshToken(hashedRefreshToken);
+      await this.profileRepository.save(profile);
+
+      return tokens;
     } catch (error) {
       if (error instanceof UnauthorizedException) {
         throw error;

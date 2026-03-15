@@ -21,6 +21,7 @@ import {
   AnalyticsQueryDto,
   DailyStatsQueryDto,
   AdjustBalanceDto,
+  MonthlyStatsQueryDto,
 } from '../dto';
 import {
   CreateTransactionCommand,
@@ -76,10 +77,9 @@ export class TransactionsController {
   @Get('stats/monthly')
   async getMonthlyStats(
     @CurrentUser('sub') userId: string,
-    @Query('year') year: string,
-    @Query('month') month: string,
+    @Query() query: MonthlyStatsQueryDto,
   ): Promise<unknown> {
-    return this.queryBus.execute(new GetMonthlyStatsQuery(userId, parseInt(year), parseInt(month)));
+    return this.queryBus.execute(new GetMonthlyStatsQuery(userId, query.year, query.month));
   }
 
   @Get('stats/daily')

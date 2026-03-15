@@ -20,6 +20,13 @@ export const WIDGET_LABELS: Record<WidgetId, string> = {
   reminders: 'Напоминания',
 };
 
+/** Widget IDs that are rendered inside the combined DashboardActivityColumn. */
+export const ACTIVITY_WIDGET_IDS: ReadonlySet<string> = new Set<WidgetId>([
+  'transactions',
+  'debts',
+  'reminders',
+]);
+
 export const WIDGET_ICONS: Record<WidgetId, string> = {
   quick_actions: 'bolt',
   budget: 'savings',

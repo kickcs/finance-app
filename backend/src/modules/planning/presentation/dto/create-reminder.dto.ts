@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsNumber, IsIn, IsDateString, Min } from 'class-validator';
+import { IsString, IsNotEmpty, IsNumber, IsIn, IsDateString, Min, Max } from 'class-validator';
 
 export class CreateReminderDto {
   @IsString()
@@ -7,6 +7,7 @@ export class CreateReminderDto {
 
   @IsNumber()
   @Min(0)
+  @Max(1_000_000_000_000)
   amount: number;
 
   @IsIn(['weekly', 'monthly', 'yearly', 'once'])

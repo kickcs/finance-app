@@ -41,7 +41,7 @@ const showEditModal = ref(false);
 const showDeleteModal = ref(false);
 
 // Edit reminder logic
-const { isUpdating, isDeleting, update, remove } = useEditReminder(userId.value);
+const { isUpdating, isDeleting, update, remove } = useEditReminder(userId);
 
 async function handleUpdate(updates: Partial<Reminder>) {
   if (!reminder.value) return;

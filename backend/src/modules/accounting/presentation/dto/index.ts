@@ -14,3 +14,4 @@ export * from './reorder-categories.dto';
 export * from './reorder-quick-actions.dto';
 export * from './bulk-import.dto';
 export * from './adjust-balance.dto';
+export * from './monthly-stats-query.dto';

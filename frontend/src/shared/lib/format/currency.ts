@@ -2,6 +2,8 @@
  * Currency formatting utilities
  */
 
+import { getCachedNumberFormat } from './intlCache';
+
 export interface CurrencyConfig {
   code: string;
   symbol: string;
@@ -33,7 +35,7 @@ export function formatCurrency(
   const config = CURRENCIES[currencyCode] ?? CURRENCIES.USD;
   const { showSymbol = true, compact = false, showSign = false } = options ?? {};
 
-  const formatter = new Intl.NumberFormat(config.locale, {
+  const formatter = getCachedNumberFormat(config.locale, {
     style: showSymbol ? 'currency' : 'decimal',
     currency: config.code,
     minimumFractionDigits: compact ? 0 : config.decimals,

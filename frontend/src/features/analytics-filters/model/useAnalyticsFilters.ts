@@ -74,40 +74,6 @@ export function useAnalyticsFilters() {
     return lastDay.getDate() - now.getDate();
   });
 
-  // Filter transactions based on current filters
-  function filterTransactions(transactions: Transaction[]): Transaction[] {
-    let result = [...transactions];
-
-    // Exclude debt-related transactions from analytics
-    result = result.filter((t) => !t.is_debt_related);
-
-    // Filter by date range
-    const { startDate, endDate } = effectiveDateRange.value;
-    if (startDate && endDate) {
-      result = result.filter((t) => {
-        const date = new Date(t.date);
-        return date >= startDate && date <= endDate;
-      });
-    }
-
-    // Filter by type (skip transfers, only filter expense/income)
-    if (filters.value.type !== 'all') {
-      result = result.filter((t) => t.type === filters.value.type);
-    }
-
-    // Filter by categories
-    if (filters.value.selectedCategoryIds.length > 0) {
-      result = result.filter((t) => filters.value.selectedCategoryIds.includes(t.category_id));
-    }
-
-    // Filter by accounts
-    if (filters.value.selectedAccountIds.length > 0) {
-      result = result.filter((t) => filters.value.selectedAccountIds.includes(t.account_id));
-    }
-
-    return result;
-  }
-
   // Calculate category statistics from filtered transactions
   function calculateCategoryStats(
     transactions: Transaction[],
@@ -212,7 +178,6 @@ export function useAnalyticsFilters() {
     daysInPeriod,
     daysRemainingInMonth,
     activeFilterCount,
-    filterTransactions,
     calculateCategoryStats,
     setPeriod,
     setType,

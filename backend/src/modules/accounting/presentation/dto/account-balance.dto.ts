@@ -1,4 +1,14 @@
-import { IsString, IsNumber, IsArray, IsUUID, ValidateNested, ArrayMinSize } from 'class-validator';
+import {
+  IsString,
+  IsNumber,
+  IsArray,
+  IsUUID,
+  ValidateNested,
+  ArrayMinSize,
+  Min,
+  Max,
+  IsNotEmpty,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class GetByAccountIdsDto {
@@ -13,17 +23,23 @@ export class UpsertBalanceDto {
   accountId: string;
 
   @IsString()
+  @IsNotEmpty()
   currency: string;
 
   @IsNumber()
+  @Min(-1_000_000_000_000)
+  @Max(1_000_000_000_000)
   balance: number;
 }
 
 export class BalanceItemDto {
   @IsString()
+  @IsNotEmpty()
   currency: string;
 
   @IsNumber()
+  @Min(-1_000_000_000_000)
+  @Max(1_000_000_000_000)
   balance: number;
 }
 
@@ -43,8 +59,11 @@ export class UpdateByDeltaDto {
   accountId: string;
 
   @IsString()
+  @IsNotEmpty()
   currency: string;
 
   @IsNumber()
+  @Min(-1_000_000_000_000)
+  @Max(1_000_000_000_000)
   delta: number;
 }

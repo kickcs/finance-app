@@ -7,6 +7,8 @@ import {
   IsBoolean,
   IsDateString,
   IsPositive,
+  IsNotEmpty,
+  Max,
 } from 'class-validator';
 
 export class UpdateTransactionDto {
@@ -16,15 +18,18 @@ export class UpdateTransactionDto {
 
   @IsOptional()
   @IsString()
+  @IsNotEmpty()
   categoryId?: string;
 
   @IsOptional()
   @IsNumber()
   @IsPositive({ message: 'Amount must be positive' })
+  @Max(1_000_000_000_000)
   amount?: number;
 
   @IsOptional()
   @IsString()
+  @IsNotEmpty()
   currency?: string;
 
   @IsOptional()
@@ -54,9 +59,11 @@ export class UpdateTransactionDto {
   @IsOptional()
   @IsNumber()
   @IsPositive({ message: 'To amount must be positive' })
+  @Max(1_000_000_000_000)
   toAmount?: number | null;
 
   @IsOptional()
   @IsString()
+  @IsNotEmpty()
   toCurrency?: string | null;
 }

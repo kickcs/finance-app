@@ -1,5 +1,6 @@
-import { IsString, IsNumber, IsOptional, IsDateString } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsDateString } from 'class-validator';
+import { PickType } from '@nestjs/swagger';
+import { PaginationDto } from './pagination.dto';
 
 export class DateRangeDto {
   @IsDateString()
@@ -9,17 +10,12 @@ export class DateRangeDto {
   endDate: string;
 }
 
-export class AccountPaginationDto {
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  pageSize?: number = 20;
-
-  @IsOptional()
-  @IsString()
-  cursorDate?: string;
-
-  @IsOptional()
-  @IsString()
-  cursorCreatedAt?: string;
-}
+/**
+ * Cursor-based pagination for account-scoped transaction queries.
+ * Reuses pageSize/cursorDate/cursorCreatedAt validation from PaginationDto.
+ */
+export class AccountPaginationDto extends PickType(PaginationDto, [
+  'pageSize',
+  'cursorDate',
+  'cursorCreatedAt',
+] as const) {}

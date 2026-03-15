@@ -309,7 +309,7 @@ onMounted(() => {
     <!-- Content -->
     <main class="pt-4 pb-28 md:pb-8 space-y-5">
       <!-- ========== Tab: Overview ========== -->
-      <div v-show="activeTab === 'overview'">
+      <div v-show="activeTab === 'overview'" role="tabpanel">
         <div
           class="space-y-4 transition-opacity duration-300"
           :class="{ 'opacity-50 pointer-events-none': analyticsFetching && !analyticsLoading }"
@@ -362,7 +362,7 @@ onMounted(() => {
       </div>
 
       <!-- ========== Tab: Categories ========== -->
-      <div v-show="activeTab === 'categories'">
+      <div v-show="activeTab === 'categories'" role="tabpanel">
         <div
           class="space-y-4 transition-opacity duration-300"
           :class="{ 'opacity-50 pointer-events-none': analyticsFetching && !analyticsLoading }"
@@ -413,7 +413,7 @@ onMounted(() => {
       </div>
 
       <!-- ========== Tab: Trends ========== -->
-      <div v-show="activeTab === 'trends'">
+      <div v-show="activeTab === 'trends'" role="tabpanel">
         <div class="flex flex-col lg:flex-row lg:gap-4 space-y-4 lg:space-y-0">
           <!-- Daily Expense Chart -->
           <div class="lg:flex-1">

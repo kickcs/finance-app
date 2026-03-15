@@ -6,17 +6,16 @@ import { useReminders } from '@/entities/reminder';
 import { useCategories } from '@/entities/category';
 import { useBudget } from '@/entities/budget';
 import { useProfile, useExchangeRates } from '@/shared/api';
-import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
-import { getGreeting } from '@/shared/lib/format/greeting';
 import { toLocalISODate } from '@/shared/lib/date';
 import type { WidgetId } from '@/shared/api/database.types';
 import { DEFAULT_WIDGET_ORDER } from '@/shared/config/dashboard';
+import { DEFAULT_CURRENCY } from '@/shared/config/currency';
 
 export function useDashboardData() {
   const { user, userId } = useCurrentUser();
-  const { currency } = useUserCurrency();
   const { profile } = useProfile(userId);
+  const currency = computed(() => profile.value?.currency ?? DEFAULT_CURRENCY);
   const { convert, isLoading: ratesLoading } = useExchangeRates(currency);
 
   const { accounts, isLoading: accountsLoading } = useAccounts(userId);
@@ -44,9 +43,6 @@ export function useDashboardData() {
     startDate: monthStart,
     endDate: monthEnd,
   });
-
-  // Greeting (static — doesn't need to be reactive)
-  const greeting = getGreeting();
 
   const userName = computed(() => {
     const fullName = profile.value?.name || user?.value?.name;
@@ -91,7 +87,6 @@ export function useDashboardData() {
   return {
     userId,
     currency,
-    greeting,
     userName,
     accounts,
     debts,

@@ -20,9 +20,9 @@ const TOTAL_STEPS = STEP_LABELS.length;
 const router = useRouter();
 const { userId } = useCurrentUser();
 
-const wizard = useReceiptWizard(() => userId.value || null);
+const wizard = useReceiptWizard(() => userId.value);
 
-const { accounts } = useAccounts(() => userId.value || null);
+const { accounts } = useAccounts(userId);
 
 const transitionName = computed(() =>
   wizard.direction.value === 'back' ? 'step-back' : 'step-forward',
@@ -36,7 +36,7 @@ function handleBack() {
   }
 }
 
-// TODO: re-enable after beta — premium gate for scan receipt
+// Premium gate: backend enforces via PremiumGuard, frontend gates in DashboardPage.handleScanReceipt
 </script>
 
 <template>

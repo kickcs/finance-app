@@ -3,7 +3,7 @@ import type { Transaction } from '@/shared/api/database.types';
 import { useTransactionSelection } from './useTransactionSelection';
 import { useEditTransaction } from './useEditTransaction';
 
-export function useTransactionEditFlow(userId: MaybeRefOrGetter<string>) {
+export function useTransactionEditFlow(userId: MaybeRefOrGetter<string | null>) {
   const showDeleteModal = ref(false);
 
   const {
