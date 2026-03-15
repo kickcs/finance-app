@@ -44,7 +44,10 @@ const selectedValue = computed({
             :value="PRIMARY_COLORS[name].base"
             class="relative w-10 h-10 rounded-full cursor-pointer transition-transform hover:scale-110 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
           >
-            <ColorSwatchPickerItemSwatch class="w-full h-full rounded-full" />
+            <ColorSwatchPickerItemSwatch
+              class="w-full h-full rounded-full"
+              style="background-color: var(--reka-color-swatch-color)"
+            />
             <ColorSwatchPickerItemIndicator
               class="absolute inset-0 flex items-center justify-center"
             >
