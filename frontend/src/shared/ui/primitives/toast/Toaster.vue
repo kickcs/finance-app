@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { watch } from 'vue';
+import { watch, onUnmounted } from 'vue';
 import { useToast, type ToasterToast } from '@/shared/lib/composables/useToast';
 import { UIcon } from '@/shared/ui/icon';
 import Toast from './Toast.vue';
@@ -56,6 +56,13 @@ watch(toasts, (current) => {
       autoDismissTimers.delete(id);
     }
   }
+});
+
+onUnmounted(() => {
+  for (const timer of autoDismissTimers.values()) {
+    clearTimeout(timer);
+  }
+  autoDismissTimers.clear();
 });
 </script>
 

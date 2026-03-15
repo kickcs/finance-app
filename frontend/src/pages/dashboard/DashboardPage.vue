@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useLocalStorage, useEventListener, useTimeoutFn } from '@vueuse/core';
 import { STORAGE_KEYS } from '@/shared/config/storageKeys';
 import { ACTIVITY_WIDGET_IDS } from '@/shared/config/dashboard';
@@ -53,7 +53,7 @@ const settingsHintConfig = getHintConfig('dashboard-settings');
 const showScanHint = ref(false);
 const scanHintConfig = getHintConfig('scan-receipt');
 
-const { start: showSettingsHintDelayed } = useTimeoutFn(
+const { start: showSettingsHintDelayed, stop: stopSettingsHint } = useTimeoutFn(
   () => {
     showSettingsHint.value = true;
     markHintShown();
@@ -62,7 +62,7 @@ const { start: showSettingsHintDelayed } = useTimeoutFn(
   { immediate: false },
 );
 
-const { start: showScanHintDelayed } = useTimeoutFn(
+const { start: showScanHintDelayed, stop: stopScanHint } = useTimeoutFn(
   () => {
     showScanHint.value = true;
     markHintShown();
@@ -79,6 +79,11 @@ onMounted(() => {
   } else if (shouldShowHint('scan-receipt')) {
     showScanHintDelayed();
   }
+});
+
+onUnmounted(() => {
+  stopSettingsHint();
+  stopScanHint();
 });
 
 function dismissSettingsHint() {

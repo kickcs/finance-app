@@ -15,7 +15,7 @@ import {
   TRANSACTION_TYPE_ORDER,
   type TransactionType,
 } from '../model/useScrollableTabs';
-import { useHashtags, useTransactions } from '@/entities/transaction';
+import { useHashtags, useRecentTransactions } from '@/entities/transaction';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useHashtagSuggestions } from '../model/useHashtagSuggestions';
 import { FeatureHintPopover, useFeatureHints } from '@/features/feature-hints';
@@ -198,10 +198,10 @@ const showSplitHint = ref(false);
 const splitHintConfig = getHintConfig('split-expense');
 
 // Smart defaults
-const { transactions } = useTransactions(userId);
+const { transactions } = useRecentTransactions(userId, 20);
 const { defaults } = useSmartDefaults(transactions, () => props.formData.type);
 
-const { start: showSplitHintDelayed } = useTimeoutFn(
+const { start: showSplitHintDelayed, stop: stopSplitHint } = useTimeoutFn(
   () => {
     showSplitHint.value = true;
     markHintShown();
@@ -227,6 +227,10 @@ onMounted(() => {
   if (Object.keys(updates).length > 0) {
     emit('update:formData', { ...props.formData, ...updates });
   }
+});
+
+onUnmounted(() => {
+  stopSplitHint();
 });
 
 function dismissSplitHint() {

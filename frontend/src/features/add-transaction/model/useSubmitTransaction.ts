@@ -11,7 +11,7 @@ import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared
 import { useToast } from '@/shared/ui';
 import { useFeatureHints } from '@/features/feature-hints';
 import { CATEGORY_IDS, getCategoryById } from '@/entities/category';
-import { formatNumberWithSpaces } from '@/shared/lib/format/currency';
+import { formatCurrency } from '@/shared/lib/format/currency';
 import type { TransactionFormData } from './useTransactionForm';
 import type { Transaction, AccountWithBalances } from '@/shared/api/database.types';
 import type { MonthlyStats, PaginatedResult } from '@/entities/transaction/api/transactionsApi';
@@ -310,13 +310,12 @@ export function useSubmitTransaction() {
       const accountName = account?.name ?? '';
       const category = getCategoryById(formData.categoryId);
       const categoryName = category?.name ?? TRANSACTION_TYPE_LABELS[formData.type];
-      const formatted = formatNumberWithSpaces(formData.amount);
-      const amount =
-        formData.type === 'income'
-          ? `+${formatted}`
-          : formData.type === 'transfer'
-            ? formatted
-            : `-${formatted}`;
+      const currency = account?.balances?.[0]?.currency ?? formData.currency;
+      const amount = formatCurrency(
+        formData.type === 'expense' ? -formData.amount : formData.amount,
+        currency,
+        { showSymbol: false, showSign: formData.type !== 'transfer' },
+      );
 
       toast({
         variant: 'transaction-success',

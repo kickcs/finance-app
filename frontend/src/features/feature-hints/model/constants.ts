@@ -1,6 +1,6 @@
-import type { HintConfig } from './types';
+import type { HintConfig, HintId } from './types';
 
-export const HINT_CONFIGS: Record<string, HintConfig> = {
+export const HINT_CONFIGS: Record<HintId, HintConfig> = {
   'split-expense': {
     id: 'split-expense',
     title: 'Совет: Разделите расход',
