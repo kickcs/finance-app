@@ -66,7 +66,7 @@ watch(toasts, (current) => {
       <div
         v-if="toast.variant === 'transaction-success' && toast.transactionData"
         v-show="toast.open"
-        class="relative rounded-[14px] bg-slate-800 p-3.5 shadow-lg"
+        class="relative rounded-[14px] bg-slate-800 p-3.5 shadow-lg pointer-events-auto"
       >
         <TransactionSuccessToast
           :data="toast.transactionData"
