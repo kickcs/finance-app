@@ -8,6 +8,15 @@ interface SmartDefaults {
 
 const EMPTY: SmartDefaults = { defaultCategoryId: null, defaultAccountId: null };
 
+function topByFrequency<T>(items: T[], key: (item: T) => string): string | null {
+  const freq = new Map<string, number>();
+  for (const item of items) {
+    const k = key(item);
+    freq.set(k, (freq.get(k) ?? 0) + 1);
+  }
+  return [...freq.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+}
+
 export function useSmartDefaults(
   transactions: MaybeRefOrGetter<Transaction[] | undefined>,
   type: MaybeRefOrGetter<'expense' | 'income' | 'transfer'>,
@@ -24,43 +33,31 @@ export function useSmartDefaults(
     if (relevant.length === 0) return EMPTY;
 
     if (txType === 'transfer') {
-      const accountFreq = new Map<string, number>();
-      for (const tx of relevant) {
-        accountFreq.set(tx.account_id, (accountFreq.get(tx.account_id) ?? 0) + 1);
-      }
-      const topAccount = [...accountFreq.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
-      return { defaultCategoryId: null, defaultAccountId: topAccount };
+      return {
+        defaultCategoryId: null,
+        defaultAccountId: topByFrequency(relevant, (tx) => tx.account_id),
+      };
     }
 
     // If account is already selected, find most frequent category for THAT account
     if (accountId) {
       const forAccount = relevant.filter((tx) => tx.account_id === accountId);
       if (forAccount.length > 0) {
-        const catFreq = new Map<string, number>();
-        for (const tx of forAccount) {
-          catFreq.set(tx.category_id, (catFreq.get(tx.category_id) ?? 0) + 1);
-        }
-        const topCat = [...catFreq.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
-        return { defaultCategoryId: topCat, defaultAccountId: accountId };
+        return {
+          defaultCategoryId: topByFrequency(forAccount, (tx) => tx.category_id),
+          defaultAccountId: null, // account was externally provided, not a default
+        };
       }
     }
 
     // No account pre-selected — find most frequent (category, account) pair
-    const pairFreq = new Map<string, { categoryId: string; accountId: string; count: number }>();
-    for (const tx of relevant) {
-      const key = `${tx.category_id}:${tx.account_id}`;
-      const existing = pairFreq.get(key);
-      if (existing) {
-        existing.count++;
-      } else {
-        pairFreq.set(key, { categoryId: tx.category_id, accountId: tx.account_id, count: 1 });
-      }
-    }
+    const topPairKey = topByFrequency(relevant, (tx) => `${tx.category_id}:${tx.account_id}`);
+    if (!topPairKey) return EMPTY;
 
-    const topPair = [...pairFreq.values()].sort((a, b) => b.count - a.count)[0];
+    const [categoryId, pairAccountId] = topPairKey.split(':');
     return {
-      defaultCategoryId: topPair?.categoryId ?? null,
-      defaultAccountId: topPair?.accountId ?? null,
+      defaultCategoryId: categoryId,
+      defaultAccountId: pairAccountId,
     };
   });
 

@@ -214,27 +214,23 @@ const { start: showSplitHintDelayed, stop: stopSplitHint } = useTimeoutFn(
   { immediate: false },
 );
 
-// Apply smart defaults once when data becomes available
-const smartDefaultsApplied = ref(false);
+// Apply smart defaults once per type when data becomes available
+const smartDefaultsAppliedForType = ref<string | null>(null);
 
 watch(
   defaults,
   (val) => {
-    if (smartDefaultsApplied.value) return;
+    if (smartDefaultsAppliedForType.value === props.formData.type) return;
     if (!val.defaultCategoryId && !val.defaultAccountId) return;
 
-    smartDefaultsApplied.value = true;
-
-    // Only apply if category is empty (account may be pre-set from profile)
-    // Apply both category AND account from the same pair to keep them consistent
     if (!props.formData.categoryId && val.defaultCategoryId) {
       const updates: Partial<TransactionFormData> = {
         categoryId: val.defaultCategoryId,
       };
-      // Only override account if it's also empty
       if (!props.formData.accountId && val.defaultAccountId) {
         updates.accountId = val.defaultAccountId;
       }
+      smartDefaultsAppliedForType.value = props.formData.type;
       emit('update:formData', { ...props.formData, ...updates });
     }
   },
