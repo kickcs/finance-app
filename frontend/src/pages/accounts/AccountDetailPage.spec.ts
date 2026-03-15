@@ -8,8 +8,11 @@ import {
   mockAccountResponse,
   mockSecondAccountResponse,
   mockCreditCardAccountResponse,
+  mockLoanAccountResponse,
+  mockDepositAccountResponse,
 } from '@/test/mocks/handlers/accounts';
 import { mockAccountTransactionResponse } from '@/test/mocks/handlers/transactions';
+import { mockProfileResponse } from '@/test/mocks/handlers/profiles';
 
 // Mock app router
 const { navigateBackMock } = vi.hoisted(() => ({
@@ -305,6 +308,221 @@ describe('AccountDetailPage', () => {
       expect(deleteModal.props('modelValue')).toBe(true);
       expect(deleteModal.props('account')).toBeTruthy();
       expect(deleteModal.props('account').id).toBe('acc-1');
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Loan Account
+  // -----------------------------------------------------------------------
+  describe('loan account', () => {
+    beforeEach(() => {
+      server.use(http.get('*/api/accounts', () => HttpResponse.json([mockLoanAccountResponse])));
+    });
+
+    it('shows loan parameters section', async () => {
+      const wrapper = await renderPage('acc-4');
+      expect(wrapper.text()).toContain('Параметры кредита');
+    });
+
+    it('shows loan amount', async () => {
+      const wrapper = await renderPage('acc-4');
+      expect(wrapper.text()).toContain('Сумма кредита');
+    });
+
+    it('shows interest rate', async () => {
+      const wrapper = await renderPage('acc-4');
+      expect(wrapper.text()).toContain('Ставка');
+      expect(wrapper.text()).toContain('22%');
+    });
+
+    it('shows monthly payment', async () => {
+      const wrapper = await renderPage('acc-4');
+      expect(wrapper.text()).toContain('Ежемесячный платёж');
+    });
+
+    it('shows loan dates', async () => {
+      const wrapper = await renderPage('acc-4');
+      expect(wrapper.text()).toContain('Дата начала');
+      expect(wrapper.text()).toContain('2024-01-15');
+      expect(wrapper.text()).toContain('Дата окончания');
+      expect(wrapper.text()).toContain('2034-01-15');
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Deposit Account
+  // -----------------------------------------------------------------------
+  describe('deposit account', () => {
+    beforeEach(() => {
+      server.use(http.get('*/api/accounts', () => HttpResponse.json([mockDepositAccountResponse])));
+    });
+
+    it('shows deposit parameters section', async () => {
+      const wrapper = await renderPage('acc-5');
+      expect(wrapper.text()).toContain('Параметры вклада');
+    });
+
+    it('shows deposit interest rate', async () => {
+      const wrapper = await renderPage('acc-5');
+      expect(wrapper.text()).toContain('Ставка');
+      expect(wrapper.text()).toContain('15%');
+    });
+
+    it('shows maturity date', async () => {
+      const wrapper = await renderPage('acc-5');
+      expect(wrapper.text()).toContain('Дата окончания');
+      expect(wrapper.text()).toContain('2026-06-01');
+    });
+
+    it('shows replenishable flag', async () => {
+      const wrapper = await renderPage('acc-5');
+      expect(wrapper.text()).toContain('Пополняемый');
+      expect(wrapper.text()).toContain('Да');
+    });
+
+    it('shows withdrawable flag', async () => {
+      const wrapper = await renderPage('acc-5');
+      expect(wrapper.text()).toContain('С возможностью снятия');
+      expect(wrapper.text()).toContain('Нет');
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Update Account Flow
+  // -----------------------------------------------------------------------
+  describe('update account flow', () => {
+    it('submits update via edit modal and closes on success', async () => {
+      let capturedPayload: Record<string, unknown> | null = null;
+      server.use(
+        http.patch('*/api/accounts/:id', async ({ request }) => {
+          capturedPayload = (await request.json()) as Record<string, unknown>;
+          return HttpResponse.json({ ...mockAccountResponse, ...capturedPayload });
+        }),
+      );
+
+      const wrapper = await renderPage();
+
+      // Open edit modal
+      const editBtn = wrapper.findAll('button').find((b) => b.text().includes('Изменить'));
+      await editBtn!.trigger('click');
+
+      const editModal = wrapper.findComponent({ name: 'EditAccountModal' });
+      expect(editModal.props('modelValue')).toBe(true);
+
+      // Emit confirm from modal
+      editModal.vm.$emit('confirm', { name: 'Обновлённый' });
+      await flushPromises();
+
+      expect(capturedPayload).not.toBeNull();
+      expect(capturedPayload!.name).toBe('Обновлённый');
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Delete Account Submission
+  // -----------------------------------------------------------------------
+  describe('delete account submission', () => {
+    it('submits delete and navigates to accounts list', async () => {
+      let deletedId: string | null = null;
+      server.use(
+        // Make acc-2 available and set default to acc-1 so acc-2 can be deleted
+        http.get('*/api/accounts', () => HttpResponse.json([mockSecondAccountResponse])),
+        http.delete('*/api/accounts/:id', ({ params }) => {
+          deletedId = params.id as string;
+          return new HttpResponse(null, { status: 204 });
+        }),
+      );
+
+      const router = createTestRouter(routes);
+      router.push('/accounts/acc-2');
+      await router.isReady();
+      const pushSpy = vi.spyOn(router, 'push');
+
+      currentWrapper = renderWithProviders(AccountDetailPage, {
+        router,
+        provideAuth: { user: mockUser },
+      });
+      await flushPromises();
+      await flushPromises();
+
+      // Open delete modal
+      await findDeleteButton(currentWrapper).trigger('click');
+
+      const deleteModal = currentWrapper.findComponent({ name: 'DeleteAccountModal' });
+      expect(deleteModal.props('modelValue')).toBe(true);
+
+      // Emit confirm from modal
+      deleteModal.vm.$emit('confirm');
+      await flushPromises();
+
+      expect(deletedId).toBe('acc-2');
+      expect(pushSpy).toHaveBeenCalledWith({ name: 'accounts' });
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Set Default Account
+  // -----------------------------------------------------------------------
+  describe('set default account', () => {
+    it('sends set-default request when star button clicked', async () => {
+      let capturedPayload: Record<string, unknown> | null = null;
+      server.use(
+        http.get('*/api/accounts', () => HttpResponse.json([mockSecondAccountResponse])),
+        http.patch('*/api/profiles/me', async ({ request }) => {
+          capturedPayload = (await request.json()) as Record<string, unknown>;
+          return HttpResponse.json({ ...mockProfileResponse, ...capturedPayload });
+        }),
+      );
+
+      const wrapper = await renderPage('acc-2');
+
+      const starBtn = wrapper.find('button[aria-label="Сделать по умолчанию"]');
+      expect(starBtn.exists()).toBe(true);
+      await starBtn.trigger('click');
+      await flushPromises();
+
+      expect(capturedPayload).not.toBeNull();
+      expect(capturedPayload!.defaultAccountId).toBe('acc-2');
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Adjust Balance
+  // -----------------------------------------------------------------------
+  describe('adjust balance', () => {
+    it('opens adjust balance modal with account currency', async () => {
+      const wrapper = await renderPage();
+
+      const adjustBtn = wrapper.find('button[aria-label="Скорректировать баланс"]');
+      await adjustBtn.trigger('click');
+
+      const modal = wrapper.findComponent({ name: 'AdjustBalanceModal' });
+      expect(modal.exists()).toBe(true);
+      expect(modal.props('modelValue')).toBe(true);
+      expect(modal.props('account')).toBeTruthy();
+      expect(modal.props('account').id).toBe('acc-1');
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Delete Modal Transactions Count
+  // -----------------------------------------------------------------------
+  describe('delete modal transactions count', () => {
+    it('fetches transaction count when delete modal opens', async () => {
+      server.use(
+        http.get('*/api/transactions/by-account/:id/count', () => {
+          return HttpResponse.json({ count: 42 });
+        }),
+      );
+
+      const wrapper = await renderPage();
+
+      await findDeleteButton(wrapper).trigger('click');
+      await flushPromises();
+      await flushPromises();
+
+      const deleteModal = wrapper.findComponent({ name: 'DeleteAccountModal' });
+      expect(deleteModal.props('transactionsCount')).toBe(42);
     });
   });
 

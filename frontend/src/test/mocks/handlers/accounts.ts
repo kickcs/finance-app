@@ -76,6 +76,53 @@ export const mockCreditCardAccountResponse = {
   ],
 };
 
+export const mockLoanAccountResponse = {
+  ...mockAccountResponse,
+  id: 'acc-4',
+  name: 'Ипотека',
+  icon: 'real_estate_agent',
+  color: '#f59e0b',
+  type: 'loan' as const,
+  order: 3,
+  totalAmount: 50000000,
+  interestRate: 22,
+  monthlyPayment: 650000,
+  startDate: '2024-01-15',
+  endDate: '2034-01-15',
+  balances: [
+    {
+      id: 'bal-4',
+      accountId: 'acc-4',
+      currency: 'UZS',
+      balance: -45000000,
+      createdAt: '2025-01-01T00:00:00.000Z',
+    },
+  ],
+};
+
+export const mockDepositAccountResponse = {
+  ...mockAccountResponse,
+  id: 'acc-5',
+  name: 'Вклад Сбережения',
+  icon: 'savings',
+  color: '#8b5cf6',
+  type: 'deposit' as const,
+  order: 4,
+  interestRate: 15,
+  maturityDate: '2026-06-01',
+  isReplenishable: true,
+  isWithdrawable: false,
+  balances: [
+    {
+      id: 'bal-5',
+      accountId: 'acc-5',
+      currency: 'UZS',
+      balance: 10000000,
+      createdAt: '2025-01-01T00:00:00.000Z',
+    },
+  ],
+};
+
 export const accountHandlers = [
   http.get('*/api/accounts', () => {
     return HttpResponse.json([mockAccountResponse]);

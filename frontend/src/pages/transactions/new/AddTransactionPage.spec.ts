@@ -917,4 +917,155 @@ describe('AddTransactionPage', () => {
       }
     });
   });
+
+  // -----------------------------------------------------------------------
+  // Transfer Submission
+  // -----------------------------------------------------------------------
+  describe('transfer submission', () => {
+    it('sends transfer transaction with toAccountId and toAmount', async () => {
+      server.use(
+        http.get('*/api/accounts', () =>
+          HttpResponse.json([mockAccountResponse, mockSecondAccountResponse]),
+        ),
+      );
+
+      let capturedPayload: Record<string, unknown> | null = null;
+      server.use(
+        http.post('*/api/transactions', async ({ request }) => {
+          capturedPayload = (await request.json()) as Record<string, unknown>;
+          return HttpResponse.json({
+            ...mockTransactionResponse,
+            id: 'tx-transfer',
+            type: 'transfer',
+            ...capturedPayload,
+          });
+        }),
+      );
+
+      const wrapper = await renderPage({ type: 'transfer' });
+
+      // TransactionForm should be in transfer mode
+      const formComp = wrapper.findComponent({ name: 'TransactionForm' });
+      expect(formComp.props('formData').type).toBe('transfer');
+
+      // Set amount and update transfer fields via formData
+      await setAmount(wrapper, 100000);
+
+      // Emit formData update with transfer fields
+      const currentData = formComp.props('formData');
+      formComp.vm.$emit('update:formData', {
+        ...currentData,
+        amount: 100000,
+        toAccountId: 'acc-2',
+        toAmount: 8,
+        toCurrency: 'USD',
+        categoryId: 'transfer',
+      });
+      await nextTick();
+      await flushPromises();
+
+      await wrapper.find('form').trigger('submit');
+      await flushPromises();
+
+      expect(capturedPayload).not.toBeNull();
+      expect(capturedPayload!.type).toBe('transfer');
+      expect(capturedPayload!.toAccountId).toBe('acc-2');
+      // toAmount is auto-recalculated by TransferPanel watcher using exchange rates
+      // 100000 UZS * 0.0000794 (mock rate) = 7.94 USD
+      expect(capturedPayload!.toAmount).toBeCloseTo(7.94, 1);
+      expect(capturedPayload!.toCurrency).toBe('USD');
+      expect(capturedPayload!.amount).toBe(100000);
+    });
+
+    it('navigates back after successful transfer', async () => {
+      server.use(
+        http.get('*/api/accounts', () =>
+          HttpResponse.json([mockAccountResponse, mockSecondAccountResponse]),
+        ),
+      );
+
+      const wrapper = await renderPage({ type: 'transfer' });
+
+      const formComp = wrapper.findComponent({ name: 'TransactionForm' });
+      const currentData = formComp.props('formData');
+      formComp.vm.$emit('update:formData', {
+        ...currentData,
+        amount: 50000,
+        toAccountId: 'acc-2',
+        toAmount: 4,
+        toCurrency: 'USD',
+        categoryId: 'transfer',
+      });
+      await nextTick();
+      await flushPromises();
+
+      await wrapper.find('form').trigger('submit');
+      await flushPromises();
+
+      expect(navigateBackMock).toHaveBeenCalled();
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Type Switching
+  // -----------------------------------------------------------------------
+  describe('type switching', () => {
+    it('switches to income type and shows income categories', async () => {
+      const wrapper = await renderPage({ type: 'income' });
+
+      expect(wrapper.text()).toContain('Добавить доход');
+      expect(wrapper.text()).toContain('Зарплата');
+    });
+
+    it('hides split expense button in income mode', async () => {
+      const wrapper = await renderPage({ type: 'income' });
+      // All panels are rendered in a swipeable container, so we check the IncomePanel specifically
+      const incomePanel = wrapper.findComponent({ name: 'IncomePanel' });
+      expect(incomePanel.exists()).toBe(true);
+      expect(incomePanel.text()).not.toContain('Разделить расход');
+    });
+
+    it('shows transfer label in transfer mode', async () => {
+      server.use(
+        http.get('*/api/accounts', () =>
+          HttpResponse.json([mockAccountResponse, mockSecondAccountResponse]),
+        ),
+      );
+      const wrapper = await renderPage({ type: 'transfer' });
+      expect(wrapper.text()).toContain('Перевести');
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Loading State
+  // -----------------------------------------------------------------------
+  describe('loading state', () => {
+    it('does not show form or empty state while accounts are loading', async () => {
+      // Delay account response
+      server.use(
+        http.get('*/api/accounts', async () => {
+          await new Promise((resolve) => setTimeout(resolve, 100));
+          return HttpResponse.json([mockAccountResponse]);
+        }),
+      );
+
+      const router = createTestRouter(routes);
+      router.push('/transactions/new');
+      await router.isReady();
+
+      currentWrapper = renderWithProviders(AddTransactionPage, {
+        router,
+        provideAuth: { user: mockUser },
+      });
+      // Only one flush — don't wait for accounts to load
+      await flushPromises();
+
+      // During loading: neither empty state nor form should be visible
+      expect(currentWrapper.find('[data-testid="no-accounts-state"]').exists()).toBe(false);
+
+      // Wait for accounts to load
+      await flushPromises();
+      await flushPromises();
+    });
+  });
 });

@@ -23,4 +23,9 @@ export const profileHandlers = [
   http.get('*/api/profiles/me', () => {
     return HttpResponse.json(mockProfileResponse);
   }),
+
+  http.patch('*/api/profiles/me', async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json({ ...mockProfileResponse, ...body });
+  }),
 ];

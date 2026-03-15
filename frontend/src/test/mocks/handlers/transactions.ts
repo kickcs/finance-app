@@ -69,6 +69,21 @@ export const transactionHandlers = [
     });
   }),
 
+  // Adjust balance
+  http.post('*/api/transactions/adjust-balance', async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json({
+      ...mockTransactionResponse,
+      id: `tx-adjust-${Date.now()}`,
+      type: 'adjustment',
+      categoryId: 'adjustment',
+      amount: body.targetBalance,
+      accountId: body.accountId,
+      currency: body.currency,
+      description: body.description ?? 'Корректировка баланса',
+    });
+  }),
+
   // Create transaction
   http.post('*/api/transactions', async ({ request }) => {
     const body = (await request.json()) as Record<string, unknown>;

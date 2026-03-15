@@ -14,7 +14,7 @@ import {
 // Stub for vuedraggable — renders scoped slot for each item
 const DraggableStub = defineComponent({
   name: 'Draggable',
-  props: ['modelValue', 'itemKey'],
+  props: { modelValue: { type: Array }, itemKey: { type: String } },
   emits: ['start', 'end', 'update:modelValue'],
   setup(props, { slots }) {
     return () =>
@@ -230,6 +230,62 @@ describe('AccountsPage', () => {
 
       expect(wrapper.text()).toContain('Основной');
       expect(wrapper.text()).toContain('Кредитная карта');
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Section header add button
+  // -----------------------------------------------------------------------
+  describe('section header', () => {
+    it('section header add button navigates to new account page', async () => {
+      const router = createTestRouter(routes);
+      router.push('/accounts');
+      await router.isReady();
+      const pushSpy = vi.spyOn(router, 'push');
+
+      const wrapper = await renderPage({ router });
+
+      // SectionHeader renders an add button via show-add prop
+      const sectionHeader = wrapper.findComponent({ name: 'SectionHeader' });
+      expect(sectionHeader.exists()).toBe(true);
+
+      // Emit add-click
+      sectionHeader.vm.$emit('add-click');
+      await flushPromises();
+
+      expect(pushSpy).toHaveBeenCalledWith({ name: 'new-account' });
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Edge cases
+  // -----------------------------------------------------------------------
+  describe('edge cases', () => {
+    it('shows zero total balance when all accounts have zero balance', async () => {
+      server.use(
+        http.get('*/api/accounts', () =>
+          HttpResponse.json([
+            {
+              ...mockAccountResponse,
+              balance: 0,
+              balances: [
+                {
+                  id: 'bal-z',
+                  accountId: 'acc-1',
+                  currency: 'UZS',
+                  balance: 0,
+                  createdAt: '2025-01-01T00:00:00.000Z',
+                },
+              ],
+            },
+          ]),
+        ),
+      );
+      const wrapper = await renderPage();
+
+      // Total balance should show 0
+      expect(wrapper.text()).toContain('Общий баланс');
+      expect(wrapper.text()).toContain('0');
     });
   });
 });
