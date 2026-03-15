@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { UIcon, Skeleton } from '@/shared/ui';
+import { UIcon, Skeleton, DiscoveryDot } from '@/shared/ui';
 import type { QuickAction } from '@/features/configure-quick-action';
 
 defineProps<{
@@ -9,6 +9,7 @@ defineProps<{
   hidden: boolean;
   loading?: boolean;
   showScanButton?: boolean;
+  showScanDot?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -33,37 +34,39 @@ const emit = defineEmits<{
 
     <div v-else class="flex gap-3 md:gap-4 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-1">
       <!-- Scan receipt button (first item) -->
-      <button
-        v-if="showScanButton"
-        type="button"
-        aria-label="Сканировать чек"
-        class="relative flex flex-col items-center gap-1.5 py-3 md:py-4 rounded-xl md:rounded-2xl bg-surface-light dark:bg-surface-dark border-2 border-primary/20 shadow-sm hover:shadow-md hover:-translate-y-1 hover:border-primary/40 active:scale-95 active:translate-y-0 active:shadow-sm transition-[transform,box-shadow,border-color] duration-200 group cursor-pointer snap-start shrink-0 w-[calc((100%-36px)/4)] overflow-hidden"
-        @click="emit('scan-click')"
-      >
-        <!-- Subtle Premium Glow -->
-        <div
-          class="absolute inset-0 bg-gradient-to-b from-primary/10 to-transparent opacity-100 group-hover:from-primary/15 transition-colors duration-300 pointer-events-none"
-        ></div>
-
-        <div
-          class="relative z-10 w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center bg-primary transition-transform duration-200 group-hover:scale-110 shadow-sm shadow-primary/30"
+      <div v-if="showScanButton" class="relative snap-start shrink-0 w-[calc((100%-36px)/4)]">
+        <button
+          type="button"
+          aria-label="Сканировать чек"
+          class="relative flex flex-col items-center gap-1.5 py-3 md:py-4 rounded-xl md:rounded-2xl bg-surface-light dark:bg-surface-dark border-2 border-primary/20 shadow-sm hover:shadow-md hover:-translate-y-1 hover:border-primary/40 active:scale-95 active:translate-y-0 active:shadow-sm transition-[transform,box-shadow,border-color] duration-200 group cursor-pointer w-full overflow-hidden"
+          @click="emit('scan-click')"
         >
-          <UIcon name="document_scanner" size="sm" class="text-white" />
-
-          <!-- Small subtle premium indicator dot -->
+          <!-- Subtle Premium Glow -->
           <div
-            class="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-tr from-amber-400 to-yellow-300 rounded-full border-2 border-surface-light dark:border-surface-dark shadow-sm flex items-center justify-center"
-          >
-            <UIcon name="star" size="xs" class="text-white scale-[0.5]" />
-          </div>
-        </div>
+            class="absolute inset-0 bg-gradient-to-b from-primary/10 to-transparent opacity-100 group-hover:from-primary/15 transition-colors duration-300 pointer-events-none"
+          ></div>
 
-        <span
-          class="relative z-10 text-xs font-semibold text-text-primary-light dark:text-text-primary-dark whitespace-nowrap transition-colors"
-        >
-          Сканировать
-        </span>
-      </button>
+          <div
+            class="relative z-10 w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center bg-primary transition-transform duration-200 group-hover:scale-110 shadow-sm shadow-primary/30"
+          >
+            <UIcon name="document_scanner" size="sm" class="text-white" />
+
+            <!-- Small subtle premium indicator dot -->
+            <div
+              class="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-tr from-amber-400 to-yellow-300 rounded-full border-2 border-surface-light dark:border-surface-dark shadow-sm flex items-center justify-center"
+            >
+              <UIcon name="star" size="xs" class="text-white scale-[0.5]" />
+            </div>
+          </div>
+
+          <span
+            class="relative z-10 text-xs font-semibold text-text-primary-light dark:text-text-primary-dark whitespace-nowrap transition-colors"
+          >
+            Сканировать
+          </span>
+        </button>
+        <DiscoveryDot :show="showScanDot" />
+      </div>
 
       <!-- Quick action slots -->
       <button

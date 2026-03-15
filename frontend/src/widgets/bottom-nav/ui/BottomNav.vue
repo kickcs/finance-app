@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { UIcon } from '@/shared/ui';
+import { UIcon, DiscoveryDot } from '@/shared/ui';
 import { useHaptics } from '@/shared/lib/haptics';
+import { useFeatureHints } from '@/features/feature-hints';
 import { MAIN_NAV_ITEMS, CHILD_ROUTE_MAP, type NavItem } from '@/shared/config/navigation';
 
 const emit = defineEmits<{
@@ -10,6 +11,8 @@ const emit = defineEmits<{
 }>();
 
 const { trigger } = useHaptics();
+const { dismissDot, isDotDismissed } = useFeatureHints();
+const showAddDot = computed(() => !isDotDismissed('add-button'));
 
 const route = useRoute();
 const router = useRouter();
@@ -41,6 +44,7 @@ const activeItem = computed(() => {
 });
 
 function handleAddClick() {
+  dismissDot('add-button');
   trigger('selection');
   emit('add-click');
 }
@@ -60,14 +64,16 @@ function handleNavClick(item: (typeof navItems)[0]) {
     <div class="max-w-md mx-auto flex items-center justify-around">
       <template v-for="item in navItems" :key="item.id">
         <!-- Add Button - Clean flat square -->
-        <button
-          v-if="item.id === 'add'"
-          :aria-label="item.label"
-          class="w-10 h-10 rounded-lg flex items-center justify-center bg-primary text-white hover:bg-primary-hover active:scale-[0.92] shadow-sm active:shadow-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-none transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
-          @click="handleAddClick"
-        >
-          <UIcon name="add" size="md" />
-        </button>
+        <div v-if="item.id === 'add'" class="relative">
+          <button
+            :aria-label="item.label"
+            class="w-10 h-10 rounded-lg flex items-center justify-center bg-primary text-white hover:bg-primary-hover active:scale-[0.92] shadow-sm active:shadow-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-none transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
+            @click="handleAddClick"
+          >
+            <UIcon name="add" size="md" />
+          </button>
+          <DiscoveryDot :show="showAddDot" size="md" />
+        </div>
 
         <!-- Nav Item -->
         <button

@@ -12,7 +12,7 @@ import { AccountStack } from '@/widgets/account-stack';
 import { BudgetSection, BudgetSectionSkeleton } from '@/widgets/budget-section';
 import { DebtsSectionSkeleton } from '@/widgets/debts-section';
 import { RemindersSectionSkeleton } from '@/widgets/reminders-section';
-import { UIcon } from '@/shared/ui';
+import { UIcon, DiscoveryDot } from '@/shared/ui';
 import DashboardQuickActions from './DashboardQuickActions.vue';
 import DashboardTopExpenses from './DashboardTopExpenses.vue';
 
@@ -45,6 +45,9 @@ const props = withDefaults(
     // Dashboard settings
     hiddenWidgets?: Set<WidgetId>;
     widgetOrder?: WidgetId[];
+    // Discovery dots
+    showScanDot?: boolean;
+    showSettingsDot?: boolean;
   }>(),
   {
     hiddenWidgets: () => new Set<WidgetId>(),
@@ -113,6 +116,7 @@ const RemindersSection = defineAsyncComponent({
           :hint-dismissed="hintDismissed"
           :hidden="quickActionsHidden"
           :loading="quickActionsLoading"
+          :show-scan-dot="showScanDot"
           show-scan-button
           @click="emit('quick-action-click', $event)"
           @long-press="emit('quick-action-long-press', $event)"
@@ -205,14 +209,17 @@ const RemindersSection = defineAsyncComponent({
     </template>
 
     <div class="flex justify-center mt-2 pb-4 md:pb-0">
-      <button
-        type="button"
-        class="flex items-center gap-2 text-body-sm font-medium text-text-tertiary-light dark:text-text-tertiary-dark hover:text-text-secondary-light dark:hover:text-text-secondary-dark transition-colors px-4 py-2 rounded-xl hover:bg-surface-light dark:hover:bg-surface-dark"
-        @click="emit('dashboard-settings-click')"
-      >
-        <UIcon name="tune" size="sm" />
-        Настроить вид дашборда
-      </button>
+      <div class="relative">
+        <button
+          type="button"
+          class="flex items-center gap-2 text-body-sm font-medium text-text-tertiary-light dark:text-text-tertiary-dark hover:text-text-secondary-light dark:hover:text-text-secondary-dark transition-colors px-4 py-2 rounded-xl hover:bg-surface-light dark:hover:bg-surface-dark"
+          @click="emit('dashboard-settings-click')"
+        >
+          <UIcon name="tune" size="sm" />
+          Настроить вид дашборда
+        </button>
+        <DiscoveryDot :show="showSettingsDot" />
+      </div>
     </div>
   </div>
 </template>
