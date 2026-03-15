@@ -8,7 +8,7 @@ import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared
 import { debtQueryKeys } from '@/entities/debt';
 import { reminderQueryKeys } from '@/entities/reminder';
 import { budgetQueryKeys } from '@/entities/budget';
-import { PageContainer, PullToRefresh, UIcon } from '@/shared/ui';
+import { PageContainer, PullToRefresh, UIcon, DiscoveryDot } from '@/shared/ui';
 import { InstallPwaBanner, InstallPwaModal, usePwaInstall } from '@/features/install-pwa';
 import { QuickActionModal } from '@/features/configure-quick-action';
 import { AccountStack } from '@/widgets/account-stack';
@@ -16,6 +16,7 @@ import { BudgetSection } from '@/widgets/budget-section';
 import { useHaptics } from '@/shared/lib/haptics';
 import { usePwaUpdateToast } from '@/shared/lib/composables/usePwaUpdate';
 import { usePremiumFeature } from '@/shared/lib/composables/usePremiumFeature';
+import { useFeatureHints } from '@/features/feature-hints';
 import { SetBudgetSheet } from '@/features/set-budget';
 
 import { useDashboardData } from './model/useDashboardData';
@@ -34,6 +35,9 @@ import DashboardSidePanel from './ui/DashboardSidePanel.vue';
 
 const { trigger } = useHaptics();
 const { requirePremium } = usePremiumFeature();
+const { isDotDismissed, dismissDot } = useFeatureHints();
+const showSettingsDot = computed(() => !isDotDismissed('dashboard-settings'));
+const showScanDot = computed(() => !isDotDismissed('scan-receipt'));
 
 const greeting = getGreeting();
 
@@ -137,9 +141,15 @@ async function handleBudgetReset() {
 }
 
 function handleScanReceipt() {
+  dismissDot('scan-receipt');
   trigger('selection');
   if (!requirePremium('Сканирование чека')) return;
   nav.toScanReceipt();
+}
+
+function handleSettingsClick() {
+  dismissDot('dashboard-settings');
+  nav.toDashboardSettings();
 }
 </script>
 
@@ -153,8 +163,9 @@ function handleScanReceipt() {
         :currency="currency"
         :is-hidden="isHidden"
         :is-scrolled-past-balance="isScrolledPastBalance"
+        :show-settings-dot="showSettingsDot"
         @profile-click="nav.toProfile"
-        @settings-click="nav.toDashboardSettings"
+        @settings-click="handleSettingsClick"
         @balance-click="nav.toAccounts"
       />
     </template>
@@ -193,6 +204,7 @@ function handleScanReceipt() {
                 :hint-dismissed="quickActionsHintDismissed"
                 :hidden="quickActionsHidden"
                 :loading="quickActionsLoading"
+                :show-scan-dot="showScanDot"
                 show-scan-button
                 @click="handleQuickActionClick"
                 @long-press="handleQuickActionLongPress"
@@ -270,14 +282,17 @@ function handleScanReceipt() {
           </template>
 
           <section class="flex justify-center mt-2 pb-4">
-            <button
-              type="button"
-              class="flex items-center gap-2 text-body-sm font-medium text-text-tertiary-light dark:text-text-tertiary-dark hover:text-text-secondary-light dark:hover:text-text-secondary-dark transition-colors px-4 py-2 rounded-xl hover:bg-surface-light dark:hover:bg-surface-dark"
-              @click="nav.toDashboardSettings"
-            >
-              <UIcon name="tune" size="sm" />
-              Настроить вид дашборда
-            </button>
+            <div class="relative">
+              <button
+                type="button"
+                class="flex items-center gap-2 text-body-sm font-medium text-text-tertiary-light dark:text-text-tertiary-dark hover:text-text-secondary-light dark:hover:text-text-secondary-dark transition-colors px-4 py-2 rounded-xl hover:bg-surface-light dark:hover:bg-surface-dark"
+                @click="handleSettingsClick"
+              >
+                <UIcon name="tune" size="sm" />
+                Настроить вид дашборда
+              </button>
+              <DiscoveryDot :show="showSettingsDot" />
+            </div>
           </section>
         </div>
       </PullToRefresh>
@@ -348,6 +363,8 @@ function handleScanReceipt() {
               :is-hidden="isHidden"
               :hidden-widgets="hiddenWidgets"
               :widget-order="widgetOrder"
+              :show-scan-dot="showScanDot"
+              :show-settings-dot="showSettingsDot"
               @quick-action-click="handleQuickActionClick"
               @quick-action-long-press="handleQuickActionLongPress"
               @dismiss-hint="dismissQuickActionsHint"
@@ -365,7 +382,7 @@ function handleScanReceipt() {
               @view-all-reminders="nav.toReminders"
               @budget-setup="showBudgetSheet = true"
               @budget-edit="showBudgetSheet = true"
-              @dashboard-settings-click="nav.toDashboardSettings"
+              @dashboard-settings-click="handleSettingsClick"
             />
           </section>
         </div>

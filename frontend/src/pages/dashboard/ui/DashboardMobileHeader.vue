@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { AppHeader } from '@/widgets/header';
 import { ThemeToggle } from '@/features/toggle-theme';
-import { UIcon } from '@/shared/ui';
+import { UIcon, DiscoveryDot } from '@/shared/ui';
 import { formatMasked, COMPACT_FORMAT } from '@/shared/lib/format/currency';
 
 defineProps<{
@@ -11,6 +11,7 @@ defineProps<{
   currency: string;
   isHidden: boolean;
   isScrolledPastBalance: boolean;
+  showSettingsDot?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -93,14 +94,17 @@ const emit = defineEmits<{
         </div>
       </template>
       <template #actions>
-        <button
-          type="button"
-          aria-label="Настройки дашборда"
-          class="w-9 h-9 rounded-xl flex items-center justify-center text-text-secondary-light dark:text-text-secondary-dark hover:bg-surface-light dark:hover:bg-surface-dark transition-colors"
-          @click="emit('settings-click')"
-        >
-          <UIcon name="tune" size="sm" />
-        </button>
+        <div class="relative">
+          <button
+            type="button"
+            aria-label="Настройки дашборда"
+            class="w-9 h-9 rounded-xl flex items-center justify-center text-text-secondary-light dark:text-text-secondary-dark hover:bg-surface-light dark:hover:bg-surface-dark transition-colors"
+            @click="emit('settings-click')"
+          >
+            <UIcon name="tune" size="sm" />
+          </button>
+          <DiscoveryDot :show="showSettingsDot" />
+        </div>
         <ThemeToggle />
       </template>
     </AppHeader>
