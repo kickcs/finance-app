@@ -720,6 +720,7 @@ describe('AddTransactionPage', () => {
     // ------- Rollback -------
 
     it('rolls back transaction when debt creation fails', async () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const { deletedTxIds } = useSplitHandlers();
       // Override debt handler to fail
       server.use(
@@ -740,9 +741,11 @@ describe('AddTransactionPage', () => {
       expect(deletedTxIds).toContain('tx-split-1');
       expect(navigateBackMock).not.toHaveBeenCalled();
       expect(wrapper.text()).toContain('Не удалось создать долги');
+      consoleSpy.mockRestore();
     });
 
     it('rolls back transaction when second debt fails (first already created)', async () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const { deletedTxIds } = useSplitHandlers();
       let debtCallCount = 0;
       // Override debt handler: first call succeeds, second fails
@@ -772,6 +775,7 @@ describe('AddTransactionPage', () => {
 
       expect(deletedTxIds).toContain('tx-split-1');
       expect(navigateBackMock).not.toHaveBeenCalled();
+      consoleSpy.mockRestore();
     });
 
     // ------- Validation errors -------
