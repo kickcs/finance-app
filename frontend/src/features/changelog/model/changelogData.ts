@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.34';
+export const CURRENT_VERSION = '1.0.35';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,33 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.35',
+    date: '2026-03-15',
+    title: 'Удобство и подсказки',
+    items: [
+      {
+        type: 'feature',
+        text: 'Подсказки по функциям — приложение расскажет про разделение расходов, сканирование чеков и настройку дашборда в нужный момент',
+      },
+      {
+        type: 'feature',
+        text: 'Отмена транзакции — после создания можно быстро отменить, нажав «Отменить» в уведомлении',
+      },
+      {
+        type: 'feature',
+        text: 'Умные дефолты — категория и счёт автоматически заполняются на основе ваших привычек',
+      },
+      {
+        type: 'improvement',
+        text: 'Свайп по транзакциям — влево для удаления, вправо для редактирования. Длинный свайп срабатывает автоматически',
+      },
+      {
+        type: 'improvement',
+        text: 'Тактильная обратная связь — вибрация при создании, удалении и ошибках ввода',
+      },
+    ],
+  },
   {
     version: '1.0.34',
     date: '2026-03-13',
