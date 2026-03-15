@@ -68,7 +68,7 @@ features/feature-hints/
 │   ├── constants.ts      # Конфигурация всех хинтов (триггеры, тексты, маршруты)
 │   └── useFeatureHints.ts  # Composable: состояние, проверка триггеров, dismiss
 ├── ui/
-│   └── FeatureHintTooltip.vue  # Компонент подсказки (Reka UI Tooltip/Popover)
+│   └── FeatureHintPopover.vue  # Компонент подсказки (Reka UI Popover)
 └── index.ts
 ```
 
