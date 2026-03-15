@@ -17,14 +17,14 @@ defineEmits<{
 
 <template>
   <div
-    class="relative overflow-hidden rounded-[2rem] bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark p-6 sm:p-8 shadow-sm group hover:shadow-md transition-all duration-300 md:hover:-translate-y-1"
+    class="relative overflow-hidden rounded-[2rem] bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark p-6 sm:p-8 shadow-sm hover:shadow-md transition-all duration-300 md:hover:-translate-y-1"
   >
     <!-- Decorative Ambient Glow (Primary Color) -->
     <div
-      class="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-primary/10 dark:bg-primary/20 blur-[50px] pointer-events-none group-hover:bg-primary/15 dark:group-hover:bg-primary/25 transition-colors duration-500 ease-out"
+      class="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-primary/10 dark:bg-primary/20 blur-[50px] pointer-events-none animate-glow-1"
     ></div>
     <div
-      class="absolute -bottom-16 -left-16 w-40 h-40 rounded-full bg-primary/10 dark:bg-primary/10 blur-[50px] pointer-events-none group-hover:bg-primary/15 dark:group-hover:bg-primary/15 transition-colors duration-500 ease-out"
+      class="absolute -bottom-16 -left-16 w-40 h-40 rounded-full bg-primary/10 dark:bg-primary/10 blur-[50px] pointer-events-none animate-glow-2"
     ></div>
 
     <div class="relative z-10 flex flex-col md:flex-row justify-between gap-6">
