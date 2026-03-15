@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.35';
+export const CURRENT_VERSION = '1.0.36';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,17 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.36',
+    date: '2026-03-15',
+    title: 'Исправление раздельного счёта',
+    items: [
+      {
+        type: 'fix',
+        text: 'Исправлено создание долгов при разделении расхода — раньше операция отменялась с ошибкой',
+      },
+    ],
+  },
   {
     version: '1.0.35',
     date: '2026-03-15',

@@ -70,8 +70,7 @@ export const debtsApi = {
       debtType: debt.debt_type ?? 'taken',
       personName: debt.person_name,
       accountId: debt.account_id,
-      transactionId: debt.transaction_id,
-      isClosed: debt.is_closed ?? false,
+      transactionId: debt.transaction_id ?? undefined,
       currency: debt.currency ?? 'UZS',
       sourceTransactionId: debt.source_transaction_id,
     });
