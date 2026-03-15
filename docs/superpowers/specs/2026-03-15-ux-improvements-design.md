@@ -35,7 +35,7 @@
 - Стрелка-указатель (CSS triangle) направлена на целевой элемент
 - Анимация появления: `fadeInUp` 200ms
 
-**Технология:** Reka UI `Tooltip` или `Popover` с кастомной стилизацией.
+**Технология:** Reka UI `Popover` с кастомной стилизацией. Tooltip не подходит — содержит интерактивные кнопки, которые нарушают WAI-ARIA семантику tooltip.
 
 ### 1.2 Триггеры показа
 
@@ -49,10 +49,10 @@
 
 - Каждая подсказка показывается **максимум 1 раз** (dismiss навсегда)
 - Не более **1 подсказки за сессию** (сессия = с момента открытия приложения)
-- Состояние хранится в `localStorage`:
-  - `hints_dismissed: { [hintId]: true }` — какие подсказки закрыты
-  - `hints_shown_this_session: boolean` — показывалась ли подсказка в текущей сессии
-  - `hints_counters: { expenses_count, transactions_count, dashboard_visits }` — счётчики триггеров
+- Состояние хранится:
+  - В `localStorage`: `hints_dismissed: { [hintId]: true }` — какие подсказки закрыты
+  - В `localStorage`: `hints_counters: { expenses_count, transactions_count, dashboard_visits }` — счётчики триггеров
+  - **В памяти (module-level `ref`)**: `hintShownThisSession: boolean` — сбрасывается при перезагрузке страницы автоматически (НЕ в localStorage, т.к. localStorage не сбрасывается при reload)
 - "Попробовать →" — навигация к фиче + dismiss
 - "Не показывать" — только dismiss
 - Подсказка закрывается также по клику вне неё
@@ -109,14 +109,22 @@ features/feature-hints/
 **Компонент:** `shared/ui/discovery-dot/DiscoveryDot.vue`
 
 ```vue
-<DiscoveryDot id="split-expense" />
+<!-- Родительский элемент ДОЛЖЕН иметь position: relative -->
+<div class="relative">
+  <button>⚙️</button>
+  <DiscoveryDot id="dashboard-settings" />
+</div>
 ```
 
 Props:
 - `id: string` — уникальный идентификатор точки
 - `size?: 'sm' | 'md'` — 8px или 10px (по умолчанию 'sm')
 
-Состояние dismissed хранится в том же `localStorage` ключе, что и hints: `discovery_dots_dismissed: { [dotId]: true }`.
+**Доступность:** Компонент рендерится с `aria-hidden="true"` — это декоративный элемент, screen readers не должны его озвучивать.
+
+**Позиционирование:** Точка позиционируется через `absolute`. Родительский элемент должен иметь `position: relative`. Компонент размещается как sibling (не child) кнопки, внутри `relative`-обёртки.
+
+Состояние dismissed хранится в `localStorage`: `discovery_dots_dismissed: { [dotId]: true }`.
 
 Компонент рендерится только если `!dismissed[id]`. При dismiss вызывает `useFeatureHints().dismissDot(id)`.
 
@@ -145,17 +153,20 @@ Props:
 ### 3.2 Логика undo
 
 - При нажатии "Отменить":
-  - Вызывается `deleteTransaction(id)` для только что созданной транзакции
-  - Баланс счёта откатывается (через существующую логику delete)
+  - Вызывается предварительно привязанный `onUndo()` callback
   - Toast заменяется на короткий "Отменено" (1.5 сек)
   - Haptic: `light`
+
+**Важно:** `onUndo` должен быть полностью привязанным замыканием (`() => Promise<void>`), собранным на месте вызова (в странице/виджете, где есть доступ к `useAccounts().updateBalance`). Toast-компонент **никогда** не вызывает API напрямую — он только вызывает переданный callback.
+
+**Захват ID транзакции:** Toast показывается из `onSuccess` мутации create (не из `onMutate`), чтобы иметь реальный серверный ID транзакции, а не оптимистичный временный ID.
 
 ### 3.3 Архитектура
 
 Расширение существующего `shared/lib/composables/useToast.ts`:
 
 - Новый вариант toast: `variant: 'transaction-success'`
-- Дополнительные поля: `amount`, `categoryName`, `accountName`, `transactionId`, `onUndo`
+- Дополнительные поля: `amount`, `categoryName`, `accountName`, `onUndo: () => Promise<void>`
 - Компонент `TransactionSuccessToast.vue` внутри toast-системы
 - Swipe-to-dismiss через `useSwipe()` из `shared/lib/hooks/`
 
@@ -173,7 +184,7 @@ Props:
 | Ошибка валидации формы | `error` | TransactionForm → onValidationError |
 | Dismiss подсказки | `light` | FeatureHintTooltip → onDismiss |
 | Pull-to-refresh (триггер) | `success` | PullToRefresh → onRefresh |
-| Порог свайпа транзакции | `selection` | SwipeableItem → onThreshold |
+| Порог свайпа транзакции | `selection` | SwipeableItem → onThreshold (замена существующего `light` на `selection`) |
 
 ### 4.2 Реализация
 
@@ -197,14 +208,17 @@ Props:
 
 ### 5.3 Архитектура
 
-Модификация существующего `shared/ui/SwipeableItem.vue`:
+Модификация существующего `shared/ui/SwipeableItem.vue` и `shared/lib/hooks/useSwipe.ts`:
 
-- Новый prop: `swipeMode: 'left' | 'right' | 'both'` (по умолчанию 'both')
-- Prop `leftAction: { icon, label, color, handler }`
-- Prop `rightAction: { icon, label, color, handler }`
-- Обратная совместимость: если передан только `leftAction`, поведение как текущее
+`SwipeableItem` уже поддерживает `leftAction` и `rightAction` props — новый `swipeMode` prop **не нужен** (направления управляются наличием/отсутствием action props).
 
-Компоненты `TransactionItem` и `VirtualGroupedTransactionList` обновляются для использования нового `swipeMode="both"`.
+**Единственное новое поведение — full-swipe auto-fire:**
+- В `useSwipe.ts` добавить `fullSwipeThreshold: number` (по умолчанию 200px)
+- При `|translateX| >= fullSwipeThreshold` — автоматически выполнить действие и сбросить позицию
+- Emit `onFullSwipeLeft` / `onFullSwipeRight` из `SwipeableItem`
+- Пружинная анимация (spring easing) при отпускании
+
+Компоненты `TransactionItem` и `VirtualGroupedTransactionList` обновляются: свайп влево → удалить (красный), свайп вправо → редактировать (индиго).
 
 ---
 
@@ -233,11 +247,14 @@ Props:
 **Новый composable:** `features/add-transaction/model/useSmartDefaults.ts`
 
 ```typescript
-useSmartDefaults(transactions: Transaction[], type: 'expense' | 'income')
+useSmartDefaults(userId: string, type: 'expense' | 'income' | 'transfer')
 // Возвращает: { defaultCategory, defaultAccount }
+// Для type='transfer' возвращает { defaultCategory: null, defaultAccount } — только счёт
 ```
 
-- Работает на клиентской стороне, анализирует уже загруженные транзакции из кеша Vue Query
+- Читает из кеша Vue Query по ключу `transactionQueryKeys.list(userId)` (последние 50 транзакций)
+- **Graceful degradation:** если кеш пуст (холодный старт, eviction) — возвращает `null` для всех полей, форма работает без предзаполнения
+- Порог "< 5 транзакций" применяется к количеству записей в кеше, а не к общему количеству на сервере
 - Никаких новых API-запросов
 - Интегрируется в `TransactionForm.vue` через `watch` на тип транзакции
 
@@ -249,23 +266,23 @@ useSmartDefaults(transactions: Transaction[], type: 'expense' | 'income')
 
 ```
 finance_app_hints_dismissed      — Record<string, boolean>
-finance_app_hints_session_shown  — boolean (сбрасывается при перезагрузке)
 finance_app_hints_counters       — Record<string, number>
 finance_app_discovery_dots       — Record<string, boolean>
 ```
+
+Флаг `hintShownThisSession` хранится в module-level `ref` (не в localStorage) — автоматически сбрасывается при перезагрузке.
 
 Все ключи с префиксом `finance_app_` для избежания коллизий.
 
 ### Зависимости
 
-- **Reka UI:** Tooltip/Popover для хинтов (уже в проекте)
+- **Reka UI:** Popover для хинтов (уже в проекте)
 - **Reka UI Presence:** Для анимаций появления/исчезновения (уже в проекте)
 - Никаких новых npm-зависимостей
 
 ### Компоненты Reka UI для использования
 
-- `Tooltip` — для tooltip-bubble хинтов
-- `Popover` — альтернатива, если нужен интерактивный контент внутри (кнопки dismiss/action)
+- `Popover` — для tooltip-bubble хинтов (содержит интерактивные кнопки, поэтому Tooltip не подходит)
 - `Presence` — анимация монтирования/демонтирования подсказок и точек
 - `Toast` — расширение существующей системы (уже кастомная)
 
