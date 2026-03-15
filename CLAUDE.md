@@ -37,6 +37,10 @@ docker compose up -d           # Start all services
 
 GitHub Actions (`deploy.yml`): build-backend (lint + test + Docker build/push) + build-frontend (type-check + Vite build + Docker build/push) → deploy via SSH with conditional migrations. On PRs only validation runs (Docker steps skipped). Production uses `docker-compose.prod.yml`.
 
+## Git Push
+
+**Always push to GitHub** (`origin`), never to `gitlab`. Example: `git push origin master`.
+
 ## Architecture Overview
 
 **Personal finance management application** with Vue 3 frontend and NestJS backend.
