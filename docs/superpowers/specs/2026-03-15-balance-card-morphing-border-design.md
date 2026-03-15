@@ -11,6 +11,8 @@ Replace the two existing glow blobs (`animate-glow-1`, `animate-glow-2`) in Bala
 - **Intensity**: Medium — 10-15s cycle, moderate opacity
 - **Current glows**: Remove both, replace entirely with new effect
 - **Approach**: Pseudo-elements (`::before` for blob, `::after` for border)
+- **Existing `border` class**: Remove from card root — `::after` fully replaces it
+- **CSS location**: Keyframes in `index.css` (global, consistent with current approach), pseudo-element styles in `<style scoped>` within `BalanceCard.vue`
 
 ## Architecture
 
@@ -19,7 +21,7 @@ Replace the two existing glow blobs (`animate-glow-1`, `animate-glow-2`) in Bala
 ```
 <div class="balance-card" (position: relative, overflow: hidden)>
   ::before  — morphing blob (background glow)
-  ::after   — animated border (thin glowing frame)
+  ::after   — animated border (thin glowing frame, inside overflow boundary)
 
   <div class="relative z-10">  — card content (above everything)
     ...balance info...
@@ -27,32 +29,86 @@ Replace the two existing glow blobs (`animate-glow-1`, `animate-glow-2`) in Bala
 </div>
 ```
 
-No additional DOM elements needed. The two existing glow `<div>`s are removed.
+No additional DOM elements needed. The two existing glow `<div>`s are removed. The existing Tailwind `border border-border-light dark:border-border-dark` is removed from the card root — `::after` replaces it entirely.
 
 ### `::before` — Morphing Blob
 
 - Position: absolute, centered, ~60-70% of card size
-- Background: `radial-gradient()` using `primary/20` → `primary/10`
-- Filter: `blur(40-50px)` for soft glow
-- Animation: `border-radius` morphing via keyframes (12-15s cycle), adapted from CodePen's 10-step shape transformation
-- Box-shadow: 2-3 `inset` values using primary color variants (simplified from CodePen's 4 values)
-- Opacity: 0.5-0.6 — subtle, doesn't overpower content
-- Performance: `will-change: border-radius`
+- Background: `radial-gradient(circle, primary/20, primary/5)`
+- Filter: `blur(45px)` for soft glow
+- `will-change: transform` + `transform: translateZ(0)` for GPU layer promotion
+- Animation: `border-radius` morphing via keyframes (12s cycle)
+- No `box-shadow` — with `blur(45px)` applied, inset shadows are invisible. Dropped for performance.
+
+**Keyframes** (adapted from CodePen, simplified to 6 steps):
+
+```css
+@keyframes morph-blob {
+  0%, 100% { border-radius: 30% 70% 70% 30% / 30% 52% 48% 70%; }
+  17%      { border-radius: 50% 50% 20% 80% / 25% 80% 20% 75%; }
+  33%      { border-radius: 67% 33% 47% 53% / 37% 20% 80% 63%; }
+  50%      { border-radius: 100%; }
+  67%      { border-radius: 50% 50% 53% 47% / 26% 22% 78% 74%; }
+  83%      { border-radius: 20% 80% 20% 80% / 20% 80% 20% 80%; }
+}
+```
 
 ### `::after` — Animated Border
 
-- Position: `inset: 0`, matches card's `border-radius: 2rem`
-- Border: `1.5-2px solid transparent`
-- Background: `conic-gradient(from var(--angle), primary/0, primary/40, primary/0)` with CSS mask to show only border area
-- Animation: `@property --angle` rotation (10s linear infinite cycle)
-- Fallback: static subtle border for browsers without `@property` support
+Uses `conic-gradient` with `@property` for rotation, masked to show only the border area:
+
+```css
+@property --border-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes rotate-border {
+  to { --border-angle: 360deg; }
+}
+
+.balance-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 2rem;
+  padding: 1.5px; /* border thickness */
+  background: conic-gradient(
+    from var(--border-angle),
+    transparent 0%,
+    oklch(var(--color-primary) / 0.4) 25%,
+    transparent 50%
+  );
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  -webkit-mask-composite: xor;
+  animation: rotate-border 10s linear infinite;
+  pointer-events: none;
+}
+```
+
+**`@property` fallback** (Firefox <128 and older browsers):
+
+```css
+/* When @property is not supported, --border-angle won't animate.
+   The ::after renders a static gradient border at 0deg.
+   This is acceptable — the morphing blob still provides the main visual effect.
+   No additional fallback border needed since the static conic-gradient
+   already renders a subtle partial border. */
+```
 
 ### Dark/Light Mode
 
-| Mode  | Blob opacity | Blob color     | Border intensity |
-|-------|-------------|----------------|------------------|
-| Light | `primary/15` | Weak blur     | Subtle           |
-| Dark  | `primary/25` | More saturated | More visible     |
+| Mode  | Blob `background`                                    | Blob `opacity` | Border gradient peak |
+|-------|------------------------------------------------------|---------------|---------------------|
+| Light | `radial-gradient(circle, primary/15, primary/5)`     | `0.5`         | `primary/30`        |
+| Dark  | `radial-gradient(circle, primary/25, primary/10)`    | `0.6`         | `primary/40`        |
 
 ### Reduced Motion
 
@@ -65,22 +121,32 @@ No additional DOM elements needed. The two existing glow `<div>`s are removed.
 }
 ```
 
+### Existing Hover Effects
+
+The card's `hover:shadow-md` and `md:hover:-translate-y-1` with `transition-all` are preserved. Since pseudo-elements don't inherit `transition-all`, there is no conflict. The `transition-all` on the root only affects the root element's own properties (shadow, transform).
+
 ## Performance Considerations
 
 - `border-radius` animation: low cost (repaint only, no layout)
-- `box-shadow inset`: moderate (repaint per frame, single element)
 - `filter: blur()`: moderate (GPU-accelerated)
 - No `drop-shadow` filters (expensive in original CodePen — intentionally removed)
+- No `box-shadow` on blob — invisible under blur, removed for performance
+- `will-change: transform` on `::before` for proper GPU layer promotion
 - One blob replaces two existing blobs — net GPU load stays the same or decreases
-- `will-change: border-radius` hints GPU layer promotion
+- BalanceCard is on the dashboard (landing page). Two CSS animations on a single card are lightweight. Battery impact is negligible for a single element, but if performance issues arise in future, `IntersectionObserver` can pause animations when off-screen.
 
 ## Files to Modify
 
-1. `frontend/src/widgets/balance-card/ui/BalanceCard.vue` — remove glow divs, add pseudo-element classes
-2. `frontend/src/app/styles/index.css` — remove `animate-glow-1`/`animate-glow-2` keyframes, add new morphing + border keyframes
+1. `frontend/src/widgets/balance-card/ui/BalanceCard.vue`:
+   - Remove two glow `<div>`s
+   - Remove `border border-border-light dark:border-border-dark` from root classes
+   - Add `<style scoped>` with `::before` and `::after` rules
+2. `frontend/src/app/styles/index.css`:
+   - Remove `animate-glow-1`/`animate-glow-2` classes and their keyframes (`glow-orbit-1`, `glow-orbit-2`, `glow-pulse-1`, `glow-pulse-2`)
+   - Add `@property --border-angle`, `@keyframes morph-blob`, `@keyframes rotate-border`
 
 ## Out of Scope
 
-- IntersectionObserver pause (overkill for single element)
+- IntersectionObserver pause (overkill for single element, can add later if needed)
 - Additional color themes beyond primary
 - JavaScript-driven animations
