@@ -5,6 +5,7 @@ import {
   DialogOverlay,
   DialogContent,
   DialogTitle,
+  DialogDescription,
   DialogClose,
 } from 'reka-ui';
 import { cn } from '@/shared/lib/utils';
@@ -77,6 +78,9 @@ function handleOpenChange(open: boolean) {
             {{ title }}
           </DialogTitle>
           <div v-else />
+          <DialogDescription class="sr-only">
+            {{ title ?? 'Диалоговое окно' }}
+          </DialogDescription>
           <DialogClose
             v-if="closeable"
             class="w-8 h-8 rounded-lg flex items-center justify-center text-text-secondary-light dark:text-text-secondary-dark hover:bg-surface-light dark:hover:bg-surface-dark transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary active:opacity-80"
