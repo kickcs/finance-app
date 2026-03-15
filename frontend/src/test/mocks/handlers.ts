@@ -1,5 +1,16 @@
 import type { RequestHandler } from 'msw';
+import { accountHandlers } from './handlers/accounts';
+import { categoryHandlers } from './handlers/categories';
+import { debtHandlers } from './handlers/debts';
+import { exchangeRateHandlers } from './handlers/exchange-rates';
+import { profileHandlers } from './handlers/profiles';
+import { transactionHandlers } from './handlers/transactions';
 
 export const handlers: RequestHandler[] = [
-  // Default handlers — extend per module as tests are added
+  ...accountHandlers,
+  ...categoryHandlers,
+  ...debtHandlers,
+  ...exchangeRateHandlers,
+  ...profileHandlers,
+  ...transactionHandlers,
 ];

@@ -194,15 +194,23 @@ async function handleAdjustBalance(data: {
     <!-- Content -->
     <main class="px-5 pt-8 pb-6">
       <!-- Loading State -->
-      <div v-if="isLoading" class="flex items-center justify-center py-12">
+      <div
+        v-if="isLoading"
+        class="flex items-center justify-center py-12"
+        data-testid="account-loading"
+      >
         <USpinner />
       </div>
 
       <!-- Not Found State -->
-      <NotFoundState v-else-if="!account" message="Счёт не найден" />
+      <NotFoundState
+        v-else-if="!account"
+        message="Счёт не найден"
+        data-testid="account-not-found"
+      />
 
       <!-- Account Details -->
-      <div v-else class="space-y-6">
+      <div v-else class="space-y-6" data-testid="account-detail">
         <!-- Main Card -->
         <UCard class="p-5" variant="bordered">
           <div class="flex items-start gap-4 mb-6">

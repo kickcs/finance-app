@@ -94,6 +94,32 @@ watch(
   { immediate: true },
 );
 
+async function handleSplitSubmit(uid: string): Promise<boolean> {
+  if (!formData.value.accountId) {
+    validationError.value = 'Выберите счёт для транзакции';
+    return false;
+  }
+
+  const transactionId = await submitAndWait(uid, formData.value);
+  if (!transactionId) return false;
+
+  const success = await createDebtsForSplit(
+    transactionId,
+    uid,
+    formData.value.accountId,
+    formData.value.currency,
+    formData.value.date,
+  );
+
+  if (!success) {
+    await rollbackTransaction(transactionId, uid);
+    validationError.value = 'Не удалось создать долги для раздельного счёта. Операция отменена.';
+    return false;
+  }
+
+  return true;
+}
+
 async function handleSubmit() {
   validationError.value = null;
 
@@ -102,7 +128,6 @@ async function handleSubmit() {
     return;
   }
 
-  // Validate split expense if enabled
   if (splitData.value.enabled && !splitIsValid.value) {
     validationError.value = splitValidationError.value || 'Проверьте данные разделения расхода';
     return;
@@ -111,41 +136,13 @@ async function handleSubmit() {
   const isSplit = splitData.value.enabled && splitData.value.participants.length > 0;
 
   if (isSplit) {
-    if (!formData.value.accountId) {
-      validationError.value = 'Выберите счёт для транзакции';
-      return;
-    }
-
-    // Split expense: must wait for transactionId to create debts
-    const transactionId = await submitAndWait(userId.value, formData.value);
-
-    if (!transactionId) {
-      // submitAndWait failed — error toast already shown by mutation
-      return;
-    }
-
-    const success = await createDebtsForSplit(
-      transactionId,
-      userId.value,
-      formData.value.accountId,
-      formData.value.currency,
-      formData.value.date,
-    );
-
-    if (!success) {
-      await rollbackTransaction(transactionId, userId.value);
-      validationError.value = 'Не удалось создать долги для раздельного счёта. Операция отменена.';
-      return;
-    }
-
-    resetSplit();
-    navigateBack();
+    if (!(await handleSplitSubmit(userId.value))) return;
   } else {
-    // Regular transaction: fire-and-forget with optimistic update
     submit(userId.value, formData.value);
-    resetSplit();
-    navigateBack();
   }
+
+  resetSplit();
+  navigateBack();
 }
 </script>
 

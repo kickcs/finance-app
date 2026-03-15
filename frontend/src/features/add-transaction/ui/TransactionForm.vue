@@ -459,7 +459,7 @@ const { isMounted } = useMountedAnimation();
       </Transition>
 
       <!-- Error -->
-      <p v-if="error" class="text-xs text-danger">{{ error }}</p>
+      <p v-if="error" data-testid="validation-error" class="text-xs text-danger">{{ error }}</p>
 
       <!-- Submit (Sticky on mobile if needed, but safe padding) -->
       <div class="pt-2 pb-safe">
@@ -468,6 +468,7 @@ const { isMounted } = useMountedAnimation();
           variant="primary"
           size="lg"
           full-width
+          data-testid="submit-btn"
           :loading="isSubmitting"
           :disabled="!isValid"
         >
