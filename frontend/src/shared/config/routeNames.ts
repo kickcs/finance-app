@@ -20,6 +20,7 @@ export const ROUTE_NAMES = {
   SETTINGS_CATEGORIES: 'settings-categories',
   PEOPLE_LIST: 'people-list',
   SETTINGS_QUICK_ACTIONS: 'settings-quick-actions',
+  SETTINGS_COLOR: 'settings-color',
   SCAN_RECEIPT: 'scan-receipt',
   DASHBOARD_SETTINGS: 'dashboard-settings',
   WELCOME: 'welcome',
