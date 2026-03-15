@@ -177,6 +177,11 @@ export const router = createRouter({
           component: () => import('@/pages/settings/quick-actions/QuickActionsSettingsPage.vue'),
         },
         {
+          path: 'settings/color',
+          name: ROUTE_NAMES.SETTINGS_COLOR,
+          component: () => import('@/pages/settings/color/PrimaryColorPage.vue'),
+        },
+        {
           path: 'scan-receipt',
           name: ROUTE_NAMES.SCAN_RECEIPT,
           component: () => import('@/pages/scan-receipt/ScanReceiptPage.vue'),

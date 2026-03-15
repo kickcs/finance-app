@@ -69,8 +69,8 @@ const selectedValue = computed({
           </div>
 
           <div class="flex items-center gap-2">
-            <UBadge variant="default">Бейдж</UBadge>
-            <UBadge variant="outline">Контур</UBadge>
+            <UBadge variant="primary">Бейдж</UBadge>
+            <UBadge variant="success">Успех</UBadge>
           </div>
 
           <div>
