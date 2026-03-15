@@ -199,7 +199,11 @@ const splitHintConfig = getHintConfig('split-expense');
 
 // Smart defaults
 const { transactions } = useRecentTransactions(userId, 20);
-const { defaults } = useSmartDefaults(transactions, () => props.formData.type);
+const { defaults } = useSmartDefaults(
+  transactions,
+  () => props.formData.type,
+  () => props.formData.accountId,
+);
 
 const { start: showSplitHintDelayed, stop: stopSplitHint } = useTimeoutFn(
   () => {
@@ -210,22 +214,36 @@ const { start: showSplitHintDelayed, stop: stopSplitHint } = useTimeoutFn(
   { immediate: false },
 );
 
+// Apply smart defaults once when data becomes available
+const smartDefaultsApplied = ref(false);
+
+watch(
+  defaults,
+  (val) => {
+    if (smartDefaultsApplied.value) return;
+    if (!val.defaultCategoryId && !val.defaultAccountId) return;
+
+    smartDefaultsApplied.value = true;
+
+    // Only apply if category is empty (account may be pre-set from profile)
+    // Apply both category AND account from the same pair to keep them consistent
+    if (!props.formData.categoryId && val.defaultCategoryId) {
+      const updates: Partial<TransactionFormData> = {
+        categoryId: val.defaultCategoryId,
+      };
+      // Only override account if it's also empty
+      if (!props.formData.accountId && val.defaultAccountId) {
+        updates.accountId = val.defaultAccountId;
+      }
+      emit('update:formData', { ...props.formData, ...updates });
+    }
+  },
+  { immediate: true },
+);
+
 onMounted(() => {
   if (shouldShowHint('split-expense')) {
     showSplitHintDelayed();
-  }
-
-  // Apply smart defaults for empty fields independently
-  const { defaultCategoryId, defaultAccountId } = defaults.value;
-  const updates: Partial<TransactionFormData> = {};
-  if (!props.formData.categoryId && defaultCategoryId) {
-    updates.categoryId = defaultCategoryId;
-  }
-  if (!props.formData.accountId && defaultAccountId) {
-    updates.accountId = defaultAccountId;
-  }
-  if (Object.keys(updates).length > 0) {
-    emit('update:formData', { ...props.formData, ...updates });
   }
 });
 
