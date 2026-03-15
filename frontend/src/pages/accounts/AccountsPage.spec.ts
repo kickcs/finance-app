@@ -283,9 +283,9 @@ describe('AccountsPage', () => {
       );
       const wrapper = await renderPage();
 
-      // Total balance should show 0
+      // Total balance should show "0 UZS" (formatted zero)
       expect(wrapper.text()).toContain('Общий баланс');
-      expect(wrapper.text()).toContain('0');
+      expect(wrapper.text()).toContain('0\u00A0UZS');
     });
   });
 });

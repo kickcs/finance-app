@@ -1041,10 +1041,13 @@ describe('AddTransactionPage', () => {
   // -----------------------------------------------------------------------
   describe('loading state', () => {
     it('does not show form or empty state while accounts are loading', async () => {
-      // Delay account response
+      // Controlled promise to block the accounts response
+      let resolveAccounts!: () => void;
       server.use(
         http.get('*/api/accounts', async () => {
-          await new Promise((resolve) => setTimeout(resolve, 100));
+          await new Promise<void>((res) => {
+            resolveAccounts = res;
+          });
           return HttpResponse.json([mockAccountResponse]);
         }),
       );
@@ -1057,13 +1060,13 @@ describe('AddTransactionPage', () => {
         router,
         provideAuth: { user: mockUser },
       });
-      // Only one flush — don't wait for accounts to load
       await flushPromises();
 
       // During loading: neither empty state nor form should be visible
       expect(currentWrapper.find('[data-testid="no-accounts-state"]').exists()).toBe(false);
 
-      // Wait for accounts to load
+      // Release the blocked response and let component settle
+      resolveAccounts();
       await flushPromises();
       await flushPromises();
     });
