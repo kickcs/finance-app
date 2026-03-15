@@ -7,7 +7,13 @@ import { UCard, Skeleton } from '@/shared/ui';
     <!-- Decorative gradient blobs (static) -->
     <div
       class="absolute -top-20 -right-16 w-48 h-48 rounded-full blur-3xl opacity-40"
-      style="background: radial-gradient(circle, rgba(59, 130, 246, 0.4) 0%, transparent 70%)"
+      style="
+        background: radial-gradient(
+          circle,
+          color-mix(in srgb, var(--color-primary) 40%, transparent) 0%,
+          transparent 70%
+        );
+      "
     />
 
     <div class="relative z-10 p-6">

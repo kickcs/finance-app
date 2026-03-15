@@ -291,24 +291,11 @@ h6 {
   animation: shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97);
 }
 
-/* BalanceCard morphing blob + rotating border */
+/* BalanceCard rotating border — @property must be global (cannot be scoped) */
 @property --border-angle {
   syntax: "<angle>";
   initial-value: 0deg;
   inherits: false;
-}
-
-@keyframes morph-blob {
-  0%, 100% { border-radius: 30% 70% 70% 30% / 30% 52% 48% 70%; }
-  17%      { border-radius: 50% 50% 20% 80% / 25% 80% 20% 75%; }
-  33%      { border-radius: 67% 33% 47% 53% / 37% 20% 80% 63%; }
-  50%      { border-radius: 100%; }
-  67%      { border-radius: 50% 50% 53% 47% / 26% 22% 78% 74%; }
-  83%      { border-radius: 20% 80% 20% 80% / 20% 80% 20% 80%; }
-}
-
-@keyframes rotate-border {
-  to { --border-angle: 360deg; }
 }
 
 /* Safe area utilities */

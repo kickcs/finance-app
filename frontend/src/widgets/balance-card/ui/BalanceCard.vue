@@ -107,7 +107,6 @@ defineEmits<{
   border-radius: 30% 70% 70% 30% / 30% 52% 48% 70%;
   animation: morph-blob 12s ease-in-out infinite;
   will-change: transform;
-  transform: translateZ(0);
   pointer-events: none;
 }
 
@@ -157,6 +156,34 @@ defineEmits<{
   .balance-card::before,
   .balance-card::after {
     animation: none;
+  }
+}
+
+@keyframes morph-blob {
+  0%,
+  100% {
+    border-radius: 30% 70% 70% 30% / 30% 52% 48% 70%;
+  }
+  17% {
+    border-radius: 50% 50% 20% 80% / 25% 80% 20% 75%;
+  }
+  33% {
+    border-radius: 67% 33% 47% 53% / 37% 20% 80% 63%;
+  }
+  50% {
+    border-radius: 100%;
+  }
+  67% {
+    border-radius: 50% 50% 53% 47% / 26% 22% 78% 74%;
+  }
+  83% {
+    border-radius: 20% 80% 20% 80% / 20% 80% 20% 80%;
+  }
+}
+
+@keyframes rotate-border {
+  to {
+    --border-angle: 360deg;
   }
 }
 </style>
