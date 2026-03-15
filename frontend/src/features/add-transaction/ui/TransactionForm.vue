@@ -215,16 +215,17 @@ onMounted(() => {
     showSplitHintDelayed();
   }
 
-  // Apply smart defaults if form is empty
-  if (!props.formData.categoryId && !props.formData.accountId) {
-    const { defaultCategoryId, defaultAccountId } = defaults.value;
-    if (defaultCategoryId || defaultAccountId) {
-      emit('update:formData', {
-        ...props.formData,
-        ...(defaultCategoryId && { categoryId: defaultCategoryId }),
-        ...(defaultAccountId && { accountId: defaultAccountId }),
-      });
-    }
+  // Apply smart defaults for empty fields independently
+  const { defaultCategoryId, defaultAccountId } = defaults.value;
+  const updates: Partial<TransactionFormData> = {};
+  if (!props.formData.categoryId && defaultCategoryId) {
+    updates.categoryId = defaultCategoryId;
+  }
+  if (!props.formData.accountId && defaultAccountId) {
+    updates.accountId = defaultAccountId;
+  }
+  if (Object.keys(updates).length > 0) {
+    emit('update:formData', { ...props.formData, ...updates });
   }
 });
 
