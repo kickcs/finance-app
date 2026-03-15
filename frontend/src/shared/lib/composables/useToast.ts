@@ -1,11 +1,18 @@
 import { ref, computed } from 'vue';
 import { trigger } from '../haptics';
 
-export type ToastVariant = 'default' | 'success' | 'error' | 'warning';
+export type ToastVariant = 'default' | 'success' | 'error' | 'warning' | 'transaction-success';
 
 export interface ToastAction {
   label: string;
   onClick: () => void;
+}
+
+export interface TransactionToastData {
+  amount: string;
+  categoryName: string;
+  accountName: string;
+  onUndo: () => Promise<void>;
 }
 
 export interface Toast {
@@ -15,6 +22,7 @@ export interface Toast {
   variant?: ToastVariant;
   action?: ToastAction;
   duration?: number;
+  transactionData?: TransactionToastData;
 }
 
 export type ToasterToast = Toast & {
@@ -66,7 +74,7 @@ function dismissAll() {
 }
 
 function triggerHaptics(variant?: ToastVariant) {
-  if (variant === 'success') {
+  if (variant === 'success' || variant === 'transaction-success') {
     trigger('success');
   } else if (variant === 'error') {
     trigger('error');

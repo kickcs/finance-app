@@ -9,7 +9,7 @@ import { transactionsApi, transactionQueryKeys } from '@/entities/transaction';
 import { accountQueryKeys } from '@/entities/account';
 import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
 import { useToast } from '@/shared/ui';
-import { CATEGORY_IDS } from '@/entities/category';
+import { CATEGORY_IDS, getCategoryById } from '@/entities/category';
 import type { TransactionFormData } from './useTransactionForm';
 import type { Transaction, AccountWithBalances } from '@/shared/api/database.types';
 import type { MonthlyStats, PaginatedResult } from '@/entities/transaction/api/transactionsApi';
@@ -288,11 +288,28 @@ export function useSubmitTransaction() {
       });
     },
 
-    onSuccess: (_data, { formData }) => {
+    onSuccess: (data, { userId, formData }) => {
+      const transactionId = data.id;
+      const onUndo = async () => {
+        await rollbackTransaction(transactionId, userId);
+      };
+
+      const accounts = queryClient.getQueryData<AccountWithBalances[]>(
+        accountQueryKeys.list(userId),
+      );
+      const account = accounts?.find((a) => a.id === formData.accountId);
+      const accountName = account?.name ?? '';
+      const category = getCategoryById(formData.categoryId);
+      const categoryName = category?.name ?? TRANSACTION_TYPE_LABELS[formData.type];
+      const amount =
+        formData.type === 'income'
+          ? `+${formData.amount.toLocaleString('ru-RU')}`
+          : `-${formData.amount.toLocaleString('ru-RU')}`;
+
       toast({
-        title: `${TRANSACTION_TYPE_LABELS[formData.type]} добавлен`,
-        variant: 'success',
-        duration: 2500,
+        variant: 'transaction-success',
+        duration: 5000,
+        transactionData: { amount, categoryName, accountName, onUndo },
       });
     },
 
