@@ -187,6 +187,7 @@ export function useSplitExpense(totalAmountRef: () => number) {
     userId: string,
     accountId: string,
     currency: string,
+    transactionDate: number,
   ): Promise<boolean> {
     if (!splitData.value.enabled || splitData.value.participants.length === 0) {
       return true;
@@ -215,6 +216,7 @@ export function useSplitExpense(totalAmountRef: () => number) {
           source_transaction_id: transactionId,
           is_closed: false,
           currency: currency,
+          created_at: new Date(transactionDate).toISOString(),
         });
       }
 

@@ -66,6 +66,7 @@ export class Debt extends AggregateRoot<string> {
     accountId?: string,
     monthlyPayment?: number,
     nextPaymentDate?: Date,
+    createdAt?: Date,
   ): Debt {
     const currencyVo = Currency.create(currency);
     const debt = new Debt({
@@ -83,7 +84,7 @@ export class Debt extends AggregateRoot<string> {
       closeTransactionId: null,
       isClosed: false,
       sourceTransactionId: null,
-      createdAt: new Date(),
+      createdAt: createdAt || new Date(),
     });
 
     debt.addDomainEvent(

@@ -52,6 +52,7 @@ export class DebtsController {
         dto.nextPaymentDate ? new Date(dto.nextPaymentDate) : undefined,
         dto.transactionId,
         dto.sourceTransactionId,
+        dto.createdAt ? new Date(dto.createdAt) : undefined,
       ),
     );
   }

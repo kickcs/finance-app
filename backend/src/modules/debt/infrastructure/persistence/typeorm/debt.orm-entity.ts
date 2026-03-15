@@ -1,4 +1,4 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity('debts')
 export class DebtOrmEntity {
@@ -34,7 +34,7 @@ export class DebtOrmEntity {
   @Column({ name: 'next_payment_date', nullable: true, type: 'date' })
   nextPaymentDate: Date | null;
 
-  @CreateDateColumn({ name: 'created_at' })
+  @Column({ name: 'created_at', type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   createdAt: Date;
 
   @Column({ name: 'debt_type', type: 'varchar', default: 'taken' })

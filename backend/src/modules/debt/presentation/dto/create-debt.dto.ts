@@ -57,4 +57,8 @@ export class CreateDebtDto {
   @IsOptional()
   @IsUUID()
   sourceTransactionId?: string;
+
+  @IsOptional()
+  @IsDateString()
+  createdAt?: string;
 }

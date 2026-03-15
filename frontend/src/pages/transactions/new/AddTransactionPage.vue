@@ -129,6 +129,7 @@ async function handleSubmit() {
       userId.value,
       formData.value.accountId,
       formData.value.currency,
+      formData.value.date,
     );
 
     if (!success) {
@@ -175,7 +176,11 @@ async function handleSubmit() {
       <div
         class="md:max-w-xl md:mx-auto md:bg-card-light md:dark:bg-card-dark md:rounded-3xl md:shadow-sm md:border md:border-border-light md:dark:border-border-dark md:p-8 md:mt-2"
       >
-        <div v-if="!accountsLoading && accounts.length === 0" class="text-center py-8">
+        <div
+          v-if="!accountsLoading && accounts.length === 0"
+          data-testid="no-accounts-state"
+          class="text-center py-8"
+        >
           <UIcon
             name="account_balance_wallet"
             size="lg"
@@ -196,6 +201,7 @@ async function handleSubmit() {
         <TransactionForm
           v-else
           v-model:form-data="formData"
+          data-testid="transaction-form"
           :accounts="accounts"
           :expense-categories="expenseCategories"
           :income-categories="incomeCategories"

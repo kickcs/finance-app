@@ -12,5 +12,6 @@ export class CreateDebtCommand {
     public readonly nextPaymentDate?: Date,
     public readonly transactionId?: string,
     public readonly sourceTransactionId?: string,
+    public readonly createdAt?: Date,
   ) {}
 }

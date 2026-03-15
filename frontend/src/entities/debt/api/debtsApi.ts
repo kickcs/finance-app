@@ -73,6 +73,7 @@ export const debtsApi = {
       transactionId: debt.transaction_id ?? undefined,
       currency: debt.currency ?? 'UZS',
       sourceTransactionId: debt.source_transaction_id,
+      createdAt: debt.created_at,
     });
     return transformDebt(data);
   },

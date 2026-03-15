@@ -26,6 +26,7 @@ export class CreateDebtHandler implements ICommandHandler<CreateDebtCommand> {
       command.accountId,
       command.monthlyPayment,
       command.nextPaymentDate,
+      command.createdAt,
     );
 
     if (command.transactionId) {
