@@ -4,6 +4,7 @@ import { CalendarDate, type DateValue } from '@internationalized/date';
 import { Popover, PopoverTrigger, PopoverContent } from '@/shared/ui/primitives/popover';
 import { RangeCalendar } from '@/shared/ui/primitives/range-calendar';
 import { UIcon } from '@/shared/ui';
+import { formatDate } from '@/shared/lib/format/date';
 import type { DateRange } from '../model/types';
 
 const props = defineProps<{
@@ -23,8 +24,8 @@ function parseDate(dateStr: string | null): DateValue | undefined {
   return new CalendarDate(year, month, day);
 }
 
-// Convert CalendarDate to string
-function formatDate(date: DateValue | undefined): string | null {
+// Convert CalendarDate to ISO string
+function toISODate(date: DateValue | undefined): string | null {
   if (!date) return null;
   const year = date.year;
   const month = String(date.month).padStart(2, '0');
@@ -40,8 +41,8 @@ const calendarValue = computed({
   }),
   set: (value: { start: DateValue | undefined; end: DateValue | undefined }) => {
     emit('update:modelValue', {
-      startDate: formatDate(value.start),
-      endDate: formatDate(value.end),
+      startDate: toISODate(value.start),
+      endDate: toISODate(value.end),
     });
   },
 });
@@ -52,25 +53,15 @@ const displayLabel = computed(() => {
   const end = props.modelValue.endDate;
 
   if (start && end) {
-    const startFormatted = formatDisplayDate(start);
-    const endFormatted = formatDisplayDate(end);
-    return `${startFormatted} - ${endFormatted}`;
+    return `${formatDate(start, { format: 'short' })} - ${formatDate(end, { format: 'short' })}`;
   }
 
   if (start) {
-    return `С ${formatDisplayDate(start)}`;
+    return `С ${formatDate(start, { format: 'short' })}`;
   }
 
   return 'Выберите период';
 });
-
-function formatDisplayDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString('ru-RU', {
-    day: 'numeric',
-    month: 'short',
-  });
-}
 
 // Get today's date as CalendarDate for maxValue
 const today = new CalendarDate(

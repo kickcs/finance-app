@@ -20,6 +20,7 @@ const emit = defineEmits<{
   addParticipant: [name: string, isMe: boolean, paidById: string | null];
   removeParticipant: [id: string];
   toggleItemParticipant: [itemId: string, participantId: string];
+  assignAll: [participantId: string];
   next: [];
   back: [];
 }>();
@@ -36,7 +37,6 @@ watch(
       activeParticipantId.value = newVal[0].id;
     }
   },
-  { immediate: true },
 );
 
 function setActiveParticipant(participantId: string) {
@@ -72,14 +72,9 @@ function handleRemoveParticipant(id: string) {
   }
 }
 
-// Assign all items to a participant
+// Assign all items to a participant (single batch operation)
 function assignAllTo(participantId: string) {
-  for (const item of props.items) {
-    if (!item.assignedParticipantIds.includes(participantId)) {
-      emit('toggleItemParticipant', item.id, participantId);
-    }
-  }
-  trigger('selection');
+  emit('assignAll', participantId);
 }
 
 function handleNext() {

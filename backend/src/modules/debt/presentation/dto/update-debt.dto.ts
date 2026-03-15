@@ -6,6 +6,7 @@ import {
   IsUUID,
   IsBoolean,
   IsDateString,
+  ValidateIf,
 } from 'class-validator';
 
 export class UpdateDebtDto {
@@ -22,10 +23,12 @@ export class UpdateDebtDto {
   remainingAmount?: number;
 
   @IsOptional()
+  @ValidateIf((o: UpdateDebtDto) => o.monthlyPayment !== null)
   @IsNumber()
   monthlyPayment?: number | null;
 
   @IsOptional()
+  @ValidateIf((o: UpdateDebtDto) => o.nextPaymentDate !== null)
   @IsDateString()
   nextPaymentDate?: string | null;
 
@@ -52,10 +55,6 @@ export class UpdateDebtDto {
   @IsOptional()
   @IsBoolean()
   isClosed?: boolean;
-
-  @IsOptional()
-  @IsString()
-  currency?: string;
 
   @IsOptional()
   @IsUUID()

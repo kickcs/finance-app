@@ -54,7 +54,7 @@ const router = useRouter();
             {{ formatCurrency(totalAmount, currency) }}
           </h2>
           <p
-            class="text-[11px] text-text-tertiary-light dark:text-text-tertiary-dark font-medium success-hero"
+            class="text-caption text-text-tertiary-light dark:text-text-tertiary-dark font-medium success-hero"
           >
             {{ displayDate }}
           </p>
@@ -71,7 +71,7 @@ const router = useRouter();
         <!-- Who owes what list -->
         <div class="flex-1 px-6 py-6 overflow-y-auto no-scrollbar success-list">
           <h3
-            class="text-[11px] font-bold text-text-tertiary-light dark:text-text-tertiary-dark uppercase tracking-widest mb-4"
+            class="text-caption font-bold text-text-tertiary-light dark:text-text-tertiary-dark uppercase tracking-widest mb-4"
           >
             Кто сколько должен
           </h3>
@@ -109,7 +109,7 @@ const router = useRouter();
 
           <p
             v-if="hasCharges"
-            class="text-[10px] text-text-tertiary-light dark:text-text-tertiary-dark text-center mt-6"
+            class="text-caption-sm text-text-tertiary-light dark:text-text-tertiary-dark text-center mt-6"
           >
             Суммы включают
             {{ enabledCharges.map((c) => `${c.percent}% ${c.label.toLowerCase()}`).join(', ') }}
@@ -119,7 +119,7 @@ const router = useRouter();
           <div
             class="hidden share-watermark text-center mt-8 pt-4 border-t border-border-light/50 opacity-60"
           >
-            <span class="text-[10px] font-bold text-primary uppercase tracking-widest">
+            <span class="text-caption-sm font-bold text-primary uppercase tracking-widest">
               Рассчитано в Ouro Finance
             </span>
           </div>
@@ -149,7 +149,7 @@ const router = useRouter();
               <UIcon :name="btn.icon" size="sm" class="text-primary" />
             </div>
             <span
-              class="text-[10px] font-semibold text-text-secondary-light dark:text-text-secondary-dark uppercase tracking-wide"
+              class="text-caption-sm font-semibold text-text-secondary-light dark:text-text-secondary-dark uppercase tracking-wide"
             >
               {{ btn.label }}
             </span>

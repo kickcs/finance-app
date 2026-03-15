@@ -2,6 +2,7 @@ import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { Inject, NotFoundException, ForbiddenException, ConflictException } from '@nestjs/common';
 import { UpdateDebtCommand } from './update-debt.command';
 import { IDebtRepository, DEBT_REPOSITORY } from '../../../domain/repositories';
+import { DebtResponseMapper } from '../../mappers/debt-response.mapper';
 
 @CommandHandler(UpdateDebtCommand)
 export class UpdateDebtHandler implements ICommandHandler<UpdateDebtCommand> {
@@ -27,23 +28,6 @@ export class UpdateDebtHandler implements ICommandHandler<UpdateDebtCommand> {
     debt.update(command.data);
     const savedDebt = await this.debtRepository.save(debt);
 
-    return {
-      id: savedDebt.id,
-      userId: savedDebt.userId,
-      name: savedDebt.name,
-      totalAmount: savedDebt.totalAmountValue,
-      remainingAmount: savedDebt.remainingAmountValue,
-      monthlyPayment: savedDebt.monthlyPaymentValue,
-      nextPaymentDate: savedDebt.nextPaymentDate,
-      debtType: savedDebt.debtTypeValue,
-      personName: savedDebt.personName,
-      accountId: savedDebt.accountId,
-      transactionId: savedDebt.transactionId,
-      closeTransactionId: savedDebt.closeTransactionId,
-      isClosed: savedDebt.isClosed,
-      currency: savedDebt.currency,
-      sourceTransactionId: savedDebt.sourceTransactionId,
-      createdAt: savedDebt.createdAt,
-    };
+    return DebtResponseMapper.toResponse(savedDebt);
   }
 }

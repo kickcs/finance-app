@@ -1,5 +1,5 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { Inject } from '@nestjs/common';
+import { ForbiddenException, Inject } from '@nestjs/common';
 import { ReorderCategoriesCommand } from './reorder-categories.command';
 import {
   ICategoryRepository,
@@ -14,6 +14,16 @@ export class ReorderCategoriesHandler implements ICommandHandler<ReorderCategori
   ) {}
 
   async execute(command: ReorderCategoriesCommand): Promise<void> {
+    // Verify all category IDs belong to the requesting user
+    const userCategories = await this.categoryRepository.findByUserId(command.userId);
+    const userCategoryIds = new Set(userCategories.map((c) => c.id));
+
+    for (const id of command.categoryIds) {
+      if (!userCategoryIds.has(id)) {
+        throw new ForbiddenException('Access denied');
+      }
+    }
+
     await this.categoryRepository.updateSortOrder(command.categoryIds);
   }
 }

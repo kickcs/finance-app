@@ -1,5 +1,6 @@
 export class UpdateCategoryCommand {
   constructor(
+    public readonly userId: string,
     public readonly id: string,
     public readonly data: {
       name?: string;

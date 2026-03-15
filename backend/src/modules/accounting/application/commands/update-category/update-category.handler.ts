@@ -1,5 +1,5 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { Inject, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Inject, NotFoundException } from '@nestjs/common';
 import { UpdateCategoryCommand } from './update-category.command';
 import {
   ICategoryRepository,
@@ -18,6 +18,10 @@ export class UpdateCategoryHandler implements ICommandHandler<UpdateCategoryComm
 
     if (!category) {
       throw new NotFoundException('Category not found');
+    }
+
+    if (category.userId !== command.userId) {
+      throw new ForbiddenException('Access denied');
     }
 
     category.update(command.data);

@@ -1,10 +1,9 @@
 import { http } from '@/shared/api/http';
-import type {
-  Account,
-  AccountInsert,
-  AccountWithBalances,
-  AccountBalance,
-} from '@/shared/api/database.types';
+import type { Account, AccountInsert, AccountWithBalances } from '@/shared/api/database.types';
+import {
+  type AccountBalanceResponse,
+  transformBalance,
+} from '@/entities/account-balance/api/accountBalancesApi';
 
 // Response types from NestJS backend (camelCase)
 interface AccountResponse {
@@ -29,14 +28,6 @@ interface AccountResponse {
   maturityDate: string | null;
   isReplenishable: boolean | null;
   isWithdrawable: boolean | null;
-}
-
-interface AccountBalanceResponse {
-  id: string;
-  accountId: string;
-  currency: string;
-  balance: number;
-  createdAt: string;
 }
 
 // Transform camelCase response to snake_case for frontend compatibility
@@ -69,16 +60,6 @@ function transformAccount(acc: AccountResponse): Account {
     ...transformAccountBase(acc),
     balance: acc.balance,
     currency: acc.currency,
-  };
-}
-
-function transformBalance(bal: AccountBalanceResponse): AccountBalance {
-  return {
-    id: bal.id,
-    account_id: bal.accountId,
-    currency: bal.currency,
-    balance: bal.balance,
-    created_at: bal.createdAt,
   };
 }
 

@@ -1,7 +1,5 @@
 <script setup lang="ts">
-import { inject, computed } from 'vue';
-import type { Ref } from 'vue';
-import type { User } from '@/shared/api/composables/useAuth';
+import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { ROUTE_NAMES } from '@/app/router/routeNames';
 import { UButton, UIcon } from '@/shared/ui';
@@ -10,11 +8,11 @@ import { queryClient, profileQueryKeys } from '@/shared/api';
 import { profileApi } from '@/shared/api/services/profileApi';
 import { navigateBack } from '@/app/router';
 import { STORAGE_KEYS } from '@/shared/config/storageKeys';
+import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 
 const router = useRouter();
 
-// Get user from provide/inject
-const user = inject<Ref<User | null>>('user');
+const { user } = useCurrentUser();
 
 // Check if this is onboarding or regular account creation
 const isOnboarding = computed(() => {

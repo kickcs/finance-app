@@ -1,8 +1,7 @@
 import { ref } from 'vue';
 import { usePartialPayment } from '@/features/partial-payment';
-import { debtQueryKeys } from '@/entities/debt';
 import { queryClient } from '@/shared/api/queryClient';
-import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
+import { invalidateDebtRelated } from '@/shared/api/invalidation';
 import { useToast } from '@/shared/ui';
 import type { Debt } from '@/shared/api/database.types';
 import { sortDebtsByDateAsc } from './sortDebts';
@@ -21,14 +20,6 @@ export function useCloseAllDebts() {
   const total = ref(0);
 
   const { makePartialPayment } = usePartialPayment();
-
-  async function invalidateAll(userId: string) {
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: debtQueryKeys.list(userId) }),
-      invalidateTransactionRelated(queryClient, userId),
-      invalidateAccountRelated(queryClient, userId),
-    ]);
-  }
 
   async function closeAllDebts(
     debts: Debt[],
@@ -87,14 +78,14 @@ export function useCloseAllDebts() {
         progress.value++;
       }
 
-      await invalidateAll(userId);
+      await invalidateDebtRelated(queryClient, userId);
       toast({ title: 'Все долги закрыты', variant: 'success' });
       return true;
     } catch (e) {
       console.error('Failed to close all debts:', e);
       error.value = `Ошибка при закрытии долга ${progress.value + 1} из ${total.value}`;
       toast({ title: 'Не удалось закрыть все долги', variant: 'error' });
-      await invalidateAll(userId).catch(() => {});
+      await invalidateDebtRelated(queryClient, userId).catch(() => {});
       return false;
     } finally {
       isClosing.value = false;

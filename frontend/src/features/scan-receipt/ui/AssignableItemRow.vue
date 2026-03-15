@@ -22,20 +22,18 @@ const emit = defineEmits<{
 
 const hasAssignments = computed(() => props.item.assignedParticipantIds.length > 0);
 
+const participantMap = computed(() => new Map(props.participants.map((p) => [p.id, p])));
+
 function isAssigned(participantId: string): boolean {
   return props.item.assignedParticipantIds.includes(participantId);
 }
 
-function getParticipant(participantId: string): Participant | undefined {
-  return props.participants.find((p) => p.id === participantId);
-}
-
 function getParticipantName(participantId: string): string {
-  return getParticipant(participantId)?.name ?? '?';
+  return participantMap.value.get(participantId)?.name ?? '?';
 }
 
 function getParticipantColor(participantId: string): string {
-  return getParticipant(participantId)?.color ?? '#888888';
+  return participantMap.value.get(participantId)?.color ?? '#888888';
 }
 
 const displayTotal = computed(() => calcLineTotalWithCharges(props.item, props.charges ?? []));
@@ -128,7 +126,7 @@ const isHighlighted = computed(() => {
           }"
           :aria-label="getParticipantName(pid)"
         >
-          <span class="text-[10px] font-bold text-white leading-none">
+          <span class="text-caption-sm font-bold text-white leading-none">
             {{ getInitial(getParticipantName(pid)) }}
           </span>
         </div>
@@ -137,7 +135,7 @@ const isHighlighted = computed(() => {
           class="w-7 h-7 rounded-full border-[2.5px] border-card-light dark:border-card-dark bg-surface-light dark:bg-surface-dark flex items-center justify-center z-0"
         >
           <span
-            class="text-[10px] font-bold text-text-secondary-light dark:text-text-secondary-dark"
+            class="text-caption-sm font-bold text-text-secondary-light dark:text-text-secondary-dark"
           >
             +{{ item.assignedParticipantIds.length - 3 }}
           </span>

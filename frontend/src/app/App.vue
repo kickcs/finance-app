@@ -30,7 +30,7 @@ initTheme();
 usePwaUpdate();
 
 // Auth state
-const { user, isLoading: _authLoading, isAuthenticated } = useAuth();
+const { user, isAuthenticated } = useAuth();
 const isAppReady = ref(false);
 
 // Categories - get getCategoryById for global use
@@ -74,7 +74,6 @@ onMounted(async () => {
 
 // Provide auth state to all components
 provide('user', user);
-provide('isAuthenticated', isAuthenticated);
 provide('getCategoryById', getCategoryById);
 provide('isDemo', isDemo);
 </script>

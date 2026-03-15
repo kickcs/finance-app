@@ -39,7 +39,7 @@ const daysLeft = computed(() => {
       'w-full text-left rounded-2xl transition-all duration-200',
       'hover:scale-[1.01] active:scale-[0.99]',
       'bg-card-light dark:bg-card-dark',
-      'border border-gray-100 dark:border-gray-800',
+      'border border-border-light dark:border-border-dark',
       compact ? 'p-3' : 'p-4',
     ]"
     @click="$emit('click')"

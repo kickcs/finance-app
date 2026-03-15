@@ -49,16 +49,6 @@ export function formatCurrency(
 export const COMPACT_FORMAT = { compact: true } as const;
 
 /**
- * Parse currency string to number
- */
-export function parseCurrency(value: string): number {
-  // Remove all non-numeric characters except decimal point and minus
-  const cleaned = value.replace(/[^\d.-]/g, '');
-  const parsed = parseFloat(cleaned);
-  return isNaN(parsed) ? 0 : parsed;
-}
-
-/**
  * Get currency symbol
  */
 export function getCurrencySymbol(currencyCode: string): string {

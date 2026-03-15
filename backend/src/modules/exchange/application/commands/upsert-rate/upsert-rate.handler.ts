@@ -20,17 +20,7 @@ export class UpsertRateHandler implements ICommandHandler<UpsertRateCommand> {
   async execute(command: UpsertRateCommand) {
     const { baseCurrency, targetCurrency, rate } = command;
 
-    const existingRate = await this.exchangeRateRepository.findByPair(baseCurrency, targetCurrency);
-
-    let exchangeRate: ExchangeRate;
-
-    if (existingRate) {
-      existingRate.updateRate(rate);
-      exchangeRate = existingRate;
-    } else {
-      exchangeRate = ExchangeRate.create(baseCurrency, targetCurrency, rate);
-    }
-
+    const exchangeRate = ExchangeRate.create(baseCurrency, targetCurrency, rate);
     const savedRate = await this.exchangeRateRepository.save(exchangeRate);
     this.exchangeRateCache.set(savedRate);
 

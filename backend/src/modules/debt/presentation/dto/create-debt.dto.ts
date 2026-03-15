@@ -1,21 +1,25 @@
 import {
   IsString,
+  IsNotEmpty,
   IsNumber,
   IsOptional,
   IsIn,
   IsUUID,
-  IsBoolean,
   IsDateString,
+  Min,
 } from 'class-validator';
 
 export class CreateDebtDto {
   @IsString()
+  @IsNotEmpty()
   name: string;
 
   @IsNumber()
+  @Min(0)
   totalAmount: number;
 
   @IsNumber()
+  @Min(0)
   remainingAmount: number;
 
   @IsOptional()
@@ -36,10 +40,6 @@ export class CreateDebtDto {
   @IsOptional()
   @IsUUID()
   accountId?: string;
-
-  @IsOptional()
-  @IsBoolean()
-  isClosed?: boolean;
 
   @IsOptional()
   @IsString()

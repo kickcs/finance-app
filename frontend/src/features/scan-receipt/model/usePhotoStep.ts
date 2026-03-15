@@ -3,6 +3,10 @@ import { useTimeoutFn } from '@vueuse/core';
 import { receiptApi, type ScanReceiptResponse } from '../api/receiptApi';
 import { useHaptics } from '@/shared/lib/haptics';
 
+// Hoisted to module scope — avoids re-creation on every OCR call
+const SERVICE_KEYWORDS =
+  /обслуживание|service|чаевые|tip|ндс|vat|tax|скидка|discount|delivery|доставка/i;
+
 export interface OcrResult {
   items: ScanReceiptResponse['items'];
   currency: string;
@@ -49,9 +53,7 @@ export function usePhotoStep(onOcrSuccess: (result: OcrResult) => void, goNext: 
       const result: ScanReceiptResponse = await receiptApi.scan(selectedFile.value);
 
       // Filter out service charge / tax / discount line items that GPT may still return
-      const serviceKeywords =
-        /обслуживание|service|чаевые|tip|ндс|vat|tax|скидка|discount|delivery|доставка/i;
-      const productItems = result.items.filter((item) => !serviceKeywords.test(item.name));
+      const productItems = result.items.filter((item) => !SERVICE_KEYWORDS.test(item.name));
 
       onOcrSuccess({
         items: productItems,
@@ -87,7 +89,6 @@ export function usePhotoStep(onOcrSuccess: (result: OcrResult) => void, goNext: 
   });
 
   return {
-    selectedFile,
     previewUrl,
     isOcrLoading,
     isOcrSuccess,

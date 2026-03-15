@@ -1,7 +1,8 @@
-import { IsString, IsNumber, IsIn, IsDateString, Min } from 'class-validator';
+import { IsString, IsNotEmpty, IsNumber, IsIn, IsDateString, Min } from 'class-validator';
 
 export class CreateReminderDto {
   @IsString()
+  @IsNotEmpty()
   name: string;
 
   @IsNumber()

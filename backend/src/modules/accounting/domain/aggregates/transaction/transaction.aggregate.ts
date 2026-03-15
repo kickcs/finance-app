@@ -400,7 +400,7 @@ export class Transaction extends AggregateRoot<string> {
         previousValues.toCurrency = this._toAmount?.currencyCode;
         this._toAmount = Money.create(
           data.toAmount ?? this._toAmount?.amount ?? 0,
-          data.toCurrency ?? this._toAmount?.currencyCode ?? 'USD',
+          data.toCurrency ?? this._toAmount?.currencyCode ?? this._amount.currencyCode,
         );
         changes.toAmount = this._toAmount.amount;
         changes.toCurrency = this._toAmount.currencyCode;

@@ -33,23 +33,15 @@ const todayCount = computed(() => {
   }).length;
 });
 
-function isUpcoming(reminder: Reminder): boolean {
-  return isReminderUpcoming(reminder);
-}
-
-function isOverdue(reminder: Reminder): boolean {
-  return isReminderOverdue(reminder);
-}
-
 function iconBgClass(reminder: Reminder): string {
-  if (isOverdue(reminder)) return 'bg-danger/10';
-  if (isUpcoming(reminder)) return 'bg-warning/10';
+  if (isReminderOverdue(reminder)) return 'bg-danger/10';
+  if (isReminderUpcoming(reminder)) return 'bg-warning/10';
   return 'bg-surface-light dark:bg-surface-dark';
 }
 
 function iconClass(reminder: Reminder): string {
-  if (isOverdue(reminder)) return 'text-danger';
-  if (isUpcoming(reminder)) return 'text-warning';
+  if (isReminderOverdue(reminder)) return 'text-danger';
+  if (isReminderUpcoming(reminder)) return 'text-warning';
   return 'text-text-secondary-light dark:text-text-secondary-dark';
 }
 </script>

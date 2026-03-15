@@ -6,9 +6,9 @@ import {
   VISIBLE_ACCOUNT_TYPES,
   ACCOUNT_TYPE_LABELS,
   AccountTypeFields,
-  ACCOUNT_COLORS,
   ACCOUNT_ICONS,
 } from '@/entities/account';
+import { ENTITY_COLORS } from '@/shared/config/colors';
 import type { AccountType } from '@/entities/account';
 
 const props = defineProps<{
@@ -100,7 +100,7 @@ function updateField<K extends keyof AccountFormData>(field: K, value: AccountFo
     <!-- Color Picker -->
     <UColorPicker
       :model-value="formData.color"
-      :colors="ACCOUNT_COLORS"
+      :colors="ENTITY_COLORS"
       label="Цвет"
       @update:model-value="updateField('color', $event)"
     />

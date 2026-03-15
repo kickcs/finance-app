@@ -5,9 +5,9 @@ import {
   VISIBLE_ACCOUNT_TYPES,
   ACCOUNT_TYPE_LABELS,
   AccountTypeFields,
-  ACCOUNT_COLORS,
   ACCOUNT_ICONS,
 } from '@/entities/account';
+import { ENTITY_COLORS } from '@/shared/config/colors';
 import type { AccountType, AccountTypeFieldValues } from '@/entities/account';
 import type { Account, AccountWithBalances } from '@/shared/api/database.types';
 
@@ -188,7 +188,7 @@ function confirm() {
       <UIconSelector v-model="icon" :icons="ACCOUNT_ICONS" :color="color" label="Иконка" />
 
       <!-- Color -->
-      <UColorPicker v-model="color" :colors="ACCOUNT_COLORS" label="Цвет" />
+      <UColorPicker v-model="color" :colors="ENTITY_COLORS" label="Цвет" />
     </div>
 
     <template #actions>

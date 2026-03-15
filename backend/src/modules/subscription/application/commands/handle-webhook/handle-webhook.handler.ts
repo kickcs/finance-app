@@ -161,6 +161,6 @@ export class HandleWebhookHandler implements ICommandHandler<HandleWebhookComman
       unpaid: 'past_due',
     };
 
-    return statusMap[status] || 'active';
+    return statusMap[status] || 'expired';
   }
 }

@@ -15,13 +15,3 @@ export type { UseGroupedTransactionsOptions } from './model/useGroupedTransactio
 
 // API
 export * from './api';
-
-// Infinite Query Composables
-export { useInfiniteTransactions } from './api/useInfiniteTransactions';
-export { useInfiniteAccountTransactions } from './api/useInfiniteAccountTransactions';
-
-// Recent Transactions
-export { useRecentTransactions } from './api/useRecentTransactions';
-
-// Hashtags
-export { useHashtags } from './api/useHashtags';

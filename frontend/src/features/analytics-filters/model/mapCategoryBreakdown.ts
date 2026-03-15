@@ -14,19 +14,19 @@ export function mapCategoryStats(
   const filtered = type ? breakdown.filter((c) => c.type === type) : breakdown;
 
   const mapped = filtered.map((c) => {
-    // Convert using amountByCurrency if convertFn provided, else fallback to raw amount
+    // Convert using amount_by_currency if convertFn provided, else fallback to raw amount
     const convertedAmount = convertFn
-      ? Object.entries(c.amountByCurrency).reduce(
+      ? Object.entries(c.amount_by_currency).reduce(
           (sum, [curr, amt]) => sum + convertFn(amt, curr),
           0,
         )
       : c.amount;
 
     return {
-      id: c.categoryId,
-      name: c.categoryName,
-      icon: c.categoryIcon,
-      color: c.categoryColor,
+      id: c.category_id,
+      name: c.category_name,
+      icon: c.category_icon,
+      color: c.category_color,
       amount: convertedAmount,
       percent: 0, // calculated below
     };

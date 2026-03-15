@@ -27,21 +27,21 @@ export interface MonthlyStats {
 }
 
 export interface CategoryBreakdown {
-  categoryId: string;
-  categoryName: string;
-  categoryIcon: string;
-  categoryColor: string;
+  category_id: string;
+  category_name: string;
+  category_icon: string;
+  category_color: string;
   type: 'income' | 'expense';
   amount: number;
-  amountByCurrency: Record<string, number>;
+  amount_by_currency: Record<string, number>;
 }
 
 export interface AnalyticsStats {
-  totalIncome: number;
-  totalExpense: number;
-  incomeByCurrency: Record<string, number>;
-  expenseByCurrency: Record<string, number>;
-  categoryBreakdown: CategoryBreakdown[];
+  total_income: number;
+  total_expense: number;
+  income_by_currency: Record<string, number>;
+  expense_by_currency: Record<string, number>;
+  category_breakdown: CategoryBreakdown[];
 }
 
 export interface AnalyticsOptions {
@@ -52,8 +52,8 @@ export interface AnalyticsOptions {
 
 export interface DailyStatsEntry {
   date: string;
-  incomeByCurrency: Record<string, number>;
-  expenseByCurrency: Record<string, number>;
+  income_by_currency: Record<string, number>;
+  expense_by_currency: Record<string, number>;
 }
 
 export interface DailyStatsOptions {
@@ -61,6 +61,61 @@ export interface DailyStatsOptions {
   endDate: string;
   accountIds?: string[];
   groupBy?: 'day' | 'week' | 'month';
+}
+
+// Response types from NestJS backend (camelCase)
+interface AnalyticsStatsResponse {
+  totalIncome: number;
+  totalExpense: number;
+  incomeByCurrency: Record<string, number>;
+  expenseByCurrency: Record<string, number>;
+  categoryBreakdown: CategoryBreakdownResponse[];
+}
+
+interface CategoryBreakdownResponse {
+  categoryId: string;
+  categoryName: string;
+  categoryIcon: string;
+  categoryColor: string;
+  type: 'income' | 'expense';
+  amount: number;
+  amountByCurrency: Record<string, number>;
+}
+
+interface DailyStatsEntryResponse {
+  date: string;
+  incomeByCurrency: Record<string, number>;
+  expenseByCurrency: Record<string, number>;
+}
+
+function transformCategoryBreakdown(c: CategoryBreakdownResponse): CategoryBreakdown {
+  return {
+    category_id: c.categoryId,
+    category_name: c.categoryName,
+    category_icon: c.categoryIcon,
+    category_color: c.categoryColor,
+    type: c.type,
+    amount: c.amount,
+    amount_by_currency: c.amountByCurrency,
+  };
+}
+
+function transformAnalyticsStats(data: AnalyticsStatsResponse): AnalyticsStats {
+  return {
+    total_income: data.totalIncome,
+    total_expense: data.totalExpense,
+    income_by_currency: data.incomeByCurrency,
+    expense_by_currency: data.expenseByCurrency,
+    category_breakdown: data.categoryBreakdown.map(transformCategoryBreakdown),
+  };
+}
+
+function transformDailyStatsEntry(entry: DailyStatsEntryResponse): DailyStatsEntry {
+  return {
+    date: entry.date,
+    income_by_currency: entry.incomeByCurrency,
+    expense_by_currency: entry.expenseByCurrency,
+  };
 }
 
 // Response type from NestJS backend (camelCase)
@@ -321,9 +376,10 @@ export const transactionsApi = {
     if (options.accountIds && options.accountIds.length > 0) {
       params.accountIds = options.accountIds.join(',');
     }
-    return http.get<AnalyticsStats>('/transactions/stats/analytics', {
+    const data = await http.get<AnalyticsStatsResponse>('/transactions/stats/analytics', {
       params,
     });
+    return transformAnalyticsStats(data);
   },
 
   async getDailyStats(options: DailyStatsOptions): Promise<DailyStatsEntry[]> {
@@ -335,7 +391,8 @@ export const transactionsApi = {
     if (options.accountIds && options.accountIds.length > 0) {
       params.accountIds = options.accountIds.join(',');
     }
-    return http.get<DailyStatsEntry[]>('/transactions/stats/daily', { params });
+    const data = await http.get<DailyStatsEntryResponse[]>('/transactions/stats/daily', { params });
+    return data.map(transformDailyStatsEntry);
   },
 
   async getHashtags(): Promise<Hashtag[]> {

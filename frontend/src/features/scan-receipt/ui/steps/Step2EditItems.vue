@@ -128,7 +128,7 @@ function handleFocusNext(index: number, currentField: 'name' | 'price' | 'qty') 
             <span
               v-for="charge in enabledCharges"
               :key="charge.id"
-              class="text-[11px] font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full tabular-nums"
+              class="text-caption font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full tabular-nums"
             >
               +{{ charge.percent }}% {{ charge.label.toLowerCase() }}
             </span>

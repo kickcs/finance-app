@@ -7,7 +7,7 @@ defineProps<{
   selectedCode?: string;
 }>();
 
-const _emit = defineEmits<{
+defineEmits<{
   select: [currency: Currency];
 }>();
 

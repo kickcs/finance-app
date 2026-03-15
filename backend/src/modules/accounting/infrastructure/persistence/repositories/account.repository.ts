@@ -112,6 +112,11 @@ export class AccountRepository implements IAccountRepository {
     return count > 0;
   }
 
+  async existsForUser(id: string, userId: string): Promise<boolean> {
+    const count = await this.ormRepository.count({ where: { id, userId } });
+    return count > 0;
+  }
+
   async updateOrder(accountIds: string[]): Promise<void> {
     if (accountIds.length === 0) return;
 

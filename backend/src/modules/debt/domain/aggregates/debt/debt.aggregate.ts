@@ -220,7 +220,8 @@ export class Debt extends AggregateRoot<string> {
     if (data.accountId !== undefined) this._accountId = data.accountId;
     if (data.transactionId !== undefined) this._transactionId = data.transactionId;
     if (data.closeTransactionId !== undefined) this._closeTransactionId = data.closeTransactionId;
-    if (data.isClosed !== undefined) this._isClosed = data.isClosed;
+    if (data.isClosed === true && !this._isClosed) this.close();
+    if (data.isClosed === false) this._isClosed = false;
     if (data.sourceTransactionId !== undefined)
       this._sourceTransactionId = data.sourceTransactionId;
   }

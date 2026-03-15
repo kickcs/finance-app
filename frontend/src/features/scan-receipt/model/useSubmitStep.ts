@@ -105,19 +105,21 @@ export function useSubmitStep(
           if (participant?.paidById) return false;
           return true;
         });
-        for (const summary of nonMeSummaries) {
-          await debtsApi.create({
-            user_id: uid_,
-            name: `Чек: ${storeName.value || 'Без названия'}`,
-            total_amount: summary.total,
-            remaining_amount: summary.total,
-            debt_type: 'given',
-            person_name: summary.name,
-            account_id: formData.value.accountId,
-            currency: formData.value.currency,
-            source_transaction_id: transaction.id,
-          });
-        }
+        await Promise.all(
+          nonMeSummaries.map((summary) =>
+            debtsApi.create({
+              user_id: uid_,
+              name: `Чек: ${storeName.value || 'Без названия'}`,
+              total_amount: summary.total,
+              remaining_amount: summary.total,
+              debt_type: 'given',
+              person_name: summary.name,
+              account_id: formData.value.accountId!,
+              currency: formData.value.currency,
+              source_transaction_id: transaction.id,
+            }),
+          ),
+        );
       }
 
       // Invalidate caches

@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { UIcon, UProgressBar } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { formatDate } from '@/shared/lib/format/date';
+import { isPastDate } from '@/shared/lib/date';
 import { DEFAULT_CURRENCY } from '@/shared/config/currency';
 import type { Debt } from '../model/types';
 import { DEBT_DIRECTION_COLORS } from '../model/types';
@@ -36,10 +37,9 @@ const nextPaymentFormatted = computed(() => {
   });
 });
 
-const isOverdue = computed(() => {
-  if (!props.debt.next_payment_date) return false;
-  return new Date(props.debt.next_payment_date).getTime() < Date.now();
-});
+const isOverdue = computed(
+  () => !!props.debt.next_payment_date && isPastDate(props.debt.next_payment_date),
+);
 
 // Get display name - prefer person_name over name
 const displayName = computed(() => {
@@ -62,7 +62,7 @@ const isFromSplit = computed(() => !!props.debt.source_transaction_id);
       'w-full text-left rounded-xl transition-all duration-200',
       'hover:scale-[1.01] active:scale-[0.99]',
       'bg-card-light dark:bg-card-dark',
-      'border border-gray-100 dark:border-gray-800',
+      'border border-border-light dark:border-border-dark',
       'focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-none',
       compact ? 'p-2.5' : 'p-3',
     ]"

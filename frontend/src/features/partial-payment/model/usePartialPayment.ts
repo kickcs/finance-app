@@ -1,8 +1,8 @@
 import { ref } from 'vue';
 import { transactionsApi } from '@/entities/transaction';
-import { debtsApi, debtQueryKeys } from '@/entities/debt';
+import { debtsApi } from '@/entities/debt';
 import { queryClient } from '@/shared/api/queryClient';
-import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
+import { invalidateDebtRelated } from '@/shared/api/invalidation';
 import { useToast } from '@/shared/ui';
 import { CATEGORY_IDS } from '@/entities/category';
 import { DEFAULT_CURRENCY } from '@/entities/currency/model/constants';
@@ -13,14 +13,6 @@ interface PartialPaymentOptions {
   skipToast?: boolean;
   forgiveRemainder?: boolean;
   excessCategoryId?: string;
-}
-
-async function invalidateDebtRelated(userId: string) {
-  await Promise.all([
-    queryClient.invalidateQueries({ queryKey: debtQueryKeys.list(userId) }),
-    invalidateTransactionRelated(queryClient, userId),
-    invalidateAccountRelated(queryClient, userId),
-  ]);
 }
 
 export function usePartialPayment() {
@@ -63,7 +55,7 @@ export function usePartialPayment() {
       if (!options?.skipInvalidation) {
         const freshDebt = await debtsApi.getById(debt.id);
         if (freshDebt?.is_closed) {
-          await invalidateDebtRelated(userId);
+          await invalidateDebtRelated(queryClient, userId);
           if (!options?.skipToast) toast({ title: 'Долг уже закрыт', variant: 'default' });
           return true;
         }
@@ -166,7 +158,7 @@ export function usePartialPayment() {
       });
 
       if (!options?.skipInvalidation) {
-        await invalidateDebtRelated(userId);
+        await invalidateDebtRelated(queryClient, userId);
       }
 
       if (!options?.skipToast) toast({ title: 'Платёж проведён', variant: 'success' });

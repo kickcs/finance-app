@@ -16,8 +16,8 @@ withDefaults(
 );
 
 const sizeClasses: Record<string, string> = {
-  xs: 'w-5 h-5 text-[10px]',
-  sm: 'w-7 h-7 text-[10px]',
+  xs: 'w-5 h-5 text-caption-sm',
+  sm: 'w-7 h-7 text-caption-sm',
   md: 'w-8 h-8 text-xs',
   lg: 'w-10 h-10 text-sm',
 };

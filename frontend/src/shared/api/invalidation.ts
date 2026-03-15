@@ -3,6 +3,7 @@ import { transactionQueryKeys } from '@/entities/transaction';
 import { accountQueryKeys } from '@/entities/account';
 import { accountBalanceQueryKeys } from '@/entities/account-balance';
 import { budgetQueryKeys } from '@/entities/budget';
+import { debtQueryKeys } from '@/entities/debt';
 
 /**
  * Invalidate all transaction-related caches.
@@ -46,6 +47,20 @@ export async function invalidateTransactionRelated(
     queryClient.invalidateQueries({
       queryKey: budgetQueryKeys.all,
     }),
+  ]);
+}
+
+/**
+ * Invalidate all debt-related caches (debts + transactions + accounts).
+ */
+export async function invalidateDebtRelated(
+  queryClient: QueryClient,
+  userId: string,
+): Promise<void> {
+  await Promise.all([
+    queryClient.invalidateQueries({ queryKey: debtQueryKeys.list(userId) }),
+    invalidateTransactionRelated(queryClient, userId),
+    invalidateAccountRelated(queryClient, userId),
   ]);
 }
 

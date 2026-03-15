@@ -271,7 +271,7 @@ const shareActions = computed(() => [
                           </p>
                           <p
                             v-if="itm.sharedWith > 1"
-                            class="text-[11px] text-text-tertiary-light dark:text-text-tertiary-dark"
+                            class="text-caption text-text-tertiary-light dark:text-text-tertiary-dark"
                           >
                             1/{{ itm.sharedWith }} от {{ formatCurrency(itm.lineTotal, currency) }}
                           </p>
@@ -321,7 +321,7 @@ const shareActions = computed(() => [
                           {{ item.value.participant.name }}
                         </p>
                         <p
-                          class="text-[11px] text-text-tertiary-light dark:text-text-tertiary-dark"
+                          class="text-caption text-text-tertiary-light dark:text-text-tertiary-dark"
                         >
                           {{ item.value.participant.itemCount }}
                           {{
@@ -370,7 +370,7 @@ const shareActions = computed(() => [
                             </p>
                             <p
                               v-if="itm.sharedWith > 1"
-                              class="text-[10px] text-text-tertiary-light dark:text-text-tertiary-dark"
+                              class="text-caption-sm text-text-tertiary-light dark:text-text-tertiary-dark"
                             >
                               1/{{ itm.sharedWith }} от
                               {{ formatCurrency(itm.lineTotal, currency) }}

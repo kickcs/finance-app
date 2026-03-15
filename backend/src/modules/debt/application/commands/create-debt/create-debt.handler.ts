@@ -4,6 +4,7 @@ import { CreateDebtCommand } from './create-debt.command';
 import { Debt } from '../../../domain/aggregates/debt';
 import { IDebtRepository, DEBT_REPOSITORY } from '../../../domain/repositories';
 import { DomainEventPublisher } from '../../../../../shared';
+import { DebtResponseMapper } from '../../mappers/debt-response.mapper';
 
 @CommandHandler(CreateDebtCommand)
 export class CreateDebtHandler implements ICommandHandler<CreateDebtCommand> {
@@ -43,27 +44,6 @@ export class CreateDebtHandler implements ICommandHandler<CreateDebtCommand> {
     const savedDebt = await this.debtRepository.save(debt);
     await this.eventPublisher.publishEvents(debt);
 
-    return this.toResponse(savedDebt);
-  }
-
-  private toResponse(debt: Debt) {
-    return {
-      id: debt.id,
-      userId: debt.userId,
-      name: debt.name,
-      totalAmount: debt.totalAmountValue,
-      remainingAmount: debt.remainingAmountValue,
-      monthlyPayment: debt.monthlyPaymentValue,
-      nextPaymentDate: debt.nextPaymentDate,
-      debtType: debt.debtTypeValue,
-      personName: debt.personName,
-      accountId: debt.accountId,
-      transactionId: debt.transactionId,
-      closeTransactionId: debt.closeTransactionId,
-      isClosed: debt.isClosed,
-      currency: debt.currency,
-      sourceTransactionId: debt.sourceTransactionId,
-      createdAt: debt.createdAt,
-    };
+    return DebtResponseMapper.toResponse(savedDebt);
   }
 }

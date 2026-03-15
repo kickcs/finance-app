@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { UButton, UIcon, UCard, UProgressBar, USpinner, IconBadge, UBadge } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { formatDate } from '@/shared/lib/format/date';
+import { isPastDate } from '@/shared/lib/date';
 import { useDebts, DEBT_DIRECTION_LABELS, DEBT_DIRECTION_COLORS } from '@/entities/debt';
 import { useAccounts } from '@/entities/account';
 import { DEFAULT_CURRENCY } from '@/shared/config/currency';
@@ -44,10 +45,12 @@ const progress = computed(() => {
 });
 
 // Check if overdue
-const isOverdue = computed(() => {
-  if (!debt.value?.next_payment_date || debt.value.is_closed) return false;
-  return new Date(debt.value.next_payment_date) < new Date();
-});
+const isOverdue = computed(
+  () =>
+    !debt.value?.is_closed &&
+    !!debt.value?.next_payment_date &&
+    isPastDate(debt.value.next_payment_date),
+);
 </script>
 
 <template>

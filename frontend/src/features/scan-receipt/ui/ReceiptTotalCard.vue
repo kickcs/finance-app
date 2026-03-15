@@ -64,7 +64,7 @@ const hasCharges = computed(() => enabledCharges.value.length > 0 && props.charg
 
       <div class="flex flex-col items-center justify-center mt-2">
         <span
-          class="text-[10px] uppercase tracking-widest text-text-tertiary-light dark:text-text-tertiary-dark font-bold mb-1"
+          class="text-caption-sm uppercase tracking-widest text-text-tertiary-light dark:text-text-tertiary-dark font-bold mb-1"
         >
           Итого к оплате
         </span>

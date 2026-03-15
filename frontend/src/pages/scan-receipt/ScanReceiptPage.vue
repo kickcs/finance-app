@@ -125,6 +125,7 @@ function handleBack() {
           @add-participant="wizard.addParticipant"
           @remove-participant="wizard.removeParticipant"
           @toggle-item-participant="wizard.toggleItemParticipant"
+          @assign-all="wizard.assignAllTo"
           @next="wizard.goNext"
           @back="wizard.goBack"
         />

@@ -13,6 +13,7 @@ import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { CurrentUser } from '../../../../common';
 import { CreateQuickActionDto } from '../dto/create-quick-action.dto';
 import { UpdateQuickActionDto } from '../dto/update-quick-action.dto';
+import { ReorderQuickActionsDto } from '../dto/reorder-quick-actions.dto';
 import { CreateQuickActionCommand } from '../../application/commands/create-quick-action/create-quick-action.command';
 import { UpdateQuickActionCommand } from '../../application/commands/update-quick-action/update-quick-action.command';
 import { DeleteQuickActionCommand } from '../../application/commands/delete-quick-action/delete-quick-action.command';
@@ -45,9 +46,9 @@ export class QuickActionsController {
   @HttpCode(HttpStatus.OK)
   async reorder(
     @CurrentUser('sub') userId: string,
-    @Body() body: { ids: string[] },
+    @Body() dto: ReorderQuickActionsDto,
   ): Promise<unknown> {
-    return this.commandBus.execute(new ReorderQuickActionsCommand(userId, body.ids));
+    return this.commandBus.execute(new ReorderQuickActionsCommand(userId, dto.ids));
   }
 
   @Patch(':id')

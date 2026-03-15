@@ -12,7 +12,7 @@ import {
 } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { CurrentUser } from '../../../../common';
-import { CreateCategoryDto, UpdateCategoryDto } from '../dto';
+import { CreateCategoryDto, UpdateCategoryDto, ReorderCategoriesDto } from '../dto';
 import {
   CreateCategoryCommand,
   UpdateCategoryCommand,
@@ -61,20 +61,24 @@ export class CategoriesController {
   }
 
   @Patch(':id')
-  async update(@Param('id') id: string, @Body() dto: UpdateCategoryDto): Promise<unknown> {
-    return this.commandBus.execute(new UpdateCategoryCommand(id, dto));
+  async update(
+    @CurrentUser('sub') userId: string,
+    @Param('id') id: string,
+    @Body() dto: UpdateCategoryDto,
+  ): Promise<unknown> {
+    return this.commandBus.execute(new UpdateCategoryCommand(userId, id, dto));
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async remove(@Param('id') id: string) {
-    await this.commandBus.execute(new DeleteCategoryCommand(id));
+  async remove(@CurrentUser('sub') userId: string, @Param('id') id: string) {
+    await this.commandBus.execute(new DeleteCategoryCommand(userId, id));
   }
 
   @Post('reorder')
   @HttpCode(HttpStatus.OK)
-  async reorder(@Body() body: { categoryIds: string[] }) {
-    await this.commandBus.execute(new ReorderCategoriesCommand(body.categoryIds));
+  async reorder(@CurrentUser('sub') userId: string, @Body() dto: ReorderCategoriesDto) {
+    await this.commandBus.execute(new ReorderCategoriesCommand(userId, dto.categoryIds));
     return { success: true };
   }
 }

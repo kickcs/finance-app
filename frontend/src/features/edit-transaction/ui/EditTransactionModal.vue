@@ -1,13 +1,12 @@
 <script setup lang="ts">
-import { ref, watch, computed, inject } from 'vue';
-import type { Ref } from 'vue';
+import { ref, watch, computed } from 'vue';
 import { UModal, UInput, UButton, UTabs, UIcon } from '@/shared/ui';
 import { CategoryChips, useCategories } from '@/entities/category';
 import { AccountSelector } from '@/entities/account';
 import type { AccountWithBalances } from '@/entities/account';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import type { Transaction } from '@/shared/api/database.types';
-import type { User } from '@/shared/api/composables/useAuth';
+import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 
 const props = defineProps<{
   modelValue: boolean;
@@ -27,8 +26,7 @@ const emit = defineEmits<{
 }>();
 
 // Get user for categories
-const user = inject<Ref<User | null>>('user');
-const userId = computed(() => user?.value?.id ?? null);
+const { userId } = useCurrentUser();
 const { getCategoriesByType } = useCategories(userId);
 
 // Check if transaction is a transfer or adjustment

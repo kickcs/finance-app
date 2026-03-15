@@ -1,7 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, inject, watch } from 'vue';
-import type { Ref } from 'vue';
-import type { User } from '@/shared/api/composables/useAuth';
+import { ref, watch } from 'vue';
 import type { WidgetId, DashboardSettings } from '@/shared/api/database.types';
 import draggable from 'vuedraggable';
 import { useDebounceFn } from '@vueuse/core';
@@ -10,14 +8,14 @@ import { UIcon, UToggle, useToast } from '@/shared/ui';
 import { useProfile } from '@/shared/api';
 import { useAccounts } from '@/entities/account';
 import { navigateBack } from '@/app/router';
+import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useHaptics } from '@/shared/lib/haptics';
 import { DEFAULT_WIDGET_ORDER, WIDGET_LABELS, WIDGET_ICONS } from './model/constants';
 
 const { toast } = useToast();
 const { trigger } = useHaptics();
 
-const user = inject<Ref<User | null>>('user');
-const userId = computed(() => user?.value?.id ?? null);
+const { userId } = useCurrentUser();
 const { dashboardSettings, updateDashboardSettings } = useProfile(userId);
 const { accounts } = useAccounts(userId);
 
@@ -105,7 +103,7 @@ function isAccountVisible(accountId: string) {
       <section class="space-y-2">
         <div class="px-2">
           <h2
-            class="text-[13px] font-medium text-text-secondary-light dark:text-text-secondary-dark uppercase tracking-wide"
+            class="text-body-sm font-medium text-text-secondary-light dark:text-text-secondary-dark uppercase tracking-wide"
           >
             Виджеты на главной
           </h2>
@@ -151,7 +149,7 @@ function isAccountVisible(accountId: string) {
 
                 <!-- Label -->
                 <span
-                  class="flex-1 text-[15px] font-medium text-text-primary-light dark:text-text-primary-dark"
+                  class="flex-1 text-body font-medium text-text-primary-light dark:text-text-primary-dark"
                 >
                   {{ WIDGET_LABELS[element.id] }}
                 </span>
@@ -175,7 +173,7 @@ function isAccountVisible(accountId: string) {
       <section v-if="accounts && accounts.length > 0" class="space-y-2">
         <div class="px-2">
           <h2
-            class="text-[13px] font-medium text-text-secondary-light dark:text-text-secondary-dark uppercase tracking-wide"
+            class="text-body-sm font-medium text-text-secondary-light dark:text-text-secondary-dark uppercase tracking-wide"
           >
             Участвуют в балансе
           </h2>
@@ -202,7 +200,7 @@ function isAccountVisible(accountId: string) {
 
             <!-- Account name -->
             <span
-              class="flex-1 text-left text-[15px] font-medium text-text-primary-light dark:text-text-primary-dark truncate"
+              class="flex-1 text-left text-body font-medium text-text-primary-light dark:text-text-primary-dark truncate"
             >
               {{ account.name }}
             </span>

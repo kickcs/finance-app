@@ -1,5 +1,6 @@
 import {
   IsString,
+  IsNotEmpty,
   IsOptional,
   IsNumber,
   IsArray,
@@ -23,6 +24,7 @@ class BalanceDto {
 
 export class CreateAccountDto {
   @IsString()
+  @IsNotEmpty()
   name: string;
 
   @IsString()

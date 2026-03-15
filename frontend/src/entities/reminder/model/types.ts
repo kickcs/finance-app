@@ -1,6 +1,5 @@
 // Re-export from database types for consistency
 export type { Reminder } from '@/shared/api/database.types';
-export type ReminderId = string;
 
 export const REMINDER_ICONS = [
   'receipt_long',

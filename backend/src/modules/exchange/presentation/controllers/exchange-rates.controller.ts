@@ -1,15 +1,11 @@
 import { Controller, Get, Post, Body, Query, Param } from '@nestjs/common';
-import { CommandBus, QueryBus } from '@nestjs/cqrs';
-import { UpsertRateDto, ConvertAmountDto } from '../dto';
-import { UpsertRateCommand } from '../../application/commands';
+import { QueryBus } from '@nestjs/cqrs';
+import { ConvertAmountDto } from '../dto';
 import { GetRateQuery, GetBatchRatesQuery, ConvertAmountQuery } from '../../application/queries';
 
 @Controller('exchange-rates')
 export class ExchangeRatesController {
-  constructor(
-    private readonly commandBus: CommandBus,
-    private readonly queryBus: QueryBus,
-  ) {}
+  constructor(private readonly queryBus: QueryBus) {}
 
   /**
    * Get all exchange rates for a base currency in one request
@@ -30,17 +26,6 @@ export class ExchangeRatesController {
     @Param('targetCurrency') targetCurrency: string,
   ): Promise<unknown> {
     return this.queryBus.execute(new GetRateQuery(baseCurrency, targetCurrency));
-  }
-
-  /**
-   * Create or update an exchange rate
-   * POST /exchange-rates
-   */
-  @Post()
-  async upsertRate(@Body() dto: UpsertRateDto): Promise<unknown> {
-    return this.commandBus.execute(
-      new UpsertRateCommand(dto.baseCurrency, dto.targetCurrency, dto.rate),
-    );
   }
 
   /**

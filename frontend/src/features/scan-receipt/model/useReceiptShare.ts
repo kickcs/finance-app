@@ -404,14 +404,17 @@ export function useReceiptShare() {
     try {
       const canvas = renderCardToCanvas(data);
       const blob = await canvasToBlob(canvas);
-      const file = new File([blob], buildFilename(data), { type: 'image/png' });
+      canvas.width = 0;
+      canvas.height = 0;
+      const filename = buildFilename(data);
+      const file = new File([blob], filename, { type: 'image/png' });
       const text = buildShareText(data);
 
       if (navigator.canShare?.({ files: [file] })) {
         await navigator.share({ files: [file], text });
         trigger('success');
       } else {
-        downloadBlob(blob, buildFilename(data));
+        downloadBlob(blob, filename);
         toast({ title: 'Изображение сохранено', variant: 'success' });
       }
     } catch (e) {
@@ -454,6 +457,8 @@ export function useReceiptShare() {
     try {
       const canvas = renderCardToCanvas(data);
       const blob = await canvasToBlob(canvas);
+      canvas.width = 0;
+      canvas.height = 0;
       downloadBlob(blob, buildFilename(data));
       toast({ title: 'Изображение сохранено', variant: 'success' });
     } catch (e) {

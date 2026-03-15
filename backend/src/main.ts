@@ -50,16 +50,20 @@ async function bootstrap() {
     }),
   );
 
-  // Swagger configuration
-  const config = new DocumentBuilder()
-    .setTitle('My Finance API')
-    .setDescription('Personal finance management API')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .build();
+  // Swagger configuration (disabled in production)
+  if (process.env.NODE_ENV !== 'production') {
+    const config = new DocumentBuilder()
+      .setTitle('My Finance API')
+      .setDescription('Personal finance management API')
+      .setVersion('1.0')
+      .addBearerAuth()
+      .build();
 
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('docs', app, document);
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('docs', app, document);
+  }
+
+  app.enableShutdownHooks();
 
   const port = process.env.PORT || 3000;
   const host = process.env.HOST || '0.0.0.0';
@@ -67,7 +71,6 @@ async function bootstrap() {
 
   const logger = app.get(Logger);
   logger.log(`Application is running on: http://localhost:${port}`);
-  logger.log(`Swagger docs: http://localhost:${port}/docs`);
 }
 
 void bootstrap();

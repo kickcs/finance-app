@@ -2,6 +2,7 @@ import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 import { Inject, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { GetDebtByIdQuery } from './get-debt-by-id.query';
 import { IDebtRepository, DEBT_REPOSITORY } from '../../../domain/repositories';
+import { DebtResponseMapper } from '../../mappers/debt-response.mapper';
 
 @QueryHandler(GetDebtByIdQuery)
 export class GetDebtByIdHandler implements IQueryHandler<GetDebtByIdQuery> {
@@ -21,23 +22,6 @@ export class GetDebtByIdHandler implements IQueryHandler<GetDebtByIdQuery> {
       throw new ForbiddenException('Access denied');
     }
 
-    return {
-      id: debt.id,
-      userId: debt.userId,
-      name: debt.name,
-      totalAmount: debt.totalAmountValue,
-      remainingAmount: debt.remainingAmountValue,
-      monthlyPayment: debt.monthlyPaymentValue,
-      nextPaymentDate: debt.nextPaymentDate,
-      debtType: debt.debtTypeValue,
-      personName: debt.personName,
-      accountId: debt.accountId,
-      transactionId: debt.transactionId,
-      closeTransactionId: debt.closeTransactionId,
-      isClosed: debt.isClosed,
-      currency: debt.currency,
-      sourceTransactionId: debt.sourceTransactionId,
-      createdAt: debt.createdAt,
-    };
+    return DebtResponseMapper.toResponse(debt);
   }
 }

@@ -116,7 +116,7 @@ function goToChangelog() {
                 <UIcon :name="CHANGELOG_TYPE_CONFIG[item.type].icon" class="w-3.5 h-3.5" />
               </div>
               <span
-                class="text-[13px] leading-relaxed text-text-secondary-light dark:text-text-secondary-dark pt-px"
+                class="text-body-sm leading-relaxed text-text-secondary-light dark:text-text-secondary-dark pt-px"
               >
                 {{ item.text }}
               </span>

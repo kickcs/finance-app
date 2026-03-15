@@ -46,7 +46,7 @@ const emit = defineEmits<{
       />
       <span
         v-else
-        class="text-[10px] font-bold leading-none"
+        class="text-caption-sm font-bold leading-none"
         :style="{ color: isActive ? '#fff' : participant.color }"
       >
         {{ getInitial(participant.name) }}
@@ -57,7 +57,7 @@ const emit = defineEmits<{
     </span>
     <span
       v-if="paidByName"
-      class="text-[10px] opacity-70 whitespace-nowrap"
+      class="text-caption-sm opacity-70 whitespace-nowrap"
       :class="isActive ? 'text-white/70' : 'text-text-tertiary-light dark:text-text-tertiary-dark'"
     >
       → {{ paidByName }}

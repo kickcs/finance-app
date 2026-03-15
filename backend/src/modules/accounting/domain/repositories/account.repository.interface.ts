@@ -13,5 +13,6 @@ export interface IAccountRepository {
   save(account: Account): Promise<Account>;
   delete(id: string): Promise<void>;
   exists(id: string): Promise<boolean>;
+  existsForUser(id: string, userId: string): Promise<boolean>;
   updateOrder(accountIds: string[]): Promise<void>;
 }

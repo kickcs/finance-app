@@ -4,7 +4,7 @@ defineProps<{ version: string; current?: boolean }>();
 
 <template>
   <span
-    class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-mono font-medium tracking-tight"
+    class="inline-flex items-center px-2 py-0.5 rounded-md text-caption font-mono font-medium tracking-tight"
     :class="
       current
         ? 'bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-hover'

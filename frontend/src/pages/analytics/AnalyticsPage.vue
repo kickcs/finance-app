@@ -185,7 +185,7 @@ const { entries: dailyEntries, isLoading: dailyLoading } = useDailyStats({
 const chartEntries = computed(() =>
   dailyEntries.value.map((e) => ({
     date: e.date,
-    expense: Object.entries(e.expenseByCurrency).reduce(
+    expense: Object.entries(e.expense_by_currency).reduce(
       (sum, [curr, amt]) => sum + convertAmount(amt, curr),
       0,
     ),

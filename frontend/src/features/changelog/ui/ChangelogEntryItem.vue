@@ -21,7 +21,7 @@ defineProps<{ entry: ChangelogEntry; showTitle?: boolean }>();
     <!-- Title -->
     <h2
       v-if="showTitle && entry.title"
-      class="text-[15px] font-semibold text-text-primary-light dark:text-text-primary-dark mb-3 leading-snug"
+      class="text-body font-semibold text-text-primary-light dark:text-text-primary-dark mb-3 leading-snug"
     >
       {{ entry.title }}
     </h2>
@@ -38,7 +38,7 @@ defineProps<{ entry: ChangelogEntry; showTitle?: boolean }>();
           <UIcon :name="CHANGELOG_TYPE_CONFIG[item.type].icon" size="sm" />
         </div>
         <span
-          class="text-[13px] leading-relaxed text-text-secondary-light dark:text-text-secondary-dark pt-0.5"
+          class="text-body-sm leading-relaxed text-text-secondary-light dark:text-text-secondary-dark pt-0.5"
         >
           {{ item.text }}
         </span>

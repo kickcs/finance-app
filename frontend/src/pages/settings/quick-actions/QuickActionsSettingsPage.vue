@@ -1,16 +1,13 @@
 <script setup lang="ts">
-import { computed, inject } from 'vue';
-import type { Ref } from 'vue';
-import type { User } from '@/shared/api/composables/useAuth';
 import { AppHeader } from '@/widgets/header';
 import { UIcon, UToggle } from '@/shared/ui';
 import { QuickActionModal, useQuickActions } from '@/features/configure-quick-action';
 import { useAccounts } from '@/entities/account';
 import { useCategories } from '@/entities/category';
 import { navigateBack } from '@/app/router';
+import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 
-const user = inject<Ref<User | null>>('user');
-const userId = computed(() => user?.value?.id ?? '');
+const { userId } = useCurrentUser();
 const { accounts } = useAccounts(userId);
 const { expenseCategories, getCategoryById } = useCategories(userId);
 const { slots, editingAction, showModal, handleSave, handleDelete, hidden, toggleHidden } =

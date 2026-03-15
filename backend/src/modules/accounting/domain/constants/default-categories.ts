@@ -177,6 +177,15 @@ export const TRANSFER_CATEGORY: DefaultCategory = {
   type: 'transfer',
 };
 
+export const DEBT_CATEGORY_IDS = {
+  GIVEN: 'debt_given',
+  TAKEN: 'debt_taken',
+  RETURN_TO_ME: 'debt_return_to_me',
+  RETURN_FROM_ME: 'debt_return_from_me',
+} as const;
+
+export const ALL_DEBT_CATEGORY_IDS = Object.values(DEBT_CATEGORY_IDS);
+
 export const ADJUSTMENT_CATEGORY: DefaultCategory = {
   id: 'balance_adjustment',
   name: 'Коррекция баланса',

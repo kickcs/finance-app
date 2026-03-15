@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Delete, Body, Param, HttpCode, HttpStatus } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
+import { CurrentUser } from '../../../../common';
 import {
   GetByAccountIdsDto,
   UpsertBalanceDto,
@@ -23,46 +24,67 @@ export class AccountBalancesController {
   ) {}
 
   @Get('by-account/:accountId')
-  async findByAccount(@Param('accountId') accountId: string): Promise<unknown> {
-    return this.queryBus.execute(new GetBalancesByAccountQuery(accountId));
+  async findByAccount(
+    @CurrentUser('sub') userId: string,
+    @Param('accountId') accountId: string,
+  ): Promise<unknown> {
+    return this.queryBus.execute(new GetBalancesByAccountQuery(accountId, userId));
   }
 
   @Post('by-accounts')
-  async findByAccounts(@Body() dto: GetByAccountIdsDto): Promise<unknown> {
-    return this.queryBus.execute(new GetBalancesByAccountsQuery(dto.accountIds));
+  async findByAccounts(
+    @CurrentUser('sub') userId: string,
+    @Body() dto: GetByAccountIdsDto,
+  ): Promise<unknown> {
+    return this.queryBus.execute(new GetBalancesByAccountsQuery(dto.accountIds, userId));
   }
 
   @Post('upsert')
-  async upsert(@Body() dto: UpsertBalanceDto): Promise<unknown> {
+  async upsert(
+    @CurrentUser('sub') userId: string,
+    @Body() dto: UpsertBalanceDto,
+  ): Promise<unknown> {
     return this.commandBus.execute(
-      new UpsertBalanceCommand(dto.accountId, dto.currency, dto.balance),
+      new UpsertBalanceCommand(dto.accountId, dto.currency, dto.balance, userId),
     );
   }
 
   @Post('create-many')
-  async createMany(@Body() dto: CreateManyBalancesDto): Promise<unknown> {
-    return this.commandBus.execute(new CreateManyBalancesCommand(dto.accountId, dto.balances));
+  async createMany(
+    @CurrentUser('sub') userId: string,
+    @Body() dto: CreateManyBalancesDto,
+  ): Promise<unknown> {
+    return this.commandBus.execute(
+      new CreateManyBalancesCommand(dto.accountId, dto.balances, userId),
+    );
   }
 
   @Post('update-by-delta')
-  async updateByDelta(@Body() dto: UpdateByDeltaDto): Promise<unknown> {
+  async updateByDelta(
+    @CurrentUser('sub') userId: string,
+    @Body() dto: UpdateByDeltaDto,
+  ): Promise<unknown> {
     return this.commandBus.execute(
-      new UpdateBalanceByDeltaCommand(dto.accountId, dto.currency, dto.delta),
+      new UpdateBalanceByDeltaCommand(dto.accountId, dto.currency, dto.delta, userId),
     );
   }
 
   @Delete(':accountId/:currency')
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(
+    @CurrentUser('sub') userId: string,
     @Param('accountId') accountId: string,
     @Param('currency') currency: string,
   ): Promise<void> {
-    await this.commandBus.execute(new DeleteBalanceCommand(accountId, currency));
+    await this.commandBus.execute(new DeleteBalanceCommand(accountId, currency, userId));
   }
 
   @Delete('by-account/:accountId')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async removeByAccount(@Param('accountId') accountId: string): Promise<void> {
-    await this.commandBus.execute(new DeleteBalancesByAccountCommand(accountId));
+  async removeByAccount(
+    @CurrentUser('sub') userId: string,
+    @Param('accountId') accountId: string,
+  ): Promise<void> {
+    await this.commandBus.execute(new DeleteBalancesByAccountCommand(accountId, userId));
   }
 }

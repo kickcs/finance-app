@@ -1,7 +1,5 @@
 <script setup lang="ts">
-import { UCard } from '@/shared/ui/card';
-import { Skeleton } from '@/shared/ui/primitives/skeleton';
-import { IconBadge } from '@/shared/ui/icon-badge';
+import { UCard, Skeleton, IconBadge } from '@/shared/ui';
 
 interface Props {
   icon: string;

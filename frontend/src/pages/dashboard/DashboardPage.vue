@@ -298,7 +298,7 @@ function handleScanReceipt() {
           <section class="flex justify-center mt-2 pb-4">
             <button
               type="button"
-              class="flex items-center gap-2 text-[13px] font-medium text-text-tertiary-light dark:text-text-tertiary-dark hover:text-text-secondary-light dark:hover:text-text-secondary-dark transition-colors px-4 py-2 rounded-xl hover:bg-surface-light dark:hover:bg-surface-dark"
+              class="flex items-center gap-2 text-body-sm font-medium text-text-tertiary-light dark:text-text-tertiary-dark hover:text-text-secondary-light dark:hover:text-text-secondary-dark transition-colors px-4 py-2 rounded-xl hover:bg-surface-light dark:hover:bg-surface-dark"
               @click="nav.toDashboardSettings"
             >
               <UIcon name="tune" size="sm" />

@@ -1,5 +1,5 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { Inject, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Inject, NotFoundException } from '@nestjs/common';
 import { DeleteCategoryCommand } from './delete-category.command';
 import {
   ICategoryRepository,
@@ -14,10 +14,14 @@ export class DeleteCategoryHandler implements ICommandHandler<DeleteCategoryComm
   ) {}
 
   async execute(command: DeleteCategoryCommand): Promise<void> {
-    const exists = await this.categoryRepository.exists(command.id);
+    const category = await this.categoryRepository.findById(command.id);
 
-    if (!exists) {
+    if (!category) {
       throw new NotFoundException('Category not found');
+    }
+
+    if (category.userId !== command.userId) {
+      throw new ForbiddenException('Access denied');
     }
 
     await this.categoryRepository.delete(command.id);

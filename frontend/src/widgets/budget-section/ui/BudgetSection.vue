@@ -96,10 +96,7 @@ const remainingColor = computed(() => {
     </div>
 
     <!-- Progress bar -->
-    <div
-      class="w-full rounded-full overflow-hidden bg-surface-light dark:bg-surface-dark"
-      style="height: 8px"
-    >
+    <div class="w-full h-2 rounded-full overflow-hidden bg-surface-light dark:bg-surface-dark">
       <div
         class="h-full rounded-full transition-all duration-500"
         :style="{

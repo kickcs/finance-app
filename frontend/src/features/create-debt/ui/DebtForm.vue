@@ -9,6 +9,7 @@ import { getCurrencyByCode, DEFAULT_CURRENCY } from '@/entities/currency';
 import { PersonSelector, usePeople } from '@/entities/person';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { getTodayISO } from '@/shared/lib/date';
+import { formatLocalDate } from '@/shared/lib/format/date';
 import type { DebtFormData } from '../model/useCreateDebt';
 import type { AccountWithBalances } from '@/entities/account';
 
@@ -103,12 +104,7 @@ function handleDateChange(value: DateValue | undefined) {
 const displayDate = computed(() => {
   const dateStr = props.formData.debt_date || getTodayISO();
   const [year, month, day] = dateStr.split('-').map(Number);
-  const date = new Date(year, month - 1, day);
-  return date.toLocaleDateString('ru-RU', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
+  return formatLocalDate(new Date(year, month - 1, day).getTime());
 });
 </script>
 

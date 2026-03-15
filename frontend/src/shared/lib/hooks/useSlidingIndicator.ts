@@ -1,4 +1,4 @@
-import { ref, watch, onMounted, nextTick } from 'vue';
+import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import type { Ref, MaybeRefOrGetter } from 'vue';
 import { toValue } from 'vue';
 import { useResizeObserver, useEventListener } from '@vueuse/core';
@@ -83,6 +83,10 @@ export function useSlidingIndicator(
 
   onMounted(() => {
     nextTick(updateIndicator);
+  });
+
+  onUnmounted(() => {
+    if (scrollRafId) cancelAnimationFrame(scrollRafId);
   });
 
   watch(

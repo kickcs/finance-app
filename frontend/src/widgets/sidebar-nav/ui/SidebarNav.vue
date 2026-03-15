@@ -137,7 +137,7 @@ function handleNavClick(item: (typeof MAIN_NAV_ITEMS)[number]) {
               : 'text-text-tertiary-light dark:text-text-tertiary-dark'
           "
         />
-        <span class="text-[15px]">{{ item.label }}</span>
+        <span class="text-body">{{ item.label }}</span>
       </RouterLink>
     </nav>
 

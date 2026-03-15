@@ -1,6 +1,5 @@
 // Re-export from database types for consistency
 export type { Account, AccountWithBalances, AccountBalance } from '@/shared/api/database.types';
-export type AccountId = string;
 
 export interface AccountTypeFieldValues {
   creditLimit: number | null;
@@ -24,8 +23,3 @@ export const ACCOUNT_ICONS = [
   'account_balance',
   'diamond',
 ] as const;
-
-import { ENTITY_COLORS } from '@/shared/config/colors';
-
-/** @deprecated Use ENTITY_COLORS from @/shared/config/colors */
-export const ACCOUNT_COLORS = ENTITY_COLORS;

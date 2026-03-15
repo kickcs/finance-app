@@ -1,7 +1,5 @@
 <script setup lang="ts">
-import { computed, inject, ref } from 'vue';
-import type { Ref } from 'vue';
-import type { User } from '@/shared/api/composables/useAuth';
+import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { ROUTE_NAMES } from '@/app/router/routeNames';
 import { AppHeader } from '@/widgets/header';
@@ -11,6 +9,7 @@ import { useAuth, useProfile } from '@/shared/api';
 import { EditProfileModal } from '@/features/edit-profile';
 import { useChangelog, CURRENT_VERSION } from '@/features/changelog';
 import { InstallPwaModal, usePwaInstall } from '@/features/install-pwa';
+import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 import { useAsyncOperation } from '@/shared/lib/hooks/useAsyncOperation';
 import { SubscriptionSection } from '@/features/manage-subscription';
@@ -20,11 +19,10 @@ import { usePwaUpdate } from '@/shared/lib/composables/usePwaUpdate';
 const router = useRouter();
 const { signOut } = useAuth();
 
-// Get user from provide/inject
-const user = inject<Ref<User | null>>('user');
+const { user, userId } = useCurrentUser();
 
 // Profile data
-const { profile } = useProfile(computed(() => user?.value?.id ?? null));
+const { profile } = useProfile(userId);
 
 // User info - prefer profile name from DB, fallback to user name
 const userName = computed(() => profile.value?.name || user?.value?.name || 'Пользователь');

@@ -19,7 +19,13 @@ import { TransactionOrmEntity } from '../typeorm/transaction.orm-entity';
 import { CategoryOrmEntity } from '../typeorm/category.orm-entity';
 import { DebtOrmEntity } from '../../../../debt/infrastructure/persistence/typeorm/debt.orm-entity';
 import { TransactionMapper } from '../mappers/transaction.mapper';
-import { getDefaultCategoryById } from '../../../domain/constants/default-categories';
+import {
+  getDefaultCategoryById,
+  DEBT_CATEGORY_IDS,
+  ALL_DEBT_CATEGORY_IDS,
+} from '../../../domain/constants/default-categories';
+
+const DEBT_IDS_SQL = ALL_DEBT_CATEGORY_IDS.map((id) => `'${id}'`).join(',');
 
 @Injectable()
 export class TransactionRepository implements ITransactionRepository {
@@ -203,7 +209,7 @@ export class TransactionRepository implements ITransactionRepository {
           'source_tx.id = COALESCE(d.source_transaction_id, d.transaction_id)',
         )
         .where('source_tx.id IN (:...transactionIds)', { transactionIds })
-        .andWhere("return_tx.category_id = 'debt_return_to_me'")
+        .andWhere(`return_tx.category_id = '${DEBT_CATEGORY_IDS.RETURN_TO_ME}'`)
         .select('source_tx.id', 'sourceTransactionId')
         .addSelect('SUM(return_tx.amount)', 'returnedAmount')
         .groupBy('source_tx.id')
@@ -356,27 +362,27 @@ export class TransactionRepository implements ITransactionRepository {
       .andWhere('t.date >= :startDate', { startDate })
       .andWhere('t.date < :endDate', { endDate })
       .select(
-        `SUM(CASE WHEN t.type = 'income' AND (t.is_debt_related = false OR t.is_debt_related IS NULL) AND t.category_id NOT IN ('debt_given','debt_taken','debt_return_to_me','debt_return_from_me') THEN t.amount ELSE 0 END)`,
+        `SUM(CASE WHEN t.type = 'income' AND (t.is_debt_related = false OR t.is_debt_related IS NULL) AND t.category_id NOT IN (${DEBT_IDS_SQL}) THEN t.amount ELSE 0 END)`,
         'regularIncome',
       )
       .addSelect(
-        `SUM(CASE WHEN t.type = 'expense' AND (t.is_debt_related = false OR t.is_debt_related IS NULL) AND t.category_id NOT IN ('debt_given','debt_taken','debt_return_to_me','debt_return_from_me') THEN t.amount ELSE 0 END)`,
+        `SUM(CASE WHEN t.type = 'expense' AND (t.is_debt_related = false OR t.is_debt_related IS NULL) AND t.category_id NOT IN (${DEBT_IDS_SQL}) THEN t.amount ELSE 0 END)`,
         'regularExpense',
       )
       .addSelect(
-        `SUM(CASE WHEN t.category_id = 'debt_given' THEN t.amount ELSE 0 END)`,
+        `SUM(CASE WHEN t.category_id = '${DEBT_CATEGORY_IDS.GIVEN}' THEN t.amount ELSE 0 END)`,
         'debtGiven',
       )
       .addSelect(
-        `SUM(CASE WHEN t.category_id = 'debt_taken' THEN t.amount ELSE 0 END)`,
+        `SUM(CASE WHEN t.category_id = '${DEBT_CATEGORY_IDS.TAKEN}' THEN t.amount ELSE 0 END)`,
         'debtTaken',
       )
       .addSelect(
-        `SUM(CASE WHEN t.category_id = 'debt_return_to_me' AND t.is_debt_related = true THEN t.amount ELSE 0 END)`,
+        `SUM(CASE WHEN t.category_id = '${DEBT_CATEGORY_IDS.RETURN_TO_ME}' AND t.is_debt_related = true THEN t.amount ELSE 0 END)`,
         'debtReturnsToMe',
       )
       .addSelect(
-        `SUM(CASE WHEN t.category_id = 'debt_return_from_me' AND t.is_debt_related = true THEN t.amount ELSE 0 END)`,
+        `SUM(CASE WHEN t.category_id = '${DEBT_CATEGORY_IDS.RETURN_FROM_ME}' AND t.is_debt_related = true THEN t.amount ELSE 0 END)`,
         'debtReturnsFromMe',
       )
       .getRawOne<{
@@ -406,27 +412,27 @@ export class TransactionRepository implements ITransactionRepository {
       .andWhere('t.date < :endDate', { endDate })
       .select('t.currency', 'currency')
       .addSelect(
-        `SUM(CASE WHEN t.type = 'income' AND (t.is_debt_related = false OR t.is_debt_related IS NULL) AND t.category_id NOT IN ('debt_given','debt_taken','debt_return_to_me','debt_return_from_me') THEN t.amount ELSE 0 END)`,
+        `SUM(CASE WHEN t.type = 'income' AND (t.is_debt_related = false OR t.is_debt_related IS NULL) AND t.category_id NOT IN (${DEBT_IDS_SQL}) THEN t.amount ELSE 0 END)`,
         'regularIncome',
       )
       .addSelect(
-        `SUM(CASE WHEN t.type = 'expense' AND (t.is_debt_related = false OR t.is_debt_related IS NULL) AND t.category_id NOT IN ('debt_given','debt_taken','debt_return_to_me','debt_return_from_me') THEN t.amount ELSE 0 END)`,
+        `SUM(CASE WHEN t.type = 'expense' AND (t.is_debt_related = false OR t.is_debt_related IS NULL) AND t.category_id NOT IN (${DEBT_IDS_SQL}) THEN t.amount ELSE 0 END)`,
         'regularExpense',
       )
       .addSelect(
-        `SUM(CASE WHEN t.category_id = 'debt_given' THEN t.amount ELSE 0 END)`,
+        `SUM(CASE WHEN t.category_id = '${DEBT_CATEGORY_IDS.GIVEN}' THEN t.amount ELSE 0 END)`,
         'debtGiven',
       )
       .addSelect(
-        `SUM(CASE WHEN t.category_id = 'debt_taken' THEN t.amount ELSE 0 END)`,
+        `SUM(CASE WHEN t.category_id = '${DEBT_CATEGORY_IDS.TAKEN}' THEN t.amount ELSE 0 END)`,
         'debtTaken',
       )
       .addSelect(
-        `SUM(CASE WHEN t.category_id = 'debt_return_to_me' AND t.is_debt_related = true THEN t.amount ELSE 0 END)`,
+        `SUM(CASE WHEN t.category_id = '${DEBT_CATEGORY_IDS.RETURN_TO_ME}' AND t.is_debt_related = true THEN t.amount ELSE 0 END)`,
         'debtReturnsToMe',
       )
       .addSelect(
-        `SUM(CASE WHEN t.category_id = 'debt_return_from_me' AND t.is_debt_related = true THEN t.amount ELSE 0 END)`,
+        `SUM(CASE WHEN t.category_id = '${DEBT_CATEGORY_IDS.RETURN_FROM_ME}' AND t.is_debt_related = true THEN t.amount ELSE 0 END)`,
         'debtReturnsFromMe',
       )
       .groupBy('t.currency')
@@ -528,15 +534,15 @@ export class TransactionRepository implements ITransactionRepository {
       const isDebt = row.isDebtRelated === true || row.isDebtRelated === 'true';
 
       switch (row.categoryId) {
-        case 'debt_given':
+        case DEBT_CATEGORY_IDS.GIVEN:
           debtGiven += amount;
           debtGivenByCurrency[row.currency] = (debtGivenByCurrency[row.currency] || 0) + amount;
           continue;
-        case 'debt_taken':
+        case DEBT_CATEGORY_IDS.TAKEN:
           debtTaken += amount;
           debtTakenByCurrency[row.currency] = (debtTakenByCurrency[row.currency] || 0) + amount;
           continue;
-        case 'debt_return_to_me':
+        case DEBT_CATEGORY_IDS.RETURN_TO_ME:
           // Only counted when original debt affected balance (is_debt_related = true)
           if (isDebt) {
             debtReturnsToMe += amount;
@@ -544,7 +550,7 @@ export class TransactionRepository implements ITransactionRepository {
               (debtReturnsToMeByCurrency[row.currency] || 0) + amount;
           }
           continue;
-        case 'debt_return_from_me':
+        case DEBT_CATEGORY_IDS.RETURN_FROM_ME:
           // Only counted when original debt affected balance (is_debt_related = true)
           if (isDebt) {
             debtReturnsFromMe += amount;
@@ -611,9 +617,7 @@ export class TransactionRepository implements ITransactionRepository {
     const categoryBreakdownQuery = createBaseQuery()
       .andWhere('t.type IN (:...types)', { types: ['income', 'expense'] })
       .andWhere('(t.is_debt_related = false OR t.is_debt_related IS NULL)')
-      .andWhere(
-        "t.category_id NOT IN ('debt_given', 'debt_taken', 'debt_return_to_me', 'debt_return_from_me')",
-      )
+      .andWhere(`t.category_id NOT IN (${DEBT_IDS_SQL})`)
       .leftJoin(CategoryOrmEntity, 'c', 'c.id::text = t.category_id')
       .select('t.category_id', 'categoryId')
       .addSelect('c.name', 'categoryName')
@@ -646,7 +650,7 @@ export class TransactionRepository implements ITransactionRepository {
       .where('return_tx.user_id = :userId', { userId })
       .andWhere('return_tx.date >= :startDate', { startDate })
       .andWhere('return_tx.date <= :endDate', { endDate })
-      .andWhere("return_tx.category_id = 'debt_return_to_me'")
+      .andWhere(`return_tx.category_id = '${DEBT_CATEGORY_IDS.RETURN_TO_ME}'`)
       .select('source_tx.category_id', 'categoryId')
       .addSelect('source_tx.currency', 'currency')
       .addSelect('SUM(return_tx.amount)', 'offsetAmount')
@@ -761,9 +765,7 @@ export class TransactionRepository implements ITransactionRepository {
       .andWhere('t.date <= :endDate', { endDate })
       .andWhere('t.type IN (:...types)', { types: ['income', 'expense'] })
       .andWhere('(t.is_debt_related = false OR t.is_debt_related IS NULL)')
-      .andWhere(
-        "t.category_id NOT IN ('debt_given', 'debt_taken', 'debt_return_to_me', 'debt_return_from_me')",
-      );
+      .andWhere(`t.category_id NOT IN (${DEBT_IDS_SQL})`);
 
     if (accountIds && accountIds.length > 0) {
       query = query.andWhere('t.account_id IN (:...accountIds)', { accountIds });
@@ -787,7 +789,9 @@ export class TransactionRepository implements ITransactionRepository {
       )
       .where('return_tx.user_id = :userId', { userId })
       .andWhere('return_tx.is_debt_related = true')
-      .andWhere("return_tx.category_id IN ('debt_return_to_me', 'debt_return_from_me')")
+      .andWhere(
+        `return_tx.category_id IN ('${DEBT_CATEGORY_IDS.RETURN_TO_ME}', '${DEBT_CATEGORY_IDS.RETURN_FROM_ME}')`,
+      )
       // Include returns where either the source expense or the return itself falls in date range
       .andWhere(
         '(COALESCE(source_tx.date, return_tx.date) >= :startDate AND COALESCE(source_tx.date, return_tx.date) <= :endDate)',
@@ -863,13 +867,13 @@ export class TransactionRepository implements ITransactionRepository {
       }
 
       const amount = Number(row.total ?? 0);
-      if (row.categoryId === 'debt_return_to_me') {
+      if (row.categoryId === DEBT_CATEGORY_IDS.RETURN_TO_ME) {
         // Someone returned money to me → subtract from expenses
         entry.expenseByCurrency[row.currency] = Math.max(
           0,
           (entry.expenseByCurrency[row.currency] || 0) - amount,
         );
-      } else if (row.categoryId === 'debt_return_from_me') {
+      } else if (row.categoryId === DEBT_CATEGORY_IDS.RETURN_FROM_ME) {
         // I returned money to someone → subtract from income
         entry.incomeByCurrency[row.currency] = Math.max(
           0,

@@ -58,6 +58,15 @@ export function useParticipantsStep(items: Ref<ReceiptItem[]>) {
     trigger('selection');
   }
 
+  function assignAllTo(participantId: string) {
+    for (const item of items.value) {
+      if (!item.assignedParticipantIds.includes(participantId)) {
+        item.assignedParticipantIds.push(participantId);
+      }
+    }
+    trigger('selection');
+  }
+
   const hasMe = computed(() => participants.value.some((p) => p.isMe));
 
   const unassignedCount = computed(
@@ -71,5 +80,6 @@ export function useParticipantsStep(items: Ref<ReceiptItem[]>) {
     addParticipant,
     removeParticipant,
     toggleItemParticipant,
+    assignAllTo,
   };
 }

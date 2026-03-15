@@ -4,8 +4,9 @@ import { DebtCardSkeleton, type Debt, DEBT_DIRECTION_COLORS } from '@/entities/d
 import { UBadge, UTabs, SectionHeader, IconBadge, EmptyState } from '@/shared/ui';
 import { formatMasked } from '@/shared/lib/format/currency';
 import { formatDate } from '@/shared/lib/format/date';
+import { isPastDate } from '@/shared/lib/date';
 import { useExchangeRates } from '@/shared/api';
-import { DEFAULT_CURRENCY } from '@/entities/currency/model/constants';
+import { DEFAULT_CURRENCY } from '@/shared/config/currency';
 
 interface DebtByPerson {
   personName: string;
@@ -102,11 +103,6 @@ const overdueCount = computed(() => {
   return activeDebts.value.filter((d) => d.next_payment_date && new Date(d.next_payment_date) < now)
     .length;
 });
-
-function isOverdue(date: string | null): boolean {
-  if (!date) return false;
-  return new Date(date) < new Date();
-}
 </script>
 
 <template>
@@ -169,13 +165,13 @@ function isOverdue(date: string | null): boolean {
                 v-if="group.nearestDueDate"
                 class="text-xs"
                 :class="
-                  isOverdue(group.nearestDueDate)
+                  isPastDate(group.nearestDueDate)
                     ? 'text-danger font-medium'
                     : 'text-text-tertiary-light dark:text-text-tertiary-dark'
                 "
               >
                 {{
-                  isOverdue(group.nearestDueDate)
+                  isPastDate(group.nearestDueDate)
                     ? 'Просрочено'
                     : formatDate(group.nearestDueDate, { format: 'short' })
                 }}

@@ -42,7 +42,7 @@ function onDateSelect(value: DateValue | undefined) {
 <template>
   <section aria-label="Параметры транзакции" class="mt-6">
     <h2
-      class="text-[11px] font-bold text-text-tertiary-light dark:text-text-tertiary-dark uppercase tracking-widest mb-2 ml-4"
+      class="text-caption font-bold text-text-tertiary-light dark:text-text-tertiary-dark uppercase tracking-widest mb-2 ml-4"
     >
       Оплата
     </h2>
@@ -74,7 +74,7 @@ function onDateSelect(value: DateValue | undefined) {
       <div class="grid grid-cols-2 divide-x divide-border-light dark:divide-border-dark">
         <div class="px-4 py-3 flex flex-col justify-center">
           <label
-            class="text-[10px] font-semibold text-text-tertiary-light dark:text-text-tertiary-dark uppercase tracking-wider mb-1.5"
+            class="text-caption-sm font-semibold text-text-tertiary-light dark:text-text-tertiary-dark uppercase tracking-wider mb-1.5"
           >
             Дата
           </label>
@@ -104,7 +104,7 @@ function onDateSelect(value: DateValue | undefined) {
 
         <div class="px-4 py-3 flex flex-col justify-center">
           <label
-            class="text-[10px] font-semibold text-text-tertiary-light dark:text-text-tertiary-dark uppercase tracking-wider mb-1.5"
+            class="text-caption-sm font-semibold text-text-tertiary-light dark:text-text-tertiary-dark uppercase tracking-wider mb-1.5"
           >
             Заметка
           </label>

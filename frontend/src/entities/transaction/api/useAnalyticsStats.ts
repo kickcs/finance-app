@@ -10,11 +10,11 @@ export interface UseAnalyticsStatsOptions {
 }
 
 const emptyStats: AnalyticsStats = {
-  totalIncome: 0,
-  totalExpense: 0,
-  incomeByCurrency: {},
-  expenseByCurrency: {},
-  categoryBreakdown: [],
+  total_income: 0,
+  total_expense: 0,
+  income_by_currency: {},
+  expense_by_currency: {},
+  category_breakdown: [],
 };
 
 export function useAnalyticsStats(options: UseAnalyticsStatsOptions) {
@@ -55,11 +55,11 @@ export function useAnalyticsStats(options: UseAnalyticsStatsOptions) {
 
   const stats = computed<AnalyticsStats>(() => data.value ?? emptyStats);
 
-  const totalIncome = computed(() => stats.value.totalIncome);
-  const totalExpense = computed(() => stats.value.totalExpense);
-  const incomeByCurrency = computed(() => stats.value.incomeByCurrency);
-  const expenseByCurrency = computed(() => stats.value.expenseByCurrency);
-  const categoryBreakdown = computed(() => stats.value.categoryBreakdown);
+  const totalIncome = computed(() => stats.value.total_income);
+  const totalExpense = computed(() => stats.value.total_expense);
+  const incomeByCurrency = computed(() => stats.value.income_by_currency);
+  const expenseByCurrency = computed(() => stats.value.expense_by_currency);
+  const categoryBreakdown = computed(() => stats.value.category_breakdown);
 
   return {
     stats,

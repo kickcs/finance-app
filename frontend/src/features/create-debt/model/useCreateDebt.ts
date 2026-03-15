@@ -1,8 +1,8 @@
 import { ref, computed } from 'vue';
 import { transactionsApi } from '@/entities/transaction';
-import { debtsApi, debtQueryKeys } from '@/entities/debt';
+import { debtsApi } from '@/entities/debt';
 import { queryClient } from '@/shared/api/queryClient';
-import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
+import { invalidateDebtRelated } from '@/shared/api/invalidation';
 import { useToast } from '@/shared/ui';
 import { getTodayISO } from '@/shared/lib/date';
 import { CATEGORY_IDS } from '@/entities/category';
@@ -108,11 +108,7 @@ export function useCreateDebt() {
       }
 
       // 4. Invalidate caches
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: debtQueryKeys.list(userId) }),
-        invalidateTransactionRelated(queryClient, userId),
-        invalidateAccountRelated(queryClient, userId),
-      ]);
+      await invalidateDebtRelated(queryClient, userId);
 
       // Show success toast
       toast({

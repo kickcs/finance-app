@@ -1,5 +1,6 @@
 import { ref, computed, watch } from 'vue';
-import { ACCOUNT_ICONS, ACCOUNT_COLORS } from '@/entities/account';
+import { ACCOUNT_ICONS } from '@/entities/account';
+import { ENTITY_COLORS } from '@/shared/config/colors';
 import type { AccountType } from '@/entities/account';
 import { accountsApi } from '@/entities/account';
 import { queryClient } from '@/shared/api/queryClient';
@@ -38,7 +39,7 @@ function getDefaultFormData(): AccountFormData {
     name: '',
     balances: [{ currency: 'UZS', balance: 0 }],
     icon: ACCOUNT_ICONS[0],
-    color: ACCOUNT_COLORS[0],
+    color: ENTITY_COLORS[0],
     type: 'basic',
     creditLimit: null,
     gracePeriodDays: null,

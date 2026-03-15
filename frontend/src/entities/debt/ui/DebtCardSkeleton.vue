@@ -15,7 +15,7 @@ withDefaults(
   <div
     :class="[
       'w-full rounded-xl bg-card-light dark:bg-card-dark',
-      'border border-gray-100 dark:border-gray-800',
+      'border border-border-light dark:border-border-dark',
       compact ? 'p-2.5' : 'p-3',
     ]"
   >

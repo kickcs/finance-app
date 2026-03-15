@@ -2,6 +2,7 @@
 import { computed, ref, onUnmounted, nextTick, watch } from 'vue';
 import { useResizeObserver } from '@vueuse/core';
 import { useMountedAnimation } from '@/shared/lib/hooks/useMountedAnimation';
+import { formatDate } from '@/shared/lib/format/date';
 import { UInput, UButton, UTabs, UIcon } from '@/shared/ui';
 import { CATEGORY_IDS } from '@/entities/category';
 import type { Category } from '@/entities/category';
@@ -173,13 +174,7 @@ const calendarValue = computed(() => {
   return new CalendarDate(d.getFullYear(), d.getMonth() + 1, d.getDate());
 });
 
-const displayDate = computed(() => {
-  const d = new Date(props.formData.date);
-  return d.toLocaleDateString('ru-RU', {
-    day: 'numeric',
-    month: 'short',
-  });
-});
+const displayDate = computed(() => formatDate(props.formData.date, { format: 'short' }));
 
 function onCalendarSelect(value: DateValue | undefined) {
   if (!value) return;

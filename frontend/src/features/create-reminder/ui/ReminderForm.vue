@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 import { UInput, UButton, UTabs, UColorPicker, UIconSelector } from '@/shared/ui';
 import { FREQUENCY_LABELS, REMINDER_ICONS } from '@/entities/reminder';
-import { ACCOUNT_COLORS } from '@/entities/account';
+import { ENTITY_COLORS } from '@/shared/config/colors';
 import { getTodayISO, isPastDate } from '@/shared/lib/date';
 import type { ReminderFormData } from '../model/useCreateReminder';
 
@@ -96,7 +96,7 @@ const dateError = computed(() => {
     <!-- Color Picker -->
     <UColorPicker
       :model-value="formData.color"
-      :colors="ACCOUNT_COLORS"
+      :colors="ENTITY_COLORS"
       label="Цвет"
       @update:model-value="updateField('color', $event)"
     />
