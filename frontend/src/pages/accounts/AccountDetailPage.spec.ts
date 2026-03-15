@@ -436,7 +436,7 @@ describe('AccountDetailPage', () => {
       const router = createTestRouter(routes);
       router.push('/accounts/acc-2');
       await router.isReady();
-      const pushSpy = vi.spyOn(router, 'push');
+      const replaceSpy = vi.spyOn(router, 'replace');
 
       currentWrapper = renderWithProviders(AccountDetailPage, {
         router,
@@ -456,7 +456,7 @@ describe('AccountDetailPage', () => {
       await flushPromises();
 
       expect(deletedId).toBe('acc-2');
-      expect(pushSpy).toHaveBeenCalledWith({ name: 'accounts' });
+      expect(replaceSpy).toHaveBeenCalledWith({ name: 'accounts' });
     });
   });
 
