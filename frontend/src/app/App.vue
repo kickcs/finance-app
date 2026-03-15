@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, provide, defineAsyncComponent } from 'vue';
 import { RouterView } from 'vue-router';
 import { useTheme } from '@/features/toggle-theme';
+import { initPrimaryColor } from '@/features/select-primary-color';
 import { initializeAuth, useAuth } from '@/shared/api/composables/useAuth';
 import { useProfile } from '@/shared/api/composables/useProfile';
 import { transitionName } from '@/app/router';
@@ -25,6 +26,9 @@ const PremiumUpgradeModal = defineAsyncComponent(
 // Initialize theme synchronously on script setup (before mount)
 const { initTheme } = useTheme();
 initTheme();
+
+// Initialize primary color synchronously (before mount, like theme)
+initPrimaryColor();
 
 // Initialize PWA updates watcher
 usePwaUpdate();
