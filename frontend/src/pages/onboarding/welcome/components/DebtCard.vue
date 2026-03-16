@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 import { useCountUp } from '../composables';
 
 const props = defineProps<{
@@ -12,12 +12,11 @@ const props = defineProps<{
   isVisible: boolean;
 }>();
 
-const visibleRef = computed(() => props.isVisible);
-const progressTarget = ref(props.progress);
-const progressDisplay = useCountUp(progressTarget, visibleRef, {
-  duration: 1000,
-  format: (n) => `${Math.round(n)}%`,
-});
+const progressDisplay = useCountUp(
+  () => props.progress,
+  () => props.isVisible,
+  { duration: 1000, format: (n) => `${Math.round(n)}%` },
+);
 
 const theme = computed(() =>
   props.type === 'given'

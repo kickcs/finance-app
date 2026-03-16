@@ -36,21 +36,21 @@ onMounted(() => {
 
 const { y } = useWindowScroll();
 const { height } = useWindowSize();
-const documentHeight = ref(document.documentElement.scrollHeight);
-useResizeObserver(document.documentElement, () => {
+const documentHeight = ref(0);
+useResizeObserver(document.body, () => {
   documentHeight.value = document.documentElement.scrollHeight;
 });
 
 const scrollProgress = computed(() => {
   const maxScroll = documentHeight.value - height.value;
-  return maxScroll > 0 ? (y.value / maxScroll) * 100 : 0;
+  return maxScroll > 0 ? Math.min((y.value / maxScroll) * 100, 100) : 0;
 });
 </script>
 
 <template>
   <div class="dark">
     <!-- Premium Scroll Progress Bar -->
-    <div class="fixed top-0 left-0 right-0 h-1 z-[100] bg-white/5 backdrop-blur-sm">
+    <div class="fixed top-0 left-0 right-0 h-1 z-[100] bg-white/5">
       <div
         class="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-fuchsia-500 shadow-[0_0_15px_rgba(168,85,247,0.8)] transition-all duration-150 ease-out"
         :style="{ width: `${scrollProgress}%` }"

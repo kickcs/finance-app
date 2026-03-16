@@ -1,27 +1,26 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref } from 'vue';
 import { useCountUp } from '../composables';
 
 const props = defineProps<{
   isVisible: boolean;
 }>();
 
-const visibleRef = computed(() => props.isVisible);
 const balanceTarget = ref(12450);
 const incomeTarget = ref(3200);
 const expenseTarget = ref(1850);
 
-const balance = useCountUp(balanceTarget, visibleRef, {
+const balance = useCountUp(balanceTarget, () => props.isVisible, {
   format: (n) => `$${Math.floor(n).toLocaleString('en-US')}`,
 });
 const balanceCents = '.00';
 
-const income = useCountUp(incomeTarget, visibleRef, {
+const income = useCountUp(incomeTarget, () => props.isVisible, {
   format: (n) => `+$${Math.floor(n).toLocaleString('en-US')}`,
   duration: 1200,
 });
 
-const expense = useCountUp(expenseTarget, visibleRef, {
+const expense = useCountUp(expenseTarget, () => props.isVisible, {
   format: (n) => `-$${Math.floor(n).toLocaleString('en-US')}`,
   duration: 1200,
 });

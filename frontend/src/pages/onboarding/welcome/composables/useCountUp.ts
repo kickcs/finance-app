@@ -1,13 +1,15 @@
-import { ref, watch, onUnmounted, type Ref } from 'vue';
+import { ref, watch, onUnmounted, toValue, type MaybeRefOrGetter } from 'vue';
 import { usePreferredReducedMotion } from '@vueuse/core';
+
+const prefersReducedMotion = usePreferredReducedMotion();
 
 function easeOutQuad(t: number): number {
   return t * (2 - t);
 }
 
 export function useCountUp(
-  target: Ref<number>,
-  isVisible: Ref<boolean>,
+  target: MaybeRefOrGetter<number>,
+  isVisible: MaybeRefOrGetter<boolean>,
   options: {
     duration?: number;
     format?: (n: number) => string;
@@ -15,20 +17,19 @@ export function useCountUp(
 ) {
   const { duration = 1500, format = (n) => n.toLocaleString('ru-RU') } = options;
   const display = ref(format(0));
-  const prefersReducedMotion = usePreferredReducedMotion();
   let animationId: number | null = null;
 
   function animate() {
     if (animationId) cancelAnimationFrame(animationId);
 
     if (prefersReducedMotion.value === 'reduce') {
-      display.value = format(target.value);
+      display.value = format(toValue(target));
       return;
     }
 
     const startTime = performance.now();
     const startValue = 0;
-    const endValue = target.value;
+    const endValue = toValue(target);
 
     function step(currentTime: number) {
       const elapsed = currentTime - startTime;
@@ -48,9 +49,12 @@ export function useCountUp(
     animationId = requestAnimationFrame(step);
   }
 
-  watch(isVisible, (visible) => {
-    if (visible) animate();
-  });
+  watch(
+    () => toValue(isVisible),
+    (visible) => {
+      if (visible) animate();
+    },
+  );
 
   onUnmounted(() => {
     if (animationId) {

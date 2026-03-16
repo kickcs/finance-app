@@ -1,16 +1,11 @@
 import { ref, watchEffect } from 'vue';
 import { useIntersectionObserver, usePreferredReducedMotion } from '@vueuse/core';
 
+const prefersReducedMotion = usePreferredReducedMotion();
+
 function useIntersectOnce(observerOptions: { threshold?: number; rootMargin?: string } = {}) {
   const targetRef = ref<HTMLElement | null>(null);
   const triggered = ref(false);
-  const prefersReducedMotion = usePreferredReducedMotion();
-
-  watchEffect(() => {
-    if (prefersReducedMotion.value === 'reduce') {
-      triggered.value = true;
-    }
-  });
 
   const { stop } = useIntersectionObserver(
     targetRef,
@@ -22,6 +17,14 @@ function useIntersectOnce(observerOptions: { threshold?: number; rootMargin?: st
     },
     observerOptions,
   );
+
+  const stopMotionWatch = watchEffect(() => {
+    if (prefersReducedMotion.value === 'reduce') {
+      triggered.value = true;
+      stop();
+      stopMotionWatch();
+    }
+  });
 
   return { targetRef, triggered };
 }

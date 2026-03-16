@@ -1,33 +1,38 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { ref } from 'vue';
 import { useCountUp } from '../composables';
+
+// ~314.16
 
 const props = defineProps<{
   isVisible: boolean;
 }>();
-
-const visibleRef = computed(() => props.isVisible);
+const CIRCUMFERENCE = 2 * Math.PI * 50;
 const totalTarget = ref(1850);
-const total = useCountUp(totalTarget, visibleRef, {
+const total = useCountUp(totalTarget, () => props.isVisible, {
   format: (n) => `$${Math.floor(n).toLocaleString('en-US')}`,
 });
 
 const segments = [
-  { color: '#34d399', percent: 35, label: 'Продукты', dasharray: '110 204' },
-  { color: '#818cf8', percent: 20, label: 'Транспорт', dasharray: '62 252' },
-  { color: '#fbbf24', percent: 15, label: 'Развлечения', dasharray: '45 269' },
-  { color: '#fb7185', percent: 10, label: 'Рестораны', dasharray: '30 284' },
-  { color: 'rgba(255,255,255,0.1)', percent: 20, label: 'Другое', dasharray: '63 251' },
+  { color: '#34d399', percent: 35, label: 'Продукты' },
+  { color: '#818cf8', percent: 20, label: 'Транспорт' },
+  { color: '#fbbf24', percent: 15, label: 'Развлечения' },
+  { color: '#fb7185', percent: 10, label: 'Рестораны' },
+  { color: 'rgba(255,255,255,0.1)', percent: 20, label: 'Другое' },
 ];
 
-const segmentOffsets = computed(() => {
+const { dasharrays: segmentDasharrays, offsets: segmentOffsets } = (() => {
+  const dasharrays: string[] = [];
+  const offsets: number[] = [];
   let offset = 0;
-  return segments.map((s) => {
-    const current = offset;
-    offset += parseFloat(s.dasharray.split(' ')[0]);
-    return -current;
-  });
-});
+  for (const s of segments) {
+    const arc = (s.percent / 100) * CIRCUMFERENCE;
+    dasharrays.push(`${arc.toFixed(1)} ${(CIRCUMFERENCE - arc).toFixed(1)}`);
+    offsets.push(-offset);
+    offset += arc;
+  }
+  return { dasharrays, offsets };
+})();
 </script>
 
 <template>
@@ -59,7 +64,7 @@ const segmentOffsets = computed(() => {
           stroke-linecap="round"
           class="transition-all duration-1000 ease-out"
           :style="{
-            strokeDasharray: isVisible ? seg.dasharray : '0 314',
+            strokeDasharray: isVisible ? segmentDasharrays[i] : '0 314',
             strokeDashoffset: isVisible ? segmentOffsets[i] : 0,
             transitionDelay: `${0.2 + i * 0.12}s`,
           }"

@@ -32,18 +32,21 @@ const emit = defineEmits<{
       />
     </div>
 
-    <div v-else class="flex gap-3 md:gap-4 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-1">
+    <div
+      v-else
+      class="flex gap-3 md:gap-4 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-1 pt-1.5 -mt-1.5 px-1.5 -mx-1.5"
+    >
       <!-- Scan receipt button (first item) -->
       <div v-if="showScanButton" class="relative snap-start shrink-0 w-[calc((100%-36px)/4)]">
         <button
           type="button"
           aria-label="Сканировать чек"
-          class="relative flex flex-col items-center gap-1.5 py-3 md:py-4 rounded-xl md:rounded-2xl bg-surface-light dark:bg-surface-dark border-2 border-primary/20 shadow-sm hover:shadow-md hover:-translate-y-1 hover:border-primary/40 active:scale-95 active:translate-y-0 active:shadow-sm transition-[transform,box-shadow,border-color] duration-200 group cursor-pointer w-full overflow-hidden"
+          class="relative flex flex-col items-center gap-1.5 py-3 md:py-4 rounded-xl md:rounded-2xl bg-surface-light dark:bg-surface-dark border-2 border-primary/20 shadow-sm hover:shadow-md hover:-translate-y-1 hover:border-primary/40 active:scale-95 active:translate-y-0 active:shadow-sm transition-[transform,box-shadow,border-color] duration-200 group cursor-pointer w-full"
           @click="emit('scan-click')"
         >
           <!-- Subtle Premium Glow -->
           <div
-            class="absolute inset-0 bg-gradient-to-b from-primary/10 to-transparent opacity-100 group-hover:from-primary/15 transition-colors duration-300 pointer-events-none"
+            class="absolute inset-0 rounded-xl md:rounded-2xl bg-gradient-to-b from-primary/10 to-transparent opacity-100 group-hover:from-primary/15 transition-colors duration-300 pointer-events-none"
           ></div>
 
           <div
