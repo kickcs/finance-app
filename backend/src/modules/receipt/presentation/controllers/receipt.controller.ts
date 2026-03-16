@@ -2,7 +2,6 @@ import {
   Controller,
   Post,
   UseInterceptors,
-  UseGuards,
   UploadedFile,
   BadRequestException,
   InternalServerErrorException,
@@ -10,7 +9,6 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CurrentUser } from '../../../../common';
-import { PremiumGuard } from '../../../subscription/guards/premium.guard';
 import { ReceiptOcrService } from '../../application/services/receipt-ocr.service';
 import type { ScanReceiptResponseDto } from '../dto/scan-receipt-response.dto';
 
@@ -30,7 +28,6 @@ export class ReceiptController {
   constructor(private readonly ocrService: ReceiptOcrService) {}
 
   @Post('scan')
-  @UseGuards(PremiumGuard)
   @UseInterceptors(
     FileInterceptor('image', {
       limits: { fileSize: 10 * 1024 * 1024 }, // 10MB

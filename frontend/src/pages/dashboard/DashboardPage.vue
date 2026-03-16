@@ -15,7 +15,6 @@ import { AccountStack } from '@/widgets/account-stack';
 import { BudgetSection } from '@/widgets/budget-section';
 import { useHaptics } from '@/shared/lib/haptics';
 import { usePwaUpdateToast } from '@/shared/lib/composables/usePwaUpdate';
-import { usePremiumFeature } from '@/shared/lib/composables/usePremiumFeature';
 import { useFeatureHints, FeatureHintPopover } from '@/features/feature-hints';
 import { SetBudgetSheet } from '@/features/set-budget';
 
@@ -34,7 +33,6 @@ import DashboardTopExpenses from './ui/DashboardTopExpenses.vue';
 import DashboardSidePanel from './ui/DashboardSidePanel.vue';
 
 const { trigger } = useHaptics();
-const { requirePremium } = usePremiumFeature();
 const {
   isDotDismissed,
   dismissDot,
@@ -214,7 +212,6 @@ async function handleBudgetReset() {
 function handleScanReceipt() {
   dismissDot('scan-receipt');
   trigger('selection');
-  if (!requirePremium('Сканирование чека')) return;
   nav.toScanReceipt();
 }
 

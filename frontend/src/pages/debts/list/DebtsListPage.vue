@@ -234,6 +234,7 @@ function handleDetailClose() {
           size="sm"
           class="!p-2"
           aria-label="Добавить долг"
+          data-testid="add-debt-btn"
           @click="handleAddDebt"
         >
           <UIcon name="add" size="sm" />
@@ -256,7 +257,7 @@ function handleDetailClose() {
           <!-- Loading Skeleton -->
           <template v-if="isLoading">
             <template v-if="statusFilter === 'active'">
-              <div class="grid grid-cols-2 gap-3">
+              <div data-testid="debt-loading" class="grid grid-cols-2 gap-3">
                 <Skeleton class="h-20 rounded-2xl" />
                 <Skeleton class="h-20 rounded-2xl" />
               </div>
@@ -278,7 +279,11 @@ function handleDetailClose() {
             <!-- Debt Summary Cards (converted to main currency) -->
             <div v-if="activeDebts.length > 0" class="grid grid-cols-2 gap-3">
               <!-- Given debts (people owe you) -->
-              <UCard class="p-4 relative overflow-hidden" variant="bordered">
+              <UCard
+                data-testid="summary-given"
+                class="p-4 relative overflow-hidden"
+                variant="bordered"
+              >
                 <div
                   class="absolute -right-4 -top-4 w-16 h-16 bg-debt-given/10 rounded-full blur-xl pointer-events-none"
                 />
@@ -293,7 +298,11 @@ function handleDetailClose() {
               </UCard>
 
               <!-- Taken debts (you owe others) -->
-              <UCard class="p-4 relative overflow-hidden" variant="bordered">
+              <UCard
+                data-testid="summary-taken"
+                class="p-4 relative overflow-hidden"
+                variant="bordered"
+              >
                 <div
                   class="absolute -right-4 -top-4 w-16 h-16 bg-debt-received/10 rounded-full blur-xl pointer-events-none"
                 />
@@ -320,6 +329,7 @@ function handleDetailClose() {
                     type="button"
                     class="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center hover:bg-primary/30"
                     :aria-label="`Сбросить фильтр по ${personFilter}`"
+                    data-testid="clear-filter-btn"
                     @click="clearFilter"
                   >
                     <UIcon name="close" size="xs" />
@@ -464,6 +474,7 @@ function handleDetailClose() {
                 v-if="personFilter && activeDebts.length > 1"
                 variant="primary"
                 full-width
+                data-testid="close-all-btn"
                 @click="showCloseAllModal = true"
               >
                 <UIcon name="check_circle" size="sm" />
@@ -471,7 +482,7 @@ function handleDetailClose() {
               </UButton>
 
               <!-- Empty State -->
-              <UCard v-if="activeDebts.length === 0" class="py-4">
+              <UCard v-if="activeDebts.length === 0" data-testid="empty-state" class="py-4">
                 <EmptyState
                   icon="celebration"
                   title="Вы без долгов!"
@@ -511,7 +522,7 @@ function handleDetailClose() {
               </TransitionGroup>
             </div>
 
-            <UCard v-else class="py-4">
+            <UCard v-else data-testid="closed-empty-state" class="py-4">
               <EmptyState
                 icon="history"
                 title="Нет закрытых долгов"

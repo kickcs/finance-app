@@ -2,7 +2,6 @@
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { UIcon } from '@/shared/ui';
-import { PremiumBadge } from '@/features/upgrade-to-premium';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import {
   useReceiptWizard,
@@ -35,8 +34,6 @@ function handleBack() {
     wizard.goBack();
   }
 }
-
-// Premium gate: backend enforces via PremiumGuard, frontend gates in DashboardPage.handleScanReceipt
 </script>
 
 <template>
@@ -72,8 +69,6 @@ function handleBack() {
           </Transition>
         </div>
       </div>
-
-      <PremiumBadge />
     </header>
 
     <!-- Step Progress Indicator -->

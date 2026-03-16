@@ -45,12 +45,20 @@ function goBack() {
     <!-- Content -->
     <main class="px-5 pt-8 pb-6">
       <!-- Loading State -->
-      <div v-if="accountsLoading" class="flex items-center justify-center py-12">
+      <div
+        v-if="accountsLoading"
+        data-testid="accounts-loading"
+        class="flex items-center justify-center py-12"
+      >
         <USpinner />
       </div>
 
       <!-- No Accounts State -->
-      <div v-else-if="accounts.length === 0" class="text-center py-12">
+      <div
+        v-else-if="accounts.length === 0"
+        data-testid="no-accounts-state"
+        class="text-center py-12"
+      >
         <div
           class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-surface-light dark:bg-surface-dark flex items-center justify-center"
         >

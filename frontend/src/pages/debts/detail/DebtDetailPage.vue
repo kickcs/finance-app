@@ -105,12 +105,16 @@ function goBack() {
     <!-- Content -->
     <main class="px-5 pt-8 pb-6">
       <!-- Loading State -->
-      <div v-if="isLoading" class="flex items-center justify-center py-12">
+      <div
+        v-if="isLoading"
+        data-testid="debt-loading"
+        class="flex items-center justify-center py-12"
+      >
         <USpinner />
       </div>
 
       <!-- Not Found State -->
-      <NotFoundState v-else-if="!debt" message="Долг не найден" />
+      <NotFoundState v-else-if="!debt" data-testid="not-found" message="Долг не найден" />
 
       <!-- Debt Details -->
       <div v-else class="space-y-6">
@@ -147,6 +151,7 @@ function goBack() {
               v-else
               class="shrink-0 w-10 h-10 -mt-1 -mr-1 rounded-xl flex items-center justify-center text-text-tertiary-light dark:text-text-tertiary-dark hover:bg-danger/10 hover:text-danger transition-colors"
               aria-label="Удалить долг"
+              data-testid="delete-debt-btn"
               @click="showDeleteModal = true"
             >
               <UIcon name="delete" size="md" />
@@ -275,7 +280,13 @@ function goBack() {
 
         <!-- Actions (only if not closed) -->
         <div v-if="!debt.is_closed">
-          <UButton variant="primary" size="lg" full-width @click="showPartialPaymentModal = true">
+          <UButton
+            data-testid="payment-btn"
+            variant="primary"
+            size="lg"
+            full-width
+            @click="showPartialPaymentModal = true"
+          >
             <UIcon name="payments" size="sm" class="mr-1.5" />
             Внести платёж
           </UButton>
