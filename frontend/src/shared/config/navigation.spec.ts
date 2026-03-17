@@ -9,8 +9,9 @@ describe('DESKTOP_NAV_ITEMS', () => {
     expect(debts?.icon).toBe('handshake');
   });
 
-  it('has more items than MAIN_NAV_ITEMS', () => {
-    expect(DESKTOP_NAV_ITEMS.length).toBeGreaterThan(MAIN_NAV_ITEMS.length);
+  it('has 5 items (one more than mobile nav)', () => {
+    expect(DESKTOP_NAV_ITEMS.length).toBe(5);
+    expect(MAIN_NAV_ITEMS.length).toBe(4);
   });
 });
 

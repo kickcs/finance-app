@@ -76,13 +76,12 @@ export function useDebtsPageState() {
     Array.from(new Set(baseClosedDebts.value.map((d) => d.currency))).sort(),
   );
 
-  const activeCurrencyItems = computed(() =>
-    availableCurrencies.value.map((c) => ({ id: c, label: c })),
-  );
+  function toCurrencyItems(currencies: string[]) {
+    return currencies.map((c) => ({ id: c, label: c }));
+  }
 
-  const closedCurrencyItems = computed(() =>
-    availableClosedCurrencies.value.map((c) => ({ id: c, label: c })),
-  );
+  const activeCurrencyItems = computed(() => toCurrencyItems(availableCurrencies.value));
+  const closedCurrencyItems = computed(() => toCurrencyItems(availableClosedCurrencies.value));
 
   const closedDebts = computed(() => {
     if (!currencyFilter.value) return baseClosedDebts.value;

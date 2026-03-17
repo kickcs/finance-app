@@ -25,14 +25,12 @@ const activeId = computed(() => props.modelValue ?? ALL_ID);
 const { setChipRef, indicatorStyle, updateIndicator } = useSlidingIndicator(
   containerRef,
   activeId,
-  (containerRect, activeRect, scrollLeft, scrollTop) =>
-    buildIndicatorRect(containerRect, activeRect, scrollLeft, scrollTop),
+  buildIndicatorRect,
 );
 
 watch(
-  () => props.items,
+  () => props.items.length,
   () => nextTick(updateIndicator),
-  { deep: true },
 );
 
 function selectAll() {
