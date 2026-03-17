@@ -76,6 +76,14 @@ export function useDebtsPageState() {
     Array.from(new Set(baseClosedDebts.value.map((d) => d.currency))).sort(),
   );
 
+  const activeCurrencyItems = computed(() =>
+    availableCurrencies.value.map((c) => ({ id: c, label: c })),
+  );
+
+  const closedCurrencyItems = computed(() =>
+    availableClosedCurrencies.value.map((c) => ({ id: c, label: c })),
+  );
+
   const closedDebts = computed(() => {
     if (!currencyFilter.value) return baseClosedDebts.value;
     return baseClosedDebts.value.filter((d) => d.currency === currencyFilter.value);
@@ -272,6 +280,8 @@ export function useDebtsPageState() {
     currencyFilter,
     availableCurrencies,
     availableClosedCurrencies,
+    activeCurrencyItems,
+    closedCurrencyItems,
     selectedDebtId,
     selectedDebt,
     selectedDebtCurrency,

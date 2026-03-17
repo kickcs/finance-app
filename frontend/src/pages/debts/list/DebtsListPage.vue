@@ -31,6 +31,8 @@ const {
   currencyFilter,
   availableCurrencies,
   availableClosedCurrencies,
+  activeCurrencyItems,
+  closedCurrencyItems,
   selectedDebtId,
   selectedDebt,
   selectedDebtCurrency,
@@ -163,7 +165,7 @@ const {
             <SelectChips
               v-if="availableCurrencies.length > 1"
               v-model="currencyFilter"
-              :items="availableCurrencies.map((c) => ({ id: c, label: c }))"
+              :items="activeCurrencyItems"
               all-label="Все валюты"
             />
 
@@ -324,7 +326,7 @@ const {
             <SelectChips
               v-if="availableClosedCurrencies.length > 1"
               v-model="currencyFilter"
-              :items="availableClosedCurrencies.map((c) => ({ id: c, label: c }))"
+              :items="closedCurrencyItems"
               all-label="Все валюты"
             />
             <div v-if="closedDebts.length > 0" class="space-y-3">
