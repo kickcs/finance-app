@@ -16,6 +16,7 @@ export interface PaginationOptions {
   accountId?: string;
   categoryId?: string;
   search?: string;
+  debtId?: string;
 }
 
 export interface MonthlyStats {

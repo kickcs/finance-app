@@ -3,7 +3,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import { debtQueryKeys } from './queryKeys';
 import { debtsApi } from './debtsApi';
 import type { Debt, DebtInsert } from '@/shared/api/database.types';
-import type { DebtsByPerson } from '../model/types';
 
 export function useDebts(userId: MaybeRefOrGetter<string | null>) {
   const queryClient = useQueryClient();
@@ -112,43 +111,6 @@ export function useDebts(userId: MaybeRefOrGetter<string | null>) {
     },
   });
 
-  // Computed values
-  const totalDebt = computed(() => debts.value.reduce((sum, d) => sum + d.remaining_amount, 0));
-
-  const totalPaid = computed(() =>
-    debts.value.reduce((sum, d) => sum + (d.total_amount - d.remaining_amount), 0),
-  );
-
-  const overallProgress = computed(() => {
-    const total = debts.value.reduce((sum, d) => sum + d.total_amount, 0);
-    if (total === 0) return 100;
-    return (totalPaid.value / total) * 100;
-  });
-
-  // Group debts by person_name
-  const debtsByPerson = computed<DebtsByPerson[]>(() => {
-    const groups = new Map<string, { debts: Debt[]; debtType: 'given' | 'taken' }>();
-
-    for (const debt of debts.value) {
-      if (debt.is_closed) continue;
-      const personName = (debt.person_name || debt.name).trim();
-      const existing = groups.get(personName);
-      if (existing) {
-        existing.debts.push(debt);
-      } else {
-        groups.set(personName, { debts: [debt], debtType: debt.debt_type });
-      }
-    }
-
-    return Array.from(groups.entries()).map(([personName, { debts: personDebts, debtType }]) => ({
-      personName,
-      debts: personDebts,
-      totalRemaining: personDebts.reduce((sum, d) => sum + d.remaining_amount, 0),
-      totalPaid: personDebts.reduce((sum, d) => sum + (d.total_amount - d.remaining_amount), 0),
-      debtType,
-    }));
-  });
-
   // Helper functions (same public API)
   async function createDebt(debt: Omit<DebtInsert, 'user_id'>) {
     return createMutation.mutateAsync(debt);
@@ -174,10 +136,6 @@ export function useDebts(userId: MaybeRefOrGetter<string | null>) {
     debts,
     isLoading,
     error,
-    totalDebt,
-    totalPaid,
-    overallProgress,
-    debtsByPerson,
     createDebt,
     updateDebt,
     makePayment,

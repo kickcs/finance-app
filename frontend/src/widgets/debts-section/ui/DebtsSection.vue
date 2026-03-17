@@ -7,6 +7,7 @@ import { formatDate } from '@/shared/lib/format/date';
 import { isPastDate } from '@/shared/lib/date';
 import { useExchangeRates } from '@/shared/api';
 import { DEFAULT_CURRENCY } from '@/shared/config/currency';
+import { listTransition } from '@/shared/lib/transitions';
 
 interface DebtByPerson {
   personName: string;
@@ -138,9 +139,13 @@ const overdueCount = computed(() => {
     <!-- Filtered Debts List -->
     <TransitionGroup
       v-else-if="filteredDebts.length > 0"
-      name="debt-list"
       tag="div"
       class="space-y-2"
+      :enter-active-class="listTransition.enterActiveClass"
+      :leave-active-class="listTransition.leaveActiveClass"
+      :enter-from-class="listTransition.enterFromClass"
+      :leave-to-class="listTransition.leaveToClass"
+      :move-class="listTransition.moveClass"
     >
       <button
         v-for="group in filteredDebts.slice(0, 4)"
@@ -210,24 +215,3 @@ const overdueCount = computed(() => {
     />
   </div>
 </template>
-
-<style scoped>
-.debt-list-enter-active,
-.debt-list-leave-active {
-  transition: all 0.15s ease;
-}
-
-.debt-list-enter-from {
-  opacity: 0;
-  transform: translateY(-6px);
-}
-
-.debt-list-leave-to {
-  opacity: 0;
-  transform: translateY(6px);
-}
-
-.debt-list-move {
-  transition: transform 0.15s ease;
-}
-</style>

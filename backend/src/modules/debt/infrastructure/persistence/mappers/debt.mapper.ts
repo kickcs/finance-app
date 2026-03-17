@@ -25,6 +25,9 @@ export class DebtMapper {
       isClosed: ormEntity.isClosed,
       sourceTransactionId: ormEntity.sourceTransactionId,
       createdAt: ormEntity.createdAt,
+      description: ormEntity.description,
+      closedAt: ormEntity.closedAt,
+      forgivenAmount: Number(ormEntity.forgivenAmount),
     });
   }
 
@@ -46,6 +49,9 @@ export class DebtMapper {
     ormEntity.currency = debt.currency;
     ormEntity.sourceTransactionId = debt.sourceTransactionId;
     ormEntity.createdAt = debt.createdAt;
+    ormEntity.description = debt.description;
+    ormEntity.closedAt = debt.closedAt;
+    ormEntity.forgivenAmount = debt.forgivenAmount;
     return ormEntity;
   }
 }

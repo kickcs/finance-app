@@ -293,6 +293,9 @@ export type Database = {
           is_closed: boolean;
           currency: string;
           source_transaction_id: string | null;
+          description: string | null;
+          closed_at: string | null;
+          forgiven_amount: number;
         };
         Insert: {
           id?: string;
@@ -311,6 +314,9 @@ export type Database = {
           is_closed?: boolean;
           currency?: string;
           source_transaction_id?: string | null;
+          description?: string | null;
+          closed_at?: string | null;
+          forgiven_amount?: number;
         };
         Update: {
           id?: string;
@@ -329,6 +335,9 @@ export type Database = {
           is_closed?: boolean;
           currency?: string;
           source_transaction_id?: string | null;
+          description?: string | null;
+          closed_at?: string | null;
+          forgiven_amount?: number;
         };
         Relationships: [];
       };

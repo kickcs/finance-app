@@ -19,6 +19,9 @@ export interface DebtProps {
   isClosed: boolean;
   sourceTransactionId: string | null;
   createdAt: Date;
+  description: string | null;
+  closedAt: Date | null;
+  forgivenAmount: number;
 }
 
 export class Debt extends AggregateRoot<string> {
@@ -36,6 +39,9 @@ export class Debt extends AggregateRoot<string> {
   private _isClosed: boolean;
   private _sourceTransactionId: string | null;
   private _createdAt: Date;
+  private _description: string | null;
+  private _closedAt: Date | null;
+  private _forgivenAmount: number;
 
   private constructor(props: DebtProps) {
     super(props.id);
@@ -53,6 +59,9 @@ export class Debt extends AggregateRoot<string> {
     this._isClosed = props.isClosed;
     this._sourceTransactionId = props.sourceTransactionId;
     this._createdAt = props.createdAt;
+    this._description = props.description;
+    this._closedAt = props.closedAt;
+    this._forgivenAmount = props.forgivenAmount;
   }
 
   static create(
@@ -67,6 +76,7 @@ export class Debt extends AggregateRoot<string> {
     monthlyPayment?: number,
     nextPaymentDate?: Date,
     createdAt?: Date,
+    description?: string,
   ): Debt {
     const currencyVo = Currency.create(currency);
     const debt = new Debt({
@@ -85,6 +95,9 @@ export class Debt extends AggregateRoot<string> {
       isClosed: false,
       sourceTransactionId: null,
       createdAt: createdAt || new Date(),
+      description: description?.trim() || null,
+      closedAt: null,
+      forgivenAmount: 0,
     });
 
     debt.addDomainEvent(
@@ -163,9 +176,21 @@ export class Debt extends AggregateRoot<string> {
   get createdAt(): Date {
     return this._createdAt;
   }
+  get description(): string | null {
+    return this._description;
+  }
+  get closedAt(): Date | null {
+    return this._closedAt;
+  }
+  get forgivenAmount(): number {
+    return this._forgivenAmount;
+  }
 
   // Behaviors
   makePayment(amount: number): void {
+    if (this._isClosed) {
+      throw new Error('Cannot make payment on a closed debt');
+    }
     const payment = Money.create(amount, this.currency);
     this._remainingAmount = this._remainingAmount.subtract(payment);
 
@@ -187,9 +212,14 @@ export class Debt extends AggregateRoot<string> {
   close(): void {
     if (!this._isClosed) {
       this._isClosed = true;
+      this._closedAt = new Date();
       this._remainingAmount = Money.zero(this.currency);
       this.addDomainEvent(new DebtClosedEvent(this.id, this._userId));
     }
+  }
+
+  setForgivenAmount(amount: number): void {
+    this._forgivenAmount = amount;
   }
 
   update(data: {
@@ -205,6 +235,8 @@ export class Debt extends AggregateRoot<string> {
     closeTransactionId?: string | null;
     isClosed?: boolean;
     sourceTransactionId?: string | null;
+    description?: string | null;
+    forgivenAmount?: number;
   }): void {
     if (data.name !== undefined) this._name = data.name;
     if (data.totalAmount !== undefined)
@@ -222,9 +254,14 @@ export class Debt extends AggregateRoot<string> {
     if (data.transactionId !== undefined) this._transactionId = data.transactionId;
     if (data.closeTransactionId !== undefined) this._closeTransactionId = data.closeTransactionId;
     if (data.isClosed === true && !this._isClosed) this.close();
-    if (data.isClosed === false) this._isClosed = false;
+    if (data.isClosed === false) {
+      this._isClosed = false;
+      this._closedAt = null;
+    }
     if (data.sourceTransactionId !== undefined)
       this._sourceTransactionId = data.sourceTransactionId;
+    if (data.description !== undefined) this._description = data.description;
+    if (data.forgivenAmount !== undefined) this._forgivenAmount = data.forgivenAmount;
   }
 
   setTransactionId(transactionId: string): void {

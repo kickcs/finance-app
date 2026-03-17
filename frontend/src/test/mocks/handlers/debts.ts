@@ -21,6 +21,9 @@ export function buildMockDebtResponse(
     isClosed: false,
     currency: body.currency,
     sourceTransactionId: body.sourceTransactionId ?? null,
+    description: null,
+    closedAt: null,
+    forgivenAmount: 0,
     ...overrides,
   };
 }
@@ -44,6 +47,9 @@ export const mockGivenDebtResponse = {
   isClosed: false,
   currency: 'UZS',
   sourceTransactionId: null,
+  description: null,
+  closedAt: null,
+  forgivenAmount: 0,
 };
 
 export const mockTakenDebtResponse = {
@@ -63,6 +69,9 @@ export const mockTakenDebtResponse = {
   isClosed: false,
   currency: 'UZS',
   sourceTransactionId: null,
+  description: null,
+  closedAt: null,
+  forgivenAmount: 0,
 };
 
 export const mockClosedDebtResponse = {
@@ -82,6 +91,9 @@ export const mockClosedDebtResponse = {
   isClosed: true,
   currency: 'UZS',
   sourceTransactionId: null,
+  description: null,
+  closedAt: '2025-02-01T12:00:00.000Z',
+  forgivenAmount: 0,
 };
 
 export const mockOverdueDebtResponse = {

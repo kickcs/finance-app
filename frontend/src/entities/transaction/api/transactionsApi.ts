@@ -403,4 +403,15 @@ export const transactionsApi = {
     const data = await http.get<{ count: number }>(`/transactions/by-account/${accountId}/count`);
     return data.count;
   },
+
+  async getByDebtId(debtId: string): Promise<Transaction[]> {
+    const response = await http.get<{
+      data: TransactionResponse[];
+      nextCursor: PaginatedCursor | null;
+      hasMore: boolean;
+    }>('/transactions', {
+      params: { debtId, pageSize: 100 },
+    });
+    return response.data.map(transformTransaction);
+  },
 };

@@ -15,6 +15,8 @@ export class UpdateDebtCommand {
       closeTransactionId?: string | null;
       isClosed?: boolean;
       sourceTransactionId?: string | null;
+      description?: string | null;
+      forgivenAmount?: number;
     },
   ) {}
 }

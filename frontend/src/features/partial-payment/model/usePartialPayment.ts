@@ -155,6 +155,11 @@ export function usePartialPayment() {
         remaining_amount: willClose ? 0 : Math.max(0, newRemaining),
         is_closed: !!willClose,
         ...(willClose && closeTransactionId ? { close_transaction_id: closeTransactionId } : {}),
+        ...(options?.forgiveRemainder
+          ? {
+              forgiven_amount: debt.remaining_amount - actualPayment,
+            }
+          : {}),
       });
 
       if (!options?.skipInvalidation) {

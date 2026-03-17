@@ -19,6 +19,9 @@ interface DebtResponse {
   isClosed: boolean;
   currency: string;
   sourceTransactionId: string | null;
+  description: string | null;
+  closedAt: string | null;
+  forgivenAmount: number;
 }
 
 function transformDebt(debt: DebtResponse): Debt {
@@ -39,6 +42,9 @@ function transformDebt(debt: DebtResponse): Debt {
     is_closed: debt.isClosed,
     currency: debt.currency,
     source_transaction_id: debt.sourceTransactionId,
+    description: debt.description,
+    closed_at: debt.closedAt,
+    forgiven_amount: debt.forgivenAmount,
   };
 }
 
@@ -71,8 +77,9 @@ export const debtsApi = {
       personName: debt.person_name,
       accountId: debt.account_id,
       transactionId: debt.transaction_id ?? undefined,
-      currency: debt.currency ?? 'UZS',
+      currency: debt.currency,
       sourceTransactionId: debt.source_transaction_id,
+      description: debt.description,
       createdAt: debt.created_at,
     });
     return transformDebt(data);
@@ -93,6 +100,8 @@ export const debtsApi = {
       isClosed: updates.is_closed,
       currency: updates.currency,
       sourceTransactionId: updates.source_transaction_id,
+      description: updates.description,
+      forgivenAmount: updates.forgiven_amount,
     });
     return transformDebt(data);
   },

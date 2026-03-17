@@ -19,6 +19,9 @@ export class DebtResponseMapper {
       currency: debt.currency,
       sourceTransactionId: debt.sourceTransactionId,
       createdAt: debt.createdAt,
+      description: debt.description,
+      closedAt: debt.closedAt?.toISOString() ?? null,
+      forgivenAmount: debt.forgivenAmount,
     };
   }
 

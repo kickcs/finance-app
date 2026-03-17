@@ -60,4 +60,13 @@ export class DebtOrmEntity {
 
   @Column({ name: 'source_transaction_id', nullable: true, type: 'uuid' })
   sourceTransactionId: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  description: string | null;
+
+  @Column({ name: 'closed_at', type: 'timestamp', nullable: true })
+  closedAt: Date | null;
+
+  @Column({ name: 'forgiven_amount', type: 'decimal', precision: 18, scale: 2, default: 0 })
+  forgivenAmount: number;
 }

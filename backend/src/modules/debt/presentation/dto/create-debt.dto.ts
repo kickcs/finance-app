@@ -61,4 +61,8 @@ export class CreateDebtDto {
   @IsOptional()
   @IsDateString()
   createdAt?: string;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
 }

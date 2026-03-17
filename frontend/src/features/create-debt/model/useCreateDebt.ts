@@ -100,6 +100,7 @@ export function useCreateDebt() {
         transaction_id: transactionId,
         is_closed: false,
         currency: currency,
+        description: formData.value.description || null,
       });
 
       // 3. Link transaction back to debt (debt_id for reliable cleanup on deletion)

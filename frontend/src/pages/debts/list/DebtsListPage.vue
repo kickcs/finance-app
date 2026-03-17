@@ -4,11 +4,23 @@ import { useRouter, useRoute } from 'vue-router';
 import { ROUTE_NAMES } from '@/app/router/routeNames';
 import { useIsDesktop } from '@/shared/lib/composables/useIsDesktop';
 import { AppHeader } from '@/widgets/header';
-import { DebtCard, DebtDetailPanel, useDebts, type Debt } from '@/entities/debt';
+import {
+  DebtCard,
+  DebtDetailPanel,
+  ClosedDebtCard,
+  useDebts,
+  DEBT_DIRECTION_DISPLAY,
+  type Debt,
+} from '@/entities/debt';
 import { useAccounts } from '@/entities/account';
-import { CloseAllDebtsModal, useCloseAllDebts } from '@/features/close-debt';
-import { DeleteDebtModal, useCloseDebt } from '@/features/close-debt';
+import {
+  CloseAllDebtsModal,
+  useCloseAllDebts,
+  DeleteDebtModal,
+  useCloseDebt,
+} from '@/features/close-debt';
 import { PartialPaymentModal, usePartialPayment } from '@/features/partial-payment';
+import { CollapsibleRoot, CollapsibleTrigger, CollapsibleContent } from 'reka-ui';
 import {
   UButton,
   UIcon,
@@ -21,12 +33,14 @@ import {
   MasterDetailLayout,
 } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
+import { pluralize } from '@/shared/lib/format/pluralize';
+import { getInitial } from '@/shared/lib/format/text';
 import { useExchangeRates } from '@/shared/api';
 import { navigateBack } from '@/app/router';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 import { DEFAULT_CURRENCY } from '@/shared/config/currency';
-import { listTransition } from '@/shared/lib/transitions';
+
 const router = useRouter();
 const route = useRoute();
 const isDesktop = useIsDesktop();
@@ -39,14 +53,11 @@ const { toast } = useToast();
 const { convert } = useExchangeRates(currency);
 
 // Use real data from API
-const { debts, debtsByPerson, isLoading } = useDebts(userId);
+const { debts, isLoading } = useDebts(userId);
 
 // Filter by person from query params
 const personFilter = ref<string | null>(route.query.person as string | null);
 const typeFilter = ref<'given' | 'taken' | null>(route.query.type as 'given' | 'taken' | null);
-
-// View mode toggle: grouped by person or flat list
-const viewMode = ref<'grouped' | 'flat'>(personFilter.value ? 'flat' : 'grouped');
 
 // Status filter: active or closed
 const statusFilter = ref<'active' | 'closed'>('active');
@@ -72,9 +83,6 @@ watch(
   (newQuery) => {
     personFilter.value = newQuery.person as string | null;
     typeFilter.value = newQuery.type as 'given' | 'taken' | null;
-    if (personFilter.value) {
-      viewMode.value = 'flat';
-    }
   },
 );
 
@@ -119,6 +127,53 @@ const totalTakenDebts = computed(() => {
     .reduce((sum, d) => sum + convert(d.remaining_amount, d.currency || DEFAULT_CURRENCY), 0);
 });
 
+// Group debts by person (page-level computed with currency conversion)
+interface PersonGroup {
+  personName: string;
+  debts: Debt[];
+  debtType: 'given' | 'taken';
+  totalRemainingDisplay: { amount: number; currency: string; approximate: boolean };
+}
+
+const debtsByPerson = computed<PersonGroup[]>(() => {
+  const groups = new Map<string, { debts: Debt[]; debtType: 'given' | 'taken' }>();
+
+  for (const debt of activeDebts.value) {
+    const personName = (debt.person_name || debt.name).trim();
+    const key = `${personName}_${debt.debt_type}`;
+    const existing = groups.get(key);
+    if (existing) {
+      existing.debts.push(debt);
+    } else {
+      groups.set(key, { debts: [debt], debtType: debt.debt_type });
+    }
+  }
+
+  return Array.from(groups.entries()).map(([, { debts: personDebts, debtType }]) => {
+    const personName = (personDebts[0].person_name || personDebts[0].name).trim();
+    const currencies = new Set(personDebts.map((d) => d.currency));
+    const isMixed = currencies.size > 1;
+
+    return {
+      personName,
+      debts: personDebts,
+      debtType,
+      totalRemainingDisplay: {
+        amount: isMixed
+          ? personDebts.reduce((sum, d) => sum + convert(d.remaining_amount, d.currency), 0)
+          : personDebts.reduce((s, d) => s + d.remaining_amount, 0),
+        currency: isMixed ? currency.value : personDebts[0].currency,
+        approximate: isMixed,
+      },
+    };
+  });
+});
+
+// Check if a person group should be initially open (from query filter)
+function isGroupDefaultOpen(group: PersonGroup): boolean {
+  return personFilter.value === group.personName;
+}
+
 function goBack() {
   navigateBack();
 }
@@ -139,15 +194,35 @@ function handleAddDebt() {
 const { accounts } = useAccounts(userId);
 const { isClosing, progress, total, closeAllDebts } = useCloseAllDebts();
 const showCloseAllModal = ref(false);
+const closeAllPersonName = ref<string | null>(null);
+
+// Debts for the person being closed
+const closeAllDebtsForPerson = computed(() => {
+  if (!closeAllPersonName.value) return activeDebts.value;
+  return activeDebts.value.filter(
+    (d) => (d.person_name || d.name).trim() === closeAllPersonName.value,
+  );
+});
+
+function openCloseAllForPerson(personName: string) {
+  closeAllPersonName.value = personName;
+  showCloseAllModal.value = true;
+}
 
 async function handleCloseAll(
   accountId: string,
   options: { paymentAmount: number; forgiveRemainder?: boolean; excessCategoryId?: string },
 ) {
   if (!userId.value) return;
-  const success = await closeAllDebts(activeDebts.value, accountId, userId.value, options);
+  const success = await closeAllDebts(
+    closeAllDebtsForPerson.value,
+    accountId,
+    userId.value,
+    options,
+  );
   if (success) {
     showCloseAllModal.value = false;
+    closeAllPersonName.value = null;
     toast({
       title:
         options.forgiveRemainder && options.paymentAmount === 0
@@ -337,137 +412,107 @@ function handleDetailClose() {
                 </div>
               </div>
 
-              <div class="flex items-center justify-between">
-                <SectionHeader
-                  :title="personFilter ? `Долги: ${personFilter}` : 'Активные долги'"
-                  :show-add="false"
-                  :show-view-all="false"
-                />
-                <!-- View Mode Toggle (hidden when filtering by person) -->
-                <div
-                  v-if="activeDebts.length > 0 && !personFilter"
-                  role="group"
-                  aria-label="Режим отображения долгов"
-                  class="flex gap-1 bg-surface-light dark:bg-surface-dark rounded-lg p-1"
-                >
-                  <button
-                    type="button"
-                    :aria-pressed="viewMode === 'grouped'"
-                    class="px-3 py-1 text-sm font-medium rounded-md transition-colors"
-                    :class="
-                      viewMode === 'grouped'
-                        ? 'bg-card-light dark:bg-card-dark text-text-primary-light dark:text-text-primary-dark shadow-sm'
-                        : 'text-text-secondary-light dark:text-text-secondary-dark'
-                    "
-                    @click="viewMode = 'grouped'"
-                  >
-                    По людям
-                  </button>
-                  <button
-                    type="button"
-                    :aria-pressed="viewMode === 'flat'"
-                    class="px-3 py-1 text-sm font-medium rounded-md transition-colors"
-                    :class="
-                      viewMode === 'flat'
-                        ? 'bg-card-light dark:bg-card-dark text-text-primary-light dark:text-text-primary-dark shadow-sm'
-                        : 'text-text-secondary-light dark:text-text-secondary-dark'
-                    "
-                    @click="viewMode = 'flat'"
-                  >
-                    Все
-                  </button>
-                </div>
-              </div>
+              <SectionHeader
+                :title="personFilter ? `Долги: ${personFilter}` : 'Активные долги'"
+                :show-add="false"
+                :show-view-all="false"
+              />
 
-              <!-- Grouped View (by person) -->
-              <div v-if="activeDebts.length > 0 && viewMode === 'grouped'" class="space-y-4">
-                <div v-for="group in debtsByPerson" :key="group.personName" class="space-y-2">
-                  <!-- Person Header -->
-                  <div class="flex items-center justify-between px-1">
-                    <div class="flex items-center gap-2">
-                      <div
-                        class="w-8 h-8 rounded-full flex items-center justify-center"
-                        :class="
-                          group.debtType === 'given'
-                            ? 'bg-debt-given-light'
-                            : 'bg-debt-received-light'
-                        "
-                      >
-                        <UIcon
-                          name="person"
-                          size="sm"
-                          :class="
-                            group.debtType === 'given' ? 'text-debt-given' : 'text-debt-received'
-                          "
-                        />
-                      </div>
-                      <div>
-                        <p
-                          class="font-semibold text-text-primary-light dark:text-text-primary-dark"
-                        >
-                          {{ group.personName }}
-                        </p>
-                        <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
-                          {{ group.debtType === 'given' ? 'Вам должны' : 'Вы должны' }}
-                        </p>
-                      </div>
+              <!-- Collapsible groups by person -->
+              <div v-if="activeDebts.length > 0" class="space-y-2">
+                <CollapsibleRoot
+                  v-for="group in debtsByPerson"
+                  :key="`${group.personName}_${group.debtType}`"
+                  v-slot="{ open }"
+                  :default-open="isGroupDefaultOpen(group)"
+                >
+                  <!-- Person header (trigger) -->
+                  <CollapsibleTrigger
+                    class="flex items-center gap-2.5 w-full p-3 rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark cursor-pointer hover:bg-surface-light dark:hover:bg-surface-dark transition-colors text-left"
+                  >
+                    <!-- Expand arrow -->
+                    <UIcon
+                      name="chevron_right"
+                      size="xs"
+                      class="text-text-tertiary-light dark:text-text-tertiary-dark transition-transform duration-200 shrink-0"
+                      :class="open ? 'rotate-90' : ''"
+                    />
+                    <!-- Avatar -->
+                    <div
+                      class="w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold shrink-0"
+                      :class="
+                        group.debtType === 'given'
+                          ? 'bg-debt-given-light text-debt-given'
+                          : 'bg-debt-received-light text-debt-received'
+                      "
+                    >
+                      {{ getInitial(group.personName) }}
                     </div>
-                    <div class="text-right">
+                    <!-- Info -->
+                    <div class="flex-1 min-w-0">
                       <p
-                        class="font-bold"
+                        class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark truncate"
+                      >
+                        {{ group.personName }}
+                      </p>
+                      <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
+                        {{ group.debts.length }}
+                        {{ pluralize(group.debts.length, 'долг', 'долга', 'долгов') }}
+                        · {{ DEBT_DIRECTION_DISPLAY[group.debtType] }}
+                      </p>
+                    </div>
+                    <!-- Total -->
+                    <div class="text-right shrink-0">
+                      <p
+                        class="text-sm font-bold"
                         :class="
                           group.debtType === 'given' ? 'text-debt-given' : 'text-debt-received'
                         "
                       >
-                        {{ formatCurrency(group.totalRemaining, currency) }}
-                      </p>
-                      <p v-if="group.totalPaid > 0" class="text-xs text-success">
-                        Выплачено: {{ formatCurrency(group.totalPaid, currency) }}
+                        {{ group.totalRemainingDisplay.approximate ? '≈ ' : ''
+                        }}{{
+                          formatCurrency(
+                            group.totalRemainingDisplay.amount,
+                            group.totalRemainingDisplay.currency,
+                          )
+                        }}
                       </p>
                     </div>
-                  </div>
+                  </CollapsibleTrigger>
 
-                  <!-- Debts for this person -->
-                  <div class="space-y-2 ml-10">
-                    <DebtCard
-                      v-for="debt in group.debts"
-                      :key="debt.id"
-                      :debt="debt"
-                      compact
-                      :class="
-                        isDesktop &&
-                        selectedDebtId === debt.id &&
-                        'ring-2 ring-primary ring-offset-2 ring-offset-background-light dark:ring-offset-background-dark'
-                      "
-                      @click="handleDebtClick(debt)"
-                    />
-                  </div>
-                </div>
+                  <!-- Expanded debts -->
+                  <CollapsibleContent class="CollapsibleContent">
+                    <div
+                      class="ml-5 pl-3 border-l-2 border-border-light dark:border-border-dark mt-1 space-y-1"
+                    >
+                      <DebtCard
+                        v-for="debt in group.debts"
+                        :key="debt.id"
+                        :debt="debt"
+                        compact
+                        :class="
+                          isDesktop &&
+                          selectedDebtId === debt.id &&
+                          'ring-2 ring-primary ring-offset-2 ring-offset-background-light dark:ring-offset-background-dark'
+                        "
+                        @click="handleDebtClick(debt)"
+                      />
+
+                      <!-- Close all button (2+ debts) -->
+                      <UButton
+                        v-if="group.debts.length > 1"
+                        variant="secondary"
+                        size="sm"
+                        full-width
+                        @click="openCloseAllForPerson(group.personName)"
+                      >
+                        <UIcon name="check_circle" size="xs" />
+                        Закрыть все долги
+                      </UButton>
+                    </div>
+                  </CollapsibleContent>
+                </CollapsibleRoot>
               </div>
-
-              <!-- Flat View (all debts) -->
-              <TransitionGroup
-                v-else-if="activeDebts.length > 0 && viewMode === 'flat'"
-                tag="div"
-                class="space-y-2"
-                :enter-active-class="listTransition.enterActiveClass"
-                :leave-active-class="listTransition.leaveActiveClass"
-                :enter-from-class="listTransition.enterFromClass"
-                :leave-to-class="listTransition.leaveToClass"
-                :move-class="listTransition.moveClass"
-              >
-                <DebtCard
-                  v-for="debt in activeDebts"
-                  :key="debt.id"
-                  :debt="debt"
-                  :class="
-                    isDesktop &&
-                    selectedDebtId === debt.id &&
-                    'ring-2 ring-primary ring-offset-2 ring-offset-background-light dark:ring-offset-background-dark'
-                  "
-                  @click="handleDebtClick(debt)"
-                />
-              </TransitionGroup>
 
               <!-- Close All Button (when filtering by person) -->
               <UButton
@@ -499,19 +544,12 @@ function handleDetailClose() {
             <div v-if="closedDebts.length > 0" class="space-y-3">
               <SectionHeader title="Погашенные долги" :show-add="false" :show-view-all="false" />
 
-              <TransitionGroup
-                tag="div"
-                class="space-y-2"
-                :enter-active-class="listTransition.enterActiveClass"
-                :leave-active-class="listTransition.leaveActiveClass"
-                :enter-from-class="listTransition.enterFromClass"
-                :leave-to-class="listTransition.leaveToClass"
-                :move-class="listTransition.moveClass"
-              >
-                <DebtCard
+              <div class="space-y-2">
+                <ClosedDebtCard
                   v-for="debt in closedDebts"
                   :key="debt.id"
                   :debt="debt"
+                  :user-currency="currency"
                   :class="
                     isDesktop &&
                     selectedDebtId === debt.id &&
@@ -519,7 +557,7 @@ function handleDetailClose() {
                   "
                   @click="handleDebtClick(debt)"
                 />
-              </TransitionGroup>
+              </div>
             </div>
 
             <UCard v-else data-testid="closed-empty-state" class="py-4">
@@ -549,8 +587,8 @@ function handleDetailClose() {
     <!-- Close All Debts Modal -->
     <CloseAllDebtsModal
       v-model="showCloseAllModal"
-      :debts="activeDebts"
-      :person-name="personFilter || ''"
+      :debts="closeAllDebtsForPerson"
+      :person-name="closeAllPersonName || personFilter || ''"
       :accounts="accounts"
       :is-closing="isClosing"
       :progress="progress"
@@ -577,3 +615,33 @@ function handleDetailClose() {
     />
   </div>
 </template>
+
+<style scoped>
+.CollapsibleContent {
+  overflow: hidden;
+}
+.CollapsibleContent[data-state='open'] {
+  animation: slideDown 200ms ease-out;
+}
+.CollapsibleContent[data-state='closed'] {
+  animation: slideUp 200ms ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--reka-collapsible-content-height);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    height: var(--reka-collapsible-content-height);
+  }
+  to {
+    height: 0;
+  }
+}
+</style>

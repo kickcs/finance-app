@@ -67,4 +67,13 @@ export class UpdateDebtDto {
   @IsOptional()
   @IsUUID()
   sourceTransactionId?: string | null;
+
+  @IsOptional()
+  @IsString()
+  description?: string | null;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  forgivenAmount?: number;
 }
