@@ -37,3 +37,4 @@ export { InitialAvatar } from './initial-avatar';
 export { PageContainer } from './page-container';
 export { MasterDetailLayout } from './master-detail-layout';
 export { DiscoveryDot } from './discovery-dot';
+export { default as FilterChips } from './FilterChips.vue';
