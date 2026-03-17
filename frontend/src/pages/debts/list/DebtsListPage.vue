@@ -1,25 +1,8 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
-import { useRouter, useRoute } from 'vue-router';
-import { ROUTE_NAMES } from '@/app/router/routeNames';
-import { useIsDesktop } from '@/shared/lib/composables/useIsDesktop';
 import { AppHeader } from '@/widgets/header';
-import {
-  DebtCard,
-  DebtDetailPanel,
-  ClosedDebtCard,
-  useDebts,
-  DEBT_DIRECTION_DISPLAY,
-  type Debt,
-} from '@/entities/debt';
-import { useAccounts } from '@/entities/account';
-import {
-  CloseAllDebtsModal,
-  useCloseAllDebts,
-  DeleteDebtModal,
-  useCloseDebt,
-} from '@/features/close-debt';
-import { PartialPaymentModal, usePartialPayment } from '@/features/partial-payment';
+import { DebtCard, DebtDetailPanel, ClosedDebtCard, DEBT_DIRECTION_DISPLAY } from '@/entities/debt';
+import { CloseAllDebtsModal, DeleteDebtModal } from '@/features/close-debt';
+import { PartialPaymentModal } from '@/features/partial-payment';
 import { CollapsibleRoot, CollapsibleTrigger, CollapsibleContent } from 'reka-ui';
 import {
   UButton,
@@ -29,272 +12,58 @@ import {
   EmptyState,
   SectionHeader,
   UTabs,
-  useToast,
   MasterDetailLayout,
 } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { pluralize } from '@/shared/lib/format/pluralize';
 import { getInitial } from '@/shared/lib/format/text';
-import { useExchangeRates } from '@/shared/api';
-import { navigateBack } from '@/app/router';
-import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
-import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
-import { DEFAULT_CURRENCY } from '@/shared/config/currency';
+import { useDebtsPageState } from './useDebtsPageState';
 
-const router = useRouter();
-const route = useRoute();
-const isDesktop = useIsDesktop();
-
-const { userId } = useCurrentUser();
-const { currency } = useUserCurrency();
-const { toast } = useToast();
-
-// Exchange rates for converting debts to user's main currency
-const { convert } = useExchangeRates(currency);
-
-// Use real data from API
-const { debts, isLoading } = useDebts(userId);
-
-// Filter by person from query params
-const personFilter = ref<string | null>(route.query.person as string | null);
-const typeFilter = ref<'given' | 'taken' | null>(route.query.type as 'given' | 'taken' | null);
-
-// Status filter: active or closed
-const statusFilter = ref<'active' | 'closed'>('active');
-const statusTabs = [
-  { id: 'active', label: 'Активные' },
-  { id: 'closed', label: 'Закрытые' },
-];
-
-// Selected debt for desktop detail panel
-const selectedDebtId = ref<string | null>(null);
-
-// Find selected debt for detail panel modals
-const selectedDebt = computed<Debt | null>(() => {
-  if (!selectedDebtId.value) return null;
-  return debts.value.find((d) => d.id === selectedDebtId.value) ?? null;
-});
-
-const selectedDebtCurrency = computed(() => selectedDebt.value?.currency || DEFAULT_CURRENCY);
-
-// Clear filter when route changes
-watch(
-  () => route.query,
-  (newQuery) => {
-    personFilter.value = newQuery.person as string | null;
-    typeFilter.value = newQuery.type as 'given' | 'taken' | null;
-  },
-);
-
-// Filter active debts
-const activeDebts = computed(() => {
-  let filtered = debts.value.filter((d) => !d.is_closed);
-
-  // Apply person filter if set
-  if (personFilter.value) {
-    filtered = filtered.filter(
-      (d) =>
-        (d.person_name || d.name) === personFilter.value &&
-        (!typeFilter.value || d.debt_type === typeFilter.value),
-    );
-  }
-
-  return filtered;
-});
-
-// Closed debts
-const closedDebts = computed(() => {
-  return debts.value.filter((d) => d.is_closed);
-});
-
-// Clear filter
-function clearFilter() {
-  personFilter.value = null;
-  typeFilter.value = null;
-  router.replace({ path: '/debts' });
-}
-
-// Calculate totals - converted to main currency
-const totalGivenDebts = computed(() => {
-  return activeDebts.value
-    .filter((d) => d.debt_type === 'given')
-    .reduce((sum, d) => sum + convert(d.remaining_amount, d.currency || DEFAULT_CURRENCY), 0);
-});
-
-const totalTakenDebts = computed(() => {
-  return activeDebts.value
-    .filter((d) => d.debt_type === 'taken')
-    .reduce((sum, d) => sum + convert(d.remaining_amount, d.currency || DEFAULT_CURRENCY), 0);
-});
-
-// Group debts by person (page-level computed with currency conversion)
-interface PersonGroup {
-  personName: string;
-  debts: Debt[];
-  debtType: 'given' | 'taken';
-  totalRemainingDisplay: { amount: number; currency: string; approximate: boolean };
-}
-
-const debtsByPerson = computed<PersonGroup[]>(() => {
-  const groups = new Map<string, { debts: Debt[]; debtType: 'given' | 'taken' }>();
-
-  for (const debt of activeDebts.value) {
-    const personName = (debt.person_name || debt.name).trim();
-    const key = `${personName}_${debt.debt_type}`;
-    const existing = groups.get(key);
-    if (existing) {
-      existing.debts.push(debt);
-    } else {
-      groups.set(key, { debts: [debt], debtType: debt.debt_type });
-    }
-  }
-
-  return Array.from(groups.entries()).map(([, { debts: personDebts, debtType }]) => {
-    const personName = (personDebts[0].person_name || personDebts[0].name).trim();
-    const currencies = new Set(personDebts.map((d) => d.currency));
-    const isMixed = currencies.size > 1;
-
-    return {
-      personName,
-      debts: personDebts,
-      debtType,
-      totalRemainingDisplay: {
-        amount: isMixed
-          ? personDebts.reduce((sum, d) => sum + convert(d.remaining_amount, d.currency), 0)
-          : personDebts.reduce((s, d) => s + d.remaining_amount, 0),
-        currency: isMixed ? currency.value : personDebts[0].currency,
-        approximate: isMixed,
-      },
-    };
-  });
-});
-
-// Check if a person group should be initially open (from query filter)
-function isGroupDefaultOpen(group: PersonGroup): boolean {
-  return personFilter.value === group.personName;
-}
-
-function goBack() {
-  navigateBack();
-}
-
-function handleDebtClick(debt: Debt) {
-  if (isDesktop.value) {
-    selectedDebtId.value = debt.id;
-  } else {
-    router.push({ name: ROUTE_NAMES.DEBT_DETAIL, params: { id: debt.id } });
-  }
-}
-
-function handleAddDebt() {
-  router.push({ name: ROUTE_NAMES.NEW_DEBT });
-}
-
-// Close all debts for a person
-const { accounts } = useAccounts(userId);
-const { isClosing, progress, total, closeAllDebts } = useCloseAllDebts();
-const showCloseAllModal = ref(false);
-const closeAllPersonName = ref<string | null>(null);
-
-// Debts for the person being closed
-const closeAllDebtsForPerson = computed(() => {
-  if (!closeAllPersonName.value) return activeDebts.value;
-  return activeDebts.value.filter(
-    (d) => (d.person_name || d.name).trim() === closeAllPersonName.value,
-  );
-});
-
-function openCloseAllForPerson(personName: string) {
-  closeAllPersonName.value = personName;
-  showCloseAllModal.value = true;
-}
-
-async function handleCloseAll(
-  accountId: string,
-  options: { paymentAmount: number; forgiveRemainder?: boolean; excessCategoryId?: string },
-) {
-  if (!userId.value) return;
-  const success = await closeAllDebts(
-    closeAllDebtsForPerson.value,
-    accountId,
-    userId.value,
-    options,
-  );
-  if (success) {
-    showCloseAllModal.value = false;
-    closeAllPersonName.value = null;
-    toast({
-      title:
-        options.forgiveRemainder && options.paymentAmount === 0
-          ? 'Все долги прощены'
-          : options.forgiveRemainder
-            ? 'Долги закрыты и прощены'
-            : 'Все долги закрыты',
-      variant: 'success',
-    });
-    clearFilter();
-  } else {
-    toast({ title: 'Ошибка при закрытии долгов', variant: 'error' });
-  }
-}
-
-// Detail panel modals
-const showDeleteModal = ref(false);
-const showPartialPaymentModal = ref(false);
-
-const { isDeleting, deleteDebt } = useCloseDebt();
-const { isPaying, makePartialPayment } = usePartialPayment();
-
-function handleDetailPayment() {
-  showPartialPaymentModal.value = true;
-}
-
-function handleDetailEdit() {
-  if (selectedDebtId.value) {
-    router.push({ name: ROUTE_NAMES.DEBT_DETAIL, params: { id: selectedDebtId.value } });
-  }
-}
-
-function handleDetailDelete() {
-  showDeleteModal.value = true;
-}
-
-async function handleDeleteDebt() {
-  if (!selectedDebt.value || !userId.value) return;
-
-  const success = await deleteDebt(selectedDebt.value, userId.value);
-  if (success) {
-    showDeleteModal.value = false;
-    selectedDebtId.value = null;
-  }
-}
-
-async function handlePartialPayment(
-  amount: number,
-  accountId: string,
-  options: { forgiveRemainder?: boolean; excessCategoryId?: string } = {},
-) {
-  if (!selectedDebt.value || !userId.value) return;
-
-  const willClose = amount >= selectedDebt.value.remaining_amount || options.forgiveRemainder;
-  const success = await makePartialPayment(
-    selectedDebt.value,
-    amount,
-    accountId,
-    userId.value,
-    options,
-  );
-  if (success) {
-    showPartialPaymentModal.value = false;
-    if (willClose) {
-      selectedDebtId.value = null;
-    }
-  }
-}
-
-function handleDetailClose() {
-  selectedDebtId.value = null;
-}
+const {
+  userId,
+  currency,
+  isLoading,
+  isDesktop,
+  statusFilter,
+  statusTabs,
+  personFilter,
+  currencyFilter,
+  availableCurrencies,
+  availableClosedCurrencies, // eslint-disable-line @typescript-eslint/no-unused-vars
+  selectedDebtId,
+  selectedDebt,
+  selectedDebtCurrency,
+  activeDebts,
+  closedDebts,
+  debtsByPerson,
+  totalGivenDebts,
+  totalTakenDebts,
+  showCloseAllModal,
+  closeAllPersonName,
+  closeAllDebtsForPerson,
+  isClosing,
+  progress,
+  total,
+  accounts,
+  showDeleteModal,
+  showPartialPaymentModal,
+  isDeleting,
+  isPaying,
+  goBack,
+  handleDebtClick,
+  handleAddDebt,
+  clearFilter,
+  isGroupDefaultOpen,
+  openCloseAllForPerson,
+  handleCloseAll,
+  handleDetailPayment,
+  handleDetailEdit,
+  handleDetailDelete,
+  handleDeleteDebt,
+  handlePartialPayment,
+  handleDetailTogglePrivate,
+  handleDetailClose,
+} = useDebtsPageState();
 </script>
 
 <template>
@@ -324,7 +93,6 @@ function handleDetailClose() {
       @close="handleDetailClose"
     >
       <template #master>
-        <!-- Content -->
         <div class="pt-8 space-y-6">
           <!-- Status Tabs -->
           <UTabs v-model="statusFilter" :items="statusTabs" size="sm" />
@@ -350,10 +118,10 @@ function handleDetailClose() {
             </div>
           </template>
 
+          <!-- Active Debts Tab -->
           <template v-else-if="statusFilter === 'active'">
-            <!-- Debt Summary Cards (converted to main currency) -->
+            <!-- Summary Cards -->
             <div v-if="activeDebts.length > 0" class="grid grid-cols-2 gap-3">
-              <!-- Given debts (people owe you) -->
               <UCard
                 data-testid="summary-given"
                 class="p-4 relative overflow-hidden"
@@ -371,8 +139,6 @@ function handleDetailClose() {
                   {{ formatCurrency(totalGivenDebts, currency) }}
                 </p>
               </UCard>
-
-              <!-- Taken debts (you owe others) -->
               <UCard
                 data-testid="summary-taken"
                 class="p-4 relative overflow-hidden"
@@ -392,9 +158,42 @@ function handleDetailClose() {
               </UCard>
             </div>
 
+            <!-- Currency Filter Chips -->
+            <div
+              v-if="availableCurrencies.length > 1"
+              class="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1"
+            >
+              <button
+                type="button"
+                class="px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors border"
+                :class="
+                  !currencyFilter
+                    ? 'bg-primary/10 text-primary border-primary/20'
+                    : 'bg-surface-light dark:bg-surface-dark text-text-secondary-light dark:text-text-secondary-dark border-border-light dark:border-border-dark'
+                "
+                @click="currencyFilter = null"
+              >
+                Все валюты
+              </button>
+              <button
+                v-for="cur in availableCurrencies"
+                :key="cur"
+                type="button"
+                class="px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors border"
+                :class="
+                  currencyFilter === cur
+                    ? 'bg-primary/10 text-primary border-primary/20'
+                    : 'bg-surface-light dark:bg-surface-dark text-text-secondary-light dark:text-text-secondary-dark border-border-light dark:border-border-dark'
+                "
+                @click="currencyFilter = cur"
+              >
+                {{ cur }}
+              </button>
+            </div>
+
             <!-- Debts List -->
             <div class="space-y-3">
-              <!-- Filter indicator -->
+              <!-- Person Filter Indicator -->
               <div v-if="personFilter" class="flex items-center gap-2 px-1">
                 <div
                   class="flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm"
@@ -418,103 +217,107 @@ function handleDetailClose() {
                 :show-view-all="false"
               />
 
-              <!-- Collapsible groups by person -->
+              <!-- Groups by Person -->
               <div v-if="activeDebts.length > 0" class="space-y-2">
-                <CollapsibleRoot
+                <template
                   v-for="group in debtsByPerson"
                   :key="`${group.personName}_${group.debtType}`"
-                  v-slot="{ open }"
-                  :default-open="isGroupDefaultOpen(group)"
                 >
-                  <!-- Person header (trigger) -->
-                  <CollapsibleTrigger
-                    class="flex items-center gap-2.5 w-full p-3 rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark cursor-pointer hover:bg-surface-light dark:hover:bg-surface-dark transition-colors text-left"
+                  <!-- Single debt — flat card -->
+                  <DebtCard
+                    v-if="group.debts.length === 1"
+                    :debt="group.debts[0]"
+                    :class="
+                      isDesktop &&
+                      selectedDebtId === group.debts[0].id &&
+                      'ring-2 ring-primary ring-offset-2 ring-offset-background-light dark:ring-offset-background-dark'
+                    "
+                    @click="handleDebtClick(group.debts[0])"
+                  />
+
+                  <!-- Multiple debts — collapsible -->
+                  <CollapsibleRoot
+                    v-else
+                    v-slot="{ open }"
+                    :default-open="isGroupDefaultOpen(group)"
                   >
-                    <!-- Expand arrow -->
-                    <UIcon
-                      name="chevron_right"
-                      size="xs"
-                      class="text-text-tertiary-light dark:text-text-tertiary-dark transition-transform duration-200 shrink-0"
-                      :class="open ? 'rotate-90' : ''"
-                    />
-                    <!-- Avatar -->
-                    <div
-                      class="w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold shrink-0"
-                      :class="
-                        group.debtType === 'given'
-                          ? 'bg-debt-given-light text-debt-given'
-                          : 'bg-debt-received-light text-debt-received'
-                      "
+                    <CollapsibleTrigger
+                      class="flex items-center gap-2.5 w-full p-3 rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark cursor-pointer hover:bg-surface-light dark:hover:bg-surface-dark transition-colors text-left"
                     >
-                      {{ getInitial(group.personName) }}
-                    </div>
-                    <!-- Info -->
-                    <div class="flex-1 min-w-0">
-                      <p
-                        class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark truncate"
+                      <UIcon
+                        name="chevron_right"
+                        size="xs"
+                        class="text-text-tertiary-light dark:text-text-tertiary-dark transition-transform duration-200 shrink-0"
+                        :class="open ? 'rotate-90' : ''"
+                      />
+                      <div
+                        class="w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold shrink-0"
+                        :class="
+                          group.debtType === 'given'
+                            ? 'bg-debt-given-light text-debt-given'
+                            : 'bg-debt-received-light text-debt-received'
+                        "
                       >
-                        {{ group.personName }}
-                      </p>
-                      <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
-                        {{ group.debts.length }}
-                        {{ pluralize(group.debts.length, 'долг', 'долга', 'долгов') }}
-                        · {{ DEBT_DIRECTION_DISPLAY[group.debtType] }}
-                      </p>
-                    </div>
-                    <!-- Total -->
-                    <div class="text-right shrink-0">
+                        {{ getInitial(group.personName) }}
+                      </div>
+                      <div class="flex-1 min-w-0">
+                        <p
+                          class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark truncate"
+                        >
+                          {{ group.personName }}
+                        </p>
+                        <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
+                          {{ group.debts.length }}
+                          {{ pluralize(group.debts.length, 'долг', 'долга', 'долгов') }} ·
+                          {{ DEBT_DIRECTION_DISPLAY[group.debtType] }}
+                        </p>
+                      </div>
                       <p
-                        class="text-sm font-bold"
+                        class="text-sm font-bold shrink-0"
                         :class="
                           group.debtType === 'given' ? 'text-debt-given' : 'text-debt-received'
                         "
                       >
-                        {{ group.totalRemainingDisplay.approximate ? '≈ ' : ''
-                        }}{{
-                          formatCurrency(
-                            group.totalRemainingDisplay.amount,
-                            group.totalRemainingDisplay.currency,
-                          )
+                        {{
+                          group.hasPrivate
+                            ? '••••'
+                            : `${group.totalRemainingDisplay.approximate ? '≈ ' : ''}${formatCurrency(group.totalRemainingDisplay.amount, group.totalRemainingDisplay.currency)}`
                         }}
                       </p>
-                    </div>
-                  </CollapsibleTrigger>
+                    </CollapsibleTrigger>
 
-                  <!-- Expanded debts -->
-                  <CollapsibleContent class="CollapsibleContent">
-                    <div
-                      class="ml-5 pl-3 border-l-2 border-border-light dark:border-border-dark mt-1 space-y-1"
-                    >
-                      <DebtCard
-                        v-for="debt in group.debts"
-                        :key="debt.id"
-                        :debt="debt"
-                        compact
-                        :class="
-                          isDesktop &&
-                          selectedDebtId === debt.id &&
-                          'ring-2 ring-primary ring-offset-2 ring-offset-background-light dark:ring-offset-background-dark'
-                        "
-                        @click="handleDebtClick(debt)"
-                      />
-
-                      <!-- Close all button (2+ debts) -->
-                      <UButton
-                        v-if="group.debts.length > 1"
-                        variant="secondary"
-                        size="sm"
-                        full-width
-                        @click="openCloseAllForPerson(group.personName)"
+                    <CollapsibleContent class="CollapsibleContent">
+                      <div
+                        class="ml-5 pl-3 border-l-2 border-border-light dark:border-border-dark mt-1 space-y-1"
                       >
-                        <UIcon name="check_circle" size="xs" />
-                        Закрыть все долги
-                      </UButton>
-                    </div>
-                  </CollapsibleContent>
-                </CollapsibleRoot>
+                        <DebtCard
+                          v-for="debt in group.debts"
+                          :key="debt.id"
+                          :debt="debt"
+                          compact
+                          :class="
+                            isDesktop &&
+                            selectedDebtId === debt.id &&
+                            'ring-2 ring-primary ring-offset-2 ring-offset-background-light dark:ring-offset-background-dark'
+                          "
+                          @click="handleDebtClick(debt)"
+                        />
+                        <UButton
+                          variant="secondary"
+                          size="sm"
+                          full-width
+                          @click="openCloseAllForPerson(group.personName)"
+                        >
+                          <UIcon name="check_circle" size="xs" />
+                          Закрыть все долги
+                        </UButton>
+                      </div>
+                    </CollapsibleContent>
+                  </CollapsibleRoot>
+                </template>
               </div>
 
-              <!-- Close All Button (when filtering by person) -->
+              <!-- Close All (person filter) -->
               <UButton
                 v-if="personFilter && activeDebts.length > 1"
                 variant="primary"
@@ -539,11 +342,10 @@ function handleDetailClose() {
             </div>
           </template>
 
-          <!-- Closed Debts -->
+          <!-- Closed Debts Tab -->
           <template v-else-if="statusFilter === 'closed'">
             <div v-if="closedDebts.length > 0" class="space-y-3">
               <SectionHeader title="Погашенные долги" :show-add="false" :show-view-all="false" />
-
               <div class="space-y-2">
                 <ClosedDebtCard
                   v-for="debt in closedDebts"
@@ -559,7 +361,6 @@ function handleDetailClose() {
                 />
               </div>
             </div>
-
             <UCard v-else data-testid="closed-empty-state" class="py-4">
               <EmptyState
                 icon="history"
@@ -580,11 +381,12 @@ function handleDetailClose() {
           @payment="handleDetailPayment"
           @edit="handleDetailEdit"
           @delete="handleDetailDelete"
+          @toggle-private="handleDetailTogglePrivate"
         />
       </template>
     </MasterDetailLayout>
 
-    <!-- Close All Debts Modal -->
+    <!-- Modals -->
     <CloseAllDebtsModal
       v-model="showCloseAllModal"
       :debts="closeAllDebtsForPerson"
@@ -595,8 +397,6 @@ function handleDetailClose() {
       :total="total"
       @confirm="handleCloseAll"
     />
-
-    <!-- Delete Debt Modal (for detail panel) -->
     <DeleteDebtModal
       v-model="showDeleteModal"
       :debt="selectedDebt"
@@ -604,8 +404,6 @@ function handleDetailClose() {
       :is-deleting="isDeleting"
       @confirm="handleDeleteDebt"
     />
-
-    <!-- Partial Payment Modal (for detail panel) -->
     <PartialPaymentModal
       v-model="showPartialPaymentModal"
       :debt="selectedDebt"
@@ -635,7 +433,6 @@ function handleDetailClose() {
     height: var(--reka-collapsible-content-height);
   }
 }
-
 @keyframes slideUp {
   from {
     height: var(--reka-collapsible-content-height);
