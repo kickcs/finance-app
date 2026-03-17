@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, computed, nextTick } from 'vue';
-import { useSlidingIndicator } from '@/shared/lib/hooks/useSlidingIndicator';
+import { useSlidingIndicator, buildIndicatorRect } from '@/shared/lib/hooks/useSlidingIndicator';
 
 const props = withDefaults(
   defineProps<{
@@ -8,7 +8,7 @@ const props = withDefaults(
     modelValue: string | null;
     allLabel?: string;
   }>(),
-  { allLabel: 'Все валюты' },
+  { allLabel: 'Все' },
 );
 
 const emit = defineEmits<{
@@ -25,14 +25,8 @@ const activeId = computed(() => props.modelValue ?? ALL_ID);
 const { setChipRef, indicatorStyle, updateIndicator } = useSlidingIndicator(
   containerRef,
   activeId,
-  (containerRect, activeRect, scrollLeft, _scrollTop) => ({
-    left: `${activeRect.left - containerRect.left + scrollLeft}px`,
-    top: `${activeRect.top - containerRect.top}px`,
-    width: `${activeRect.width}px`,
-    height: `${activeRect.height}px`,
-    backgroundColor: 'var(--color-primary-light, rgb(var(--primary) / 0.1))',
-    borderColor: 'rgb(var(--primary) / 0.3)',
-  }),
+  (containerRect, activeRect, scrollLeft, scrollTop) =>
+    buildIndicatorRect(containerRect, activeRect, scrollLeft, scrollTop),
 );
 
 watch(
@@ -57,7 +51,7 @@ function selectItem(id: string) {
   >
     <!-- Sliding indicator -->
     <span
-      class="absolute rounded-lg pointer-events-none transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] z-0 border"
+      class="absolute rounded-lg pointer-events-none transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] z-0 border bg-primary/10 border-primary"
       :style="indicatorStyle"
     />
 
