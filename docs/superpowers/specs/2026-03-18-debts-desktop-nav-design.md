@@ -36,11 +36,19 @@ export const DESKTOP_NAV_ITEMS: NavItem[] = [
 ];
 ```
 
-Убрать запись `/debts: 'home'` из `CHILD_ROUTE_MAP` — на десктопе сайдбар находит активный пункт напрямую по `route.path.startsWith('/debts')`.
+Запись `/debts: 'home'` в `CHILD_ROUTE_MAP` **оставить** — она нужна `BottomNav` на мобайле для подсветки "Главная".
 
 ### `frontend/src/widgets/sidebar-nav/ui/SidebarNav.vue`
 
-Заменить импорт `MAIN_NAV_ITEMS` на `DESKTOP_NAV_ITEMS`.
+Заменить все четыре вхождения `MAIN_NAV_ITEMS` на `DESKTOP_NAV_ITEMS`:
+- импорт (`import { DESKTOP_NAV_ITEMS } from ...`)
+- `MAIN_NAV_ITEMS.find(...)` в computed `activeItem`
+- тип параметра `handleNavClick`: `(typeof MAIN_NAV_ITEMS)[number]` → `(typeof DESKTOP_NAV_ITEMS)[number]`
+- `v-for="item in MAIN_NAV_ITEMS"` в шаблоне
+
+### `frontend/src/shared/ui/icon/iconMap.ts`
+
+Добавить маппинг `handshake → Handshake` из `lucide-vue-next`. Иконка `handshake` используется в `DebtsListPage` и `dashboard.ts`, но отсутствовала в iconMap (рендерилась как `?`). Добавление исправляет это заодно.
 
 ### `frontend/src/widgets/bottom-nav/ui/BottomNav.vue`
 
