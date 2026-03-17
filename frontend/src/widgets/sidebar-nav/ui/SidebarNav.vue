@@ -3,7 +3,7 @@ import { computed } from 'vue';
 import { useRoute, RouterLink } from 'vue-router';
 import { UIcon, Skeleton } from '@/shared/ui';
 import { useHaptics } from '@/shared/lib/haptics';
-import { formatMasked, COMPACT_FORMAT } from '@/shared/lib/format/currency';
+import { formatMasked } from '@/shared/lib/format/currency';
 import { ThemeToggle } from '@/features/toggle-theme';
 import { MAIN_NAV_ITEMS } from '@/shared/config/navigation';
 
@@ -105,9 +105,7 @@ function handleNavClick(item: (typeof MAIN_NAV_ITEMS)[number]) {
           v-else
           class="font-bold text-2xl text-text-primary-light dark:text-text-primary-dark tracking-tight"
         >
-          {{
-            formatMasked(totalBalance || 0, currency || 'USD', isHidden ?? false, COMPACT_FORMAT)
-          }}
+          {{ formatMasked(totalBalance || 0, currency || 'USD', isHidden ?? false) }}
         </div>
       </div>
     </div>

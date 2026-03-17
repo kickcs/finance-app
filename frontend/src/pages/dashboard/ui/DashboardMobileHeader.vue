@@ -2,7 +2,7 @@
 import { AppHeader } from '@/widgets/header';
 import { ThemeToggle } from '@/features/toggle-theme';
 import { UIcon, DiscoveryDot } from '@/shared/ui';
-import { formatMasked, COMPACT_FORMAT } from '@/shared/lib/format/currency';
+import { formatMasked } from '@/shared/lib/format/currency';
 
 defineProps<{
   userName: string;
@@ -87,7 +87,7 @@ const emit = defineEmits<{
               <span
                 class="font-bold text-sm text-text-primary-light dark:text-text-primary-dark leading-none tracking-tight"
               >
-                {{ formatMasked(totalBalance, currency, isHidden, COMPACT_FORMAT) }}
+                {{ formatMasked(totalBalance, currency, isHidden) }}
               </span>
             </div>
           </button>

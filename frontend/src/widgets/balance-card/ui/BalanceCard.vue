@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { UIcon, Skeleton } from '@/shared/ui';
-import { formatMasked, COMPACT_FORMAT } from '@/shared/lib/format/currency';
+import { formatMasked } from '@/shared/lib/format/currency';
 
 defineProps<{
   totalBalance: number;
@@ -60,9 +60,9 @@ defineEmits<{
             @click="$emit('balance-click')"
           >
             <h1
-              class="text-4xl sm:text-[3.5rem] font-extrabold tracking-tight text-text-primary-light dark:text-text-primary-dark group-hover/btn:text-primary transition-colors duration-300 truncate leading-tight"
+              class="text-2xl sm:text-4xl font-extrabold tracking-tight text-text-primary-light dark:text-text-primary-dark group-hover/btn:text-primary transition-colors duration-300 truncate leading-tight"
             >
-              {{ formatMasked(totalBalance, currency, hidden ?? false, COMPACT_FORMAT) }}
+              {{ formatMasked(totalBalance, currency, hidden ?? false) }}
             </h1>
           </button>
         </Transition>
