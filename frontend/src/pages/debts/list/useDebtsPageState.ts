@@ -15,7 +15,7 @@ import { navigateBack } from '@/app/router';
 const STATUS_TABS = [
   { id: 'active', label: 'Активные' },
   { id: 'closed', label: 'Закрытые' },
-] as const;
+];
 
 export interface PersonGroup {
   personName: string;
