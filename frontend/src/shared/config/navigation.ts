@@ -12,6 +12,14 @@ export const MAIN_NAV_ITEMS: NavItem[] = [
   { id: 'profile', icon: 'person', path: '/profile', label: 'Профиль' },
 ];
 
+export const DESKTOP_NAV_ITEMS: NavItem[] = [
+  { id: 'home', icon: 'home', path: '/', label: 'Главная' },
+  { id: 'analytics', icon: 'pie_chart', path: '/analytics', label: 'Аналитика' },
+  { id: 'history', icon: 'history', path: '/history', label: 'История' },
+  { id: 'debts', icon: 'handshake', path: '/debts', label: 'Долги' },
+  { id: 'profile', icon: 'person', path: '/profile', label: 'Профиль' },
+];
+
 /**
  * Maps child route prefixes to their parent nav item id.
  * Used by BottomNav to highlight the correct tab on sub-pages.
