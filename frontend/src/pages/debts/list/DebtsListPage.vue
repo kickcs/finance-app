@@ -13,6 +13,7 @@ import {
   SectionHeader,
   UTabs,
   MasterDetailLayout,
+  SelectChips,
 } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { pluralize } from '@/shared/lib/format/pluralize';
@@ -29,7 +30,7 @@ const {
   personFilter,
   currencyFilter,
   availableCurrencies,
-  availableClosedCurrencies, // eslint-disable-line @typescript-eslint/no-unused-vars
+  availableClosedCurrencies,
   selectedDebtId,
   selectedDebt,
   selectedDebtCurrency,
@@ -159,37 +160,12 @@ const {
             </div>
 
             <!-- Currency Filter Chips -->
-            <div
+            <SelectChips
               v-if="availableCurrencies.length > 1"
-              class="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1"
-            >
-              <button
-                type="button"
-                class="px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors border"
-                :class="
-                  !currencyFilter
-                    ? 'bg-primary/10 text-primary border-primary/20'
-                    : 'bg-surface-light dark:bg-surface-dark text-text-secondary-light dark:text-text-secondary-dark border-border-light dark:border-border-dark'
-                "
-                @click="currencyFilter = null"
-              >
-                Все валюты
-              </button>
-              <button
-                v-for="cur in availableCurrencies"
-                :key="cur"
-                type="button"
-                class="px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors border"
-                :class="
-                  currencyFilter === cur
-                    ? 'bg-primary/10 text-primary border-primary/20'
-                    : 'bg-surface-light dark:bg-surface-dark text-text-secondary-light dark:text-text-secondary-dark border-border-light dark:border-border-dark'
-                "
-                @click="currencyFilter = cur"
-              >
-                {{ cur }}
-              </button>
-            </div>
+              v-model="currencyFilter"
+              :items="availableCurrencies.map((c) => ({ id: c, label: c }))"
+              all-label="Все валюты"
+            />
 
             <!-- Debts List -->
             <div class="space-y-3">
@@ -344,6 +320,13 @@ const {
 
           <!-- Closed Debts Tab -->
           <template v-else-if="statusFilter === 'closed'">
+            <!-- Currency Filter Chips -->
+            <SelectChips
+              v-if="availableClosedCurrencies.length > 1"
+              v-model="currencyFilter"
+              :items="availableClosedCurrencies.map((c) => ({ id: c, label: c }))"
+              all-label="Все валюты"
+            />
             <div v-if="closedDebts.length > 0" class="space-y-3">
               <SectionHeader title="Погашенные долги" :show-add="false" :show-view-all="false" />
               <div class="space-y-2">
