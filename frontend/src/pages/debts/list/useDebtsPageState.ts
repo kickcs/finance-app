@@ -12,6 +12,11 @@ import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 import { DEFAULT_CURRENCY } from '@/shared/config/currency';
 import { navigateBack } from '@/app/router';
 
+const STATUS_TABS = [
+  { id: 'active', label: 'Активные' },
+  { id: 'closed', label: 'Закрытые' },
+] as const;
+
 export interface PersonGroup {
   personName: string;
   debts: Debt[];
@@ -271,10 +276,7 @@ export function useDebtsPageState() {
     isLoading,
     isDesktop,
     statusFilter,
-    statusTabs: [
-      { id: 'active', label: 'Активные' },
-      { id: 'closed', label: 'Закрытые' },
-    ],
+    statusTabs: STATUS_TABS,
     personFilter,
     currencyFilter,
     availableCurrencies,
