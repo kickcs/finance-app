@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue';
-import { type DateValue } from '@internationalized/date';
 import {
   DrawerRoot,
   DrawerPortal,
@@ -9,19 +8,20 @@ import {
   DrawerHandle,
   DrawerTitle,
 } from 'vaul-vue';
-import { UInput, UButton, UTabs, UIcon, UToggle, SelectChips } from '@/shared/ui';
-import { Popover, PopoverTrigger, PopoverContent } from '@/shared/ui/primitives/popover';
-import { Calendar } from '@/shared/ui/primitives/calendar';
+import { UInput, UButton, UTabs, UIcon, SelectChips } from '@/shared/ui';
 import { DEBT_DIRECTION_LABELS, type DebtDirection } from '@/entities/debt';
 import { getCurrencyByCode, DEFAULT_CURRENCY } from '@/entities/currency';
+import { getCurrencySymbol } from '@/shared/lib/format/currency';
 import { PersonSelector, usePeople } from '@/entities/person';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useIsDesktop } from '@/shared/lib/composables/useIsDesktop';
 import { useDrawerKeyboard } from '@/shared/lib/composables';
-import { getTodayISO, isoToCalendarDate, dateValueToISO } from '@/shared/lib/date';
-import { formatLocalDate } from '@/shared/lib/format/date';
+import { getTodayISO } from '@/shared/lib/date';
 import { useCreateDebt } from '../model/useCreateDebt';
+import { useHaptics } from '@/shared/lib/haptics';
 import type { AccountWithBalances } from '@/entities/account';
+import DatePickerField from './DatePickerField.vue';
+import ToggleRow from './ToggleRow.vue';
 
 const props = defineProps<{
   open: boolean;
@@ -33,6 +33,7 @@ const emit = defineEmits<{
 }>();
 
 const isDesktop = useIsDesktop();
+const { trigger } = useHaptics();
 
 const { userId } = useCurrentUser();
 const { people, createPerson } = usePeople(userId);
@@ -46,6 +47,7 @@ const debtTypeTabs = Object.entries(DEBT_DIRECTION_LABELS).map(([id, label]) => 
 const accountItems = computed(() => props.accounts.map((a) => ({ id: a.id, label: a.name })));
 
 function handleAccountChange(accountId: string | null) {
+  trigger('selection');
   if (!accountId) {
     updateField('account_id', null);
     return;
@@ -64,52 +66,19 @@ const availableCurrencies = computed(() =>
   selectedAccount.value ? selectedAccount.value.balances.map((b) => b.currency) : [],
 );
 const isMultiCurrency = computed(() => availableCurrencies.value.length > 1);
-const currencySymbol = computed(() => {
-  const c = getCurrencyByCode(formData.value.currency);
-  return c?.symbol || formData.value.currency;
-});
+const currencySymbol = computed(() => getCurrencySymbol(formData.value.currency));
 
-// Converts ISO date string to a localized display string using local timezone construction
-// (avoids UTC-offset issues that arise from passing ISO strings directly to new Date())
-function isoToDisplayDate(iso: string): string {
-  const [y, m, d] = iso.split('-').map(Number);
-  return formatLocalDate(new Date(y, m - 1, d).getTime());
-}
-
-// ── Debt date (when debt was created) ─────────────────────────────────────
+// ── Dates ────────────────────────────────────────────────────────────────
 const isDebtDateOpen = ref(false);
-const debtDateCalendarValue = computed(
-  () => isoToCalendarDate(formData.value.debt_date || getTodayISO())!,
-);
-const debtDisplayDate = computed(() => isoToDisplayDate(formData.value.debt_date || getTodayISO()));
-function handleDebtDateChange(value: DateValue | undefined) {
-  const iso = dateValueToISO(value);
-  if (!iso) return;
-  updateField('debt_date', iso);
-  isDebtDateOpen.value = false;
-}
-
-// ── Due date (when debt should be returned) ───────────────────────────────
 const isDueDateOpen = ref(false);
-const dueDateCalendarValue = computed(() => isoToCalendarDate(formData.value.due_date));
-const dueDateDisplay = computed(() =>
-  formData.value.due_date ? isoToDisplayDate(formData.value.due_date) : null,
-);
-function handleDueDateChange(value: DateValue | undefined) {
-  const iso = dateValueToISO(value);
-  if (!iso) return;
-  updateField('due_date', iso);
-  isDueDateOpen.value = false;
-}
-function clearDueDate() {
-  updateField('due_date', null);
-}
+const debtDateValue = computed(() => formData.value.debt_date || getTodayISO());
 
 // ── Submit ────────────────────────────────────────────────────────────────
 async function handleSubmit() {
   if (!userId.value) return;
   const debtId = await createDebt(userId.value);
   if (debtId) {
+    trigger('success');
     emit('update:open', false);
   }
 }
@@ -195,7 +164,10 @@ watch(
             <UTabs
               :model-value="formData.debt_type"
               :items="debtTypeTabs"
-              @update:model-value="updateField('debt_type', $event as DebtDirection)"
+              @update:model-value="
+                trigger('selection');
+                updateField('debt_type', $event as DebtDirection);
+              "
             />
           </div>
 
@@ -275,36 +247,12 @@ watch(
             >
               Дата
             </label>
-            <Popover v-model:open="isDebtDateOpen">
-              <PopoverTrigger as-child>
-                <button
-                  type="button"
-                  class="w-full flex items-center justify-between gap-2 px-4 py-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark hover:border-primary/50 transition-all"
-                >
-                  <div class="flex items-center gap-2">
-                    <UIcon
-                      name="calendar_month"
-                      size="sm"
-                      class="text-text-secondary-light dark:text-text-secondary-dark"
-                    />
-                    <span class="text-sm">{{ debtDisplayDate }}</span>
-                  </div>
-                  <UIcon
-                    name="expand_more"
-                    size="sm"
-                    class="text-text-secondary-light dark:text-text-secondary-dark transition-transform"
-                    :class="{ 'rotate-180': isDebtDateOpen }"
-                  />
-                </button>
-              </PopoverTrigger>
-              <PopoverContent class="w-auto p-0" align="start" :to="calendarPortalRef">
-                <Calendar
-                  :model-value="debtDateCalendarValue"
-                  locale="ru-RU"
-                  @update:model-value="handleDebtDateChange"
-                />
-              </PopoverContent>
-            </Popover>
+            <DatePickerField
+              v-model:open="isDebtDateOpen"
+              :model-value="debtDateValue"
+              :portal-to="calendarPortalRef"
+              @update:model-value="updateField('debt_date', $event)"
+            />
           </div>
 
           <!-- Due date -->
@@ -314,39 +262,14 @@ watch(
             >
               Срок возврата
             </label>
-            <div class="flex items-center gap-2">
-              <Popover v-model:open="isDueDateOpen">
-                <PopoverTrigger as-child>
-                  <button
-                    type="button"
-                    class="flex-1 flex items-center gap-2 px-4 py-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:border-primary/50 transition-all"
-                    :class="
-                      formData.due_date
-                        ? 'text-text-primary-light dark:text-text-primary-dark'
-                        : 'text-text-tertiary-light dark:text-text-tertiary-dark'
-                    "
-                  >
-                    <UIcon name="calendar_month" size="sm" />
-                    <span class="text-sm">{{ dueDateDisplay ?? 'Без срока' }}</span>
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent class="w-auto p-0" align="start" :to="calendarPortalRef">
-                  <Calendar
-                    :model-value="dueDateCalendarValue"
-                    locale="ru-RU"
-                    @update:model-value="handleDueDateChange"
-                  />
-                </PopoverContent>
-              </Popover>
-              <button
-                v-if="formData.due_date"
-                type="button"
-                class="p-2 rounded-lg text-text-tertiary-light dark:text-text-tertiary-dark hover:text-danger transition-colors"
-                @click="clearDueDate"
-              >
-                <UIcon name="close" size="sm" />
-              </button>
-            </div>
+            <DatePickerField
+              v-model:open="isDueDateOpen"
+              :model-value="formData.due_date"
+              placeholder="Без срока"
+              clearable
+              :portal-to="calendarPortalRef"
+              @update:model-value="updateField('due_date', $event)"
+            />
           </div>
 
           <!-- Description -->
@@ -358,44 +281,26 @@ watch(
           />
 
           <!-- Is private toggle -->
-          <div class="flex items-center justify-between gap-4">
-            <div>
-              <p class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
-                Скрыть сумму
-              </p>
-              <p class="text-xs text-text-secondary-light dark:text-text-secondary-dark mt-0.5">
-                Сумма не будет видна в общем списке
-              </p>
-            </div>
-            <UToggle
-              :model-value="formData.is_private"
-              @update:model-value="updateField('is_private', $event)"
-            />
-          </div>
+          <ToggleRow
+            :model-value="formData.is_private"
+            title="Скрыть сумму"
+            description="Сумма не будет видна в общем списке"
+            @update:model-value="updateField('is_private', $event)"
+          />
 
           <!-- Skip transaction -->
-          <div class="flex items-center justify-between gap-4">
-            <div>
-              <p class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
-                {{
-                  formData.debt_type === 'given'
-                    ? 'Не списывать с баланса'
-                    : 'Не добавлять на баланс'
-                }}
-              </p>
-              <p class="text-xs text-text-secondary-light dark:text-text-secondary-dark mt-0.5">
-                Транзакция не будет создана
-              </p>
-            </div>
-            <UToggle
-              :model-value="formData.skipTransaction"
-              @update:model-value="updateField('skipTransaction', $event)"
-            />
-          </div>
+          <ToggleRow
+            :model-value="formData.skip_transaction"
+            :title="
+              formData.debt_type === 'given' ? 'Не списывать с баланса' : 'Не добавлять на баланс'
+            "
+            description="Транзакция не будет создана"
+            @update:model-value="updateField('skip_transaction', $event)"
+          />
 
           <!-- Info box -->
           <div
-            v-if="!formData.skipTransaction && formData.account_id"
+            v-if="!formData.skip_transaction && formData.account_id"
             class="p-4 rounded-xl bg-surface-light dark:bg-surface-dark"
           >
             <div class="flex items-start gap-3">
@@ -419,7 +324,7 @@ watch(
         </div>
 
         <!-- Portal container for calendars — keeps popovers inside drawer DOM -->
-        <div ref="calendarPortalRef" class="hidden" />
+        <div ref="calendarPortalRef" />
 
         <!-- Footer -->
         <div

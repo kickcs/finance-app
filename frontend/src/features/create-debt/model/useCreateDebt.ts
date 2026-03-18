@@ -18,7 +18,7 @@ export interface DebtFormData {
   account_id: string | null;
   debt_date: string | null;
   description: string;
-  skipTransaction: boolean;
+  skip_transaction: boolean;
   is_private: boolean;
   due_date: string | null;
 }
@@ -32,7 +32,7 @@ function makeInitialFormData(): DebtFormData {
     account_id: null,
     debt_date: getTodayISO(),
     description: '',
-    skipTransaction: false,
+    skip_transaction: false,
     is_private: false,
     due_date: null,
   };
@@ -62,8 +62,8 @@ export function useCreateDebt() {
       let transactionId: string | null = null;
 
       try {
-        // 1. Create the linked transaction (backend handles balance update) — unless skipTransaction
-        if (!formData.value.skipTransaction) {
+        // 1. Create the linked transaction (backend handles balance update) — unless skip_transaction
+        if (!formData.value.skip_transaction) {
           const transaction = await transactionsApi.create({
             user_id: userId,
             account_id: accountId,
@@ -119,8 +119,8 @@ export function useCreateDebt() {
       }
     },
 
-    onSuccess: async (_, userId) => {
-      await invalidateDebtRelated(queryClient, userId);
+    onSuccess: (_, userId) => {
+      invalidateDebtRelated(queryClient, userId).catch(console.error);
       const isGiven = formData.value.debt_type === 'given';
       toast({
         title: 'Долг создан',
@@ -147,7 +147,7 @@ export function useCreateDebt() {
   const isSubmitting = mutation.isPending;
 
   async function createDebt(userId: string): Promise<string | null> {
-    if (!isValid.value || !formData.value.account_id) {
+    if (!isValid.value) {
       error.value = 'Заполните все обязательные поля';
       return null;
     }
