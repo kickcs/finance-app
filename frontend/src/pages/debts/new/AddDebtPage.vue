@@ -2,7 +2,8 @@
 import { useRouter } from 'vue-router';
 import { ROUTE_NAMES } from '@/app/router/routeNames';
 import { UButton, UIcon, USpinner } from '@/shared/ui';
-import { DebtForm, useCreateDebt } from '@/features/create-debt';
+import DebtForm from '@/features/create-debt/ui/DebtForm.vue';
+import { useCreateDebt } from '@/features/create-debt';
 import { useAccounts } from '@/entities/account';
 import { navigateBack } from '@/app/router';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';

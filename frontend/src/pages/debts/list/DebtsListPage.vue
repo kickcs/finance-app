@@ -3,6 +3,7 @@ import { AppHeader } from '@/widgets/header';
 import { DebtCard, DebtDetailPanel, ClosedDebtCard, DEBT_DIRECTION_DISPLAY } from '@/entities/debt';
 import { CloseAllDebtsModal, DeleteDebtModal } from '@/features/close-debt';
 import { PartialPaymentModal } from '@/features/partial-payment';
+import { CreateDebtDrawer } from '@/features/create-debt';
 import { CollapsibleRoot, CollapsibleTrigger, CollapsibleContent } from 'reka-ui';
 import {
   UButton,
@@ -48,6 +49,7 @@ const {
   progress,
   total,
   accounts,
+  showCreateDrawer,
   showDeleteModal,
   showPartialPaymentModal,
   isDeleting,
@@ -396,6 +398,7 @@ const {
       :is-paying="isPaying"
       @confirm="handlePartialPayment"
     />
+    <CreateDebtDrawer v-model:open="showCreateDrawer" :accounts="accounts" />
   </div>
 </template>
 
