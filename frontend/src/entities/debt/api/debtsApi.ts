@@ -22,6 +22,7 @@ interface DebtResponse {
   description: string | null;
   closedAt: string | null;
   forgivenAmount: number;
+  isPrivate: boolean;
 }
 
 function transformDebt(debt: DebtResponse): Debt {
@@ -45,6 +46,7 @@ function transformDebt(debt: DebtResponse): Debt {
     description: debt.description,
     closed_at: debt.closedAt,
     forgiven_amount: debt.forgivenAmount,
+    is_private: debt.isPrivate,
   };
 }
 
@@ -72,7 +74,7 @@ export const debtsApi = {
       totalAmount: debt.total_amount,
       remainingAmount: debt.remaining_amount,
       monthlyPayment: debt.monthly_payment,
-      nextPaymentDate: debt.next_payment_date,
+      nextPaymentDate: debt.next_payment_date ?? undefined,
       debtType: debt.debt_type ?? 'taken',
       personName: debt.person_name,
       accountId: debt.account_id,
@@ -81,6 +83,7 @@ export const debtsApi = {
       sourceTransactionId: debt.source_transaction_id,
       description: debt.description,
       createdAt: debt.created_at,
+      isPrivate: debt.is_private ?? false,
     });
     return transformDebt(data);
   },
@@ -102,6 +105,7 @@ export const debtsApi = {
       sourceTransactionId: updates.source_transaction_id,
       description: updates.description,
       forgivenAmount: updates.forgiven_amount,
+      isPrivate: updates.is_private,
     });
     return transformDebt(data);
   },
