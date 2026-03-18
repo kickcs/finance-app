@@ -238,7 +238,7 @@ function handleSettingsClick() {
       />
     </template>
 
-    <main class="relative z-10 pt-3 md:pt-8 pb-28 md:pb-8">
+    <main data-testid="dashboard-main" class="relative z-10 pt-3 md:pt-8 pb-28 md:pb-8">
       <div class="mb-6 md:mb-8">
         <InstallPwaBanner @install="showInstallModal = true" />
       </div>
@@ -249,7 +249,7 @@ function handleSettingsClick() {
         :on-refresh="handleRefresh"
         :container-ref="scrollContainerRef"
       >
-        <div class="flex flex-col space-y-6 md:hidden">
+        <div data-testid="dashboard-mobile-layout" class="flex flex-col space-y-6 md:hidden">
           <section :class="staggerClass('delay-75')">
             <BalanceCard
               :total-balance="totalBalance"
@@ -264,6 +264,7 @@ function handleSettingsClick() {
           <template v-for="widgetId in widgetOrder" :key="widgetId">
             <section
               v-if="widgetId === 'quick_actions' && !hiddenWidgets.has('quick_actions')"
+              data-testid="widget-quick-actions"
               :class="staggerClass('delay-150')"
             >
               <FeatureHintPopover
@@ -293,6 +294,7 @@ function handleSettingsClick() {
 
             <section
               v-if="widgetId === 'accounts' && !hiddenWidgets.has('accounts')"
+              data-testid="widget-accounts"
               :class="staggerClass('delay-300')"
             >
               <AccountStack
@@ -307,6 +309,7 @@ function handleSettingsClick() {
 
             <section
               v-if="widgetId === 'top_expenses' && !hiddenWidgets.has('top_expenses')"
+              data-testid="widget-top-expenses"
               :class="staggerClass('delay-300')"
             >
               <DashboardTopExpenses
@@ -318,7 +321,11 @@ function handleSettingsClick() {
             </section>
 
             <!-- Single DashboardActivityColumn for transactions/debts/reminders on mobile -->
-            <section v-if="widgetId === firstActivityWidgetId" :class="staggerClass('delay-300')">
+            <section
+              v-if="widgetId === firstActivityWidgetId"
+              data-testid="widget-activity"
+              :class="staggerClass('delay-300')"
+            >
               <DashboardActivityColumn
                 :transactions="mobileTransactions"
                 :debts="debts"
@@ -346,6 +353,7 @@ function handleSettingsClick() {
 
             <section
               v-if="widgetId === 'budget' && !hiddenWidgets.has('budget')"
+              data-testid="widget-budget"
               :class="staggerClass('delay-150')"
             >
               <BudgetSection
@@ -370,6 +378,7 @@ function handleSettingsClick() {
               <div class="relative">
                 <button
                   type="button"
+                  data-testid="dashboard-settings-btn"
                   class="flex items-center gap-2 text-body-sm font-medium text-text-tertiary-light dark:text-text-tertiary-dark hover:text-text-secondary-light dark:hover:text-text-secondary-dark transition-colors px-4 py-2 rounded-xl hover:bg-surface-light dark:hover:bg-surface-dark"
                   @click="handleSettingsClick"
                 >

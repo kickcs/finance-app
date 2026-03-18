@@ -2,9 +2,15 @@
 import { ref, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { ROUTE_NAMES } from '@/app/router/routeNames';
-import { USpinner, NotFoundState } from '@/shared/ui';
+import { USpinner, NotFoundState, useToast } from '@/shared/ui';
 import { AppHeader } from '@/widgets/header';
-import { useDebts, DebtDetailContent, useDebtTransactions, type Debt } from '@/entities/debt';
+import {
+  useDebts,
+  DebtDetailContent,
+  useDebtTransactions,
+  getDebtDisplayName,
+  type Debt,
+} from '@/entities/debt';
 import { DEFAULT_CURRENCY } from '@/shared/config/currency';
 import { useAccounts } from '@/entities/account';
 import { DeleteDebtModal, useCloseDebt } from '@/features/close-debt';
@@ -15,10 +21,11 @@ import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 const router = useRouter();
 const route = useRoute();
 const { userId } = useCurrentUser();
+const { toast } = useToast();
 const debtId = computed(() => route.params.id as string);
 
 // Get debts and accounts
-const { debts, isLoading } = useDebts(userId);
+const { debts, isLoading, updateDebt } = useDebts(userId);
 const { accounts } = useAccounts(userId);
 
 // Load transactions for this debt
@@ -49,6 +56,12 @@ async function handleDeleteDebt() {
   }
 }
 
+function handleEdit() {
+  toast({ title: 'Редактирование пока недоступно' });
+}
+
+// TODO: This logic is duplicated in useDebtsPageState.ts (with different post-payment navigation).
+// Consider extracting a shared helper, e.g. `makePartialPaymentFlow(debt, amount, accountId, userId, options)`.
 async function handlePartialPayment(
   amount: number,
   accountId: string,
@@ -66,6 +79,11 @@ async function handlePartialPayment(
   }
 }
 
+async function handleTogglePrivate(value: boolean) {
+  if (!debt.value) return;
+  await updateDebt(debt.value.id, { is_private: value });
+}
+
 function goBack() {
   navigateBack();
 }
@@ -76,7 +94,7 @@ function goBack() {
     class="h-full flex flex-col relative bg-background-light dark:bg-background-dark pb-28 md:pb-8 overflow-y-auto"
   >
     <!-- Header -->
-    <AppHeader :title="debt?.person_name || debt?.name || 'Долг'" show-back blur @back="goBack" />
+    <AppHeader :title="debt ? getDebtDisplayName(debt) : 'Долг'" show-back blur @back="goBack" />
 
     <!-- Content -->
     <main class="px-5 pt-8 pb-6">
@@ -100,7 +118,9 @@ function goBack() {
         :accounts="accounts"
         :transactions-loading="transactionsLoading"
         @payment="showPartialPaymentModal = true"
+        @edit="handleEdit"
         @delete="showDeleteModal = true"
+        @toggle-private="handleTogglePrivate"
       />
     </main>
 

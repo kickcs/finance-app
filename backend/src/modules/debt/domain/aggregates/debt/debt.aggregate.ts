@@ -22,6 +22,22 @@ export interface DebtProps {
   description: string | null;
   closedAt: Date | null;
   forgivenAmount: number;
+  isPrivate: boolean;
+}
+
+export interface CreateDebtProps {
+  id: string;
+  userId: string;
+  name: string;
+  totalAmount: number;
+  currency: string;
+  debtType: 'given' | 'taken';
+  personName?: string;
+  accountId?: string;
+  monthlyPayment?: number;
+  nextPaymentDate?: Date;
+  createdAt?: Date;
+  description?: string;
 }
 
 export class Debt extends AggregateRoot<string> {
@@ -42,6 +58,7 @@ export class Debt extends AggregateRoot<string> {
   private _description: string | null;
   private _closedAt: Date | null;
   private _forgivenAmount: number;
+  private _isPrivate: boolean;
 
   private constructor(props: DebtProps) {
     super(props.id);
@@ -62,22 +79,25 @@ export class Debt extends AggregateRoot<string> {
     this._description = props.description;
     this._closedAt = props.closedAt;
     this._forgivenAmount = props.forgivenAmount;
+    this._isPrivate = props.isPrivate;
   }
 
-  static create(
-    id: string,
-    userId: string,
-    name: string,
-    totalAmount: number,
-    currency: string,
-    debtType: string,
-    personName?: string,
-    accountId?: string,
-    monthlyPayment?: number,
-    nextPaymentDate?: Date,
-    createdAt?: Date,
-    description?: string,
-  ): Debt {
+  static create(props: CreateDebtProps): Debt {
+    const {
+      id,
+      userId,
+      name,
+      totalAmount,
+      currency,
+      debtType,
+      personName,
+      accountId,
+      monthlyPayment,
+      nextPaymentDate,
+      createdAt,
+      description,
+    } = props;
+
     const currencyVo = Currency.create(currency);
     const debt = new Debt({
       id,
@@ -98,17 +118,11 @@ export class Debt extends AggregateRoot<string> {
       description: description?.trim() || null,
       closedAt: null,
       forgivenAmount: 0,
+      isPrivate: false,
     });
 
     debt.addDomainEvent(
-      new DebtCreatedEvent(
-        id,
-        userId,
-        debtType as 'given' | 'taken',
-        totalAmount,
-        currency,
-        accountId || null,
-      ),
+      new DebtCreatedEvent(id, userId, debtType, totalAmount, currency, accountId || null),
     );
 
     return debt;
@@ -152,7 +166,7 @@ export class Debt extends AggregateRoot<string> {
   get debtType(): DebtType {
     return this._debtType;
   }
-  get debtTypeValue(): string {
+  get debtTypeValue(): 'given' | 'taken' {
     return this._debtType.value;
   }
   get personName(): string | null {
@@ -184,6 +198,9 @@ export class Debt extends AggregateRoot<string> {
   }
   get forgivenAmount(): number {
     return this._forgivenAmount;
+  }
+  get isPrivate(): boolean {
+    return this._isPrivate;
   }
 
   // Behaviors
@@ -228,7 +245,7 @@ export class Debt extends AggregateRoot<string> {
     remainingAmount?: number;
     monthlyPayment?: number | null;
     nextPaymentDate?: Date | null;
-    debtType?: string;
+    debtType?: 'given' | 'taken';
     personName?: string | null;
     accountId?: string | null;
     transactionId?: string | null;
@@ -237,6 +254,7 @@ export class Debt extends AggregateRoot<string> {
     sourceTransactionId?: string | null;
     description?: string | null;
     forgivenAmount?: number;
+    isPrivate?: boolean;
   }): void {
     if (data.name !== undefined) this._name = data.name;
     if (data.totalAmount !== undefined)
@@ -262,6 +280,7 @@ export class Debt extends AggregateRoot<string> {
       this._sourceTransactionId = data.sourceTransactionId;
     if (data.description !== undefined) this._description = data.description;
     if (data.forgivenAmount !== undefined) this._forgivenAmount = data.forgivenAmount;
+    if (data.isPrivate !== undefined) this._isPrivate = data.isPrivate;
   }
 
   setTransactionId(transactionId: string): void {

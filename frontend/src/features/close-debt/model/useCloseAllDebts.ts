@@ -41,7 +41,14 @@ export function useCloseAllDebts() {
     const sorted = sortDebtsByDateAsc(debts);
 
     try {
+      // Pre-compute (debt, allocatedAmount) pairs synchronously
       let budget = paymentAmount;
+      const paymentPlan: {
+        debt: Debt;
+        amount: number;
+        forgive: boolean;
+        excessCategoryId?: string;
+      }[] = [];
 
       for (let i = 0; i < sorted.length; i++) {
         const debt = sorted[i];
@@ -58,21 +65,31 @@ export function useCloseAllDebts() {
         const isLastPaidDebt = budget === 0 || i === sorted.length - 1;
         const hasExcess = isLastPaidDebt && excessAmount > 0;
 
-        const success = await makePartialPayment(
+        paymentPlan.push({
           debt,
-          allocated + (hasExcess ? excessAmount : 0),
+          amount: allocated + (hasExcess ? excessAmount : 0),
+          forgive: !!(options?.forgiveRemainder && allocated < debt.remaining_amount),
+          excessCategoryId: hasExcess ? options?.excessCategoryId : undefined,
+        });
+      }
+
+      // Execute payments sequentially (same account — parallel would cause balance race conditions)
+      for (const plan of paymentPlan) {
+        const success = await makePartialPayment(
+          plan.debt,
+          plan.amount,
           selectedAccountId,
           userId,
           {
             skipInvalidation: true,
             skipToast: true,
-            forgiveRemainder: options?.forgiveRemainder && allocated < debt.remaining_amount,
-            excessCategoryId: hasExcess ? options?.excessCategoryId : undefined,
+            forgiveRemainder: plan.forgive,
+            excessCategoryId: plan.excessCategoryId,
           },
         );
 
         if (!success) {
-          throw new Error(`Failed to close debt ${debt.id}`);
+          throw new Error(`Failed to close debt ${plan.debt.id}`);
         }
 
         progress.value++;

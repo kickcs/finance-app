@@ -25,6 +25,10 @@ export interface PersonGroup {
   hasPrivate: boolean;
 }
 
+function toCurrencyItems(currencies: string[]) {
+  return currencies.map((c) => ({ id: c, label: c }));
+}
+
 export function useDebtsPageState() {
   const router = useRouter();
   const route = useRoute();
@@ -32,7 +36,7 @@ export function useDebtsPageState() {
   const { userId } = useCurrentUser();
   const { currency } = useUserCurrency();
   const { convert } = useExchangeRates(currency);
-  const { debts, isLoading, updateDebt } = useDebts(userId);
+  const { debts, isLoading, updateDebt, refetch } = useDebts(userId);
   const { accounts } = useAccounts(userId);
 
   // --- Filters ---
@@ -80,10 +84,6 @@ export function useDebtsPageState() {
   const availableClosedCurrencies = computed(() =>
     Array.from(new Set(baseClosedDebts.value.map((d) => d.currency))).sort(),
   );
-
-  function toCurrencyItems(currencies: string[]) {
-    return currencies.map((c) => ({ id: c, label: c }));
-  }
 
   const activeCurrencyItems = computed(() => toCurrencyItems(availableCurrencies.value));
   const closedCurrencyItems = computed(() => toCurrencyItems(availableClosedCurrencies.value));
@@ -240,6 +240,8 @@ export function useDebtsPageState() {
     }
   }
 
+  // TODO: This logic is duplicated in DebtDetailPage.vue (with different post-payment navigation).
+  // Consider extracting a shared helper, e.g. `makePartialPaymentFlow(debt, amount, accountId, userId, options)`.
   async function handlePartialPayment(
     amount: number,
     accountId: string,
@@ -269,6 +271,10 @@ export function useDebtsPageState() {
 
   function handleDetailClose() {
     selectedDebtId.value = null;
+  }
+
+  async function handleRefresh() {
+    await refetch();
   }
 
   return {
@@ -329,5 +335,6 @@ export function useDebtsPageState() {
     handlePartialPayment,
     handleDetailTogglePrivate,
     handleDetailClose,
+    handleRefresh,
   };
 }

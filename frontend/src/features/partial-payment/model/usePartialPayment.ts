@@ -1,11 +1,11 @@
 import { ref } from 'vue';
 import { transactionsApi } from '@/entities/transaction';
-import { debtsApi } from '@/entities/debt';
+import { debtsApi, getDebtDisplayName } from '@/entities/debt';
 import { queryClient } from '@/shared/api/queryClient';
 import { invalidateDebtRelated } from '@/shared/api/invalidation';
 import { useToast } from '@/shared/ui';
 import { CATEGORY_IDS } from '@/entities/category';
-import { DEFAULT_CURRENCY } from '@/entities/currency/model/constants';
+import { DEFAULT_CURRENCY } from '@/entities/currency';
 import type { Debt } from '@/shared/api/database.types';
 
 interface PartialPaymentOptions {
@@ -37,9 +37,9 @@ export function usePartialPayment() {
       return false;
     }
 
-    const excess = paymentAmount - debt.remaining_amount;
-    const isOverpayment = excess > 0;
-    if (isOverpayment && !options?.excessCategoryId) {
+    // Pre-check overpayment for validation (recomputed after fresh fetch)
+    const preCheckExcess = paymentAmount - debt.remaining_amount;
+    if (preCheckExcess > 0 && !options?.excessCategoryId) {
       error.value = 'Выберите категорию для переплаты';
       return false;
     }
@@ -52,6 +52,7 @@ export function usePartialPayment() {
     try {
       // In single-payment mode, re-fetch debt to prevent stale cache double-close.
       // Skipped in bulk mode (skipInvalidation=true) where caller manages freshness.
+      let effectiveDebt = debt;
       if (!options?.skipInvalidation) {
         const freshDebt = await debtsApi.getById(debt.id);
         if (freshDebt?.is_closed) {
@@ -61,32 +62,38 @@ export function usePartialPayment() {
         }
         // Use fresh remaining_amount if available
         if (freshDebt) {
-          debt = { ...debt, remaining_amount: freshDebt.remaining_amount };
+          effectiveDebt = { ...debt, remaining_amount: freshDebt.remaining_amount };
         }
       }
 
-      const isGiven = debt.debt_type === 'given';
+      // Recompute against fresh remaining_amount
+      const excess = paymentAmount - effectiveDebt.remaining_amount;
+      const isOverpayment = excess > 0;
+
+      const isGiven = effectiveDebt.debt_type === 'given';
       const transactionType = isGiven ? 'income' : 'expense';
       const categoryId = isGiven
         ? CATEGORY_IDS.DEBT_RETURN_TO_ME
         : CATEGORY_IDS.DEBT_RETURN_FROM_ME;
-      const hadBalanceEffect = !!debt.transaction_id || !!debt.source_transaction_id;
+      const hadBalanceEffect =
+        !!effectiveDebt.transaction_id || !!effectiveDebt.source_transaction_id;
 
-      const actualPayment = isOverpayment ? debt.remaining_amount : paymentAmount;
+      const actualPayment = isOverpayment ? effectiveDebt.remaining_amount : paymentAmount;
 
       let closeTransactionId: string | undefined;
 
       // 1. Create debt return transaction (if there's an actual payment)
       if (actualPayment > 0) {
-        const isClosed = actualPayment >= debt.remaining_amount || !!options?.forgiveRemainder;
+        const isClosed =
+          actualPayment >= effectiveDebt.remaining_amount || !!options?.forgiveRemainder;
 
         let description: string;
-        if (isClosed && debt.source_transaction_id) {
-          description = `Возврат от ${debt.person_name}: доля в общем счёте`;
+        if (isClosed && effectiveDebt.source_transaction_id) {
+          description = `Возврат от ${getDebtDisplayName(effectiveDebt)}: доля в общем счёте`;
         } else if (isClosed) {
-          description = `Закрытие долга: ${debt.person_name || debt.name}`;
+          description = `Закрытие долга: ${getDebtDisplayName(effectiveDebt)}`;
         } else {
-          description = `Частичный платёж: ${debt.person_name || debt.name}`;
+          description = `Частичный платёж: ${getDebtDisplayName(effectiveDebt)}`;
         }
 
         const transaction = await transactionsApi.create({
@@ -99,7 +106,7 @@ export function usePartialPayment() {
           description,
           date: new Date().toISOString(),
           is_debt_related: hadBalanceEffect,
-          debt_id: debt.id,
+          debt_id: effectiveDebt.id,
         });
 
         closeTransactionId = transaction.id;
@@ -115,28 +122,30 @@ export function usePartialPayment() {
           amount: excess,
           currency: debtCurrency,
           type: excessType,
-          description: `Переплата по долгу: ${debt.person_name || debt.name}`,
+          description: `Переплата по долгу: ${getDebtDisplayName(effectiveDebt)}`,
           date: new Date().toISOString(),
           is_debt_related: false,
         });
       }
 
+      // Remaining amount after payment (also used as forgiven amount when forgiving)
+      const remainingAfterPayment = effectiveDebt.remaining_amount - actualPayment;
+
       // 3. Create forgiveness expense transaction (gift)
       // Only create balance-affecting forgiveness when debt has no source transaction,
       // otherwise the money was already accounted for in the original expense
       if (options?.forgiveRemainder) {
-        const forgivenAmount = debt.remaining_amount - actualPayment;
-        if (forgivenAmount > 0 && !hadBalanceEffect) {
+        if (remainingAfterPayment > 0 && !hadBalanceEffect) {
           const giftType = isGiven ? 'expense' : 'income';
           const giftCategoryId = isGiven ? CATEGORY_IDS.GIFTS : CATEGORY_IDS.GIFTS_INCOME;
           const tx = await transactionsApi.create({
             user_id: userId,
             account_id: selectedAccountId,
             category_id: giftCategoryId,
-            amount: forgivenAmount,
+            amount: remainingAfterPayment,
             currency: debtCurrency,
             type: giftType,
-            description: `Прощение долга: ${debt.person_name || debt.name}`,
+            description: `Прощение долга: ${getDebtDisplayName(effectiveDebt)}`,
             date: new Date().toISOString(),
             is_debt_related: false,
           });
@@ -148,16 +157,16 @@ export function usePartialPayment() {
       }
 
       // 4. Update debt
-      const newRemaining = debt.remaining_amount - actualPayment;
+      const newRemaining = remainingAfterPayment;
       const willClose = isOverpayment || options?.forgiveRemainder || newRemaining <= 0;
 
-      await debtsApi.update(debt.id, {
+      await debtsApi.update(effectiveDebt.id, {
         remaining_amount: willClose ? 0 : Math.max(0, newRemaining),
         is_closed: !!willClose,
         ...(willClose && closeTransactionId ? { close_transaction_id: closeTransactionId } : {}),
         ...(options?.forgiveRemainder
           ? {
-              forgiven_amount: debt.remaining_amount - actualPayment,
+              forgiven_amount: remainingAfterPayment,
             }
           : {}),
       });

@@ -9,11 +9,13 @@ import {
   IsBoolean,
   Min,
   Max,
+  MaxLength,
 } from 'class-validator';
 
 export class CreateDebtDto {
   @IsString()
   @IsNotEmpty()
+  @MaxLength(200)
   name: string;
 
   @IsNumber()
@@ -41,6 +43,7 @@ export class CreateDebtDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(200)
   personName?: string;
 
   @IsOptional()
@@ -49,6 +52,7 @@ export class CreateDebtDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(10)
   currency?: string;
 
   @IsOptional()
@@ -65,6 +69,7 @@ export class CreateDebtDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(1000)
   description?: string;
 
   @IsOptional()

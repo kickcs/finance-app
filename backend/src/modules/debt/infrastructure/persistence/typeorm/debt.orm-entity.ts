@@ -55,7 +55,7 @@ export class DebtOrmEntity {
   @Column({ name: 'is_closed', default: false })
   isClosed: boolean;
 
-  @Column({ default: 'UZS' })
+  @Column({ default: 'USD' })
   currency: string;
 
   @Column({ name: 'source_transaction_id', nullable: true, type: 'uuid' })
@@ -69,4 +69,7 @@ export class DebtOrmEntity {
 
   @Column({ name: 'forgiven_amount', type: 'decimal', precision: 18, scale: 2, default: 0 })
   forgivenAmount: number;
+
+  @Column({ name: 'is_private', type: 'boolean', default: false })
+  isPrivate: boolean;
 }

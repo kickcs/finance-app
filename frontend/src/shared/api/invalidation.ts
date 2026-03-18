@@ -58,7 +58,7 @@ export async function invalidateDebtRelated(
   userId: string,
 ): Promise<void> {
   await Promise.all([
-    queryClient.invalidateQueries({ queryKey: debtQueryKeys.list(userId) }),
+    queryClient.invalidateQueries({ queryKey: debtQueryKeys.all }),
     invalidateTransactionRelated(queryClient, userId),
     invalidateAccountRelated(queryClient, userId),
   ]);

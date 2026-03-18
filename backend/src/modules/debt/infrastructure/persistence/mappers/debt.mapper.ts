@@ -16,7 +16,7 @@ export class DebtMapper {
         ormEntity.monthlyPayment !== null
           ? Money.create(Number(ormEntity.monthlyPayment), currency)
           : null,
-      nextPaymentDate: ormEntity.nextPaymentDate,
+      nextPaymentDate: ormEntity.nextPaymentDate ? new Date(ormEntity.nextPaymentDate) : null,
       debtType: DebtType.create(ormEntity.debtType),
       personName: ormEntity.personName,
       accountId: ormEntity.accountId,
@@ -28,6 +28,7 @@ export class DebtMapper {
       description: ormEntity.description,
       closedAt: ormEntity.closedAt,
       forgivenAmount: Number(ormEntity.forgivenAmount),
+      isPrivate: ormEntity.isPrivate,
     });
   }
 
@@ -52,6 +53,7 @@ export class DebtMapper {
     ormEntity.description = debt.description;
     ormEntity.closedAt = debt.closedAt;
     ormEntity.forgivenAmount = debt.forgivenAmount;
+    ormEntity.isPrivate = debt.isPrivate;
     return ormEntity;
   }
 }

@@ -296,6 +296,7 @@ export type Database = {
           description: string | null;
           closed_at: string | null;
           forgiven_amount: number;
+          is_private: boolean;
         };
         Insert: {
           id?: string;
@@ -317,6 +318,7 @@ export type Database = {
           description?: string | null;
           closed_at?: string | null;
           forgiven_amount?: number;
+          is_private?: boolean;
         };
         Update: {
           id?: string;
@@ -338,6 +340,7 @@ export type Database = {
           description?: string | null;
           closed_at?: string | null;
           forgiven_amount?: number;
+          is_private?: boolean;
         };
         Relationships: [];
       };

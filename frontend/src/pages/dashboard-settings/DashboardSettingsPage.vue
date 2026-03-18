@@ -100,7 +100,7 @@ function isAccountVisible(accountId: string) {
 
     <main class="flex-1 overflow-y-auto px-4 pt-6 pb-28 space-y-8">
       <!-- Section 1: Widgets -->
-      <section class="space-y-2">
+      <section data-testid="widgets-section" class="space-y-2">
         <div class="px-2">
           <h2
             class="text-body-sm font-medium text-text-secondary-light dark:text-text-secondary-dark uppercase tracking-wide"
@@ -123,6 +123,7 @@ function isAccountVisible(accountId: string) {
           >
             <template #item="{ element, index }: { element: WidgetItem; index: number }">
               <div
+                :data-testid="`widget-item-${element.id}`"
                 class="flex items-center gap-3 p-4 bg-card-light dark:bg-card-dark transition-colors duration-200"
                 :class="{
                   'border-b border-border-light dark:border-border-dark':
@@ -170,7 +171,11 @@ function isAccountVisible(accountId: string) {
       </section>
 
       <!-- Section 2: Accounts in balance -->
-      <section v-if="accounts && accounts.length > 0" class="space-y-2">
+      <section
+        v-if="accounts && accounts.length > 0"
+        data-testid="accounts-section"
+        class="space-y-2"
+      >
         <div class="px-2">
           <h2
             class="text-body-sm font-medium text-text-secondary-light dark:text-text-secondary-dark uppercase tracking-wide"
@@ -185,6 +190,7 @@ function isAccountVisible(accountId: string) {
           <div
             v-for="(account, index) in accounts"
             :key="account.id"
+            :data-testid="`account-item-${account.id}`"
             class="flex items-center gap-3 p-4 transition-colors duration-200"
             :class="{
               'border-b border-border-light dark:border-border-dark': index !== accounts.length - 1,

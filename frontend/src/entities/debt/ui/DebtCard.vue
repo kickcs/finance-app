@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { UIcon, UProgressBar } from '@/shared/ui';
-import { formatCurrency } from '@/shared/lib/format/currency';
+import { formatCurrency, formatMasked } from '@/shared/lib/format/currency';
 import { formatDate } from '@/shared/lib/format/date';
 import { isPastDate } from '@/shared/lib/date';
 import { DEFAULT_CURRENCY } from '@/shared/config/currency';
+import { useHaptics } from '@/shared/lib/haptics';
 import {
   DEBT_DIRECTION_COLORS,
   DEBT_DIRECTION_DISPLAY,
@@ -18,9 +19,16 @@ const props = defineProps<{
   compact?: boolean;
 }>();
 
-defineEmits<{
+const emit = defineEmits<{
   click: [];
 }>();
+
+const { trigger } = useHaptics();
+
+function handleClick() {
+  trigger('selection');
+  emit('click');
+}
 
 // Use debt's own currency
 const debtCurrency = computed(() => props.debt.currency || DEFAULT_CURRENCY);
@@ -59,8 +67,12 @@ const isFromSplit = computed(() => !!props.debt.source_transaction_id);
       compact ? 'p-2.5' : 'p-3',
       isOverdue && !debt.is_closed && 'bg-danger/[0.03] !border-danger/15',
     ]"
-    :aria-label="`${debtLabel} ${displayName}, ${formatCurrency(debt.remaining_amount, debtCurrency)}`"
-    @click="$emit('click')"
+    :aria-label="
+      debt.is_private
+        ? `${debtLabel}, скрытый долг`
+        : `${debtLabel} ${displayName}, ${formatCurrency(debt.remaining_amount, debtCurrency)}`
+    "
+    @click="handleClick"
   >
     <div class="flex items-center gap-2.5">
       <!-- Icon - now shows debt direction -->
@@ -82,9 +94,15 @@ const isFromSplit = computed(() => !!props.debt.source_transaction_id);
         <div class="flex items-center justify-between gap-2">
           <div class="min-w-0 flex-1">
             <p
-              class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark truncate"
+              class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark truncate flex items-center gap-1"
             >
-              {{ displayName }}
+              {{ debt.is_private ? '•••' : displayName }}
+              <UIcon
+                v-if="debt.is_private"
+                name="visibility_off"
+                size="xs"
+                class="text-text-tertiary-light dark:text-text-tertiary-dark shrink-0"
+              />
             </p>
             <p
               class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark flex items-center gap-1"
@@ -98,7 +116,7 @@ const isFromSplit = computed(() => !!props.debt.source_transaction_id);
           <!-- Right side: amount + badge -->
           <div class="text-right shrink-0">
             <p class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark">
-              {{ formatCurrency(debt.remaining_amount, debtCurrency) }}
+              {{ formatMasked(debt.remaining_amount, debtCurrency, debt.is_private) }}
             </p>
             <!-- Closed badge or date -->
             <span v-if="debt.is_closed" class="text-xs text-success">Погашен</span>
@@ -114,9 +132,9 @@ const isFromSplit = computed(() => !!props.debt.source_transaction_id);
           </div>
         </div>
 
-        <!-- Progress Bar (only if not closed) -->
+        <!-- Progress Bar (only if not closed and has progress) -->
         <UProgressBar
-          v-if="!debt.is_closed"
+          v-if="progress > 0 && !debt.is_closed"
           :value="progress"
           :color="isOverdue ? 'var(--color-danger)' : debtColor"
           size="xs"

@@ -54,6 +54,16 @@ const paymentTransactions = computed(() => {
         </p>
       </div>
 
+      <!-- Empty state when no payments yet -->
+      <div v-if="paymentTransactions.length === 0 && !debt.is_closed" class="relative mb-4">
+        <div
+          class="absolute -left-5 top-0.5 w-2.5 h-2.5 rounded-full bg-border-light dark:bg-border-dark border-2 border-card-light dark:border-card-dark shadow-[0_0_0_2px] shadow-border-light dark:shadow-border-dark"
+        />
+        <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark italic">
+          Платежей пока нет
+        </p>
+      </div>
+
       <!-- Payment nodes -->
       <div v-for="tx in paymentTransactions" :key="tx.id" class="relative mb-4">
         <div
@@ -64,7 +74,7 @@ const paymentTransactions = computed(() => {
         </p>
         <p class="text-xs text-success">+{{ formatCurrency(tx.amount, tx.currency) }}</p>
         <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
-          {{ formatDate(tx.created_at, { format: 'short' }) }}
+          {{ formatDate(tx.date || tx.created_at, { format: 'short' }) }}
           <template v-if="tx.description">· {{ tx.description }}</template>
         </p>
       </div>
@@ -79,6 +89,12 @@ const paymentTransactions = computed(() => {
         </p>
         <p class="text-xs text-warning">
           {{ formatCurrency(debt.forgiven_amount, debt.currency) }}
+        </p>
+        <p
+          v-if="debt.closed_at"
+          class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
+        >
+          {{ formatDate(debt.closed_at, { format: 'short' }) }}
         </p>
       </div>
 

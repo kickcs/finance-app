@@ -1,4 +1,4 @@
-import { http } from '@/shared/api/http';
+import { http, HttpError } from '@/shared/api/http';
 import type { Debt, DebtInsert } from '@/shared/api/database.types';
 
 // Response type from NestJS backend (camelCase)
@@ -51,8 +51,8 @@ function transformDebt(debt: DebtResponse): Debt {
 }
 
 export const debtsApi = {
-  async getAll(_userId: string): Promise<Debt[]> {
-    // Backend gets userId from JWT token
+  async getAll(_userId?: string): Promise<Debt[]> {
+    // Backend gets userId from JWT token — _userId kept for caller compatibility
     const data = await http.get<DebtResponse[]>('/debts');
     return data.map(transformDebt);
   },
@@ -61,8 +61,11 @@ export const debtsApi = {
     try {
       const data = await http.get<DebtResponse>(`/debts/${debtId}`);
       return transformDebt(data);
-    } catch {
-      return null;
+    } catch (error) {
+      if (error instanceof HttpError && error.status === 404) {
+        return null;
+      }
+      throw error;
     }
   },
 
@@ -89,24 +92,29 @@ export const debtsApi = {
   },
 
   async update(id: string, updates: Partial<Debt>): Promise<Debt> {
-    const data = await http.patch<DebtResponse>(`/debts/${id}`, {
-      name: updates.name,
-      totalAmount: updates.total_amount,
-      remainingAmount: updates.remaining_amount,
-      monthlyPayment: updates.monthly_payment,
-      nextPaymentDate: updates.next_payment_date,
-      debtType: updates.debt_type,
-      personName: updates.person_name,
-      accountId: updates.account_id,
-      transactionId: updates.transaction_id,
-      closeTransactionId: updates.close_transaction_id,
-      isClosed: updates.is_closed,
-      currency: updates.currency,
-      sourceTransactionId: updates.source_transaction_id,
-      description: updates.description,
-      forgivenAmount: updates.forgiven_amount,
-      isPrivate: updates.is_private,
-    });
+    // Build payload with only defined keys (keep null — needed to clear nullable fields via PATCH)
+    const payload: Record<string, unknown> = {};
+    if (updates.name !== undefined) payload.name = updates.name;
+    if (updates.total_amount !== undefined) payload.totalAmount = updates.total_amount;
+    if (updates.remaining_amount !== undefined) payload.remainingAmount = updates.remaining_amount;
+    if (updates.monthly_payment !== undefined) payload.monthlyPayment = updates.monthly_payment;
+    if (updates.next_payment_date !== undefined)
+      payload.nextPaymentDate = updates.next_payment_date;
+    if (updates.debt_type !== undefined) payload.debtType = updates.debt_type;
+    if (updates.person_name !== undefined) payload.personName = updates.person_name;
+    if (updates.account_id !== undefined) payload.accountId = updates.account_id;
+    if (updates.transaction_id !== undefined) payload.transactionId = updates.transaction_id;
+    if (updates.close_transaction_id !== undefined)
+      payload.closeTransactionId = updates.close_transaction_id;
+    if (updates.is_closed !== undefined) payload.isClosed = updates.is_closed;
+    if (updates.currency !== undefined) payload.currency = updates.currency;
+    if (updates.source_transaction_id !== undefined)
+      payload.sourceTransactionId = updates.source_transaction_id;
+    if (updates.description !== undefined) payload.description = updates.description;
+    if (updates.forgiven_amount !== undefined) payload.forgivenAmount = updates.forgiven_amount;
+    if (updates.is_private !== undefined) payload.isPrivate = updates.is_private;
+
+    const data = await http.patch<DebtResponse>(`/debts/${id}`, payload);
     return transformDebt(data);
   },
 

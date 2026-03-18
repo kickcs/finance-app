@@ -2,6 +2,7 @@
  * Date utility functions
  */
 import { CalendarDate, type DateValue } from '@internationalized/date';
+import { formatLocalDate } from '@/shared/lib/format/date';
 
 /**
  * Check if a date string represents today
@@ -68,4 +69,14 @@ export function isoToCalendarDate(dateStr: string | null | undefined): DateValue
 export function dateValueToISO(date: DateValue | undefined): string | null {
   if (!date) return null;
   return `${date.year}-${String(date.month).padStart(2, '0')}-${String(date.day).padStart(2, '0')}`;
+}
+
+/**
+ * Convert ISO date string (YYYY-MM-DD) to a localized display string.
+ * Constructs the Date in local timezone to avoid UTC-offset issues
+ * (e.g. "2026-03-18" not becoming "17 марта" in UTC+5).
+ */
+export function isoToDisplayDate(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  return formatLocalDate(new Date(y, m - 1, d).getTime());
 }

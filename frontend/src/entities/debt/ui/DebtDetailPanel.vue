@@ -15,6 +15,7 @@ defineEmits<{
   payment: [];
   edit: [];
   delete: [];
+  'toggle-private': [value: boolean];
 }>();
 
 // Get debts and accounts
@@ -58,6 +59,7 @@ const debt = computed(() => {
       @payment="$emit('payment')"
       @edit="$emit('edit')"
       @delete="$emit('delete')"
+      @toggle-private="$emit('toggle-private', $event)"
     />
   </div>
 </template>

@@ -2,11 +2,12 @@
 import { ref, computed, watch } from 'vue';
 import { UModal, UButton, UIcon, UInput } from '@/shared/ui';
 import { CategoryChips, INCOME_CATEGORIES, EXPENSE_CATEGORIES } from '@/entities/category';
-import { formatCurrency } from '@/shared/lib/format/currency';
-import { DEFAULT_CURRENCY } from '@/entities/currency/model/constants';
+import { formatCurrency, getCurrencySymbol } from '@/shared/lib/format/currency';
+import { DEFAULT_CURRENCY } from '@/entities/currency';
 import type { Debt } from '@/shared/api/database.types';
 import type { AccountWithBalances } from '@/entities/account';
-import { useDebtPaymentForm, ForgivenessToggle } from '@/entities/debt';
+import { useDebtPaymentForm, ForgivenessToggle, getDebtDisplayName } from '@/entities/debt';
+import { useHaptics } from '@/shared/lib/haptics';
 
 const props = defineProps<{
   modelValue: boolean;
@@ -24,6 +25,8 @@ const emit = defineEmits<{
   ];
   cancel: [];
 }>();
+
+const { trigger } = useHaptics();
 
 const selectedAccountId = ref<string | null>(null);
 
@@ -52,6 +55,7 @@ watch(
 );
 
 const debtCurrency = computed(() => props.debt?.currency || DEFAULT_CURRENCY);
+const currencySymbol = computed(() => getCurrencySymbol(debtCurrency.value));
 
 const isValid = computed(() => {
   if (!props.debt || !selectedAccountId.value) return false;
@@ -77,12 +81,23 @@ function close() {
 
 function confirm() {
   if (isValid.value && selectedAccountId.value) {
+    trigger('selection');
     emit('confirm', paymentAmount.value, selectedAccountId.value, {
       forgiveRemainder: forgiveRemainder.value,
       excessCategoryId: isOverpayment.value ? excessCategoryId.value : undefined,
     });
   }
 }
+
+// Haptic feedback when payment completes (isPaying goes from true to false while modal is open)
+watch(
+  () => props.isPaying,
+  (paying, wasPaying) => {
+    if (wasPaying && !paying && props.modelValue) {
+      trigger('success');
+    }
+  },
+);
 
 function setForgiveOnly() {
   paymentAmount.value = 0;
@@ -104,7 +119,7 @@ function setForgiveOnly() {
             {{ debt.debt_type === 'given' ? 'Вам должны' : 'Вы должны' }}
           </span>
           <span class="font-bold text-text-primary-light dark:text-text-primary-dark">
-            {{ debt.person_name || debt.name }}
+            {{ getDebtDisplayName(debt) }}
           </span>
         </div>
         <div class="flex justify-between items-center">
@@ -135,6 +150,7 @@ function setForgiveOnly() {
           type="number"
           placeholder="Введите сумму"
           variant="currency"
+          :suffix="currencySymbol"
         />
       </div>
 
@@ -143,14 +159,31 @@ function setForgiveOnly() {
         <UButton
           variant="secondary"
           size="sm"
-          @click="paymentAmount = Math.round(debt.remaining_amount / 2)"
+          @click="
+            trigger('selection');
+            paymentAmount = Math.round(debt.remaining_amount / 2);
+          "
         >
           50%
         </UButton>
-        <UButton variant="secondary" size="sm" @click="paymentAmount = debt.remaining_amount">
+        <UButton
+          variant="secondary"
+          size="sm"
+          @click="
+            trigger('selection');
+            paymentAmount = debt.remaining_amount;
+          "
+        >
           Полностью
         </UButton>
-        <UButton variant="secondary" size="sm" @click="setForgiveOnly">
+        <UButton
+          variant="secondary"
+          size="sm"
+          @click="
+            trigger('selection');
+            setForgiveOnly();
+          "
+        >
           <UIcon name="volunteer_activism" size="xs" class="mr-1" />
           Простить
         </UButton>
@@ -219,7 +252,7 @@ function setForgiveOnly() {
             :class="
               selectedAccountId === account.id
                 ? 'border-primary bg-primary/10 text-primary'
-                : 'border-gray-200 dark:border-gray-700 bg-surface-light dark:bg-surface-dark'
+                : 'border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark'
             "
             @click="selectedAccountId = account.id"
           >
@@ -255,7 +288,7 @@ function setForgiveOnly() {
     </div>
 
     <template #actions>
-      <UButton variant="secondary" full-width @click="close">Отмена</UButton>
+      <UButton variant="secondary" full-width :disabled="isPaying" @click="close">Отмена</UButton>
       <UButton
         variant="primary"
         full-width

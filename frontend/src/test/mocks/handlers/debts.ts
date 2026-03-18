@@ -24,6 +24,7 @@ export function buildMockDebtResponse(
     description: null,
     closedAt: null,
     forgivenAmount: 0,
+    isPrivate: false,
     ...overrides,
   };
 }
@@ -50,6 +51,7 @@ export const mockGivenDebtResponse = {
   description: null,
   closedAt: null,
   forgivenAmount: 0,
+  isPrivate: false,
 };
 
 export const mockTakenDebtResponse = {
@@ -72,6 +74,7 @@ export const mockTakenDebtResponse = {
   description: null,
   closedAt: null,
   forgivenAmount: 0,
+  isPrivate: false,
 };
 
 export const mockClosedDebtResponse = {
@@ -94,6 +97,7 @@ export const mockClosedDebtResponse = {
   description: null,
   closedAt: '2025-02-01T12:00:00.000Z',
   forgivenAmount: 0,
+  isPrivate: false,
 };
 
 export const mockOverdueDebtResponse = {

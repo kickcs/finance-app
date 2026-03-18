@@ -84,6 +84,16 @@ export const transactionHandlers = [
     });
   }),
 
+  // Update transaction
+  http.patch('*/api/transactions/:id', async ({ request, params }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json({
+      ...mockTransactionResponse,
+      id: params.id,
+      ...body,
+    });
+  }),
+
   // Create transaction
   http.post('*/api/transactions', async ({ request }) => {
     const body = (await request.json()) as Record<string, unknown>;

@@ -18,7 +18,7 @@ export function useDebts(userId: MaybeRefOrGetter<string | null>) {
     queryFn: () => {
       const uid = toValue(userId);
       if (!uid) return [];
-      return debtsApi.getAll(uid);
+      return debtsApi.getAll();
     },
     enabled: computed(() => !!toValue(userId)),
   });
@@ -45,8 +45,20 @@ export function useDebts(userId: MaybeRefOrGetter<string | null>) {
         created_at: new Date().toISOString(),
         monthly_payment: null,
         next_payment_date: null,
+        debt_type: newDebt.debt_type ?? 'given',
+        person_name: newDebt.person_name ?? null,
+        account_id: newDebt.account_id ?? null,
+        transaction_id: newDebt.transaction_id ?? null,
+        close_transaction_id: null,
+        is_closed: false,
+        currency: newDebt.currency ?? 'USD',
+        source_transaction_id: newDebt.source_transaction_id ?? null,
+        description: newDebt.description ?? null,
+        closed_at: null,
+        forgiven_amount: newDebt.forgiven_amount ?? 0,
+        is_private: newDebt.is_private ?? false,
         ...newDebt,
-      } as Debt;
+      };
 
       queryClient.setQueryData<Debt[]>(queryKey.value, (old) => [optimisticDebt, ...(old ?? [])]);
 
@@ -120,14 +132,6 @@ export function useDebts(userId: MaybeRefOrGetter<string | null>) {
     return updateMutation.mutateAsync({ id, updates });
   }
 
-  async function makePayment(id: string, amount: number) {
-    const debt = debts.value.find((d) => d.id === id);
-    if (!debt) throw new Error('Debt not found');
-
-    const newRemaining = Math.max(0, debt.remaining_amount - amount);
-    return updateDebt(id, { remaining_amount: newRemaining });
-  }
-
   async function deleteDebt(id: string) {
     return deleteMutation.mutateAsync(id);
   }
@@ -138,7 +142,6 @@ export function useDebts(userId: MaybeRefOrGetter<string | null>) {
     error,
     createDebt,
     updateDebt,
-    makePayment,
     deleteDebt,
     refetch,
   };

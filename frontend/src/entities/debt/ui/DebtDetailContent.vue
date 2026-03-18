@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { UButton, UIcon, UCard, UProgressBar, UBadge, IconBadge } from '@/shared/ui';
-import { formatCurrency } from '@/shared/lib/format/currency';
+import { UButton, UIcon, UCard, UProgressBar, UBadge, IconBadge, UToggle } from '@/shared/ui';
+import { formatMasked } from '@/shared/lib/format/currency';
 import { formatDate } from '@/shared/lib/format/date';
 import { isPastDate } from '@/shared/lib/date';
+import { useHaptics } from '@/shared/lib/haptics';
 import {
   DEBT_DIRECTION_LABELS,
   DEBT_DIRECTION_COLORS,
@@ -22,11 +23,34 @@ const props = defineProps<{
   transactionsLoading: boolean;
 }>();
 
-defineEmits<{
+const emit = defineEmits<{
   payment: [];
   edit: [];
   delete: [];
+  'toggle-private': [value: boolean];
 }>();
+
+const { trigger } = useHaptics();
+
+function handlePayment() {
+  trigger('selection');
+  emit('payment');
+}
+
+function handleEdit() {
+  trigger('selection');
+  emit('edit');
+}
+
+function handleDelete() {
+  trigger('selection');
+  emit('delete');
+}
+
+function handleTogglePrivate(value: boolean) {
+  trigger('selection');
+  emit('toggle-private', value);
+}
 
 // Find linked account
 const linkedAccount = computed(() => {
@@ -61,7 +85,7 @@ const isOverdue = computed(
         <!-- Info -->
         <div class="flex-1 min-w-0 pt-1">
           <p class="text-xl font-bold text-text-primary-light dark:text-text-primary-dark truncate">
-            {{ getDebtDisplayName(debt) }}
+            {{ debt.is_private ? '•••' : getDebtDisplayName(debt) }}
           </p>
           <p
             class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mt-0.5"
@@ -74,14 +98,31 @@ const isOverdue = computed(
         <UBadge v-if="debt.is_closed" variant="success" shape="pill" class="mt-1">Погашен</UBadge>
       </div>
 
+      <!-- Privacy toggle -->
+      <div
+        class="flex items-center justify-between py-3 border-b border-border-light dark:border-border-dark"
+      >
+        <div class="flex items-center gap-2">
+          <UIcon
+            name="visibility_off"
+            size="sm"
+            class="text-text-tertiary-light dark:text-text-tertiary-dark"
+          />
+          <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
+            Скрытый долг
+          </span>
+        </div>
+        <UToggle :model-value="debt.is_private" @update:model-value="handleTogglePrivate" />
+      </div>
+
       <!-- Amount Section -->
-      <div class="mt-6 pt-6 border-t border-border-light dark:border-border-dark">
+      <div class="mt-4 pt-4">
         <div class="flex justify-between items-end mb-3">
           <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
             {{ debt.is_closed ? 'Сумма' : 'Осталось' }}
           </span>
           <span class="text-2xl font-bold text-text-primary-light dark:text-text-primary-dark">
-            {{ formatCurrency(debt.remaining_amount, debt.currency) }}
+            {{ formatMasked(debt.remaining_amount, debt.currency, debt.is_private) }}
           </span>
         </div>
 
@@ -94,7 +135,13 @@ const isOverdue = computed(
             Уже выплачено
           </span>
           <span class="text-sm font-medium text-success">
-            {{ formatCurrency(debt.total_amount - debt.remaining_amount, debt.currency) }}
+            {{
+              formatMasked(
+                debt.total_amount - debt.remaining_amount,
+                debt.currency,
+                debt.is_private,
+              )
+            }}
           </span>
         </div>
 
@@ -108,7 +155,9 @@ const isOverdue = computed(
             class="flex justify-between text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
           >
             <span>Погашено {{ progress }}%</span>
-            <span>Всего: {{ formatCurrency(debt.total_amount, debt.currency) }}</span>
+            <span>
+              Всего: {{ formatMasked(debt.total_amount, debt.currency, debt.is_private) }}
+            </span>
           </div>
         </div>
       </div>
@@ -142,7 +191,7 @@ const isOverdue = computed(
           Исходная сумма
         </span>
         <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
-          {{ formatCurrency(debt.total_amount, debt.currency) }}
+          {{ formatMasked(debt.total_amount, debt.currency, debt.is_private) }}
         </span>
       </div>
 
@@ -207,14 +256,14 @@ const isOverdue = computed(
         size="lg"
         full-width
         data-testid="payment-btn"
-        @click="$emit('payment')"
+        @click="handlePayment"
       >
         <UIcon name="payments" size="sm" class="mr-1.5" />
         Внести платёж
       </UButton>
 
       <div class="grid grid-cols-2 gap-3">
-        <UButton variant="secondary" size="md" full-width @click="$emit('edit')">
+        <UButton variant="secondary" size="md" full-width @click="handleEdit">
           <UIcon name="edit" size="sm" class="mr-1.5" />
           Редактировать
         </UButton>
@@ -224,7 +273,7 @@ const isOverdue = computed(
           full-width
           class="text-danger"
           data-testid="delete-debt-btn"
-          @click="$emit('delete')"
+          @click="handleDelete"
         >
           <UIcon name="delete" size="sm" class="mr-1.5" />
           Удалить
@@ -233,14 +282,7 @@ const isOverdue = computed(
     </div>
 
     <!-- Delete Button for Closed Debts -->
-    <UButton
-      v-else
-      variant="ghost"
-      size="lg"
-      full-width
-      class="text-danger"
-      @click="$emit('delete')"
-    >
+    <UButton v-else variant="ghost" size="lg" full-width class="text-danger" @click="handleDelete">
       <UIcon name="delete" size="sm" class="mr-2" />
       Удалить долг
     </UButton>
