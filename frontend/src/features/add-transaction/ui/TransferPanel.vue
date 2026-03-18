@@ -52,6 +52,13 @@ function recalcToAmount(amount: number, rate: number | null): number | null {
   return Math.round(amount * rate * 100) / 100;
 }
 
+function applyApiRate(fromCurrency: string, toCurrency: string): number | null {
+  const rate = loadRateFromApi(fromCurrency, toCurrency);
+  exchangeRate.value = rate;
+  isUserEditingRate.value = false;
+  return recalcToAmount(props.formData.amount, rate);
+}
+
 // Target account state
 const targetAccount = computed(() =>
   props.accounts.find((a) => a.id === props.formData.toAccountId),
@@ -95,16 +102,9 @@ const isIntraAccount = computed(
 watch(
   () => [props.formData.currency, props.formData.toCurrency, rates.value] as const,
   ([fromCurrency, toCurrency]) => {
-    if (
-      fromCurrency &&
-      toCurrency &&
-      fromCurrency !== toCurrency &&
-      !isUserEditingRate.value &&
-      exchangeRate.value === null
-    ) {
+    if (fromCurrency && toCurrency && fromCurrency !== toCurrency && !isUserEditingRate.value) {
       const rate = loadRateFromApi(fromCurrency, toCurrency);
       exchangeRate.value = rate;
-      isUserEditingRate.value = false;
       const toAmount = recalcToAmount(props.formData.amount, rate);
       if (toAmount !== null) {
         emit('update:formData', { ...props.formData, toAmount });
@@ -126,11 +126,8 @@ function handleSourceSelect(accountId: string) {
   if (props.formData.toAccountId === accountId) {
     const otherCurrencies = account?.balances.filter((b) => b.currency !== firstCurrency) || [];
     if (otherCurrencies.length > 0) {
-      const rate = loadRateFromApi(firstCurrency, otherCurrencies[0].currency);
-      exchangeRate.value = rate;
-      isUserEditingRate.value = false;
       updates.toCurrency = otherCurrencies[0].currency;
-      updates.toAmount = recalcToAmount(props.formData.amount, rate);
+      updates.toAmount = applyApiRate(firstCurrency, otherCurrencies[0].currency);
     } else {
       updates.toAccountId = null;
       updates.toCurrency = null;
@@ -157,10 +154,7 @@ function handleTargetSelect(accountId: string) {
     firstCurrency = account?.balances[0]?.currency || DEFAULT_CURRENCY;
   }
 
-  const rate = loadRateFromApi(props.formData.currency, firstCurrency);
-  exchangeRate.value = rate;
-  isUserEditingRate.value = false;
-  const toAmount = recalcToAmount(props.formData.amount, rate);
+  const toAmount = applyApiRate(props.formData.currency, firstCurrency);
 
   emit('update:formData', {
     ...props.formData,
@@ -179,10 +173,7 @@ function handleSwap() {
   const newTargetId = props.formData.accountId;
   const newTargetCurrency = props.formData.currency;
 
-  const rate = loadRateFromApi(newSourceCurrency, newTargetCurrency);
-  exchangeRate.value = rate;
-  isUserEditingRate.value = false;
-  const newToAmount = recalcToAmount(props.formData.amount, rate);
+  const newToAmount = applyApiRate(newSourceCurrency, newTargetCurrency);
 
   emit('update:formData', {
     ...props.formData,
@@ -195,10 +186,7 @@ function handleSwap() {
 }
 
 function handleToCurrencyChange(currency: string) {
-  const rate = loadRateFromApi(props.formData.currency, currency);
-  exchangeRate.value = rate;
-  isUserEditingRate.value = false;
-  const toAmount = recalcToAmount(props.formData.amount, rate);
+  const toAmount = applyApiRate(props.formData.currency, currency);
 
   emit('update:formData', {
     ...props.formData,
@@ -217,17 +205,11 @@ function handleSourceCurrencyChange(newCurrency: string) {
     const account = props.accounts.find((a) => a.id === props.formData.accountId);
     const otherCurrency = account?.balances.find((b) => b.currency !== newCurrency)?.currency;
     if (otherCurrency) {
-      const rate = loadRateFromApi(newCurrency, otherCurrency);
-      exchangeRate.value = rate;
-      isUserEditingRate.value = false;
       updates.toCurrency = otherCurrency;
-      updates.toAmount = recalcToAmount(props.formData.amount, rate);
+      updates.toAmount = applyApiRate(newCurrency, otherCurrency);
     }
   } else if (props.formData.toCurrency && props.formData.toCurrency !== newCurrency) {
-    const rate = loadRateFromApi(newCurrency, props.formData.toCurrency);
-    exchangeRate.value = rate;
-    isUserEditingRate.value = false;
-    updates.toAmount = recalcToAmount(props.formData.amount, rate);
+    updates.toAmount = applyApiRate(newCurrency, props.formData.toCurrency);
   }
 
   emit('update:formData', { ...props.formData, ...updates });
@@ -247,8 +229,8 @@ function handleTargetAmountChange(newToAmount: number) {
 
   if (props.formData.amount > 0) {
     exchangeRate.value = newToAmount / props.formData.amount;
-    isUserEditingRate.value = true;
   }
+  isUserEditingRate.value = true;
 
   emit('update:formData', {
     ...props.formData,
