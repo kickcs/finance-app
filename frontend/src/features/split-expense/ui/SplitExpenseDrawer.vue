@@ -12,6 +12,7 @@ import { UIcon, UButton, UProgressBar, InitialAvatar } from '@/shared/ui';
 import { formatCurrency, formatNumberWithSpaces } from '@/shared/lib/format/currency';
 import { PersonSelector, usePeople } from '@/entities/person';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
+import { useIsDesktop } from '@/shared/lib/composables/useIsDesktop';
 import type { SplitExpenseData, SplitMethod } from '../model/types';
 
 const props = defineProps<{
@@ -32,6 +33,9 @@ const emit = defineEmits<{
   setIsIncluded: [included: boolean];
   setEnabled: [enabled: boolean];
 }>();
+
+const isDesktop = useIsDesktop();
+const drawerDirection = computed(() => (isDesktop.value ? 'right' : 'bottom'));
 
 const { userId } = useCurrentUser();
 const { people, createPerson } = usePeople(userId);
@@ -197,7 +201,7 @@ watch(
       }
       await nextTick();
       if (!props.open) return;
-      setupKeyboardListener();
+      if (!isDesktop.value) setupKeyboardListener();
     } else {
       cleanupKeyboardListener();
     }
@@ -210,15 +214,20 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <DrawerRoot :open="open" @update:open="handleOpenChange">
+  <DrawerRoot :open="open" :direction="drawerDirection" @update:open="handleOpenChange">
     <DrawerPortal>
       <DrawerOverlay class="fixed inset-0 z-50 bg-black/40" />
       <DrawerContent
         ref="drawerContentRef"
-        class="fixed bottom-0 left-0 right-0 z-50 flex flex-col rounded-t-2xl bg-card-light dark:bg-card-dark border-t border-border-light dark:border-border-dark max-h-[90dvh]"
+        class="fixed z-50 flex flex-col bg-card-light dark:bg-card-dark"
+        :class="
+          isDesktop
+            ? 'top-0 right-0 bottom-0 w-[420px] rounded-l-2xl border-l border-border-light dark:border-border-dark'
+            : 'bottom-0 left-0 right-0 rounded-t-2xl border-t border-border-light dark:border-border-dark max-h-[90dvh]'
+        "
       >
-        <!-- Handle -->
-        <div class="flex justify-center pt-3 pb-1">
+        <!-- Handle (mobile only) -->
+        <div v-if="!isDesktop" class="flex justify-center pt-3 pb-1">
           <DrawerHandle class="w-10 h-1 rounded-full bg-border-light dark:bg-border-dark" />
         </div>
 
@@ -482,7 +491,11 @@ onBeforeUnmount(() => {
         <div
           ref="footerRef"
           class="px-5 py-3 border-t border-border-light dark:border-border-dark"
-          style="padding-bottom: calc(env(safe-area-inset-bottom, 16px) + 1.5rem)"
+          :style="
+            !isDesktop
+              ? 'padding-bottom: calc(env(safe-area-inset-bottom, 16px) + 1.5rem)'
+              : undefined
+          "
         >
           <UButton
             type="button"
