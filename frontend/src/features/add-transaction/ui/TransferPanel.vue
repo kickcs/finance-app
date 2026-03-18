@@ -115,6 +115,21 @@ watch(
   { immediate: true },
 );
 
+// Auto-select target account when source is set but target is empty
+watch(
+  () =>
+    [props.formData.accountId, props.formData.toAccountId, availableTargetAccounts.value] as const,
+  ([sourceId, targetId, targets]) => {
+    if (sourceId && !targetId && targets.length > 0) {
+      const firstTarget = targets.find((a) => a.id !== sourceId) ?? targets[0];
+      if (firstTarget) {
+        handleTargetSelect(firstTarget.id);
+      }
+    }
+  },
+  { immediate: true },
+);
+
 function handleSourceSelect(accountId: string) {
   const account = props.accounts.find((a) => a.id === accountId);
   const firstCurrency = account?.balances[0]?.currency || DEFAULT_CURRENCY;
