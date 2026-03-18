@@ -304,7 +304,9 @@ onBeforeUnmount(() => {
 
           <!-- Debt date -->
           <div class="space-y-2">
-            <label class="text-xs font-medium text-text-primary-light dark:text-text-primary-dark">
+            <label
+              class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark"
+            >
               Дата
             </label>
             <Popover v-model:open="isDebtDateOpen">
