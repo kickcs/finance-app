@@ -37,7 +37,7 @@ Replace the existing watcher (lines 256-268) with explicit handler functions —
 
 - `handleAmountChange(newAmount)` — sets `amount`, computes `toAmount = newAmount * exchangeRate`, emits both
 - `handleRateChange(newRate)` — sets `exchangeRate`, computes `toAmount = amount * newRate`, emits `toAmount`
-- `handleTargetAmountChange(newToAmount)` — sets `toAmount`, computes `exchangeRate = newToAmount / amount` (guard: `amount > 0`), emits `toAmount`
+- `handleTargetAmountChange(newToAmount)` — sets `toAmount`, computes `exchangeRate = newToAmount / amount` (guard: `amount > 0`), emits `toAmount`. **Behavioral change:** the existing handler back-calculates `amount` from `toAmount`; the new version keeps `amount` unchanged and adjusts `exchangeRate` instead. This is intentional — with the rate field visible, adjusting `toAmount` should change the rate, not the source amount.
 
 The existing `skipWatcherRecalc` flag and the watcher on `[amount, currency, toCurrency]` are **removed**. The parent's `amount` changes already flow through `HeroAmount`'s `@update:amount` → `handleAmountChange`, so a watcher is not needed.
 
@@ -45,7 +45,9 @@ Currency/account change handlers (`handleSourceSelect`, `handleTargetSelect`, `h
 
 ### Loading rate from API
 
-`convertBetween(1, fromCurrency, toCurrency)` returns `1` when rates are not yet loaded (it returns `amount` unchanged). To detect this, check `rates.value` from `useExchangeRates` — if `rates.value` is null/undefined, set `exchangeRate = null` (field shown empty). Otherwise set `exchangeRate = convertBetween(1, from, to)`.
+Destructure `rates` alongside `convertBetween` from the composable: `const { convertBetween, rates } = useExchangeRates(baseCurrency)`.
+
+`convertBetween(1, fromCurrency, toCurrency)` returns `1` when rates are not yet loaded (it returns `amount` unchanged). To detect this, check `rates.value` — if `rates.value` is null/undefined, set `exchangeRate = null` (field shown empty). Otherwise set `exchangeRate = convertBetween(1, from, to)`.
 
 ### Edge cases
 
@@ -110,6 +112,8 @@ Same `Transition name="fee"` as the commission block.
 - The `skipWatcherRecalc` flag is **removed**
 - `calculateConvertedAmount()` still exists but is only used internally by currency/account change handlers to seed `exchangeRate`
 - All handlers that currently call `calculateConvertedAmount` directly are updated to go through `exchangeRate` ref
+- The `@update:amount` binding on the source `HeroAmount` is changed from `updateField('amount', $event)` to `handleAmountChange($event)`
+- `handleTargetAmountChange` no longer back-calculates `amount`; it adjusts `exchangeRate` instead (see handler description above)
 
 ## Files to modify
 
