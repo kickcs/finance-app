@@ -16,34 +16,57 @@ Add a visible, editable exchange rate field to the transfer tab on the Add Trans
 
 ```typescript
 const exchangeRate = ref<number | null>(null)       // 1 sourceCurrency = X targetCurrency
-const lastEditedField = ref<'rate' | 'toAmount' | 'amount'>('amount')
+const isUserEditingRate = ref(false)                 // true while user is editing rate or toAmount
 ```
 
 ### Recalculation rules
 
 | User action | What recalculates |
 |---|---|
-| Edit `amount` | `toAmount = amount * exchangeRate` |
-| Edit `exchangeRate` | `toAmount = amount * exchangeRate` |
-| Edit `toAmount` | `exchangeRate = toAmount / amount` |
-| Change currency/account | `exchangeRate` loaded from API via `convertBetween(1, from, to)`, then `toAmount` recalculated |
-| Swap button | `exchangeRate = 1 / oldRate`, `toAmount` recalculated |
+| Edit `amount` | `toAmount = amount * exchangeRate` (uses stored rate, NOT API) |
+| Edit `exchangeRate` | `toAmount = amount * exchangeRate`, set `isUserEditingRate = true` |
+| Edit `toAmount` | `exchangeRate = toAmount / amount` (only if `amount > 0`), set `isUserEditingRate = true` |
+| Change currency/account | `exchangeRate` loaded from API via `convertBetween(1, from, to)`, then `toAmount` recalculated. Reset `isUserEditingRate = false` |
+| Swap button | `exchangeRate` loaded from API via `convertBetween(1, newSource, newTarget)`, then `toAmount` recalculated. Reset `isUserEditingRate = false` |
 
 ### Preventing circular watchers
 
-`lastEditedField` ref tracks which field the user last edited. The watcher checks this value before deciding what to recalculate, preventing infinite loops.
+Replace the existing watcher (lines 256-268) with explicit handler functions — no watchers for recalculation.
+
+**Approach:** Each input handler (`handleAmountChange`, `handleRateChange`, `handleTargetAmountChange`) directly computes and emits the derived values. No watcher is needed because every change goes through an explicit handler.
+
+- `handleAmountChange(newAmount)` — sets `amount`, computes `toAmount = newAmount * exchangeRate`, emits both
+- `handleRateChange(newRate)` — sets `exchangeRate`, computes `toAmount = amount * newRate`, emits `toAmount`
+- `handleTargetAmountChange(newToAmount)` — sets `toAmount`, computes `exchangeRate = newToAmount / amount` (guard: `amount > 0`), emits `toAmount`
+
+The existing `skipWatcherRecalc` flag and the watcher on `[amount, currency, toCurrency]` are **removed**. The parent's `amount` changes already flow through `HeroAmount`'s `@update:amount` → `handleAmountChange`, so a watcher is not needed.
+
+Currency/account change handlers (`handleSourceSelect`, `handleTargetSelect`, `handleSourceCurrencyChange`, `handleToCurrencyChange`, `handleSwap`) load the rate from API and compute `toAmount` directly — same as today but using `exchangeRate` ref as the intermediate.
+
+### Loading rate from API
+
+`convertBetween(1, fromCurrency, toCurrency)` returns `1` when rates are not yet loaded (it returns `amount` unchanged). To detect this, check `rates.value` from `useExchangeRates` — if `rates.value` is null/undefined, set `exchangeRate = null` (field shown empty). Otherwise set `exchangeRate = convertBetween(1, from, to)`.
 
 ### Edge cases
 
 - `amount === 0` — do not recalculate `exchangeRate` when `toAmount` changes (division by zero). Keep rate as-is.
-- API rate unavailable — `exchangeRate` stays `null`, field shown empty, user enters manually.
+- `exchangeRate <= 0` or `null` — do not recalculate `toAmount`. Show field empty, user must enter a valid rate.
+- API rate unavailable (`rates.value` is null) — `exchangeRate` stays `null`, field shown empty, user enters manually.
 - Rounding — `toAmount` rounded to 2 decimal places (`Math.round(x * 100) / 100`). `exchangeRate` displayed without rounding.
 
 ## UI Design
 
-### Placement
+### Template layout order
 
-New exchange rate section appears **between the target account card and the commission input**, visible only when `showConversion === true` (currencies differ).
+The full template structure when `showConversion` is true:
+
+1. `HeroAmount` — source amount (existing, untouched)
+2. `<div class="relative">` — source card, swap button, target card (existing, untouched)
+3. **Exchange rate section** (NEW) — inside the relative div, after target card, before commission
+4. Commission section (existing, untouched)
+5. `HeroAmount` — target amount / `toAmount` (existing, untouched)
+
+The exchange rate section is placed **inside** the `<div class="relative">` block, after the target account `Popover` and before the commission `Transition`. It shares the same `v-if` condition: visible when `showConversion` is true.
 
 ### Visual design
 
@@ -75,12 +98,19 @@ Same `Transition name="fee"` as the commission block.
 
 ## What does NOT change
 
-- `HeroAmount` components — untouched
+- `HeroAmount` components — both remain untouched (source amount and target `toAmount`)
 - Backend API — untouched
 - `TransactionFormData` interface — no new fields (rate is local ref only)
 - Commission section — untouched
 - Submit logic in `useSubmitTransaction.ts` — untouched (sends `amount` + `toAmount` as before)
 
+## What changes in existing code
+
+- The watcher on `[amount, currency, toCurrency]` (lines 256-268) is **removed**
+- The `skipWatcherRecalc` flag is **removed**
+- `calculateConvertedAmount()` still exists but is only used internally by currency/account change handlers to seed `exchangeRate`
+- All handlers that currently call `calculateConvertedAmount` directly are updated to go through `exchangeRate` ref
+
 ## Files to modify
 
-1. `frontend/src/features/add-transaction/ui/TransferPanel.vue` — add state, UI section, update watcher logic
+1. `frontend/src/features/add-transaction/ui/TransferPanel.vue` — add state, UI section, replace watcher with explicit handlers
