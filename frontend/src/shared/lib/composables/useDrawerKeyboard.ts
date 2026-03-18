@@ -43,9 +43,10 @@ export function useDrawerKeyboard(
     cleanupViewport = () => {
       vv.removeEventListener('resize', onResize);
       vv.removeEventListener('scroll', onResize);
-      drawerEl.style.bottom = '';
-      drawerEl.style.top = '';
-      drawerEl.style.maxHeight = '';
+      const el = (drawerContentRef.value?.$el as HTMLElement | undefined) ?? drawerEl;
+      el.style.bottom = '';
+      el.style.top = '';
+      el.style.maxHeight = '';
       const footerEl = footerRef.value;
       const scrollEl = scrollContainerRef.value;
       if (footerEl) footerEl.style.paddingBottom = '';

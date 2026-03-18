@@ -17,7 +17,7 @@ import { getCurrencyByCode, DEFAULT_CURRENCY } from '@/entities/currency';
 import { PersonSelector, usePeople } from '@/entities/person';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useIsDesktop } from '@/shared/lib/composables/useIsDesktop';
-import { useDrawerKeyboard } from '@/shared/lib/composables/useDrawerKeyboard';
+import { useDrawerKeyboard } from '@/shared/lib/composables';
 import { getTodayISO, isoToCalendarDate, dateValueToISO } from '@/shared/lib/date';
 import { formatLocalDate } from '@/shared/lib/format/date';
 import { useCreateDebt } from '../model/useCreateDebt';

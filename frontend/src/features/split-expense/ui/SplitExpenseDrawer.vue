@@ -13,7 +13,7 @@ import { formatCurrency, formatNumberWithSpaces } from '@/shared/lib/format/curr
 import { PersonSelector, usePeople } from '@/entities/person';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useIsDesktop } from '@/shared/lib/composables/useIsDesktop';
-import { useDrawerKeyboard } from '@/shared/lib/composables/useDrawerKeyboard';
+import { useDrawerKeyboard } from '@/shared/lib/composables';
 import type { SplitExpenseData, SplitMethod } from '../model/types';
 
 const props = defineProps<{
