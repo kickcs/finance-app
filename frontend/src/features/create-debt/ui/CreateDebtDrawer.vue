@@ -428,19 +428,24 @@ onBeforeUnmount(() => {
           </div>
 
           <!-- Skip transaction -->
-          <label class="flex items-center gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              :checked="formData.skipTransaction"
-              class="w-5 h-5 rounded border-border-light dark:border-border-dark text-primary focus:ring-primary"
-              @change="updateField('skipTransaction', ($event.target as HTMLInputElement).checked)"
+          <div class="flex items-center justify-between gap-4">
+            <div>
+              <p class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
+                {{
+                  formData.debt_type === 'given'
+                    ? 'Не списывать с баланса'
+                    : 'Не добавлять на баланс'
+                }}
+              </p>
+              <p class="text-xs text-text-secondary-light dark:text-text-secondary-dark mt-0.5">
+                Транзакция не будет создана
+              </p>
+            </div>
+            <UToggle
+              :model-value="formData.skipTransaction"
+              @update:model-value="updateField('skipTransaction', $event)"
             />
-            <span class="text-sm text-text-primary-light dark:text-text-primary-dark">
-              {{
-                formData.debt_type === 'given' ? 'Не списывать с баланса' : 'Не добавлять на баланс'
-              }}
-            </span>
-          </label>
+          </div>
 
           <!-- Info box -->
           <div
