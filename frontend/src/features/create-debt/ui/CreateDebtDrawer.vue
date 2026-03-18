@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onBeforeUnmount, type ComponentPublicInstance } from 'vue';
+import { ref, computed, watch, nextTick, onBeforeUnmount } from 'vue';
 import { CalendarDate, type DateValue } from '@internationalized/date';
 import {
   DrawerRoot,
@@ -131,9 +131,7 @@ function setupKeyboardListener() {
   cleanupKeyboardListener();
   const vv = window.visualViewport;
   if (!vv) return;
-  const drawerEl = (drawerContentRef.value as ComponentPublicInstance | null)?.$el as
-    | HTMLElement
-    | undefined;
+  const drawerEl = drawerContentRef.value?.$el as HTMLElement | undefined;
   const footerEl = footerRef.value;
   const scrollEl = scrollContainerRef.value;
   if (!drawerEl) return;
@@ -354,14 +352,18 @@ onBeforeUnmount(() => {
             </label>
             <Popover v-model:open="isDueDateOpen">
               <PopoverTrigger as-child>
-                <button
+                <div
+                  role="button"
+                  tabindex="0"
                   type="button"
-                  class="w-full flex items-center justify-between gap-2 px-4 py-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:border-primary/50 transition-all"
+                  class="w-full flex items-center justify-between gap-2 px-4 py-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:border-primary/50 transition-all cursor-pointer"
                   :class="
                     formData.due_date
                       ? 'text-text-primary-light dark:text-text-primary-dark'
                       : 'text-text-tertiary-light dark:text-text-tertiary-dark'
                   "
+                  @keydown.enter.prevent="isDueDateOpen = !isDueDateOpen"
+                  @keydown.space.prevent="isDueDateOpen = !isDueDateOpen"
                 >
                   <div class="flex items-center gap-2">
                     <UIcon name="event" size="sm" />
@@ -382,7 +384,7 @@ onBeforeUnmount(() => {
                     class="transition-transform"
                     :class="{ 'rotate-180': isDueDateOpen }"
                   />
-                </button>
+                </div>
               </PopoverTrigger>
               <PopoverContent class="w-auto p-0" align="start">
                 <Calendar
@@ -435,7 +437,7 @@ onBeforeUnmount(() => {
 
           <!-- Info box -->
           <div
-            v-if="!formData.skipTransaction"
+            v-if="!formData.skipTransaction && formData.account_id"
             class="p-4 rounded-xl bg-surface-light dark:bg-surface-dark"
           >
             <div class="flex items-start gap-3">
