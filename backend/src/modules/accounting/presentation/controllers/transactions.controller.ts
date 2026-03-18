@@ -65,6 +65,7 @@ export class TransactionsController {
         pagination.accountId,
         pagination.categoryId,
         pagination.search,
+        pagination.debtId,
       ),
     );
   }

@@ -5,6 +5,7 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/shared/ui/primitives/
 import { RangeCalendar } from '@/shared/ui/primitives/range-calendar';
 import { UIcon } from '@/shared/ui';
 import { formatDate } from '@/shared/lib/format/date';
+import { isoToCalendarDate, dateValueToISO } from '@/shared/lib/date';
 import type { DateRange } from '../model/types';
 
 const props = defineProps<{
@@ -17,32 +18,16 @@ const emit = defineEmits<{
 
 const isOpen = ref(false);
 
-// Convert string date to CalendarDate
-function parseDate(dateStr: string | null): DateValue | undefined {
-  if (!dateStr) return undefined;
-  const [year, month, day] = dateStr.split('-').map(Number);
-  return new CalendarDate(year, month, day);
-}
-
-// Convert CalendarDate to ISO string
-function toISODate(date: DateValue | undefined): string | null {
-  if (!date) return null;
-  const year = date.year;
-  const month = String(date.month).padStart(2, '0');
-  const day = String(date.day).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
 // Calendar value (DateRange format for reka-ui)
 const calendarValue = computed({
   get: () => ({
-    start: parseDate(props.modelValue.startDate),
-    end: parseDate(props.modelValue.endDate),
+    start: isoToCalendarDate(props.modelValue.startDate),
+    end: isoToCalendarDate(props.modelValue.endDate),
   }),
   set: (value: { start: DateValue | undefined; end: DateValue | undefined }) => {
     emit('update:modelValue', {
-      startDate: toISODate(value.start),
-      endDate: toISODate(value.end),
+      startDate: dateValueToISO(value.start),
+      endDate: dateValueToISO(value.end),
     });
   },
 });

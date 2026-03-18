@@ -274,7 +274,7 @@ export class DemoInitializationService {
       name: string;
       amount: number;
       currency: string;
-      type: string;
+      type: 'given' | 'taken';
       personName: string;
     }> = [
       // Given (user lent money)
@@ -288,16 +288,16 @@ export class DemoInitializationService {
     ];
 
     const debts = debtsData.map((data) =>
-      Debt.create(
-        crypto.randomUUID(),
+      Debt.create({
+        id: crypto.randomUUID(),
         userId,
-        data.name,
-        data.amount,
-        data.currency,
-        data.type,
-        data.personName,
+        name: data.name,
+        totalAmount: data.amount,
+        currency: data.currency,
+        debtType: data.type,
+        personName: data.personName,
         accountId,
-      ),
+      }),
     );
 
     await Promise.all(debts.map((debt) => this.debtRepository.save(debt)));

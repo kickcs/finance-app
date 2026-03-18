@@ -5,7 +5,7 @@ import { UIcon, Skeleton } from '@/shared/ui';
 import { useHaptics } from '@/shared/lib/haptics';
 import { formatMasked } from '@/shared/lib/format/currency';
 import { ThemeToggle } from '@/features/toggle-theme';
-import { MAIN_NAV_ITEMS } from '@/shared/config/navigation';
+import { DESKTOP_NAV_ITEMS } from '@/shared/config/navigation';
 
 defineProps<{
   userName?: string;
@@ -27,14 +27,14 @@ const route = useRoute();
 
 const activeItem = computed(() => {
   return (
-    MAIN_NAV_ITEMS.find((item) => {
+    DESKTOP_NAV_ITEMS.find((item) => {
       if (item.path === '/') return route.path === '/';
       return route.path.startsWith(item.path);
     })?.id || 'home'
   );
 });
 
-function handleNavClick(item: (typeof MAIN_NAV_ITEMS)[number]) {
+function handleNavClick(item: (typeof DESKTOP_NAV_ITEMS)[number]) {
   if (item.id === activeItem.value) return;
   trigger('selection');
 }
@@ -113,7 +113,7 @@ function handleNavClick(item: (typeof MAIN_NAV_ITEMS)[number]) {
     <!-- Navigation Links -->
     <nav class="flex-1 space-y-1.5 overflow-y-auto">
       <RouterLink
-        v-for="item in MAIN_NAV_ITEMS"
+        v-for="item in DESKTOP_NAV_ITEMS"
         :key="item.id"
         :to="item.path"
         :aria-current="activeItem === item.id ? 'page' : undefined"

@@ -132,11 +132,6 @@ export const router = createRouter({
           component: () => import('@/pages/debts/list/DebtsListPage.vue'),
         },
         {
-          path: 'debts/new',
-          name: ROUTE_NAMES.NEW_DEBT,
-          component: () => import('@/pages/debts/new/AddDebtPage.vue'),
-        },
-        {
           path: 'debts/:id',
           name: ROUTE_NAMES.DEBT_DETAIL,
           component: () => import('@/pages/debts/detail/DebtDetailPage.vue'),

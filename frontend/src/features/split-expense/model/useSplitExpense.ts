@@ -1,5 +1,5 @@
 import { ref, computed, watch } from 'vue';
-import { debtsApi, debtQueryKeys } from '@/entities/debt';
+import { debtsApi, debtQueryKeys, buildDebtName } from '@/entities/debt';
 import { queryClient } from '@/shared/api/queryClient';
 import type { SplitExpenseData, SplitMethod } from './types';
 import { initialSplitData } from './types';
@@ -206,7 +206,7 @@ export function useSplitExpense(totalAmountRef: () => number) {
       for (const participant of validParticipants) {
         await debtsApi.create({
           user_id: userId,
-          name: `Долг от ${participant.personName}`,
+          name: buildDebtName('given', participant.personName),
           total_amount: participant.amount,
           remaining_amount: participant.amount,
           debt_type: 'given',

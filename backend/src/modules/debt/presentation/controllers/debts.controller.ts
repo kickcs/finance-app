@@ -53,6 +53,8 @@ export class DebtsController {
         dto.transactionId,
         dto.sourceTransactionId,
         dto.createdAt ? new Date(dto.createdAt) : undefined,
+        dto.description,
+        dto.isPrivate,
       ),
     );
   }

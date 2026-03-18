@@ -169,22 +169,25 @@ async function confirmLogout() {
     <!-- Content -->
     <main class="pt-8 pb-28 md:pb-8 space-y-6">
       <!-- User Card -->
-      <UCard class="p-5" variant="bordered">
+      <UCard data-testid="user-card" class="p-5" variant="bordered">
         <div class="flex items-center gap-4">
           <IconBadge icon="person" size="lg" color="#3b82f6" class="shrink-0" />
           <div class="flex-1 min-w-0">
             <p
+              data-testid="user-name"
               class="text-lg font-bold text-text-primary-light dark:text-text-primary-dark truncate"
             >
               {{ userName }}
             </p>
             <p
+              data-testid="user-email"
               class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark truncate"
             >
               {{ userEmail }}
             </p>
           </div>
           <UButton
+            data-testid="edit-profile-btn"
             variant="icon"
             class="shrink-0 bg-surface-light dark:bg-surface-dark hover:bg-border-light dark:hover:bg-border-dark rounded-xl"
             @click="showEditProfileModal = true"
@@ -205,6 +208,7 @@ async function confirmLogout() {
           <button
             v-for="item in settingsGroup"
             :key="item.id"
+            :data-testid="`menu-item-${item.id}`"
             class="w-full flex items-center gap-4 p-4 transition-colors hover:bg-surface-light dark:hover:bg-surface-dark active:bg-surface-light dark:active:bg-surface-dark"
             @click="handleMenuClick(item.id)"
           >
@@ -222,6 +226,7 @@ async function confirmLogout() {
             </span>
             <span
               v-if="item.id === 'color'"
+              data-testid="color-dot"
               class="w-5 h-5 rounded-full border border-border-light dark:border-border-dark mr-2 shrink-0"
               :style="{ backgroundColor: currentPrimaryColor }"
             />
@@ -248,6 +253,7 @@ async function confirmLogout() {
           <button
             v-for="item in dataGroup"
             :key="item.id"
+            :data-testid="`menu-item-${item.id}`"
             class="w-full flex items-center gap-4 p-4 transition-colors hover:bg-surface-light dark:hover:bg-surface-dark active:bg-surface-light dark:active:bg-surface-dark"
             @click="handleMenuClick(item.id)"
           >
@@ -277,6 +283,7 @@ async function confirmLogout() {
           <button
             v-for="item in appGroup"
             :key="item.id"
+            :data-testid="`menu-item-${item.id}`"
             class="w-full flex items-center gap-4 p-4 transition-colors hover:bg-surface-light dark:hover:bg-surface-dark active:bg-surface-light dark:active:bg-surface-dark relative"
             @click="handleMenuClick(item.id)"
           >
@@ -289,6 +296,7 @@ async function confirmLogout() {
               />
               <span
                 v-if="item.badge?.value"
+                data-testid="unseen-badge"
                 class="absolute -top-0.5 -right-0.5 w-3 h-3 border-2 border-card-light dark:border-card-dark rounded-full bg-danger"
               />
             </div>
@@ -312,6 +320,7 @@ async function confirmLogout() {
         class="overflow-hidden border-danger/20 dark:border-danger/20 hover:border-danger/40 transition-colors"
       >
         <button
+          data-testid="logout-btn"
           class="w-full flex items-center justify-center gap-2 p-4 text-danger font-semibold active:bg-danger/5"
           @click="handleLogout"
         >
@@ -328,8 +337,16 @@ async function confirmLogout() {
       </p>
 
       <template #actions>
-        <UButton variant="secondary" full-width @click="closeLogoutModal">Отмена</UButton>
         <UButton
+          data-testid="logout-cancel-btn"
+          variant="secondary"
+          full-width
+          @click="closeLogoutModal"
+        >
+          Отмена
+        </UButton>
+        <UButton
+          data-testid="logout-confirm-btn"
           variant="primary"
           full-width
           class="!bg-danger hover:!bg-danger/90"

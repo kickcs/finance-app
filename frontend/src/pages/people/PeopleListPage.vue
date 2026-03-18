@@ -101,7 +101,7 @@ async function handleDelete() {
     <main class="flex-1 overflow-y-auto px-4 pt-6 pb-32">
       <!-- Loading skeleton -->
       <template v-if="isLoading">
-        <div class="mb-5 px-1">
+        <div data-testid="people-loading" class="mb-5 px-1">
           <Skeleton class="h-4 w-36 rounded" />
         </div>
         <div class="space-y-3">
@@ -118,7 +118,11 @@ async function handleDelete() {
 
       <template v-else>
         <!-- Header stats -->
-        <div v-if="sortedPeople.length > 0" class="mb-5 flex items-center justify-between px-1">
+        <div
+          v-if="sortedPeople.length > 0"
+          data-testid="people-count"
+          class="mb-5 flex items-center justify-between px-1"
+        >
           <h2 class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">
             Всего контактов: {{ sortedPeople.length }}
           </h2>
@@ -129,9 +133,15 @@ async function handleDelete() {
           v-if="sortedPeople.length > 0"
           v-bind="listTransition"
           tag="div"
+          data-testid="people-list"
           class="space-y-3 relative"
         >
-          <div v-for="person in sortedPeople" :key="person.id" class="group list-item-wrapper">
+          <div
+            v-for="person in sortedPeople"
+            :key="person.id"
+            data-testid="person-item"
+            class="group list-item-wrapper"
+          >
             <SwipeableItem
               @action-left="personToDelete = person"
               @action-right="openEditModal(person)"
@@ -170,7 +180,11 @@ async function handleDelete() {
         </TransitionGroup>
 
         <!-- Empty state -->
-        <div v-else class="h-[60vh] flex items-center justify-center mt-8">
+        <div
+          v-else
+          data-testid="people-empty-state"
+          class="h-[60vh] flex items-center justify-center mt-8"
+        >
           <EmptyState
             icon="group"
             title="Нет контактов"
@@ -185,6 +199,7 @@ async function handleDelete() {
     <!-- FAB for quick add -->
     <div class="fixed right-6 bottom-24 z-30 transition-transform hover:scale-105 active:scale-95">
       <button
+        data-testid="add-person-fab"
         class="h-14 w-14 rounded-full bg-primary text-white shadow-lg flex items-center justify-center focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/30"
         aria-label="Добавить новый контакт"
         @click="openAddModal"
@@ -228,6 +243,7 @@ async function handleDelete() {
           Отмена
         </UButton>
         <UButton
+          data-testid="save-person-btn"
           variant="primary"
           size="lg"
           class="flex-1"

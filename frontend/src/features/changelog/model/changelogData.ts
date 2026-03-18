@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.35';
+export const CURRENT_VERSION = '1.0.36';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,25 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.36',
+    date: '2026-03-19',
+    title: 'Переводы и долги',
+    items: [
+      {
+        type: 'feature',
+        text: 'Курс обмена при переводах — виден и редактируется при переводе между валютами',
+      },
+      {
+        type: 'feature',
+        text: 'Новая форма создания долга — срок возврата, скрытие суммы, фильтр по валютам',
+      },
+      {
+        type: 'improvement',
+        text: 'Редизайн страницы долгов — группировка по людям, таймлайн платежей',
+      },
+    ],
+  },
   {
     version: '1.0.35',
     date: '2026-03-15',

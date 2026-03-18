@@ -3,7 +3,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import { debtQueryKeys } from './queryKeys';
 import { debtsApi } from './debtsApi';
 import type { Debt, DebtInsert } from '@/shared/api/database.types';
-import type { DebtsByPerson } from '../model/types';
 
 export function useDebts(userId: MaybeRefOrGetter<string | null>) {
   const queryClient = useQueryClient();
@@ -19,7 +18,7 @@ export function useDebts(userId: MaybeRefOrGetter<string | null>) {
     queryFn: () => {
       const uid = toValue(userId);
       if (!uid) return [];
-      return debtsApi.getAll(uid);
+      return debtsApi.getAll();
     },
     enabled: computed(() => !!toValue(userId)),
   });
@@ -46,8 +45,20 @@ export function useDebts(userId: MaybeRefOrGetter<string | null>) {
         created_at: new Date().toISOString(),
         monthly_payment: null,
         next_payment_date: null,
+        debt_type: newDebt.debt_type ?? 'given',
+        person_name: newDebt.person_name ?? null,
+        account_id: newDebt.account_id ?? null,
+        transaction_id: newDebt.transaction_id ?? null,
+        close_transaction_id: null,
+        is_closed: false,
+        currency: newDebt.currency ?? 'USD',
+        source_transaction_id: newDebt.source_transaction_id ?? null,
+        description: newDebt.description ?? null,
+        closed_at: null,
+        forgiven_amount: newDebt.forgiven_amount ?? 0,
+        is_private: newDebt.is_private ?? false,
         ...newDebt,
-      } as Debt;
+      };
 
       queryClient.setQueryData<Debt[]>(queryKey.value, (old) => [optimisticDebt, ...(old ?? [])]);
 
@@ -112,43 +123,6 @@ export function useDebts(userId: MaybeRefOrGetter<string | null>) {
     },
   });
 
-  // Computed values
-  const totalDebt = computed(() => debts.value.reduce((sum, d) => sum + d.remaining_amount, 0));
-
-  const totalPaid = computed(() =>
-    debts.value.reduce((sum, d) => sum + (d.total_amount - d.remaining_amount), 0),
-  );
-
-  const overallProgress = computed(() => {
-    const total = debts.value.reduce((sum, d) => sum + d.total_amount, 0);
-    if (total === 0) return 100;
-    return (totalPaid.value / total) * 100;
-  });
-
-  // Group debts by person_name
-  const debtsByPerson = computed<DebtsByPerson[]>(() => {
-    const groups = new Map<string, { debts: Debt[]; debtType: 'given' | 'taken' }>();
-
-    for (const debt of debts.value) {
-      if (debt.is_closed) continue;
-      const personName = (debt.person_name || debt.name).trim();
-      const existing = groups.get(personName);
-      if (existing) {
-        existing.debts.push(debt);
-      } else {
-        groups.set(personName, { debts: [debt], debtType: debt.debt_type });
-      }
-    }
-
-    return Array.from(groups.entries()).map(([personName, { debts: personDebts, debtType }]) => ({
-      personName,
-      debts: personDebts,
-      totalRemaining: personDebts.reduce((sum, d) => sum + d.remaining_amount, 0),
-      totalPaid: personDebts.reduce((sum, d) => sum + (d.total_amount - d.remaining_amount), 0),
-      debtType,
-    }));
-  });
-
   // Helper functions (same public API)
   async function createDebt(debt: Omit<DebtInsert, 'user_id'>) {
     return createMutation.mutateAsync(debt);
@@ -156,14 +130,6 @@ export function useDebts(userId: MaybeRefOrGetter<string | null>) {
 
   async function updateDebt(id: string, updates: Partial<Debt>) {
     return updateMutation.mutateAsync({ id, updates });
-  }
-
-  async function makePayment(id: string, amount: number) {
-    const debt = debts.value.find((d) => d.id === id);
-    if (!debt) throw new Error('Debt not found');
-
-    const newRemaining = Math.max(0, debt.remaining_amount - amount);
-    return updateDebt(id, { remaining_amount: newRemaining });
   }
 
   async function deleteDebt(id: string) {
@@ -174,13 +140,8 @@ export function useDebts(userId: MaybeRefOrGetter<string | null>) {
     debts,
     isLoading,
     error,
-    totalDebt,
-    totalPaid,
-    overallProgress,
-    debtsByPerson,
     createDebt,
     updateDebt,
-    makePayment,
     deleteDebt,
     refetch,
   };

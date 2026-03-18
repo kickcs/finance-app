@@ -226,6 +226,10 @@ export class TransactionRepository implements ITransactionRepository {
       });
     }
 
+    if (options.debtId) {
+      query = query.andWhere('t.debt_id = :debtId', { debtId: options.debtId });
+    }
+
     const items = await query.getMany();
 
     // Calculate returned amounts for expense transactions via debt returns

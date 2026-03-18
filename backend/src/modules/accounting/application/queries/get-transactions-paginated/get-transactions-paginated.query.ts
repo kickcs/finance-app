@@ -8,5 +8,6 @@ export class GetTransactionsPaginatedQuery {
     public readonly accountId?: string,
     public readonly categoryId?: string,
     public readonly search?: string,
+    public readonly debtId?: string,
   ) {}
 }

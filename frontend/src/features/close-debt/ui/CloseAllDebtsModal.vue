@@ -5,10 +5,11 @@ import { CategoryChips, INCOME_CATEGORIES, EXPENSE_CATEGORIES } from '@/entities
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { pluralize } from '@/shared/lib/format/pluralize';
 import { AccountSelector, type AccountWithBalances } from '@/entities/account';
-import { DEFAULT_CURRENCY } from '@/entities/currency/model/constants';
+import { DEFAULT_CURRENCY } from '@/entities/currency';
 import type { Debt } from '@/shared/api/database.types';
 import { sortDebtsByDateAsc } from '../model/sortDebts';
 import { useDebtPaymentForm, ForgivenessToggle } from '@/entities/debt';
+import { useHaptics } from '@/shared/lib/haptics';
 
 const props = defineProps<{
   modelValue: boolean;
@@ -31,6 +32,8 @@ const emit = defineEmits<{
     },
   ];
 }>();
+
+const { trigger } = useHaptics();
 
 const selectedAccountId = ref<string | null>(null);
 
@@ -62,6 +65,10 @@ watch(
       const linkedAccountId = props.debts.find((d) => d.account_id)?.account_id;
       selectedAccountId.value = linkedAccountId || props.accounts[0]?.id || null;
       reset();
+      // Mixed currencies: auto-fill full amount (FIFO distribution handles per-debt currency)
+      if (isMixedCurrency.value) {
+        paymentAmount.value = totalDebt.value;
+      }
     }
   },
 );
@@ -77,6 +84,7 @@ const totalsByCurrency = computed(() => {
 });
 
 const debtCurrency = computed(() => props.debts[0]?.currency || DEFAULT_CURRENCY);
+const isMixedCurrency = computed(() => totalsByCurrency.value.length > 1);
 
 const excessCategories = computed(() => {
   return debtDirection.value === 'given' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
@@ -124,6 +132,21 @@ const confirmLabel = computed(() => {
   if (forgiveRemainder.value) return 'Оплатить и простить';
   return 'Закрыть все';
 });
+
+// Haptic feedback when closing completes
+watch(
+  () => props.isClosing,
+  (closing, wasClosing) => {
+    if (wasClosing && !closing && props.modelValue) {
+      // If progress reached total, it was a success; otherwise an error occurred
+      if (props.progress === props.total) {
+        trigger('success');
+      } else {
+        trigger('error');
+      }
+    }
+  },
+);
 
 function close() {
   if (!props.isClosing) {
@@ -236,32 +259,64 @@ function setForgiveOnly() {
           </div>
         </div>
 
-        <!-- Payment Amount Input -->
-        <div class="space-y-2">
-          <label
-            class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark"
-          >
-            Сумма платежа
-          </label>
-          <UInput
-            v-model="paymentAmount"
-            type="number"
-            placeholder="Введите сумму"
-            variant="currency"
-          />
-        </div>
+        <!-- Payment Amount Input (hidden for mixed currencies) -->
+        <template v-if="!isMixedCurrency">
+          <div class="space-y-2">
+            <label
+              class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark"
+            >
+              Сумма платежа
+            </label>
+            <UInput
+              v-model="paymentAmount"
+              type="number"
+              placeholder="Введите сумму"
+              variant="currency"
+            />
+          </div>
 
-        <!-- Quick Amount Buttons -->
-        <div class="flex gap-2">
-          <UButton variant="secondary" size="sm" @click="paymentAmount = Math.round(totalDebt / 2)">
-            50%
+          <!-- Quick Amount Buttons -->
+          <div class="flex gap-2">
+            <UButton
+              variant="secondary"
+              size="sm"
+              @click="paymentAmount = Math.round(totalDebt / 2)"
+            >
+              50%
+            </UButton>
+            <UButton variant="secondary" size="sm" @click="paymentAmount = totalDebt">
+              Полностью
+            </UButton>
+            <UButton variant="secondary" size="sm" @click="setForgiveOnly">
+              <UIcon name="volunteer_activism" size="xs" class="mr-1" />
+              Простить
+            </UButton>
+          </div>
+        </template>
+
+        <!-- Mixed currency: only forgive option -->
+        <div v-else class="flex gap-2">
+          <UButton
+            variant="secondary"
+            size="sm"
+            full-width
+            :class="paymentAmount === totalDebt && !forgiveRemainder && 'ring-2 ring-primary'"
+            @click="
+              paymentAmount = totalDebt;
+              forgiveRemainder = false;
+            "
+          >
+            Оплатить полностью
           </UButton>
-          <UButton variant="secondary" size="sm" @click="paymentAmount = totalDebt">
-            Полностью
-          </UButton>
-          <UButton variant="secondary" size="sm" @click="setForgiveOnly">
+          <UButton
+            variant="secondary"
+            size="sm"
+            full-width
+            :class="forgiveRemainder && paymentAmount === 0 && 'ring-2 ring-primary'"
+            @click="setForgiveOnly"
+          >
             <UIcon name="volunteer_activism" size="xs" class="mr-1" />
-            Простить
+            Простить все
           </UButton>
         </div>
 
@@ -305,10 +360,21 @@ function setForgiveOnly() {
           <div class="flex items-start gap-2">
             <UIcon name="volunteer_activism" size="sm" class="text-warning mt-0.5 shrink-0" />
             <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
-              Все долги на сумму
-              <span class="font-semibold">
-                {{ formatCurrency(totalDebt, debtCurrency) }}
-              </span>
+              Все долги
+              <template v-if="isMixedCurrency">
+                (
+                <span v-for="(item, i) in totalsByCurrency" :key="item.currency">
+                  <span class="font-semibold">
+                    {{ formatCurrency(item.amount, item.currency) }}
+                  </span>
+                  <template v-if="i < totalsByCurrency.length - 1">+</template>
+                </span>
+                )
+              </template>
+              <template v-else>
+                на сумму
+                <span class="font-semibold">{{ formatCurrency(totalDebt, debtCurrency) }}</span>
+              </template>
               будут прощены и списаны как подарок.
             </p>
           </div>
@@ -316,7 +382,10 @@ function setForgiveOnly() {
 
         <!-- Distribution Preview (when amount differs from total) -->
         <div
-          v-if="paymentAmount !== totalDebt && paymentAmount > 0"
+          v-if="
+            (paymentAmount !== totalDebt && paymentAmount > 0) ||
+            (forgiveRemainder && paymentAmount === 0)
+          "
           class="p-4 rounded-xl bg-surface-light dark:bg-surface-dark space-y-2"
         >
           <p
@@ -385,12 +454,10 @@ function setForgiveOnly() {
     </div>
 
     <template #actions>
-      <template v-if="!isClosing">
-        <UButton variant="secondary" full-width @click="close">Отмена</UButton>
-        <UButton variant="primary" full-width :disabled="!isValid" @click="confirm">
-          {{ confirmLabel }}
-        </UButton>
-      </template>
+      <UButton variant="secondary" full-width :disabled="isClosing" @click="close">Отмена</UButton>
+      <UButton v-if="!isClosing" variant="primary" full-width :disabled="!isValid" @click="confirm">
+        {{ confirmLabel }}
+      </UButton>
     </template>
   </UModal>
 </template>

@@ -22,6 +22,7 @@ export class GetTransactionsPaginatedHandler implements IQueryHandler<GetTransac
       accountId: query.accountId,
       categoryId: query.categoryId,
       search: query.search,
+      debtId: query.debtId,
     });
 
     return {

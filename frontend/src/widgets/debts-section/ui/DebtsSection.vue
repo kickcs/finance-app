@@ -1,12 +1,20 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { DebtCardSkeleton, type Debt, DEBT_DIRECTION_COLORS } from '@/entities/debt';
+import {
+  DebtCardSkeleton,
+  type Debt,
+  DEBT_DIRECTION_COLORS,
+  getDebtDisplayName,
+} from '@/entities/debt';
 import { UBadge, UTabs, SectionHeader, IconBadge, EmptyState } from '@/shared/ui';
 import { formatMasked } from '@/shared/lib/format/currency';
+import { pluralize } from '@/shared/lib/format/pluralize';
 import { formatDate } from '@/shared/lib/format/date';
 import { isPastDate } from '@/shared/lib/date';
 import { useExchangeRates } from '@/shared/api';
 import { DEFAULT_CURRENCY } from '@/shared/config/currency';
+import { listTransition } from '@/shared/lib/transitions';
+import { useHaptics } from '@/shared/lib/haptics';
 
 interface DebtByPerson {
   personName: string;
@@ -14,6 +22,7 @@ interface DebtByPerson {
   totalRemaining: number;
   debtType: 'given' | 'taken';
   nearestDueDate: string | null;
+  hasPrivate: boolean;
 }
 
 const props = defineProps<{
@@ -30,6 +39,8 @@ const emit = defineEmits<{
   'view-all': [];
 }>();
 
+const { trigger } = useHaptics();
+
 const activeTab = ref('given');
 
 const debtTabs = [
@@ -38,11 +49,27 @@ const debtTabs = [
 ];
 
 function handleGroupClick(group: DebtByPerson) {
+  trigger('selection');
   if (group.debts.length === 1) {
     emit('debt-click', group.debts[0]);
   } else {
     emit('person-click', group.personName, group.debtType);
   }
+}
+
+function handleTabChange(tab: string) {
+  trigger('selection');
+  activeTab.value = tab;
+}
+
+function handleAddClick() {
+  trigger('selection');
+  emit('add-click');
+}
+
+function handleViewAll() {
+  trigger('selection');
+  emit('view-all');
 }
 
 const { convert } = useExchangeRates(computed(() => props.currency));
@@ -55,7 +82,7 @@ const debtsByPerson = computed<DebtByPerson[]>(() => {
   const grouped: Record<string, DebtByPerson> = {};
 
   for (const debt of activeDebts.value) {
-    const personName = debt.person_name || debt.name || 'Без имени';
+    const personName = getDebtDisplayName(debt);
     const key = `${personName}_${debt.debt_type}`;
 
     if (!grouped[key]) {
@@ -65,20 +92,19 @@ const debtsByPerson = computed<DebtByPerson[]>(() => {
         totalRemaining: 0,
         debtType: debt.debt_type,
         nearestDueDate: null,
+        hasPrivate: false,
       };
     }
 
     grouped[key].debts.push(debt);
+    if (debt.is_private) grouped[key].hasPrivate = true;
     grouped[key].totalRemaining += convert(
       debt.remaining_amount,
       debt.currency || DEFAULT_CURRENCY,
     );
 
     if (debt.next_payment_date) {
-      if (
-        !grouped[key].nearestDueDate ||
-        new Date(debt.next_payment_date) < new Date(grouped[key].nearestDueDate!)
-      ) {
+      if (!grouped[key].nearestDueDate || debt.next_payment_date < grouped[key].nearestDueDate!) {
         grouped[key].nearestDueDate = debt.next_payment_date;
       }
     }
@@ -86,7 +112,7 @@ const debtsByPerson = computed<DebtByPerson[]>(() => {
 
   return Object.values(grouped).sort((a, b) => {
     if (a.nearestDueDate && b.nearestDueDate) {
-      return new Date(a.nearestDueDate).getTime() - new Date(b.nearestDueDate).getTime();
+      return a.nearestDueDate!.localeCompare(b.nearestDueDate!);
     }
     if (a.nearestDueDate) return -1;
     if (b.nearestDueDate) return 1;
@@ -98,9 +124,14 @@ const filteredDebts = computed(() => {
   return debtsByPerson.value.filter((g) => g.debtType === activeTab.value);
 });
 
+const MAX_VISIBLE_GROUPS = 4;
+
+const hiddenCount = computed(() => {
+  return Math.max(0, filteredDebts.value.length - MAX_VISIBLE_GROUPS);
+});
+
 const overdueCount = computed(() => {
-  const now = new Date();
-  return activeDebts.value.filter((d) => d.next_payment_date && new Date(d.next_payment_date) < now)
+  return activeDebts.value.filter((d) => d.next_payment_date && isPastDate(d.next_payment_date))
     .length;
 });
 </script>
@@ -112,8 +143,8 @@ const overdueCount = computed(() => {
       title="Долги"
       :count="activeDebts.length"
       show-view-all
-      @add-click="$emit('add-click')"
-      @view-all="$emit('view-all')"
+      @add-click="handleAddClick"
+      @view-all="handleViewAll"
     >
       <template #badge>
         <UBadge v-if="overdueCount > 0" variant="danger" size="xs">
@@ -125,9 +156,10 @@ const overdueCount = computed(() => {
     <!-- Tabs -->
     <UTabs
       v-if="activeDebts.length > 0 && !loading"
-      v-model="activeTab"
+      :model-value="activeTab"
       :items="debtTabs"
       size="sm"
+      @update:model-value="handleTabChange"
     />
 
     <!-- Loading state -->
@@ -138,12 +170,16 @@ const overdueCount = computed(() => {
     <!-- Filtered Debts List -->
     <TransitionGroup
       v-else-if="filteredDebts.length > 0"
-      name="debt-list"
       tag="div"
       class="space-y-2"
+      :enter-active-class="listTransition.enterActiveClass"
+      :leave-active-class="listTransition.leaveActiveClass"
+      :enter-from-class="listTransition.enterFromClass"
+      :leave-to-class="listTransition.leaveToClass"
+      :move-class="listTransition.moveClass"
     >
       <button
-        v-for="group in filteredDebts.slice(0, 4)"
+        v-for="group in filteredDebts.slice(0, MAX_VISIBLE_GROUPS)"
         :key="`${group.personName}_${group.debtType}`"
         class="w-full p-3 rounded-xl text-left bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark hover:bg-surface-light dark:hover:bg-surface-dark active:opacity-80 transition-all duration-150"
         @click="handleGroupClick(group)"
@@ -159,7 +195,7 @@ const overdueCount = computed(() => {
               <p
                 class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark truncate"
               >
-                {{ group.personName }}
+                {{ group.hasPrivate ? '•••' : group.personName }}
               </p>
               <p
                 v-if="group.nearestDueDate"
@@ -177,7 +213,11 @@ const overdueCount = computed(() => {
                 }}
               </p>
               <p v-else class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
-                {{ group.debts.length > 1 ? `${group.debts.length} долга` : 'Без срока' }}
+                {{
+                  group.debts.length > 1
+                    ? `${group.debts.length} ${pluralize(group.debts.length, 'долг', 'долга', 'долгов')}`
+                    : 'Без срока'
+                }}
               </p>
             </div>
           </div>
@@ -186,18 +226,30 @@ const overdueCount = computed(() => {
             class="text-sm font-semibold shrink-0"
             :style="{ color: DEBT_DIRECTION_COLORS[group.debtType] }"
           >
-            {{ formatMasked(group.totalRemaining, currency, hidden ?? false) }}
+            {{
+              formatMasked(group.totalRemaining, currency, (hidden ?? false) || group.hasPrivate)
+            }}
           </p>
         </div>
       </button>
     </TransitionGroup>
 
+    <!-- Truncation indicator -->
+    <p
+      v-if="filteredDebts.length > 0 && hiddenCount > 0 && !loading"
+      class="text-xs text-center text-text-tertiary-light dark:text-text-tertiary-dark pt-1"
+    >
+      и ещё {{ hiddenCount }} {{ pluralize(hiddenCount, 'долг', 'долга', 'долгов') }}
+    </p>
+
     <!-- Empty state for current tab -->
-    <div v-else-if="activeDebts.length > 0" class="py-6 text-center">
-      <p class="text-sm text-text-tertiary-light dark:text-text-tertiary-dark">
-        {{ activeTab === 'given' ? 'Нет долгов «вам должны»' : 'Нет долгов «вы должны»' }}
-      </p>
-    </div>
+    <EmptyState
+      v-else-if="activeDebts.length > 0 && !loading"
+      variant="inline"
+      :icon="activeTab === 'given' ? 'arrow_upward' : 'arrow_downward'"
+      :title="activeTab === 'given' ? 'Нет долгов «вам должны»' : 'Нет долгов «вы должны»'"
+      description="Долги этого типа появятся здесь"
+    />
 
     <!-- Empty state — no debts at all -->
     <EmptyState
@@ -210,24 +262,3 @@ const overdueCount = computed(() => {
     />
   </div>
 </template>
-
-<style scoped>
-.debt-list-enter-active,
-.debt-list-leave-active {
-  transition: all 0.15s ease;
-}
-
-.debt-list-enter-from {
-  opacity: 0;
-  transform: translateY(-6px);
-}
-
-.debt-list-leave-to {
-  opacity: 0;
-  transform: translateY(6px);
-}
-
-.debt-list-move {
-  transition: transform 0.15s ease;
-}
-</style>

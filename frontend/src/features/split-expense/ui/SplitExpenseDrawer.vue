@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onBeforeUnmount, type ComponentPublicInstance } from 'vue';
+import { ref, computed, watch, nextTick, type ComponentPublicInstance } from 'vue';
 import {
   DrawerRoot,
   DrawerPortal,
@@ -12,6 +12,8 @@ import { UIcon, UButton, UProgressBar, InitialAvatar } from '@/shared/ui';
 import { formatCurrency, formatNumberWithSpaces } from '@/shared/lib/format/currency';
 import { PersonSelector, usePeople } from '@/entities/person';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
+import { useIsDesktop } from '@/shared/lib/composables/useIsDesktop';
+import { useDrawerKeyboard } from '@/shared/lib/composables';
 import type { SplitExpenseData, SplitMethod } from '../model/types';
 
 const props = defineProps<{
@@ -33,67 +35,22 @@ const emit = defineEmits<{
   setEnabled: [enabled: boolean];
 }>();
 
+const isDesktop = useIsDesktop();
+
 const { userId } = useCurrentUser();
 const { people, createPerson } = usePeople(userId);
 
 const newParticipantName = ref('');
 
-// Position drawer above iOS virtual keyboard via direct DOM manipulation.
-// Using direct DOM instead of reactive state to avoid Vue re-renders
-// that cause input focus loss when the keyboard appears.
 const drawerContentRef = ref<InstanceType<typeof DrawerContent> | null>(null);
 const footerRef = ref<HTMLDivElement | null>(null);
 const scrollContainerRef = ref<HTMLDivElement | null>(null);
-let cleanupViewport: (() => void) | null = null;
 
-function setupKeyboardListener() {
-  cleanupKeyboardListener();
-
-  const vv = window.visualViewport;
-  if (!vv) return;
-
-  const drawerEl = drawerContentRef.value?.$el as HTMLElement | undefined;
-  const footerEl = footerRef.value;
-  const scrollEl = scrollContainerRef.value;
-  if (!drawerEl) return;
-
-  const onResize = () => {
-    const offset = Math.max(0, window.innerHeight - vv.height);
-    const keyboardVisible = offset > 0;
-    drawerEl.style.bottom = offset > 0 ? `${offset}px` : '';
-    drawerEl.style.top = offset > 0 ? 'env(safe-area-inset-top, 0px)' : '';
-    drawerEl.style.maxHeight = offset > 0 ? `${window.innerHeight - offset}px` : '';
-    if (footerEl) {
-      footerEl.style.paddingBottom = offset > 0 ? '0.75rem' : '';
-    }
-    if (scrollEl) {
-      scrollEl.style.paddingBottom = keyboardVisible ? '1rem' : '';
-    }
-    if (keyboardVisible) {
-      document.documentElement.scrollTop = 0;
-      document.body.scrollTop = 0;
-    }
-  };
-
-  vv.addEventListener('resize', onResize);
-  vv.addEventListener('scroll', onResize);
-  cleanupViewport = () => {
-    vv.removeEventListener('resize', onResize);
-    vv.removeEventListener('scroll', onResize);
-    drawerEl.style.bottom = '';
-    drawerEl.style.top = '';
-    drawerEl.style.maxHeight = '';
-    if (footerEl) footerEl.style.paddingBottom = '';
-    if (scrollEl) scrollEl.style.paddingBottom = '';
-  };
-
-  onResize();
-}
-
-function cleanupKeyboardListener() {
-  cleanupViewport?.();
-  cleanupViewport = null;
-}
+const { setupKeyboardListener, cleanupKeyboardListener } = useDrawerKeyboard(
+  drawerContentRef,
+  footerRef,
+  scrollContainerRef,
+);
 
 const availablePeople = computed(() => {
   const addedNames = new Set(props.splitData.participants.map((p) => p.personName.toLowerCase()));
@@ -197,33 +154,38 @@ watch(
       }
       await nextTick();
       if (!props.open) return;
-      setupKeyboardListener();
+      if (!isDesktop.value) setupKeyboardListener();
     } else {
       cleanupKeyboardListener();
     }
   },
 );
-
-onBeforeUnmount(() => {
-  cleanupKeyboardListener();
-});
 </script>
 
 <template>
-  <DrawerRoot :open="open" @update:open="handleOpenChange">
+  <DrawerRoot
+    :open="open"
+    :direction="isDesktop ? 'right' : 'bottom'"
+    @update:open="handleOpenChange"
+  >
     <DrawerPortal>
       <DrawerOverlay class="fixed inset-0 z-50 bg-black/40" />
       <DrawerContent
         ref="drawerContentRef"
-        class="fixed bottom-0 left-0 right-0 z-50 flex flex-col rounded-t-2xl bg-card-light dark:bg-card-dark border-t border-border-light dark:border-border-dark max-h-[90dvh]"
+        class="fixed z-50 flex flex-col bg-card-light dark:bg-card-dark"
+        :class="
+          isDesktop
+            ? 'top-0 right-0 bottom-0 w-[420px] rounded-l-2xl border-l border-border-light dark:border-border-dark'
+            : 'bottom-0 left-0 right-0 rounded-t-2xl border-t border-border-light dark:border-border-dark max-h-[90dvh]'
+        "
       >
-        <!-- Handle -->
-        <div class="flex justify-center pt-3 pb-1">
+        <!-- Handle (mobile only) -->
+        <div v-if="!isDesktop" class="flex justify-center pt-3 pb-1">
           <DrawerHandle class="w-10 h-1 rounded-full bg-border-light dark:bg-border-dark" />
         </div>
 
         <!-- Header -->
-        <div class="flex items-center justify-between px-5 pb-3">
+        <div class="flex items-center justify-between px-5 pb-3" :class="{ 'pt-4': isDesktop }">
           <DrawerTitle
             class="text-base font-semibold text-text-primary-light dark:text-text-primary-dark"
           >
@@ -482,7 +444,11 @@ onBeforeUnmount(() => {
         <div
           ref="footerRef"
           class="px-5 py-3 border-t border-border-light dark:border-border-dark"
-          style="padding-bottom: calc(env(safe-area-inset-bottom, 16px) + 1.5rem)"
+          :style="
+            !isDesktop
+              ? 'padding-bottom: calc(env(safe-area-inset-bottom, 16px) + 1.5rem)'
+              : undefined
+          "
         >
           <UButton
             type="button"

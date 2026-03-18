@@ -8,13 +8,16 @@ export class UpdateDebtCommand {
       remainingAmount?: number;
       monthlyPayment?: number | null;
       nextPaymentDate?: Date | null;
-      debtType?: string;
+      debtType?: 'given' | 'taken';
       personName?: string | null;
       accountId?: string | null;
       transactionId?: string | null;
       closeTransactionId?: string | null;
       isClosed?: boolean;
       sourceTransactionId?: string | null;
+      description?: string | null;
+      forgivenAmount?: number;
+      isPrivate?: boolean;
     },
   ) {}
 }
