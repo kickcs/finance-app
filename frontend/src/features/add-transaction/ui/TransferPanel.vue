@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch, nextTick } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { UIcon } from '@/shared/ui';
 import { getCurrencyByCode, DEFAULT_CURRENCY } from '@/entities/currency';
 import { formatCurrency } from '@/shared/lib/format/currency';
@@ -27,14 +27,30 @@ const {
   currencySymbol,
   currentBalance,
   hasSufficientFunds,
-  updateField,
 } = usePanelState(props, emit);
 
 const sourceOpen = ref(false);
 const targetOpen = ref(false);
 
 const baseCurrency = computed(() => props.userCurrency || DEFAULT_CURRENCY);
-const { convertBetween } = useExchangeRates(baseCurrency);
+const { convertBetween, rates } = useExchangeRates(baseCurrency);
+
+const exchangeRate = ref<number | null>(null);
+const isUserEditingRate = ref(false);
+
+function loadRateFromApi(fromCurrency: string, toCurrency: string): number | null {
+  if (fromCurrency === toCurrency) return null;
+  const ratesData = rates.value;
+  if (!ratesData) return null;
+  if (fromCurrency !== baseCurrency.value && !ratesData[fromCurrency]) return null;
+  if (toCurrency !== baseCurrency.value && !ratesData[toCurrency]) return null;
+  return convertBetween(1, fromCurrency, toCurrency);
+}
+
+function recalcToAmount(amount: number, rate: number | null): number | null {
+  if (rate === null || rate <= 0) return null;
+  return Math.round(amount * rate * 100) / 100;
+}
 
 // Target account state
 const targetAccount = computed(() =>
@@ -76,16 +92,27 @@ const isIntraAccount = computed(
   () => props.formData.accountId === props.formData.toAccountId && !!props.formData.accountId,
 );
 
-function calculateConvertedAmount(
-  amount: number,
-  fromCurrency: string,
-  toCurrency: string,
-): number {
-  if (fromCurrency === toCurrency) return amount;
-  if (amount <= 0) return 0;
-  const converted = convertBetween(amount, fromCurrency, toCurrency);
-  return Math.round(converted * 100) / 100;
-}
+watch(
+  () => [props.formData.currency, props.formData.toCurrency, rates.value] as const,
+  ([fromCurrency, toCurrency]) => {
+    if (
+      fromCurrency &&
+      toCurrency &&
+      fromCurrency !== toCurrency &&
+      !isUserEditingRate.value &&
+      exchangeRate.value === null
+    ) {
+      const rate = loadRateFromApi(fromCurrency, toCurrency);
+      exchangeRate.value = rate;
+      isUserEditingRate.value = false;
+      const toAmount = recalcToAmount(props.formData.amount, rate);
+      if (toAmount !== null) {
+        emit('update:formData', { ...props.formData, toAmount });
+      }
+    }
+  },
+  { immediate: true },
+);
 
 function handleSourceSelect(accountId: string) {
   const account = props.accounts.find((a) => a.id === accountId);
@@ -99,16 +126,17 @@ function handleSourceSelect(accountId: string) {
   if (props.formData.toAccountId === accountId) {
     const otherCurrencies = account?.balances.filter((b) => b.currency !== firstCurrency) || [];
     if (otherCurrencies.length > 0) {
+      const rate = loadRateFromApi(firstCurrency, otherCurrencies[0].currency);
+      exchangeRate.value = rate;
+      isUserEditingRate.value = false;
       updates.toCurrency = otherCurrencies[0].currency;
-      updates.toAmount = calculateConvertedAmount(
-        props.formData.amount,
-        firstCurrency,
-        otherCurrencies[0].currency,
-      );
+      updates.toAmount = recalcToAmount(props.formData.amount, rate);
     } else {
       updates.toAccountId = null;
       updates.toCurrency = null;
       updates.toAmount = null;
+      exchangeRate.value = null;
+      isUserEditingRate.value = false;
     }
   }
 
@@ -129,11 +157,10 @@ function handleTargetSelect(accountId: string) {
     firstCurrency = account?.balances[0]?.currency || DEFAULT_CURRENCY;
   }
 
-  const toAmount = calculateConvertedAmount(
-    props.formData.amount,
-    props.formData.currency,
-    firstCurrency,
-  );
+  const rate = loadRateFromApi(props.formData.currency, firstCurrency);
+  exchangeRate.value = rate;
+  isUserEditingRate.value = false;
+  const toAmount = recalcToAmount(props.formData.amount, rate);
 
   emit('update:formData', {
     ...props.formData,
@@ -151,11 +178,11 @@ function handleSwap() {
   const newSourceCurrency = props.formData.toCurrency;
   const newTargetId = props.formData.accountId;
   const newTargetCurrency = props.formData.currency;
-  const newToAmount = calculateConvertedAmount(
-    props.formData.amount,
-    newSourceCurrency,
-    newTargetCurrency,
-  );
+
+  const rate = loadRateFromApi(newSourceCurrency, newTargetCurrency);
+  exchangeRate.value = rate;
+  isUserEditingRate.value = false;
+  const newToAmount = recalcToAmount(props.formData.amount, rate);
 
   emit('update:formData', {
     ...props.formData,
@@ -168,11 +195,11 @@ function handleSwap() {
 }
 
 function handleToCurrencyChange(currency: string) {
-  const toAmount = calculateConvertedAmount(
-    props.formData.amount,
-    props.formData.currency,
-    currency,
-  );
+  const rate = loadRateFromApi(props.formData.currency, currency);
+  exchangeRate.value = rate;
+  isUserEditingRate.value = false;
+  const toAmount = recalcToAmount(props.formData.amount, rate);
+
   emit('update:formData', {
     ...props.formData,
     toCurrency: currency,
@@ -183,7 +210,6 @@ function handleToCurrencyChange(currency: string) {
 function handleSourceCurrencyChange(newCurrency: string) {
   const updates: Partial<TransactionFormData> = { currency: newCurrency };
 
-  // Auto-correct toCurrency when same-account conversion
   if (
     props.formData.toAccountId === props.formData.accountId &&
     props.formData.toCurrency === newCurrency
@@ -191,45 +217,58 @@ function handleSourceCurrencyChange(newCurrency: string) {
     const account = props.accounts.find((a) => a.id === props.formData.accountId);
     const otherCurrency = account?.balances.find((b) => b.currency !== newCurrency)?.currency;
     if (otherCurrency) {
+      const rate = loadRateFromApi(newCurrency, otherCurrency);
+      exchangeRate.value = rate;
+      isUserEditingRate.value = false;
       updates.toCurrency = otherCurrency;
-      updates.toAmount = calculateConvertedAmount(
-        props.formData.amount,
-        newCurrency,
-        otherCurrency,
-      );
+      updates.toAmount = recalcToAmount(props.formData.amount, rate);
     }
   } else if (props.formData.toCurrency && props.formData.toCurrency !== newCurrency) {
-    updates.toAmount = calculateConvertedAmount(
-      props.formData.amount,
-      newCurrency,
-      props.formData.toCurrency,
-    );
+    const rate = loadRateFromApi(newCurrency, props.formData.toCurrency);
+    exchangeRate.value = rate;
+    isUserEditingRate.value = false;
+    updates.toAmount = recalcToAmount(props.formData.amount, rate);
   }
 
   emit('update:formData', { ...props.formData, ...updates });
 }
 
-function handleTargetAmountChange(newToAmount: number) {
-  if (!props.formData.currency || !props.formData.toCurrency) return;
-
-  const newSourceAmount = calculateConvertedAmount(
-    newToAmount,
-    props.formData.toCurrency,
-    props.formData.currency,
-  );
-
-  skipWatcherRecalc = true;
+function handleAmountChange(newAmount: number) {
+  const toAmount = recalcToAmount(newAmount, exchangeRate.value);
   emit('update:formData', {
     ...props.formData,
-    amount: newSourceAmount,
-    toAmount: newToAmount,
-  });
-  nextTick(() => {
-    skipWatcherRecalc = false;
+    amount: newAmount,
+    toAmount: toAmount ?? null,
   });
 }
 
-let skipWatcherRecalc = false;
+function handleTargetAmountChange(newToAmount: number) {
+  if (!props.formData.currency || !props.formData.toCurrency) return;
+
+  if (props.formData.amount > 0) {
+    exchangeRate.value = newToAmount / props.formData.amount;
+    isUserEditingRate.value = true;
+  }
+
+  emit('update:formData', {
+    ...props.formData,
+    toAmount: newToAmount,
+  });
+}
+
+function handleRateChange(value: string) {
+  const num = parseFloat(value.replace(',', '.'));
+  if (Number.isNaN(num) || num <= 0) {
+    exchangeRate.value = null;
+    return;
+  }
+  exchangeRate.value = num;
+  isUserEditingRate.value = true;
+  const toAmount = recalcToAmount(props.formData.amount, num);
+  if (toAmount !== null) {
+    emit('update:formData', { ...props.formData, toAmount });
+  }
+}
 
 const feeDisplayAmount = computed(() => {
   if (
@@ -251,21 +290,6 @@ function handleFeeTypeToggle() {
   const newType = props.formData.feeType === 'fixed' ? 'percent' : 'fixed';
   emit('update:formData', { ...props.formData, feeType: newType, feeAmount: 0 });
 }
-
-// Auto-recalculate toAmount when amount or currencies change
-watch(
-  () => [props.formData.amount, props.formData.currency, props.formData.toCurrency] as const,
-  ([newAmount, fromCurrency, toCurrency]) => {
-    if (skipWatcherRecalc) return;
-    if (fromCurrency && toCurrency && newAmount >= 0) {
-      const converted = calculateConvertedAmount(newAmount, fromCurrency, toCurrency);
-
-      if (Math.abs((props.formData.toAmount || 0) - converted) > 0.01) {
-        emit('update:formData', { ...props.formData, toAmount: converted });
-      }
-    }
-  },
-);
 </script>
 
 <template>
@@ -279,7 +303,7 @@ watch(
       :show-insufficient-funds="!hasSufficientFunds"
       :current-balance="currentBalance"
       label="Сумма списания"
-      @update:amount="updateField('amount', $event)"
+      @update:amount="handleAmountChange"
       @update:currency="handleSourceCurrencyChange"
     />
 
@@ -466,6 +490,40 @@ watch(
           </button>
         </PopoverContent>
       </Popover>
+
+      <!-- Exchange rate input (only when currencies differ) -->
+      <Transition name="fee">
+        <div
+          v-if="showConversion"
+          class="mt-3 px-3 py-2.5 rounded-xl bg-surface-light/50 dark:bg-surface-dark/50 border border-border-light dark:border-border-dark"
+        >
+          <div class="flex items-center gap-2">
+            <UIcon
+              name="currency_exchange"
+              size="sm"
+              class="text-text-tertiary-light dark:text-text-tertiary-dark shrink-0"
+            />
+            <span class="text-xs text-text-secondary-light dark:text-text-secondary-dark shrink-0">
+              Курс обмена
+            </span>
+            <input
+              type="number"
+              inputmode="decimal"
+              step="any"
+              :value="exchangeRate ?? ''"
+              placeholder="0"
+              class="flex-1 min-w-0 bg-transparent text-sm text-right text-text-primary-light dark:text-text-primary-dark outline-none tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              @input="handleRateChange(($event.target as HTMLInputElement).value)"
+            />
+            <span class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark shrink-0">
+              {{ formData.toCurrency }}
+            </span>
+          </div>
+          <p class="mt-1 text-[11px] text-text-tertiary-light dark:text-text-tertiary-dark pl-7">
+            1 {{ formData.currency }} = {{ exchangeRate ?? '—' }} {{ formData.toCurrency }}
+          </p>
+        </div>
+      </Transition>
 
       <!-- Commission input (only when target selected) -->
       <Transition name="fee">
