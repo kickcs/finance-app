@@ -104,6 +104,7 @@ watch(
   ([fromCurrency, toCurrency]) => {
     if (fromCurrency && toCurrency && fromCurrency !== toCurrency && !isUserEditingRate.value) {
       const rate = loadRateFromApi(fromCurrency, toCurrency);
+      if (rate === exchangeRate.value) return;
       exchangeRate.value = rate;
       const toAmount = recalcToAmount(props.formData.amount, rate);
       if (toAmount !== null) {
