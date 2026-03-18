@@ -249,13 +249,14 @@ describe('DebtsListPage', () => {
       // Empty state should be showing
       expect(wrapper.find('[data-testid="empty-state"]').exists()).toBe(true);
 
-      // Click the action button inside empty state
+      // Click the action button inside empty state — opens drawer, not navigates
       const actionBtn = wrapper.findAll('button').find((b) => b.text().includes('Создать долг'));
       expect(actionBtn).toBeDefined();
       await actionBtn!.trigger('click');
       await flushPromises();
 
-      expect(router.currentRoute.value.name).toBe('new-debt');
+      // Drawer should be open (route stays on debts-list)
+      expect(router.currentRoute.value.name).toBe('debts-list');
     });
   });
 
@@ -340,7 +341,7 @@ describe('DebtsListPage', () => {
   // Navigation
   // -----------------------------------------------------------------------
   describe('navigation', () => {
-    it('navigates to new debt page on add button click', async () => {
+    it('opens create debt drawer on add button click', async () => {
       const { wrapper, router } = await renderPage();
 
       const addBtn = wrapper.find('[data-testid="add-debt-btn"]');
@@ -348,7 +349,8 @@ describe('DebtsListPage', () => {
       await addBtn.trigger('click');
       await flushPromises();
 
-      expect(router.currentRoute.value.name).toBe('new-debt');
+      // Stays on debts-list (drawer opens instead of navigation)
+      expect(router.currentRoute.value.name).toBe('debts-list');
     });
 
     it('navigates to debt detail on card click', async () => {
