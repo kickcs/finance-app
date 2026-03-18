@@ -239,8 +239,12 @@ function handleTargetAmountChange(newToAmount: number) {
   });
 }
 
+function parseDecimalInput(value: string): number {
+  return parseFloat(value.replace(',', '.'));
+}
+
 function handleRateChange(value: string) {
-  const num = parseFloat(value.replace(',', '.'));
+  const num = parseDecimalInput(value);
   if (Number.isNaN(num) || num <= 0) {
     exchangeRate.value = null;
     return;
@@ -265,7 +269,7 @@ const feeDisplayAmount = computed(() => {
 });
 
 function handleFeeAmountChange(value: string) {
-  const num = parseFloat(value.replace(',', '.'));
+  const num = parseDecimalInput(value);
   emit('update:formData', { ...props.formData, feeAmount: Number.isNaN(num) ? 0 : num });
 }
 
