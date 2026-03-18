@@ -357,50 +357,39 @@ onBeforeUnmount(() => {
             >
               Срок возврата
             </label>
-            <Popover v-model:open="isDueDateOpen">
-              <PopoverTrigger as-child>
-                <div
-                  role="button"
-                  tabindex="0"
-                  class="w-full flex items-center justify-between gap-2 px-4 py-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:border-primary/50 transition-all cursor-pointer"
-                  :class="
-                    formData.due_date
-                      ? 'text-text-primary-light dark:text-text-primary-dark'
-                      : 'text-text-tertiary-light dark:text-text-tertiary-dark'
-                  "
-                  @keydown.enter.prevent="isDueDateOpen = !isDueDateOpen"
-                  @keydown.space.prevent="isDueDateOpen = !isDueDateOpen"
-                >
-                  <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2">
+              <Popover v-model:open="isDueDateOpen">
+                <PopoverTrigger as-child>
+                  <button
+                    type="button"
+                    class="flex-1 flex items-center gap-2 px-4 py-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:border-primary/50 transition-all"
+                    :class="
+                      formData.due_date
+                        ? 'text-text-primary-light dark:text-text-primary-dark'
+                        : 'text-text-tertiary-light dark:text-text-tertiary-dark'
+                    "
+                  >
                     <UIcon name="event" size="sm" />
                     <span class="text-sm">{{ dueDateDisplay ?? 'Без срока' }}</span>
-                  </div>
-                  <button
-                    v-if="formData.due_date"
-                    type="button"
-                    class="p-0.5 rounded hover:text-danger transition-colors"
-                    @click.stop="clearDueDate"
-                    @keydown.stop
-                  >
-                    <UIcon name="close" size="xs" />
                   </button>
-                  <UIcon
-                    v-else
-                    name="expand_more"
-                    size="sm"
-                    class="transition-transform"
-                    :class="{ 'rotate-180': isDueDateOpen }"
+                </PopoverTrigger>
+                <PopoverContent class="w-auto p-0" align="start">
+                  <Calendar
+                    :model-value="dueDateCalendarValue"
+                    locale="ru-RU"
+                    @update:model-value="handleDueDateChange"
                   />
-                </div>
-              </PopoverTrigger>
-              <PopoverContent class="w-auto p-0" align="start">
-                <Calendar
-                  :model-value="dueDateCalendarValue"
-                  locale="ru-RU"
-                  @update:model-value="handleDueDateChange"
-                />
-              </PopoverContent>
-            </Popover>
+                </PopoverContent>
+              </Popover>
+              <button
+                v-if="formData.due_date"
+                type="button"
+                class="p-2 rounded-lg text-text-tertiary-light dark:text-text-tertiary-dark hover:text-danger transition-colors"
+                @click="clearDueDate"
+              >
+                <UIcon name="close" size="sm" />
+              </button>
+            </div>
           </div>
 
           <!-- Description -->
