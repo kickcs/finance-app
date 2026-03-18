@@ -8,7 +8,7 @@ import { useToast } from '@/shared/ui';
 import { getTodayISO } from '@/shared/lib/date';
 import { CATEGORY_IDS } from '@/entities/category';
 import { DEFAULT_CURRENCY } from '@/entities/currency';
-import type { DebtDirection } from '@/entities/debt';
+import { buildDebtName, type DebtDirection } from '@/entities/debt';
 
 export interface DebtFormData {
   debt_type: DebtDirection;
@@ -83,7 +83,7 @@ export function useCreateDebt() {
         }
 
         // 2. Create the debt record
-        const debtName = `${isGiven ? 'Долг от' : 'Долг для'} ${formData.value.person_name}`;
+        const debtName = buildDebtName(formData.value.debt_type, formData.value.person_name);
         const debt = await debtsApi.create({
           user_id: userId,
           name: debtName,
@@ -144,7 +144,7 @@ export function useCreateDebt() {
     },
   });
 
-  const isSubmitting = mutation.isPending;
+  const isSubmitting = computed(() => mutation.isPending.value);
 
   async function createDebt(userId: string): Promise<string | null> {
     if (!isValid.value) {

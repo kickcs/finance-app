@@ -52,9 +52,13 @@ function handleAccountChange(accountId: string | null) {
     return;
   }
   const account = props.accounts.find((a) => a.id === accountId);
-  const firstCurrency = account?.balances[0]?.currency || DEFAULT_CURRENCY;
+  const currencies = account?.balances.map((b) => b.currency) || [];
+  const currentCurrency = formData.value.currency;
+  const newCurrency = currencies.includes(currentCurrency)
+    ? currentCurrency
+    : currencies[0] || DEFAULT_CURRENCY;
   updateField('account_id', accountId);
-  updateField('currency', firstCurrency);
+  updateField('currency', newCurrency);
 }
 
 // ── Currency ──────────────────────────────────────────────────────────────
