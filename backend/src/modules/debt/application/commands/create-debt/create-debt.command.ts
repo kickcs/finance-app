@@ -14,5 +14,6 @@ export class CreateDebtCommand {
     public readonly sourceTransactionId?: string,
     public readonly createdAt?: Date,
     public readonly description?: string,
+    public readonly isPrivate?: boolean,
   ) {}
 }

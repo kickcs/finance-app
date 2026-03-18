@@ -6,6 +6,7 @@ import {
   IsIn,
   IsUUID,
   IsDateString,
+  IsBoolean,
   Min,
   Max,
 } from 'class-validator';
@@ -65,4 +66,8 @@ export class CreateDebtDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  isPrivate?: boolean;
 }

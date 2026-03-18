@@ -43,6 +43,10 @@ export class CreateDebtHandler implements ICommandHandler<CreateDebtCommand> {
       debt.update({ remainingAmount: command.remainingAmount });
     }
 
+    if (command.isPrivate !== undefined) {
+      debt.update({ isPrivate: command.isPrivate });
+    }
+
     const savedDebt = await this.debtRepository.save(debt);
     await this.eventPublisher.publishEvents(debt);
 
