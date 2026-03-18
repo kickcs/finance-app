@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onBeforeUnmount } from 'vue';
+import { ref, computed, watch, nextTick } from 'vue';
 import { type DateValue } from '@internationalized/date';
 import {
   DrawerRoot,
@@ -17,6 +17,7 @@ import { getCurrencyByCode, DEFAULT_CURRENCY } from '@/entities/currency';
 import { PersonSelector, usePeople } from '@/entities/person';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useIsDesktop } from '@/shared/lib/composables/useIsDesktop';
+import { useDrawerKeyboard } from '@/shared/lib/composables/useDrawerKeyboard';
 import { getTodayISO, isoToCalendarDate, dateValueToISO } from '@/shared/lib/date';
 import { formatLocalDate } from '@/shared/lib/format/date';
 import { useCreateDebt } from '../model/useCreateDebt';
@@ -32,7 +33,6 @@ const emit = defineEmits<{
 }>();
 
 const isDesktop = useIsDesktop();
-const drawerDirection = computed(() => (isDesktop.value ? 'right' : 'bottom'));
 
 const { userId } = useCurrentUser();
 const { people, createPerson } = usePeople(userId);
@@ -114,61 +114,17 @@ async function handleSubmit() {
   }
 }
 
-// ── iOS virtual keyboard fix ──────────────────────────────────────────────
-// Direct DOM manipulation — NOT reactive state — to avoid Vue re-renders
-// that cause input focus loss when the keyboard appears.
+// ── iOS virtual keyboard fix (mobile only) ───────────────────────────────
 const drawerContentRef = ref<InstanceType<typeof DrawerContent> | null>(null);
 const footerRef = ref<HTMLDivElement | null>(null);
 const scrollContainerRef = ref<HTMLDivElement | null>(null);
 const calendarPortalRef = ref<HTMLElement | null>(null);
-let cleanupViewport: (() => void) | null = null;
 
-function setupKeyboardListener() {
-  cleanupKeyboardListener();
-  const vv = window.visualViewport;
-  if (!vv) return;
-  const drawerEl = drawerContentRef.value?.$el as HTMLElement | undefined;
-  if (!drawerEl) return;
-
-  let wasKeyboardVisible = false;
-
-  const onResize = () => {
-    const footerEl = footerRef.value;
-    const scrollEl = scrollContainerRef.value;
-    const offset = Math.max(0, window.innerHeight - vv.height);
-    const keyboardVisible = offset > 0;
-    drawerEl.style.bottom = keyboardVisible ? `${offset}px` : '';
-    drawerEl.style.top = keyboardVisible ? 'env(safe-area-inset-top, 0px)' : '';
-    drawerEl.style.maxHeight = keyboardVisible ? `${window.innerHeight - offset}px` : '';
-    if (footerEl) footerEl.style.paddingBottom = keyboardVisible ? '0.75rem' : '';
-    if (scrollEl) scrollEl.style.paddingBottom = keyboardVisible ? '1rem' : '';
-    if (keyboardVisible && !wasKeyboardVisible) {
-      document.documentElement.scrollTop = 0;
-      document.body.scrollTop = 0;
-    }
-    wasKeyboardVisible = keyboardVisible;
-  };
-
-  vv.addEventListener('resize', onResize);
-  vv.addEventListener('scroll', onResize);
-  cleanupViewport = () => {
-    vv.removeEventListener('resize', onResize);
-    vv.removeEventListener('scroll', onResize);
-    const footerEl = footerRef.value;
-    const scrollEl = scrollContainerRef.value;
-    drawerEl.style.bottom = '';
-    drawerEl.style.top = '';
-    drawerEl.style.maxHeight = '';
-    if (footerEl) footerEl.style.paddingBottom = '';
-    if (scrollEl) scrollEl.style.paddingBottom = '';
-  };
-  onResize();
-}
-
-function cleanupKeyboardListener() {
-  cleanupViewport?.();
-  cleanupViewport = null;
-}
+const { setupKeyboardListener, cleanupKeyboardListener } = useDrawerKeyboard(
+  drawerContentRef,
+  footerRef,
+  scrollContainerRef,
+);
 
 watch(
   () => props.open,
@@ -183,14 +139,14 @@ watch(
     }
   },
 );
-
-onBeforeUnmount(() => {
-  cleanupKeyboardListener();
-});
 </script>
 
 <template>
-  <DrawerRoot :open="open" :direction="drawerDirection" @update:open="$emit('update:open', $event)">
+  <DrawerRoot
+    :open="open"
+    :direction="isDesktop ? 'right' : 'bottom'"
+    @update:open="$emit('update:open', $event)"
+  >
     <DrawerPortal>
       <DrawerOverlay class="fixed inset-0 z-50 bg-black/40" />
       <DrawerContent
@@ -208,7 +164,7 @@ onBeforeUnmount(() => {
         </div>
 
         <!-- Header -->
-        <div class="flex items-center justify-between px-5 pb-3" :class="isDesktop && 'pt-4'">
+        <div class="flex items-center justify-between px-5 pb-3" :class="{ 'pt-4': isDesktop }">
           <DrawerTitle
             class="text-base font-semibold text-text-primary-light dark:text-text-primary-dark"
           >
@@ -463,7 +419,7 @@ onBeforeUnmount(() => {
         </div>
 
         <!-- Portal container for calendars — keeps popovers inside drawer DOM -->
-        <div ref="calendarPortalRef" />
+        <div ref="calendarPortalRef" class="hidden" />
 
         <!-- Footer -->
         <div
