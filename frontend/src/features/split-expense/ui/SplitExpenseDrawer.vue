@@ -232,7 +232,7 @@ onBeforeUnmount(() => {
         </div>
 
         <!-- Header -->
-        <div class="flex items-center justify-between px-5 pb-3">
+        <div class="flex items-center justify-between px-5 pb-3" :class="isDesktop && 'pt-4'">
           <DrawerTitle
             class="text-base font-semibold text-text-primary-light dark:text-text-primary-dark"
           >
