@@ -1,6 +1,7 @@
 /**
  * Date utility functions
  */
+import { CalendarDate, type DateValue } from '@internationalized/date';
 
 /**
  * Check if a date string represents today
@@ -54,4 +55,17 @@ export function toLocalISODate(date: Date): string {
  */
 export function getTodayISO(): string {
   return toLocalISODate(new Date());
+}
+
+/** Convert ISO date string (YYYY-MM-DD) to CalendarDate. Returns undefined for null/empty. */
+export function isoToCalendarDate(dateStr: string | null | undefined): DateValue | undefined {
+  if (!dateStr) return undefined;
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new CalendarDate(year, month, day);
+}
+
+/** Convert a DateValue (from @internationalized/date) to ISO date string (YYYY-MM-DD). Returns null for undefined. */
+export function dateValueToISO(date: DateValue | undefined): string | null {
+  if (!date) return null;
+  return `${date.year}-${String(date.month).padStart(2, '0')}-${String(date.day).padStart(2, '0')}`;
 }

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onBeforeUnmount } from 'vue';
-import { CalendarDate, type DateValue } from '@internationalized/date';
+import { type DateValue } from '@internationalized/date';
 import {
   DrawerRoot,
   DrawerPortal,
@@ -16,7 +16,7 @@ import { DEBT_DIRECTION_LABELS, type DebtDirection } from '@/entities/debt';
 import { getCurrencyByCode, DEFAULT_CURRENCY } from '@/entities/currency';
 import { PersonSelector, usePeople } from '@/entities/person';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
-import { getTodayISO } from '@/shared/lib/date';
+import { getTodayISO, isoToCalendarDate, dateValueToISO } from '@/shared/lib/date';
 import { formatLocalDate } from '@/shared/lib/format/date';
 import { useCreateDebt } from '../model/useCreateDebt';
 import type { AccountWithBalances } from '@/entities/account';
@@ -67,43 +67,33 @@ const currencySymbol = computed(() => {
 
 // ── Debt date (when debt was created) ─────────────────────────────────────
 const isDebtDateOpen = ref(false);
-const debtDateCalendarValue = computed(() => {
-  const s = formData.value.debt_date || getTodayISO();
-  const [y, m, d] = s.split('-').map(Number);
-  return new CalendarDate(y, m, d);
-});
+const debtDateCalendarValue = computed(
+  () => isoToCalendarDate(formData.value.debt_date || getTodayISO())!,
+);
 const debtDisplayDate = computed(() => {
   const s = formData.value.debt_date || getTodayISO();
   const [y, m, d] = s.split('-').map(Number);
   return formatLocalDate(new Date(y, m - 1, d).getTime());
 });
 function handleDebtDateChange(value: DateValue | undefined) {
-  if (!value) return;
-  const y = value.year;
-  const m = String(value.month).padStart(2, '0');
-  const d = String(value.day).padStart(2, '0');
-  updateField('debt_date', `${y}-${m}-${d}`);
+  const iso = dateValueToISO(value);
+  if (!iso) return;
+  updateField('debt_date', iso);
   isDebtDateOpen.value = false;
 }
 
 // ── Due date (when debt should be returned) ───────────────────────────────
 const isDueDateOpen = ref(false);
-const dueDateCalendarValue = computed<DateValue | undefined>(() => {
-  if (!formData.value.due_date) return undefined;
-  const [y, m, d] = formData.value.due_date.split('-').map(Number);
-  return new CalendarDate(y, m, d);
-});
+const dueDateCalendarValue = computed(() => isoToCalendarDate(formData.value.due_date));
 const dueDateDisplay = computed(() => {
   if (!formData.value.due_date) return null;
   const [y, m, d] = formData.value.due_date.split('-').map(Number);
   return formatLocalDate(new Date(y, m - 1, d).getTime());
 });
 function handleDueDateChange(value: DateValue | undefined) {
-  if (!value) return;
-  const y = value.year;
-  const m = String(value.month).padStart(2, '0');
-  const d = String(value.day).padStart(2, '0');
-  updateField('due_date', `${y}-${m}-${d}`);
+  const iso = dateValueToISO(value);
+  if (!iso) return;
+  updateField('due_date', iso);
   isDueDateOpen.value = false;
 }
 function clearDueDate() {
@@ -132,11 +122,13 @@ function setupKeyboardListener() {
   const vv = window.visualViewport;
   if (!vv) return;
   const drawerEl = drawerContentRef.value?.$el as HTMLElement | undefined;
-  const footerEl = footerRef.value;
-  const scrollEl = scrollContainerRef.value;
   if (!drawerEl) return;
 
+  let wasKeyboardVisible = false;
+
   const onResize = () => {
+    const footerEl = footerRef.value;
+    const scrollEl = scrollContainerRef.value;
     const offset = Math.max(0, window.innerHeight - vv.height);
     const keyboardVisible = offset > 0;
     drawerEl.style.bottom = keyboardVisible ? `${offset}px` : '';
@@ -144,10 +136,11 @@ function setupKeyboardListener() {
     drawerEl.style.maxHeight = keyboardVisible ? `${window.innerHeight - offset}px` : '';
     if (footerEl) footerEl.style.paddingBottom = keyboardVisible ? '0.75rem' : '';
     if (scrollEl) scrollEl.style.paddingBottom = keyboardVisible ? '1rem' : '';
-    if (keyboardVisible) {
+    if (keyboardVisible && !wasKeyboardVisible) {
       document.documentElement.scrollTop = 0;
       document.body.scrollTop = 0;
     }
+    wasKeyboardVisible = keyboardVisible;
   };
 
   vv.addEventListener('resize', onResize);
@@ -155,6 +148,8 @@ function setupKeyboardListener() {
   cleanupViewport = () => {
     vv.removeEventListener('resize', onResize);
     vv.removeEventListener('scroll', onResize);
+    const footerEl = footerRef.value;
+    const scrollEl = scrollContainerRef.value;
     drawerEl.style.bottom = '';
     drawerEl.style.top = '';
     drawerEl.style.maxHeight = '';
@@ -355,7 +350,6 @@ onBeforeUnmount(() => {
                 <div
                   role="button"
                   tabindex="0"
-                  type="button"
                   class="w-full flex items-center justify-between gap-2 px-4 py-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:border-primary/50 transition-all cursor-pointer"
                   :class="
                     formData.due_date
@@ -374,6 +368,7 @@ onBeforeUnmount(() => {
                     type="button"
                     class="p-0.5 rounded hover:text-danger transition-colors"
                     @click.stop="clearDueDate"
+                    @keydown.stop
                   >
                     <UIcon name="close" size="xs" />
                   </button>

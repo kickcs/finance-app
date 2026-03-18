@@ -23,22 +23,24 @@ export interface DebtFormData {
   due_date: string | null;
 }
 
-const initialFormData: DebtFormData = {
-  debt_type: 'taken',
-  person_name: '',
-  amount: 0,
-  currency: DEFAULT_CURRENCY,
-  account_id: null,
-  debt_date: getTodayISO(),
-  description: '',
-  skipTransaction: false,
-  is_private: false,
-  due_date: null,
-};
+function makeInitialFormData(): DebtFormData {
+  return {
+    debt_type: 'taken',
+    person_name: '',
+    amount: 0,
+    currency: DEFAULT_CURRENCY,
+    account_id: null,
+    debt_date: getTodayISO(),
+    description: '',
+    skipTransaction: false,
+    is_private: false,
+    due_date: null,
+  };
+}
 
 export function useCreateDebt() {
   const { toast } = useToast();
-  const formData = ref<DebtFormData>({ ...initialFormData });
+  const formData = ref<DebtFormData>(makeInitialFormData());
   const error = ref<string | null>(null);
 
   const isValid = computed(() => {
@@ -162,7 +164,7 @@ export function useCreateDebt() {
   }
 
   function resetForm() {
-    formData.value = { ...initialFormData };
+    formData.value = makeInitialFormData();
     error.value = null;
     mutation.reset();
   }
