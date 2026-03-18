@@ -2,14 +2,11 @@
 import { UToggle } from '@/shared/ui';
 
 defineProps<{
-  modelValue: boolean;
   title: string;
   description: string;
 }>();
 
-defineEmits<{
-  'update:modelValue': [value: boolean];
-}>();
+const model = defineModel<boolean>({ required: true });
 </script>
 
 <template>
@@ -22,6 +19,6 @@ defineEmits<{
         {{ description }}
       </p>
     </div>
-    <UToggle :model-value="modelValue" @update:model-value="$emit('update:modelValue', $event)" />
+    <UToggle v-model="model" />
   </div>
 </template>

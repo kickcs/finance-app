@@ -16,7 +16,6 @@ import { PersonSelector, usePeople } from '@/entities/person';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useIsDesktop } from '@/shared/lib/composables/useIsDesktop';
 import { useDrawerKeyboard } from '@/shared/lib/composables';
-import { getTodayISO } from '@/shared/lib/date';
 import { useCreateDebt } from '../model/useCreateDebt';
 import { useHaptics } from '@/shared/lib/haptics';
 import type { AccountWithBalances } from '@/entities/account';
@@ -71,7 +70,6 @@ const currencySymbol = computed(() => getCurrencySymbol(formData.value.currency)
 // ── Dates ────────────────────────────────────────────────────────────────
 const isDebtDateOpen = ref(false);
 const isDueDateOpen = ref(false);
-const debtDateValue = computed(() => formData.value.debt_date || getTodayISO());
 
 // ── Submit ────────────────────────────────────────────────────────────────
 async function handleSubmit() {
@@ -249,7 +247,7 @@ watch(
             </label>
             <DatePickerField
               v-model:open="isDebtDateOpen"
-              :model-value="debtDateValue"
+              :model-value="formData.debt_date"
               :portal-to="calendarPortalRef"
               @update:model-value="updateField('debt_date', $event)"
             />
@@ -282,20 +280,18 @@ watch(
 
           <!-- Is private toggle -->
           <ToggleRow
-            :model-value="formData.is_private"
+            v-model="formData.is_private"
             title="Скрыть сумму"
             description="Сумма не будет видна в общем списке"
-            @update:model-value="updateField('is_private', $event)"
           />
 
           <!-- Skip transaction -->
           <ToggleRow
-            :model-value="formData.skip_transaction"
+            v-model="formData.skip_transaction"
             :title="
               formData.debt_type === 'given' ? 'Не списывать с баланса' : 'Не добавлять на баланс'
             "
             description="Транзакция не будет создана"
-            @update:model-value="updateField('skip_transaction', $event)"
           />
 
           <!-- Info box -->
