@@ -11,7 +11,6 @@ export const ROUTE_NAMES = {
   REMINDER_DETAIL: 'reminder-detail',
   REMINDERS_LIST: 'reminders-list',
   DEBTS_LIST: 'debts-list',
-  NEW_DEBT: 'new-debt',
   DEBT_DETAIL: 'debt-detail',
   PROFILE: 'profile',
   CHANGELOG: 'changelog',

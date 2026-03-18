@@ -21,7 +21,7 @@ export function useDashboardNavigation() {
       ),
     toHistory: () => router.push({ name: ROUTE_NAMES.HISTORY }),
     toDebt: (debt: Debt) => router.push({ name: ROUTE_NAMES.DEBT_DETAIL, params: { id: debt.id } }),
-    toNewDebt: () => router.push({ name: ROUTE_NAMES.NEW_DEBT }),
+    toNewDebt: () => router.push({ name: ROUTE_NAMES.DEBTS_LIST }),
     toDebts: (person?: string, debtType?: 'given' | 'taken') =>
       person
         ? router.push({ name: ROUTE_NAMES.DEBTS_LIST, query: { person, type: debtType } })
