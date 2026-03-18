@@ -5,7 +5,9 @@ import { cn } from '@/shared/lib/utils';
 import { computed, type HTMLAttributes } from 'vue';
 
 const props = withDefaults(
-  defineProps<PopoverContentProps & { class?: HTMLAttributes['class'] }>(),
+  defineProps<
+    PopoverContentProps & { class?: HTMLAttributes['class']; to?: string | HTMLElement | null }
+  >(),
   {
     align: 'center',
     sideOffset: 4,
@@ -15,13 +17,13 @@ const props = withDefaults(
 defineOptions({ inheritAttrs: false });
 
 const delegatedProps = computed(() => {
-  const { class: _, ...delegated } = props;
+  const { class: _, to: _to, ...delegated } = props;
   return delegated;
 });
 </script>
 
 <template>
-  <PopoverPortal>
+  <PopoverPortal :to="props.to ?? undefined">
     <PopoverContent
       v-bind="{ ...delegatedProps, ...$attrs }"
       :class="

@@ -10,6 +10,7 @@ import {
   DrawerTitle,
 } from 'vaul-vue';
 import { UInput, UButton, UTabs, UIcon, UToggle, SelectChips } from '@/shared/ui';
+import { Popover, PopoverTrigger, PopoverContent } from '@/shared/ui/primitives/popover';
 import { Calendar } from '@/shared/ui/primitives/calendar';
 import { DEBT_DIRECTION_LABELS, type DebtDirection } from '@/entities/debt';
 import { getCurrencyByCode, DEFAULT_CURRENCY } from '@/entities/currency';
@@ -119,6 +120,7 @@ async function handleSubmit() {
 const drawerContentRef = ref<InstanceType<typeof DrawerContent> | null>(null);
 const footerRef = ref<HTMLDivElement | null>(null);
 const scrollContainerRef = ref<HTMLDivElement | null>(null);
+const calendarPortalRef = ref<HTMLElement | null>(null);
 let cleanupViewport: (() => void) | null = null;
 
 function setupKeyboardListener() {
@@ -317,36 +319,36 @@ onBeforeUnmount(() => {
             >
               Дата
             </label>
-            <button
-              type="button"
-              class="w-full flex items-center justify-between gap-2 px-4 py-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark hover:border-primary/50 transition-all"
-              @click="isDebtDateOpen = !isDebtDateOpen"
-            >
-              <div class="flex items-center gap-2">
-                <UIcon
-                  name="calendar_month"
-                  size="sm"
-                  class="text-text-secondary-light dark:text-text-secondary-dark"
+            <Popover v-model:open="isDebtDateOpen">
+              <PopoverTrigger as-child>
+                <button
+                  type="button"
+                  class="w-full flex items-center justify-between gap-2 px-4 py-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark hover:border-primary/50 transition-all"
+                >
+                  <div class="flex items-center gap-2">
+                    <UIcon
+                      name="calendar_month"
+                      size="sm"
+                      class="text-text-secondary-light dark:text-text-secondary-dark"
+                    />
+                    <span class="text-sm">{{ debtDisplayDate }}</span>
+                  </div>
+                  <UIcon
+                    name="expand_more"
+                    size="sm"
+                    class="text-text-secondary-light dark:text-text-secondary-dark transition-transform"
+                    :class="{ 'rotate-180': isDebtDateOpen }"
+                  />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent class="w-auto p-0" align="start" :to="calendarPortalRef">
+                <Calendar
+                  :model-value="debtDateCalendarValue"
+                  locale="ru-RU"
+                  @update:model-value="handleDebtDateChange"
                 />
-                <span class="text-sm">{{ debtDisplayDate }}</span>
-              </div>
-              <UIcon
-                name="expand_more"
-                size="sm"
-                class="text-text-secondary-light dark:text-text-secondary-dark transition-transform"
-                :class="{ 'rotate-180': isDebtDateOpen }"
-              />
-            </button>
-            <div
-              v-if="isDebtDateOpen"
-              class="rounded-xl border border-border-light dark:border-border-dark overflow-hidden"
-            >
-              <Calendar
-                :model-value="debtDateCalendarValue"
-                locale="ru-RU"
-                @update:model-value="handleDebtDateChange"
-              />
-            </div>
+              </PopoverContent>
+            </Popover>
           </div>
 
           <!-- Due date -->
@@ -357,19 +359,29 @@ onBeforeUnmount(() => {
               Срок возврата
             </label>
             <div class="flex items-center gap-2">
-              <button
-                type="button"
-                class="flex-1 flex items-center gap-2 px-4 py-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:border-primary/50 transition-all"
-                :class="
-                  formData.due_date
-                    ? 'text-text-primary-light dark:text-text-primary-dark'
-                    : 'text-text-tertiary-light dark:text-text-tertiary-dark'
-                "
-                @click="isDueDateOpen = !isDueDateOpen"
-              >
-                <UIcon name="event" size="sm" />
-                <span class="text-sm">{{ dueDateDisplay ?? 'Без срока' }}</span>
-              </button>
+              <Popover v-model:open="isDueDateOpen">
+                <PopoverTrigger as-child>
+                  <button
+                    type="button"
+                    class="flex-1 flex items-center gap-2 px-4 py-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:border-primary/50 transition-all"
+                    :class="
+                      formData.due_date
+                        ? 'text-text-primary-light dark:text-text-primary-dark'
+                        : 'text-text-tertiary-light dark:text-text-tertiary-dark'
+                    "
+                  >
+                    <UIcon name="calendar_month" size="sm" />
+                    <span class="text-sm">{{ dueDateDisplay ?? 'Без срока' }}</span>
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent class="w-auto p-0" align="start" :to="calendarPortalRef">
+                  <Calendar
+                    :model-value="dueDateCalendarValue"
+                    locale="ru-RU"
+                    @update:model-value="handleDueDateChange"
+                  />
+                </PopoverContent>
+              </Popover>
               <button
                 v-if="formData.due_date"
                 type="button"
@@ -378,16 +390,6 @@ onBeforeUnmount(() => {
               >
                 <UIcon name="close" size="sm" />
               </button>
-            </div>
-            <div
-              v-if="isDueDateOpen"
-              class="rounded-xl border border-border-light dark:border-border-dark overflow-hidden"
-            >
-              <Calendar
-                :model-value="dueDateCalendarValue"
-                locale="ru-RU"
-                @update:model-value="handleDueDateChange"
-              />
             </div>
           </div>
 
@@ -459,6 +461,9 @@ onBeforeUnmount(() => {
           <!-- Error -->
           <p v-if="error" class="text-sm text-danger">{{ error }}</p>
         </div>
+
+        <!-- Portal container for calendars — keeps popovers inside drawer DOM -->
+        <div ref="calendarPortalRef" />
 
         <!-- Footer -->
         <div
