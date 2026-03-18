@@ -65,16 +65,19 @@ const currencySymbol = computed(() => {
   return c?.symbol || formData.value.currency;
 });
 
+// Converts ISO date string to a localized display string using local timezone construction
+// (avoids UTC-offset issues that arise from passing ISO strings directly to new Date())
+function isoToDisplayDate(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  return formatLocalDate(new Date(y, m - 1, d).getTime());
+}
+
 // ── Debt date (when debt was created) ─────────────────────────────────────
 const isDebtDateOpen = ref(false);
 const debtDateCalendarValue = computed(
   () => isoToCalendarDate(formData.value.debt_date || getTodayISO())!,
 );
-const debtDisplayDate = computed(() => {
-  const s = formData.value.debt_date || getTodayISO();
-  const [y, m, d] = s.split('-').map(Number);
-  return formatLocalDate(new Date(y, m - 1, d).getTime());
-});
+const debtDisplayDate = computed(() => isoToDisplayDate(formData.value.debt_date || getTodayISO()));
 function handleDebtDateChange(value: DateValue | undefined) {
   const iso = dateValueToISO(value);
   if (!iso) return;
@@ -85,11 +88,9 @@ function handleDebtDateChange(value: DateValue | undefined) {
 // ── Due date (when debt should be returned) ───────────────────────────────
 const isDueDateOpen = ref(false);
 const dueDateCalendarValue = computed(() => isoToCalendarDate(formData.value.due_date));
-const dueDateDisplay = computed(() => {
-  if (!formData.value.due_date) return null;
-  const [y, m, d] = formData.value.due_date.split('-').map(Number);
-  return formatLocalDate(new Date(y, m - 1, d).getTime());
-});
+const dueDateDisplay = computed(() =>
+  formData.value.due_date ? isoToDisplayDate(formData.value.due_date) : null,
+);
 function handleDueDateChange(value: DateValue | undefined) {
   const iso = dateValueToISO(value);
   if (!iso) return;
