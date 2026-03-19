@@ -170,7 +170,10 @@ function handleTargetSelect(accountId: string) {
     firstCurrency = account?.balances[0]?.currency || DEFAULT_CURRENCY;
   }
 
-  const toAmount = applyApiRate(props.formData.currency, firstCurrency);
+  const isSameCurrency = props.formData.currency === firstCurrency;
+  const toAmount = isSameCurrency
+    ? props.formData.amount
+    : applyApiRate(props.formData.currency, firstCurrency);
 
   emit('update:formData', {
     ...props.formData,
@@ -232,7 +235,11 @@ function handleSourceCurrencyChange(newCurrency: string) {
 }
 
 function handleAmountChange(newAmount: number) {
-  const toAmount = recalcToAmount(newAmount, exchangeRate.value);
+  const isSameCurrency =
+    props.formData.currency &&
+    props.formData.toCurrency &&
+    props.formData.currency === props.formData.toCurrency;
+  const toAmount = isSameCurrency ? newAmount : recalcToAmount(newAmount, exchangeRate.value);
   emit('update:formData', {
     ...props.formData,
     amount: newAmount,
