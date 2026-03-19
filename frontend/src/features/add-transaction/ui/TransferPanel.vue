@@ -192,7 +192,10 @@ function handleSwap() {
   const newTargetId = props.formData.accountId;
   const newTargetCurrency = props.formData.currency;
 
-  const newToAmount = applyApiRate(newSourceCurrency, newTargetCurrency);
+  const isSameCurrency = newSourceCurrency === newTargetCurrency;
+  const newToAmount = isSameCurrency
+    ? props.formData.amount
+    : applyApiRate(newSourceCurrency, newTargetCurrency);
 
   emit('update:formData', {
     ...props.formData,
@@ -235,11 +238,9 @@ function handleSourceCurrencyChange(newCurrency: string) {
 }
 
 function handleAmountChange(newAmount: number) {
-  const isSameCurrency =
-    props.formData.currency &&
-    props.formData.toCurrency &&
-    props.formData.currency === props.formData.toCurrency;
-  const toAmount = isSameCurrency ? newAmount : recalcToAmount(newAmount, exchangeRate.value);
+  const toAmount = !showConversion.value
+    ? newAmount
+    : recalcToAmount(newAmount, exchangeRate.value);
   emit('update:formData', {
     ...props.formData,
     amount: newAmount,
