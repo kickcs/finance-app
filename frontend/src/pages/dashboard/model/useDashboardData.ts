@@ -8,10 +8,12 @@ import { useCategories } from '@/entities/category';
 import { useBudget } from '@/entities/budget';
 import { useProfile, useExchangeRates } from '@/shared/api';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
-import { toLocalISODate } from '@/shared/lib/date';
+import { toLocalISODate, getDaysRemainingInMonth } from '@/shared/lib/date';
 import type { WidgetId } from '@/shared/api/database.types';
 import { DEFAULT_WIDGET_ORDER } from '@/shared/config/dashboard';
 import { DEFAULT_CURRENCY } from '@/shared/config/currency';
+
+const MIN_DAYS_FOR_SPENDING_METRICS = 7;
 
 export function useDashboardData() {
   const { user, userId } = useCurrentUser();
@@ -51,7 +53,7 @@ export function useDashboardData() {
   });
   const {
     categoryBreakdown,
-    totalExpense,
+    expenseByCurrency,
     isLoading: analyticsLoading,
   } = useAnalyticsStats({
     startDate: monthStart,
@@ -99,20 +101,25 @@ export function useDashboardData() {
   });
 
   const daysElapsedInMonth = computed(() => currentDate.value.getDate());
-
-  const daysRemainingInMonth = computed(() => {
-    const d = currentDate.value;
-    const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-    return Math.max(1, lastDay - d.getDate() + 1);
-  });
+  const daysRemainingInMonth = computed(() => getDaysRemainingInMonth(currentDate.value));
 
   // Show spending metrics only after the first week of the month (7+ days of data)
-  const showSpendingMetrics = computed(() => daysElapsedInMonth.value >= 7);
+  const showSpendingMetrics = computed(
+    () => daysElapsedInMonth.value >= MIN_DAYS_FOR_SPENDING_METRICS,
+  );
 
-  // A) Average daily expense = totalExpense / daysElapsed
+  // Monthly expense converted to user's currency (multi-currency safe)
+  const convertedMonthlyExpense = computed(() =>
+    Object.entries(expenseByCurrency.value).reduce(
+      (sum, [curr, amt]) => sum + convert(amt, curr),
+      0,
+    ),
+  );
+
+  // A) Average daily expense = convertedExpense / daysElapsed
   const avgDailyExpense = computed(() => {
     if (!showSpendingMetrics.value) return null;
-    return totalExpense.value / daysElapsedInMonth.value;
+    return convertedMonthlyExpense.value / daysElapsedInMonth.value;
   });
 
   // B) Safe daily balance = totalBalance (non-hidden accounts) / daysRemaining

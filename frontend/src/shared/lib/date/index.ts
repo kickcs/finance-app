@@ -58,6 +58,12 @@ export function getTodayISO(): string {
   return toLocalISODate(new Date());
 }
 
+/** Days remaining in current month, inclusive of today. Minimum 1 (prevents division-by-zero). */
+export function getDaysRemainingInMonth(date: Date = new Date()): number {
+  const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  return Math.max(1, lastDay - date.getDate() + 1);
+}
+
 /** Convert ISO date string (YYYY-MM-DD) to CalendarDate. Returns undefined for null/empty. */
 export function isoToCalendarDate(dateStr: string | null | undefined): DateValue | undefined {
   if (!dateStr) return undefined;

@@ -1,4 +1,5 @@
 import { ref, computed } from 'vue';
+import { getDaysRemainingInMonth } from '@/shared/lib/date';
 import type { Transaction } from '@/shared/api/database.types';
 import type {
   AnalyticsFilters,
@@ -67,12 +68,8 @@ export function useAnalyticsFilters() {
     return Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
   });
 
-  // Days remaining in current month
-  const daysRemainingInMonth = computed(() => {
-    const now = new Date();
-    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    return lastDay.getDate() - now.getDate();
-  });
+  // Days remaining in current month (inclusive of today, min 1)
+  const daysRemainingInMonth = computed(() => getDaysRemainingInMonth());
 
   // Calculate category statistics from filtered transactions
   function calculateCategoryStats(

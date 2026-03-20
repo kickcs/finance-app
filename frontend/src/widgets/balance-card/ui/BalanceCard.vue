@@ -67,25 +67,37 @@ const metricSub = 'text-[0.6rem] font-medium text-text-tertiary-light dark:text-
         </button>
       </div>
 
-      <!-- Divider (only after first week) -->
+      <!-- Divider -->
       <div
-        v-if="avgDailyExpense != null"
+        v-if="loading || avgDailyExpense != null"
         class="w-px self-stretch my-1 bg-border-light dark:bg-border-dark"
       />
 
-      <!-- Right Side: Spending Metrics (only after first week of month) -->
-      <div v-if="avgDailyExpense != null" class="flex flex-col items-end shrink-0 gap-1.5">
-        <Skeleton v-if="loading" class="h-4 w-16 rounded" />
+      <!-- Right Side: Spending Metrics -->
+      <div
+        v-if="loading || avgDailyExpense != null"
+        class="flex flex-col items-end shrink-0 gap-1.5"
+      >
+        <!-- Loading skeleton -->
+        <template v-if="loading">
+          <Skeleton class="h-3 w-16 rounded" />
+          <Skeleton class="h-5 w-24 rounded-lg" />
+          <Skeleton class="h-3 w-16 rounded" />
+          <Skeleton class="h-5 w-24 rounded-lg" />
+          <Skeleton class="h-2.5 w-20 rounded" />
+        </template>
+
+        <!-- Loaded metrics -->
         <template v-else>
           <!-- Average daily expense -->
           <div class="flex flex-col items-end">
             <p :class="metricLabel">Средний расход</p>
             <span class="text-sm font-bold text-warning leading-tight">
-              {{ formatMasked(avgDailyExpense, currency, hidden ?? false) }}/дн
+              {{ formatMasked(avgDailyExpense!, currency, hidden ?? false) }}/дн
             </span>
           </div>
 
-          <!-- Safe daily limit -->
+          <!-- Safe daily balance -->
           <div v-if="safeDailyLimit != null" class="flex flex-col items-end">
             <p :class="metricLabel">Безопасный остаток</p>
             <span
@@ -96,7 +108,9 @@ const metricSub = 'text-[0.6rem] font-medium text-text-tertiary-light dark:text-
             </span>
           </div>
 
-          <span :class="metricSub">осталось {{ daysRemaining }} дн</span>
+          <span v-if="daysRemaining != null" :class="metricSub">
+            осталось {{ daysRemaining }} дн
+          </span>
         </template>
       </div>
 
