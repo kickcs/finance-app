@@ -26,6 +26,9 @@ export class QuickActionOrmEntity {
   @Column({ type: 'smallint', default: 0 })
   position: number;
 
+  @Column({ type: 'numeric', precision: 12, scale: 2, nullable: true })
+  amount: string | null;
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamp with time zone' })
   createdAt: Date;
 

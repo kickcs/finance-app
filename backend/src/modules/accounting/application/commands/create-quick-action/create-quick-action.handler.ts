@@ -10,7 +10,7 @@ import {
 import { QuickAction } from '../../../domain/aggregates/quick-action';
 import { toQuickActionResponse } from '../quick-action-response';
 
-const MAX_QUICK_ACTIONS = 4;
+const MAX_QUICK_ACTIONS = 6;
 
 @CommandHandler(CreateQuickActionCommand)
 export class CreateQuickActionHandler implements ICommandHandler<CreateQuickActionCommand> {
@@ -22,7 +22,7 @@ export class CreateQuickActionHandler implements ICommandHandler<CreateQuickActi
   async execute(command: CreateQuickActionCommand) {
     const count = await this.quickActionRepository.countByUserId(command.userId);
     if (count >= MAX_QUICK_ACTIONS) {
-      throw new BadRequestException('Maximum of 4 quick actions allowed');
+      throw new BadRequestException('Maximum of 6 quick actions allowed');
     }
 
     const quickAction = QuickAction.create(
@@ -32,6 +32,7 @@ export class CreateQuickActionHandler implements ICommandHandler<CreateQuickActi
       command.accountId,
       command.label,
       count,
+      command.amount ?? null,
     );
 
     const saved = await this.quickActionRepository.save(quickAction);

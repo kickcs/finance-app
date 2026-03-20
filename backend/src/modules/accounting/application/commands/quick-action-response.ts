@@ -8,6 +8,7 @@ export function toQuickActionResponse(a: QuickAction) {
     accountId: a.accountId,
     label: a.label,
     position: a.position,
+    amount: a.amount ?? null,
     createdAt: a.createdAt.toISOString(),
     updatedAt: a.updatedAt.toISOString(),
   };

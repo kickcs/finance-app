@@ -1,4 +1,4 @@
-import { IsString, IsUUID, MaxLength } from 'class-validator';
+import { IsString, IsUUID, MaxLength, IsOptional, IsNumber, IsPositive } from 'class-validator';
 
 export class CreateQuickActionDto {
   @IsUUID()
@@ -10,4 +10,9 @@ export class CreateQuickActionDto {
   @IsString()
   @MaxLength(50)
   label: string;
+
+  @IsOptional()
+  @IsNumber()
+  @IsPositive()
+  amount?: number;
 }

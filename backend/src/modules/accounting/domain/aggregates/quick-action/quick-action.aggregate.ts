@@ -7,6 +7,7 @@ export interface QuickActionProps {
   accountId: string;
   label: string;
   position: number;
+  amount: number | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -17,6 +18,7 @@ export class QuickAction extends AggregateRoot<string> {
   private _accountId: string;
   private _label: string;
   private _position: number;
+  private _amount: number | null;
   private _createdAt: Date;
   private _updatedAt: Date;
 
@@ -27,6 +29,7 @@ export class QuickAction extends AggregateRoot<string> {
     this._accountId = props.accountId;
     this._label = props.label;
     this._position = props.position;
+    this._amount = props.amount;
     this._createdAt = props.createdAt;
     this._updatedAt = props.updatedAt;
   }
@@ -38,6 +41,7 @@ export class QuickAction extends AggregateRoot<string> {
     accountId: string,
     label: string,
     position: number,
+    amount: number | null = null,
   ): QuickAction {
     return new QuickAction({
       id,
@@ -46,6 +50,7 @@ export class QuickAction extends AggregateRoot<string> {
       accountId,
       label,
       position,
+      amount,
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -70,6 +75,9 @@ export class QuickAction extends AggregateRoot<string> {
   get position(): number {
     return this._position;
   }
+  get amount(): number | null {
+    return this._amount;
+  }
   get createdAt(): Date {
     return this._createdAt;
   }
@@ -77,10 +85,16 @@ export class QuickAction extends AggregateRoot<string> {
     return this._updatedAt;
   }
 
-  update(data: { categoryId?: string; accountId?: string; label?: string }): void {
+  update(data: {
+    categoryId?: string;
+    accountId?: string;
+    label?: string;
+    amount?: number | null;
+  }): void {
     if (data.categoryId !== undefined) this._categoryId = data.categoryId;
     if (data.accountId !== undefined) this._accountId = data.accountId;
     if (data.label !== undefined) this._label = data.label;
+    if (data.amount !== undefined) this._amount = data.amount;
     this._updatedAt = new Date();
   }
 

@@ -10,6 +10,7 @@ export class QuickActionMapper {
       accountId: orm.accountId,
       label: orm.label,
       position: orm.position,
+      amount: orm.amount !== null ? parseFloat(orm.amount) : null,
       createdAt: orm.createdAt,
       updatedAt: orm.updatedAt,
     });
@@ -23,6 +24,7 @@ export class QuickActionMapper {
     orm.accountId = domain.accountId;
     orm.label = domain.label;
     orm.position = domain.position;
+    orm.amount = domain.amount !== null ? domain.amount.toString() : null;
     orm.createdAt = domain.createdAt;
     orm.updatedAt = domain.updatedAt;
     return orm;

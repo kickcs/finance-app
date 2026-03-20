@@ -1,4 +1,12 @@
-import { IsString, IsOptional, IsUUID, MaxLength } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsUUID,
+  MaxLength,
+  IsNumber,
+  IsPositive,
+  ValidateIf,
+} from 'class-validator';
 
 export class UpdateQuickActionDto {
   @IsOptional()
@@ -13,4 +21,10 @@ export class UpdateQuickActionDto {
   @IsString()
   @MaxLength(50)
   label?: string;
+
+  @IsOptional()
+  @ValidateIf((_o, value) => value !== null)
+  @IsNumber()
+  @IsPositive()
+  amount?: number | null;
 }

@@ -4,5 +4,6 @@ export class CreateQuickActionCommand {
     public readonly categoryId: string,
     public readonly accountId: string,
     public readonly label: string,
+    public readonly amount?: number,
   ) {}
 }

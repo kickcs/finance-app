@@ -38,7 +38,7 @@ export class QuickActionsController {
     @Body() dto: CreateQuickActionDto,
   ): Promise<unknown> {
     return this.commandBus.execute(
-      new CreateQuickActionCommand(userId, dto.categoryId, dto.accountId, dto.label),
+      new CreateQuickActionCommand(userId, dto.categoryId, dto.accountId, dto.label, dto.amount),
     );
   }
 

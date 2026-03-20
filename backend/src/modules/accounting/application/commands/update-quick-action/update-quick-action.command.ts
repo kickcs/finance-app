@@ -6,6 +6,7 @@ export class UpdateQuickActionCommand {
       categoryId?: string;
       accountId?: string;
       label?: string;
+      amount?: number | null;
     },
   ) {}
 }
