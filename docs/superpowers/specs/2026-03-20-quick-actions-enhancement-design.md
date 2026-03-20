@@ -34,17 +34,25 @@ Enhance Quick Actions with three capabilities:
 - `CreateQuickActionDto`: Add `amount?: number` (optional, `@IsNumber()`, `@IsPositive()`)
 - `UpdateQuickActionDto`: Add `amount?: number | null` (nullable to allow clearing)
 
-**MAX_QUICK_ACTIONS**: Change from 4 to 6 in `CreateQuickActionHandler`.
+**MAX_QUICK_ACTIONS**: Change from 4 to 6 in `CreateQuickActionHandler`. Update error message string from "4" to "6".
+
+**Command classes**:
+- `CreateQuickActionCommand`: Add `amount?: number` constructor parameter
+- `UpdateQuickActionCommand`: Add `amount?: number | null` to data type
+
+**Response serializer** (`quick-action-response.ts`): Add `amount: a.amount ?? null` to `toQuickActionResponse()`.
+
+**Controller** (`quick-actions.controller.ts`): Pass `dto.amount` to `CreateQuickActionCommand`.
 
 **API endpoints unchanged** — same routes, new optional field in request/response.
 
 ### 2. Frontend: One-tap Transaction Creation
 
 **Click behavior branching** (in `useDashboardQuickActions`):
-- If quick action has `amount` → call `POST /api/transactions` directly with `{ type: 'expense', categoryId, accountId, amount }`, show success toast with haptic feedback
+- If quick action has `amount` → call `POST /api/transactions` directly with `{ type: 'expense', categoryId, accountId, amount, currency }` (currency resolved from account via `useAccounts`), show success toast with haptic feedback
 - If quick action has no `amount` → current behavior (navigate to `/transactions/new?type=expense&categoryId=X&accountId=Y`)
 
-**Implementation**: Use `createTransaction` mutation from `useTransactions` composable. After successful creation, invalidate transaction-related queries.
+**Implementation**: Use `createTransaction` mutation from `useTransactions` composable. Pass `updateBalance` callback (from `useAccounts` or `useAccountBalances`) as required second argument. After successful creation, invalidate transaction-related queries via `invalidateTransactionRelated`.
 
 ### 3. Frontend: Modal Enhancements
 
@@ -86,15 +94,21 @@ Enhance Quick Actions with three capabilities:
 - `backend/src/modules/accounting/domain/aggregates/quick-action/quick-action.aggregate.ts`
 - `backend/src/modules/accounting/infrastructure/persistence/typeorm/quick-action.orm-entity.ts`
 - `backend/src/modules/accounting/infrastructure/persistence/mappers/quick-action.mapper.ts`
+- `backend/src/modules/accounting/application/commands/create-quick-action/create-quick-action.command.ts`
 - `backend/src/modules/accounting/application/commands/create-quick-action/create-quick-action.handler.ts`
+- `backend/src/modules/accounting/application/commands/update-quick-action/update-quick-action.command.ts`
 - `backend/src/modules/accounting/application/commands/update-quick-action/update-quick-action.handler.ts`
+- `backend/src/modules/accounting/application/commands/quick-action-response.ts`
+- `backend/src/modules/accounting/presentation/controllers/quick-actions.controller.ts`
 - `backend/src/modules/accounting/presentation/dtos/create-quick-action.dto.ts`
 - `backend/src/modules/accounting/presentation/dtos/update-quick-action.dto.ts`
 - New migration file
 
 **Frontend**:
+- `frontend/src/shared/api/database.types.ts` (add `amount` to `quick_actions` Row/Insert/Update)
 - `frontend/src/entities/quick-action/api/quickActionApi.ts`
 - `frontend/src/entities/quick-action/api/useQuickActions.ts`
+- `frontend/src/features/configure-quick-action/model/types.ts` (add `amount?: number | null`)
 - `frontend/src/features/configure-quick-action/model/useQuickActions.ts`
 - `frontend/src/features/configure-quick-action/ui/QuickActionModal.vue`
 - `frontend/src/pages/dashboard/ui/DashboardQuickActions.vue`
