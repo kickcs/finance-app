@@ -36,11 +36,24 @@ export function useDashboardData() {
     10,
   );
 
-  // Current month analytics (category breakdown for top expenses widget)
-  const now = new Date();
-  const monthStart = toLocalISODate(new Date(now.getFullYear(), now.getMonth(), 1));
-  const monthEnd = toLocalISODate(new Date(now.getFullYear(), now.getMonth() + 1, 0));
-  const { categoryBreakdown, isLoading: analyticsLoading } = useAnalyticsStats({
+  // Reactive timestamp — keeps day calculations and month boundaries fresh across midnight
+  const timestamp = useTimestamp({ interval: 60_000 });
+  const currentDate = computed(() => new Date(timestamp.value));
+
+  // Current month analytics (reactive — re-queries on month boundary)
+  const monthStart = computed(() => {
+    const d = currentDate.value;
+    return toLocalISODate(new Date(d.getFullYear(), d.getMonth(), 1));
+  });
+  const monthEnd = computed(() => {
+    const d = currentDate.value;
+    return toLocalISODate(new Date(d.getFullYear(), d.getMonth() + 1, 0));
+  });
+  const {
+    categoryBreakdown,
+    totalExpense,
+    isLoading: analyticsLoading,
+  } = useAnalyticsStats({
     startDate: monthStart,
     endDate: monthEnd,
   });
@@ -85,23 +98,27 @@ export function useDashboardData() {
     return total;
   });
 
-  // Reactive timestamp that updates every minute — keeps daysRemaining fresh across midnight
-  const timestamp = useTimestamp({ interval: 60_000 });
+  const daysElapsedInMonth = computed(() => currentDate.value.getDate());
 
   const daysRemainingInMonth = computed(() => {
-    const now = new Date(timestamp.value);
-    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    return Math.max(1, lastDay - now.getDate() + 1);
+    const d = currentDate.value;
+    const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+    return Math.max(1, lastDay - d.getDate() + 1);
   });
 
-  const dailyLimit = computed(() => {
-    if (!budget.value) return null;
-    return budget.value.remaining / daysRemainingInMonth.value;
+  // Show spending metrics only after the first week of the month (7+ days of data)
+  const showSpendingMetrics = computed(() => daysElapsedInMonth.value >= 7);
+
+  // A) Average daily expense = totalExpense / daysElapsed
+  const avgDailyExpense = computed(() => {
+    if (!showSpendingMetrics.value) return null;
+    return totalExpense.value / daysElapsedInMonth.value;
   });
 
-  const dailyLimitCurrency = computed(() => {
-    if (!budget.value) return null;
-    return budget.value.budget.currency;
+  // B) Safe daily balance = totalBalance (non-hidden accounts) / daysRemaining
+  const safeDailyLimit = computed(() => {
+    if (!showSpendingMetrics.value) return null;
+    return totalBalance.value / daysRemainingInMonth.value;
   });
 
   return {
@@ -127,8 +144,8 @@ export function useDashboardData() {
     budget,
     budgetLoading,
     budgetSaving,
-    dailyLimit,
-    dailyLimitCurrency,
+    avgDailyExpense,
+    safeDailyLimit,
     daysRemainingInMonth,
     setBudgetDefault: setDefault,
     setBudgetOverride: setOverride,

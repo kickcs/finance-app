@@ -5,8 +5,8 @@ import { formatMasked } from '@/shared/lib/format/currency';
 defineProps<{
   totalBalance: number;
   currency: string;
-  dailyLimit?: number | null;
-  dailyLimitCurrency?: string | null;
+  avgDailyExpense?: number | null;
+  safeDailyLimit?: number | null;
   daysRemaining?: number;
   loading?: boolean;
   hidden?: boolean;
@@ -16,11 +16,15 @@ defineEmits<{
   'toggle-hidden': [];
   'balance-click': [];
 }>();
+
+const metricLabel =
+  'text-[0.6rem] font-semibold tracking-wide uppercase text-text-tertiary-light dark:text-text-tertiary-dark';
+const metricSub = 'text-[0.6rem] font-medium text-text-tertiary-light dark:text-text-tertiary-dark';
 </script>
 
 <template>
   <div
-    class="balance-card relative overflow-hidden rounded-[2rem] bg-card-light dark:bg-card-dark p-5 sm:p-6 shadow-sm hover:shadow-md transition-all duration-300 md:hover:-translate-y-1"
+    class="balance-card relative overflow-hidden rounded-2xl bg-card-light dark:bg-card-dark p-5 sm:p-6 shadow-sm hover:shadow-md transition-all duration-300 md:hover:-translate-y-1"
   >
     <div class="relative z-10 flex items-center justify-between gap-4">
       <!-- Left Side: Balance -->
@@ -63,33 +67,36 @@ defineEmits<{
         </button>
       </div>
 
-      <!-- Divider (only with budget) -->
+      <!-- Divider (only after first week) -->
       <div
-        v-if="dailyLimit != null"
+        v-if="avgDailyExpense != null"
         class="w-px self-stretch my-1 bg-border-light dark:bg-border-dark"
       />
 
-      <!-- Right Side: Daily Limit (only with budget) -->
-      <div v-if="dailyLimit != null" class="flex flex-col items-end shrink-0">
-        <Skeleton v-if="loading" class="h-4 w-16 rounded mb-1.5" />
+      <!-- Right Side: Spending Metrics (only after first week of month) -->
+      <div v-if="avgDailyExpense != null" class="flex flex-col items-end shrink-0 gap-1.5">
+        <Skeleton v-if="loading" class="h-4 w-16 rounded" />
         <template v-else>
-          <p
-            class="text-xs font-semibold tracking-wide uppercase mb-1"
-            :class="dailyLimit >= 0 ? 'text-success/60' : 'text-danger/60'"
-          >
-            В день
-          </p>
-          <span
-            class="text-lg sm:text-xl font-bold leading-tight"
-            :class="dailyLimit >= 0 ? 'text-success' : 'text-danger'"
-          >
-            {{ formatMasked(dailyLimit, dailyLimitCurrency ?? currency, hidden ?? false) }}
-          </span>
-          <span
-            class="text-[0.65rem] font-medium text-text-tertiary-light dark:text-text-tertiary-dark mt-0.5"
-          >
-            осталось {{ daysRemaining }} дн
-          </span>
+          <!-- Average daily expense -->
+          <div class="flex flex-col items-end">
+            <p :class="metricLabel">Средний расход</p>
+            <span class="text-sm font-bold text-warning leading-tight">
+              {{ formatMasked(avgDailyExpense, currency, hidden ?? false) }}/дн
+            </span>
+          </div>
+
+          <!-- Safe daily limit -->
+          <div v-if="safeDailyLimit != null" class="flex flex-col items-end">
+            <p :class="metricLabel">Безопасный остаток</p>
+            <span
+              class="text-sm font-bold leading-tight"
+              :class="safeDailyLimit >= 0 ? 'text-success' : 'text-danger'"
+            >
+              {{ formatMasked(safeDailyLimit, currency, hidden ?? false) }}/дн
+            </span>
+          </div>
+
+          <span :class="metricSub">осталось {{ daysRemaining }} дн</span>
         </template>
       </div>
 
@@ -119,8 +126,8 @@ defineEmits<{
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 65%;
-  height: 65%;
+  width: 85%;
+  height: 85%;
   translate: -50% -50%;
   background: radial-gradient(
     circle,
@@ -148,8 +155,8 @@ defineEmits<{
   content: '';
   position: absolute;
   inset: 0;
-  border-radius: 2rem;
-  padding: 1.5px;
+  border-radius: 1.25rem;
+  padding: 2.5px;
   background: conic-gradient(
     from var(--border-angle),
     transparent 0%,

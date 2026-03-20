@@ -134,8 +134,8 @@ const {
   setBudgetDefault,
   setBudgetOverride,
   removeBudgetOverride,
-  dailyLimit,
-  dailyLimitCurrency,
+  avgDailyExpense,
+  safeDailyLimit,
   daysRemainingInMonth,
 } = useDashboardData();
 
@@ -257,10 +257,10 @@ function handleSettingsClick() {
             <BalanceCard
               :total-balance="totalBalance"
               :currency="currency"
-              :daily-limit="dailyLimit"
-              :daily-limit-currency="dailyLimitCurrency"
+              :avg-daily-expense="avgDailyExpense"
+              :safe-daily-limit="safeDailyLimit"
               :days-remaining="daysRemainingInMonth"
-              :loading="accountsLoading || ratesLoading || budgetLoading"
+              :loading="accountsLoading || ratesLoading || analyticsLoading"
               :hidden="isHidden"
               @toggle-hidden="isHidden = !isHidden"
               @balance-click="nav.toAccounts"
@@ -406,10 +406,10 @@ function handleSettingsClick() {
             <BalanceCard
               :total-balance="totalBalance"
               :currency="currency"
-              :daily-limit="dailyLimit"
-              :daily-limit-currency="dailyLimitCurrency"
+              :avg-daily-expense="avgDailyExpense"
+              :safe-daily-limit="safeDailyLimit"
               :days-remaining="daysRemainingInMonth"
-              :loading="accountsLoading || ratesLoading || budgetLoading"
+              :loading="accountsLoading || ratesLoading || analyticsLoading"
               :hidden="isHidden"
               @toggle-hidden="isHidden = !isHidden"
               @balance-click="nav.toAccounts"

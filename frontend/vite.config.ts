@@ -74,20 +74,21 @@ export default defineConfig({
     chunkSizeWarningLimit: 500,
     // Enable CSS code splitting
     cssCodeSplit: true,
-    // Minification settings
-    minify: 'esbuild',
     // Target modern browsers for smaller bundles
     target: 'es2020',
-    rollupOptions: {
+    rolldownOptions: {
       output: {
         // Manual chunk splitting for optimal caching
-        manualChunks: {
-          // Vue core - changes rarely
-          'vue-core': ['vue', 'vue-router'],
-          // TanStack Query - changes rarely
-          tanstack: ['@tanstack/vue-query', '@tanstack/vue-virtual'],
-          // UI primitives + VueUse (merged to avoid circular dependency)
-          'ui-primitives': ['reka-ui', '@vueuse/core'],
+        manualChunks(id) {
+          if (id.includes('node_modules/vue/') || id.includes('node_modules/vue-router/')) {
+            return 'vue-core';
+          }
+          if (id.includes('node_modules/@tanstack/vue-query/') || id.includes('node_modules/@tanstack/vue-virtual/')) {
+            return 'tanstack';
+          }
+          if (id.includes('node_modules/reka-ui/') || id.includes('node_modules/@vueuse/core/')) {
+            return 'ui-primitives';
+          }
         },
         // Optimize chunk file naming for better caching
         chunkFileNames: (chunkInfo) => {
