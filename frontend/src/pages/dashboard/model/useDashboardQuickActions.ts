@@ -28,6 +28,7 @@ export function useDashboardQuickActions(
       categoryId: string;
       amount: number;
       currency: string;
+      description: string;
     }) =>
       transactionsApi.create({
         user_id: toValue(userId)!,
@@ -36,6 +37,7 @@ export function useDashboardQuickActions(
         amount: params.amount,
         currency: params.currency,
         type: 'expense',
+        description: params.description,
         date: getTodayISO(),
       }),
     onSettled: async () => {
@@ -88,6 +90,7 @@ export function useDashboardQuickActions(
           categoryId: action.categoryId,
           amount: action.amount,
           currency,
+          description: action.label,
         });
 
         triggerHaptic('success');

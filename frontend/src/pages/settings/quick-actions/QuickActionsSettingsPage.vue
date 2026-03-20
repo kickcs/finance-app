@@ -97,7 +97,7 @@ function handleSlotClick(action: (typeof slots.value)[number]) {
                 <p class="text-sm font-medium">
                   {{
                     formatCurrency(
-                      action.amount!,
+                      action.amount ?? 0,
                       accounts?.find((a) => a.id === action.accountId)?.balances[0]?.currency ??
                         'USD',
                     )

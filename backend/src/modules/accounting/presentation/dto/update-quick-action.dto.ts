@@ -6,6 +6,7 @@ import {
   IsNumber,
   IsPositive,
   ValidateIf,
+  Max,
 } from 'class-validator';
 
 export class UpdateQuickActionDto {
@@ -26,5 +27,6 @@ export class UpdateQuickActionDto {
   @ValidateIf((_o, value) => value !== null)
   @IsNumber()
   @IsPositive()
+  @Max(1_000_000_000_000)
   amount?: number | null;
 }
