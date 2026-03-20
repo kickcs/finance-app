@@ -27,8 +27,8 @@ function handleSlotClick(action: (typeof slots.value)[number]) {
 
     <main class="px-5 pt-6 pb-28 space-y-4">
       <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
-        Настройте до 4 быстрых кнопок на главном экране. Каждая кнопка открывает добавление расхода
-        с выбранной категорией и счётом.
+        Настройте до 6 быстрых кнопок на главном экране. Каждая кнопка открывает добавление расхода
+        с выбранной категорией и счётом, или создаёт транзакцию мгновенно, если указана сумма.
       </p>
 
       <!-- Visibility toggle -->
@@ -86,6 +86,15 @@ function handleSlotClick(action: (typeof slots.value)[number]) {
                 <UIcon name="account_balance_wallet" size="xs" class="opacity-70" />
                 <p class="text-sm font-medium">
                   {{ accounts?.find((a) => a.id === action.accountId)?.name || 'Счёт не найден' }}
+                </p>
+              </div>
+              <div
+                v-if="action.amount != null"
+                class="flex items-center gap-1.5 mt-0.5 text-text-tertiary-light dark:text-text-tertiary-dark"
+              >
+                <UIcon name="payments" size="xs" class="opacity-70" />
+                <p class="text-sm font-medium">
+                  {{ action.amount }}
                 </p>
               </div>
             </div>
