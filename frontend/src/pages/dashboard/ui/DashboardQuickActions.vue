@@ -63,9 +63,9 @@ function onClick(action: QuickAction | null) {
     <!-- Loading skeleton -->
     <div v-if="loading" class="flex gap-2 pb-1">
       <Skeleton
-        v-for="i in showScanButton ? 7 : 6"
+        v-for="i in showScanButton ? 5 : 4"
         :key="i"
-        class="shrink-0 w-[calc((100%-40px)/6)] h-[60px] md:h-[72px] rounded-xl md:rounded-2xl"
+        class="shrink-0 w-[calc((100%-24px)/4)] aspect-square rounded-xl md:rounded-2xl"
       />
     </div>
 
@@ -74,11 +74,11 @@ function onClick(action: QuickAction | null) {
       class="flex gap-2 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-1 pt-1.5 -mt-1.5 px-1.5 -mx-1.5"
     >
       <!-- Scan receipt button (first item) -->
-      <div v-if="showScanButton" class="relative snap-start shrink-0 w-[calc((100%-40px)/6)]">
+      <div v-if="showScanButton" class="relative snap-start shrink-0 w-[calc((100%-24px)/4)]">
         <button
           type="button"
           aria-label="Сканировать чек"
-          class="relative flex flex-col items-center gap-1 py-2 md:py-3 rounded-xl md:rounded-2xl bg-surface-light dark:bg-surface-dark border-2 border-primary/20 shadow-sm hover:shadow-md hover:-translate-y-1 hover:border-primary/40 active:scale-95 active:translate-y-0 active:shadow-sm transition-[transform,box-shadow,border-color] duration-200 group cursor-pointer w-full"
+          class="relative flex flex-col items-center justify-center gap-1.5 aspect-square rounded-xl md:rounded-2xl bg-surface-light dark:bg-surface-dark border-2 border-primary/20 shadow-sm hover:shadow-md hover:-translate-y-1 hover:border-primary/40 active:scale-95 active:translate-y-0 active:shadow-sm transition-[transform,box-shadow,border-color] duration-200 group cursor-pointer w-full"
           @click="emit('scan-click')"
         >
           <!-- Subtle Premium Glow -->
@@ -87,7 +87,7 @@ function onClick(action: QuickAction | null) {
           ></div>
 
           <div
-            class="relative z-10 w-8 h-8 md:w-9 md:h-9 rounded-lg flex items-center justify-center bg-primary transition-transform duration-200 group-hover:scale-110 shadow-sm shadow-primary/30"
+            class="relative z-10 w-10 h-10 rounded-xl flex items-center justify-center bg-primary transition-transform duration-200 group-hover:scale-110 shadow-sm shadow-primary/30"
           >
             <UIcon name="document_scanner" size="sm" class="text-white" />
 
@@ -100,7 +100,7 @@ function onClick(action: QuickAction | null) {
           </div>
 
           <span
-            class="relative z-10 text-[10px] md:text-xs font-semibold text-text-primary-light dark:text-text-primary-dark whitespace-nowrap transition-colors"
+            class="relative z-10 text-xs font-semibold text-text-primary-light dark:text-text-primary-dark whitespace-nowrap transition-colors"
           >
             Скан
           </span>
@@ -117,7 +117,7 @@ function onClick(action: QuickAction | null) {
             ? `Добавить расход: ${action.label}`
             : `Настроить быстрое действие, слот ${index + 1}`
         "
-        class="flex flex-col items-center gap-1 py-2 md:py-3 rounded-xl md:rounded-2xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark shadow-sm hover:shadow-md hover:-translate-y-1 hover:bg-card-light dark:hover:bg-card-dark active:scale-95 active:translate-y-0 active:shadow-sm transition-[transform,box-shadow,background-color] duration-200 group cursor-pointer snap-start shrink-0 w-[calc((100%-40px)/6)] select-none"
+        class="flex flex-col items-center justify-center gap-1.5 aspect-square rounded-xl md:rounded-2xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark shadow-sm hover:shadow-md hover:-translate-y-1 hover:bg-card-light dark:hover:bg-card-dark active:scale-95 active:translate-y-0 active:shadow-sm transition-[transform,box-shadow,background-color] duration-200 group cursor-pointer snap-start shrink-0 w-[calc((100%-24px)/4)] select-none"
         @click="onClick(action)"
         @contextmenu.prevent="emit('long-press', action)"
         @touchstart.passive="onTouchStart(action)"
@@ -126,43 +126,43 @@ function onClick(action: QuickAction | null) {
       >
         <template v-if="action">
           <div
-            class="w-8 h-8 md:w-9 md:h-9 rounded-lg flex items-center justify-center transition-transform duration-200 group-hover:scale-110"
+            class="w-10 h-10 rounded-xl flex items-center justify-center transition-transform duration-200 group-hover:scale-110"
             :style="{
               backgroundColor: (categoryMap.get(action.categoryId)?.color ?? '#64748b') + '1A',
             }"
           >
             <UIcon
               :name="categoryMap.get(action.categoryId)?.icon ?? 'receipt_long'"
-              size="xs"
+              size="sm"
               :style="{
                 color: categoryMap.get(action.categoryId)?.color ?? '#64748b',
               }"
             />
           </div>
           <span
-            class="text-[10px] md:text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark truncate w-full text-center px-0.5 leading-tight"
+            class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark truncate w-full text-center px-1 leading-tight"
           >
             {{ action.label }}
           </span>
           <span
             v-if="action.amount != null"
-            class="text-[9px] md:text-[10px] font-medium text-text-tertiary-light dark:text-text-tertiary-dark leading-tight"
+            class="text-[10px] font-medium text-text-tertiary-light dark:text-text-tertiary-dark leading-tight"
           >
             {{ formatNumberWithSpaces(action.amount) }}
           </span>
         </template>
         <template v-else>
           <div
-            class="w-8 h-8 md:w-9 md:h-9 rounded-lg flex items-center justify-center bg-border-light/50 dark:bg-border-dark/50 group-hover:bg-border-light dark:group-hover:bg-border-dark transition-colors duration-200"
+            class="w-10 h-10 rounded-xl flex items-center justify-center bg-border-light/50 dark:bg-border-dark/50 group-hover:bg-border-light dark:group-hover:bg-border-dark transition-colors duration-200"
           >
             <UIcon
               name="add"
-              size="xs"
+              size="sm"
               class="text-text-tertiary-light dark:text-text-tertiary-dark group-hover:text-text-secondary-light dark:group-hover:text-text-secondary-dark"
             />
           </div>
           <span
-            class="text-[10px] md:text-xs font-medium text-text-tertiary-light dark:text-text-tertiary-dark group-hover:text-text-secondary-light dark:group-hover:text-text-secondary-dark"
+            class="text-xs font-medium text-text-tertiary-light dark:text-text-tertiary-dark group-hover:text-text-secondary-light dark:group-hover:text-text-secondary-dark"
           >
             Добавить
           </span>
