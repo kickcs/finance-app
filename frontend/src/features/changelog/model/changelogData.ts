@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.37';
+export const CURRENT_VERSION = '1.0.38';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,17 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.38',
+    date: '2026-03-20',
+    title: 'Дневной лимит расходов',
+    items: [
+      {
+        type: 'feature',
+        text: 'Дневной лимит расходов теперь отображается на главном экране',
+      },
+    ],
+  },
   {
     version: '1.0.37',
     date: '2026-03-20',
