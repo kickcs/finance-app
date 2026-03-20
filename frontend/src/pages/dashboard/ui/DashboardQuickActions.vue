@@ -121,7 +121,19 @@ function onClick(action: QuickAction | null) {
             ? `Добавить расход: ${action.label}`
             : `Настроить быстрое действие, слот ${index + 1}`
         "
-        class="qa-card relative flex flex-col items-center justify-center gap-2 aspect-square rounded-2xl overflow-hidden bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark group cursor-pointer snap-start shrink-0 w-[calc((100%-30px)/4)] select-none"
+        :class="[
+          'qa-card relative flex flex-col items-center justify-center gap-2 aspect-square rounded-2xl overflow-hidden group cursor-pointer snap-start shrink-0 w-[calc((100%-30px)/4)] select-none',
+          action
+            ? 'qa-filled border-0'
+            : 'bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark',
+        ]"
+        :style="
+          action
+            ? {
+                backgroundColor: (categoryMap.get(action.categoryId)?.color ?? '#64748b') + '12',
+              }
+            : undefined
+        "
         @click="onClick(action)"
         @contextmenu.prevent="emit('long-press', action)"
         @touchstart.passive="onTouchStart(action)"
@@ -129,17 +141,11 @@ function onClick(action: QuickAction | null) {
         @touchmove.passive="onTouchMove()"
       >
         <template v-if="action">
-          <!-- Top accent line — category color -->
+          <!-- Icon on deeper tint -->
           <div
-            class="absolute top-0 left-3 right-3 h-[2px] rounded-full opacity-50 group-hover:opacity-80 transition-opacity duration-300"
-            :style="{ backgroundColor: categoryMap.get(action.categoryId)?.color ?? '#64748b' }"
-          />
-
-          <!-- Icon -->
-          <div
-            class="w-11 h-11 rounded-[14px] flex items-center justify-center transition-transform duration-200 group-hover:scale-105 group-active:scale-95"
+            class="w-11 h-11 rounded-[14px] flex items-center justify-center transition-transform duration-200 group-hover:scale-110 group-active:scale-95"
             :style="{
-              backgroundColor: (categoryMap.get(action.categoryId)?.color ?? '#64748b') + '14',
+              backgroundColor: (categoryMap.get(action.categoryId)?.color ?? '#64748b') + '20',
             }"
           >
             <UIcon
@@ -158,7 +164,8 @@ function onClick(action: QuickAction | null) {
             </span>
             <span
               v-if="action.amount != null"
-              class="text-[10px] font-medium text-text-tertiary-light dark:text-text-tertiary-dark leading-tight tabular-nums"
+              class="text-[10px] font-medium leading-tight tabular-nums"
+              :style="{ color: (categoryMap.get(action.categoryId)?.color ?? '#64748b') + 'AA' }"
             >
               {{ formatNumberWithSpaces(action.amount) }}
             </span>
@@ -216,7 +223,7 @@ function onClick(action: QuickAction | null) {
   transition:
     transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
     box-shadow 0.2s cubic-bezier(0.22, 1, 0.36, 1),
-    border-color 0.2s ease;
+    background-color 0.2s ease;
 }
 
 .qa-card:hover {
@@ -229,8 +236,8 @@ function onClick(action: QuickAction | null) {
 .qa-card:active {
   transform: scale(0.96) translateY(0);
   box-shadow:
-    0 1px 2px -1px rgba(0, 0, 0, 0.08),
-    0 1px 3px -1px rgba(0, 0, 0, 0.04);
+    0 1px 2px -1px rgba(0, 0, 0, 0.06),
+    0 1px 3px -1px rgba(0, 0, 0, 0.03);
 }
 
 :where(.dark) .qa-card {
@@ -242,6 +249,10 @@ function onClick(action: QuickAction | null) {
 :where(.dark) .qa-card:hover {
   box-shadow:
     0 4px 16px -2px rgba(0, 0, 0, 0.4),
-    0 0 0 0.5px rgba(255, 255, 255, 0.06);
+    0 0 0 0.5px rgba(255, 255, 255, 0.08);
+}
+
+:where(.dark) .qa-filled {
+  background-color: color-mix(in srgb, var(--qa-color, #64748b) 12%, #18181b);
 }
 </style>
