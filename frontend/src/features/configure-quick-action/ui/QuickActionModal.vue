@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
-import { UModal, UButton, UIcon } from '@/shared/ui';
+import { UModal, UButton, UIcon, UInput } from '@/shared/ui';
 import { useHaptics } from '@/shared/lib/haptics';
 import type { Category } from '@/entities/category';
 import { CategoryChips } from '@/entities/category';
@@ -17,7 +17,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean];
-  save: [action: { label: string; categoryId: string; accountId: string }];
+  save: [action: { label: string; categoryId: string; accountId: string; amount?: number | null }];
   delete: [];
 }>();
 
@@ -25,6 +25,8 @@ const { trigger } = useHaptics();
 
 const selectedCategoryId = ref('');
 const selectedAccountId = ref('');
+const customLabel = ref('');
+const customAmount = ref<string>('');
 
 const isEditing = computed(() => !!props.editAction);
 
@@ -37,13 +39,25 @@ watch(
       if (props.editAction) {
         selectedCategoryId.value = props.editAction.categoryId;
         selectedAccountId.value = props.editAction.accountId;
+        customLabel.value = props.editAction.label ?? '';
+        customAmount.value =
+          props.editAction.amount !== null && props.editAction.amount !== undefined
+            ? String(props.editAction.amount)
+            : '';
       } else {
         selectedCategoryId.value = '';
         selectedAccountId.value = props.accounts[0]?.id ?? '';
+        customLabel.value = '';
+        customAmount.value = '';
       }
     }
   },
 );
+
+const selectedAccountCurrency = computed(() => {
+  const account = props.accounts.find((a) => a.id === selectedAccountId.value);
+  return account?.balances[0]?.currency ?? 'USD';
+});
 
 function selectCategory(id: string) {
   selectedCategoryId.value = id;
@@ -59,10 +73,12 @@ function handleSave() {
   if (!canSave.value) return;
   trigger('success');
   const cat = props.expenseCategories.find((c) => c.id === selectedCategoryId.value);
+  const parsedAmount = customAmount.value ? parseFloat(customAmount.value) : null;
   emit('save', {
-    label: cat?.name || 'Расход',
+    label: customLabel.value.trim() || cat?.name || 'Расход',
     categoryId: selectedCategoryId.value,
     accountId: selectedAccountId.value,
+    amount: parsedAmount && parsedAmount > 0 ? parsedAmount : null,
   });
   emit('update:modelValue', false);
 }
@@ -81,6 +97,15 @@ function handleDelete() {
     @update:model-value="emit('update:modelValue', $event)"
   >
     <div class="space-y-4">
+      <div>
+        <label
+          class="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-1.5"
+        >
+          Название
+        </label>
+        <UInput v-model="customLabel" placeholder="По умолчанию — имя категории" />
+      </div>
+
       <CategoryChips
         :categories="expenseCategories"
         :selected-id="selectedCategoryId"
@@ -95,6 +120,23 @@ function handleDelete() {
         label="Счёт списания"
         @select="selectAccount"
       />
+
+      <div>
+        <label
+          class="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-1.5"
+        >
+          Сумма
+        </label>
+        <UInput
+          v-model="customAmount"
+          variant="currency"
+          :suffix="selectedAccountCurrency"
+          placeholder="Не указана"
+        />
+        <p class="mt-1 text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
+          Для мгновенного создания транзакции
+        </p>
+      </div>
     </div>
 
     <template #actions>
