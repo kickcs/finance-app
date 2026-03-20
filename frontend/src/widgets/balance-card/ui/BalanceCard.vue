@@ -5,6 +5,9 @@ import { formatMasked } from '@/shared/lib/format/currency';
 defineProps<{
   totalBalance: number;
   currency: string;
+  dailyLimit?: number | null;
+  dailyLimitCurrency?: string | null;
+  daysRemaining?: number;
   loading?: boolean;
   hidden?: boolean;
 }>();
@@ -17,63 +20,87 @@ defineEmits<{
 
 <template>
   <div
-    class="balance-card relative overflow-hidden rounded-[2rem] bg-card-light dark:bg-card-dark p-6 sm:p-8 shadow-sm hover:shadow-md transition-all duration-300 md:hover:-translate-y-1"
+    class="balance-card relative overflow-hidden rounded-[2rem] bg-card-light dark:bg-card-dark p-5 sm:p-6 shadow-sm hover:shadow-md transition-all duration-300 md:hover:-translate-y-1"
   >
-    <div class="relative z-10 flex flex-col md:flex-row justify-between gap-6">
-      <!-- Left Side: Balance Info -->
-      <div class="flex flex-col items-center md:items-start text-center md:text-left w-full">
-        <!-- Balance Label -->
-        <div class="flex items-center justify-center md:justify-start gap-2 mb-3">
+    <div class="relative z-10 flex items-center justify-between gap-4">
+      <!-- Left Side: Balance -->
+      <div class="flex flex-col min-w-0">
+        <!-- Balance Label + Eye Toggle -->
+        <div class="flex items-center gap-2 mb-1.5">
           <div
-            class="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary"
+            class="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-primary"
           >
             <UIcon name="account_balance_wallet" size="xs" />
           </div>
           <p
-            class="text-sm font-semibold tracking-wide text-text-secondary-light dark:text-text-secondary-dark uppercase"
+            class="text-xs font-semibold tracking-wide text-text-secondary-light dark:text-text-secondary-dark uppercase"
           >
-            Общий баланс
+            Баланс
           </p>
           <button
             :aria-label="hidden ? 'Показать баланс' : 'Скрыть баланс'"
-            class="p-1.5 ml-1 rounded-lg text-text-tertiary-light dark:text-text-tertiary-dark hover:bg-black/5 dark:hover:bg-white/5 hover:text-text-primary-light dark:hover:text-text-primary-dark transition-all duration-200"
+            class="p-1 rounded-lg text-text-tertiary-light dark:text-text-tertiary-dark hover:bg-black/5 dark:hover:bg-white/5 hover:text-text-primary-light dark:hover:text-text-primary-dark transition-all duration-200"
             @click.stop="$emit('toggle-hidden')"
           >
             <UIcon :name="hidden ? 'visibility_off' : 'visibility'" size="xs" />
           </button>
         </div>
 
-        <!-- Loading skeleton -->
-        <Skeleton v-if="loading" class="h-12 w-[200px] sm:w-[280px] rounded-xl mb-3" />
-
-        <!-- Balance amount -->
-        <Transition
-          enter-active-class="transition-opacity duration-300 ease-out"
-          enter-from-class="opacity-0"
-          enter-to-class="opacity-100"
+        <!-- Balance Amount -->
+        <Skeleton v-if="loading" class="h-9 w-[180px] rounded-xl" />
+        <button
+          v-else
+          type="button"
+          aria-label="Перейти к счетам"
+          class="group/btn flex items-center outline-none rounded-xl focus-visible:ring-2 focus-visible:ring-primary"
+          @click="$emit('balance-click')"
         >
-          <button
-            v-if="!loading"
-            type="button"
-            aria-label="Перейти к счетам"
-            class="group/btn w-full flex items-center justify-center md:justify-start outline-none rounded-2xl focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-surface-dark"
-            @click="$emit('balance-click')"
+          <span
+            class="text-xl sm:text-2xl font-extrabold tracking-tight text-text-primary-light dark:text-text-primary-dark group-hover/btn:text-primary transition-colors duration-300 truncate leading-tight"
           >
-            <h1
-              class="text-2xl sm:text-4xl font-extrabold tracking-tight text-text-primary-light dark:text-text-primary-dark group-hover/btn:text-primary transition-colors duration-300 truncate leading-tight"
-            >
-              {{ formatMasked(totalBalance, currency, hidden ?? false) }}
-            </h1>
-          </button>
-        </Transition>
+            {{ formatMasked(totalBalance, currency, hidden ?? false) }}
+          </span>
+        </button>
       </div>
 
-      <!-- Right Side (Desktop Only): 'К счетам' Button -->
-      <div class="hidden md:flex shrink-0 mt-2">
+      <!-- Divider (only with budget) -->
+      <div
+        v-if="dailyLimit != null"
+        class="w-px self-stretch my-1 bg-border-light dark:bg-border-dark"
+      />
+
+      <!-- Right Side: Daily Limit (only with budget) -->
+      <div v-if="dailyLimit != null" class="flex flex-col items-end shrink-0">
+        <Skeleton v-if="loading" class="h-4 w-16 rounded mb-1.5" />
+        <template v-else>
+          <p
+            class="text-xs font-semibold tracking-wide uppercase mb-1"
+            :class="dailyLimit >= 0 ? 'text-success/60' : 'text-danger/60'"
+          >
+            В день
+          </p>
+          <span
+            class="text-lg sm:text-xl font-bold leading-tight"
+            :class="dailyLimit >= 0 ? 'text-success' : 'text-danger'"
+          >
+            {{
+              formatMasked(Math.abs(dailyLimit), dailyLimitCurrency ?? currency, hidden ?? false)
+            }}
+          </span>
+          <span
+            class="text-[0.65rem] font-medium text-text-tertiary-light dark:text-text-tertiary-dark mt-0.5"
+          >
+            осталось {{ daysRemaining }} дн
+          </span>
+        </template>
+      </div>
+
+      <!-- Desktop: 'К счетам' Button -->
+      <div class="hidden md:flex shrink-0">
         <button
           type="button"
           aria-label="Перейти ко всем счетам"
-          class="group/nav flex items-center gap-2 h-10 text-sm font-semibold text-primary hover:text-primary-hover transition-colors px-4 py-2 rounded-xl bg-primary/10 hover:bg-primary/20"
+          class="group/nav flex items-center gap-2 h-9 text-sm font-semibold text-primary hover:text-primary-hover transition-colors px-4 py-2 rounded-xl bg-primary/10 hover:bg-primary/20"
           @click="$emit('balance-click')"
         >
           К счетам
