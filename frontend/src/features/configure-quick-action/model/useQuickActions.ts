@@ -14,6 +14,7 @@ export function useQuickActions(userId: MaybeRefOrGetter<string | null>) {
             label: a.label,
             categoryId: a.category_id,
             accountId: a.account_id,
+            amount: a.amount,
           }
         : null,
     ),
@@ -22,7 +23,12 @@ export function useQuickActions(userId: MaybeRefOrGetter<string | null>) {
   const editingAction = ref<QuickAction | null>(null);
   const showModal = ref(false);
 
-  async function handleSave(data: { label: string; categoryId: string; accountId: string }) {
+  async function handleSave(data: {
+    label: string;
+    categoryId: string;
+    accountId: string;
+    amount?: number | null;
+  }) {
     if (editingAction.value) {
       await api.updateAction(editingAction.value.id, data);
     } else {

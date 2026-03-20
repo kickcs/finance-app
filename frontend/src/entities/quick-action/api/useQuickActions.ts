@@ -6,7 +6,7 @@ import type { QuickAction } from '@/shared/api/database.types';
 import { useProfile } from '@/shared/api/composables/useProfile';
 import { STORAGE_KEYS } from '@/shared/config/storageKeys';
 
-const MAX_SLOTS = 4;
+const MAX_SLOTS = 6;
 let migrationRun = false;
 
 export function useQuickActions(userId: MaybeRefOrGetter<string | null>) {
@@ -39,8 +39,12 @@ export function useQuickActions(userId: MaybeRefOrGetter<string | null>) {
   const hintDismissed = computed(() => profile.value?.quick_actions_hint_dismissed ?? false);
 
   const createMutation = useMutation({
-    mutationFn: (params: { categoryId: string; accountId: string; label: string }) =>
-      quickActionApi.create(params),
+    mutationFn: (params: {
+      categoryId: string;
+      accountId: string;
+      label: string;
+      amount?: number | null;
+    }) => quickActionApi.create(params),
     onSettled: () => queryClient.invalidateQueries({ queryKey: queryKey.value }),
   });
 
@@ -53,6 +57,7 @@ export function useQuickActions(userId: MaybeRefOrGetter<string | null>) {
       categoryId?: string;
       accountId?: string;
       label?: string;
+      amount?: number | null;
     }) => quickActionApi.update(id, params),
     onMutate: async ({ id, ...updates }) => {
       await queryClient.cancelQueries({ queryKey: queryKey.value });
@@ -67,6 +72,7 @@ export function useQuickActions(userId: MaybeRefOrGetter<string | null>) {
               ...(updates.categoryId !== undefined && { category_id: updates.categoryId }),
               ...(updates.accountId !== undefined && { account_id: updates.accountId }),
               ...(updates.label !== undefined && { label: updates.label }),
+              ...(updates.amount !== undefined && { amount: updates.amount }),
             };
           }) ?? [],
       );
@@ -95,14 +101,19 @@ export function useQuickActions(userId: MaybeRefOrGetter<string | null>) {
     onSettled: () => queryClient.invalidateQueries({ queryKey: queryKey.value }),
   });
 
-  async function addAction(params: { label: string; categoryId: string; accountId: string }) {
+  async function addAction(params: {
+    label: string;
+    categoryId: string;
+    accountId: string;
+    amount?: number | null;
+  }) {
     if (actions.value.length >= MAX_SLOTS) return;
     return createMutation.mutateAsync(params);
   }
 
   async function updateAction(
     id: string,
-    updates: { categoryId?: string; accountId?: string; label?: string },
+    updates: { categoryId?: string; accountId?: string; label?: string; amount?: number | null },
   ) {
     return updateMutation.mutateAsync({ id, ...updates });
   }

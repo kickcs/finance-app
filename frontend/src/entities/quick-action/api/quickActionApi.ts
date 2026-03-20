@@ -8,6 +8,7 @@ interface QuickActionResponse {
   accountId: string;
   label: string;
   position: number;
+  amount: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -20,6 +21,7 @@ function transformQuickAction(qa: QuickActionResponse): QuickAction {
     account_id: qa.accountId,
     label: qa.label,
     position: qa.position,
+    amount: qa.amount,
     created_at: qa.createdAt,
     updated_at: qa.updatedAt,
   };
@@ -35,6 +37,7 @@ export const quickActionApi = {
     categoryId: string;
     accountId: string;
     label: string;
+    amount?: number | null;
   }): Promise<QuickAction> {
     const data = await http.post<QuickActionResponse>('/quick-actions', params);
     return transformQuickAction(data);
@@ -42,7 +45,7 @@ export const quickActionApi = {
 
   async update(
     id: string,
-    params: { categoryId?: string; accountId?: string; label?: string },
+    params: { categoryId?: string; accountId?: string; label?: string; amount?: number | null },
   ): Promise<QuickAction> {
     const data = await http.patch<QuickActionResponse>(`/quick-actions/${id}`, params);
     return transformQuickAction(data);

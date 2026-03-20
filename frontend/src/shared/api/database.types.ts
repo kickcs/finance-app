@@ -451,6 +451,7 @@ export type Database = {
           account_id: string;
           label: string;
           position: number;
+          amount: number | null;
           created_at: string;
           updated_at: string;
         };
@@ -461,6 +462,7 @@ export type Database = {
           account_id: string;
           label: string;
           position?: number;
+          amount?: number | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -471,6 +473,7 @@ export type Database = {
           account_id?: string;
           label?: string;
           position?: number;
+          amount?: number | null;
           created_at?: string;
           updated_at?: string;
         };

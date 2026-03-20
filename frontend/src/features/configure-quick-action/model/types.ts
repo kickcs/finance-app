@@ -3,4 +3,5 @@ export interface QuickAction {
   label: string;
   categoryId: string;
   accountId: string;
+  amount: number | null;
 }
