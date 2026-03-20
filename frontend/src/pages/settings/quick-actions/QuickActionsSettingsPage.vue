@@ -1,8 +1,9 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { AppHeader } from '@/widgets/header';
 import { UIcon, UToggle } from '@/shared/ui';
 import { QuickActionModal, useQuickActions } from '@/features/configure-quick-action';
-import { useAccounts } from '@/entities/account';
+import { useAccounts, type AccountWithBalances } from '@/entities/account';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { useCategories } from '@/entities/category';
 import { navigateBack } from '@/app/router';
@@ -13,6 +14,12 @@ const { accounts } = useAccounts(userId);
 const { expenseCategories, getCategoryById } = useCategories(userId);
 const { slots, editingAction, showModal, handleSave, handleDelete, hidden, toggleHidden } =
   useQuickActions(userId);
+
+const accountMap = computed(() => {
+  const map = new Map<string, AccountWithBalances>();
+  for (const a of accounts.value ?? []) map.set(a.id, a);
+  return map;
+});
 
 function handleSlotClick(action: (typeof slots.value)[number]) {
   editingAction.value = action;
@@ -86,7 +93,7 @@ function handleSlotClick(action: (typeof slots.value)[number]) {
               >
                 <UIcon name="account_balance_wallet" size="xs" class="opacity-70" />
                 <p class="text-sm font-medium">
-                  {{ accounts?.find((a) => a.id === action.accountId)?.name || 'Счёт не найден' }}
+                  {{ accountMap.get(action.accountId)?.name || 'Счёт не найден' }}
                 </p>
               </div>
               <div
@@ -98,8 +105,7 @@ function handleSlotClick(action: (typeof slots.value)[number]) {
                   {{
                     formatCurrency(
                       action.amount ?? 0,
-                      accounts?.find((a) => a.id === action.accountId)?.balances[0]?.currency ??
-                        'USD',
+                      accountMap.get(action.accountId)?.balances[0]?.currency ?? 'USD',
                     )
                   }}
                 </p>

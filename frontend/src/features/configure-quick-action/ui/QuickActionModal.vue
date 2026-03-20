@@ -74,7 +74,7 @@ function handleSave() {
   if (!canSave.value) return;
   trigger('success');
   const cat = props.expenseCategories.find((c) => c.id === selectedCategoryId.value);
-  const parsedAmount = customAmount.value ? parseFloat(customAmount.value) : null;
+  const parsedAmount = customAmount.value ? parseFloat(customAmount.value.replace(',', '.')) : null;
   emit('save', {
     label: customLabel.value.trim() || cat?.name || 'Расход',
     categoryId: selectedCategoryId.value,

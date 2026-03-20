@@ -1,5 +1,6 @@
 import {
   IsString,
+  IsNotEmpty,
   IsUUID,
   MaxLength,
   IsOptional,
@@ -16,6 +17,7 @@ export class CreateQuickActionDto {
   accountId: string;
 
   @IsString()
+  @IsNotEmpty()
   @MaxLength(50)
   label: string;
 
