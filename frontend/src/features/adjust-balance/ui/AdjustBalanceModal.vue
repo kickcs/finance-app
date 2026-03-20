@@ -110,6 +110,7 @@ function handleConfirm() {
       <!-- Target balance input -->
       <UInput
         v-model="targetBalanceInput"
+        data-testid="target-balance-input"
         label="Реальный баланс"
         placeholder="0"
         inputmode="decimal"
@@ -118,6 +119,7 @@ function handleConfirm() {
       <!-- Diff display -->
       <div
         v-if="hasDiff"
+        data-testid="diff-display"
         :class="
           cn(
             'px-3 py-2.5 rounded-lg text-sm font-semibold',
@@ -134,6 +136,7 @@ function handleConfirm() {
       <!-- Description -->
       <UInput
         v-model="description"
+        data-testid="description-input"
         label="Описание (необязательно)"
         placeholder="Причина коррекции..."
       />
@@ -143,6 +146,7 @@ function handleConfirm() {
       <UButton
         variant="secondary"
         full-width
+        data-testid="cancel-btn"
         :disabled="isLoading"
         @click="emit('update:modelValue', false)"
       >
@@ -151,6 +155,7 @@ function handleConfirm() {
       <UButton
         variant="primary"
         full-width
+        data-testid="confirm-btn"
         :disabled="!canSubmit"
         :loading="isLoading"
         @click="handleConfirm"

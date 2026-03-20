@@ -43,14 +43,27 @@ async function handleSave() {
     @close="closeModal"
   >
     <div class="space-y-4">
-      <UInput v-model="formData.name" label="Имя" placeholder="Введите ваше имя" />
+      <UInput
+        v-model="formData.name"
+        data-testid="edit-profile-name-input"
+        label="Имя"
+        placeholder="Введите ваше имя"
+      />
     </div>
 
     <template #actions>
-      <UButton variant="secondary" full-width @click="closeModal">Отмена</UButton>
+      <UButton
+        variant="secondary"
+        full-width
+        data-testid="edit-profile-cancel-btn"
+        @click="closeModal"
+      >
+        Отмена
+      </UButton>
       <UButton
         variant="primary"
         full-width
+        data-testid="edit-profile-save-btn"
         :disabled="!isValid || isSubmitting"
         @click="handleSave"
       >

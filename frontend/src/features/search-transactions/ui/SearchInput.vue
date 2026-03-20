@@ -17,6 +17,7 @@ defineEmits<{
     :model-value="modelValue"
     variant="search"
     :placeholder="placeholder || 'Поиск...'"
+    data-testid="search-input"
     @update:model-value="$emit('update:modelValue', $event as string)"
     @clear="$emit('clear')"
   />

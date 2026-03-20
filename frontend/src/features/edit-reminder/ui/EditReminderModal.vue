@@ -65,10 +65,16 @@ function confirm() {
   >
     <div v-if="reminder" class="space-y-4">
       <!-- Name -->
-      <UInput v-model="name" label="Название" placeholder="Netflix, Spotify..." />
+      <UInput
+        v-model="name"
+        data-testid="edit-reminder-name-input"
+        label="Название"
+        placeholder="Netflix, Spotify..."
+      />
 
       <!-- Amount -->
       <UInput
+        data-testid="edit-reminder-amount-input"
         :model-value="String(amount)"
         label="Сумма"
         placeholder="0"
@@ -83,16 +89,28 @@ function confirm() {
         <label class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">
           Частота
         </label>
-        <UTabs v-model="frequency" :items="frequencyTabs" />
+        <UTabs
+          v-model="frequency"
+          data-testid="edit-reminder-frequency-tabs"
+          :items="frequencyTabs"
+        />
       </div>
 
       <!-- Next Date -->
-      <UInput v-model="nextDate" label="Следующий платёж" type="date" />
+      <UInput
+        v-model="nextDate"
+        data-testid="edit-reminder-next-date-input"
+        label="Следующий платёж"
+        type="date"
+      />
     </div>
 
     <template #actions>
-      <UButton variant="secondary" full-width @click="close">Отмена</UButton>
+      <UButton variant="secondary" full-width data-testid="edit-reminder-cancel-btn" @click="close">
+        Отмена
+      </UButton>
       <UButton
+        data-testid="edit-reminder-save-btn"
         variant="primary"
         full-width
         :loading="isUpdating"

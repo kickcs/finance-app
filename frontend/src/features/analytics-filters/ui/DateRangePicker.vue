@@ -60,6 +60,7 @@ const today = new CalendarDate(
   <Popover v-model:open="isOpen">
     <PopoverTrigger as-child>
       <button
+        data-testid="date-range-picker-trigger"
         class="w-full flex items-center justify-between gap-2 px-4 py-3 rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark hover:border-primary/50 hover:bg-surface-light dark:hover:bg-surface-dark transition-all duration-200"
       >
         <div class="flex items-center gap-2">

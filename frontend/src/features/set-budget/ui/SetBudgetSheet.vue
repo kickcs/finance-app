@@ -65,6 +65,7 @@ function handleReset() {
         </label>
         <UInput
           v-model="amount"
+          data-testid="budget-amount-input"
           variant="currency"
           placeholder="0"
           :suffix="currencySymbol"
@@ -78,6 +79,7 @@ function handleReset() {
         v-if="isOverride"
         variant="secondary"
         full-width
+        data-testid="reset-btn"
         :disabled="isSaving"
         @click="handleReset"
       >
@@ -86,6 +88,7 @@ function handleReset() {
       <UButton
         variant="primary"
         full-width
+        data-testid="save-btn"
         :loading="isSaving"
         :disabled="!isValid || isSaving"
         @click="handleSave"

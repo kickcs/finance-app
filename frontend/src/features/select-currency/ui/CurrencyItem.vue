@@ -14,6 +14,7 @@ defineEmits<{
 
 <template>
   <button
+    :data-testid="`currency-item-${currency.code}`"
     :class="[
       'w-full flex items-center gap-4 p-4 rounded-2xl transition-all duration-200',
       'hover:bg-surface-light dark:hover:bg-surface-dark',

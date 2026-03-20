@@ -16,7 +16,11 @@ async function handleNativeInstall() {
 <template>
   <UModal v-model="modelValue" title="Установите Ouro Finance">
     <!-- Already installed -->
-    <div v-if="isStandalone" class="flex flex-col items-center gap-3 py-4">
+    <div
+      v-if="isStandalone"
+      data-testid="already-installed"
+      class="flex flex-col items-center gap-3 py-4"
+    >
       <div class="w-14 h-14 rounded-full bg-success/10 flex items-center justify-center">
         <UIcon name="check_circle" size="lg" class="text-success" />
       </div>
@@ -56,7 +60,14 @@ async function handleNativeInstall() {
       <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
         Установите Ouro Finance как приложение для быстрого доступа с главного экрана.
       </p>
-      <UButton variant="primary" full-width @click="handleNativeInstall">Установить</UButton>
+      <UButton
+        data-testid="android-install-btn"
+        variant="primary"
+        full-width
+        @click="handleNativeInstall"
+      >
+        Установить
+      </UButton>
     </div>
 
     <!-- Android without native prompt -->
@@ -84,7 +95,14 @@ async function handleNativeInstall() {
       </p>
 
       <div v-if="canUseNativePrompt">
-        <UButton variant="primary" full-width @click="handleNativeInstall">Установить</UButton>
+        <UButton
+          data-testid="desktop-install-btn"
+          variant="primary"
+          full-width
+          @click="handleNativeInstall"
+        >
+          Установить
+        </UButton>
       </div>
 
       <div v-else class="space-y-3">

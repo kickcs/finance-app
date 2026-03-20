@@ -39,12 +39,14 @@ const dateError = computed(() => {
 
 <template>
   <form
+    data-testid="reminder-form"
     class="space-y-6 transition-opacity duration-200"
     :class="isSubmitting && 'opacity-60 pointer-events-none'"
     @submit.prevent="$emit('submit')"
   >
     <!-- Reminder Name -->
     <UInput
+      data-testid="reminder-name-input"
       :model-value="formData.name"
       label="Название подписки"
       placeholder="Netflix, Spotify, Яндекс Плюс..."
@@ -53,6 +55,7 @@ const dateError = computed(() => {
 
     <!-- Amount -->
     <UInput
+      data-testid="reminder-amount-input"
       :model-value="String(formData.amount)"
       label="Сумма"
       placeholder="0"
@@ -68,6 +71,7 @@ const dateError = computed(() => {
         Частота оплаты
       </label>
       <UTabs
+        data-testid="reminder-frequency-tabs"
         :items="frequencyTabs"
         :model-value="formData.frequency"
         @update:model-value="updateField('frequency', $event as ReminderFormData['frequency'])"
@@ -76,6 +80,7 @@ const dateError = computed(() => {
 
     <!-- Next Date -->
     <UInput
+      data-testid="reminder-next-date-input"
       :model-value="formData.next_date"
       label="Дата следующего платежа"
       type="date"
@@ -86,6 +91,7 @@ const dateError = computed(() => {
 
     <!-- Icon Selector -->
     <UIconSelector
+      data-testid="reminder-icon-selector"
       :model-value="formData.icon"
       :icons="REMINDER_ICONS"
       :color="formData.color"
@@ -95,6 +101,7 @@ const dateError = computed(() => {
 
     <!-- Color Picker -->
     <UColorPicker
+      data-testid="reminder-color-picker"
       :model-value="formData.color"
       :colors="ENTITY_COLORS"
       label="Цвет"
@@ -102,12 +109,13 @@ const dateError = computed(() => {
     />
 
     <!-- Error Message -->
-    <p v-if="error" class="text-sm text-danger">
+    <p v-if="error" data-testid="reminder-form-error" class="text-sm text-danger">
       {{ error }}
     </p>
 
     <!-- Submit Button -->
     <UButton
+      data-testid="reminder-submit-btn"
       type="submit"
       variant="primary"
       size="xl"

@@ -154,20 +154,26 @@ function confirm() {
     title="Редактировать счёт"
     @update:model-value="emit('update:modelValue', $event)"
   >
-    <div v-if="account" class="space-y-5">
+    <div v-if="account" class="space-y-5" data-testid="edit-account-form">
       <!-- Name -->
-      <UInput v-model="name" label="Название" placeholder="Наличные, Карта..." />
+      <UInput
+        v-model="name"
+        data-testid="account-name-input"
+        label="Название"
+        placeholder="Наличные, Карта..."
+      />
 
       <!-- Type -->
       <div class="space-y-2">
         <label class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">
           Тип счёта
         </label>
-        <div class="grid grid-cols-3 gap-2">
+        <div class="grid grid-cols-3 gap-2" data-testid="account-type-selector">
           <button
             v-for="t in VISIBLE_ACCOUNT_TYPES"
             :key="t"
             type="button"
+            :data-testid="`account-type-${t}`"
             :class="[
               'px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 border',
               type === t
@@ -192,10 +198,13 @@ function confirm() {
     </div>
 
     <template #actions>
-      <UButton variant="secondary" full-width @click="close">Отмена</UButton>
+      <UButton variant="secondary" full-width data-testid="cancel-btn" @click="close">
+        Отмена
+      </UButton>
       <UButton
         variant="primary"
         full-width
+        data-testid="save-btn"
         :loading="isUpdating"
         :disabled="!name.trim()"
         @click="confirm"

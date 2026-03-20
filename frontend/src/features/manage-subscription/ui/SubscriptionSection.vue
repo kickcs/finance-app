@@ -26,16 +26,21 @@ const statusLabel = computed(() => {
     </h2>
     <UCard class="divide-y divide-border-light dark:divide-border-dark overflow-hidden">
       <button
+        data-testid="subscription-button"
         class="w-full flex items-center gap-4 p-4 transition-colors hover:bg-surface-light dark:hover:bg-surface-dark active:bg-surface-light dark:active:bg-surface-dark text-left"
         @click="emit('upgrade')"
       >
         <IconBadge icon="workspace_premium" size="sm" color="#f59e0b" />
         <div class="flex-1 min-w-0">
-          <p class="font-medium text-text-primary-light dark:text-text-primary-dark truncate">
+          <p
+            data-testid="subscription-plan-label"
+            class="font-medium text-text-primary-light dark:text-text-primary-dark truncate"
+          >
             {{ isPremium ? PLAN_LABELS[subscription.plan] || 'Premium' : 'Premium подписка' }}
           </p>
           <p
             v-if="isPremium && subscription.current_period_end"
+            data-testid="subscription-period-end"
             class="text-xs text-text-secondary-light dark:text-text-secondary-dark truncate"
           >
             {{ subscription.cancel_at_period_end ? 'Действует до' : 'Следующая оплата' }}:
@@ -44,6 +49,7 @@ const statusLabel = computed(() => {
         </div>
         <div class="flex items-center gap-2 shrink-0">
           <span
+            data-testid="subscription-status-label"
             class="text-sm font-medium"
             :class="
               isPremium ? 'text-success' : 'text-text-secondary-light dark:text-text-secondary-dark'

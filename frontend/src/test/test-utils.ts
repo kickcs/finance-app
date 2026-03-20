@@ -1,7 +1,7 @@
 import { mount, type ComponentMountingOptions } from '@vue/test-utils';
 import { createRouter, createMemoryHistory, type RouteRecordRaw } from 'vue-router';
 import { VueQueryPlugin, QueryClient } from '@tanstack/vue-query';
-import type { Component } from 'vue';
+import { defineComponent, h, type Component } from 'vue';
 import type { User } from '@/shared/api/composables/useAuth';
 
 const defaultRoute: RouteRecordRaw = {
@@ -67,6 +67,25 @@ export function renderWithProviders(component: Component, options: RenderOptions
       },
     },
   });
+}
+
+/**
+ * Mount a composable in a minimal component context with Vue Query + Router.
+ * Returns `{ result, wrapper }`. Caller must unmount wrapper in afterEach.
+ */
+export function mountComposable<T>(
+  composableFn: () => T,
+  options: RenderOptions = {},
+): { result: T; wrapper: ReturnType<typeof renderWithProviders> } {
+  let result!: T;
+  const Stub = defineComponent({
+    setup() {
+      result = composableFn();
+      return () => h('div');
+    },
+  });
+  const wrapper = renderWithProviders(Stub, options);
+  return { result, wrapper };
 }
 
 /** Reusable mock user for tests */

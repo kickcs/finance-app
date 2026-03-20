@@ -11,7 +11,12 @@ const { isDark, toggleTheme } = useTheme();
 </script>
 
 <template>
-  <UButton variant="ghost" :icon-only="!showLabel" @click="toggleTheme">
+  <UButton
+    data-testid="theme-toggle-btn"
+    variant="ghost"
+    :icon-only="!showLabel"
+    @click="toggleTheme"
+  >
     <UIcon :name="isDark ? 'light_mode' : 'dark_mode'" size="md" />
     <span v-if="showLabel" class="ml-2">
       {{ isDark ? 'Светлая тема' : 'Тёмная тема' }}

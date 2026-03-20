@@ -102,13 +102,20 @@ function handleDelete() {
         <UButton
           v-if="isEditing"
           variant="secondary"
+          data-testid="delete-btn"
           class="flex-1 !bg-danger/10 !text-danger hover:!bg-danger/20 border-none"
           @click="handleDelete"
         >
           <UIcon name="delete" size="sm" class="mr-1.5" />
           Удалить
         </UButton>
-        <UButton variant="primary" class="flex-1" :disabled="!canSave" @click="handleSave">
+        <UButton
+          variant="primary"
+          class="flex-1"
+          data-testid="save-btn"
+          :disabled="!canSave"
+          @click="handleSave"
+        >
           <UIcon v-if="!isEditing" name="add" size="sm" class="mr-1.5" />
           {{ isEditing ? 'Сохранить изменения' : 'Добавить действие' }}
         </UButton>

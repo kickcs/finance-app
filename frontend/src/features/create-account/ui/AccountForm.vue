@@ -34,12 +34,14 @@ function updateField<K extends keyof AccountFormData>(field: K, value: AccountFo
 
 <template>
   <form
+    data-testid="account-form"
     class="space-y-6 transition-opacity duration-200"
     :class="isSubmitting && 'opacity-60 pointer-events-none'"
     @submit.prevent="$emit('submit')"
   >
     <!-- Account Name -->
     <UInput
+      data-testid="account-name-input"
       :model-value="formData.name"
       label="Название счёта"
       placeholder="Например: Основная карта"
@@ -52,11 +54,12 @@ function updateField<K extends keyof AccountFormData>(field: K, value: AccountFo
       <label class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">
         Тип счёта
       </label>
-      <div class="grid grid-cols-2 gap-2">
+      <div class="grid grid-cols-2 gap-2" data-testid="account-type-selector">
         <button
           v-for="t in VISIBLE_ACCOUNT_TYPES"
           :key="t"
           type="button"
+          :data-testid="`account-type-${t}`"
           :class="[
             'px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 border',
             formData.type === t
@@ -106,12 +109,13 @@ function updateField<K extends keyof AccountFormData>(field: K, value: AccountFo
     />
 
     <!-- Error Message -->
-    <p v-if="error" class="text-sm text-danger">
+    <p v-if="error" data-testid="form-error" class="text-sm text-danger">
       {{ error }}
     </p>
 
     <!-- Submit Button -->
     <UButton
+      data-testid="submit-btn"
       type="submit"
       variant="primary"
       size="xl"

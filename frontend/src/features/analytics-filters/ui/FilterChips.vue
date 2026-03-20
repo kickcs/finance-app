@@ -35,6 +35,7 @@ function handleChipClick(id: string) {
       </span>
       <button
         v-if="selectedIds.length > 0"
+        data-testid="filter-chips-clear"
         class="text-xs text-primary hover:text-primary/80 transition-colors"
         @click="emit('clear')"
       >
@@ -48,6 +49,7 @@ function handleChipClick(id: string) {
         <button
           v-for="item in items"
           :key="item.id"
+          :data-testid="`filter-chip-${item.id}`"
           :class="[
             'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap',
             'transition-all duration-200 flex-shrink-0',

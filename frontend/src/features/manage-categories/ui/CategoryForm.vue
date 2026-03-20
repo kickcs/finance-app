@@ -22,6 +22,7 @@ const emit = defineEmits<{
       label="Название"
       placeholder="Введите название категории"
       :error="nameError ?? undefined"
+      data-testid="category-name-input"
       @update:model-value="emit('update:name', String($event))"
     />
 

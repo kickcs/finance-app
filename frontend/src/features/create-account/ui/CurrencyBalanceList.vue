@@ -43,13 +43,19 @@ function addCurrency(code: string) {
     </div>
 
     <!-- Balance items -->
-    <div class="space-y-3">
-      <div v-for="(balance, index) in balances" :key="index" class="flex items-stretch gap-2">
+    <div class="space-y-3" data-testid="balance-list">
+      <div
+        v-for="(balance, index) in balances"
+        :key="index"
+        :data-testid="`balance-item-${index}`"
+        class="flex items-stretch gap-2"
+      >
         <!-- Currency selector - styled to match UInput, stretches to same height -->
         <div
           class="relative shrink-0 w-24 flex items-center rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark transition-all duration-200 focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-0"
         >
           <select
+            :data-testid="`currency-select-${index}`"
             :value="balance.currency"
             class="w-full h-full pl-3 pr-8 appearance-none bg-transparent text-sm font-medium text-text-primary-light dark:text-text-primary-dark focus:outline-none"
             @change="$emit('updateCurrency', index, ($event.target as HTMLSelectElement).value)"
@@ -85,6 +91,7 @@ function addCurrency(code: string) {
         <button
           v-if="balances.length > 1"
           type="button"
+          :data-testid="`remove-currency-${index}`"
           class="shrink-0 self-center p-2 rounded-lg hover:bg-surface-light dark:hover:bg-surface-dark transition-colors"
           @click="$emit('remove', index)"
         >
@@ -100,18 +107,29 @@ function addCurrency(code: string) {
     <!-- Add currency button -->
     <div v-if="availableCurrencies.length > 0">
       <div v-if="!showCurrencyPicker">
-        <UButton type="button" variant="ghost" size="sm" @click="showCurrencyPicker = true">
+        <UButton
+          type="button"
+          variant="ghost"
+          size="sm"
+          data-testid="add-currency-btn"
+          @click="showCurrencyPicker = true"
+        >
           <UIcon name="add" size="sm" class="mr-1" />
           Добавить валюту
         </UButton>
       </div>
 
       <!-- Currency picker dropdown -->
-      <div v-else class="flex flex-wrap gap-2 p-3 bg-surface-light dark:bg-surface-dark rounded-xl">
+      <div
+        v-else
+        data-testid="currency-picker"
+        class="flex flex-wrap gap-2 p-3 bg-surface-light dark:bg-surface-dark rounded-xl"
+      >
         <button
           v-for="currency in availableCurrencies"
           :key="currency.code"
           type="button"
+          :data-testid="`pick-currency-${currency.code}`"
           class="flex items-center gap-2 px-3 py-2 rounded-lg bg-background-light dark:bg-background-dark hover:bg-primary/10 transition-colors text-sm"
           @click="addCurrency(currency.code)"
         >
@@ -120,6 +138,7 @@ function addCurrency(code: string) {
         </button>
         <button
           type="button"
+          data-testid="cancel-currency-picker"
           class="px-3 py-2 text-sm text-text-tertiary-light dark:text-text-tertiary-dark"
           @click="showCurrencyPicker = false"
         >

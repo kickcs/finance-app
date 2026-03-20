@@ -55,6 +55,7 @@ async function handlePurchase(plan: 'premium_monthly' | 'premium_yearly') {
 
     <template #actions>
       <UButton
+        data-testid="yearly-btn"
         variant="primary"
         full-width
         :loading="isLoading"
@@ -63,6 +64,7 @@ async function handlePurchase(plan: 'premium_monthly' | 'premium_yearly') {
         {{ PLAN_PRICES.premium_yearly }} — выгоднее
       </UButton>
       <UButton
+        data-testid="monthly-btn"
         variant="secondary"
         full-width
         :loading="isLoading"

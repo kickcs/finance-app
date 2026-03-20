@@ -19,8 +19,10 @@ function handleDismiss(e: Event) {
 </script>
 
 <template>
-  <div v-if="showBanner">
+  <div v-if="showBanner" data-testid="install-pwa-banner">
     <UCard
+      data-testid="install-pwa-card"
+      clickable
       class="cursor-pointer border border-primary/20 dark:border-primary/30 bg-gradient-to-r from-primary/5 to-transparent dark:from-primary/10"
       @click="handleClick"
     >
@@ -42,6 +44,7 @@ function handleDismiss(e: Event) {
 
         <!-- Dismiss -->
         <button
+          data-testid="dismiss-btn"
           class="p-1.5 rounded-lg text-text-tertiary-light dark:text-text-tertiary-dark hover:bg-surface-light dark:hover:bg-surface-dark transition-colors shrink-0"
           @click="handleDismiss"
         >

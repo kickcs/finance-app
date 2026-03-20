@@ -11,6 +11,11 @@ import {
 } from '../../../infrastructure/lemonsqueezy';
 import { SubscriptionPlan, SubscriptionStatus } from '../../../domain/value-objects';
 
+const MOCK_VARIANT_CONFIG: Record<string, string> = {
+  LEMONSQUEEZY_PREMIUM_MONTHLY_VARIANT_ID: '100',
+  LEMONSQUEEZY_PREMIUM_YEARLY_VARIANT_ID: '200',
+};
+
 describe('HandleWebhookHandler', () => {
   let handler: HandleWebhookHandler;
   const mockRepository = {
@@ -24,13 +29,7 @@ describe('HandleWebhookHandler', () => {
     parseEvent: jest.fn(),
   };
   const mockConfigService = {
-    getOrThrow: jest.fn((key: string) => {
-      const config: Record<string, string> = {
-        LEMONSQUEEZY_PREMIUM_MONTHLY_VARIANT_ID: '100',
-        LEMONSQUEEZY_PREMIUM_YEARLY_VARIANT_ID: '200',
-      };
-      return config[key];
-    }),
+    getOrThrow: jest.fn((key: string) => MOCK_VARIANT_CONFIG[key]),
   };
 
   beforeEach(async () => {
@@ -55,6 +54,7 @@ describe('HandleWebhookHandler', () => {
     handler = module.get<HandleWebhookHandler>(HandleWebhookHandler);
 
     jest.clearAllMocks();
+    mockConfigService.getOrThrow.mockImplementation((key: string) => MOCK_VARIANT_CONFIG[key]);
   });
 
   function makeCommand(event: LemonSqueezyWebhookEvent): HandleWebhookCommand {
