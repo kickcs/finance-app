@@ -4,7 +4,7 @@ import { UCard, Skeleton } from '@/shared/ui';
 
 <template>
   <UCard class="relative overflow-hidden">
-    <!-- Decorative gradient blobs (static) -->
+    <!-- Decorative gradient blob (static) -->
     <div
       class="absolute -top-20 -right-16 w-48 h-48 rounded-full blur-3xl opacity-40"
       style="
@@ -16,18 +16,20 @@ import { UCard, Skeleton } from '@/shared/ui';
       "
     />
 
-    <div class="relative z-10 p-6">
-      <!-- Balance Section Skeleton -->
-      <div class="text-center md:text-left mb-8">
-        <Skeleton class="h-4 w-24 mx-auto md:mx-0 rounded mb-3" />
-        <Skeleton class="h-12 w-56 mx-auto md:mx-0 rounded-xl mb-3" />
-        <Skeleton class="h-7 w-36 mx-auto md:mx-0 rounded-full" />
-      </div>
+    <div class="relative z-10 p-5">
+      <div class="flex items-center justify-between gap-4">
+        <!-- Left: Balance skeleton -->
+        <div class="flex flex-col gap-1.5">
+          <Skeleton class="h-3.5 w-20 rounded" />
+          <Skeleton class="h-9 w-44 rounded-xl" />
+        </div>
 
-      <!-- Quick Actions Skeleton (hidden on desktop — sidebar has them) -->
-      <div class="flex gap-3 md:hidden">
-        <Skeleton class="flex-1 h-16 rounded-2xl" />
-        <Skeleton class="flex-1 h-16 rounded-2xl" />
+        <!-- Right: Daily limit skeleton -->
+        <div class="flex flex-col items-end gap-1.5">
+          <Skeleton class="h-3 w-12 rounded" />
+          <Skeleton class="h-7 w-32 rounded-xl" />
+          <Skeleton class="h-2.5 w-20 rounded" />
+        </div>
       </div>
     </div>
   </UCard>
