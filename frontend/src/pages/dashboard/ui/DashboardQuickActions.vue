@@ -61,46 +61,50 @@ function onClick(action: QuickAction | null) {
 <template>
   <section v-if="!hidden">
     <!-- Loading skeleton -->
-    <div v-if="loading" class="flex gap-2 pb-1">
+    <div v-if="loading" class="flex gap-2.5 pb-1">
       <Skeleton
         v-for="i in showScanButton ? 5 : 4"
         :key="i"
-        class="shrink-0 w-[calc((100%-24px)/4)] aspect-square rounded-xl md:rounded-2xl"
+        class="shrink-0 w-[calc((100%-30px)/4)] aspect-square rounded-2xl"
       />
     </div>
 
     <div
       v-else
-      class="flex gap-2 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-1 pt-1.5 -mt-1.5 px-1.5 -mx-1.5"
+      class="flex gap-2.5 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-1 pt-1.5 -mt-1.5 px-1.5 -mx-1.5"
     >
-      <!-- Scan receipt button (first item) -->
-      <div v-if="showScanButton" class="relative snap-start shrink-0 w-[calc((100%-24px)/4)]">
+      <!-- Scan receipt button -->
+      <div v-if="showScanButton" class="relative snap-start shrink-0 w-[calc((100%-30px)/4)]">
         <button
           type="button"
           aria-label="Сканировать чек"
-          class="relative flex flex-col items-center justify-center gap-1.5 aspect-square rounded-xl md:rounded-2xl bg-surface-light dark:bg-surface-dark border-2 border-primary/20 shadow-sm hover:shadow-md hover:-translate-y-1 hover:border-primary/40 active:scale-95 active:translate-y-0 active:shadow-sm transition-[transform,box-shadow,border-color] duration-200 group cursor-pointer w-full"
+          class="qa-card relative flex flex-col items-center justify-center gap-2 aspect-square rounded-2xl overflow-hidden bg-card-light dark:bg-card-dark border border-primary/25 group cursor-pointer w-full select-none"
           @click="emit('scan-click')"
         >
-          <!-- Subtle Premium Glow -->
+          <!-- Top accent line -->
           <div
-            class="absolute inset-0 rounded-xl md:rounded-2xl bg-gradient-to-b from-primary/10 to-transparent opacity-100 group-hover:from-primary/15 transition-colors duration-300 pointer-events-none"
-          ></div>
+            class="absolute top-0 left-3 right-3 h-[2px] rounded-full bg-primary/40 group-hover:bg-primary/70 transition-colors duration-300"
+          />
+
+          <!-- Background glow -->
+          <div
+            class="absolute inset-0 bg-gradient-to-b from-primary/[0.06] to-transparent pointer-events-none"
+          />
 
           <div
-            class="relative z-10 w-10 h-10 rounded-xl flex items-center justify-center bg-primary transition-transform duration-200 group-hover:scale-110 shadow-sm shadow-primary/30"
+            class="relative w-11 h-11 rounded-[14px] flex items-center justify-center bg-primary shadow-[0_2px_8px_-2px] shadow-primary/40 transition-transform duration-200 group-hover:scale-105 group-active:scale-95"
           >
             <UIcon name="document_scanner" size="sm" class="text-white" />
-
-            <!-- Small subtle premium indicator dot -->
+            <!-- Premium badge -->
             <div
-              class="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-tr from-amber-400 to-yellow-300 rounded-full border-2 border-surface-light dark:border-surface-dark shadow-sm flex items-center justify-center"
+              class="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-br from-amber-400 to-yellow-500 rounded-full border-[1.5px] border-card-light dark:border-card-dark shadow-sm flex items-center justify-center"
             >
               <UIcon name="star" size="xs" class="text-white scale-[0.5]" />
             </div>
           </div>
 
           <span
-            class="relative z-10 text-xs font-semibold text-text-primary-light dark:text-text-primary-dark whitespace-nowrap transition-colors"
+            class="text-[11px] font-semibold text-text-primary-light dark:text-text-primary-dark tracking-tight"
           >
             Скан
           </span>
@@ -117,7 +121,7 @@ function onClick(action: QuickAction | null) {
             ? `Добавить расход: ${action.label}`
             : `Настроить быстрое действие, слот ${index + 1}`
         "
-        class="flex flex-col items-center justify-center gap-1.5 aspect-square rounded-xl md:rounded-2xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark shadow-sm hover:shadow-md hover:-translate-y-1 hover:bg-card-light dark:hover:bg-card-dark active:scale-95 active:translate-y-0 active:shadow-sm transition-[transform,box-shadow,background-color] duration-200 group cursor-pointer snap-start shrink-0 w-[calc((100%-24px)/4)] select-none"
+        class="qa-card relative flex flex-col items-center justify-center gap-2 aspect-square rounded-2xl overflow-hidden bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark group cursor-pointer snap-start shrink-0 w-[calc((100%-30px)/4)] select-none"
         @click="onClick(action)"
         @contextmenu.prevent="emit('long-press', action)"
         @touchstart.passive="onTouchStart(action)"
@@ -125,51 +129,63 @@ function onClick(action: QuickAction | null) {
         @touchmove.passive="onTouchMove()"
       >
         <template v-if="action">
+          <!-- Top accent line — category color -->
           <div
-            class="w-10 h-10 rounded-xl flex items-center justify-center transition-transform duration-200 group-hover:scale-110"
+            class="absolute top-0 left-3 right-3 h-[2px] rounded-full opacity-50 group-hover:opacity-80 transition-opacity duration-300"
+            :style="{ backgroundColor: categoryMap.get(action.categoryId)?.color ?? '#64748b' }"
+          />
+
+          <!-- Icon -->
+          <div
+            class="w-11 h-11 rounded-[14px] flex items-center justify-center transition-transform duration-200 group-hover:scale-105 group-active:scale-95"
             :style="{
-              backgroundColor: (categoryMap.get(action.categoryId)?.color ?? '#64748b') + '1A',
+              backgroundColor: (categoryMap.get(action.categoryId)?.color ?? '#64748b') + '14',
             }"
           >
             <UIcon
               :name="categoryMap.get(action.categoryId)?.icon ?? 'receipt_long'"
               size="sm"
-              :style="{
-                color: categoryMap.get(action.categoryId)?.color ?? '#64748b',
-              }"
+              :style="{ color: categoryMap.get(action.categoryId)?.color ?? '#64748b' }"
             />
           </div>
-          <span
-            class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark truncate w-full text-center px-1 leading-tight"
-          >
-            {{ action.label }}
-          </span>
-          <span
-            v-if="action.amount != null"
-            class="text-[10px] font-medium text-text-tertiary-light dark:text-text-tertiary-dark leading-tight"
-          >
-            {{ formatNumberWithSpaces(action.amount) }}
-          </span>
+
+          <!-- Label + amount -->
+          <div class="flex flex-col items-center gap-0.5 w-full px-1.5">
+            <span
+              class="text-[11px] font-semibold text-text-primary-light dark:text-text-primary-dark truncate w-full text-center leading-tight tracking-tight"
+            >
+              {{ action.label }}
+            </span>
+            <span
+              v-if="action.amount != null"
+              class="text-[10px] font-medium text-text-tertiary-light dark:text-text-tertiary-dark leading-tight tabular-nums"
+            >
+              {{ formatNumberWithSpaces(action.amount) }}
+            </span>
+          </div>
         </template>
+
+        <!-- Empty slot -->
         <template v-else>
           <div
-            class="w-10 h-10 rounded-xl flex items-center justify-center bg-border-light/50 dark:bg-border-dark/50 group-hover:bg-border-light dark:group-hover:bg-border-dark transition-colors duration-200"
+            class="w-11 h-11 rounded-[14px] flex items-center justify-center border-2 border-dashed border-border-light dark:border-border-dark group-hover:border-primary/40 group-hover:bg-primary/[0.04] transition-all duration-200 group-active:scale-95"
           >
             <UIcon
               name="add"
               size="sm"
-              class="text-text-tertiary-light dark:text-text-tertiary-dark group-hover:text-text-secondary-light dark:group-hover:text-text-secondary-dark"
+              class="text-text-tertiary-light dark:text-text-tertiary-dark group-hover:text-primary transition-colors duration-200"
             />
           </div>
           <span
-            class="text-xs font-medium text-text-tertiary-light dark:text-text-tertiary-dark group-hover:text-text-secondary-light dark:group-hover:text-text-secondary-dark"
+            class="text-[11px] font-medium text-text-tertiary-light dark:text-text-tertiary-dark group-hover:text-text-secondary-light dark:group-hover:text-text-secondary-dark transition-colors duration-200"
           >
             Добавить
           </span>
         </template>
       </button>
     </div>
-    <!-- Hint — shown once until dismissed -->
+
+    <!-- Hint -->
     <div v-if="!loading && !hintDismissed" class="mt-3 flex items-start gap-2 px-1">
       <p class="text-caption-xs leading-snug text-text-tertiary-light dark:text-text-tertiary-dark">
         Удерживайте (или правый клик) для редактирования. Настроить или скрыть — в
@@ -191,3 +207,41 @@ function onClick(action: QuickAction | null) {
     </div>
   </section>
 </template>
+
+<style scoped>
+.qa-card {
+  box-shadow:
+    0 1px 3px -1px rgba(0, 0, 0, 0.08),
+    0 2px 6px -2px rgba(0, 0, 0, 0.05);
+  transition:
+    transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.2s ease;
+}
+
+.qa-card:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 4px 12px -2px rgba(0, 0, 0, 0.1),
+    0 2px 6px -2px rgba(0, 0, 0, 0.06);
+}
+
+.qa-card:active {
+  transform: scale(0.96) translateY(0);
+  box-shadow:
+    0 1px 2px -1px rgba(0, 0, 0, 0.08),
+    0 1px 3px -1px rgba(0, 0, 0, 0.04);
+}
+
+:where(.dark) .qa-card {
+  box-shadow:
+    0 1px 3px -1px rgba(0, 0, 0, 0.3),
+    0 0 0 0.5px rgba(255, 255, 255, 0.04);
+}
+
+:where(.dark) .qa-card:hover {
+  box-shadow:
+    0 4px 16px -2px rgba(0, 0, 0, 0.4),
+    0 0 0 0.5px rgba(255, 255, 255, 0.06);
+}
+</style>
