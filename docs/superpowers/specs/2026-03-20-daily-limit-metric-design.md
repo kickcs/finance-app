@@ -34,23 +34,29 @@ Where:
 ```
 
 ### Left side
-- Label: "Баланс" — small uppercase, secondary color
-- Amount: total balance across all accounts — large, bold, white/primary text
+- Label: "Баланс" + eye toggle button inline — small uppercase, `text-text-secondary-light dark:text-text-secondary-dark`
+- Amount: total balance across all accounts — large, bold, `text-text-primary-light dark:text-text-primary-dark`
 - Click navigates to accounts page
 
 ### Divider
-- Vertical 1px line, `rgba(255,255,255,0.08)` — only rendered when budget exists
+- Vertical 1px line, `border-light dark:border-dark` — only rendered when budget exists
 
 ### Right side (only with budget)
-- Label: "В день" — small uppercase, green-tinted (`#4ade80` at 60% opacity)
-- Amount: daily limit — medium-bold, green (`#4ade80`)
-- Sub-text: "осталось N дней" — small, tertiary color
+- Label: "В день" — small uppercase, `text-success` at 60% opacity
+- Amount: daily limit — medium-bold, `text-success` (or `text-danger` when overspent)
+- Sub-text: "осталось N дней" — small, `text-text-tertiary-light dark:text-text-tertiary-dark`
+- Currency: uses `budget.currency` (may differ from profile currency)
 
 ### Preserved
-- Eye toggle button for hiding balances
+- Eye toggle button — inline with "Баланс" label on the left side
 - Animated blob background (morph keyframes)
 - Rotating conic-gradient border
 - Desktop: "К счетам" button on far right
+
+### Balance masking (`hidden = true`)
+- Total balance amount shows masked dots (via `formatMasked`)
+- Daily limit amount also shows masked dots
+- "осталось N дней" sub-text remains visible (non-financial)
 
 ### Without budget
 - Card shows only balance on the left (no divider, no right side)
@@ -61,19 +67,25 @@ Where:
 
 ### 1. `frontend/src/widgets/balance-card/ui/BalanceCard.vue`
 - Remove "Общий баланс" label and centered layout
-- New props: `dailyLimit: number | null`, `daysRemaining: number`
+- New props: `dailyLimit: number | null`, `dailyLimitCurrency: string`, `daysRemaining: number`
 - Layout: flex-row with left (balance) + conditional divider + conditional right (daily limit)
 - Left-align balance
 - Conditionally render right side when `dailyLimit !== null`
+- Use `formatMasked` with `dailyLimitCurrency` for the daily limit amount
 
-### 2. `frontend/src/pages/dashboard/model/useDashboardData.ts`
+### 2. `frontend/src/widgets/balance-card/ui/BalanceCardSkeleton.vue`
+- Update skeleton to reflect new two-column layout (left block + divider + right block)
+- Match the new flex-row structure when budget skeleton is shown
+
+### 3. `frontend/src/pages/dashboard/model/useDashboardData.ts`
 - Import and use `useBudget` composable
-- Compute `daysRemainingInMonth`: days from today to last day of month (min 1)
+- Compute `daysRemainingInMonth` as a reactive `computed()` using `useTimestamp({ interval: 60000 })` from VueUse — stays fresh across midnight
 - Compute `dailyLimit`: `budget.remaining / daysRemainingInMonth` — null if no budget
-- Expose `dailyLimit`, `daysRemaining`, `budgetLoading` in return
+- Compute `dailyLimitCurrency`: `budget.budget.currency` — null if no budget
+- Expose `dailyLimit`, `dailyLimitCurrency`, `daysRemaining`, `budgetLoading` in return
 
-### 3. `frontend/src/pages/dashboard/DashboardPage.vue`
-- Pass `dailyLimit` and `daysRemaining` props to BalanceCard
+### 4. `frontend/src/pages/dashboard/DashboardPage.vue`
+- Pass `dailyLimit`, `dailyLimitCurrency`, and `daysRemaining` props to BalanceCard
 
 ## Edge Cases
 
@@ -84,11 +96,13 @@ Where:
 | Budget overspent (`remaining < 0`) | Shows negative daily limit (red instead of green) |
 | Budget remaining = 0 | Shows "0 сўм" in green |
 | Loading state | Skeleton for both sides |
+| `hidden = true` | Daily limit amount shows masked dots; "осталось N дней" remains visible |
+| App open across midnight | `daysRemaining` updates reactively via `useTimestamp` |
 
-## Color Coding
+## Color Coding (semantic tokens)
 
-- `remaining > 0`: green (#4ade80)
-- `remaining <= 0`: red (#f87171) — overspent signal
+- `remaining > 0`: `text-success` / `bg-success-light`
+- `remaining <= 0`: `text-danger` / `bg-danger-light` — overspent signal
 
 ## Out of Scope
 
