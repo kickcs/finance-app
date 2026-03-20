@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.38';
+export const CURRENT_VERSION = '1.0.39';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,25 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.39',
+    date: '2026-03-20',
+    title: 'Быстрые действия',
+    items: [
+      {
+        type: 'feature',
+        text: 'Указание суммы в быстром действии — мгновенное создание транзакции одним нажатием',
+      },
+      {
+        type: 'feature',
+        text: 'Кастомные названия кнопок быстрых действий',
+      },
+      {
+        type: 'improvement',
+        text: '6 слотов вместо 4, компактный размер кнопок',
+      },
+    ],
+  },
   {
     version: '1.0.38',
     date: '2026-03-20',

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { UIcon, Skeleton, DiscoveryDot } from '@/shared/ui';
+import { formatNumberWithSpaces } from '@/shared/lib/format/currency';
 import type { QuickAction } from '@/features/configure-quick-action';
 
 defineProps<{
@@ -108,7 +109,7 @@ const emit = defineEmits<{
             v-if="action.amount != null"
             class="text-[9px] md:text-[10px] font-medium text-text-tertiary-light dark:text-text-tertiary-dark leading-tight"
           >
-            {{ action.amount }}
+            {{ formatNumberWithSpaces(action.amount) }}
           </span>
         </template>
         <template v-else>

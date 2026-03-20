@@ -1,23 +1,52 @@
 import { computed, toValue, type ComputedRef, type MaybeRefOrGetter } from 'vue';
 import { useRouter } from 'vue-router';
+import { useQueryClient, useMutation } from '@tanstack/vue-query';
 import { useQuickActions, type QuickAction } from '@/features/configure-quick-action';
 import { useKeyboardTrigger } from '@/shared/lib/composables';
 import { useHaptics } from '@/shared/lib/haptics';
 import { useToast } from '@/shared/ui';
-import { useTransactions } from '@/entities/transaction';
+import { transactionsApi } from '@/entities/transaction';
 import { useAccounts } from '@/entities/account';
 import { getTodayISO } from '@/shared/lib/date';
+import { formatCurrency } from '@/shared/lib/format/currency';
+import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
 
 export function useDashboardQuickActions(
   allCategories: ComputedRef<Array<{ id: string; icon: string; color: string }>>,
   userId: MaybeRefOrGetter<string | null>,
 ) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { trigger: triggerKeyboard } = useKeyboardTrigger();
   const { trigger: triggerHaptic } = useHaptics();
   const { toast } = useToast();
-  const { getAccountById, updateBalance } = useAccounts(userId);
-  const { createTransaction } = useTransactions(userId);
+  const { getAccountById } = useAccounts(userId);
+
+  const oneTapMutation = useMutation({
+    mutationFn: (params: {
+      accountId: string;
+      categoryId: string;
+      amount: number;
+      currency: string;
+    }) =>
+      transactionsApi.create({
+        user_id: toValue(userId)!,
+        account_id: params.accountId,
+        category_id: params.categoryId,
+        amount: params.amount,
+        currency: params.currency,
+        type: 'expense',
+        date: getTodayISO(),
+      }),
+    onSettled: async () => {
+      const uid = toValue(userId);
+      if (!uid) return;
+      await Promise.all([
+        invalidateTransactionRelated(queryClient, uid),
+        invalidateAccountRelated(queryClient, uid),
+      ]);
+    },
+  });
 
   const {
     slots: quickActionSlots,
@@ -47,34 +76,24 @@ export function useDashboardQuickActions(
     }
 
     // One-tap: create transaction immediately if amount is set
-    if (action.amount !== null && action.amount !== undefined && action.amount > 0) {
-      const uid = toValue(userId);
-      if (!uid) return;
-
+    if (action.amount !== null && action.amount > 0) {
       const account = getAccountById(action.accountId);
       if (!account) return;
 
       const currency = account.balances[0]?.currency ?? 'USD';
 
       try {
-        await createTransaction(
-          {
-            account_id: action.accountId,
-            category_id: action.categoryId,
-            amount: action.amount,
-            currency,
-            type: 'expense',
-            date: getTodayISO(),
-          },
-          async (accountId, amount) => {
-            await updateBalance(accountId, amount);
-          },
-        );
+        await oneTapMutation.mutateAsync({
+          accountId: action.accountId,
+          categoryId: action.categoryId,
+          amount: action.amount,
+          currency,
+        });
 
         triggerHaptic('success');
         toast({
           title: 'Транзакция создана',
-          description: `${action.label} — ${action.amount} ${currency}`,
+          description: `${action.label} — ${formatCurrency(action.amount, currency)}`,
           variant: 'default',
         });
       } catch {

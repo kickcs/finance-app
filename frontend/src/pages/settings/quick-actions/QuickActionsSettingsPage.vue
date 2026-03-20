@@ -3,6 +3,7 @@ import { AppHeader } from '@/widgets/header';
 import { UIcon, UToggle } from '@/shared/ui';
 import { QuickActionModal, useQuickActions } from '@/features/configure-quick-action';
 import { useAccounts } from '@/entities/account';
+import { formatCurrency } from '@/shared/lib/format/currency';
 import { useCategories } from '@/entities/category';
 import { navigateBack } from '@/app/router';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
@@ -94,7 +95,13 @@ function handleSlotClick(action: (typeof slots.value)[number]) {
               >
                 <UIcon name="payments" size="xs" class="opacity-70" />
                 <p class="text-sm font-medium">
-                  {{ action.amount }}
+                  {{
+                    formatCurrency(
+                      action.amount!,
+                      accounts?.find((a) => a.id === action.accountId)?.balances[0]?.currency ??
+                        'USD',
+                    )
+                  }}
                 </p>
               </div>
             </div>
