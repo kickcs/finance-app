@@ -83,9 +83,7 @@ defineEmits<{
             class="text-lg sm:text-xl font-bold leading-tight"
             :class="dailyLimit >= 0 ? 'text-success' : 'text-danger'"
           >
-            {{
-              formatMasked(Math.abs(dailyLimit), dailyLimitCurrency ?? currency, hidden ?? false)
-            }}
+            {{ formatMasked(dailyLimit, dailyLimitCurrency ?? currency, hidden ?? false) }}
           </span>
           <span
             class="text-[0.65rem] font-medium text-text-tertiary-light dark:text-text-tertiary-dark mt-0.5"
