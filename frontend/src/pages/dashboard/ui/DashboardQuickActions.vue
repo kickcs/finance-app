@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { UIcon, Skeleton, DiscoveryDot } from '@/shared/ui';
 import { formatNumberWithSpaces } from '@/shared/lib/format/currency';
+import { useHaptics } from '@/shared/lib/haptics';
 import type { QuickAction } from '@/features/configure-quick-action';
 
 defineProps<{
@@ -20,6 +21,41 @@ const emit = defineEmits<{
   'settings-click': [];
   'scan-click': [];
 }>();
+
+const LONG_PRESS_MS = 500;
+
+const { trigger } = useHaptics();
+
+let longPressTimer: ReturnType<typeof setTimeout> | null = null;
+let longPressTriggered = false;
+
+function onTouchStart(action: QuickAction | null) {
+  longPressTriggered = false;
+  longPressTimer = setTimeout(() => {
+    longPressTriggered = true;
+    trigger('selection');
+    emit('long-press', action);
+  }, LONG_PRESS_MS);
+}
+
+function onTouchEnd() {
+  if (longPressTimer) {
+    clearTimeout(longPressTimer);
+    longPressTimer = null;
+  }
+}
+
+function onTouchMove() {
+  if (longPressTimer) {
+    clearTimeout(longPressTimer);
+    longPressTimer = null;
+  }
+}
+
+function onClick(action: QuickAction | null) {
+  if (longPressTriggered) return;
+  emit('click', action);
+}
 </script>
 
 <template>
@@ -81,9 +117,12 @@ const emit = defineEmits<{
             ? `Добавить расход: ${action.label}`
             : `Настроить быстрое действие, слот ${index + 1}`
         "
-        class="flex flex-col items-center gap-1 py-2 md:py-3 rounded-xl md:rounded-2xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark shadow-sm hover:shadow-md hover:-translate-y-1 hover:bg-card-light dark:hover:bg-card-dark active:scale-95 active:translate-y-0 active:shadow-sm transition-[transform,box-shadow,background-color] duration-200 group cursor-pointer snap-start shrink-0 w-[calc((100%-40px)/6)]"
-        @click="emit('click', action)"
+        class="flex flex-col items-center gap-1 py-2 md:py-3 rounded-xl md:rounded-2xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark shadow-sm hover:shadow-md hover:-translate-y-1 hover:bg-card-light dark:hover:bg-card-dark active:scale-95 active:translate-y-0 active:shadow-sm transition-[transform,box-shadow,background-color] duration-200 group cursor-pointer snap-start shrink-0 w-[calc((100%-40px)/6)] select-none"
+        @click="onClick(action)"
         @contextmenu.prevent="emit('long-press', action)"
+        @touchstart.passive="onTouchStart(action)"
+        @touchend.passive="onTouchEnd()"
+        @touchmove.passive="onTouchMove()"
       >
         <template v-if="action">
           <div
