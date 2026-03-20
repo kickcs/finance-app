@@ -40,10 +40,10 @@ export function useDashboardQuickActions(
         description: params.description,
         date: getTodayISO(),
       }),
-    onSettled: async () => {
+    onSettled: () => {
       const uid = toValue(userId);
       if (!uid) return;
-      await Promise.all([
+      void Promise.all([
         invalidateTransactionRelated(queryClient, uid),
         invalidateAccountRelated(queryClient, uid),
       ]);
@@ -118,7 +118,8 @@ export function useDashboardQuickActions(
                   invalidateTransactionRelated(queryClient, uid),
                   invalidateAccountRelated(queryClient, uid),
                 ]);
-              } catch {
+              } catch (e) {
+                console.error('Failed to undo quick action transaction:', e);
                 toast({
                   title: 'Ошибка отмены',
                   description: 'Не удалось отменить транзакцию',

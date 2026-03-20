@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { onUnmounted } from 'vue';
 import { UIcon, Skeleton, DiscoveryDot } from '@/shared/ui';
 import { formatNumberWithSpaces } from '@/shared/lib/format/currency';
 import { useHaptics } from '@/shared/lib/haptics';
@@ -29,7 +30,15 @@ const { trigger } = useHaptics();
 let longPressTimer: ReturnType<typeof setTimeout> | null = null;
 let longPressTriggered = false;
 
+function clearLongPress() {
+  if (longPressTimer) {
+    clearTimeout(longPressTimer);
+    longPressTimer = null;
+  }
+}
+
 function onTouchStart(action: QuickAction | null) {
+  clearLongPress();
   longPressTriggered = false;
   longPressTimer = setTimeout(() => {
     longPressTriggered = true;
@@ -38,24 +47,12 @@ function onTouchStart(action: QuickAction | null) {
   }, LONG_PRESS_MS);
 }
 
-function onTouchEnd() {
-  if (longPressTimer) {
-    clearTimeout(longPressTimer);
-    longPressTimer = null;
-  }
-}
-
-function onTouchMove() {
-  if (longPressTimer) {
-    clearTimeout(longPressTimer);
-    longPressTimer = null;
-  }
-}
-
 function onClick(action: QuickAction | null) {
   if (longPressTriggered) return;
   emit('click', action);
 }
+
+onUnmounted(clearLongPress);
 </script>
 
 <template>
@@ -130,6 +127,7 @@ function onClick(action: QuickAction | null) {
         :style="
           action
             ? {
+                '--qa-color': categoryMap.get(action.categoryId)?.color ?? '#64748b',
                 backgroundColor: (categoryMap.get(action.categoryId)?.color ?? '#64748b') + '12',
               }
             : undefined
@@ -137,8 +135,8 @@ function onClick(action: QuickAction | null) {
         @click="onClick(action)"
         @contextmenu.prevent="emit('long-press', action)"
         @touchstart.passive="onTouchStart(action)"
-        @touchend.passive="onTouchEnd()"
-        @touchmove.passive="onTouchMove()"
+        @touchend.passive="clearLongPress()"
+        @touchmove.passive="clearLongPress()"
       >
         <template v-if="action">
           <!-- Icon on deeper tint -->
