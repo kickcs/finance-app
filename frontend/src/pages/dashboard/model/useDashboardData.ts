@@ -1,4 +1,5 @@
 import { computed } from 'vue';
+import { useTimestamp } from '@vueuse/core';
 import { useAccounts } from '@/entities/account';
 import { useRecentTransactions, useAnalyticsStats } from '@/entities/transaction';
 import { useDebts } from '@/entities/debt';
@@ -84,6 +85,25 @@ export function useDashboardData() {
     return total;
   });
 
+  // Reactive timestamp that updates every minute — keeps daysRemaining fresh across midnight
+  const timestamp = useTimestamp({ interval: 60_000 });
+
+  const daysRemainingInMonth = computed(() => {
+    const now = new Date(timestamp.value);
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    return Math.max(1, lastDay - now.getDate() + 1);
+  });
+
+  const dailyLimit = computed(() => {
+    if (!budget.value) return null;
+    return budget.value.remaining / daysRemainingInMonth.value;
+  });
+
+  const dailyLimitCurrency = computed(() => {
+    if (!budget.value) return null;
+    return budget.value.budget.currency;
+  });
+
   return {
     userId,
     currency,
@@ -107,6 +127,9 @@ export function useDashboardData() {
     budget,
     budgetLoading,
     budgetSaving,
+    dailyLimit,
+    dailyLimitCurrency,
+    daysRemainingInMonth,
     setBudgetDefault: setDefault,
     setBudgetOverride: setOverride,
     removeBudgetOverride: removeOverride,
