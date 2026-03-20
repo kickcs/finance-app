@@ -12,7 +12,7 @@ import { formatCurrency } from '@/shared/lib/format/currency';
 import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
 
 export function useDashboardQuickActions(
-  allCategories: ComputedRef<Array<{ id: string; icon: string; color: string }>>,
+  allCategories: ComputedRef<Array<{ id: string; name: string; icon: string; color: string }>>,
   userId: MaybeRefOrGetter<string | null>,
 ) {
   const router = useRouter();
@@ -63,9 +63,9 @@ export function useDashboardQuickActions(
   } = useQuickActions(userId);
 
   const categoryMap = computed(() => {
-    const map = new Map<string, { icon: string; color: string }>();
+    const map = new Map<string, { name: string; icon: string; color: string }>();
     for (const cat of allCategories.value) {
-      map.set(cat.id, { icon: cat.icon, color: cat.color });
+      map.set(cat.id, { name: cat.name, icon: cat.icon, color: cat.color });
     }
     return map;
   });
@@ -85,7 +85,7 @@ export function useDashboardQuickActions(
       const currency = account.balances[0]?.currency ?? 'USD';
 
       try {
-        await oneTapMutation.mutateAsync({
+        const created = await oneTapMutation.mutateAsync({
           accountId: action.accountId,
           categoryId: action.categoryId,
           amount: action.amount,
@@ -94,10 +94,40 @@ export function useDashboardQuickActions(
         });
 
         triggerHaptic('success');
+
+        const categoryName = categoryMap.value.get(action.categoryId)?.name ?? action.label;
+        const accountName = account.name;
+        const amount = formatCurrency(-action.amount, currency, {
+          showSymbol: false,
+          showSign: true,
+        });
+
         toast({
-          title: 'Транзакция создана',
-          description: `${action.label} — ${formatCurrency(action.amount, currency)}`,
-          variant: 'default',
+          variant: 'transaction-success',
+          duration: 5000,
+          transactionData: {
+            amount,
+            categoryName,
+            accountName,
+            onUndo: async () => {
+              const uid = toValue(userId);
+              if (!uid) return;
+              try {
+                await transactionsApi.delete(created.id);
+                await Promise.all([
+                  invalidateTransactionRelated(queryClient, uid),
+                  invalidateAccountRelated(queryClient, uid),
+                ]);
+              } catch {
+                toast({
+                  title: 'Ошибка отмены',
+                  description: 'Не удалось отменить транзакцию',
+                  variant: 'error',
+                  duration: 5000,
+                });
+              }
+            },
+          },
         });
       } catch {
         triggerHaptic('error');

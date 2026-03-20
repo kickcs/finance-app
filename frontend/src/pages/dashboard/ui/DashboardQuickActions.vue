@@ -6,7 +6,7 @@ import type { QuickAction } from '@/features/configure-quick-action';
 
 defineProps<{
   slots: (QuickAction | null)[];
-  categoryMap: Map<string, { icon: string; color: string }>;
+  categoryMap: Map<string, { name: string; icon: string; color: string }>;
   hintDismissed: boolean;
   hidden: boolean;
   loading?: boolean;

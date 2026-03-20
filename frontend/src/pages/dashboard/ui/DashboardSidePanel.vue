@@ -20,7 +20,7 @@ const props = withDefaults(
   defineProps<{
     // Quick Actions
     quickActionSlots: (QuickAction | null)[];
-    categoryMap: Map<string, { icon: string; color: string }>;
+    categoryMap: Map<string, { name: string; icon: string; color: string }>;
     hintDismissed: boolean;
     quickActionsHidden: boolean;
     quickActionsLoading?: boolean;
