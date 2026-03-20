@@ -2,6 +2,7 @@
 import { ref, computed, watch } from 'vue';
 import { UModal, UButton, UIcon, UInput } from '@/shared/ui';
 import { useHaptics } from '@/shared/lib/haptics';
+import { getCurrencySymbol } from '@/shared/lib/format/currency';
 import type { Category } from '@/entities/category';
 import { CategoryChips } from '@/entities/category';
 import type { AccountWithBalances } from '@/entities/account';
@@ -126,16 +127,15 @@ function handleDelete() {
           class="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-1.5"
         >
           Сумма
+          <span class="font-normal text-text-tertiary-light dark:text-text-tertiary-dark">
+            — для мгновенного создания
+          </span>
         </label>
         <UInput
           v-model="customAmount"
-          variant="currency"
-          :suffix="selectedAccountCurrency"
+          :suffix="getCurrencySymbol(selectedAccountCurrency)"
           placeholder="Не указана"
         />
-        <p class="mt-1 text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
-          Для мгновенного создания транзакции
-        </p>
       </div>
     </div>
 
