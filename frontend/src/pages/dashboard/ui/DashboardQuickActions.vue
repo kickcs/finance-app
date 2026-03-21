@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { onUnmounted } from 'vue';
+import { computed } from 'vue';
+import { useTimeoutFn } from '@vueuse/core';
 import { UIcon, Skeleton, DiscoveryDot } from '@/shared/ui';
 import { formatNumberWithSpaces } from '@/shared/lib/format/currency';
 import { useHaptics } from '@/shared/lib/haptics';
 import type { QuickAction } from '@/features/configure-quick-action';
 
-defineProps<{
+const props = defineProps<{
   slots: (QuickAction | null)[];
   categoryMap: Map<string, { name: string; icon: string; color: string }>;
   hintDismissed: boolean;
@@ -14,7 +15,6 @@ defineProps<{
   showScanButton?: boolean;
   showScanDot?: boolean;
 }>();
-
 const emit = defineEmits<{
   click: [action: QuickAction | null];
   'long-press': [action: QuickAction | null];
@@ -22,37 +22,44 @@ const emit = defineEmits<{
   'settings-click': [];
   'scan-click': [];
 }>();
-
+const DEFAULT_CAT = { name: '', icon: 'receipt_long', color: '#64748b' };
 const LONG_PRESS_MS = 500;
 
 const { trigger } = useHaptics();
 
-let longPressTimer: ReturnType<typeof setTimeout> | null = null;
+// Resolve category data once per slot to avoid repeated Map lookups in template
+const resolvedSlots = computed(() =>
+  props.slots.map((action) => ({
+    action,
+    cat: action ? (props.categoryMap.get(action.categoryId) ?? DEFAULT_CAT) : DEFAULT_CAT,
+  })),
+);
+
+// Long-press via useTimeoutFn (auto-cleanup on unmount)
+let longPressAction: QuickAction | null = null;
 let longPressTriggered = false;
 
-function clearLongPress() {
-  if (longPressTimer) {
-    clearTimeout(longPressTimer);
-    longPressTimer = null;
-  }
-}
-
-function onTouchStart(action: QuickAction | null) {
-  clearLongPress();
-  longPressTriggered = false;
-  longPressTimer = setTimeout(() => {
+const { start: startLongPress, stop: stopLongPress } = useTimeoutFn(
+  () => {
     longPressTriggered = true;
     trigger('selection');
-    emit('long-press', action);
-  }, LONG_PRESS_MS);
+    emit('long-press', longPressAction);
+  },
+  LONG_PRESS_MS,
+  { immediate: false },
+);
+
+function onTouchStart(action: QuickAction | null) {
+  stopLongPress();
+  longPressTriggered = false;
+  longPressAction = action;
+  startLongPress();
 }
 
 function onClick(action: QuickAction | null) {
   if (longPressTriggered) return;
   emit('click', action);
 }
-
-onUnmounted(clearLongPress);
 </script>
 
 <template>
@@ -114,7 +121,7 @@ onUnmounted(clearLongPress);
 
       <!-- Quick action slots -->
       <button
-        v-for="(action, index) in slots"
+        v-for="({ action, cat }, index) in resolvedSlots"
         :key="action?.id ?? `empty-${index}`"
         :aria-label="
           action
@@ -130,27 +137,27 @@ onUnmounted(clearLongPress);
         :style="
           action
             ? {
-                '--qa-color': categoryMap.get(action.categoryId)?.color ?? '#64748b',
-                backgroundColor: (categoryMap.get(action.categoryId)?.color ?? '#64748b') + '0A',
+                '--qa-color': cat.color,
+                backgroundColor: cat.color + '0A',
               }
             : undefined
         "
         @click="onClick(action)"
         @contextmenu.prevent="emit('long-press', action)"
         @touchstart.passive="onTouchStart(action)"
-        @touchend.passive="clearLongPress()"
-        @touchmove.passive="clearLongPress()"
+        @touchend.passive="stopLongPress()"
+        @touchmove.passive="stopLongPress()"
       >
         <template v-if="action">
-          <!-- Full-card icon — shifted up so text doesn't overlap -->
+          <!-- Full-card icon -->
           <div
             class="absolute inset-0 -top-2 flex items-center justify-center transition-transform duration-200 group-hover:scale-110 group-active:scale-95"
           >
             <UIcon
-              :name="categoryMap.get(action.categoryId)?.icon ?? 'receipt_long'"
+              :name="cat.icon"
               size="2xl"
               class="opacity-[0.12] dark:opacity-[0.08]"
-              :style="{ color: categoryMap.get(action.categoryId)?.color ?? '#64748b' }"
+              :style="{ color: cat.color }"
             />
           </div>
 
@@ -158,10 +165,7 @@ onUnmounted(clearLongPress);
           <span
             v-if="action.amount != null"
             class="absolute top-1.5 right-1.5 z-10 text-[9px] md:text-[10px] font-semibold leading-none tabular-nums px-1.5 py-[3px] rounded-md"
-            :style="{
-              color: categoryMap.get(action.categoryId)?.color ?? '#64748b',
-              backgroundColor: (categoryMap.get(action.categoryId)?.color ?? '#64748b') + '18',
-            }"
+            :style="{ color: cat.color, backgroundColor: cat.color + '18' }"
           >
             {{ formatNumberWithSpaces(action.amount) }}
           </span>
