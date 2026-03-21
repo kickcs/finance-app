@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useTimeoutFn } from '@vueuse/core';
-import { UIcon, IconBadge, Skeleton } from '@/shared/ui';
+import { UIcon, Skeleton } from '@/shared/ui';
 import { formatNumberWithSpaces } from '@/shared/lib/format/currency';
 import { useHaptics } from '@/shared/lib/haptics';
 import type { QuickAction } from '@/features/configure-quick-action';
@@ -104,19 +104,15 @@ function onClick(action: QuickAction | null) {
         @touchmove.passive="stopLongPress()"
       >
         <template v-if="action">
-          <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div
+            class="absolute inset-0 -top-1 flex items-center justify-center transition-transform duration-200 group-hover:scale-110 group-active:scale-95"
+          >
             <UIcon
               :name="cat.icon"
               size="2xl"
-              class="opacity-[0.07] dark:opacity-[0.05] translate-y-1"
+              class="opacity-45 dark:opacity-40"
               :style="{ color: cat.color }"
             />
-          </div>
-
-          <div
-            class="absolute inset-x-0 top-0 bottom-5 flex items-center justify-center transition-transform duration-200 group-hover:scale-110 group-active:scale-95"
-          >
-            <IconBadge :icon="cat.icon" :color="cat.color" size="lg" />
           </div>
 
           <span
