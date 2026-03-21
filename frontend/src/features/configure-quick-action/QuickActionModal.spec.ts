@@ -3,7 +3,7 @@ import { flushPromises } from '@vue/test-utils';
 import { nextTick } from 'vue';
 import { renderWithProviders, mockUser } from '@/test/test-utils';
 import QuickActionModal from './ui/QuickActionModal.vue';
-import type { AccountWithBalances } from '@/shared/api/database.types';
+import type { AccountWithBalances } from '@/entities/account';
 import type { Category } from '@/entities/category';
 
 // ---------------------------------------------------------------------------
@@ -118,6 +118,7 @@ describe('QuickActionModal', () => {
           label: 'Продукты',
           categoryId: 'cat-groceries',
           accountId: 'acc-1',
+          amount: null,
         },
       });
       const modal = currentWrapper.findComponent({ name: 'UModal' });
@@ -152,6 +153,7 @@ describe('QuickActionModal', () => {
           label: 'Продукты',
           categoryId: 'cat-groceries',
           accountId: 'acc-1',
+          amount: null,
         },
       });
       expect(findInBody('[data-testid="delete-btn"]')).not.toBeNull();
@@ -239,6 +241,7 @@ describe('QuickActionModal', () => {
           label: 'Продукты',
           categoryId: 'cat-groceries',
           accountId: 'acc-1',
+          amount: null,
         },
       });
 
@@ -255,6 +258,7 @@ describe('QuickActionModal', () => {
           label: 'Продукты',
           categoryId: 'cat-groceries',
           accountId: 'acc-1',
+          amount: null,
         },
       });
 
@@ -264,6 +268,70 @@ describe('QuickActionModal', () => {
       const closeEmit = currentWrapper.emitted('update:modelValue');
       expect(closeEmit).toBeTruthy();
       expect(closeEmit![0][0]).toBe(false);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Amount field
+  // -----------------------------------------------------------------------
+  describe('amount field', () => {
+    it('emits save with amount: null when amount field is empty', async () => {
+      currentWrapper = await renderAndOpen();
+
+      const categoryBtn = Array.from(document.body.querySelectorAll('[role="dialog"] button')).find(
+        (b) => b.textContent?.trim() === 'Продукты',
+      ) as HTMLButtonElement | undefined;
+      categoryBtn!.click();
+      await nextTick();
+
+      findInBody('[data-testid="save-btn"]')!.click();
+      await nextTick();
+
+      const saveEmit = currentWrapper.emitted('save');
+      expect(saveEmit).toBeTruthy();
+      const payload = saveEmit![0][0] as Record<string, unknown>;
+      expect(payload.amount).toBeNull();
+    });
+
+    it('emits save with parsed numeric amount when provided', async () => {
+      currentWrapper = await renderAndOpen();
+
+      const categoryBtn = Array.from(document.body.querySelectorAll('[role="dialog"] button')).find(
+        (b) => b.textContent?.trim() === 'Продукты',
+      ) as HTMLButtonElement | undefined;
+      categoryBtn!.click();
+      await nextTick();
+
+      // Type amount into the input
+      const inputs = document.body.querySelectorAll('[role="dialog"] input');
+      const amountInput = inputs[inputs.length - 1] as HTMLInputElement;
+      amountInput.value = '1500';
+      amountInput.dispatchEvent(new Event('input', { bubbles: true }));
+      await nextTick();
+
+      findInBody('[data-testid="save-btn"]')!.click();
+      await nextTick();
+
+      const saveEmit = currentWrapper.emitted('save');
+      expect(saveEmit).toBeTruthy();
+      const payload = saveEmit![0][0] as Record<string, unknown>;
+      expect(payload.amount).toBe(1500);
+    });
+
+    it('pre-populates amount from editAction in edit mode', async () => {
+      currentWrapper = await renderAndOpen({
+        editAction: {
+          id: 'qa-1',
+          label: 'Продукты',
+          categoryId: 'cat-groceries',
+          accountId: 'acc-1',
+          amount: 5000,
+        },
+      });
+
+      const inputs = document.body.querySelectorAll('[role="dialog"] input');
+      const amountInput = inputs[inputs.length - 1] as HTMLInputElement;
+      expect(amountInput.value).toBe('5000');
     });
   });
 
@@ -278,6 +346,7 @@ describe('QuickActionModal', () => {
           label: 'Продукты',
           categoryId: 'cat-groceries',
           accountId: 'acc-1',
+          amount: null,
         },
       });
       const saveBtn = findInBody('[data-testid="save-btn"]') as HTMLButtonElement;
@@ -291,6 +360,7 @@ describe('QuickActionModal', () => {
           label: 'Продукты',
           categoryId: 'cat-groceries',
           accountId: 'acc-1',
+          amount: null,
         },
       });
       expect(findInBody('[data-testid="save-btn"]')?.textContent).toContain('Сохранить изменения');

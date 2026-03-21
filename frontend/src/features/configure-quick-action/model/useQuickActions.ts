@@ -1,6 +1,6 @@
 import { ref, computed, type MaybeRefOrGetter } from 'vue';
 import { useQuickActions as useQuickActionsApi } from '@/entities/quick-action';
-import type { QuickAction } from './types';
+import type { QuickAction, QuickActionPayload } from './types';
 
 export function useQuickActions(userId: MaybeRefOrGetter<string | null>) {
   const api = useQuickActionsApi(userId);
@@ -23,18 +23,14 @@ export function useQuickActions(userId: MaybeRefOrGetter<string | null>) {
   const editingAction = ref<QuickAction | null>(null);
   const showModal = ref(false);
 
-  async function handleSave(data: {
-    label: string;
-    categoryId: string;
-    accountId: string;
-    amount?: number | null;
-  }) {
+  async function handleSave(data: QuickActionPayload) {
     if (editingAction.value) {
       await api.updateAction(editingAction.value.id, data);
     } else {
       await api.addAction(data);
     }
     editingAction.value = null;
+    showModal.value = false;
   }
 
   async function handleDelete() {
@@ -42,6 +38,7 @@ export function useQuickActions(userId: MaybeRefOrGetter<string | null>) {
       await api.removeAction(editingAction.value.id);
     }
     editingAction.value = null;
+    showModal.value = false;
   }
 
   return {

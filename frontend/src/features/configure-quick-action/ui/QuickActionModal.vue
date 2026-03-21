@@ -7,7 +7,7 @@ import type { Category } from '@/entities/category';
 import { CategoryChips } from '@/entities/category';
 import type { AccountWithBalances } from '@/entities/account';
 import { AccountSelector } from '@/entities/account';
-import type { QuickAction } from '../model/types';
+import type { QuickAction, QuickActionPayload } from '../model/types';
 
 const props = defineProps<{
   modelValue: boolean;
@@ -18,7 +18,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean];
-  save: [action: { label: string; categoryId: string; accountId: string; amount?: number | null }];
+  save: [action: QuickActionPayload];
   delete: [];
 }>();
 
@@ -42,9 +42,7 @@ watch(
         selectedAccountId.value = props.editAction.accountId;
         customLabel.value = props.editAction.label ?? '';
         customAmount.value =
-          props.editAction.amount !== null && props.editAction.amount !== undefined
-            ? String(props.editAction.amount)
-            : '';
+          props.editAction.amount !== null ? String(props.editAction.amount) : '';
       } else {
         selectedCategoryId.value = '';
         selectedAccountId.value = props.accounts[0]?.id ?? '';
