@@ -131,7 +131,7 @@ onUnmounted(clearLongPress);
           action
             ? {
                 '--qa-color': categoryMap.get(action.categoryId)?.color ?? '#64748b',
-                backgroundColor: (categoryMap.get(action.categoryId)?.color ?? '#64748b') + '14',
+                backgroundColor: (categoryMap.get(action.categoryId)?.color ?? '#64748b') + '0A',
               }
             : undefined
         "
@@ -149,7 +149,7 @@ onUnmounted(clearLongPress);
             <UIcon
               :name="categoryMap.get(action.categoryId)?.icon ?? 'receipt_long'"
               size="2xl"
-              class="opacity-20 dark:opacity-[0.15]"
+              class="opacity-[0.12] dark:opacity-[0.08]"
               :style="{ color: categoryMap.get(action.categoryId)?.color ?? '#64748b' }"
             />
           </div>
@@ -157,9 +157,10 @@ onUnmounted(clearLongPress);
           <!-- Amount badge — top right -->
           <span
             v-if="action.amount != null"
-            class="absolute top-1.5 right-1.5 z-10 text-[9px] md:text-[10px] font-bold leading-none tabular-nums px-1.5 py-[3px] rounded-md text-white"
+            class="absolute top-1.5 right-1.5 z-10 text-[9px] md:text-[10px] font-semibold leading-none tabular-nums px-1.5 py-[3px] rounded-md"
             :style="{
-              backgroundColor: (categoryMap.get(action.categoryId)?.color ?? '#64748b') + 'CC',
+              color: categoryMap.get(action.categoryId)?.color ?? '#64748b',
+              backgroundColor: (categoryMap.get(action.categoryId)?.color ?? '#64748b') + '18',
             }"
           >
             {{ formatNumberWithSpaces(action.amount) }}
@@ -167,8 +168,7 @@ onUnmounted(clearLongPress);
 
           <!-- Label — bottom center -->
           <span
-            class="relative z-10 text-[11px] md:text-xs font-bold truncate w-full text-center leading-tight tracking-tight px-1 pb-2.5 md:pb-3"
-            :style="{ color: categoryMap.get(action.categoryId)?.color ?? '#64748b' }"
+            class="relative z-10 text-[11px] md:text-xs font-semibold truncate w-full text-center leading-tight tracking-tight px-1 pb-2.5 md:pb-3 text-text-primary-light dark:text-text-primary-dark"
           >
             {{ action.label }}
           </span>
@@ -253,6 +253,6 @@ onUnmounted(clearLongPress);
 }
 
 :where(.dark) .qa-filled {
-  background-color: color-mix(in srgb, var(--qa-color, #64748b) 12%, #18181b);
+  background-color: color-mix(in srgb, var(--qa-color, #64748b) 6%, #18181b);
 }
 </style>
