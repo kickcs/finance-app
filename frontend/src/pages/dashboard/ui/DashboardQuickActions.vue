@@ -119,16 +119,16 @@ onUnmounted(clearLongPress);
             : `Настроить быстрое действие, слот ${index + 1}`
         "
         :class="[
-          'qa-card relative flex flex-col items-center justify-center gap-2 aspect-square rounded-2xl overflow-hidden group cursor-pointer snap-start shrink-0 w-[calc((100%-30px)/4)] select-none',
+          'qa-card relative flex items-end justify-center aspect-square rounded-2xl overflow-hidden group cursor-pointer snap-start shrink-0 w-[calc((100%-30px)/4)] select-none',
           action
             ? 'qa-filled border-0'
-            : 'bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark',
+            : 'bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark items-center',
         ]"
         :style="
           action
             ? {
                 '--qa-color': categoryMap.get(action.categoryId)?.color ?? '#64748b',
-                backgroundColor: (categoryMap.get(action.categoryId)?.color ?? '#64748b') + '12',
+                backgroundColor: (categoryMap.get(action.categoryId)?.color ?? '#64748b') + '14',
               }
             : undefined
         "
@@ -139,31 +139,29 @@ onUnmounted(clearLongPress);
         @touchmove.passive="clearLongPress()"
       >
         <template v-if="action">
-          <!-- Icon on deeper tint -->
+          <!-- Full-card icon -->
           <div
-            class="w-11 h-11 rounded-[14px] flex items-center justify-center transition-transform duration-200 group-hover:scale-110 group-active:scale-95"
-            :style="{
-              backgroundColor: (categoryMap.get(action.categoryId)?.color ?? '#64748b') + '20',
-            }"
+            class="absolute inset-0 flex items-center justify-center transition-transform duration-200 group-hover:scale-110 group-active:scale-95"
           >
             <UIcon
               :name="categoryMap.get(action.categoryId)?.icon ?? 'receipt_long'"
-              size="sm"
+              size="2xl"
+              class="opacity-20 dark:opacity-[0.15]"
               :style="{ color: categoryMap.get(action.categoryId)?.color ?? '#64748b' }"
             />
           </div>
 
-          <!-- Label + amount -->
-          <div class="flex flex-col items-center gap-0.5 w-full px-1.5">
+          <!-- Bottom text overlay -->
+          <div class="relative z-10 flex flex-col items-center gap-0.5 w-full px-1 pb-2.5">
             <span
-              class="text-[11px] font-semibold text-text-primary-light dark:text-text-primary-dark truncate w-full text-center leading-tight tracking-tight"
+              class="text-[11px] font-bold truncate w-full text-center leading-tight tracking-tight"
+              :style="{ color: categoryMap.get(action.categoryId)?.color ?? '#64748b' }"
             >
               {{ action.label }}
             </span>
             <span
               v-if="action.amount != null"
-              class="text-[10px] font-medium leading-tight tabular-nums"
-              :style="{ color: (categoryMap.get(action.categoryId)?.color ?? '#64748b') + 'AA' }"
+              class="text-[10px] font-semibold leading-tight tabular-nums text-text-secondary-light dark:text-text-secondary-dark"
             >
               {{ formatNumberWithSpaces(action.amount) }}
             </span>
@@ -172,20 +170,18 @@ onUnmounted(clearLongPress);
 
         <!-- Empty slot -->
         <template v-else>
-          <div
-            class="w-11 h-11 rounded-[14px] flex items-center justify-center border-2 border-dashed border-border-light dark:border-border-dark group-hover:border-primary/40 group-hover:bg-primary/[0.04] transition-all duration-200 group-active:scale-95"
-          >
+          <div class="flex flex-col items-center justify-center gap-1.5 w-full h-full">
             <UIcon
               name="add"
-              size="sm"
-              class="text-text-tertiary-light dark:text-text-tertiary-dark group-hover:text-primary transition-colors duration-200"
+              size="lg"
+              class="text-text-tertiary-light dark:text-text-tertiary-dark opacity-40 group-hover:text-primary group-hover:opacity-60 transition-all duration-200"
             />
+            <span
+              class="text-[11px] font-medium text-text-tertiary-light dark:text-text-tertiary-dark group-hover:text-text-secondary-light dark:group-hover:text-text-secondary-dark transition-colors duration-200"
+            >
+              Добавить
+            </span>
           </div>
-          <span
-            class="text-[11px] font-medium text-text-tertiary-light dark:text-text-tertiary-dark group-hover:text-text-secondary-light dark:group-hover:text-text-secondary-dark transition-colors duration-200"
-          >
-            Добавить
-          </span>
         </template>
       </button>
     </div>
