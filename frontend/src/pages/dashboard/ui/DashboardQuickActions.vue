@@ -151,21 +151,24 @@ onUnmounted(clearLongPress);
             />
           </div>
 
-          <!-- Bottom text overlay -->
-          <div class="relative z-10 flex flex-col items-center gap-0.5 w-full px-1 pb-2.5">
-            <span
-              class="text-[11px] font-bold truncate w-full text-center leading-tight tracking-tight"
-              :style="{ color: categoryMap.get(action.categoryId)?.color ?? '#64748b' }"
-            >
-              {{ action.label }}
-            </span>
-            <span
-              v-if="action.amount != null"
-              class="text-[10px] font-semibold leading-tight tabular-nums text-text-secondary-light dark:text-text-secondary-dark"
-            >
-              {{ formatNumberWithSpaces(action.amount) }}
-            </span>
-          </div>
+          <!-- Amount badge — top right -->
+          <span
+            v-if="action.amount != null"
+            class="absolute top-1.5 right-1.5 z-10 text-[9px] font-bold leading-none tabular-nums px-1.5 py-[3px] rounded-md text-white"
+            :style="{
+              backgroundColor: (categoryMap.get(action.categoryId)?.color ?? '#64748b') + 'CC',
+            }"
+          >
+            {{ formatNumberWithSpaces(action.amount) }}
+          </span>
+
+          <!-- Label — bottom center -->
+          <span
+            class="relative z-10 text-[11px] font-bold truncate w-full text-center leading-tight tracking-tight px-1 pb-2.5"
+            :style="{ color: categoryMap.get(action.categoryId)?.color ?? '#64748b' }"
+          >
+            {{ action.label }}
+          </span>
         </template>
 
         <!-- Empty slot -->
