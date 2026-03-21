@@ -44,23 +44,23 @@ describe('useFeatureHints', () => {
       const { useFeatureHints } = await importFresh();
       const { incrementCounter, shouldShowHint } = useFeatureHints();
 
-      // scan-receipt threshold is 5
-      expect(shouldShowHint('scan-receipt')).toBe(false);
-      for (let i = 0; i < 5; i++) incrementCounter('transactions_count');
-      expect(shouldShowHint('scan-receipt')).toBe(true);
+      // dashboard-settings threshold is 7
+      expect(shouldShowHint('dashboard-settings')).toBe(false);
+      for (let i = 0; i < 7; i++) incrementCounter('dashboard_visits');
+      expect(shouldShowHint('dashboard-settings')).toBe(true);
     });
 
     it('tracks different counters independently', async () => {
       const { useFeatureHints } = await importFresh();
       const { incrementCounter, shouldShowHint } = useFeatureHints();
 
-      // Increment expenses only — scan-receipt (transactions_count) stays false
+      // Increment expenses only — dashboard-settings (dashboard_visits) stays false
       for (let i = 0; i < 5; i++) incrementCounter('expenses_count');
-      expect(shouldShowHint('scan-receipt')).toBe(false);
+      expect(shouldShowHint('dashboard-settings')).toBe(false);
 
-      // Increment transactions — now scan-receipt becomes true
-      for (let i = 0; i < 5; i++) incrementCounter('transactions_count');
-      expect(shouldShowHint('scan-receipt')).toBe(true);
+      // Increment dashboard visits — now dashboard-settings becomes true
+      for (let i = 0; i < 7; i++) incrementCounter('dashboard_visits');
+      expect(shouldShowHint('dashboard-settings')).toBe(true);
     });
   });
 
@@ -112,11 +112,11 @@ describe('useFeatureHints', () => {
     it('makes shouldShowHint return false after dismissal', async () => {
       const { useFeatureHints } = await importFresh();
       const { dismissHint, shouldShowHint, incrementCounter } = useFeatureHints();
-      for (let i = 0; i < 5; i++) incrementCounter('transactions_count');
-      expect(shouldShowHint('scan-receipt')).toBe(true);
+      for (let i = 0; i < 7; i++) incrementCounter('dashboard_visits');
+      expect(shouldShowHint('dashboard-settings')).toBe(true);
 
-      dismissHint('scan-receipt');
-      expect(shouldShowHint('scan-receipt')).toBe(false);
+      dismissHint('dashboard-settings');
+      expect(shouldShowHint('dashboard-settings')).toBe(false);
     });
 
     it('sets hintShownThisSession — prevents other hints from showing', async () => {
@@ -142,13 +142,11 @@ describe('useFeatureHints', () => {
       const { useFeatureHints } = await importFresh();
       const { markHintShown, shouldShowHint, incrementCounter } = useFeatureHints();
       for (let i = 0; i < 3; i++) incrementCounter('expenses_count');
-      for (let i = 0; i < 5; i++) incrementCounter('transactions_count');
       for (let i = 0; i < 7; i++) incrementCounter('dashboard_visits');
 
       markHintShown();
 
       expect(shouldShowHint('split-expense')).toBe(false);
-      expect(shouldShowHint('scan-receipt')).toBe(false);
       expect(shouldShowHint('dashboard-settings')).toBe(false);
     });
   });
@@ -160,7 +158,6 @@ describe('useFeatureHints', () => {
       const { useFeatureHints } = await importFresh();
       const { isDotDismissed } = useFeatureHints();
       expect(isDotDismissed('add-button')).toBe(false);
-      expect(isDotDismissed('scan-receipt')).toBe(false);
       expect(isDotDismissed('dashboard-settings')).toBe(false);
     });
 
@@ -175,16 +172,15 @@ describe('useFeatureHints', () => {
       const { useFeatureHints } = await importFresh();
       const { dismissDot, isDotDismissed } = useFeatureHints();
       dismissDot('add-button');
-      expect(isDotDismissed('scan-receipt')).toBe(false);
       expect(isDotDismissed('dashboard-settings')).toBe(false);
     });
 
     it('dismissDot reflects immediately in the same instance', async () => {
       const { useFeatureHints } = await importFresh();
       const { dismissDot, isDotDismissed } = useFeatureHints();
-      expect(isDotDismissed('scan-receipt')).toBe(false);
-      dismissDot('scan-receipt');
-      expect(isDotDismissed('scan-receipt')).toBe(true);
+      expect(isDotDismissed('dashboard-settings')).toBe(false);
+      dismissDot('dashboard-settings');
+      expect(isDotDismissed('dashboard-settings')).toBe(true);
     });
   });
 
@@ -207,7 +203,7 @@ describe('useFeatureHints', () => {
     it('all hint configs have required fields', async () => {
       const { useFeatureHints } = await importFresh();
       const { getHintConfig } = useFeatureHints();
-      const hintIds = ['split-expense', 'scan-receipt', 'dashboard-settings'] as const;
+      const hintIds = ['split-expense', 'dashboard-settings'] as const;
       hintIds.forEach((id) => {
         const config = getHintConfig(id);
         expect(config).not.toBeNull();
@@ -217,13 +213,6 @@ describe('useFeatureHints', () => {
         expect(config?.triggerCounter).toBeTruthy();
         expect(config?.triggerThreshold).toBeGreaterThan(0);
       });
-    });
-
-    it('scan-receipt uses transactions_count with threshold 5', async () => {
-      const { useFeatureHints } = await importFresh();
-      const config = useFeatureHints().getHintConfig('scan-receipt');
-      expect(config?.triggerCounter).toBe('transactions_count');
-      expect(config?.triggerThreshold).toBe(5);
     });
 
     it('split-expense uses expenses_count with threshold 3', async () => {
@@ -264,15 +253,15 @@ describe('useFeatureHints', () => {
     it('dismissed hints persist across module reloads', async () => {
       const { useFeatureHints: use1 } = await importFresh();
       const session1 = use1();
-      for (let i = 0; i < 5; i++) session1.incrementCounter('transactions_count');
-      session1.dismissHint('scan-receipt');
+      for (let i = 0; i < 7; i++) session1.incrementCounter('dashboard_visits');
+      session1.dismissHint('dashboard-settings');
       await nextTick();
 
       const { useFeatureHints: use2 } = await importFresh();
       const session2 = use2();
-      for (let i = 0; i < 5; i++) session2.incrementCounter('transactions_count');
+      for (let i = 0; i < 7; i++) session2.incrementCounter('dashboard_visits');
       // Dismissed in previous session, should still be false
-      expect(session2.shouldShowHint('scan-receipt')).toBe(false);
+      expect(session2.shouldShowHint('dashboard-settings')).toBe(false);
     });
   });
 });

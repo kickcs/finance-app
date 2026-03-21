@@ -293,7 +293,6 @@ export function useSubmitTransaction() {
 
     onSuccess: (data, { userId, formData }) => {
       // Increment hint counters
-      incrementCounter('transactions_count');
       if (formData.type === 'expense') {
         incrementCounter('expenses_count');
       }

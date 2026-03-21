@@ -260,15 +260,6 @@ provide('isDemo', isDemo);
   -webkit-backface-visibility: hidden;
 }
 
-/* GPU acceleration for slide transitions (not tab - translateZ conflicts with translateX) */
-.slide-forward-enter-active,
-.slide-forward-leave-active,
-.slide-back-enter-active,
-.slide-back-leave-active {
-  transform: translateZ(0);
-  -webkit-transform: translateZ(0);
-}
-
 /* No transition - handled by skipping Transition component entirely in template */
 
 /* Reduce motion for users who prefer it */

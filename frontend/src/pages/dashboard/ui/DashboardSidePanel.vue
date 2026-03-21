@@ -46,7 +46,6 @@ const props = withDefaults(
     hiddenWidgets?: Set<WidgetId>;
     widgetOrder?: WidgetId[];
     // Discovery dots
-    showScanDot?: boolean;
     showSettingsDot?: boolean;
   }>(),
   {
@@ -61,7 +60,6 @@ const emit = defineEmits<{
   'quick-action-long-press': [action: QuickAction | null];
   'dismiss-hint': [];
   'settings-click': [];
-  'scan-click': [];
   // Accounts
   'account-click': [account: AccountWithBalances];
   'add-account': [];
@@ -116,13 +114,10 @@ const RemindersSection = defineAsyncComponent({
           :hint-dismissed="hintDismissed"
           :hidden="quickActionsHidden"
           :loading="quickActionsLoading"
-          :show-scan-dot="showScanDot"
-          show-scan-button
           @click="emit('quick-action-click', $event)"
           @long-press="emit('quick-action-long-press', $event)"
           @dismiss-hint="emit('dismiss-hint')"
           @settings-click="emit('settings-click')"
-          @scan-click="emit('scan-click')"
         />
       </section>
 

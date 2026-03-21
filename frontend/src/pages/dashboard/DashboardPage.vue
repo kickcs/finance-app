@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useLocalStorage, useEventListener, useTimeoutFn } from '@vueuse/core';
 import { STORAGE_KEYS } from '@/shared/config/storageKeys';
 import { ACTIVITY_WIDGET_IDS } from '@/shared/config/dashboard';
@@ -13,7 +13,6 @@ import { InstallPwaBanner, InstallPwaModal, usePwaInstall } from '@/features/ins
 import { QuickActionModal } from '@/features/configure-quick-action';
 import { AccountStack } from '@/widgets/account-stack';
 import { BudgetSection } from '@/widgets/budget-section';
-import { useHaptics } from '@/shared/lib/haptics';
 import { usePwaUpdateToast } from '@/shared/lib/composables/usePwaUpdate';
 import { useFeatureHints, FeatureHintPopover } from '@/features/feature-hints';
 import { SetBudgetSheet } from '@/features/set-budget';
@@ -32,7 +31,6 @@ import DashboardActivityColumn from './ui/DashboardActivityColumn.vue';
 import DashboardTopExpenses from './ui/DashboardTopExpenses.vue';
 import DashboardSidePanel from './ui/DashboardSidePanel.vue';
 
-const { trigger } = useHaptics();
 const {
   isDotDismissed,
   dismissDot,
@@ -43,26 +41,14 @@ const {
   getHintConfig,
 } = useFeatureHints();
 const showSettingsDot = computed(() => !isDotDismissed('dashboard-settings'));
-const showScanDot = computed(() => !isDotDismissed('scan-receipt'));
 
 // Feature hints
 const showSettingsHint = ref(false);
 const settingsHintConfig = getHintConfig('dashboard-settings');
-const showScanHint = ref(false);
-const scanHintConfig = getHintConfig('scan-receipt');
 
-const { start: showSettingsHintDelayed, stop: stopSettingsHint } = useTimeoutFn(
+const { start: showSettingsHintDelayed } = useTimeoutFn(
   () => {
     showSettingsHint.value = true;
-    markHintShown();
-  },
-  1000,
-  { immediate: false },
-);
-
-const { start: showScanHintDelayed, stop: stopScanHint } = useTimeoutFn(
-  () => {
-    showScanHint.value = true;
     markHintShown();
   },
   1000,
@@ -74,14 +60,7 @@ onMounted(() => {
 
   if (shouldShowHint('dashboard-settings')) {
     showSettingsHintDelayed();
-  } else if (shouldShowHint('scan-receipt')) {
-    showScanHintDelayed();
   }
-});
-
-onUnmounted(() => {
-  stopSettingsHint();
-  stopScanHint();
 });
 
 function dismissSettingsHint() {
@@ -93,17 +72,6 @@ function handleSettingsHintAction() {
   showSettingsHint.value = false;
   dismissHint('dashboard-settings');
   nav.toDashboardSettings();
-}
-
-function dismissScanHint() {
-  showScanHint.value = false;
-  dismissHint('scan-receipt');
-}
-
-function handleScanHintAction() {
-  showScanHint.value = false;
-  dismissHint('scan-receipt');
-  handleScanReceipt();
 }
 
 const greeting = getGreeting();
@@ -212,12 +180,6 @@ async function handleBudgetReset() {
   showBudgetSheet.value = false;
 }
 
-function handleScanReceipt() {
-  dismissDot('scan-receipt');
-  trigger('selection');
-  nav.toScanReceipt();
-}
-
 function handleSettingsClick() {
   dismissDot('dashboard-settings');
   nav.toDashboardSettings();
@@ -273,29 +235,17 @@ function handleSettingsClick() {
               data-testid="widget-quick-actions"
               :class="staggerClass('delay-150')"
             >
-              <FeatureHintPopover
-                v-if="scanHintConfig"
-                :config="scanHintConfig"
-                :open="showScanHint"
-                side="bottom"
-                @dismiss="dismissScanHint"
-                @action="handleScanHintAction"
-              >
-                <DashboardQuickActions
-                  :slots="quickActionSlots"
-                  :category-map="categoryMap"
-                  :hint-dismissed="quickActionsHintDismissed"
-                  :hidden="quickActionsHidden"
-                  :loading="quickActionsLoading"
-                  :show-scan-dot="showScanDot"
-                  show-scan-button
-                  @click="handleQuickActionClick"
-                  @long-press="handleQuickActionLongPress"
-                  @dismiss-hint="dismissQuickActionsHint"
-                  @settings-click="nav.toQuickActionsSettings"
-                  @scan-click="handleScanReceipt"
-                />
-              </FeatureHintPopover>
+              <DashboardQuickActions
+                :slots="quickActionSlots"
+                :category-map="categoryMap"
+                :hint-dismissed="quickActionsHintDismissed"
+                :hidden="quickActionsHidden"
+                :loading="quickActionsLoading"
+                @click="handleQuickActionClick"
+                @long-press="handleQuickActionLongPress"
+                @dismiss-hint="dismissQuickActionsHint"
+                @settings-click="nav.toQuickActionsSettings"
+              />
             </section>
 
             <section
@@ -467,13 +417,11 @@ function handleSettingsClick() {
               :is-hidden="isHidden"
               :hidden-widgets="hiddenWidgets"
               :widget-order="widgetOrder"
-              :show-scan-dot="showScanDot"
               :show-settings-dot="showSettingsDot"
               @quick-action-click="handleQuickActionClick"
               @quick-action-long-press="handleQuickActionLongPress"
               @dismiss-hint="dismissQuickActionsHint"
               @settings-click="nav.toQuickActionsSettings"
-              @scan-click="handleScanReceipt"
               @account-click="nav.toAccount"
               @add-account="nav.toNewAccount"
               @view-all-accounts="nav.toAccounts"

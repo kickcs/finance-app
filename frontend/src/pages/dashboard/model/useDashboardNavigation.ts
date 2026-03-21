@@ -33,7 +33,6 @@ export function useDashboardNavigation() {
     toAnalytics: (type: 'income' | 'expense') =>
       router.push({ name: ROUTE_NAMES.ANALYTICS, query: { type } }),
     toQuickActionsSettings: () => router.push({ name: ROUTE_NAMES.SETTINGS_QUICK_ACTIONS }),
-    toScanReceipt: () => router.push({ name: ROUTE_NAMES.SCAN_RECEIPT }),
     toDashboardSettings: () => router.push({ name: ROUTE_NAMES.DASHBOARD_SETTINGS }),
   };
 }

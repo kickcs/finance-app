@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
-import { UIcon } from '@/shared/ui';
+import { AppHeader } from '@/widgets/header';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import {
   useReceiptWizard,
@@ -39,37 +39,28 @@ function handleBack() {
 <template>
   <div class="h-dvh flex flex-col overflow-hidden bg-background-light dark:bg-background-dark">
     <!-- Header -->
-    <header
-      class="flex-shrink-0 flex items-center gap-3 px-5 pt-[calc(0.75rem+var(--safe-area-inset-top))] pb-3 bg-background-light dark:bg-background-dark"
-    >
-      <button
-        type="button"
-        aria-label="Назад"
-        class="w-9 h-9 rounded-full flex items-center justify-center bg-surface-light dark:bg-surface-dark text-text-secondary-light dark:text-text-secondary-dark active:bg-border-light dark:active:bg-border-dark transition-colors duration-150"
-        @click="handleBack"
-      >
-        <UIcon name="arrow_back" size="sm" />
-      </button>
-
-      <div class="flex-1 min-w-0">
-        <h1
-          class="text-body font-semibold text-text-primary-light dark:text-text-primary-dark leading-tight truncate"
-        >
-          Сканировать чек
-        </h1>
-        <div class="relative h-5 overflow-hidden">
-          <Transition name="step-label">
-            <p
-              :key="wizard.currentStep.value"
-              class="absolute inset-x-0 top-0 text-caption text-text-tertiary-light dark:text-text-tertiary-dark"
-            >
-              Шаг {{ wizard.currentStep.value }} из {{ TOTAL_STEPS }} ·
-              {{ STEP_LABELS[wizard.currentStep.value - 1] }}
-            </p>
-          </Transition>
+    <AppHeader show-back blur @back="handleBack">
+      <template #left>
+        <div class="min-w-0">
+          <h1
+            class="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark leading-tight truncate"
+          >
+            Сканировать чек
+          </h1>
+          <div class="relative h-5 overflow-hidden">
+            <Transition name="step-label">
+              <p
+                :key="wizard.currentStep.value"
+                class="absolute inset-x-0 top-0 text-caption text-text-tertiary-light dark:text-text-tertiary-dark"
+              >
+                Шаг {{ wizard.currentStep.value }} из {{ TOTAL_STEPS }} ·
+                {{ STEP_LABELS[wizard.currentStep.value - 1] }}
+              </p>
+            </Transition>
+          </div>
         </div>
-      </div>
-    </header>
+      </template>
+    </AppHeader>
 
     <!-- Step Progress Indicator -->
     <StepProgressIndicator :current-step="wizard.currentStep.value" :total-steps="TOTAL_STEPS" />

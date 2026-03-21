@@ -97,7 +97,6 @@ const routes = [
     component: { template: '<div />' },
     name: 'settings-quick-actions',
   },
-  { path: '/scan-receipt', component: { template: '<div />' }, name: 'scan-receipt' },
   { path: '/settings/dashboard', component: { template: '<div />' }, name: 'dashboard-settings' },
 ];
 

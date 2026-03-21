@@ -9,15 +9,6 @@ export const HINT_CONFIGS: Record<HintId, HintConfig> = {
     triggerCounter: 'expenses_count',
     triggerThreshold: 3,
   },
-  'scan-receipt': {
-    id: 'scan-receipt',
-    title: 'Совет: Сканируйте чеки',
-    description: 'Сфотографируйте чек — мы заполним транзакцию за вас',
-    actionLabel: 'Попробовать →',
-    actionRoute: '/scan-receipt',
-    triggerCounter: 'transactions_count',
-    triggerThreshold: 5,
-  },
   'dashboard-settings': {
     id: 'dashboard-settings',
     title: 'Совет: Настройте дашборд',

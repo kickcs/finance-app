@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, defineAsyncComponent } from 'vue';
+import { useRouter } from 'vue-router';
+import { ROUTE_NAMES } from '@/shared/config/routeNames';
 import { UIcon, InitialAvatar } from '@/shared/ui';
 import type { Category } from '@/entities/category';
 import type { SplitExpenseData, SplitMethod } from '@/features/split-expense';
@@ -42,6 +44,7 @@ const {
   handleAccountChange,
 } = usePanelState(props, emit);
 
+const router = useRouter();
 const drawerOpen = ref(false);
 
 const hasSplit = computed(() => {
@@ -58,6 +61,13 @@ const splitSummary = computed(() => {
 function clearSplit() {
   emit('setSplitEnabled', false);
 }
+
+function toScanReceipt() {
+  router.push({ name: ROUTE_NAMES.SCAN_RECEIPT });
+}
+
+const dashedBtnBase =
+  'rounded-xl border border-dashed border-border-light dark:border-border-dark hover:border-primary hover:bg-primary/[0.03] dark:hover:bg-primary/[0.06] transition-all';
 </script>
 
 <template>
@@ -90,14 +100,14 @@ function clearSplit() {
       @select="updateField('categoryId', $event)"
     />
 
-    <!-- Split button / summary -->
-    <div v-if="splitData">
+    <!-- Action buttons row -->
+    <div class="flex gap-2">
       <!-- Configured split summary -->
       <div
-        v-if="hasSplit"
+        v-if="splitData && hasSplit"
         role="button"
         tabindex="0"
-        class="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-primary/20 bg-primary/[0.04] dark:bg-primary/[0.08] transition-all hover:border-primary/30 active:scale-[0.99] cursor-pointer"
+        class="flex-1 min-w-0 flex items-center gap-3 px-4 py-3 rounded-xl border border-primary/20 bg-primary/[0.04] dark:bg-primary/[0.08] transition-all hover:border-primary/30 active:scale-[0.99] cursor-pointer"
         @click="drawerOpen = true"
         @keydown.enter="drawerOpen = true"
       >
@@ -140,9 +150,12 @@ function clearSplit() {
 
       <!-- Empty state: split button -->
       <button
-        v-else
+        v-else-if="splitData"
         type="button"
-        class="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-dashed border-border-light dark:border-border-dark hover:border-primary hover:bg-primary/[0.03] dark:hover:bg-primary/[0.06] transition-all active:scale-[0.99]"
+        :class="[
+          dashedBtnBase,
+          'flex-1 min-w-0 flex items-center gap-3 px-4 py-3 active:scale-[0.99]',
+        ]"
         @click="drawerOpen = true"
       >
         <div
@@ -154,37 +167,57 @@ function clearSplit() {
             class="text-text-tertiary-light dark:text-text-tertiary-dark"
           />
         </div>
-        <div class="flex-1 text-left">
-          <p class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">
+        <div class="flex-1 text-left min-w-0">
+          <p
+            class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark truncate"
+          >
             Разделить расход
           </p>
         </div>
         <UIcon
           name="chevron_right"
           size="sm"
-          class="text-text-tertiary-light dark:text-text-tertiary-dark"
+          class="text-text-tertiary-light dark:text-text-tertiary-dark shrink-0"
         />
       </button>
 
-      <!-- Drawer -->
-      <SplitExpenseDrawer
-        :open="drawerOpen"
-        :total-amount="formData.amount"
-        :currency="formData.currency"
-        :split-data="splitData"
-        :validation-error="splitValidationError"
-        @update:open="drawerOpen = $event"
-        @add-participant="
-          (name: string, fromContacts: boolean, color?: string) =>
-            $emit('addParticipant', name, fromContacts, color)
-        "
-        @remove-participant="$emit('removeParticipant', $event)"
-        @update-participant-amount="(id, amount) => $emit('updateParticipantAmount', id, amount)"
-        @set-method="$emit('setSplitMethod', $event)"
-        @set-my-share="$emit('setMyShare', $event)"
-        @set-is-included="$emit('setIsIncluded', $event)"
-        @set-enabled="$emit('setSplitEnabled', $event)"
-      />
+      <!-- Scan receipt button (icon only) -->
+      <button
+        type="button"
+        aria-label="Сканировать чек"
+        :class="[
+          dashedBtnBase,
+          'shrink-0 size-[60px] flex items-center justify-center active:scale-[0.95]',
+        ]"
+        @click="toScanReceipt"
+      >
+        <UIcon
+          name="document_scanner"
+          size="sm"
+          class="text-text-tertiary-light dark:text-text-tertiary-dark"
+        />
+      </button>
     </div>
+
+    <!-- Split Expense Drawer -->
+    <SplitExpenseDrawer
+      v-if="splitData"
+      :open="drawerOpen"
+      :total-amount="formData.amount"
+      :currency="formData.currency"
+      :split-data="splitData"
+      :validation-error="splitValidationError"
+      @update:open="drawerOpen = $event"
+      @add-participant="
+        (name: string, fromContacts: boolean, color?: string) =>
+          $emit('addParticipant', name, fromContacts, color)
+      "
+      @remove-participant="$emit('removeParticipant', $event)"
+      @update-participant-amount="(id, amount) => $emit('updateParticipantAmount', id, amount)"
+      @set-method="$emit('setSplitMethod', $event)"
+      @set-my-share="$emit('setMyShare', $event)"
+      @set-is-included="$emit('setIsIncluded', $event)"
+      @set-enabled="$emit('setSplitEnabled', $event)"
+    />
   </div>
 </template>
