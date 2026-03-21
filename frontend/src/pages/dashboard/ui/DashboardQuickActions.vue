@@ -139,9 +139,9 @@ onUnmounted(clearLongPress);
         @touchmove.passive="clearLongPress()"
       >
         <template v-if="action">
-          <!-- Full-card icon -->
+          <!-- Full-card icon — shifted up so text doesn't overlap -->
           <div
-            class="absolute inset-0 flex items-center justify-center transition-transform duration-200 group-hover:scale-110 group-active:scale-95"
+            class="absolute inset-0 -top-2 flex items-center justify-center transition-transform duration-200 group-hover:scale-110 group-active:scale-95"
           >
             <UIcon
               :name="categoryMap.get(action.categoryId)?.icon ?? 'receipt_long'"
