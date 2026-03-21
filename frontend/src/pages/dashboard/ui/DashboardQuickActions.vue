@@ -58,20 +58,23 @@ onUnmounted(clearLongPress);
 <template>
   <section v-if="!hidden">
     <!-- Loading skeleton -->
-    <div v-if="loading" class="flex gap-2.5 pb-1">
+    <div v-if="loading" class="flex gap-2.5 pb-1 md:grid md:grid-cols-3 md:pb-0">
       <Skeleton
         v-for="i in showScanButton ? 5 : 4"
         :key="i"
-        class="shrink-0 w-[calc((100%-30px)/4)] aspect-square rounded-2xl"
+        class="shrink-0 w-[calc((100%-30px)/4)] md:w-auto aspect-square rounded-2xl"
       />
     </div>
 
     <div
       v-else
-      class="flex gap-2.5 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-1 pt-1.5 -mt-1.5 px-1.5 -mx-1.5"
+      class="flex gap-2.5 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-1 pt-1.5 -mt-1.5 px-1.5 -mx-1.5 md:grid md:grid-cols-3 md:overflow-visible md:pb-0 md:pt-0 md:mt-0 md:px-0 md:mx-0"
     >
       <!-- Scan receipt button -->
-      <div v-if="showScanButton" class="relative snap-start shrink-0 w-[calc((100%-30px)/4)]">
+      <div
+        v-if="showScanButton"
+        class="relative snap-start shrink-0 w-[calc((100%-30px)/4)] md:w-auto md:shrink"
+      >
         <button
           type="button"
           aria-label="Сканировать чек"
@@ -101,7 +104,7 @@ onUnmounted(clearLongPress);
           </div>
 
           <span
-            class="text-[11px] font-semibold text-text-primary-light dark:text-text-primary-dark tracking-tight"
+            class="text-[11px] md:text-xs font-semibold text-text-primary-light dark:text-text-primary-dark tracking-tight"
           >
             Скан
           </span>
@@ -119,7 +122,7 @@ onUnmounted(clearLongPress);
             : `Настроить быстрое действие, слот ${index + 1}`
         "
         :class="[
-          'qa-card relative flex items-end justify-center aspect-square rounded-2xl overflow-hidden group cursor-pointer snap-start shrink-0 w-[calc((100%-30px)/4)] select-none',
+          'qa-card relative flex items-end justify-center aspect-square rounded-2xl overflow-hidden group cursor-pointer snap-start shrink-0 w-[calc((100%-30px)/4)] md:w-auto md:shrink select-none',
           action
             ? 'qa-filled border-0'
             : 'bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark items-center',
@@ -154,7 +157,7 @@ onUnmounted(clearLongPress);
           <!-- Amount badge — top right -->
           <span
             v-if="action.amount != null"
-            class="absolute top-1.5 right-1.5 z-10 text-[9px] font-bold leading-none tabular-nums px-1.5 py-[3px] rounded-md text-white"
+            class="absolute top-1.5 right-1.5 z-10 text-[9px] md:text-[10px] font-bold leading-none tabular-nums px-1.5 py-[3px] rounded-md text-white"
             :style="{
               backgroundColor: (categoryMap.get(action.categoryId)?.color ?? '#64748b') + 'CC',
             }"
@@ -164,7 +167,7 @@ onUnmounted(clearLongPress);
 
           <!-- Label — bottom center -->
           <span
-            class="relative z-10 text-[11px] font-bold truncate w-full text-center leading-tight tracking-tight px-1 pb-2.5"
+            class="relative z-10 text-[11px] md:text-xs font-bold truncate w-full text-center leading-tight tracking-tight px-1 pb-2.5 md:pb-3"
             :style="{ color: categoryMap.get(action.categoryId)?.color ?? '#64748b' }"
           >
             {{ action.label }}
@@ -180,7 +183,7 @@ onUnmounted(clearLongPress);
               class="text-text-tertiary-light dark:text-text-tertiary-dark opacity-40 group-hover:text-primary group-hover:opacity-60 transition-all duration-200"
             />
             <span
-              class="text-[11px] font-medium text-text-tertiary-light dark:text-text-tertiary-dark group-hover:text-text-secondary-light dark:group-hover:text-text-secondary-dark transition-colors duration-200"
+              class="text-[11px] md:text-xs font-medium text-text-tertiary-light dark:text-text-tertiary-dark group-hover:text-text-secondary-light dark:group-hover:text-text-secondary-dark transition-colors duration-200"
             >
               Добавить
             </span>
