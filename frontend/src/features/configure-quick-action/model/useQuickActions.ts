@@ -50,6 +50,7 @@ export function useQuickActions(userId: MaybeRefOrGetter<string | null>) {
     showModal,
     handleSave,
     handleDelete,
+    reorderActions: api.reorderActions,
     toggleHidden: api.toggleHidden,
     dismissHint: api.dismissHint,
   };

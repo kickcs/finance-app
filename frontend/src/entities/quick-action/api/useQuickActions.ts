@@ -6,7 +6,7 @@ import type { QuickAction } from '@/shared/api/database.types';
 import { useProfile } from '@/shared/api/composables/useProfile';
 import { STORAGE_KEYS } from '@/shared/config/storageKeys';
 
-const MAX_SLOTS = 6;
+export const MAX_SLOTS = 6;
 let migrationRun = false;
 
 export function useQuickActions(userId: MaybeRefOrGetter<string | null>) {
@@ -84,6 +84,29 @@ export function useQuickActions(userId: MaybeRefOrGetter<string | null>) {
     onSettled: () => queryClient.invalidateQueries({ queryKey: queryKey.value }),
   });
 
+  const reorderMutation = useMutation({
+    mutationFn: (ids: string[]) => quickActionApi.reorder(ids),
+    onMutate: async (ids) => {
+      await queryClient.cancelQueries({ queryKey: queryKey.value });
+      const previous = queryClient.getQueryData<QuickAction[]>(queryKey.value);
+      queryClient.setQueryData<QuickAction[]>(queryKey.value, (old) => {
+        if (!old) return old;
+        const ordered: QuickAction[] = [];
+        for (let i = 0; i < ids.length; i++) {
+          const item = old.find((a) => a.id === ids[i]);
+          if (item) ordered.push({ ...item, position: i });
+        }
+        const remaining = old.filter((a) => !ids.includes(a.id));
+        return [...ordered, ...remaining];
+      });
+      return { previous };
+    },
+    onError: (_err, _ids, context) => {
+      if (context?.previous) queryClient.setQueryData(queryKey.value, context.previous);
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: queryKey.value }),
+  });
+
   const deleteMutation = useMutation({
     mutationFn: (id: string) => quickActionApi.delete(id),
     onMutate: async (id) => {
@@ -120,6 +143,10 @@ export function useQuickActions(userId: MaybeRefOrGetter<string | null>) {
 
   async function removeAction(id: string) {
     return deleteMutation.mutateAsync(id);
+  }
+
+  async function reorderActions(ids: string[]) {
+    return reorderMutation.mutateAsync(ids);
   }
 
   async function toggleHidden() {
@@ -197,6 +224,7 @@ export function useQuickActions(userId: MaybeRefOrGetter<string | null>) {
     addAction,
     updateAction,
     removeAction,
+    reorderActions,
     toggleHidden,
     dismissHint,
   };
