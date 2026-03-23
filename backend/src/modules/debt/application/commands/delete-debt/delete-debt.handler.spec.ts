@@ -6,6 +6,7 @@ import { DeleteDebtHandler } from './delete-debt.handler';
 import { DeleteDebtCommand } from './delete-debt.command';
 import { DEBT_REPOSITORY } from '../../../domain/repositories';
 import { Debt } from '../../../domain/aggregates/debt';
+import { DeleteTransactionCommand } from '../../../../accounting/application/commands/delete-transaction/delete-transaction.command';
 
 describe('DeleteDebtHandler', () => {
   let handler: DeleteDebtHandler;
@@ -129,6 +130,41 @@ describe('DeleteDebtHandler', () => {
     const command = new DeleteDebtCommand('debt-1', 'user-1');
 
     await expect(handler.execute(command)).rejects.toThrow(ForbiddenException);
+  });
+
+  it('should delete source transaction when no other debts reference it', async () => {
+    const debt = createTestDebt();
+    debt.update({ sourceTransactionId: 'tx-source-1' });
+    mockRepository.findById.mockResolvedValue(debt);
+    mockDataSource.query.mockResolvedValueOnce([{ exists: false }]).mockResolvedValueOnce([]);
+    mockCommandBus.execute.mockResolvedValue(undefined);
+    mockRepository.delete.mockResolvedValue(undefined);
+
+    const command = new DeleteDebtCommand('debt-1', 'user-1');
+
+    await handler.execute(command);
+
+    expect(mockCommandBus.execute).toHaveBeenCalledTimes(1);
+    expect(mockCommandBus.execute).toHaveBeenCalledWith(
+      new DeleteTransactionCommand('tx-source-1', 'user-1', true),
+    );
+    expect(mockRepository.delete).toHaveBeenCalledWith('debt-1');
+  });
+
+  it('should NOT delete source transaction when other debts still reference it', async () => {
+    const debt = createTestDebt();
+    debt.update({ sourceTransactionId: 'tx-source-1' });
+    mockRepository.findById.mockResolvedValue(debt);
+    mockDataSource.query.mockResolvedValueOnce([{ exists: true }]).mockResolvedValueOnce([]);
+    mockCommandBus.execute.mockResolvedValue(undefined);
+    mockRepository.delete.mockResolvedValue(undefined);
+
+    const command = new DeleteDebtCommand('debt-1', 'user-1');
+
+    await handler.execute(command);
+
+    expect(mockCommandBus.execute).not.toHaveBeenCalled();
+    expect(mockRepository.delete).toHaveBeenCalledWith('debt-1');
   });
 
   it('should deduplicate transaction IDs', async () => {

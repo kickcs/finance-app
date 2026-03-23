@@ -24,6 +24,17 @@ export class DeleteDebtHandler implements ICommandHandler<DeleteDebtCommand> {
     if (debt.transactionId) transactionIds.add(debt.transactionId);
     if (debt.closeTransactionId) transactionIds.add(debt.closeTransactionId);
 
+    // Multiple debts can share the same source transaction (e.g. split receipt) — only delete it with the last debt
+    if (debt.sourceTransactionId) {
+      const [{ exists }]: { exists: boolean }[] = await this.dataSource.query(
+        'SELECT EXISTS(SELECT 1 FROM debts WHERE source_transaction_id = $1 AND id != $2) as exists',
+        [debt.sourceTransactionId, command.id],
+      );
+      if (!exists) {
+        transactionIds.add(debt.sourceTransactionId);
+      }
+    }
+
     // Find partial payment transactions linked to this debt via raw SQL
     const debtTxRows: { id: string }[] = await this.dataSource.query(
       'SELECT id FROM transactions WHERE debt_id = $1',
