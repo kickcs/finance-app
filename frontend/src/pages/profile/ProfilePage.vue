@@ -16,6 +16,8 @@ import { SubscriptionSection } from '@/features/manage-subscription';
 import { usePremiumFeature } from '@/shared/lib/composables/usePremiumFeature';
 import { usePwaUpdate } from '@/shared/lib/composables/usePwaUpdate';
 import { usePrimaryColor, PRIMARY_COLORS } from '@/features/select-primary-color';
+import { FinancialPeriodModal } from '@/features/configure-financial-period';
+import { useFinancialPeriod } from '@/shared/lib/hooks/useFinancialPeriod';
 
 const router = useRouter();
 const { signOut } = useAuth();
@@ -48,6 +50,13 @@ const currentPrimaryColor = computed(
   () => PRIMARY_COLORS[primaryColorName.value]?.base ?? '#4F46E5',
 );
 
+// Financial period
+const { startDay } = useFinancialPeriod();
+const showFinancialPeriodModal = ref(false);
+const financialPeriodLabel = computed(() =>
+  startDay.value === 1 ? '1-е (стандарт)' : `${startDay.value}-е число`,
+);
+
 // PWA update
 const { toast } = useToast();
 const { checkForUpdate } = usePwaUpdate();
@@ -70,6 +79,13 @@ const settingsGroup = [
     label: 'Главная валюта',
     value: () => currency.value?.code,
     color: '#10b981', // success
+  },
+  {
+    id: 'financial-period',
+    icon: 'calendar_month',
+    label: 'Начало месяца',
+    value: () => financialPeriodLabel.value,
+    color: '#6366f1',
   },
   {
     id: 'color',
@@ -120,6 +136,9 @@ function handleMenuClick(itemId: string) {
       break;
     case 'currency':
       router.push({ name: ROUTE_NAMES.SETTINGS_CURRENCY });
+      break;
+    case 'financial-period':
+      showFinancialPeriodModal.value = true;
       break;
     case 'categories':
       router.push({ name: ROUTE_NAMES.SETTINGS_CATEGORIES });
@@ -362,5 +381,8 @@ async function confirmLogout() {
 
     <!-- Edit Profile Modal -->
     <EditProfileModal v-model="showEditProfileModal" :user-id="user?.id ?? null" />
+
+    <!-- Financial Period Modal -->
+    <FinancialPeriodModal v-model="showFinancialPeriodModal" />
   </PageContainer>
 </template>
