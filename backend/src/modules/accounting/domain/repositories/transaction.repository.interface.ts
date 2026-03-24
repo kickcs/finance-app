@@ -106,7 +106,12 @@ export interface ITransactionRepository {
   ): Promise<PaginatedResult<Transaction>>;
 
   // Statistics
-  getMonthlyStats(userId: string, year: number, month: number): Promise<MonthlyStats>;
+  getMonthlyStats(
+    userId: string,
+    year: number,
+    month: number,
+    startDay?: number,
+  ): Promise<MonthlyStats>;
 
   getAnalyticsStats(userId: string, options: AnalyticsOptions): Promise<AnalyticsStats>;
 

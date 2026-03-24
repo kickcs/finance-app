@@ -9,9 +9,14 @@ import {
   Query,
   HttpCode,
   HttpStatus,
+  Inject,
 } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { CurrentUser } from '../../../../common';
+import {
+  IProfileRepository,
+  PROFILE_REPOSITORY,
+} from '../../../identity/domain/repositories/profile.repository.interface';
 import {
   CreateTransactionDto,
   UpdateTransactionDto,
@@ -48,6 +53,8 @@ export class TransactionsController {
   constructor(
     private readonly commandBus: CommandBus,
     private readonly queryBus: QueryBus,
+    @Inject(PROFILE_REPOSITORY)
+    private readonly profileRepository: IProfileRepository,
   ) {}
 
   @Get()
@@ -80,7 +87,11 @@ export class TransactionsController {
     @CurrentUser('sub') userId: string,
     @Query() query: MonthlyStatsQueryDto,
   ): Promise<unknown> {
-    return this.queryBus.execute(new GetMonthlyStatsQuery(userId, query.year, query.month));
+    const profile = await this.profileRepository.findById(userId);
+    const startDay = profile?.financialMonthStartDay ?? 1;
+    return this.queryBus.execute(
+      new GetMonthlyStatsQuery(userId, query.year, query.month, startDay),
+    );
   }
 
   @Get('stats/daily')

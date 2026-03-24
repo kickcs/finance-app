@@ -25,6 +25,7 @@ import {
   DEBT_CATEGORY_IDS,
   ALL_DEBT_CATEGORY_IDS,
 } from '../../../domain/constants/default-categories';
+import { getFinancialMonthBounds } from '../../../../../shared/utils/financial-period';
 
 /** Shared query parameters for debt category filtering. */
 const DEBT_PARAMS = {
@@ -394,9 +395,13 @@ export class TransactionRepository implements ITransactionRepository {
     };
   }
 
-  async getMonthlyStats(userId: string, year: number, month: number): Promise<MonthlyStats> {
-    const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 1);
+  async getMonthlyStats(
+    userId: string,
+    year: number,
+    month: number,
+    startDay: number = 1,
+  ): Promise<MonthlyStats> {
+    const { start: startDate, end: endDate } = getFinancialMonthBounds(year, month, startDay);
 
     // Query 1: All totals in one query using conditional SUM
     const result = await this.ormRepository

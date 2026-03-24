@@ -50,7 +50,22 @@ describe('GetMonthlyStatsHandler', () => {
     const result = await handler.execute(new GetMonthlyStatsQuery('user-1', 2026, 3));
 
     expect(result).toEqual(stats);
-    expect(mockTransactionRepository.getMonthlyStats).toHaveBeenCalledWith('user-1', 2026, 3);
+    expect(mockTransactionRepository.getMonthlyStats).toHaveBeenCalledWith('user-1', 2026, 3, 1);
+  });
+
+  it('should pass custom startDay to repository', async () => {
+    const stats = {
+      totalIncome: 0,
+      totalExpense: 0,
+      incomeByCurrency: {},
+      expenseByCurrency: {},
+    };
+    mockTransactionRepository.getMonthlyStats.mockResolvedValue(stats);
+
+    const result = await handler.execute(new GetMonthlyStatsQuery('user-1', 2026, 3, 15));
+
+    expect(result).toEqual(stats);
+    expect(mockTransactionRepository.getMonthlyStats).toHaveBeenCalledWith('user-1', 2026, 3, 15);
   });
 
   it('should return zero stats for month with no transactions', async () => {

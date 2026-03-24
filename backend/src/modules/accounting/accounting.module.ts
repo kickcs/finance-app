@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CqrsModule } from '@nestjs/cqrs';
 
@@ -33,6 +33,7 @@ import {
 
 // Cross-module
 import { DebtModule } from '../debt/debt.module';
+import { IdentityModule } from '../identity/identity.module';
 
 // Presentation
 import {
@@ -48,6 +49,7 @@ import {
   imports: [
     CqrsModule,
     DebtModule,
+    forwardRef(() => IdentityModule),
     TypeOrmModule.forFeature([
       AccountOrmEntity,
       AccountBalanceOrmEntity,
