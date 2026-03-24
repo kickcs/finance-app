@@ -123,6 +123,22 @@ describe('GetBudgetForMonthHandler', () => {
     expect(result!.remaining).toBe(69000);
   });
 
+  it('should pass startDay to getMonthlyStats', async () => {
+    const defaultBudget = Budget.createDefault('b-1', 'user-1', 50000, 'USD');
+    mockBudgetRepository.findOverride.mockResolvedValue(null);
+    mockBudgetRepository.findDefault.mockResolvedValue(defaultBudget);
+    mockTransactionRepository.getMonthlyStats.mockResolvedValue({
+      totalIncome: 0,
+      totalExpense: 0,
+      incomeByCurrency: {},
+      expenseByCurrency: {},
+    });
+
+    await handler.execute(new GetBudgetForMonthQuery('user-1', 2026, 3, 15));
+
+    expect(mockTransactionRepository.getMonthlyStats).toHaveBeenCalledWith('user-1', 2026, 3, 15);
+  });
+
   it('should handle overspending (negative remaining)', async () => {
     const defaultBudget = Budget.createDefault('b-1', 'user-1', 10000, 'USD');
 

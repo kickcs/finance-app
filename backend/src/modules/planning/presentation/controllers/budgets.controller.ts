@@ -20,6 +20,7 @@ import {
   RemoveMonthlyBudgetOverrideCommand,
 } from '../../application/commands';
 import { GetBudgetForMonthQuery, GetBudgetHistoryQuery } from '../../application/queries';
+import { getCurrentFinancialMonth } from '../../../../shared/utils/financial-period';
 import {
   IProfileRepository,
   PROFILE_REPOSITORY,
@@ -39,12 +40,16 @@ export class BudgetsController {
     return profile?.currency ?? 'USD';
   }
 
+  private async getStartDay(userId: string): Promise<number> {
+    const profile = await this.profileRepository.findById(userId);
+    return profile?.financialMonthStartDay ?? 1;
+  }
+
   @Get('current')
   async getCurrent(@CurrentUser('sub') userId: string): Promise<unknown> {
-    const now = new Date();
-    return this.queryBus.execute(
-      new GetBudgetForMonthQuery(userId, now.getFullYear(), now.getMonth() + 1),
-    );
+    const startDay = await this.getStartDay(userId);
+    const { year, month } = getCurrentFinancialMonth(startDay);
+    return this.queryBus.execute(new GetBudgetForMonthQuery(userId, year, month, startDay));
   }
 
   @Get('history')
@@ -53,8 +58,9 @@ export class BudgetsController {
     @Query('months') months?: string,
   ): Promise<unknown> {
     const parsedMonths = months ? parseInt(months, 10) : 6;
+    const startDay = await this.getStartDay(userId);
     return this.queryBus.execute(
-      new GetBudgetHistoryQuery(userId, isNaN(parsedMonths) ? 6 : parsedMonths),
+      new GetBudgetHistoryQuery(userId, isNaN(parsedMonths) ? 6 : parsedMonths, startDay),
     );
   }
 

@@ -40,6 +40,7 @@ export class GetBudgetForMonthHandler implements IQueryHandler<GetBudgetForMonth
       query.userId,
       query.year,
       query.month,
+      query.startDay,
     );
 
     const spent = convertExpensesToCurrency(
