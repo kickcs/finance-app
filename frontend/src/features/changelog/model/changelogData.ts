@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.39';
+export const CURRENT_VERSION = '1.0.40';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,17 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.40',
+    date: '2026-03-24',
+    title: 'Финансовый период',
+    items: [
+      {
+        type: 'feature',
+        text: 'Настраиваемый день начала финансового месяца — статистика, бюджеты и аналитика теперь считаются по вашему периоду',
+      },
+    ],
+  },
   {
     version: '1.0.39',
     date: '2026-03-20',

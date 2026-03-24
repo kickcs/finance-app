@@ -1,5 +1,5 @@
 import { ref, computed } from 'vue';
-import { getDaysRemainingInMonth } from '@/shared/lib/date';
+import { useFinancialPeriod } from '@/shared/lib/hooks/useFinancialPeriod';
 import type { Transaction } from '@/shared/api/database.types';
 import type {
   AnalyticsFilters,
@@ -12,6 +12,8 @@ import type { Category } from '@/entities/category';
 import { getCategoryById as getStaticCategoryById } from '@/entities/category';
 
 export function useAnalyticsFilters() {
+  const { currentBounds, daysRemaining: daysRemainingInPeriod } = useFinancialPeriod();
+
   const filters = ref<AnalyticsFilters>({
     period: 'month-start',
     customDateRange: { startDate: null, endDate: null },
@@ -39,7 +41,8 @@ export function useAnalyticsFilters() {
         return { startDate: weekStart, endDate: now };
       }
       case 'month-start': {
-        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const { start } = currentBounds.value;
+        const monthStart = new Date(start);
         monthStart.setHours(0, 0, 0, 0);
         return { startDate: monthStart, endDate: now };
       }
@@ -69,7 +72,7 @@ export function useAnalyticsFilters() {
   });
 
   // Days remaining in current month (inclusive of today, min 1)
-  const daysRemainingInMonth = computed(() => getDaysRemainingInMonth());
+  const daysRemainingInMonth = computed(() => daysRemainingInPeriod.value);
 
   // Calculate category statistics from filtered transactions
   function calculateCategoryStats(
