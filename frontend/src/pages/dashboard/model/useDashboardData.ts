@@ -8,7 +8,8 @@ import { useCategories } from '@/entities/category';
 import { useBudget } from '@/entities/budget';
 import { useProfile, useExchangeRates } from '@/shared/api';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
-import { toLocalISODate, getDaysRemainingInMonth } from '@/shared/lib/date';
+import { toLocalISODate } from '@/shared/lib/date';
+import { useFinancialPeriod } from '@/shared/lib/hooks/useFinancialPeriod';
 import type { WidgetId } from '@/shared/api/database.types';
 import { DEFAULT_WIDGET_ORDER } from '@/shared/config/dashboard';
 import { DEFAULT_CURRENCY } from '@/shared/config/currency';
@@ -101,7 +102,8 @@ export function useDashboardData() {
   });
 
   const daysElapsedInMonth = computed(() => currentDate.value.getDate());
-  const daysRemainingInMonth = computed(() => getDaysRemainingInMonth(currentDate.value));
+  const { daysRemaining } = useFinancialPeriod();
+  const daysRemainingInMonth = computed(() => daysRemaining.value);
 
   // Show spending metrics only after the first week of the month (7+ days of data)
   const showSpendingMetrics = computed(

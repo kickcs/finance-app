@@ -53,7 +53,13 @@ async function save() {
   isSaving.value = true;
   try {
     await updateProfile({ financial_month_start_day: selectedDay.value });
-    await queryClient.invalidateQueries();
+    // Invalidate only period-sensitive queries (stats, budgets, analytics)
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['transactions', 'monthly-stats'] }),
+      queryClient.invalidateQueries({ queryKey: ['transactions', 'analytics-stats'] }),
+      queryClient.invalidateQueries({ queryKey: ['transactions', 'daily-stats'] }),
+      queryClient.invalidateQueries({ queryKey: ['budgets'] }),
+    ]);
     trigger('success');
     toast({ title: 'Начало месяца обновлено', variant: 'default' });
     model.value = false;
@@ -78,22 +84,7 @@ async function save() {
       <div class="space-y-1.5">
         <div class="grid grid-cols-7 gap-1.5">
           <button
-            v-for="day in 28"
-            :key="day"
-            :class="[
-              'h-10 rounded-lg text-sm font-medium transition-all',
-              day === selectedDay
-                ? 'bg-primary text-white shadow-sm scale-105'
-                : 'bg-surface-light dark:bg-surface-dark hover:bg-primary/10 text-text-primary-light dark:text-text-primary-dark',
-            ]"
-            @click="selectDay(day)"
-          >
-            {{ day }}
-          </button>
-        </div>
-        <div class="grid grid-cols-7 gap-1.5">
-          <button
-            v-for="day in [29, 30, 31]"
+            v-for="day in 31"
             :key="day"
             :class="[
               'h-10 rounded-lg text-sm font-medium transition-all',

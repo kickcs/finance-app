@@ -35,19 +35,17 @@ export class BudgetsController {
     private readonly profileRepository: IProfileRepository,
   ) {}
 
-  private async getUserCurrency(userId: string): Promise<string> {
+  private async getProfileFields(userId: string) {
     const profile = await this.profileRepository.findById(userId);
-    return profile?.currency ?? 'USD';
-  }
-
-  private async getStartDay(userId: string): Promise<number> {
-    const profile = await this.profileRepository.findById(userId);
-    return profile?.financialMonthStartDay ?? 1;
+    return {
+      currency: profile?.currency ?? 'USD',
+      startDay: profile?.financialMonthStartDay ?? 1,
+    };
   }
 
   @Get('current')
   async getCurrent(@CurrentUser('sub') userId: string): Promise<unknown> {
-    const startDay = await this.getStartDay(userId);
+    const { startDay } = await this.getProfileFields(userId);
     const { year, month } = getCurrentFinancialMonth(startDay);
     return this.queryBus.execute(new GetBudgetForMonthQuery(userId, year, month, startDay));
   }
@@ -58,7 +56,7 @@ export class BudgetsController {
     @Query('months') months?: string,
   ): Promise<unknown> {
     const parsedMonths = months ? parseInt(months, 10) : 6;
-    const startDay = await this.getStartDay(userId);
+    const { startDay } = await this.getProfileFields(userId);
     return this.queryBus.execute(
       new GetBudgetHistoryQuery(userId, isNaN(parsedMonths) ? 6 : parsedMonths, startDay),
     );
@@ -69,7 +67,7 @@ export class BudgetsController {
     @CurrentUser('sub') userId: string,
     @Body() dto: SetDefaultBudgetDto,
   ): Promise<unknown> {
-    const currency = await this.getUserCurrency(userId);
+    const { currency } = await this.getProfileFields(userId);
     return this.commandBus.execute(new SetDefaultBudgetCommand(userId, dto.amount, currency));
   }
 
@@ -78,7 +76,7 @@ export class BudgetsController {
     @CurrentUser('sub') userId: string,
     @Body() dto: SetMonthlyOverrideDto,
   ): Promise<unknown> {
-    const currency = await this.getUserCurrency(userId);
+    const { currency } = await this.getProfileFields(userId);
     return this.commandBus.execute(
       new SetMonthlyBudgetOverrideCommand(userId, dto.year, dto.month, dto.amount, currency),
     );
