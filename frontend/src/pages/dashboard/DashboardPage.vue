@@ -25,6 +25,8 @@ import { useStaggerAnimation } from './model/useStaggerAnimation';
 import { getGreeting } from '@/shared/lib/format/greeting';
 import { BalanceCard } from '@/widgets/balance-card';
 
+import { FinancialPeriodModal } from '@/features/configure-financial-period';
+
 import DashboardMobileHeader from './ui/DashboardMobileHeader.vue';
 import DashboardQuickActions from './ui/DashboardQuickActions.vue';
 import DashboardActivityColumn from './ui/DashboardActivityColumn.vue';
@@ -131,6 +133,7 @@ onMounted(() => {
   usePwaUpdateToast();
 });
 const isHidden = useLocalStorage(STORAGE_KEYS.BALANCE_HIDDEN, false);
+const showFinancialPeriodModal = ref(false);
 const mobileTransactions = computed(() => recentTransactions.value.slice(0, 5));
 
 // First visible activity widget ID - renders the single combined DashboardActivityColumn
@@ -273,6 +276,7 @@ function handleSettingsClick() {
                 :currency="currency"
                 :loading="analyticsLoading"
                 :is-hidden="isHidden"
+                @configure-period="showFinancialPeriodModal = true"
               />
             </section>
 
@@ -451,6 +455,8 @@ function handleSettingsClick() {
       @save="handleQuickActionSave"
       @delete="handleQuickActionDelete"
     />
+
+    <FinancialPeriodModal v-model="showFinancialPeriodModal" />
 
     <SetBudgetSheet
       v-model="showBudgetSheet"

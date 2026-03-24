@@ -72,6 +72,13 @@ const periodItems = [
 
 const showCustomDatePicker = computed(() => filters.value.period === 'custom');
 
+const dateRangeLabel = computed(() => {
+  const { startDate, endDate } = effectiveDateRange.value;
+  if (!startDate || !endDate) return null;
+  const fmt = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short' });
+  return `${fmt.format(startDate)} – ${fmt.format(endDate)}`;
+});
+
 // --- Accounts ---
 const { accounts } = useAccounts(userId);
 
@@ -270,6 +277,18 @@ onMounted(() => {
         :items="periodItems"
         @update:model-value="handlePeriodChange"
       />
+
+      <!-- Date Range Indicator -->
+      <p
+        v-if="dateRangeLabel && !showCustomDatePicker"
+        class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark flex items-center gap-1.5"
+      >
+        <span class="inline-block w-1 h-1 rounded-full bg-primary/60" />
+        {{ dateRangeLabel }}
+        <span class="text-text-quaternary-light dark:text-text-quaternary-dark">
+          · {{ daysInPeriod }} дн
+        </span>
+      </p>
 
       <!-- Custom Date Range Picker -->
       <Transition
