@@ -5,6 +5,8 @@ import { useProfile } from '@/shared/api';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useHaptics } from '@/shared/lib/haptics';
 import { getFinancialMonthBounds, formatFinancialPeriod } from '@/shared/lib/utils/financialPeriod';
+import { transactionQueryKeys } from '@/entities/transaction';
+import { budgetQueryKeys } from '@/entities/budget';
 import { useQueryClient } from '@tanstack/vue-query';
 
 const model = defineModel<boolean>({ required: true });
@@ -53,12 +55,11 @@ async function save() {
   isSaving.value = true;
   try {
     await updateProfile({ financial_month_start_day: selectedDay.value });
-    // Invalidate only period-sensitive queries (stats, budgets, analytics)
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['transactions', 'monthly-stats'] }),
-      queryClient.invalidateQueries({ queryKey: ['transactions', 'analytics-stats'] }),
-      queryClient.invalidateQueries({ queryKey: ['transactions', 'daily-stats'] }),
-      queryClient.invalidateQueries({ queryKey: ['budgets'] }),
+      queryClient.invalidateQueries({ queryKey: transactionQueryKeys.monthlyStatsPrefix() }),
+      queryClient.invalidateQueries({ queryKey: transactionQueryKeys.analyticsStatsPrefix() }),
+      queryClient.invalidateQueries({ queryKey: transactionQueryKeys.dailyStatsPrefix() }),
+      queryClient.invalidateQueries({ queryKey: budgetQueryKeys.all }),
     ]);
     trigger('success');
     toast({ title: 'Начало месяца обновлено', variant: 'default' });

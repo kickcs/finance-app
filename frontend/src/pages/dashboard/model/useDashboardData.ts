@@ -101,8 +101,13 @@ export function useDashboardData() {
     return total;
   });
 
-  const daysElapsedInMonth = computed(() => currentDate.value.getDate());
-  const { daysRemaining } = useFinancialPeriod();
+  const { currentBounds, daysRemaining } = useFinancialPeriod();
+  const daysElapsedInMonth = computed(() => {
+    const start = currentBounds.value.start;
+    const today = currentDate.value;
+    const diffMs = today.getTime() - start.getTime();
+    return Math.max(1, Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1);
+  });
   const daysRemainingInMonth = computed(() => daysRemaining.value);
 
   // Show spending metrics only after the first week of the month (7+ days of data)
