@@ -77,6 +77,7 @@ const emit = defineEmits<{
   'budget-setup': [];
   'budget-edit': [];
   'dashboard-settings-click': [];
+  'configure-period': [];
 }>();
 
 const sidePanelWidgets = computed(() =>
@@ -158,6 +159,7 @@ const RemindersSection = defineAsyncComponent({
           :currency="currency"
           :loading="analyticsLoading"
           :is-hidden="isHidden"
+          @configure-period="emit('configure-period')"
         />
       </section>
 

@@ -439,6 +439,7 @@ function handleSettingsClick() {
               @budget-setup="showBudgetSheet = true"
               @budget-edit="showBudgetSheet = true"
               @dashboard-settings-click="handleSettingsClick"
+              @configure-period="showFinancialPeriodModal = true"
             />
           </section>
         </div>

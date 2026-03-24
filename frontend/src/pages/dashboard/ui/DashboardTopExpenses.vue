@@ -19,7 +19,7 @@ const props = defineProps<{
   isHidden: boolean;
 }>();
 
-defineEmits<{
+const emit = defineEmits<{
   'configure-period': [];
 }>();
 const router = useRouter();
@@ -51,7 +51,7 @@ function goToAnalytics() {
     <button
       v-if="!isCustomPeriod && !loading"
       class="flex items-center gap-1 mt-1 text-[0.65rem] text-text-tertiary-light dark:text-text-tertiary-dark hover:text-primary transition-colors"
-      @click="$emit('configure-period')"
+      @click="emit('configure-period')"
     >
       <UIcon name="calendar_month" size="xs" class="opacity-60" />
       <span>Зарплата не 1-го? Настройте начало месяца</span>

@@ -15,6 +15,7 @@ import { PageContainer, UTabs, UCard, EmptyState, Skeleton } from '@/shared/ui';
 import { useDailyStats } from '@/entities/transaction';
 import { useAccounts } from '@/entities/account';
 import { toLocalISODate, isPastDate } from '@/shared/lib/date';
+import { getCachedDateFormat } from '@/shared/lib/format/intlCache';
 import {
   DateRangePicker,
   FilterChips,
@@ -75,7 +76,7 @@ const showCustomDatePicker = computed(() => filters.value.period === 'custom');
 const dateRangeLabel = computed(() => {
   const { startDate, endDate } = effectiveDateRange.value;
   if (!startDate || !endDate) return null;
-  const fmt = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short' });
+  const fmt = getCachedDateFormat('ru-RU', { day: 'numeric', month: 'short' });
   return `${fmt.format(startDate)} – ${fmt.format(endDate)}`;
 });
 
@@ -285,7 +286,7 @@ onMounted(() => {
       >
         <span class="inline-block w-1 h-1 rounded-full bg-primary/60" />
         {{ dateRangeLabel }}
-        <span class="text-text-quaternary-light dark:text-text-quaternary-dark">
+        <span class="text-text-tertiary-light dark:text-text-tertiary-dark opacity-60">
           · {{ daysInPeriod }} дн
         </span>
       </p>
