@@ -86,6 +86,7 @@ describe('ProfileMapper', () => {
         },
         quickActionsHidden: true,
         quickActionsHintDismissed: false,
+        financialMonthStartDay: 1,
         createdAt: new Date('2024-01-01'),
       });
 

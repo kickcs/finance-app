@@ -49,6 +49,7 @@ describe('UpdateProfileHandler', () => {
       dashboardSettings: null,
       quickActionsHidden: false,
       quickActionsHintDismissed: false,
+      financialMonthStartDay: 1,
       createdAt: new Date('2024-01-01'),
     });
   }
@@ -155,6 +156,7 @@ describe('UpdateProfileHandler', () => {
       dashboardSettings: null,
       quickActionsHidden: false,
       quickActionsHintDismissed: false,
+      financialMonthStartDay: 1,
       createdAt: new Date('2024-01-01'),
     });
   });

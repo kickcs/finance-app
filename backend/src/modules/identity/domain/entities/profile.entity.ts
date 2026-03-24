@@ -33,6 +33,7 @@ export interface ProfileProps {
   dashboardSettings: DashboardSettings | null;
   quickActionsHidden: boolean;
   quickActionsHintDismissed: boolean;
+  financialMonthStartDay: number;
   createdAt: Date;
 }
 
@@ -53,6 +54,7 @@ export class Profile extends AggregateRoot<string> {
   private _dashboardSettings: DashboardSettings | null;
   private _quickActionsHidden: boolean;
   private _quickActionsHintDismissed: boolean;
+  private _financialMonthStartDay: number;
   private _createdAt: Date;
 
   private constructor(props: ProfileProps) {
@@ -69,6 +71,7 @@ export class Profile extends AggregateRoot<string> {
     this._dashboardSettings = props.dashboardSettings;
     this._quickActionsHidden = props.quickActionsHidden;
     this._quickActionsHintDismissed = props.quickActionsHintDismissed;
+    this._financialMonthStartDay = props.financialMonthStartDay;
     this._createdAt = props.createdAt;
   }
 
@@ -96,6 +99,7 @@ export class Profile extends AggregateRoot<string> {
       dashboardSettings: null,
       quickActionsHidden: false,
       quickActionsHintDismissed: false,
+      financialMonthStartDay: 1,
       createdAt: new Date(),
     });
 
@@ -124,6 +128,7 @@ export class Profile extends AggregateRoot<string> {
       dashboardSettings: null,
       quickActionsHidden: false,
       quickActionsHintDismissed: false,
+      financialMonthStartDay: 1,
       createdAt: new Date(),
     });
 
@@ -192,6 +197,10 @@ export class Profile extends AggregateRoot<string> {
     return this._quickActionsHintDismissed;
   }
 
+  get financialMonthStartDay(): number {
+    return this._financialMonthStartDay;
+  }
+
   get createdAt(): Date {
     return this._createdAt;
   }
@@ -205,6 +214,7 @@ export class Profile extends AggregateRoot<string> {
     dashboardSettings?: DashboardSettings | null;
     quickActionsHidden?: boolean;
     quickActionsHintDismissed?: boolean;
+    financialMonthStartDay?: number;
   }): void {
     const changes: Record<string, unknown> = {};
 
@@ -241,6 +251,11 @@ export class Profile extends AggregateRoot<string> {
     if (data.quickActionsHintDismissed !== undefined) {
       this._quickActionsHintDismissed = data.quickActionsHintDismissed;
       changes.quickActionsHintDismissed = data.quickActionsHintDismissed;
+    }
+
+    if (data.financialMonthStartDay !== undefined) {
+      this._financialMonthStartDay = data.financialMonthStartDay;
+      changes.financialMonthStartDay = data.financialMonthStartDay;
     }
 
     if (Object.keys(changes).length > 0) {

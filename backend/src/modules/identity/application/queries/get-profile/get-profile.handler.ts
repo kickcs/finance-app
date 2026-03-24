@@ -38,6 +38,7 @@ export class GetProfileHandler implements IQueryHandler<GetProfileQuery> {
       dashboardSettings: profile.dashboardSettings,
       quickActionsHidden: profile.quickActionsHidden,
       quickActionsHintDismissed: profile.quickActionsHintDismissed,
+      financialMonthStartDay: profile.financialMonthStartDay,
       createdAt: profile.createdAt,
     };
   }

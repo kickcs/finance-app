@@ -11,6 +11,7 @@ export class UpdateProfileCommand {
       dashboardSettings?: DashboardSettings | null;
       quickActionsHidden?: boolean;
       quickActionsHintDismissed?: boolean;
+      financialMonthStartDay?: number;
     },
   ) {}
 }

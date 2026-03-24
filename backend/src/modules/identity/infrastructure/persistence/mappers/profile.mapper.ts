@@ -25,6 +25,7 @@ export class ProfileMapper {
       dashboardSettings: ormEntity.dashboardSettings as DashboardSettings | null,
       quickActionsHidden: ormEntity.quickActionsHidden,
       quickActionsHintDismissed: ormEntity.quickActionsHintDismissed,
+      financialMonthStartDay: ormEntity.financialMonthStartDay,
       createdAt: ormEntity.createdAt,
     });
   }
@@ -48,6 +49,7 @@ export class ProfileMapper {
     ormEntity.dashboardSettings = domainEntity.dashboardSettings as Record<string, unknown> | null;
     ormEntity.quickActionsHidden = domainEntity.quickActionsHidden;
     ormEntity.quickActionsHintDismissed = domainEntity.quickActionsHintDismissed;
+    ormEntity.financialMonthStartDay = domainEntity.financialMonthStartDay;
     ormEntity.createdAt = domainEntity.createdAt;
 
     return ormEntity;

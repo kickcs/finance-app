@@ -12,6 +12,7 @@ export interface ProfileResponse {
   dashboardSettings: DashboardSettings | null;
   quickActionsHidden: boolean;
   quickActionsHintDismissed: boolean;
+  financialMonthStartDay: number;
   createdAt: Date;
 }
 

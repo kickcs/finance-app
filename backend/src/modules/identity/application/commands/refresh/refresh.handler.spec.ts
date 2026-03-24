@@ -53,6 +53,7 @@ describe('RefreshHandler', () => {
       dashboardSettings: null,
       quickActionsHidden: false,
       quickActionsHintDismissed: false,
+      financialMonthStartDay: 1,
       createdAt: new Date(),
     });
   }

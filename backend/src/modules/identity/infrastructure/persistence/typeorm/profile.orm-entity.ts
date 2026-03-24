@@ -51,4 +51,7 @@ export class ProfileOrmEntity {
 
   @Column({ name: 'quick_actions_hint_dismissed', default: false })
   quickActionsHintDismissed: boolean;
+
+  @Column({ name: 'financial_month_start_day', type: 'integer', default: 1 })
+  financialMonthStartDay: number;
 }

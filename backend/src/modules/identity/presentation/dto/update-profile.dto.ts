@@ -5,6 +5,9 @@ import {
   IsUUID,
   IsArray,
   IsObject,
+  IsInt,
+  Min,
+  Max,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -54,4 +57,10 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsBoolean()
   quickActionsHintDismissed?: boolean;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(31)
+  financialMonthStartDay?: number;
 }

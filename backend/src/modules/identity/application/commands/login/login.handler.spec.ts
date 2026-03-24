@@ -56,6 +56,7 @@ describe('LoginHandler', () => {
       dashboardSettings: null,
       quickActionsHidden: false,
       quickActionsHintDismissed: false,
+      financialMonthStartDay: 1,
       createdAt: new Date(),
     });
   }
@@ -109,6 +110,7 @@ describe('LoginHandler', () => {
       dashboardSettings: null,
       quickActionsHidden: false,
       quickActionsHintDismissed: false,
+      financialMonthStartDay: 1,
       createdAt: new Date(),
     });
     mockRepository.findByEmail.mockResolvedValue(profile);

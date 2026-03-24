@@ -99,6 +99,7 @@ describe('Profile Entity', () => {
         dashboardSettings: null,
         quickActionsHidden: false,
         quickActionsHintDismissed: false,
+        financialMonthStartDay: 1,
         createdAt: new Date('2024-01-01'),
       });
 
