@@ -1,5 +1,6 @@
 import { ref, computed, watch, type MaybeRefOrGetter, toValue } from 'vue';
 import { useDebts, type Debt } from '@/entities/debt';
+import { transactionsApi } from '@/entities/transaction';
 import { useToast } from '@/shared/ui';
 import { useHaptics } from '@/shared/lib/haptics';
 
@@ -54,8 +55,11 @@ export function useEditDebt(
 
   const warnings = computed(() => {
     const result: string[] = [];
+    const d = toValue(debt);
     if (formData.value.total_amount !== originalData.value.total_amount) {
-      result.push('Изменение суммы не повлияет на уже созданные транзакции платежей');
+      if (d?.transaction_id) {
+        result.push('Сумма связанной транзакции тоже будет обновлена');
+      }
     }
     return result;
   });
@@ -80,6 +84,11 @@ export function useEditDebt(
       if (f.is_private !== o.is_private) updates.is_private = f.is_private;
 
       await updateDebt(d.id, updates);
+
+      // Update linked creation transaction amount if debt amount changed
+      if (updates.total_amount !== undefined && d.transaction_id) {
+        await transactionsApi.update(d.transaction_id, { amount: updates.total_amount });
+      }
       trigger('success');
       toast({ title: 'Долг обновлён' });
       return true;
