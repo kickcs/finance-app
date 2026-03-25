@@ -2,13 +2,14 @@ import { ref, computed, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { ROUTE_NAMES } from '@/app/router/routeNames';
 import {
-  useDebts,
   useInfiniteDebts,
   getDebtDisplayName,
   type Debt,
   type DebtGroupResponse,
   type DebtsFilters,
 } from '@/entities/debt';
+import { debtsApi } from '@/entities/debt/api/debtsApi';
+import { debtQueryKeys } from '@/entities/debt/api/queryKeys';
 import { useAccounts } from '@/entities/account';
 import { useCloseAllDebts, useCloseDebt } from '@/features/close-debt';
 import { usePartialPayment } from '@/features/partial-payment';
@@ -18,6 +19,7 @@ import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 import { DEFAULT_CURRENCY } from '@/shared/config/currency';
 import { navigateBack } from '@/app/router';
+import { useQueryClient } from '@tanstack/vue-query';
 
 const STATUS_TABS = [
   { id: 'active', label: 'Активные' },
@@ -35,7 +37,7 @@ export function useDebtsPageState() {
   const { userId } = useCurrentUser();
   const { currency } = useUserCurrency();
   const { convert } = useExchangeRates(currency);
-  const { updateDebt } = useDebts(userId);
+  const queryClient = useQueryClient();
   const { accounts } = useAccounts(userId);
 
   // --- Filters ---
@@ -78,6 +80,9 @@ export function useDebtsPageState() {
   // --- Derived from groups ---
   const allDebtsFromGroups = computed(() => groups.value.flatMap((g) => g.debts));
 
+  // TODO: typeFilter is client-side only. Currently safe because typeFilter
+  // is always paired with personFilter (server-side), so groups are few.
+  // Consider moving debtType to server-side filters if needed.
   const filteredGroups = computed(() => {
     if (!typeFilter.value) return groups.value;
     return groups.value.filter((g) => g.debt_type === typeFilter.value);
@@ -232,7 +237,9 @@ export function useDebtsPageState() {
 
   async function handleDetailTogglePrivate(value: boolean) {
     if (!selectedDebt.value) return;
-    await updateDebt(selectedDebt.value.id, { is_private: value });
+    await debtsApi.update(selectedDebt.value.id, { is_private: value });
+    // Invalidate all debt queries (covers both infinite and list caches)
+    await queryClient.invalidateQueries({ queryKey: debtQueryKeys.all });
   }
 
   function handleDetailClose() {

@@ -42,7 +42,8 @@ export function useInfiniteDebts(
       return debtsApi.getPaginated(uid, PAGE_SIZE, pageParam, f);
     },
     initialPageParam: undefined as DebtsPaginatedCursor | undefined,
-    getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.nextCursor : undefined),
+    getNextPageParam: (lastPage) =>
+      lastPage.hasMore && lastPage.nextCursor ? lastPage.nextCursor : undefined,
     enabled: computed(() => !!toValue(userId)),
     placeholderData: keepPreviousData,
   });
