@@ -2,10 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { defineComponent, h } from 'vue';
 import { flushPromises } from '@vue/test-utils';
 import { renderWithProviders, mockUser } from '@/test/test-utils';
-import { server } from '@/test/mocks/server';
-import { http, HttpResponse } from 'msw';
 import { useTransactionSelection } from './useTransactionSelection';
-import { mockGivenDebtResponse } from '@/test/mocks/handlers/debts';
 import type { Transaction } from '@/shared/api/database.types';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -16,7 +13,7 @@ function mountComposable() {
   let result!: ReturnType<typeof useTransactionSelection>;
   const Stub = defineComponent({
     setup() {
-      result = useTransactionSelection(mockUser.id);
+      result = useTransactionSelection();
       return () => h('div');
     },
   });
@@ -56,7 +53,6 @@ describe('useTransactionSelection', () => {
   });
 
   afterEach(async () => {
-    server.resetHandlers();
     currentWrapper?.unmount();
     currentWrapper = null;
     await flushPromises();
@@ -74,173 +70,46 @@ describe('useTransactionSelection', () => {
       const c = mountComposable();
       expect(c.showEditModal.value).toBe(false);
     });
-
-    it('starts with hasSplitDebts = false', () => {
-      const c = mountComposable();
-      expect(c.hasSplitDebts.value).toBe(false);
-    });
   });
 
   // ── select ────────────────────────────────────────────────────────────────
 
   describe('select', () => {
-    it('sets selectedTransaction', async () => {
+    it('sets selectedTransaction', () => {
       const c = mountComposable();
       const tx = makeTx({ id: 'tx-abc' });
 
-      await c.select(tx);
+      c.select(tx);
 
       expect(c.selectedTransaction.value?.id).toBe('tx-abc');
     });
 
-    it('opens edit modal after selecting', async () => {
+    it('opens edit modal after selecting', () => {
       const c = mountComposable();
       const tx = makeTx();
 
-      await c.select(tx);
+      c.select(tx);
 
       expect(c.showEditModal.value).toBe(true);
-    });
-
-    it('sets hasSplitDebts = false when no open linked debts', async () => {
-      server.use(http.get('*/api/debts', () => HttpResponse.json([])));
-
-      const c = mountComposable();
-      const tx = makeTx({ id: 'tx-clean' });
-
-      await c.select(tx);
-      await flushPromises();
-
-      expect(c.hasSplitDebts.value).toBe(false);
-    });
-
-    it('sets hasSplitDebts = true when open split debt exists for this transaction', async () => {
-      server.use(
-        http.get('*/api/debts', () =>
-          // Backend returns camelCase — debtsApi.getAll() transforms to snake_case
-          HttpResponse.json([
-            {
-              ...mockGivenDebtResponse,
-              sourceTransactionId: 'tx-split',
-              isClosed: false,
-            },
-          ]),
-        ),
-      );
-
-      const c = mountComposable();
-      const tx = makeTx({ id: 'tx-split' });
-
-      await c.select(tx);
-      await flushPromises();
-
-      expect(c.hasSplitDebts.value).toBe(true);
-    });
-
-    it('does NOT set hasSplitDebts when debt is closed', async () => {
-      server.use(
-        http.get('*/api/debts', () =>
-          // Backend returns camelCase — debtsApi.getAll() transforms to snake_case
-          HttpResponse.json([
-            {
-              ...mockGivenDebtResponse,
-              sourceTransactionId: 'tx-closed-split',
-              isClosed: true,
-            },
-          ]),
-        ),
-      );
-
-      const c = mountComposable();
-      const tx = makeTx({ id: 'tx-closed-split' });
-
-      await c.select(tx);
-      await flushPromises();
-
-      expect(c.hasSplitDebts.value).toBe(false);
-    });
-
-    it('skips debt check for debt-related transactions', async () => {
-      const debtsSpy = vi.fn();
-      server.use(
-        http.get('*/api/debts', () => {
-          debtsSpy();
-          return HttpResponse.json([]);
-        }),
-      );
-
-      const c = mountComposable();
-      const tx = makeTx({ is_debt_related: true });
-
-      await c.select(tx);
-      await flushPromises();
-
-      expect(debtsSpy).not.toHaveBeenCalled();
-      expect(c.hasSplitDebts.value).toBe(false);
-    });
-
-    it('resets hasSplitDebts when selecting a different transaction', async () => {
-      server.use(
-        http.get('*/api/debts', () =>
-          // Backend returns camelCase — debtsApi.getAll() transforms to snake_case
-          HttpResponse.json([
-            {
-              ...mockGivenDebtResponse,
-              sourceTransactionId: 'tx-has-split',
-              isClosed: false,
-            },
-          ]),
-        ),
-      );
-
-      const c = mountComposable();
-      await c.select(makeTx({ id: 'tx-has-split' }));
-      await flushPromises();
-
-      expect(c.hasSplitDebts.value).toBe(true);
-
-      // Now select a different tx — hasSplitDebts resets to false first
-      server.use(http.get('*/api/debts', () => HttpResponse.json([])));
-      await c.select(makeTx({ id: 'tx-clean' }));
-      await flushPromises();
-
-      expect(c.hasSplitDebts.value).toBe(false);
-    });
-
-    it('gracefully handles debt API errors (hasSplitDebts stays false)', async () => {
-      server.use(
-        http.get('*/api/debts', () =>
-          HttpResponse.json({ message: 'Server error' }, { status: 500 }),
-        ),
-      );
-
-      const c = mountComposable();
-      const tx = makeTx();
-
-      await c.select(tx);
-      await flushPromises();
-
-      expect(c.hasSplitDebts.value).toBe(false);
-      expect(c.showEditModal.value).toBe(true); // modal still opens
     });
   });
 
   // ── close ─────────────────────────────────────────────────────────────────
 
   describe('close', () => {
-    it('closes the edit modal', async () => {
+    it('closes the edit modal', () => {
       const c = mountComposable();
-      await c.select(makeTx());
+      c.select(makeTx());
       expect(c.showEditModal.value).toBe(true);
 
       c.close();
       expect(c.showEditModal.value).toBe(false);
     });
 
-    it('keeps selectedTransaction after closing (used for delete modal)', async () => {
+    it('keeps selectedTransaction after closing (used for delete modal)', () => {
       const c = mountComposable();
       const tx = makeTx({ id: 'tx-keep' });
-      await c.select(tx);
+      c.select(tx);
 
       c.close();
 

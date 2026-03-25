@@ -127,7 +127,6 @@ const { getBalanceAfter } = useBalanceAfter(
 // Edit transaction modal state
 const {
   selectedTransaction,
-  hasSplitDebts,
   showEditModal,
   showDeleteModal,
   isUpdating,
@@ -434,7 +433,6 @@ async function handleRefresh() {
       :currency="currency"
       :is-updating="isUpdating"
       :error="editError"
-      :has-split-debts="hasSplitDebts"
       @confirm="handleUpdateTransaction"
       @cancel="closeEditModal"
       @delete="handleDeleteClick"

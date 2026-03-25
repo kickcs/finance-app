@@ -42,16 +42,16 @@ export function useEditDebt(
     };
   }
 
-  // Re-init when debt changes
+  // Re-init when debt changes (not immediate — initial values set above)
   watch(
     () => toValue(debt),
     (d) => {
       if (d) {
-        formData.value = makeFormData(d);
-        originalData.value = makeFormData(d);
+        const data = makeFormData(d);
+        formData.value = data;
+        originalData.value = { ...data };
       }
     },
-    { immediate: true },
   );
 
   const isValid = computed(() => {

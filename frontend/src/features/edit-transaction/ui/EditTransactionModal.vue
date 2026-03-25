@@ -16,7 +16,6 @@ const props = defineProps<{
   currency: string;
   isUpdating?: boolean;
   error?: string | null;
-  hasSplitDebts?: boolean;
 }>();
 
 const emit = defineEmits<{

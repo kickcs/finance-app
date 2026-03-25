@@ -274,7 +274,6 @@ export function useSplitTransactionEdit(
     isLoading,
     participants,
     myShare,
-    canEditParticipant,
     updateParticipantAmount,
     updateParticipantName,
     addParticipant,

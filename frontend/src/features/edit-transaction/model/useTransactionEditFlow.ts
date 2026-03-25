@@ -8,12 +8,10 @@ export function useTransactionEditFlow(userId: MaybeRefOrGetter<string | null>) 
 
   const {
     selectedTransaction,
-    hasSplitDebts,
-    splitDebts,
     showEditModal,
     select: handleTransactionClick,
     close: closeEditModal,
-  } = useTransactionSelection(userId);
+  } = useTransactionSelection();
 
   const {
     isUpdating,
@@ -52,8 +50,6 @@ export function useTransactionEditFlow(userId: MaybeRefOrGetter<string | null>) 
 
   return {
     selectedTransaction,
-    hasSplitDebts,
-    splitDebts,
     showEditModal,
     showDeleteModal,
     isUpdating,
