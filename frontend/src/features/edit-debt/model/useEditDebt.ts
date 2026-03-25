@@ -1,13 +1,11 @@
 import { ref, computed, watch, type MaybeRefOrGetter, toValue } from 'vue';
-import { useDebts, buildDebtName, type Debt, type DebtDirection } from '@/entities/debt';
+import { useDebts, type Debt } from '@/entities/debt';
 import { useToast } from '@/shared/ui';
 import { useHaptics } from '@/shared/lib/haptics';
 
 export interface EditDebtFormData {
-  debt_type: DebtDirection;
   person_name: string;
   total_amount: number;
-  account_id: string | null;
   description: string;
   is_private: boolean;
 }
@@ -27,10 +25,8 @@ export function useEditDebt(
 
   function makeFormData(d: Debt | null): EditDebtFormData {
     return {
-      debt_type: (d?.debt_type as DebtDirection) ?? 'taken',
       person_name: d?.person_name ?? '',
       total_amount: d?.total_amount ?? 0,
-      account_id: d?.account_id ?? null,
       description: d?.description ?? '',
       is_private: d?.is_private ?? false,
     };
@@ -61,9 +57,6 @@ export function useEditDebt(
     if (formData.value.total_amount !== originalData.value.total_amount) {
       result.push('Изменение суммы не повлияет на уже созданные транзакции платежей');
     }
-    if (formData.value.debt_type !== originalData.value.debt_type) {
-      result.push('Направление долга изменится');
-    }
     return result;
   });
 
@@ -77,22 +70,14 @@ export function useEditDebt(
 
     isSubmitting.value = true;
     try {
-      // Build diff — only send changed fields
       const updates: Partial<Debt> = {};
       const f = formData.value;
       const o = originalData.value;
 
-      if (f.debt_type !== o.debt_type) updates.debt_type = f.debt_type;
       if (f.person_name !== o.person_name) updates.person_name = f.person_name;
       if (f.total_amount !== o.total_amount) updates.total_amount = f.total_amount;
-      if (f.account_id !== o.account_id) updates.account_id = f.account_id;
       if (f.description !== o.description) updates.description = f.description || null;
       if (f.is_private !== o.is_private) updates.is_private = f.is_private;
-
-      // Also update the name if person_name or debt_type changed
-      if (updates.person_name !== undefined || updates.debt_type !== undefined) {
-        updates.name = buildDebtName(f.debt_type, f.person_name);
-      }
 
       await updateDebt(d.id, updates);
       trigger('success');

@@ -147,7 +147,6 @@ function goBack() {
     <EditDebtDrawer
       :open="showEditDrawer"
       :debt="debt"
-      :accounts="accounts"
       @update:open="showEditDrawer = $event"
       @saved="showEditDrawer = false"
     />
