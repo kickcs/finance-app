@@ -1,5 +1,5 @@
 import { ref, computed, watch, type MaybeRefOrGetter, toValue } from 'vue';
-import { useDebts, type Debt } from '@/entities/debt';
+import { useDebts, buildDebtName, type Debt } from '@/entities/debt';
 import { transactionsApi } from '@/entities/transaction';
 import { queryClient } from '@/shared/api/queryClient';
 import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
@@ -80,7 +80,10 @@ export function useEditDebt(
       const f = formData.value;
       const o = originalData.value;
 
-      if (f.person_name !== o.person_name) updates.person_name = f.person_name;
+      if (f.person_name !== o.person_name) {
+        updates.person_name = f.person_name;
+        updates.name = buildDebtName(d.debt_type as 'given' | 'taken', f.person_name);
+      }
       if (f.total_amount !== o.total_amount) {
         updates.total_amount = f.total_amount;
         // Adjust remaining by the same delta to preserve paid amount

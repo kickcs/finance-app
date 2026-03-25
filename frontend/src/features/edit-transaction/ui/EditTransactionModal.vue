@@ -82,24 +82,33 @@ const {
   () => amount.value,
 );
 
-// Amount change dialog: null = hidden, number = pending new amount
-const pendingAmountChange = ref<number | null>(null);
+const showAmountStrategyDialog = ref(false);
 const showSplitDeleteConfirm = ref(false);
+// Track original amount at modal open for split redistribution
+const amountBeforeEdit = ref(0);
+
+watch(
+  () => props.transaction,
+  (t) => {
+    if (t) amountBeforeEdit.value = t.amount;
+  },
+  { immediate: true },
+);
 
 function handleAmountInput(value: string | number) {
-  const newAmount = Number(value) || 0;
-  if (hasSplit.value && newAmount !== amount.value) {
-    pendingAmountChange.value = newAmount;
-  } else {
-    amount.value = newAmount;
+  amount.value = Number(value) || 0;
+}
+
+function handleAmountBlur() {
+  if (hasSplit.value && amount.value !== amountBeforeEdit.value) {
+    showAmountStrategyDialog.value = true;
   }
 }
 
 function handleAmountStrategy(strategy: 'redistribute' | 'keep') {
-  if (pendingAmountChange.value === null) return;
-  amount.value = pendingAmountChange.value;
-  handleTransactionAmountChange(pendingAmountChange.value, strategy);
-  pendingAmountChange.value = null;
+  handleTransactionAmountChange(amount.value, strategy);
+  amountBeforeEdit.value = amount.value;
+  showAmountStrategyDialog.value = false;
 }
 
 const openSplitDebtsCount = computed(
@@ -349,6 +358,7 @@ const isFormValid = computed(() => {
         type="number"
         :suffix="transaction!.currency"
         @update:model-value="handleAmountInput($event)"
+        @blur="handleAmountBlur"
       />
 
       <!-- Category Chips -->
@@ -383,9 +393,9 @@ const isFormValid = computed(() => {
 
     <!-- Amount Change Strategy Dialog -->
     <UModal
-      :model-value="pendingAmountChange !== null"
+      :model-value="showAmountStrategyDialog"
       title="Сумма изменена"
-      @update:model-value="!$event && (pendingAmountChange = null)"
+      @update:model-value="showAmountStrategyDialog = $event"
     >
       <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark mb-4">
         Вы изменили общую сумму транзакции. Как распределить изменение между участниками?

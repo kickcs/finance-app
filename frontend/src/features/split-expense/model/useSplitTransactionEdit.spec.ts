@@ -347,7 +347,8 @@ describe('useSplitTransactionEdit', () => {
       result.addParticipant('Тест', 10000);
       expect(result.participants.value).toHaveLength(1);
 
-      result.removeParticipant('new-0');
+      const newId = result.participants.value[0].debtId;
+      result.removeParticipant(newId);
       expect(result.participants.value).toHaveLength(0);
     });
   });

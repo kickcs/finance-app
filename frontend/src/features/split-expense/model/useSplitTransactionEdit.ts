@@ -18,9 +18,12 @@ export interface SplitParticipantView {
 }
 
 interface PendingAdd {
+  id: string;
   personName: string;
   amount: number;
 }
+
+let nextNewId = 0;
 
 interface PendingUpdate {
   amount?: number;
@@ -41,8 +44,6 @@ export function useSplitTransactionEdit(
   const pendingAdds = ref<PendingAdd[]>([]);
   const pendingDeletes = ref<Set<string>>(new Set());
   const pendingUpdates = ref<Map<string, PendingUpdate>>(new Map());
-
-  const hasSplit = computed(() => splitDebts.value.length > 0 || pendingAdds.value.length > 0);
 
   // Load split debts for transaction
   async function loadSplitDebts() {
@@ -99,8 +100,8 @@ export function useSplitTransactionEdit(
         };
       });
 
-    const added = pendingAdds.value.map((a, i) => ({
-      debtId: `new-${i}`,
+    const added = pendingAdds.value.map((a) => ({
+      debtId: a.id,
       personName: a.personName,
       amount: a.amount,
       paidAmount: 0,
@@ -113,6 +114,8 @@ export function useSplitTransactionEdit(
 
     return [...existing, ...added];
   });
+
+  const hasSplit = computed(() => participants.value.length > 0);
 
   const myShare = computed(() => {
     const total = toValue(transactionAmount);
@@ -132,7 +135,7 @@ export function useSplitTransactionEdit(
     if (!p) return;
 
     if (p.isNew) {
-      const idx = pendingAdds.value.findIndex((_, i) => `new-${i}` === debtId);
+      const idx = pendingAdds.value.findIndex((a) => a.id === debtId);
       if (idx > -1) pendingAdds.value[idx].amount = Math.max(0, amount);
     } else {
       const existing = pendingUpdates.value.get(debtId) ?? {};
@@ -147,7 +150,7 @@ export function useSplitTransactionEdit(
     if (!p) return;
 
     if (p.isNew) {
-      const idx = pendingAdds.value.findIndex((_, i) => `new-${i}` === debtId);
+      const idx = pendingAdds.value.findIndex((a) => a.id === debtId);
       if (idx > -1) pendingAdds.value[idx].personName = name.trim();
     } else {
       const existing = pendingUpdates.value.get(debtId) ?? {};
@@ -157,7 +160,11 @@ export function useSplitTransactionEdit(
 
   function addParticipant(name: string, amount: number) {
     if (!name.trim()) return;
-    pendingAdds.value.push({ personName: name.trim(), amount: Math.max(0, amount) });
+    pendingAdds.value.push({
+      id: `new-${nextNewId++}`,
+      personName: name.trim(),
+      amount: Math.max(0, amount),
+    });
   }
 
   function removeParticipant(debtId: string) {
@@ -167,7 +174,7 @@ export function useSplitTransactionEdit(
     if (!p) return;
 
     if (p.isNew) {
-      const idx = pendingAdds.value.findIndex((_, i) => `new-${i}` === debtId);
+      const idx = pendingAdds.value.findIndex((a) => a.id === debtId);
       if (idx > -1) pendingAdds.value.splice(idx, 1);
     } else {
       pendingDeletes.value.add(debtId);
