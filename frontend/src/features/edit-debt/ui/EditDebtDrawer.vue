@@ -156,17 +156,6 @@ async function handleSubmit() {
             @update:model-value="updateField('total_amount', Number($event) || 0)"
           />
 
-          <!-- Remaining Amount -->
-          <UInput
-            :model-value="String(formData.remaining_amount || '')"
-            label="Остаток"
-            placeholder="0"
-            variant="currency"
-            type="number"
-            :suffix="currencySymbol"
-            @update:model-value="updateField('remaining_amount', Number($event) || 0)"
-          />
-
           <!-- Account -->
           <div class="space-y-2">
             <label

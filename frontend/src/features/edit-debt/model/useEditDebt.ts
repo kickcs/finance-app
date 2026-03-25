@@ -7,7 +7,6 @@ export interface EditDebtFormData {
   debt_type: DebtDirection;
   person_name: string;
   total_amount: number;
-  remaining_amount: number;
   account_id: string | null;
   description: string;
   is_private: boolean;
@@ -31,7 +30,6 @@ export function useEditDebt(
       debt_type: (d?.debt_type as DebtDirection) ?? 'taken',
       person_name: d?.person_name ?? '',
       total_amount: d?.total_amount ?? 0,
-      remaining_amount: d?.remaining_amount ?? 0,
       account_id: d?.account_id ?? null,
       description: d?.description ?? '',
       is_private: d?.is_private ?? false,
@@ -51,12 +49,7 @@ export function useEditDebt(
   );
 
   const isValid = computed(() => {
-    return (
-      formData.value.person_name.trim().length > 0 &&
-      formData.value.total_amount > 0 &&
-      formData.value.remaining_amount >= 0 &&
-      formData.value.remaining_amount <= formData.value.total_amount
-    );
+    return formData.value.person_name.trim().length > 0 && formData.value.total_amount > 0;
   });
 
   const isDirty = computed(() => {
@@ -76,11 +69,6 @@ export function useEditDebt(
 
   function updateField<K extends keyof EditDebtFormData>(field: K, value: EditDebtFormData[K]) {
     formData.value[field] = value;
-
-    // Auto-correct remaining if exceeds total
-    if (field === 'total_amount' && formData.value.remaining_amount > formData.value.total_amount) {
-      formData.value.remaining_amount = formData.value.total_amount;
-    }
   }
 
   async function submit(): Promise<boolean> {
@@ -97,7 +85,6 @@ export function useEditDebt(
       if (f.debt_type !== o.debt_type) updates.debt_type = f.debt_type;
       if (f.person_name !== o.person_name) updates.person_name = f.person_name;
       if (f.total_amount !== o.total_amount) updates.total_amount = f.total_amount;
-      if (f.remaining_amount !== o.remaining_amount) updates.remaining_amount = f.remaining_amount;
       if (f.account_id !== o.account_id) updates.account_id = f.account_id;
       if (f.description !== o.description) updates.description = f.description || null;
       if (f.is_private !== o.is_private) updates.is_private = f.is_private;
