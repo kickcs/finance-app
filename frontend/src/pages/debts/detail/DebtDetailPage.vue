@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { ROUTE_NAMES } from '@/app/router/routeNames';
-import { USpinner, NotFoundState, useToast } from '@/shared/ui';
+import { USpinner, NotFoundState } from '@/shared/ui';
 import { AppHeader } from '@/widgets/header';
 import {
   useDebts,
@@ -15,13 +15,13 @@ import { DEFAULT_CURRENCY } from '@/shared/config/currency';
 import { useAccounts } from '@/entities/account';
 import { DeleteDebtModal, useCloseDebt } from '@/features/close-debt';
 import { PartialPaymentModal, usePartialPayment } from '@/features/partial-payment';
+import { EditDebtDrawer } from '@/features/edit-debt';
 import { navigateBack } from '@/app/router';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 
 const router = useRouter();
 const route = useRoute();
 const { userId } = useCurrentUser();
-const { toast } = useToast();
 const debtId = computed(() => route.params.id as string);
 
 // Get debts and accounts
@@ -56,8 +56,9 @@ async function handleDeleteDebt() {
   }
 }
 
+const showEditDrawer = ref(false);
 function handleEdit() {
-  toast({ title: 'Редактирование пока недоступно' });
+  showEditDrawer.value = true;
 }
 
 // TODO: This logic is duplicated in useDebtsPageState.ts (with different post-payment navigation).
@@ -140,6 +141,15 @@ function goBack() {
       :accounts="accounts"
       :is-paying="isPaying"
       @confirm="handlePartialPayment"
+    />
+
+    <!-- Edit Debt Drawer -->
+    <EditDebtDrawer
+      :open="showEditDrawer"
+      :debt="debt"
+      :accounts="accounts"
+      @update:open="showEditDrawer = $event"
+      @saved="showEditDrawer = false"
     />
   </div>
 </template>
