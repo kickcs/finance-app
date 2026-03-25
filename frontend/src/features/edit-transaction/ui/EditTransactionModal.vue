@@ -7,6 +7,8 @@ import type { AccountWithBalances } from '@/entities/account';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import type { Transaction } from '@/shared/api/database.types';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
+import { SplitParticipantList, useSplitTransactionEdit } from '@/features/split-expense';
+import type { Debt } from '@/entities/debt';
 
 const props = defineProps<{
   modelValue: boolean;
@@ -16,6 +18,7 @@ const props = defineProps<{
   isUpdating?: boolean;
   error?: string | null;
   hasSplitDebts?: boolean;
+  splitDebts?: Debt[];
 }>();
 
 const emit = defineEmits<{
@@ -23,6 +26,7 @@ const emit = defineEmits<{
   confirm: [updates: Partial<Transaction>];
   cancel: [];
   delete: [];
+  'split-saved': [];
 }>();
 
 // Get user for categories
@@ -37,12 +41,6 @@ const isAdjustment = computed(() => props.transaction?.type === 'adjustment');
 const isDebtRelated = computed(
   () => props.transaction?.is_debt_related === true && !isAdjustment.value,
 );
-
-// Check if transaction has split debts linked to it (cannot be edited)
-const hasSplitDebts = computed(() => props.hasSplitDebts === true);
-
-// Cannot edit if debt-related OR has split debts
-const isProtected = computed(() => isDebtRelated.value || hasSplitDebts.value);
 
 // Local form state (only for non-transfer)
 const type = ref<'expense' | 'income'>('expense');
@@ -67,6 +65,50 @@ watch(
   },
   { immediate: true },
 );
+
+// Split expense editing
+const splitEdit = useSplitTransactionEdit(
+  () => props.transaction?.id ?? null,
+  userId,
+  () => amount.value,
+);
+
+const showAmountChangeDialog = ref(false);
+const pendingNewAmount = ref(0);
+const showSplitDeleteConfirm = ref(false);
+
+function handleAmountInput(value: string | number) {
+  const newAmount = Number(value) || 0;
+  if (splitEdit.hasSplit.value && newAmount !== amount.value) {
+    pendingNewAmount.value = newAmount;
+    showAmountChangeDialog.value = true;
+  } else {
+    amount.value = newAmount;
+  }
+}
+
+function handleAmountStrategy(strategy: 'redistribute' | 'keep') {
+  amount.value = pendingNewAmount.value;
+  splitEdit.handleTransactionAmountChange(pendingNewAmount.value, strategy);
+  showAmountChangeDialog.value = false;
+}
+
+const openSplitDebtsCount = computed(
+  () => splitEdit.participants.value.filter((p) => !p.isClosed && !p.isNew).length,
+);
+
+function handleDelete() {
+  if (splitEdit.hasSplit.value && openSplitDebtsCount.value > 0) {
+    showSplitDeleteConfirm.value = true;
+  } else {
+    emit('delete');
+  }
+}
+
+function confirmSplitDelete() {
+  showSplitDeleteConfirm.value = false;
+  emit('delete');
+}
 
 const tabItems = [
   { id: 'expense', label: 'Расход' },
@@ -96,7 +138,12 @@ function close() {
   emit('cancel');
 }
 
-function confirm() {
+async function confirm() {
+  if (splitEdit.hasSplit.value) {
+    const splitSuccess = await splitEdit.saveChanges();
+    if (!splitSuccess) return;
+    emit('split-saved');
+  }
   emit('confirm', {
     type: type.value,
     amount: amount.value,
@@ -126,20 +173,16 @@ const isFormValid = computed(() => {
       </div>
     </div>
 
-    <!-- Protected Mode (debt-related OR has split debts): View Only -->
-    <div v-if="isProtected && transaction" class="py-2">
+    <!-- Debt-Related Mode: View Only -->
+    <div v-if="isDebtRelated && transaction" class="py-2">
       <div class="text-center mb-4">
         <div
           class="w-12 h-12 mx-auto mb-3 rounded-xl bg-warning-light flex items-center justify-center"
         >
-          <UIcon
-            :name="hasSplitDebts ? 'group' : 'account_balance_wallet'"
-            size="md"
-            class="text-warning"
-          />
+          <UIcon name="account_balance_wallet" size="md" class="text-warning" />
         </div>
         <p class="text-sm text-text-primary-light dark:text-text-primary-dark font-medium mb-0.5">
-          {{ hasSplitDebts ? 'Транзакция с раздельным счётом' : 'Транзакция связана с долгом' }}
+          Транзакция связана с долгом
         </p>
         <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
           Управляйте долгом в разделе "Долги"
@@ -169,11 +212,8 @@ const isFormValid = computed(() => {
         <div class="flex gap-1.5">
           <UIcon name="info" size="xs" class="text-warning shrink-0 mt-0.5" />
           <p class="text-xs text-warning">
-            {{
-              hasSplitDebts
-                ? 'Эту транзакцию нельзя редактировать, пока есть связанные долги. Сначала закройте долги в разделе "Долги".'
-                : 'Эту транзакцию нельзя редактировать или удалять напрямую. Перейдите в раздел "Долги" для управления.'
-            }}
+            Эту транзакцию нельзя редактировать или удалять напрямую. Перейдите в раздел "Долги" для
+            управления.
           </p>
         </div>
       </div>
@@ -300,7 +340,9 @@ const isFormValid = computed(() => {
         variant="currency"
         type="number"
         :suffix="transaction!.currency"
-        @update:model-value="amount = Number($event) || 0"
+        @update:model-value="
+          splitEdit.hasSplit.value ? handleAmountInput($event) : (amount = Number($event) || 0)
+        "
       />
 
       <!-- Category Chips -->
@@ -317,11 +359,84 @@ const isFormValid = computed(() => {
         <UInput v-model="description" label="Комментарий" placeholder="Описание..." />
         <UInput v-model="date" label="Дата" type="date" />
       </div>
+
+      <!-- Split Section -->
+      <div
+        v-if="splitEdit.hasSplit.value"
+        class="border-t border-border-light dark:border-border-dark pt-4"
+      >
+        <SplitParticipantList
+          :participants="splitEdit.participants.value"
+          :my-share="splitEdit.myShare.value"
+          :currency="transaction!.currency"
+          editable
+          @update-amount="splitEdit.updateParticipantAmount"
+          @update-name="splitEdit.updateParticipantName"
+          @remove="splitEdit.removeParticipant"
+          @add="splitEdit.addParticipant"
+        />
+      </div>
     </div>
 
+    <!-- Amount Change Strategy Dialog -->
+    <UModal
+      :model-value="showAmountChangeDialog"
+      title="Сумма изменена"
+      @update:model-value="showAmountChangeDialog = $event"
+    >
+      <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark mb-4">
+        Вы изменили общую сумму транзакции. Как распределить изменение между участниками?
+      </p>
+      <template #actions>
+        <div class="flex gap-2 w-full">
+          <UButton variant="secondary" size="sm" full-width @click="handleAmountStrategy('keep')">
+            Оставить доли
+          </UButton>
+          <UButton
+            variant="primary"
+            size="sm"
+            full-width
+            @click="handleAmountStrategy('redistribute')"
+          >
+            Перераспределить
+          </UButton>
+        </div>
+      </template>
+    </UModal>
+
+    <!-- Split Delete Confirmation Dialog -->
+    <UModal
+      :model-value="showSplitDeleteConfirm"
+      title="Удалить транзакцию?"
+      @update:model-value="showSplitDeleteConfirm = $event"
+    >
+      <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark mb-2">
+        У этой транзакции есть {{ openSplitDebtsCount }} открытых долгов из раздельного счёта.
+      </p>
+      <p class="text-sm text-danger">
+        При удалении транзакции связанные долги останутся. Управляйте ими в разделе "Долги".
+      </p>
+      <template #actions>
+        <div class="flex gap-2 w-full">
+          <UButton variant="secondary" size="sm" full-width @click="showSplitDeleteConfirm = false">
+            Отмена
+          </UButton>
+          <UButton
+            variant="primary"
+            size="sm"
+            full-width
+            class="!bg-danger hover:!bg-danger/90"
+            @click="confirmSplitDelete"
+          >
+            Удалить
+          </UButton>
+        </div>
+      </template>
+    </UModal>
+
     <template #actions>
-      <!-- Protected (debt-related OR split debts) Actions: Close Only -->
-      <div v-if="isProtected" class="flex gap-2 w-full">
+      <!-- Debt-Related Actions: Close Only -->
+      <div v-if="isDebtRelated" class="flex gap-2 w-full">
         <UButton variant="secondary" size="sm" full-width @click="close">Закрыть</UButton>
       </div>
 
@@ -342,7 +457,7 @@ const isFormValid = computed(() => {
 
       <!-- Regular Actions: Delete + Cancel + Save -->
       <div v-else class="flex gap-2 w-full">
-        <UButton variant="ghost" size="sm" class="!text-danger shrink-0" @click="emit('delete')">
+        <UButton variant="ghost" size="sm" class="!text-danger shrink-0" @click="handleDelete()">
           <UIcon name="delete" size="sm" />
         </UButton>
         <UButton variant="secondary" size="sm" full-width @click="close">Отмена</UButton>
