@@ -16,7 +16,7 @@ import { useIsDesktop } from '@/shared/lib/composables/useIsDesktop';
 import { useDrawerKeyboard } from '@/shared/lib/composables';
 import { useEditDebt } from '../model/useEditDebt';
 import type { AccountWithBalances } from '@/entities/account';
-import { DatePickerField, ToggleRow } from '@/features/create-debt';
+import { ToggleRow } from '@/features/create-debt';
 
 const props = defineProps<{
   open: boolean;
@@ -38,7 +38,6 @@ const { formData, isValid, isDirty, isSubmitting, warnings, updateField, submit,
 const drawerContentRef = ref<InstanceType<typeof DrawerContent> | null>(null);
 const footerRef = ref<HTMLDivElement | null>(null);
 const scrollContainerRef = ref<HTMLDivElement | null>(null);
-const calendarPortalRef = ref<HTMLElement | null>(null);
 
 const { setupKeyboardListener, cleanupKeyboardListener } = useDrawerKeyboard(
   drawerContentRef,
@@ -70,7 +69,6 @@ const currencySymbol = computed(() => (props.debt ? getCurrencySymbol(props.debt
 const accountOptions = computed(() => props.accounts.map((a) => ({ id: a.id, label: a.name })));
 
 // Date picker open states
-const isNextPaymentDateOpen = ref(false);
 
 async function handleSubmit() {
   const success = await submit();
@@ -184,34 +182,6 @@ async function handleSubmit() {
             />
           </div>
 
-          <!-- Monthly Payment -->
-          <UInput
-            :model-value="String(formData.monthly_payment ?? '')"
-            label="Ежемесячный платёж"
-            placeholder="Не указан"
-            variant="currency"
-            type="number"
-            :suffix="currencySymbol"
-            @update:model-value="updateField('monthly_payment', $event ? Number($event) : null)"
-          />
-
-          <!-- Next Payment Date -->
-          <div class="space-y-2">
-            <label
-              class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark"
-            >
-              Дата следующего платежа
-            </label>
-            <DatePickerField
-              v-model:open="isNextPaymentDateOpen"
-              :model-value="formData.next_payment_date"
-              placeholder="Не указана"
-              clearable
-              :portal-to="calendarPortalRef"
-              @update:model-value="updateField('next_payment_date', $event)"
-            />
-          </div>
-
           <!-- Description -->
           <UInput
             :model-value="formData.description"
@@ -241,7 +211,6 @@ async function handleSubmit() {
         </div>
 
         <!-- Calendar Portal -->
-        <div ref="calendarPortalRef" />
 
         <!-- Footer -->
         <div

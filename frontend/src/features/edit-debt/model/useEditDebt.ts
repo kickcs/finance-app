@@ -9,8 +9,6 @@ export interface EditDebtFormData {
   total_amount: number;
   remaining_amount: number;
   account_id: string | null;
-  monthly_payment: number | null;
-  next_payment_date: string | null;
   description: string;
   is_private: boolean;
 }
@@ -35,8 +33,6 @@ export function useEditDebt(
       total_amount: d?.total_amount ?? 0,
       remaining_amount: d?.remaining_amount ?? 0,
       account_id: d?.account_id ?? null,
-      monthly_payment: d?.monthly_payment ?? null,
-      next_payment_date: d?.next_payment_date ?? null,
       description: d?.description ?? '',
       is_private: d?.is_private ?? false,
     };
@@ -103,9 +99,6 @@ export function useEditDebt(
       if (f.total_amount !== o.total_amount) updates.total_amount = f.total_amount;
       if (f.remaining_amount !== o.remaining_amount) updates.remaining_amount = f.remaining_amount;
       if (f.account_id !== o.account_id) updates.account_id = f.account_id;
-      if (f.monthly_payment !== o.monthly_payment) updates.monthly_payment = f.monthly_payment;
-      if (f.next_payment_date !== o.next_payment_date)
-        updates.next_payment_date = f.next_payment_date;
       if (f.description !== o.description) updates.description = f.description || null;
       if (f.is_private !== o.is_private) updates.is_private = f.is_private;
 
