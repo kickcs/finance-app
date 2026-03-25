@@ -82,10 +82,16 @@ export class DebtRepository implements IDebtRepository {
       .addSelect('d.currency', 'currency')
       .addSelect('SUM(d.remainingAmount)', 'total')
       .where('d.userId = :userId', { userId })
-      .andWhere('d.isPrivate = :isPrivate', { isPrivate: false })
-      .andWhere('d.isClosed = :isClosed', { isClosed: false })
-      .groupBy('d.debtType')
-      .addGroupBy('d.currency');
+      .andWhere('d.isPrivate = :isPrivate', { isPrivate: false });
+
+    if (status === 'active') summaryQuery.andWhere('d.isClosed = :isClosed', { isClosed: false });
+    else if (status === 'closed')
+      summaryQuery.andWhere('d.isClosed = :isClosed', { isClosed: true });
+    if (currency) summaryQuery.andWhere('d.currency = :sumCurrency', { sumCurrency: currency });
+    if (personName)
+      summaryQuery.andWhere('d.personName = :sumPersonName', { sumPersonName: personName });
+
+    summaryQuery.groupBy('d.debtType').addGroupBy('d.currency');
 
     const summaryRows: Array<{ debtType: string; currency: string; total: string }> =
       await summaryQuery.getRawMany();
