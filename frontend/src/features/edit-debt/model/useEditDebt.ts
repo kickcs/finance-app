@@ -80,7 +80,12 @@ export function useEditDebt(
       const o = originalData.value;
 
       if (f.person_name !== o.person_name) updates.person_name = f.person_name;
-      if (f.total_amount !== o.total_amount) updates.total_amount = f.total_amount;
+      if (f.total_amount !== o.total_amount) {
+        updates.total_amount = f.total_amount;
+        // Adjust remaining by the same delta to preserve paid amount
+        const delta = f.total_amount - o.total_amount;
+        updates.remaining_amount = Math.max(0, d.remaining_amount + delta);
+      }
       if (f.description !== o.description) updates.description = f.description || null;
       if (f.is_private !== o.is_private) updates.is_private = f.is_private;
 
