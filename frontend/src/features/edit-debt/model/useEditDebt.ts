@@ -1,6 +1,7 @@
 import { ref, computed, watch, type MaybeRefOrGetter, toValue } from 'vue';
 import { useDebts, type Debt } from '@/entities/debt';
-import { transactionsApi } from '@/entities/transaction';
+import { transactionsApi, transactionQueryKeys } from '@/entities/transaction';
+import { queryClient } from '@/shared/api/queryClient';
 import { useToast } from '@/shared/ui';
 import { useHaptics } from '@/shared/lib/haptics';
 
@@ -88,6 +89,7 @@ export function useEditDebt(
       // Update linked creation transaction amount if debt amount changed
       if (updates.total_amount !== undefined && d.transaction_id) {
         await transactionsApi.update(d.transaction_id, { amount: updates.total_amount });
+        queryClient.invalidateQueries({ queryKey: transactionQueryKeys.all });
       }
       trigger('success');
       toast({ title: 'Долг обновлён' });
