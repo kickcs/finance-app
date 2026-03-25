@@ -63,7 +63,17 @@ watch(
 );
 
 // Split expense editing — only load for non-protected, non-transfer transactions
-const splitEdit = useSplitTransactionEdit(
+const {
+  hasSplit,
+  participants: splitParticipants,
+  myShare: splitMyShare,
+  updateParticipantAmount,
+  updateParticipantName,
+  addParticipant,
+  removeParticipant,
+  handleTransactionAmountChange,
+  saveChanges: saveSplitChanges,
+} = useSplitTransactionEdit(
   () =>
     !isDebtRelated.value && !isTransfer.value && !isAdjustment.value
       ? (props.transaction?.id ?? null)
@@ -78,7 +88,7 @@ const showSplitDeleteConfirm = ref(false);
 
 function handleAmountInput(value: string | number) {
   const newAmount = Number(value) || 0;
-  if (splitEdit.hasSplit.value && newAmount !== amount.value) {
+  if (hasSplit.value && newAmount !== amount.value) {
     pendingAmountChange.value = newAmount;
   } else {
     amount.value = newAmount;
@@ -88,16 +98,16 @@ function handleAmountInput(value: string | number) {
 function handleAmountStrategy(strategy: 'redistribute' | 'keep') {
   if (pendingAmountChange.value === null) return;
   amount.value = pendingAmountChange.value;
-  splitEdit.handleTransactionAmountChange(pendingAmountChange.value, strategy);
+  handleTransactionAmountChange(pendingAmountChange.value, strategy);
   pendingAmountChange.value = null;
 }
 
 const openSplitDebtsCount = computed(
-  () => splitEdit.participants.value.filter((p) => !p.isClosed && !p.isNew).length,
+  () => splitParticipants.value.filter((p) => !p.isClosed && !p.isNew).length,
 );
 
 function handleDelete() {
-  if (splitEdit.hasSplit.value && openSplitDebtsCount.value > 0) {
+  if (hasSplit.value && openSplitDebtsCount.value > 0) {
     showSplitDeleteConfirm.value = true;
   } else {
     emit('delete');
@@ -138,8 +148,8 @@ function close() {
 }
 
 async function confirm() {
-  if (splitEdit.hasSplit.value) {
-    const splitSuccess = await splitEdit.saveChanges();
+  if (hasSplit.value) {
+    const splitSuccess = await saveSplitChanges();
     if (!splitSuccess) return;
   }
   emit('confirm', {
@@ -357,19 +367,16 @@ const isFormValid = computed(() => {
       </div>
 
       <!-- Split Section -->
-      <div
-        v-if="splitEdit.hasSplit.value"
-        class="border-t border-border-light dark:border-border-dark pt-4"
-      >
+      <div v-if="hasSplit" class="border-t border-border-light dark:border-border-dark pt-4">
         <SplitParticipantList
-          :participants="splitEdit.participants.value"
-          :my-share="splitEdit.myShare.value"
+          :participants="splitParticipants"
+          :my-share="splitMyShare"
           :currency="transaction!.currency"
           editable
-          @update-amount="splitEdit.updateParticipantAmount"
-          @update-name="splitEdit.updateParticipantName"
-          @remove="splitEdit.removeParticipant"
-          @add="splitEdit.addParticipant"
+          @update-amount="updateParticipantAmount"
+          @update-name="updateParticipantName"
+          @remove="removeParticipant"
+          @add="addParticipant"
         />
       </div>
     </div>

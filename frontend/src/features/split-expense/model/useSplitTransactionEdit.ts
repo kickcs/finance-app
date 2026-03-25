@@ -3,6 +3,7 @@ import { ref, computed, watch, type MaybeRefOrGetter, toValue } from 'vue';
 import { debtsApi, debtQueryKeys, buildDebtName, type Debt } from '@/entities/debt';
 import { queryClient } from '@/shared/api/queryClient';
 import { useToast } from '@/shared/ui';
+import { DEFAULT_CURRENCY } from '@/shared/config/currency';
 
 export interface SplitParticipantView {
   debtId: string;
@@ -246,7 +247,7 @@ export function useSplitTransactionEdit(
           transaction_id: null,
           source_transaction_id: txId,
           is_closed: false,
-          currency: debt?.currency ?? 'UZS',
+          currency: debt?.currency ?? DEFAULT_CURRENCY,
           created_at: new Date().toISOString(),
         });
       }
@@ -269,9 +270,7 @@ export function useSplitTransactionEdit(
   }
 
   return {
-    splitDebts,
     hasSplit,
-    isLoading,
     participants,
     myShare,
     updateParticipantAmount,
@@ -280,6 +279,5 @@ export function useSplitTransactionEdit(
     removeParticipant,
     handleTransactionAmountChange,
     saveChanges,
-    loadSplitDebts,
   };
 }
