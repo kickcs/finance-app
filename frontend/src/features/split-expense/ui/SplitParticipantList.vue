@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { UInput, UButton, UIcon, InitialAvatar } from '@/shared/ui';
+import { UIcon, InitialAvatar } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { ENTITY_COLORS } from '@/shared/config/colors';
 import type { SplitParticipantView } from '../model/useSplitTransactionEdit';
@@ -154,23 +154,31 @@ function handleAdd() {
     </div>
 
     <!-- Add participant -->
-    <div v-if="editable" class="flex gap-2 pt-1">
-      <UInput v-model="newName" placeholder="Имя" class="flex-1" @keyup.enter="handleAdd" />
+    <div v-if="editable" class="flex items-center gap-2 pt-1">
+      <input
+        v-model="newName"
+        placeholder="Имя"
+        class="flex-1 min-w-0 text-sm px-2.5 py-1.5 rounded-lg border border-border-light dark:border-border-dark bg-transparent text-text-primary-light dark:text-text-primary-dark outline-none placeholder:text-text-tertiary-light dark:placeholder:text-text-tertiary-dark"
+        @keyup.enter="handleAdd"
+      />
       <input
         v-model.number="newAmount"
         type="number"
-        placeholder="Сумма"
-        class="w-24 text-sm px-2.5 py-2 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark text-text-primary-light dark:text-text-primary-dark outline-none"
+        placeholder="0"
+        class="w-20 text-right text-sm px-2 py-1.5 rounded-lg border border-border-light dark:border-border-dark bg-transparent text-text-primary-light dark:text-text-primary-dark outline-none"
         @keyup.enter="handleAdd"
       />
-      <UButton
-        variant="secondary"
-        size="sm"
+      <button
         :disabled="!newName.trim() || newAmount <= 0"
+        class="w-7 h-7 flex items-center justify-center rounded-full bg-surface-secondary-light dark:bg-surface-secondary-dark disabled:opacity-30 transition-opacity shrink-0"
         @click="handleAdd"
       >
-        <UIcon name="add" size="xs" />
-      </UButton>
+        <UIcon
+          name="add"
+          size="xs"
+          class="text-text-secondary-light dark:text-text-secondary-dark"
+        />
+      </button>
     </div>
   </div>
 </template>
