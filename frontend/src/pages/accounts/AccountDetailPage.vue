@@ -134,7 +134,6 @@ async function handleDeleteAccount() {
 const {
   selectedTransaction,
   hasSplitDebts,
-  splitDebts,
   showEditModal: showEditTransactionModal,
   showDeleteModal: showDeleteTransactionModal,
   isUpdating: isUpdatingTransaction,
@@ -605,7 +604,6 @@ async function handleAdjustBalance(data: {
       :is-updating="isUpdatingTransaction"
       :error="transactionError"
       :has-split-debts="hasSplitDebts"
-      :split-debts="splitDebts"
       @confirm="handleUpdateTransaction"
       @delete="handleDeleteTransactionClick"
     />

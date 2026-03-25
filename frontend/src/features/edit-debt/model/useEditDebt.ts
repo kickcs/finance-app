@@ -1,5 +1,5 @@
 import { ref, computed, watch, type MaybeRefOrGetter, toValue } from 'vue';
-import { useDebts, type Debt, type DebtDirection } from '@/entities/debt';
+import { useDebts, buildDebtName, type Debt, type DebtDirection } from '@/entities/debt';
 import { useToast } from '@/shared/ui';
 import { useHaptics } from '@/shared/lib/haptics';
 
@@ -112,7 +112,6 @@ export function useEditDebt(
 
       // Also update the name if person_name or debt_type changed
       if (updates.person_name !== undefined || updates.debt_type !== undefined) {
-        const { buildDebtName } = await import('@/entities/debt');
         updates.name = buildDebtName(f.debt_type, f.person_name);
       }
 

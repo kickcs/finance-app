@@ -8,7 +8,6 @@ import { formatCurrency } from '@/shared/lib/format/currency';
 import type { Transaction } from '@/shared/api/database.types';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { SplitParticipantList, useSplitTransactionEdit } from '@/features/split-expense';
-import type { Debt } from '@/entities/debt';
 
 const props = defineProps<{
   modelValue: boolean;
@@ -18,7 +17,6 @@ const props = defineProps<{
   isUpdating?: boolean;
   error?: string | null;
   hasSplitDebts?: boolean;
-  splitDebts?: Debt[];
 }>();
 
 const emit = defineEmits<{
@@ -448,7 +446,7 @@ const isFormValid = computed(() => {
           size="sm"
           full-width
           class="!bg-danger hover:!bg-danger/90"
-          @click="emit('delete')"
+          @click="handleDelete()"
         >
           <UIcon name="delete" size="xs" class="mr-1" />
           Удалить
