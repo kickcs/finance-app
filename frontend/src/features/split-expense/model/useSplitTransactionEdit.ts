@@ -59,7 +59,7 @@ export function useSplitTransactionEdit(
       if (cached) {
         splitDebts.value = cached.filter((d) => d.source_transaction_id === txId);
       } else {
-        const allDebts = await debtsApi.getAll();
+        const allDebts = await debtsApi.getAll(uid);
         splitDebts.value = allDebts.filter((d) => d.source_transaction_id === txId);
       }
     } catch {
@@ -119,25 +119,9 @@ export function useSplitTransactionEdit(
     return total - participantTotal;
   });
 
-  const totalAssigned = computed(() => {
-    return participants.value.reduce((sum, p) => sum + p.amount, 0) + myShare.value;
-  });
-
-  const isBalanced = computed(() => {
-    return Math.abs(totalAssigned.value - toValue(transactionAmount)) <= 1;
-  });
-
-  const lockedParticipantIds = computed(() =>
-    participants.value.filter((p) => p.isLocked).map((p) => p.debtId),
-  );
-
   function canEditParticipant(debtId: string): boolean {
     const p = participants.value.find((x) => x.debtId === debtId);
     return p ? !p.isLocked : false;
-  }
-
-  function canDeleteParticipant(debtId: string): boolean {
-    return canEditParticipant(debtId);
   }
 
   function updateParticipantAmount(debtId: string, amount: number) {
@@ -176,7 +160,7 @@ export function useSplitTransactionEdit(
   }
 
   function removeParticipant(debtId: string) {
-    if (!canDeleteParticipant(debtId)) return;
+    if (!canEditParticipant(debtId)) return;
 
     const p = participants.value.find((x) => x.debtId === debtId);
     if (!p) return;
@@ -290,11 +274,7 @@ export function useSplitTransactionEdit(
     isLoading,
     participants,
     myShare,
-    totalAssigned,
-    isBalanced,
-    lockedParticipantIds,
     canEditParticipant,
-    canDeleteParticipant,
     updateParticipantAmount,
     updateParticipantName,
     addParticipant,

@@ -23,11 +23,10 @@ export function useEditDebt(
   const { toast } = useToast();
   const { trigger } = useHaptics();
 
-  const formData = ref<EditDebtFormData>(makeFormData(toValue(debt)));
+  const initial = makeFormData(toValue(debt));
+  const formData = ref<EditDebtFormData>(initial);
   const isSubmitting = ref(false);
-
-  // Track original values for diff
-  const originalData = ref<EditDebtFormData>(makeFormData(toValue(debt)));
+  const originalData = ref<EditDebtFormData>({ ...initial });
 
   function makeFormData(d: Debt | null): EditDebtFormData {
     return {
@@ -128,8 +127,9 @@ export function useEditDebt(
   }
 
   function reset() {
-    formData.value = makeFormData(toValue(debt));
-    originalData.value = makeFormData(toValue(debt));
+    const d = makeFormData(toValue(debt));
+    formData.value = d;
+    originalData.value = { ...d };
   }
 
   return {
