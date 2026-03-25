@@ -16,8 +16,7 @@ import { useIsDesktop } from '@/shared/lib/composables/useIsDesktop';
 import { useDrawerKeyboard } from '@/shared/lib/composables';
 import { useEditDebt } from '../model/useEditDebt';
 import type { AccountWithBalances } from '@/entities/account';
-import DatePickerField from '@/features/create-debt/ui/DatePickerField.vue';
-import ToggleRow from '@/features/create-debt/ui/ToggleRow.vue';
+import { DatePickerField, ToggleRow } from '@/features/create-debt';
 
 const props = defineProps<{
   open: boolean;

@@ -23,7 +23,6 @@ const emit = defineEmits<{
   confirm: [updates: Partial<Transaction>];
   cancel: [];
   delete: [];
-  'split-saved': [];
 }>();
 
 // Get user for categories
@@ -142,7 +141,6 @@ async function confirm() {
   if (splitEdit.hasSplit.value) {
     const splitSuccess = await splitEdit.saveChanges();
     if (!splitSuccess) return;
-    emit('split-saved');
   }
   emit('confirm', {
     type: type.value,

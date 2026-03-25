@@ -1,8 +1,8 @@
-<!-- frontend/src/features/split-expense/ui/SplitParticipantList.vue -->
 <script setup lang="ts">
 import { ref } from 'vue';
 import { UInput, UButton, UIcon, InitialAvatar } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
+import { ENTITY_COLORS } from '@/shared/config/colors';
 import type { SplitParticipantView } from '../model/useSplitTransactionEdit';
 
 defineProps<{
@@ -18,6 +18,12 @@ const emit = defineEmits<{
   remove: [debtId: string];
   add: [name: string, amount: number];
 }>();
+
+function getParticipantColor(id: string): string {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = ((hash << 5) - hash + id.charCodeAt(i)) | 0;
+  return ENTITY_COLORS[Math.abs(hash) % ENTITY_COLORS.length];
+}
 
 const newName = ref('');
 const newAmount = ref(0);
@@ -73,7 +79,7 @@ function handleAdd() {
       class="flex items-center justify-between p-2.5 rounded-lg bg-surface-secondary-light dark:bg-surface-secondary-dark"
     >
       <div class="flex items-center gap-2 min-w-0 flex-1">
-        <InitialAvatar :name="p.personName" color="#3b82f6" size="sm" />
+        <InitialAvatar :name="p.personName" :color="getParticipantColor(p.debtId)" size="sm" />
         <div class="min-w-0">
           <input
             v-if="editable && !p.isLocked"
