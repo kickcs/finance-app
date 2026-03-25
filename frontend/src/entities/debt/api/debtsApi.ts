@@ -1,5 +1,6 @@
 import { http, HttpError } from '@/shared/api/http';
 import type { Debt, DebtInsert } from '@/shared/api/database.types';
+import type { DebtsPaginatedCursor, DebtsFilters, PaginatedDebtsResult } from '../model/types';
 
 // Response type from NestJS backend (camelCase)
 interface DebtResponse {
@@ -23,6 +24,23 @@ interface DebtResponse {
   closedAt: string | null;
   forgivenAmount: number;
   isPrivate: boolean;
+}
+
+interface DebtGroupBackendResponse {
+  personName: string;
+  debtType: 'given' | 'taken';
+  debts: DebtResponse[];
+}
+
+interface PaginatedDebtsBackendResponse {
+  groups: DebtGroupBackendResponse[];
+  totalSummary: {
+    totalGiven: Record<string, number>;
+    totalTaken: Record<string, number>;
+  };
+  nextCursor: { personName: string; debtType: string; createdAt: string } | null;
+  hasMore: boolean;
+  totalDebtsCount: number;
 }
 
 function transformDebt(debt: DebtResponse): Debt {
@@ -55,6 +73,40 @@ export const debtsApi = {
     // Backend gets userId from JWT token — _userId kept for caller compatibility
     const data = await http.get<DebtResponse[]>('/debts');
     return data.map(transformDebt);
+  },
+
+  async getPaginated(
+    _userId: string,
+    pageSize: number = 10,
+    cursor?: DebtsPaginatedCursor,
+    filters?: DebtsFilters,
+  ): Promise<PaginatedDebtsResult> {
+    const params: Record<string, string | number | boolean> = { pageSize };
+    if (cursor) {
+      params.cursorPersonName = cursor.personName;
+      params.cursorDebtType = cursor.debtType;
+      params.cursorCreatedAt = cursor.createdAt;
+    }
+    if (filters?.status) params.status = filters.status;
+    if (filters?.currency) params.currency = filters.currency;
+    if (filters?.personName) params.personName = filters.personName;
+
+    const data = await http.get<PaginatedDebtsBackendResponse>('/debts/paginated', { params });
+
+    return {
+      groups: data.groups.map((g) => ({
+        person_name: g.personName,
+        debt_type: g.debtType,
+        debts: g.debts.map(transformDebt),
+      })),
+      totalSummary: {
+        totalGiven: data.totalSummary.totalGiven,
+        totalTaken: data.totalSummary.totalTaken,
+      },
+      nextCursor: data.nextCursor,
+      hasMore: data.hasMore,
+      totalDebtsCount: data.totalDebtsCount,
+    };
   },
 
   async getById(debtId: string): Promise<Debt | null> {

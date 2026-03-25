@@ -2,3 +2,4 @@ export { debtsApi } from './debtsApi';
 export { useDebts } from './useDebts';
 export { debtQueryKeys, type DebtQueryKeys } from './queryKeys';
 export { useDebtTransactions } from './useDebtTransactions';
+export { useInfiniteDebts } from './useInfiniteDebts';
