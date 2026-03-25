@@ -75,7 +75,13 @@ function handleAdd() {
       <div class="flex items-center gap-2 min-w-0 flex-1">
         <InitialAvatar :name="p.personName" color="#3b82f6" size="sm" />
         <div class="min-w-0">
-          <div class="text-sm text-text-primary-light dark:text-text-primary-dark truncate">
+          <input
+            v-if="editable && !p.isLocked"
+            :value="p.personName"
+            class="text-sm text-text-primary-light dark:text-text-primary-dark bg-transparent outline-none border-b border-transparent focus:border-border-light dark:focus:border-border-dark truncate w-full"
+            @blur="emit('update-name', p.debtId, ($event.target as HTMLInputElement).value)"
+          />
+          <div v-else class="text-sm text-text-primary-light dark:text-text-primary-dark truncate">
             {{ p.personName }}
           </div>
           <div v-if="p.hasPayments" class="text-[11px] text-warning">

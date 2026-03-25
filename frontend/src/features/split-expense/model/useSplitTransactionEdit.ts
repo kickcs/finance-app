@@ -120,7 +120,7 @@ export function useSplitTransactionEdit(
   });
 
   const totalAssigned = computed(() => {
-    return participants.value.reduce((sum, p) => sum + p.amount, 0) + Math.max(0, myShare.value);
+    return participants.value.reduce((sum, p) => sum + p.amount, 0) + myShare.value;
   });
 
   const isBalanced = computed(() => {
