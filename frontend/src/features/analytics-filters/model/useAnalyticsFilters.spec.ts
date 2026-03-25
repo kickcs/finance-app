@@ -1,4 +1,19 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { ref } from 'vue';
+
+vi.mock('@/shared/lib/hooks/useFinancialPeriod', () => ({
+  useFinancialPeriod: () => ({
+    startDay: ref(1),
+    isCustomPeriod: ref(false),
+    currentPeriod: ref({ year: new Date().getFullYear(), month: new Date().getMonth() + 1 }),
+    currentBounds: ref({
+      start: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+      end: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1),
+    }),
+    daysRemaining: ref(15),
+  }),
+}));
+
 import { useAnalyticsFilters } from './useAnalyticsFilters';
 
 // ---------------------------------------------------------------------------
