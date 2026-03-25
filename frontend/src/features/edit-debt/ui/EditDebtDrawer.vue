@@ -99,6 +99,7 @@ async function handleSubmit() {
           </DrawerTitle>
           <button
             type="button"
+            aria-label="Закрыть"
             class="w-8 h-8 rounded-lg flex items-center justify-center text-text-secondary-light dark:text-text-secondary-dark hover:bg-surface-light dark:hover:bg-surface-dark transition-colors"
             @click="emit('update:open', false)"
           >

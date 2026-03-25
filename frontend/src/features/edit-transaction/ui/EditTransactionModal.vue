@@ -57,6 +57,7 @@ watch(
       categoryId.value = t.category_id;
       description.value = t.description || '';
       date.value = t.date ? t.date.split('T')[0] : '';
+      amountBeforeEdit.value = t.amount;
     }
   },
   { immediate: true },
@@ -84,22 +85,14 @@ const {
 
 const showAmountStrategyDialog = ref(false);
 const showSplitDeleteConfirm = ref(false);
-// Track original amount at modal open for split redistribution
+const isConfirming = ref(false);
 const amountBeforeEdit = ref(0);
-
-watch(
-  () => props.transaction,
-  (t) => {
-    if (t) amountBeforeEdit.value = t.amount;
-  },
-  { immediate: true },
-);
 
 function handleAmountInput(value: string | number) {
   amount.value = Number(value) || 0;
 }
 
-function handleAmountBlur() {
+function checkAmountChange() {
   if (hasSplit.value && amount.value !== amountBeforeEdit.value) {
     showAmountStrategyDialog.value = true;
   }
@@ -157,18 +150,24 @@ function close() {
 }
 
 async function confirm() {
-  if (hasSplit.value) {
-    const splitSuccess = await saveSplitChanges();
-    if (!splitSuccess) return;
+  if (isConfirming.value) return;
+  isConfirming.value = true;
+  try {
+    if (hasSplit.value) {
+      const splitSuccess = await saveSplitChanges();
+      if (!splitSuccess) return;
+    }
+    emit('confirm', {
+      type: type.value,
+      amount: amount.value,
+      account_id: accountId.value,
+      category_id: categoryId.value,
+      description: description.value || null,
+      date: date.value,
+    });
+  } finally {
+    isConfirming.value = false;
   }
-  emit('confirm', {
-    type: type.value,
-    amount: amount.value,
-    account_id: accountId.value,
-    category_id: categoryId.value,
-    description: description.value || null,
-    date: date.value,
-  });
 }
 
 const isFormValid = computed(() => {
@@ -358,7 +357,8 @@ const isFormValid = computed(() => {
         type="number"
         :suffix="transaction!.currency"
         @update:model-value="handleAmountInput($event)"
-        @blur="handleAmountBlur"
+        @blur="checkAmountChange"
+        @keydown.enter="checkAmountChange"
       />
 
       <!-- Category Chips -->
@@ -434,13 +434,7 @@ const isFormValid = computed(() => {
           <UButton variant="secondary" size="sm" full-width @click="showSplitDeleteConfirm = false">
             Отмена
           </UButton>
-          <UButton
-            variant="primary"
-            size="sm"
-            full-width
-            class="!bg-danger hover:!bg-danger/90"
-            @click="confirmSplitDelete"
-          >
+          <UButton variant="danger" size="sm" full-width @click="confirmSplitDelete">
             Удалить
           </UButton>
         </div>
@@ -456,13 +450,7 @@ const isFormValid = computed(() => {
       <!-- Transfer/Adjustment Actions: Cancel + Delete -->
       <div v-else-if="isTransfer || isAdjustment" class="flex gap-2 w-full">
         <UButton variant="secondary" size="sm" full-width @click="close">Отмена</UButton>
-        <UButton
-          variant="primary"
-          size="sm"
-          full-width
-          class="!bg-danger hover:!bg-danger/90"
-          @click="handleDelete()"
-        >
+        <UButton variant="danger" size="sm" full-width @click="handleDelete()">
           <UIcon name="delete" size="xs" class="mr-1" />
           Удалить
         </UButton>
@@ -470,7 +458,13 @@ const isFormValid = computed(() => {
 
       <!-- Regular Actions: Delete + Cancel + Save -->
       <div v-else class="flex gap-2 w-full">
-        <UButton variant="ghost" size="sm" class="!text-danger shrink-0" @click="handleDelete()">
+        <UButton
+          variant="ghost"
+          size="sm"
+          class="!text-danger shrink-0"
+          aria-label="Удалить"
+          @click="handleDelete()"
+        >
           <UIcon name="delete" size="sm" />
         </UButton>
         <UButton variant="secondary" size="sm" full-width @click="close">Отмена</UButton>
@@ -478,7 +472,7 @@ const isFormValid = computed(() => {
           variant="primary"
           size="sm"
           full-width
-          :loading="isUpdating"
+          :loading="isUpdating || isConfirming"
           :disabled="!isFormValid"
           @click="confirm"
         >

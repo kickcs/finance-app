@@ -84,8 +84,10 @@ function handleAdd() {
           <input
             v-if="editable && !p.isLocked"
             :value="p.personName"
+            :aria-label="`Имя участника ${p.personName}`"
             class="text-sm text-text-primary-light dark:text-text-primary-dark bg-transparent outline-none border-b border-transparent focus:border-border-light dark:focus:border-border-dark truncate w-full"
             @blur="emit('update-name', p.debtId, ($event.target as HTMLInputElement).value)"
+            @keydown.enter="($event.target as HTMLInputElement).blur()"
           />
           <div v-else class="text-sm text-text-primary-light dark:text-text-primary-dark truncate">
             {{ p.personName }}
@@ -110,6 +112,7 @@ function handleAdd() {
           <input
             :value="p.amount"
             type="number"
+            :aria-label="`Сумма для ${p.personName}`"
             class="w-20 text-right text-sm font-medium bg-transparent border-b border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark outline-none px-1 py-0.5"
             @input="
               emit(
@@ -120,6 +123,7 @@ function handleAdd() {
             "
           />
           <button
+            :aria-label="`Удалить ${p.personName}`"
             class="w-6 h-6 flex items-center justify-center rounded-full hover:bg-danger/10 transition-colors"
             @click="emit('remove', p.debtId)"
           >
@@ -158,6 +162,7 @@ function handleAdd() {
       <input
         v-model="newName"
         placeholder="Имя"
+        aria-label="Имя нового участника"
         class="flex-1 min-w-0 text-sm px-2.5 py-1.5 rounded-lg border border-border-light dark:border-border-dark bg-transparent text-text-primary-light dark:text-text-primary-dark outline-none placeholder:text-text-tertiary-light dark:placeholder:text-text-tertiary-dark"
         @keyup.enter="handleAdd"
       />
@@ -165,10 +170,12 @@ function handleAdd() {
         v-model.number="newAmount"
         type="number"
         placeholder="0"
+        aria-label="Сумма нового участника"
         class="w-20 text-right text-sm px-2 py-1.5 rounded-lg border border-border-light dark:border-border-dark bg-transparent text-text-primary-light dark:text-text-primary-dark outline-none"
         @keyup.enter="handleAdd"
       />
       <button
+        aria-label="Добавить участника"
         :disabled="!newName.trim() || newAmount <= 0"
         class="w-7 h-7 flex items-center justify-center rounded-full bg-surface-secondary-light dark:bg-surface-secondary-dark disabled:opacity-30 transition-opacity shrink-0"
         @click="handleAdd"
