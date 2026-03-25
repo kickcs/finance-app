@@ -1,7 +1,8 @@
 import { ref, computed, watch, type MaybeRefOrGetter, toValue } from 'vue';
 import { useDebts, type Debt } from '@/entities/debt';
-import { transactionsApi, transactionQueryKeys } from '@/entities/transaction';
+import { transactionsApi } from '@/entities/transaction';
 import { queryClient } from '@/shared/api/queryClient';
+import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
 import { useToast } from '@/shared/ui';
 import { useHaptics } from '@/shared/lib/haptics';
 
@@ -91,10 +92,16 @@ export function useEditDebt(
 
       await updateDebt(d.id, updates);
 
-      // Update linked creation transaction amount if debt amount changed
+      // Update linked creation transaction and refresh caches
       if (updates.total_amount !== undefined && d.transaction_id) {
+        const uid = toValue(userId);
         await transactionsApi.update(d.transaction_id, { amount: updates.total_amount });
-        queryClient.invalidateQueries({ queryKey: transactionQueryKeys.all });
+        if (uid) {
+          await Promise.all([
+            invalidateTransactionRelated(queryClient, uid),
+            invalidateAccountRelated(queryClient, uid),
+          ]);
+        }
       }
       trigger('success');
       toast({ title: 'Долг обновлён' });
