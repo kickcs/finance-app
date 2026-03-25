@@ -95,15 +95,18 @@ export function useEditDebt(
 
       await updateDebt(d.id, updates);
 
-      // Update linked creation transaction and refresh caches
+      // Update linked creation transaction and force-refetch caches
       if (updates.total_amount !== undefined && d.transaction_id) {
         const uid = toValue(userId);
         await transactionsApi.update(d.transaction_id, { amount: updates.total_amount });
         if (uid) {
+          // Use refetchQueries to force immediate data refresh (not just mark stale)
           await Promise.all([
             invalidateTransactionRelated(queryClient, uid),
             invalidateAccountRelated(queryClient, uid),
           ]);
+          // Force refetch active queries so UI updates immediately
+          await queryClient.refetchQueries({ type: 'active' });
         }
       }
       trigger('success');
