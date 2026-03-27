@@ -444,6 +444,7 @@ onMounted(() => {
               :currency="currency"
               :period-label="pacePeriodLabel"
               :loading="paceLoading"
+              class="lg:max-w-lg"
             />
 
             <!-- Daily Stats + Savings side-by-side on desktop -->
