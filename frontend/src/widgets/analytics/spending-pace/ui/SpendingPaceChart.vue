@@ -3,6 +3,8 @@ import { computed, ref } from 'vue';
 import { useTimeoutFn } from '@vueuse/core';
 import { UCard, Skeleton } from '@/shared/ui';
 import { formatCurrency, COMPACT_FORMAT } from '@/shared/lib/format/currency';
+import { formatDate } from '@/shared/lib/format/date';
+import { toLocalISODate } from '@/shared/lib/date';
 import type { SpendingPaceEntry } from '../types';
 
 const props = withDefaults(
@@ -134,37 +136,20 @@ const labelStep = computed(() => {
   return 7;
 });
 
-// X-axis date labels from entry dates
-const SHORT_MONTHS = [
-  'янв',
-  'фев',
-  'мар',
-  'апр',
-  'мая',
-  'июн',
-  'июл',
-  'авг',
-  'сен',
-  'окт',
-  'ноя',
-  'дек',
-];
-
+// Format ISO date string as short label (e.g. "5 мая")
 function formatDayLabel(dateStr: string): string {
-  const [, m, d] = dateStr.split('-').map(Number);
-  return `${d} ${SHORT_MONTHS[m - 1]}`;
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return formatDate(new Date(y, m - 1, d), { format: 'short' });
 }
 
-// Compute date string for any day number in the period
+// Compute ISO date string for any day number in the period
 function dateForDay(dayNum: number): string {
   if (!hasEntries.value) return '';
   const first = props.entries[0];
   const [y, m, d] = first.date.split('-').map(Number);
   const base = new Date(y, m - 1, d);
   base.setDate(base.getDate() + (dayNum - first.day));
-  const mm = String(base.getMonth() + 1).padStart(2, '0');
-  const dd = String(base.getDate()).padStart(2, '0');
-  return `${base.getFullYear()}-${mm}-${dd}`;
+  return toLocalISODate(base);
 }
 
 // Y-axis ticks: 0 and 50% of budget (100% handled by dedicated budget line)
