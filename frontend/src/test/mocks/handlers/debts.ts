@@ -1,5 +1,28 @@
 import { http, HttpResponse } from 'msw';
 
+export interface MockDebtResponse {
+  id: string;
+  userId: string;
+  name: string;
+  totalAmount: number;
+  remainingAmount: number;
+  monthlyPayment: number | null;
+  nextPaymentDate: string | null;
+  createdAt: string;
+  debtType: 'given' | 'taken';
+  personName: string;
+  accountId: string;
+  transactionId: string | null;
+  closeTransactionId: string | null;
+  isClosed: boolean;
+  currency: string;
+  sourceTransactionId: string | null;
+  description: string | null;
+  closedAt: string | null;
+  forgivenAmount: number;
+  isPrivate: boolean;
+}
+
 export function buildMockDebtResponse(
   body: Record<string, unknown>,
   overrides: Record<string, unknown> = {},
@@ -31,7 +54,7 @@ export function buildMockDebtResponse(
 
 // --- Mock debt objects (camelCase = backend format) ---
 
-export const mockGivenDebtResponse = {
+export const mockGivenDebtResponse: MockDebtResponse = {
   id: 'debt-1',
   userId: 'test-user-1',
   name: 'Долг от Алексей',
@@ -54,7 +77,7 @@ export const mockGivenDebtResponse = {
   isPrivate: false,
 };
 
-export const mockTakenDebtResponse = {
+export const mockTakenDebtResponse: MockDebtResponse = {
   id: 'debt-2',
   userId: 'test-user-1',
   name: 'Долг для Мария',
@@ -77,7 +100,7 @@ export const mockTakenDebtResponse = {
   isPrivate: false,
 };
 
-export const mockClosedDebtResponse = {
+export const mockClosedDebtResponse: MockDebtResponse = {
   id: 'debt-3',
   userId: 'test-user-1',
   name: 'Долг от Иван',
@@ -119,8 +142,8 @@ export const mockSecondGivenDebtResponse = {
   transactionId: 'tx-debt-5',
 };
 
-export function buildPaginatedDebtsResponse(debts: (typeof mockGivenDebtResponse)[]) {
-  const groupMap = new Map<string, (typeof mockGivenDebtResponse)[]>();
+export function buildPaginatedDebtsResponse(debts: MockDebtResponse[]) {
+  const groupMap = new Map<string, MockDebtResponse[]>();
   for (const debt of debts) {
     const key = `${debt.personName}::${debt.debtType}`;
     if (!groupMap.has(key)) groupMap.set(key, []);
