@@ -27,6 +27,7 @@ const props = withDefaults(
     // Accounts
     accounts: AccountWithBalances[];
     accountsLoading: boolean;
+    hiddenAccountCount?: number;
     // Top Expenses
     categoryBreakdown: CategoryBreakdown[];
     analyticsLoading: boolean;
@@ -145,6 +146,7 @@ const RemindersSection = defineAsyncComponent({
           :accounts="accounts"
           :loading="accountsLoading"
           :hidden="isHidden"
+          :hidden-count="hiddenAccountCount"
           class="hover:shadow-md transition-shadow duration-300 rounded-3xl"
           @account-click="emit('account-click', $event)"
           @add-click="emit('add-account')"

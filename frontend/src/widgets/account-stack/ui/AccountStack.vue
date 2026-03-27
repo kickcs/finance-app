@@ -1,12 +1,17 @@
 <script setup lang="ts">
 import { AccountCard, type AccountWithBalances } from '@/entities/account';
 import { SectionHeader, EmptyState, Skeleton } from '@/shared/ui';
+import { pluralize } from '@/shared/lib/format/pluralize';
 
-defineProps<{
-  accounts: AccountWithBalances[];
-  loading?: boolean;
-  hidden?: boolean;
-}>();
+withDefaults(
+  defineProps<{
+    accounts: AccountWithBalances[];
+    loading?: boolean;
+    hidden?: boolean;
+    hiddenCount?: number;
+  }>(),
+  { hiddenCount: 0 },
+);
 
 defineEmits<{
   'account-click': [account: AccountWithBalances];
@@ -32,25 +37,40 @@ defineEmits<{
     </div>
 
     <!-- Account List -->
-    <div
-      v-else-if="accounts.length > 0"
-      class="rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark overflow-hidden"
-    >
-      <AccountCard
-        v-for="(account, index) in accounts"
-        :key="account.id"
-        :account="account"
-        :compact="true"
-        :hidden="hidden"
-        :class="[
-          '!rounded-none !border-0',
-          index < accounts.length - 1 && 'border-b border-border-light dark:border-border-dark',
-        ]"
-        @click="$emit('account-click', account)"
-      />
-    </div>
+    <template v-else-if="accounts.length > 0">
+      <div
+        class="rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark overflow-hidden"
+      >
+        <AccountCard
+          v-for="(account, index) in accounts"
+          :key="account.id"
+          :account="account"
+          :compact="true"
+          :hidden="hidden"
+          :class="[
+            '!rounded-none !border-0',
+            index < accounts.length - 1 && 'border-b border-border-light dark:border-border-dark',
+          ]"
+          @click="$emit('account-click', account)"
+        />
+      </div>
+      <p
+        v-if="hiddenCount > 0"
+        class="text-body-sm text-text-tertiary-light dark:text-text-tertiary-dark text-center"
+      >
+        {{ hiddenCount }}
+        {{ pluralize(hiddenCount, 'скрытый счёт', 'скрытых счёта', 'скрытых счетов') }}
+      </p>
+    </template>
 
-    <!-- Empty state -->
+    <p
+      v-else-if="hiddenCount > 0"
+      class="text-body-sm text-text-tertiary-light dark:text-text-tertiary-dark text-center py-4"
+    >
+      {{ hiddenCount }}
+      {{ pluralize(hiddenCount, 'скрытый счёт', 'скрытых счёта', 'скрытых счетов') }}
+    </p>
+
     <EmptyState
       v-else
       variant="inline"
