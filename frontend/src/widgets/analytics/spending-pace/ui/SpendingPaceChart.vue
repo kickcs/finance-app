@@ -3,13 +3,7 @@ import { computed, ref } from 'vue';
 import { useTimeoutFn } from '@vueuse/core';
 import { UCard, Skeleton } from '@/shared/ui';
 import { formatCurrency, COMPACT_FORMAT } from '@/shared/lib/format/currency';
-
-export interface SpendingPaceEntry {
-  day: number;
-  actual: number;
-  ideal: number;
-  date: string;
-}
+import type { SpendingPaceEntry } from '../types';
 
 const props = withDefaults(
   defineProps<{
