@@ -426,31 +426,40 @@ onMounted(() => {
           </UCard>
 
           <template v-else>
-            <!-- Income/Expense Bars -->
-            <IncomeExpenseBar
-              :income="convertedIncome"
-              :expense="convertedExpense"
-              :currency="currency"
-              :loading="analyticsLoading"
-            />
+            <!-- Desktop: 2-column grid / Mobile: vertical stack -->
+            <div class="flex flex-col lg:grid lg:grid-cols-2 lg:gap-4 space-y-4 lg:space-y-0">
+              <!-- Income/Expense — full width -->
+              <div class="lg:col-span-2">
+                <IncomeExpenseBar
+                  :income="convertedIncome"
+                  :expense="convertedExpense"
+                  :currency="currency"
+                  :loading="analyticsLoading"
+                />
+              </div>
 
-            <!-- Spending Pace -->
-            <SpendingPaceChart
-              v-if="budget || paceLoading"
-              :entries="paceEntries"
-              :budget-amount="paceBudgetAmount"
-              :total-days="paceTotalDays"
-              :today-index="paceTodayIndex"
-              :currency="currency"
-              :period-label="pacePeriodLabel"
-              :loading="paceLoading"
-              class="lg:max-w-lg"
-            />
+              <!-- Spending Pace — left column -->
+              <SpendingPaceChart
+                v-if="budget || paceLoading"
+                :entries="paceEntries"
+                :budget-amount="paceBudgetAmount"
+                :total-days="paceTotalDays"
+                :today-index="paceTodayIndex"
+                :currency="currency"
+                :period-label="pacePeriodLabel"
+                :loading="paceLoading"
+              />
 
-            <!-- Daily Stats + Savings side-by-side on desktop -->
-            <div class="flex flex-col lg:flex-row lg:gap-4">
-              <!-- Daily Stats Cards -->
-              <div class="lg:flex-1">
+              <!-- Savings Gauge — right column (pairs with pace chart) -->
+              <SavingsGauge
+                :total-income="convertedIncome"
+                :total-expense="convertedExpense"
+                :available-balance="availableBalance"
+                :currency="currency"
+              />
+
+              <!-- Daily Stats — full width -->
+              <div class="lg:col-span-2">
                 <DailyStatsCards
                   :total-expense="convertedExpense"
                   :available-balance="availableBalance"
@@ -459,16 +468,6 @@ onMounted(() => {
                   :currency="currency"
                   :is-past-period="isPastPeriod"
                   :balance-label="balanceLabel"
-                />
-              </div>
-
-              <!-- Savings Gauge -->
-              <div class="mt-4 lg:mt-0 lg:flex-1">
-                <SavingsGauge
-                  :total-income="convertedIncome"
-                  :total-expense="convertedExpense"
-                  :available-balance="availableBalance"
-                  :currency="currency"
                 />
               </div>
             </div>
