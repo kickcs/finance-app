@@ -373,22 +373,34 @@ const yTicks = computed(() => {
 
       <!-- Tooltip (fixed below chart) -->
       <div
-        class="mt-2 px-3 py-1.5 bg-surface-light dark:bg-surface-dark rounded-lg flex items-center gap-2 text-sm min-h-[32px]"
+        class="relative mt-2 px-3 py-1.5 bg-surface-light dark:bg-surface-dark rounded-lg text-sm h-[32px] overflow-hidden"
       >
-        <template v-if="activeEntry">
+        <!-- Active entry data -->
+        <div
+          class="absolute inset-0 px-3 py-1.5 flex items-center gap-2 transition-opacity duration-150"
+          :class="activeEntry ? 'opacity-100' : 'opacity-0'"
+        >
           <span class="text-text-secondary-light dark:text-text-secondary-dark">
-            {{ formatDayLabel(activeEntry.date) }}
+            {{ activeEntry ? formatDayLabel(activeEntry.date) : '' }}
           </span>
           <span class="font-semibold text-text-primary-light dark:text-text-primary-dark">
-            {{ formatCurrency(activeEntry.actual, currency, COMPACT_FORMAT) }}
+            {{ activeEntry ? formatCurrency(activeEntry.actual, currency, COMPACT_FORMAT) : '' }}
           </span>
           <span v-if="hasBudget" class="text-text-tertiary-light dark:text-text-tertiary-dark">
-            / {{ formatCurrency(activeEntry.ideal, currency, COMPACT_FORMAT) }}
+            {{
+              activeEntry ? `/ ${formatCurrency(activeEntry.ideal, currency, COMPACT_FORMAT)}` : ''
+            }}
           </span>
-        </template>
-        <span v-else class="text-text-tertiary-light dark:text-text-tertiary-dark">
-          Нажмите на точку графика
-        </span>
+        </div>
+        <!-- Placeholder -->
+        <div
+          class="absolute inset-0 px-3 py-1.5 flex items-center transition-opacity duration-150"
+          :class="activeEntry ? 'opacity-0' : 'opacity-100'"
+        >
+          <span class="text-text-tertiary-light dark:text-text-tertiary-dark">
+            Нажмите на точку графика
+          </span>
+        </div>
       </div>
 
       <!-- Status summary -->
