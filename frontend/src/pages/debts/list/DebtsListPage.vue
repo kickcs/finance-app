@@ -358,7 +358,7 @@ useIntersectionObserver(
 
                 <!-- Close All (person filter) -->
                 <UButton
-                  v-if="personFilter && allDebtsFromGroups.length > 1"
+                  v-if="personFilter && groups.length > 1 && allDebtsFromGroups.length > 1"
                   variant="primary"
                   full-width
                   data-testid="close-all-btn"

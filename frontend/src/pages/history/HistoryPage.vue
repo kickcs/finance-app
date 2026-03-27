@@ -133,7 +133,7 @@ const {
   isDeleting,
   editError,
   handleTransactionClick,
-  handleUpdateTransaction,
+  saveTransaction,
   handleDeleteTransaction,
   handleDeleteClick,
   handleSwipeDelete,
@@ -171,8 +171,7 @@ function handleDetailEdit() {
 
 function handleDetailDelete() {
   if (!selectedDetailTransaction.value) return;
-  selectedTransaction.value = selectedDetailTransaction.value;
-  showDeleteModal.value = true;
+  handleSwipeDelete(selectedDetailTransaction.value);
 }
 
 async function handleDeleteTransactionAndClear() {
@@ -433,7 +432,8 @@ async function handleRefresh() {
       :currency="currency"
       :is-updating="isUpdating"
       :error="editError"
-      @confirm="handleUpdateTransaction"
+      :on-save="saveTransaction"
+      @saved="closeEditModal"
       @cancel="closeEditModal"
       @delete="handleDeleteClick"
     />

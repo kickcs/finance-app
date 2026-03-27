@@ -21,12 +21,9 @@ export function useTransactionEditFlow(userId: MaybeRefOrGetter<string | null>) 
     remove: removeTransactionFn,
   } = useEditTransaction(userId);
 
-  async function handleUpdateTransaction(updates: Partial<Transaction>) {
-    if (!selectedTransaction.value) return;
-    const success = await updateTransactionFn(selectedTransaction.value, updates);
-    if (success) {
-      closeEditModal();
-    }
+  async function saveTransaction(updates: Partial<Transaction>): Promise<boolean> {
+    if (!selectedTransaction.value) return false;
+    return updateTransactionFn(selectedTransaction.value, updates);
   }
 
   async function handleDeleteTransaction() {
@@ -56,7 +53,7 @@ export function useTransactionEditFlow(userId: MaybeRefOrGetter<string | null>) 
     isDeleting,
     editError,
     handleTransactionClick,
-    handleUpdateTransaction,
+    saveTransaction,
     handleDeleteTransaction,
     handleDeleteClick,
     handleSwipeDelete,

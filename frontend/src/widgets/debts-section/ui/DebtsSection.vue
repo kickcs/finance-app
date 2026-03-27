@@ -242,9 +242,9 @@ const overdueCount = computed(() => {
       и ещё {{ hiddenCount }} {{ pluralize(hiddenCount, 'долг', 'долга', 'долгов') }}
     </p>
 
-    <!-- Empty state for current tab -->
+    <!-- Empty state for current tab (no debts of this type, but other type exists) -->
     <EmptyState
-      v-else-if="activeDebts.length > 0 && !loading"
+      v-if="filteredDebts.length === 0 && activeDebts.length > 0 && !loading"
       variant="inline"
       :icon="activeTab === 'given' ? 'arrow_upward' : 'arrow_downward'"
       :title="activeTab === 'given' ? 'Нет долгов «вам должны»' : 'Нет долгов «вы должны»'"
@@ -253,7 +253,7 @@ const overdueCount = computed(() => {
 
     <!-- Empty state — no debts at all -->
     <EmptyState
-      v-else-if="!loading"
+      v-else-if="activeDebts.length === 0 && !loading"
       variant="inline"
       icon="check_circle"
       title="Вы без долгов!"

@@ -4,12 +4,12 @@ import { ROUTE_NAMES } from '@/app/router/routeNames';
 import {
   useInfiniteDebts,
   getDebtDisplayName,
+  debtsApi,
+  debtQueryKeys,
   type Debt,
   type DebtGroupResponse,
   type DebtsFilters,
 } from '@/entities/debt';
-import { debtsApi } from '@/entities/debt/api/debtsApi';
-import { debtQueryKeys } from '@/entities/debt/api/queryKeys';
 import { useAccounts } from '@/entities/account';
 import { useCloseAllDebts, useCloseDebt } from '@/features/close-debt';
 import { usePartialPayment } from '@/features/partial-payment';

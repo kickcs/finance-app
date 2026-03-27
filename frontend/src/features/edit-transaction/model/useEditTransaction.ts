@@ -2,7 +2,7 @@ import { ref, type MaybeRefOrGetter, toValue } from 'vue';
 import { transactionsApi } from '@/entities/transaction';
 import { debtsApi } from '@/entities/debt';
 import { queryClient } from '@/shared/api/queryClient';
-import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
+import { invalidateDebtRelated } from '@/shared/api/invalidation';
 import { useToast } from '@/shared/ui';
 import type { Transaction } from '@/shared/api/database.types';
 
@@ -34,11 +34,8 @@ export function useEditTransaction(userId: MaybeRefOrGetter<string | null>) {
       // Currently, amount/type changes may not update balances correctly
       await transactionsApi.update(transaction.id, updates);
 
-      // Invalidate all related caches
-      await Promise.all([
-        invalidateTransactionRelated(queryClient, toValue(userId) ?? ''),
-        invalidateAccountRelated(queryClient, toValue(userId) ?? ''),
-      ]);
+      // invalidateDebtRelated covers debts + transactions + accounts
+      await invalidateDebtRelated(queryClient, toValue(userId) ?? '');
 
       toast({ title: 'Транзакция обновлена', variant: 'success' });
       return true;
@@ -85,11 +82,8 @@ export function useEditTransaction(userId: MaybeRefOrGetter<string | null>) {
       // Note: Backend automatically reverses account balance when deleting
       await transactionsApi.delete(transaction.id);
 
-      // Invalidate all related caches
-      await Promise.all([
-        invalidateTransactionRelated(queryClient, toValue(userId) ?? ''),
-        invalidateAccountRelated(queryClient, toValue(userId) ?? ''),
-      ]);
+      // invalidateDebtRelated covers debts + transactions + accounts
+      await invalidateDebtRelated(queryClient, toValue(userId) ?? '');
 
       toast({ title: 'Транзакция удалена', variant: 'success' });
       return true;
