@@ -85,10 +85,15 @@ export function useDashboardData() {
     () => new Set(dashboardSettings.value?.hidden_account_ids ?? []),
   );
 
+  const visibleAccounts = computed(() =>
+    accounts.value.filter((a) => !hiddenAccountIds.value.has(a.id)),
+  );
+
+  const hiddenAccountCount = computed(() => accounts.value.length - visibleAccounts.value.length);
+
   const totalBalance = computed(() => {
     const filteredByCurrency: Record<string, number> = {};
-    for (const account of accounts.value) {
-      if (hiddenAccountIds.value.has(account.id)) continue;
+    for (const account of visibleAccounts.value) {
       for (const balance of account.balances) {
         filteredByCurrency[balance.currency] =
           (filteredByCurrency[balance.currency] ?? 0) + balance.balance;
@@ -140,6 +145,8 @@ export function useDashboardData() {
     currency,
     userName,
     accounts,
+    visibleAccounts,
+    hiddenAccountCount,
     debts,
     reminders,
     expenseCategories,

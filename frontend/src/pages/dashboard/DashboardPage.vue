@@ -83,6 +83,8 @@ const {
   currency,
   userName,
   accounts,
+  visibleAccounts,
+  hiddenAccountCount,
   debts,
   reminders,
   expenseCategories,
@@ -257,9 +259,10 @@ function handleSettingsClick() {
               :class="staggerClass('delay-300')"
             >
               <AccountStack
-                :accounts="accounts"
+                :accounts="visibleAccounts"
                 :loading="accountsLoading"
                 :hidden="isHidden"
+                :hidden-count="hiddenAccountCount"
                 @account-click="nav.toAccount"
                 @add-click="nav.toNewAccount"
                 @view-all="nav.toAccounts"
@@ -407,8 +410,9 @@ function handleSettingsClick() {
               :hint-dismissed="quickActionsHintDismissed"
               :quick-actions-hidden="quickActionsHidden"
               :quick-actions-loading="quickActionsLoading"
-              :accounts="accounts"
+              :accounts="visibleAccounts"
               :accounts-loading="accountsLoading"
+              :hidden-account-count="hiddenAccountCount"
               :category-breakdown="categoryBreakdown"
               :analytics-loading="analyticsLoading"
               :debts="debts"
