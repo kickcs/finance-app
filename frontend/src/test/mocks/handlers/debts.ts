@@ -119,7 +119,44 @@ export const mockSecondGivenDebtResponse = {
   transactionId: 'tx-debt-5',
 };
 
+export function buildPaginatedDebtsResponse(debts: (typeof mockGivenDebtResponse)[]) {
+  const groupMap = new Map<string, (typeof mockGivenDebtResponse)[]>();
+  for (const debt of debts) {
+    const key = `${debt.personName}::${debt.debtType}`;
+    if (!groupMap.has(key)) groupMap.set(key, []);
+    groupMap.get(key)!.push(debt);
+  }
+
+  const groups = Array.from(groupMap.entries()).map(([key, groupDebts]) => {
+    const [personName, debtType] = key.split('::');
+    return { personName, debtType, debts: groupDebts };
+  });
+
+  const totalGiven: Record<string, number> = {};
+  const totalTaken: Record<string, number> = {};
+  for (const debt of debts) {
+    if (debt.debtType === 'given') {
+      totalGiven[debt.currency] = (totalGiven[debt.currency] ?? 0) + debt.remainingAmount;
+    } else {
+      totalTaken[debt.currency] = (totalTaken[debt.currency] ?? 0) + debt.remainingAmount;
+    }
+  }
+
+  return {
+    groups,
+    totalSummary: { totalGiven, totalTaken },
+    nextCursor: null,
+    hasMore: false,
+    totalDebtsCount: debts.length,
+  };
+}
+
 export const debtHandlers = [
+  // GET paginated debts (must be before GET :id to avoid wildcard match)
+  http.get('*/api/debts/paginated', () => {
+    return HttpResponse.json(buildPaginatedDebtsResponse([]));
+  }),
+
   // GET single debt (must be before GET list to avoid wildcard match)
   http.get('*/api/debts/:id', ({ params }) => {
     const id = params.id as string;

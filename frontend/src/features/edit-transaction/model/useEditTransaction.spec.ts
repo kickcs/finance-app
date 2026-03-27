@@ -21,6 +21,7 @@ vi.mock('@/shared/ui', async (importOriginal) => {
 vi.mock('@/shared/api/invalidation', () => ({
   invalidateTransactionRelated: vi.fn().mockResolvedValue(undefined),
   invalidateAccountRelated: vi.fn().mockResolvedValue(undefined),
+  invalidateDebtRelated: vi.fn().mockResolvedValue(undefined),
 }));
 
 // ── Helpers ────────────────────────────────────────────────────────────────

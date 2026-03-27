@@ -10,7 +10,19 @@ import {
   mockTakenDebtResponse,
   mockClosedDebtResponse,
   mockSecondGivenDebtResponse,
+  buildPaginatedDebtsResponse,
 } from '@/test/mocks/handlers/debts';
+
+/** Алексей taken debt — used when we need 2 groups for the same person */
+const mockAlexeiTakenDebtResponse = {
+  ...mockGivenDebtResponse,
+  id: 'debt-alexei-taken',
+  name: 'Долг для Алексей',
+  debtType: 'taken' as const,
+  totalAmount: 20000,
+  remainingAmount: 20000,
+  transactionId: 'tx-debt-alexei-taken',
+};
 
 // Mock app router — vi.hoisted runs before vi.mock hoisting
 const { navigateBackMock } = vi.hoisted(() => ({
@@ -77,11 +89,11 @@ describe('DebtsListPage', () => {
       // Block debts response to keep loading state
       let resolveDebts!: () => void;
       server.use(
-        http.get('*/api/debts', async () => {
+        http.get('*/api/debts/paginated', async () => {
           await new Promise<void>((res) => {
             resolveDebts = res;
           });
-          return HttpResponse.json([]);
+          return HttpResponse.json(buildPaginatedDebtsResponse([]));
         }),
       );
 
@@ -113,8 +125,10 @@ describe('DebtsListPage', () => {
 
     it('shows debt groups when debts exist', async () => {
       server.use(
-        http.get('*/api/debts', () =>
-          HttpResponse.json([mockGivenDebtResponse, mockTakenDebtResponse]),
+        http.get('*/api/debts/paginated', () =>
+          HttpResponse.json(
+            buildPaginatedDebtsResponse([mockGivenDebtResponse, mockTakenDebtResponse]),
+          ),
         ),
       );
       const { wrapper } = await renderPage();
@@ -126,8 +140,10 @@ describe('DebtsListPage', () => {
 
     it('shows summary cards with totals', async () => {
       server.use(
-        http.get('*/api/debts', () =>
-          HttpResponse.json([mockGivenDebtResponse, mockTakenDebtResponse]),
+        http.get('*/api/debts/paginated', () =>
+          HttpResponse.json(
+            buildPaginatedDebtsResponse([mockGivenDebtResponse, mockTakenDebtResponse]),
+          ),
         ),
       );
       const { wrapper } = await renderPage();
@@ -147,7 +163,11 @@ describe('DebtsListPage', () => {
   // -----------------------------------------------------------------------
   describe('status filter', () => {
     it('shows active tab by default', async () => {
-      server.use(http.get('*/api/debts', () => HttpResponse.json([mockGivenDebtResponse])));
+      server.use(
+        http.get('*/api/debts/paginated', () =>
+          HttpResponse.json(buildPaginatedDebtsResponse([mockGivenDebtResponse])),
+        ),
+      );
       const { wrapper } = await renderPage();
 
       // Active debts should be visible, not closed empty state
@@ -157,9 +177,12 @@ describe('DebtsListPage', () => {
 
     it('switches to closed tab showing closed debts', async () => {
       server.use(
-        http.get('*/api/debts', () =>
-          HttpResponse.json([mockGivenDebtResponse, mockClosedDebtResponse]),
-        ),
+        http.get('*/api/debts/paginated', ({ request }) => {
+          const url = new URL(request.url);
+          const status = url.searchParams.get('status');
+          const debts = status === 'closed' ? [mockClosedDebtResponse] : [mockGivenDebtResponse];
+          return HttpResponse.json(buildPaginatedDebtsResponse(debts));
+        }),
       );
       const { wrapper } = await renderPage();
 
@@ -177,7 +200,15 @@ describe('DebtsListPage', () => {
     });
 
     it('shows closed empty state when no closed debts', async () => {
-      server.use(http.get('*/api/debts', () => HttpResponse.json([mockGivenDebtResponse])));
+      server.use(
+        http.get('*/api/debts/paginated', ({ request }) => {
+          const url = new URL(request.url);
+          const status = url.searchParams.get('status');
+          return HttpResponse.json(
+            buildPaginatedDebtsResponse(status === 'closed' ? [] : [mockGivenDebtResponse]),
+          );
+        }),
+      );
       const { wrapper } = await renderPage();
 
       // Switch to closed tab via UTabs component
@@ -197,8 +228,10 @@ describe('DebtsListPage', () => {
   describe('grouped view content', () => {
     it('shows person name headers in grouped view', async () => {
       server.use(
-        http.get('*/api/debts', () =>
-          HttpResponse.json([mockGivenDebtResponse, mockTakenDebtResponse]),
+        http.get('*/api/debts/paginated', () =>
+          HttpResponse.json(
+            buildPaginatedDebtsResponse([mockGivenDebtResponse, mockTakenDebtResponse]),
+          ),
         ),
       );
       const { wrapper } = await renderPage();
@@ -210,8 +243,10 @@ describe('DebtsListPage', () => {
 
     it('shows "Вам должны" and "Вы должны" labels in person headers', async () => {
       server.use(
-        http.get('*/api/debts', () =>
-          HttpResponse.json([mockGivenDebtResponse, mockTakenDebtResponse]),
+        http.get('*/api/debts/paginated', () =>
+          HttpResponse.json(
+            buildPaginatedDebtsResponse([mockGivenDebtResponse, mockTakenDebtResponse]),
+          ),
         ),
       );
       const { wrapper } = await renderPage();
@@ -222,12 +257,14 @@ describe('DebtsListPage', () => {
 
     it('groups multiple debts under same person', async () => {
       server.use(
-        http.get('*/api/debts', () =>
-          HttpResponse.json([
-            mockGivenDebtResponse,
-            mockSecondGivenDebtResponse,
-            mockTakenDebtResponse,
-          ]),
+        http.get('*/api/debts/paginated', () =>
+          HttpResponse.json(
+            buildPaginatedDebtsResponse([
+              mockGivenDebtResponse,
+              mockSecondGivenDebtResponse,
+              mockTakenDebtResponse,
+            ]),
+          ),
         ),
       );
       const { wrapper } = await renderPage();
@@ -266,12 +303,14 @@ describe('DebtsListPage', () => {
   describe('person filter', () => {
     it('filters debts by person from query param', async () => {
       server.use(
-        http.get('*/api/debts', () =>
-          HttpResponse.json([
-            mockGivenDebtResponse,
-            mockTakenDebtResponse,
-            mockSecondGivenDebtResponse,
-          ]),
+        http.get('*/api/debts/paginated', () =>
+          HttpResponse.json(
+            buildPaginatedDebtsResponse([
+              mockGivenDebtResponse,
+              mockTakenDebtResponse,
+              mockSecondGivenDebtResponse,
+            ]),
+          ),
         ),
       );
       const { wrapper } = await renderPage({ person: 'Алексей', type: 'given' });
@@ -284,8 +323,10 @@ describe('DebtsListPage', () => {
 
     it('shows filter indicator with person name', async () => {
       server.use(
-        http.get('*/api/debts', () =>
-          HttpResponse.json([mockGivenDebtResponse, mockSecondGivenDebtResponse]),
+        http.get('*/api/debts/paginated', () =>
+          HttpResponse.json(
+            buildPaginatedDebtsResponse([mockGivenDebtResponse, mockSecondGivenDebtResponse]),
+          ),
         ),
       );
       const { wrapper } = await renderPage({ person: 'Алексей' });
@@ -296,17 +337,24 @@ describe('DebtsListPage', () => {
     });
 
     it('shows clear filter button', async () => {
-      server.use(http.get('*/api/debts', () => HttpResponse.json([mockGivenDebtResponse])));
+      server.use(
+        http.get('*/api/debts/paginated', () =>
+          HttpResponse.json(buildPaginatedDebtsResponse([mockGivenDebtResponse])),
+        ),
+      );
       const { wrapper } = await renderPage({ person: 'Алексей' });
 
       const clearBtn = wrapper.find('[data-testid="clear-filter-btn"]');
       expect(clearBtn.exists()).toBe(true);
     });
 
-    it('shows "close all" button when >1 filtered debts for same person', async () => {
+    it('shows "close all" button when >1 groups for same person', async () => {
+      // Need 2 groups (given + taken) so groups.length > 1 condition is met
       server.use(
-        http.get('*/api/debts', () =>
-          HttpResponse.json([mockGivenDebtResponse, mockSecondGivenDebtResponse]),
+        http.get('*/api/debts/paginated', () =>
+          HttpResponse.json(
+            buildPaginatedDebtsResponse([mockGivenDebtResponse, mockAlexeiTakenDebtResponse]),
+          ),
         ),
       );
       const { wrapper } = await renderPage({ person: 'Алексей' });
@@ -318,8 +366,10 @@ describe('DebtsListPage', () => {
 
     it('clears filter when clear button clicked', async () => {
       server.use(
-        http.get('*/api/debts', () =>
-          HttpResponse.json([mockGivenDebtResponse, mockSecondGivenDebtResponse]),
+        http.get('*/api/debts/paginated', () =>
+          HttpResponse.json(
+            buildPaginatedDebtsResponse([mockGivenDebtResponse, mockSecondGivenDebtResponse]),
+          ),
         ),
       );
       const { wrapper, router } = await renderPage({ person: 'Алексей' });
@@ -354,7 +404,11 @@ describe('DebtsListPage', () => {
     });
 
     it('navigates to debt detail on card click', async () => {
-      server.use(http.get('*/api/debts', () => HttpResponse.json([mockGivenDebtResponse])));
+      server.use(
+        http.get('*/api/debts/paginated', () =>
+          HttpResponse.json(buildPaginatedDebtsResponse([mockGivenDebtResponse])),
+        ),
+      );
       const { wrapper, router } = await renderPage();
 
       // Find and click on the tree group to expand it
@@ -399,9 +453,12 @@ describe('DebtsListPage', () => {
   // -----------------------------------------------------------------------
   describe('close all debts flow', () => {
     it('closes all debts for a person and clears filter', async () => {
+      // Need 2 groups (given + taken) so groups.length > 1 condition shows close-all-btn
       server.use(
-        http.get('*/api/debts', () =>
-          HttpResponse.json([mockGivenDebtResponse, mockSecondGivenDebtResponse]),
+        http.get('*/api/debts/paginated', () =>
+          HttpResponse.json(
+            buildPaginatedDebtsResponse([mockGivenDebtResponse, mockAlexeiTakenDebtResponse]),
+          ),
         ),
         http.post('*/api/transactions', async ({ request }) => {
           const body = (await request.json()) as Record<string, unknown>;
