@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.40';
+export const CURRENT_VERSION = '1.0.41';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,21 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.41',
+    date: '2026-03-27',
+    title: 'Долги: подгрузка и исправления',
+    items: [
+      {
+        type: 'feature',
+        text: 'Бесконечная прокрутка на странице долгов — долги загружаются постепенно по мере прокрутки, без лишних запросов',
+      },
+      {
+        type: 'fix',
+        text: 'Исправлено редактирование долгов и разделённых расходов — изменения теперь корректно сохраняются',
+      },
+    ],
+  },
   {
     version: '1.0.40',
     date: '2026-03-24',
