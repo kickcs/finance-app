@@ -72,11 +72,11 @@ describe('useSplitExpense', () => {
       expect(result.splitData.value.myShare).toBe(90000);
     });
 
-    it('isValid becomes false when enabled with no participants', () => {
+    it('isValid stays true when enabled with no participants (treated as no split)', () => {
       const { result } = mountComposable();
       result.setEnabled(true);
-      // No participants → isValid should be false
-      expect(result.isValid.value).toBe(false);
+      // No participants → split treated as "not active" → isValid is true
+      expect(result.isValid.value).toBe(true);
     });
 
     it('disables split cleanly', () => {

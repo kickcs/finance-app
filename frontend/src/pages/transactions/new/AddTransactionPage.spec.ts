@@ -652,7 +652,7 @@ describe('AddTransactionPage', () => {
       expect(debtPayloads[0].totalAmount).toBe(10000);
     });
 
-    it('split enabled but no participants → blocked by validation', async () => {
+    it('split enabled but no participants → submits as regular transaction', async () => {
       const wrapper = await renderPage();
 
       await setAmount(wrapper, 5000);
@@ -666,9 +666,9 @@ describe('AddTransactionPage', () => {
       await wrapper.find('form').trigger('submit');
       await flushPromises();
 
-      expect(wrapper.find('[data-testid="validation-error"]').exists()).toBe(true);
-      expect(wrapper.text()).toContain('Проверьте данные разделения расхода');
-      expect(navigateBackMock).not.toHaveBeenCalled();
+      // 0 participants → treated as "no split" → no validation error, submits normally
+      expect(wrapper.find('[data-testid="validation-error"]').exists()).toBe(false);
+      expect(navigateBackMock).toHaveBeenCalled();
     });
 
     // ------- Debt payload structure -------
@@ -822,7 +822,7 @@ describe('AddTransactionPage', () => {
       expect(navigateBackMock).not.toHaveBeenCalled();
     });
 
-    it('add then remove all participants → blocked by validation', async () => {
+    it('add then remove all participants → submits as regular transaction', async () => {
       const wrapper = await renderPage();
 
       await setAmount(wrapper, 5000);
@@ -842,8 +842,9 @@ describe('AddTransactionPage', () => {
       await wrapper.find('form').trigger('submit');
       await flushPromises();
 
-      expect(wrapper.find('[data-testid="validation-error"]').exists()).toBe(true);
-      expect(navigateBackMock).not.toHaveBeenCalled();
+      // 0 participants after removal → treated as "no split" → no validation error
+      expect(wrapper.find('[data-testid="validation-error"]').exists()).toBe(false);
+      expect(navigateBackMock).toHaveBeenCalled();
     });
   });
 
