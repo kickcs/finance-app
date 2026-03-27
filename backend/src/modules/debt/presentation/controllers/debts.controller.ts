@@ -6,18 +6,19 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { CurrentUser } from '../../../../common';
-import { CreateDebtDto, UpdateDebtDto } from '../dto';
+import { CreateDebtDto, UpdateDebtDto, GetDebtsPaginatedDto } from '../dto';
 import {
   CreateDebtCommand,
   UpdateDebtCommand,
   DeleteDebtCommand,
 } from '../../application/commands';
-import { GetDebtsQuery, GetDebtByIdQuery } from '../../application/queries';
+import { GetDebtsQuery, GetDebtByIdQuery, GetDebtsPaginatedQuery } from '../../application/queries';
 
 @Controller('debts')
 export class DebtsController {
@@ -29,6 +30,25 @@ export class DebtsController {
   @Get()
   async findAll(@CurrentUser('sub') userId: string): Promise<unknown> {
     return this.queryBus.execute(new GetDebtsQuery(userId));
+  }
+
+  @Get('paginated')
+  async getPaginated(
+    @CurrentUser('sub') userId: string,
+    @Query() dto: GetDebtsPaginatedDto,
+  ): Promise<unknown> {
+    return this.queryBus.execute(
+      new GetDebtsPaginatedQuery(
+        userId,
+        dto.pageSize,
+        dto.cursorPersonName,
+        dto.cursorDebtType,
+        dto.cursorCreatedAt,
+        dto.status,
+        dto.currency,
+        dto.personName,
+      ),
+    );
   }
 
   @Get(':id')

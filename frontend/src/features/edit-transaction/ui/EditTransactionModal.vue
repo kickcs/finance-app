@@ -8,6 +8,7 @@ import { formatCurrency } from '@/shared/lib/format/currency';
 import type { Transaction } from '@/shared/api/database.types';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { SplitParticipantList, useSplitTransactionEdit } from '@/features/split-expense';
+import { DEFAULT_CURRENCY } from '@/shared/config/currency';
 
 const props = defineProps<{
   modelValue: boolean;
@@ -16,11 +17,12 @@ const props = defineProps<{
   currency: string;
   isUpdating?: boolean;
   error?: string | null;
+  onSave: (updates: Partial<Transaction>) => Promise<boolean>;
 }>();
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean];
-  confirm: [updates: Partial<Transaction>];
+  saved: [];
   cancel: [];
   delete: [];
 }>();
@@ -57,6 +59,7 @@ watch(
       categoryId.value = t.category_id;
       description.value = t.description || '';
       date.value = t.date ? t.date.split('T')[0] : '';
+      dateBeforeEdit.value = date.value;
       amountBeforeEdit.value = t.amount;
     }
   },
@@ -66,6 +69,7 @@ watch(
 // Split expense editing — only load for non-protected, non-transfer transactions
 const {
   hasSplit,
+  hasPendingChanges: hasPendingSplitChanges,
   participants: splitParticipants,
   myShare: splitMyShare,
   updateParticipantAmount,
@@ -74,6 +78,7 @@ const {
   removeParticipant,
   handleTransactionAmountChange,
   saveChanges: saveSplitChanges,
+  reload: reloadSplitDebts,
 } = useSplitTransactionEdit(
   () =>
     !isDebtRelated.value && !isTransfer.value && !isAdjustment.value
@@ -81,12 +86,26 @@ const {
       : null,
   userId,
   () => amount.value,
+  () => accountId.value,
+  () => props.transaction?.currency ?? DEFAULT_CURRENCY,
+);
+
+// Reload split debts on reopen for the same transaction
+// (the composable's internal watcher only fires when transactionId changes)
+watch(
+  () => [props.modelValue, props.transaction?.id ?? null] as const,
+  ([open, txId], [wasOpen, prevTxId]) => {
+    if (open && !wasOpen && txId && txId === prevTxId) {
+      reloadSplitDebts();
+    }
+  },
 );
 
 const showAmountStrategyDialog = ref(false);
 const showSplitDeleteConfirm = ref(false);
 const isConfirming = ref(false);
 const amountBeforeEdit = ref(0);
+const dateBeforeEdit = ref('');
 
 function handleAmountInput(value: string | number) {
   amount.value = Number(value) || 0;
@@ -96,6 +115,12 @@ function checkAmountChange() {
   if (hasSplit.value && amount.value !== amountBeforeEdit.value) {
     showAmountStrategyDialog.value = true;
   }
+}
+
+function handleAmountStrategyDismiss(open: boolean) {
+  showAmountStrategyDialog.value = open;
+  // Revert amount when user dismisses without choosing a strategy
+  if (!open) amount.value = amountBeforeEdit.value;
 }
 
 function handleAmountStrategy(strategy: 'redistribute' | 'keep') {
@@ -151,27 +176,46 @@ function close() {
 
 async function confirm() {
   if (isConfirming.value) return;
+
+  // Ensure pending amount change is resolved before saving
+  if (hasSplit.value && amount.value !== amountBeforeEdit.value) {
+    showAmountStrategyDialog.value = true;
+    return;
+  }
+
   isConfirming.value = true;
   try {
-    if (hasSplit.value) {
-      const splitSuccess = await saveSplitChanges();
-      if (!splitSuccess) return;
-    }
-    emit('confirm', {
+    const updates: Partial<Transaction> = {
       type: type.value,
       amount: amount.value,
       account_id: accountId.value,
       category_id: categoryId.value,
       description: description.value || null,
-      date: date.value,
-    });
+      // Only send date if user changed it — sending date-only string
+      // to a timestamptz column resets the time component to UTC midnight
+      ...(date.value !== dateBeforeEdit.value && { date: date.value }),
+    };
+
+    const txSuccess = await props.onSave(updates);
+    if (!txSuccess) return;
+
+    // Split save is best-effort: transaction is already saved above,
+    // so always close the modal regardless of split outcome.
+    if (hasSplit.value || hasPendingSplitChanges.value) {
+      await saveSplitChanges();
+    }
+
+    emit('saved');
   } finally {
     isConfirming.value = false;
   }
 }
 
 const isFormValid = computed(() => {
-  return accountId.value && categoryId.value && amount.value > 0;
+  const baseValid = !!accountId.value && !!categoryId.value && amount.value > 0;
+  if (!baseValid) return false;
+  if (hasSplit.value && splitMyShare.value < 0) return false;
+  return true;
 });
 </script>
 
@@ -395,7 +439,7 @@ const isFormValid = computed(() => {
     <UModal
       :model-value="showAmountStrategyDialog"
       title="Сумма изменена"
-      @update:model-value="showAmountStrategyDialog = $event"
+      @update:model-value="handleAmountStrategyDismiss"
     >
       <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark mb-4">
         Вы изменили общую сумму транзакции. Как распределить изменение между участниками?

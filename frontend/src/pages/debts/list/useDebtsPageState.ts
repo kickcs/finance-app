@@ -1,7 +1,15 @@
 import { ref, computed, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { ROUTE_NAMES } from '@/app/router/routeNames';
-import { useDebts, getDebtDisplayName, type Debt } from '@/entities/debt';
+import {
+  useInfiniteDebts,
+  getDebtDisplayName,
+  debtsApi,
+  debtQueryKeys,
+  type Debt,
+  type DebtGroupResponse,
+  type DebtsFilters,
+} from '@/entities/debt';
 import { useAccounts } from '@/entities/account';
 import { useCloseAllDebts, useCloseDebt } from '@/features/close-debt';
 import { usePartialPayment } from '@/features/partial-payment';
@@ -10,20 +18,14 @@ import { useExchangeRates } from '@/shared/api';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 import { DEFAULT_CURRENCY } from '@/shared/config/currency';
+import { useToast } from '@/shared/ui';
 import { navigateBack } from '@/app/router';
+import { useQueryClient } from '@tanstack/vue-query';
 
 const STATUS_TABS = [
   { id: 'active', label: 'Активные' },
   { id: 'closed', label: 'Закрытые' },
 ];
-
-export interface PersonGroup {
-  personName: string;
-  debts: Debt[];
-  debtType: 'given' | 'taken';
-  totalRemainingDisplay: { amount: number; currency: string; approximate: boolean };
-  hasPrivate: boolean;
-}
 
 function toCurrencyItems(currencies: string[]) {
   return currencies.map((c) => ({ id: c, label: c }));
@@ -36,7 +38,8 @@ export function useDebtsPageState() {
   const { userId } = useCurrentUser();
   const { currency } = useUserCurrency();
   const { convert } = useExchangeRates(currency);
-  const { debts, isLoading, updateDebt, refetch } = useDebts(userId);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   const { accounts } = useAccounts(userId);
 
   // --- Filters ---
@@ -57,99 +60,70 @@ export function useDebtsPageState() {
     },
   );
 
-  // --- Computed debt lists ---
-  const baseActiveDebts = computed(() => {
-    let filtered = debts.value.filter((d) => !d.is_closed);
-    if (personFilter.value) {
-      filtered = filtered.filter(
-        (d) =>
-          getDebtDisplayName(d) === personFilter.value &&
-          (!typeFilter.value || d.debt_type === typeFilter.value),
-      );
-    }
-    return filtered;
+  // --- Server-side filters ---
+  const serverFilters = computed<DebtsFilters>(() => ({
+    status: statusFilter.value,
+    ...(currencyFilter.value ? { currency: currencyFilter.value } : {}),
+    ...(personFilter.value ? { personName: personFilter.value } : {}),
+  }));
+
+  // --- Infinite debts ---
+  const {
+    groups,
+    totalDebtsCount,
+    totalSummary,
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    refetch,
+  } = useInfiniteDebts(userId, serverFilters);
+
+  // --- Derived from groups ---
+  const allDebtsFromGroups = computed(() => groups.value.flatMap((g) => g.debts));
+
+  // TODO: typeFilter is client-side only. Currently safe because typeFilter
+  // is always paired with personFilter (server-side), so groups are few.
+  // Consider moving debtType to server-side filters if needed.
+  const filteredGroups = computed(() => {
+    if (!typeFilter.value) return groups.value;
+    return groups.value.filter((g) => g.debt_type === typeFilter.value);
   });
 
-  const availableCurrencies = computed(() =>
-    Array.from(new Set(baseActiveDebts.value.map((d) => d.currency))).sort(),
-  );
-
-  const activeDebts = computed(() => {
-    if (!currencyFilter.value) return baseActiveDebts.value;
-    return baseActiveDebts.value.filter((d) => d.currency === currencyFilter.value);
+  const availableCurrencies = computed(() => {
+    const currencies = new Set<string>();
+    for (const c of Object.keys(totalSummary.value.totalGiven)) currencies.add(c);
+    for (const c of Object.keys(totalSummary.value.totalTaken)) currencies.add(c);
+    return Array.from(currencies).sort();
   });
 
-  const baseClosedDebts = computed(() => debts.value.filter((d) => d.is_closed));
-
-  const availableClosedCurrencies = computed(() =>
-    Array.from(new Set(baseClosedDebts.value.map((d) => d.currency))).sort(),
-  );
-
-  const activeCurrencyItems = computed(() => toCurrencyItems(availableCurrencies.value));
-  const closedCurrencyItems = computed(() => toCurrencyItems(availableClosedCurrencies.value));
-
-  const closedDebts = computed(() => {
-    if (!currencyFilter.value) return baseClosedDebts.value;
-    return baseClosedDebts.value.filter((d) => d.currency === currencyFilter.value);
+  // --- Totals from server summary ---
+  const totalGivenDebts = computed(() => {
+    const given = totalSummary.value.totalGiven;
+    return Object.entries(given).reduce(
+      (sum, [cur, amount]) => sum + convert(amount, cur || DEFAULT_CURRENCY),
+      0,
+    );
   });
 
-  const totalGivenDebts = computed(() =>
-    activeDebts.value
-      .filter((d) => d.debt_type === 'given' && !d.is_private)
-      .reduce((sum, d) => sum + convert(d.remaining_amount, d.currency || DEFAULT_CURRENCY), 0),
-  );
-
-  const totalTakenDebts = computed(() =>
-    activeDebts.value
-      .filter((d) => d.debt_type === 'taken' && !d.is_private)
-      .reduce((sum, d) => sum + convert(d.remaining_amount, d.currency || DEFAULT_CURRENCY), 0),
-  );
+  const totalTakenDebts = computed(() => {
+    const taken = totalSummary.value.totalTaken;
+    return Object.entries(taken).reduce(
+      (sum, [cur, amount]) => sum + convert(amount, cur || DEFAULT_CURRENCY),
+      0,
+    );
+  });
 
   // --- Grouping ---
-  const debtsByPerson = computed<PersonGroup[]>(() => {
-    const groups = new Map<string, { debts: Debt[]; debtType: 'given' | 'taken' }>();
-
-    for (const debt of activeDebts.value) {
-      const personName = getDebtDisplayName(debt);
-      const key = `${personName}_${debt.debt_type}`;
-      const existing = groups.get(key);
-      if (existing) {
-        existing.debts.push(debt);
-      } else {
-        groups.set(key, { debts: [debt], debtType: debt.debt_type });
-      }
-    }
-
-    return Array.from(groups.entries()).map(([, { debts: personDebts, debtType }]) => {
-      const personName = getDebtDisplayName(personDebts[0]);
-      const currencies = new Set(personDebts.map((d) => d.currency));
-      const isMixed = currencies.size > 1;
-
-      return {
-        personName,
-        debts: personDebts,
-        debtType,
-        totalRemainingDisplay: {
-          amount: isMixed
-            ? personDebts.reduce((sum, d) => sum + convert(d.remaining_amount, d.currency), 0)
-            : personDebts.reduce((s, d) => s + d.remaining_amount, 0),
-          currency: isMixed ? currency.value : personDebts[0].currency,
-          approximate: isMixed,
-        },
-        hasPrivate: personDebts.some((d) => d.is_private),
-      };
-    });
-  });
-
-  function isGroupDefaultOpen(group: PersonGroup): boolean {
-    return personFilter.value === group.personName;
+  function isGroupDefaultOpen(group: DebtGroupResponse): boolean {
+    return personFilter.value === group.person_name;
   }
 
   // --- Selected debt (desktop detail panel) ---
   const selectedDebtId = ref<string | null>(null);
   const selectedDebt = computed<Debt | null>(() => {
     if (!selectedDebtId.value) return null;
-    return debts.value.find((d) => d.id === selectedDebtId.value) ?? null;
+    return allDebtsFromGroups.value.find((d) => d.id === selectedDebtId.value) ?? null;
   });
   const selectedDebtCurrency = computed(() => selectedDebt.value?.currency || DEFAULT_CURRENCY);
 
@@ -184,8 +158,10 @@ export function useDebtsPageState() {
   const closeAllPersonName = ref<string | null>(null);
 
   const closeAllDebtsForPerson = computed(() => {
-    if (!closeAllPersonName.value) return activeDebts.value;
-    return activeDebts.value.filter((d) => getDebtDisplayName(d) === closeAllPersonName.value);
+    if (!closeAllPersonName.value) return allDebtsFromGroups.value;
+    return allDebtsFromGroups.value.filter(
+      (d) => getDebtDisplayName(d) === closeAllPersonName.value,
+    );
   });
 
   function openCloseAllForPerson(personName: string) {
@@ -266,7 +242,12 @@ export function useDebtsPageState() {
 
   async function handleDetailTogglePrivate(value: boolean) {
     if (!selectedDebt.value) return;
-    await updateDebt(selectedDebt.value.id, { is_private: value });
+    try {
+      await debtsApi.update(selectedDebt.value.id, { is_private: value });
+      await queryClient.invalidateQueries({ queryKey: debtQueryKeys.all });
+    } catch {
+      toast({ title: 'Не удалось обновить', variant: 'error' });
+    }
   }
 
   function handleDetailClose() {
@@ -288,19 +269,21 @@ export function useDebtsPageState() {
     personFilter,
     currencyFilter,
     availableCurrencies,
-    availableClosedCurrencies,
-    activeCurrencyItems,
-    closedCurrencyItems,
     selectedDebtId,
     selectedDebt,
     selectedDebtCurrency,
 
     // Debt lists
-    activeDebts,
-    closedDebts,
-    debtsByPerson,
+    groups: filteredGroups,
+    allDebtsFromGroups,
+    totalDebtsCount,
     totalGivenDebts,
     totalTakenDebts,
+
+    // Infinite scroll
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
 
     // Close all
     showCloseAllModal,
@@ -336,5 +319,8 @@ export function useDebtsPageState() {
     handleDetailTogglePrivate,
     handleDetailClose,
     handleRefresh,
+
+    // Helpers
+    toCurrencyItems,
   };
 }

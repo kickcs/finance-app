@@ -1,7 +1,8 @@
 // frontend/src/features/split-expense/model/useSplitTransactionEdit.ts
 import { ref, computed, watch, type MaybeRefOrGetter, toValue } from 'vue';
-import { debtsApi, debtQueryKeys, buildDebtName, type Debt } from '@/entities/debt';
+import { debtsApi, buildDebtName, type Debt } from '@/entities/debt';
 import { queryClient } from '@/shared/api/queryClient';
+import { invalidateDebtRelated } from '@/shared/api/invalidation';
 import { useToast } from '@/shared/ui';
 import { DEFAULT_CURRENCY } from '@/shared/config/currency';
 
@@ -23,8 +24,6 @@ interface PendingAdd {
   amount: number;
 }
 
-let nextNewId = 0;
-
 interface PendingUpdate {
   amount?: number;
   personName?: string;
@@ -34,9 +33,12 @@ export function useSplitTransactionEdit(
   transactionId: MaybeRefOrGetter<string | null>,
   userId: MaybeRefOrGetter<string | null>,
   transactionAmount: MaybeRefOrGetter<number>,
+  transactionAccountId?: MaybeRefOrGetter<string>,
+  transactionCurrency?: MaybeRefOrGetter<string>,
 ) {
   const { toast } = useToast();
 
+  let nextNewId = 0;
   const splitDebts = ref<Debt[]>([]);
   const isLoading = ref(false);
 
@@ -56,14 +58,8 @@ export function useSplitTransactionEdit(
 
     isLoading.value = true;
     try {
-      // Try to read from query cache first
-      const cached = queryClient.getQueryData<Debt[]>(debtQueryKeys.list(uid));
-      if (cached) {
-        splitDebts.value = cached.filter((d) => d.source_transaction_id === txId);
-      } else {
-        const allDebts = await debtsApi.getAll(uid);
-        splitDebts.value = allDebts.filter((d) => d.source_transaction_id === txId);
-      }
+      const allDebts = await debtsApi.getAll(uid);
+      splitDebts.value = allDebts.filter((d) => d.source_transaction_id === txId);
     } catch {
       splitDebts.value = [];
     } finally {
@@ -71,14 +67,7 @@ export function useSplitTransactionEdit(
     }
   }
 
-  watch(
-    () => toValue(transactionId),
-    () => {
-      resetLocal();
-      loadSplitDebts();
-    },
-    { immediate: true },
-  );
+  watch(() => toValue(transactionId), reload, { immediate: true });
 
   // Build participant views
   const participants = computed<SplitParticipantView[]>(() => {
@@ -95,7 +84,7 @@ export function useSplitTransactionEdit(
           remainingAmount: d.remaining_amount,
           isClosed: d.is_closed,
           hasPayments: paidAmount > 0,
-          isLocked: paidAmount > 0,
+          isLocked: paidAmount > 0 || d.is_closed,
           isNew: false,
         };
       });
@@ -116,6 +105,13 @@ export function useSplitTransactionEdit(
   });
 
   const hasSplit = computed(() => participants.value.length > 0);
+
+  const hasPendingChanges = computed(
+    () =>
+      pendingDeletes.value.size > 0 ||
+      pendingAdds.value.length > 0 ||
+      pendingUpdates.value.size > 0,
+  );
 
   const myShare = computed(() => {
     const total = toValue(transactionAmount);
@@ -195,6 +191,9 @@ export function useSplitTransactionEdit(
     const lockedTotal = locked.reduce((sum, p) => sum + p.amount, 0);
     const availableForRedistribution = newAmount - lockedTotal;
 
+    // Cannot redistribute: locked amounts already exceed new total
+    if (availableForRedistribution <= 0) return;
+
     // Count = unlocked participants + user's share
     const count = unlocked.length + 1; // +1 for user
     if (count <= 0) return;
@@ -212,37 +211,55 @@ export function useSplitTransactionEdit(
     const txId = toValue(transactionId);
     if (!uid || !txId) return false;
 
+    // Nothing to do — skip API calls and invalidation
+    if (!hasPendingChanges.value) return true;
+
     try {
-      // 1. Delete removed debts
-      for (const debtId of pendingDeletes.value) {
+      // 1. Delete removed debts (remove from set on success to avoid double-delete on retry)
+      for (const debtId of [...pendingDeletes.value]) {
         await debtsApi.delete(debtId);
+        pendingDeletes.value.delete(debtId);
       }
 
-      // 2. Update modified debts
-      for (const [debtId, update] of pendingUpdates.value) {
+      // 2. Update modified debts (remove from map on success to avoid double-update on retry)
+      for (const [debtId, update] of [...pendingUpdates.value]) {
         const debt = splitDebts.value.find((d) => d.id === debtId);
-        if (!debt) continue;
+        if (!debt) {
+          pendingUpdates.value.delete(debtId);
+          continue;
+        }
 
         const updates: Partial<Debt> = {};
         if (update.amount !== undefined) {
           updates.total_amount = update.amount;
-          updates.remaining_amount = update.amount; // Reset remaining for unlocked debts (no payments)
+          // Preserve payments: remaining = new_total - already_paid
+          const paidAmount = debt.total_amount - debt.remaining_amount;
+          updates.remaining_amount = Math.max(0, update.amount - paidAmount);
         }
         if (update.personName !== undefined) {
           updates.person_name = update.personName;
-          updates.name = buildDebtName('given', update.personName);
+          updates.name = buildDebtName(debt.debt_type as 'given' | 'taken', update.personName);
         }
 
         if (Object.keys(updates).length > 0) {
           await debtsApi.update(debtId, updates);
         }
+        pendingUpdates.value.delete(debtId);
       }
 
-      // 3. Create new debts
-      for (const add of pendingAdds.value) {
-        if (add.amount <= 0) continue;
+      // 3. Create new debts (shift from array on success to avoid duplicate creation on retry)
+      // Use transaction context first, then first non-deleted debt as fallback
+      const templateDebt = splitDebts.value.find((d) => !pendingDeletes.value.has(d.id));
+      const acctId = toValue(transactionAccountId) || templateDebt?.account_id || '';
+      const curr = toValue(transactionCurrency) || templateDebt?.currency || DEFAULT_CURRENCY;
 
-        const debt = splitDebts.value[0]; // Use first debt as template for currency/account
+      while (pendingAdds.value.length > 0) {
+        const add = pendingAdds.value[0];
+        if (add.amount <= 0) {
+          pendingAdds.value.shift();
+          continue;
+        }
+
         await debtsApi.create({
           user_id: uid,
           name: buildDebtName('given', add.personName),
@@ -250,17 +267,18 @@ export function useSplitTransactionEdit(
           remaining_amount: add.amount,
           debt_type: 'given',
           person_name: add.personName,
-          account_id: debt?.account_id ?? '',
+          account_id: acctId,
           transaction_id: null,
           source_transaction_id: txId,
           is_closed: false,
-          currency: debt?.currency ?? DEFAULT_CURRENCY,
+          currency: curr,
           created_at: new Date().toISOString(),
         });
+        pendingAdds.value.shift();
       }
 
-      // 4. Invalidate caches
-      await queryClient.invalidateQueries({ queryKey: debtQueryKeys.list(uid) });
+      // 4. Invalidate debt + transaction + account caches
+      await invalidateDebtRelated(queryClient, uid);
 
       resetLocal();
       return true;
@@ -276,8 +294,15 @@ export function useSplitTransactionEdit(
     pendingUpdates.value = new Map();
   }
 
+  function reload() {
+    resetLocal();
+    loadSplitDebts();
+  }
+
   return {
+    isLoading,
     hasSplit,
+    hasPendingChanges,
     participants,
     myShare,
     updateParticipantAmount,
@@ -286,5 +311,6 @@ export function useSplitTransactionEdit(
     removeParticipant,
     handleTransactionAmountChange,
     saveChanges,
+    reload,
   };
 }

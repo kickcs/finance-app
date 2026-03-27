@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
+import { useIntersectionObserver } from '@vueuse/core';
 import { AppHeader } from '@/widgets/header';
 import { DebtCard, DebtDetailPanel, ClosedDebtCard, DEBT_DIRECTION_DISPLAY } from '@/entities/debt';
 import { CloseAllDebtsModal, DeleteDebtModal } from '@/features/close-debt';
@@ -10,6 +11,7 @@ import {
   UButton,
   UIcon,
   UCard,
+  USpinner,
   Skeleton,
   EmptyState,
   SectionHeader,
@@ -52,6 +54,9 @@ onMounted(() => {
   }
 });
 
+// Infinite scroll sentinel
+const sentinelRef = ref<HTMLElement | null>(null);
+
 const {
   userId,
   currency,
@@ -62,17 +67,16 @@ const {
   personFilter,
   currencyFilter,
   availableCurrencies,
-  availableClosedCurrencies,
-  activeCurrencyItems,
-  closedCurrencyItems,
   selectedDebtId,
   selectedDebt,
   selectedDebtCurrency,
-  activeDebts,
-  closedDebts,
-  debtsByPerson,
+  groups,
+  allDebtsFromGroups,
   totalGivenDebts,
   totalTakenDebts,
+  fetchNextPage,
+  hasNextPage,
+  isFetchingNextPage,
   showCloseAllModal,
   closeAllPersonName,
   closeAllDebtsForPerson,
@@ -100,7 +104,18 @@ const {
   handleDetailTogglePrivate,
   handleDetailClose,
   handleRefresh,
+  toCurrencyItems,
 } = useDebtsPageState();
+
+useIntersectionObserver(
+  sentinelRef,
+  ([{ isIntersecting }]) => {
+    if (isIntersecting && hasNextPage.value && !isFetchingNextPage.value) {
+      fetchNextPage();
+    }
+  },
+  { rootMargin: '200px' },
+);
 </script>
 
 <template>
@@ -164,7 +179,7 @@ const {
             <!-- Active Debts Tab -->
             <template v-else-if="statusFilter === 'active'">
               <!-- Summary Cards -->
-              <div v-if="activeDebts.length > 0" class="grid grid-cols-2 gap-3">
+              <div v-if="allDebtsFromGroups.length > 0" class="grid grid-cols-2 gap-3">
                 <UCard
                   data-testid="summary-given"
                   class="p-4 relative overflow-hidden"
@@ -205,7 +220,7 @@ const {
               <SelectChips
                 v-if="availableCurrencies.length > 1"
                 v-model="currencyFilter"
-                :items="activeCurrencyItems"
+                :items="toCurrencyItems(availableCurrencies)"
                 all-label="Все валюты"
               />
 
@@ -236,10 +251,10 @@ const {
                 />
 
                 <!-- Groups by Person -->
-                <div v-if="activeDebts.length > 0" class="space-y-2">
+                <div v-if="groups.length > 0" class="space-y-2">
                   <template
-                    v-for="group in debtsByPerson"
-                    :key="`${group.personName}_${group.debtType}`"
+                    v-for="group in groups"
+                    :key="`${group.person_name}_${group.debt_type}`"
                   >
                     <!-- Single debt — flat card -->
                     <DebtCard
@@ -272,35 +287,38 @@ const {
                         <div
                           class="w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold shrink-0"
                           :class="
-                            group.debtType === 'given'
+                            group.debt_type === 'given'
                               ? 'bg-debt-given-light text-debt-given'
                               : 'bg-debt-received-light text-debt-received'
                           "
                         >
-                          {{ getInitial(group.personName) }}
+                          {{ getInitial(group.person_name) }}
                         </div>
                         <div class="flex-1 min-w-0">
                           <p
                             class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark truncate"
                           >
-                            {{ group.personName }}
+                            {{ group.person_name }}
                           </p>
                           <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
                             {{ group.debts.length }}
                             {{ pluralize(group.debts.length, 'долг', 'долга', 'долгов') }} ·
-                            {{ DEBT_DIRECTION_DISPLAY[group.debtType] }}
+                            {{ DEBT_DIRECTION_DISPLAY[group.debt_type] }}
                           </p>
                         </div>
                         <p
                           class="text-sm font-bold shrink-0"
                           :class="
-                            group.debtType === 'given' ? 'text-debt-given' : 'text-debt-received'
+                            group.debt_type === 'given' ? 'text-debt-given' : 'text-debt-received'
                           "
                         >
                           {{
-                            group.hasPrivate
+                            group.debts.some((d) => d.is_private)
                               ? '••••'
-                              : `${group.totalRemainingDisplay.approximate ? '≈ ' : ''}${formatCurrency(group.totalRemainingDisplay.amount, group.totalRemainingDisplay.currency)}`
+                              : formatCurrency(
+                                  group.debts.reduce((s, d) => s + d.remaining_amount, 0),
+                                  group.debts[0]?.currency ?? currency,
+                                )
                           }}
                         </p>
                       </CollapsibleTrigger>
@@ -325,7 +343,9 @@ const {
                             variant="secondary"
                             size="sm"
                             full-width
-                            @click="(trigger('selection'), openCloseAllForPerson(group.personName))"
+                            @click="
+                              (trigger('selection'), openCloseAllForPerson(group.person_name))
+                            "
                           >
                             <UIcon name="check_circle" size="xs" />
                             Закрыть все долги
@@ -338,7 +358,7 @@ const {
 
                 <!-- Close All (person filter) -->
                 <UButton
-                  v-if="personFilter && activeDebts.length > 1"
+                  v-if="personFilter && groups.length > 1 && allDebtsFromGroups.length > 1"
                   variant="primary"
                   full-width
                   data-testid="close-all-btn"
@@ -350,7 +370,7 @@ const {
 
                 <!-- Empty State: filtered by currency -->
                 <UCard
-                  v-if="activeDebts.length === 0 && currencyFilter"
+                  v-if="groups.length === 0 && currencyFilter"
                   data-testid="empty-state-filtered"
                   class="py-4"
                 >
@@ -358,7 +378,7 @@ const {
                 </UCard>
 
                 <!-- Empty State: no debts at all -->
-                <UCard v-else-if="activeDebts.length === 0" data-testid="empty-state" class="py-4">
+                <UCard v-else-if="groups.length === 0" data-testid="empty-state" class="py-4">
                   <EmptyState
                     icon="celebration"
                     title="Вы без долгов!"
@@ -374,16 +394,16 @@ const {
             <template v-else-if="statusFilter === 'closed'">
               <!-- Currency Filter Chips -->
               <SelectChips
-                v-if="availableClosedCurrencies.length > 1"
+                v-if="availableCurrencies.length > 1"
                 v-model="currencyFilter"
-                :items="closedCurrencyItems"
+                :items="toCurrencyItems(availableCurrencies)"
                 all-label="Все валюты"
               />
-              <div v-if="closedDebts.length > 0" class="space-y-3">
+              <div v-if="allDebtsFromGroups.length > 0" class="space-y-3">
                 <SectionHeader title="Погашенные долги" :show-add="false" :show-view-all="false" />
                 <div class="space-y-2">
                   <ClosedDebtCard
-                    v-for="debt in closedDebts"
+                    v-for="debt in allDebtsFromGroups"
                     :key="debt.id"
                     :debt="debt"
                     :user-currency="currency"
@@ -413,6 +433,12 @@ const {
                 />
               </UCard>
             </template>
+
+            <!-- Infinite scroll sentinel (shared across tabs) -->
+            <div ref="sentinelRef" class="h-1" />
+            <div v-if="isFetchingNextPage" class="flex justify-center py-4">
+              <USpinner size="sm" />
+            </div>
           </div>
         </PullToRefresh>
       </template>

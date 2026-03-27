@@ -1,6 +1,8 @@
 import { ref, computed, watch } from 'vue';
-import { debtsApi, debtQueryKeys, buildDebtName } from '@/entities/debt';
+import { debtsApi, buildDebtName } from '@/entities/debt';
 import { queryClient } from '@/shared/api/queryClient';
+import { invalidateDebtRelated } from '@/shared/api/invalidation';
+import { useToast } from '@/shared/ui';
 import type { SplitExpenseData, SplitMethod } from './types';
 import { initialSplitData } from './types';
 
@@ -11,6 +13,8 @@ function generateParticipantId(): string {
 }
 
 export function useSplitExpense(totalAmountRef: () => number) {
+  const { toast } = useToast();
+
   const splitData = ref<SplitExpenseData>({
     ...initialSplitData,
     participants: [], // Create new array to avoid sharing reference
@@ -22,7 +26,8 @@ export function useSplitExpense(totalAmountRef: () => number) {
 
   const isValid = computed(() => {
     if (!splitData.value.enabled) return true;
-    if (splitData.value.participants.length === 0) return false;
+    // No participants = user opened split but decided not to add anyone — treat as valid (no split)
+    if (splitData.value.participants.length === 0) return true;
 
     const totalAmount = totalAmountRef();
     const totalSplit = splitData.value.myShare + totalToReturn.value;
@@ -193,15 +198,17 @@ export function useSplitExpense(totalAmountRef: () => number) {
       return true;
     }
 
+    // Filter out participants with zero or negative amounts
+    const validParticipants = splitData.value.participants.filter((p) => p.amount > 0);
+
+    if (validParticipants.length === 0) {
+      console.warn('No valid participants with amount > 0 for split expense');
+      return true; // Nothing to create, but not an error
+    }
+
+    let createdCount = 0;
+
     try {
-      // Filter out participants with zero or negative amounts
-      const validParticipants = splitData.value.participants.filter((p) => p.amount > 0);
-
-      if (validParticipants.length === 0) {
-        console.warn('No valid participants with amount > 0 for split expense');
-        return true; // Nothing to create, but not an error
-      }
-
       // Create debts one by one using the API
       for (const participant of validParticipants) {
         await debtsApi.create({
@@ -218,16 +225,33 @@ export function useSplitExpense(totalAmountRef: () => number) {
           currency: currency,
           created_at: new Date(transactionDate).toISOString(),
         });
+        createdCount++;
       }
 
-      // Invalidate debts cache
-      await queryClient.invalidateQueries({
-        queryKey: debtQueryKeys.list(userId),
-      });
+      // Invalidate debt + transaction + account caches
+      await invalidateDebtRelated(queryClient, userId);
 
       return true;
     } catch (e) {
       console.error('Failed to create debts for split expense:', e);
+
+      // Invalidate caches so any partially created debts are visible
+      await invalidateDebtRelated(queryClient, userId);
+
+      if (createdCount > 0) {
+        toast({
+          title: `Создано ${createdCount} из ${validParticipants.length} долгов`,
+          description: 'Остальные можно добавить через редактирование транзакции',
+          variant: 'warning',
+        });
+      } else {
+        toast({
+          title: 'Не удалось создать долги',
+          description: 'Транзакция создана, долги можно добавить позже',
+          variant: 'error',
+        });
+      }
+
       return false;
     }
   }

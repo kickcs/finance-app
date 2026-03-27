@@ -139,9 +139,10 @@ const {
   isDeleting: isDeletingTransaction,
   editError: transactionError,
   handleTransactionClick,
-  handleUpdateTransaction,
+  saveTransaction,
   handleDeleteClick: handleDeleteTransactionClick,
   handleDeleteTransaction,
+  closeEditModal: closeEditTransactionModal,
 } = useTransactionEditFlow(userId);
 
 function goBack() {
@@ -602,7 +603,9 @@ async function handleAdjustBalance(data: {
       :currency="currency"
       :is-updating="isUpdatingTransaction"
       :error="transactionError"
-      @confirm="handleUpdateTransaction"
+      :on-save="saveTransaction"
+      @saved="closeEditTransactionModal"
+      @cancel="closeEditTransactionModal"
       @delete="handleDeleteTransactionClick"
     />
 

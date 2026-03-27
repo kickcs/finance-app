@@ -77,7 +77,9 @@ GitHub Actions (`deploy.yml`): build-backend (lint + test + Docker build/push) +
 
 **Authentication**: JWT via `useAuth()`. Access token in localStorage, refresh token in httpOnly cookie. Auto-refresh on 401.
 
-**Cursor Pagination**: `{ date, createdAt }` cursor format (camelCase from backend)
+**Cursor Pagination**: Transactions use `{ date, createdAt }` cursor. Debts use `{ personName, debtType, createdAt }` cursor with group-level pagination (groups never split across pages). Both use camelCase from backend.
+
+**Split Expense + Debts**: Split creates one transaction + N debts linked via `source_transaction_id`. When editing split transactions, save transaction first (via `onSave` prop), then split debts — never the reverse. Use `invalidateDebtRelated` for cache invalidation after any debt mutation.
 
 ### Subscription & Monetization
 
@@ -142,7 +144,7 @@ Custom component library wrapping Reka UI headless primitives (CVA-based variant
 - `useProfile(userId)` — profile CRUD, setCurrency, completeOnboarding, defaultAccountId
 - `useExchangeRates(baseCurrency)` — convert, convertBetween, getRate. Cached 24h
 
-**Cache invalidation** (`shared/api/invalidation.ts`): `invalidateTransactionRelated`, `invalidateAccountRelated`
+**Cache invalidation** (`shared/api/invalidation.ts`): `invalidateTransactionRelated`, `invalidateAccountRelated`, `invalidateDebtRelated` (covers debts + transactions + accounts). For any debt mutation, always use `invalidateDebtRelated` — it's the broadest helper that covers all dependent caches.
 
 ### Frontend Entity API Composables
 
@@ -155,7 +157,8 @@ All accept `userId: MaybeRefOrGetter<string|null>`, auto-disable when falsy, inc
 - `useRecentTransactions(userId, limit=5)` — read-only for dashboard
 - `useMonthlyStats(userId, {year?, month?})` — income/expense by currency
 - `useAnalyticsStats({startDate, endDate, accountIds?})` — totals + categoryBreakdown + by-currency
-- `useDebts` — CRUD, totalDebt, debtsByPerson, makePayment
+- `useDebts` — CRUD, totalDebt, debtsByPerson, makePayment (used by dashboard widget)
+- `useInfiniteDebts(userId, filters?)` — cursor-paginated debts grouped by (personName, debtType), PAGE_SIZE=10. Server-side filtering by status/currency/personName
 - `useGoals` — CRUD, totalSaved/Target, overallProgress
 - `useReminders` — CRUD, active/upcoming/overdue filters
 - `useCategories` — expense/income categories, reorder
@@ -229,6 +232,7 @@ Update `frontend/src/features/changelog/model/changelogData.ts`:
 - **Icons**: `<UIcon name="material_symbol_name" />` — add new mappings to `shared/ui/icon/iconMap.ts`
 - **Global state**: User auth via Vue `provide/inject` from `App.vue`
 - **TypeORM**: `synchronize: false` — always use migrations
+- **TypeORM QueryBuilder**: Use camelCase entity property names (`d.userId`, `d.isClosed`), NOT snake_case column names (`d.user_id`, `d.is_closed`). Column name mapping is handled by TypeORM decorators
 - **PullToRefresh**: Breaks flex chains — wrap in separate `flex-1 overflow-y-auto` div
 - **Design tokens**: Always use semantic tokens (`bg-surface-light dark:bg-surface-dark`) not raw Tailwind colors. See `frontend/DESIGN_SYSTEM.md` § Anti-Patterns
 - **Multi-currency**: Account balances stored in separate `account_balances` table

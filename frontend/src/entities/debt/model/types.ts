@@ -35,3 +35,34 @@ export function getDebtProgress(debt: Debt): number {
   const paid = debt.total_amount - debt.remaining_amount;
   return Math.min(100, Math.max(0, Math.round((paid / debt.total_amount) * 100)));
 }
+
+// --- Paginated debts ---
+
+export interface DebtGroupResponse {
+  person_name: string;
+  debt_type: 'given' | 'taken';
+  debts: Debt[];
+}
+
+export interface DebtsPaginatedCursor {
+  personName: string;
+  debtType: string;
+  createdAt: string;
+}
+
+export interface DebtsFilters {
+  status?: 'active' | 'closed';
+  currency?: string;
+  personName?: string;
+}
+
+export interface PaginatedDebtsResult {
+  groups: DebtGroupResponse[];
+  totalSummary: {
+    totalGiven: Record<string, number>;
+    totalTaken: Record<string, number>;
+  };
+  nextCursor: DebtsPaginatedCursor | null;
+  hasMore: boolean;
+  totalDebtsCount: number;
+}
