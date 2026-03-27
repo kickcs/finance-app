@@ -18,6 +18,7 @@ import { useExchangeRates } from '@/shared/api';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 import { DEFAULT_CURRENCY } from '@/shared/config/currency';
+import { useToast } from '@/shared/ui';
 import { navigateBack } from '@/app/router';
 import { useQueryClient } from '@tanstack/vue-query';
 
@@ -38,6 +39,7 @@ export function useDebtsPageState() {
   const { currency } = useUserCurrency();
   const { convert } = useExchangeRates(currency);
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const { accounts } = useAccounts(userId);
 
   // --- Filters ---
@@ -88,9 +90,12 @@ export function useDebtsPageState() {
     return groups.value.filter((g) => g.debt_type === typeFilter.value);
   });
 
-  const availableCurrencies = computed(() =>
-    Array.from(new Set(allDebtsFromGroups.value.map((d) => d.currency))).sort(),
-  );
+  const availableCurrencies = computed(() => {
+    const currencies = new Set<string>();
+    for (const c of Object.keys(totalSummary.value.totalGiven)) currencies.add(c);
+    for (const c of Object.keys(totalSummary.value.totalTaken)) currencies.add(c);
+    return Array.from(currencies).sort();
+  });
 
   // --- Totals from server summary ---
   const totalGivenDebts = computed(() => {
@@ -237,9 +242,12 @@ export function useDebtsPageState() {
 
   async function handleDetailTogglePrivate(value: boolean) {
     if (!selectedDebt.value) return;
-    await debtsApi.update(selectedDebt.value.id, { is_private: value });
-    // Invalidate all debt queries (covers both infinite and list caches)
-    await queryClient.invalidateQueries({ queryKey: debtQueryKeys.all });
+    try {
+      await debtsApi.update(selectedDebt.value.id, { is_private: value });
+      await queryClient.invalidateQueries({ queryKey: debtQueryKeys.all });
+    } catch {
+      toast({ title: 'Не удалось обновить', variant: 'error' });
+    }
   }
 
   function handleDetailClose() {

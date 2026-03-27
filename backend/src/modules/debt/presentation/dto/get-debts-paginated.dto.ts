@@ -1,4 +1,4 @@
-import { IsString, IsNumber, IsOptional, IsIn, Max, Min } from 'class-validator';
+import { IsString, IsNumber, IsOptional, IsIn, IsDateString, Max, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class GetDebtsPaginatedDto {
@@ -18,7 +18,7 @@ export class GetDebtsPaginatedDto {
   cursorDebtType?: string;
 
   @IsOptional()
-  @IsString()
+  @IsDateString()
   cursorCreatedAt?: string;
 
   @IsOptional()
