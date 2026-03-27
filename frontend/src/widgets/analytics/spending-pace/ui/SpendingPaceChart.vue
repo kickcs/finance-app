@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useTimeoutFn } from '@vueuse/core';
 import { UCard, Skeleton } from '@/shared/ui';
 import { formatCurrency, COMPACT_FORMAT } from '@/shared/lib/format/currency';
@@ -119,6 +119,12 @@ const deviation = computed(() => {
 const activeEntry = computed(() =>
   activeIdx.value !== null ? (props.entries[activeIdx.value] ?? null) : null,
 );
+
+// Buffered entry: retains last active entry so text doesn't vanish during transitions
+const displayEntry = ref<SpendingPaceEntry | null>(null);
+watch(activeEntry, (entry) => {
+  if (entry) displayEntry.value = entry;
+});
 
 function toggleDay(i: number) {
   activeIdx.value = activeIdx.value === i ? null : i;
@@ -373,28 +379,35 @@ const yTicks = computed(() => {
 
       <!-- Tooltip (fixed below chart) -->
       <div
-        class="relative mt-2 px-3 py-1.5 bg-surface-light dark:bg-surface-dark rounded-lg text-sm h-[32px] overflow-hidden"
+        class="relative mt-2 bg-surface-light dark:bg-surface-dark rounded-lg text-sm h-[32px] overflow-hidden"
       >
-        <!-- Active entry data -->
+        <!-- Active entry data (uses displayEntry for stable text, activeEntry for visibility) -->
         <div
-          class="absolute inset-0 px-3 py-1.5 flex items-center gap-2 transition-opacity duration-150"
+          class="absolute inset-0 px-3 py-1.5 flex items-center gap-2 transition-opacity duration-150 ease-out"
           :class="activeEntry ? 'opacity-100' : 'opacity-0'"
         >
-          <span class="text-text-secondary-light dark:text-text-secondary-dark">
-            {{ activeEntry ? formatDayLabel(activeEntry.date) : '' }}
+          <span class="text-text-secondary-light dark:text-text-secondary-dark whitespace-nowrap">
+            {{ displayEntry ? formatDayLabel(displayEntry.date) : '' }}
           </span>
-          <span class="font-semibold text-text-primary-light dark:text-text-primary-dark">
-            {{ activeEntry ? formatCurrency(activeEntry.actual, currency, COMPACT_FORMAT) : '' }}
+          <span
+            class="font-semibold text-text-primary-light dark:text-text-primary-dark whitespace-nowrap"
+          >
+            {{ displayEntry ? formatCurrency(displayEntry.actual, currency, COMPACT_FORMAT) : '' }}
           </span>
-          <span v-if="hasBudget" class="text-text-tertiary-light dark:text-text-tertiary-dark">
+          <span
+            v-if="hasBudget"
+            class="text-text-tertiary-light dark:text-text-tertiary-dark whitespace-nowrap"
+          >
             {{
-              activeEntry ? `/ ${formatCurrency(activeEntry.ideal, currency, COMPACT_FORMAT)}` : ''
+              displayEntry
+                ? `/ ${formatCurrency(displayEntry.ideal, currency, COMPACT_FORMAT)}`
+                : ''
             }}
           </span>
         </div>
         <!-- Placeholder -->
         <div
-          class="absolute inset-0 px-3 py-1.5 flex items-center transition-opacity duration-150"
+          class="absolute inset-0 px-3 py-1.5 flex items-center transition-opacity duration-150 ease-out"
           :class="activeEntry ? 'opacity-0' : 'opacity-100'"
         >
           <span class="text-text-tertiary-light dark:text-text-tertiary-dark">
