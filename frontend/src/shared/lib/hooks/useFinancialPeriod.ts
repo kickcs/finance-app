@@ -5,6 +5,7 @@ import { useProfile } from '@/shared/api';
 import {
   getCurrentFinancialMonth,
   getFinancialMonthBounds,
+  getDaysInPeriod,
   getDaysRemainingInPeriod,
 } from '@/shared/lib/utils/financialPeriod';
 
@@ -22,7 +23,12 @@ export function useFinancialPeriod() {
     return getFinancialMonthBounds(year, month, startDay.value);
   });
 
+  const totalDays = computed(() => {
+    const { start, end } = currentBounds.value;
+    return getDaysInPeriod(start, end);
+  });
+
   const daysRemaining = computed(() => getDaysRemainingInPeriod(startDay.value));
 
-  return { startDay, isCustomPeriod, currentPeriod, currentBounds, daysRemaining };
+  return { startDay, isCustomPeriod, currentPeriod, currentBounds, totalDays, daysRemaining };
 }

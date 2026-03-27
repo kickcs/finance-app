@@ -9,10 +9,12 @@ import {
   DonutChart,
   DailyExpenseChart,
   PeriodComparison,
+  SpendingPaceChart,
   type DonutSegment,
 } from '@/widgets/analytics';
 import { PageContainer, UTabs, UCard, EmptyState, Skeleton } from '@/shared/ui';
 import { useDailyStats } from '@/entities/transaction';
+import { useBudget } from '@/entities/budget';
 import { useAccounts } from '@/entities/account';
 import { toLocalISODate, isPastDate } from '@/shared/lib/date';
 import { getCachedDateFormat } from '@/shared/lib/format/intlCache';
@@ -26,6 +28,8 @@ import {
 } from '@/features/analytics-filters';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
+import { useFinancialPeriod } from '@/shared/lib/hooks/useFinancialPeriod';
+import { formatFinancialPeriod } from '@/shared/lib/utils/financialPeriod';
 
 const route = useRoute();
 const { userId } = useCurrentUser();
@@ -141,6 +145,87 @@ const isPastPeriod = computed(() => {
   return isPastDate(toLocalISODate(end));
 });
 
+// --- Spending Pace (always current financial month) ---
+const {
+  currentBounds,
+  currentPeriod,
+  startDay,
+  totalDays: paceTotalDays,
+  daysRemaining,
+} = useFinancialPeriod();
+const { budget, isLoading: budgetLoading } = useBudget(userId);
+
+const paceTodayIndex = computed(() => Math.max(0, paceTotalDays.value - daysRemaining.value));
+
+const isOverviewActive = computed(() => activeTab.value === 'overview');
+
+const paceStartStr = computed(() => toLocalISODate(currentBounds.value.start));
+const paceEndStr = computed(() => {
+  const end = new Date(currentBounds.value.end);
+  end.setDate(end.getDate() - 1);
+  return toLocalISODate(end);
+});
+
+const paceEnabled = computed(
+  () => isOverviewActive.value && (!!budget.value || budgetLoading.value),
+);
+
+const { entries: paceRaw, isLoading: paceStatsLoading } = useDailyStats({
+  startDate: computed(() => (paceEnabled.value ? paceStartStr.value : null)),
+  endDate: computed(() => (paceEnabled.value ? paceEndStr.value : null)),
+  accountIds: computed(() => filters.value.selectedAccountIds),
+  groupBy: 'day',
+});
+
+const paceLoading = computed(() => paceStatsLoading.value || budgetLoading.value);
+
+function convertExpenseByCurrency(byCurrency: Record<string, number>): number {
+  return Object.entries(byCurrency).reduce((sum, [c, a]) => sum + convertAmount(a, c), 0);
+}
+
+const paceBudgetAmount = computed(() => {
+  if (!budget.value) return 0;
+  const { amount, currency: budgetCurrency } = budget.value.budget;
+  if (budgetCurrency === currency.value) return amount;
+  return convertAmount(amount, budgetCurrency);
+});
+
+const paceEntries = computed(() => {
+  if (paceRaw.value.length === 0) return [];
+
+  const amount = paceBudgetAmount.value;
+  const days = paceTotalDays.value;
+  const today = paceTodayIndex.value;
+
+  const expenseMap = new Map<string, number>();
+  for (const e of paceRaw.value) {
+    expenseMap.set(e.date, convertExpenseByCurrency(e.expense_by_currency));
+  }
+
+  let cum = 0;
+  const result: { day: number; actual: number; ideal: number; date: string }[] = [];
+  const start = currentBounds.value.start;
+
+  for (let i = 0; i <= today; i++) {
+    const d = new Date(start);
+    d.setDate(d.getDate() + i);
+    const ds = toLocalISODate(d);
+    cum += expenseMap.get(ds) ?? 0;
+    result.push({
+      day: i + 1,
+      actual: cum,
+      ideal: amount > 0 ? (amount / days) * (i + 1) : 0,
+      date: ds,
+    });
+  }
+
+  return result;
+});
+
+const pacePeriodLabel = computed(() =>
+  formatFinancialPeriod(currentPeriod.value.year, currentPeriod.value.month, startDay.value),
+);
+
 // --- Empty state ---
 const hasNoData = computed(
   () => convertedIncome.value === 0 && convertedExpense.value === 0 && !analyticsLoading.value,
@@ -193,10 +278,7 @@ const { entries: dailyEntries, isLoading: dailyLoading } = useDailyStats({
 const chartEntries = computed(() =>
   dailyEntries.value.map((e) => ({
     date: e.date,
-    expense: Object.entries(e.expense_by_currency).reduce(
-      (sum, [curr, amt]) => sum + convertAmount(amt, curr),
-      0,
-    ),
+    expense: convertExpenseByCurrency(e.expense_by_currency),
   })),
 );
 
@@ -350,6 +432,18 @@ onMounted(() => {
               :expense="convertedExpense"
               :currency="currency"
               :loading="analyticsLoading"
+            />
+
+            <!-- Spending Pace -->
+            <SpendingPaceChart
+              v-if="budget || paceLoading"
+              :entries="paceEntries"
+              :budget-amount="paceBudgetAmount"
+              :total-days="paceTotalDays"
+              :today-index="paceTodayIndex"
+              :currency="currency"
+              :period-label="pacePeriodLabel"
+              :loading="paceLoading"
             />
 
             <!-- Daily Stats + Savings side-by-side on desktop -->

@@ -43,14 +43,14 @@ export function useDashboardData() {
   const timestamp = useTimestamp({ interval: 60_000 });
   const currentDate = computed(() => new Date(timestamp.value));
 
-  // Current month analytics (reactive — re-queries on month boundary)
-  const monthStart = computed(() => {
-    const d = currentDate.value;
-    return toLocalISODate(new Date(d.getFullYear(), d.getMonth(), 1));
-  });
+  // Current financial month analytics (respects financialMonthStartDay)
+  const { currentBounds, daysRemaining } = useFinancialPeriod();
+
+  const monthStart = computed(() => toLocalISODate(currentBounds.value.start));
   const monthEnd = computed(() => {
-    const d = currentDate.value;
-    return toLocalISODate(new Date(d.getFullYear(), d.getMonth() + 1, 0));
+    const end = new Date(currentBounds.value.end);
+    end.setDate(end.getDate() - 1);
+    return toLocalISODate(end);
   });
   const {
     categoryBreakdown,
@@ -106,7 +106,6 @@ export function useDashboardData() {
     return total;
   });
 
-  const { currentBounds, daysRemaining } = useFinancialPeriod();
   const daysElapsedInMonth = computed(() => {
     const start = currentBounds.value.start;
     const today = currentDate.value;

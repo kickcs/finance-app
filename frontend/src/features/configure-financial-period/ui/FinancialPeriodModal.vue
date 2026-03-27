@@ -4,7 +4,11 @@ import { UModal, UButton, useToast } from '@/shared/ui';
 import { useProfile } from '@/shared/api';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useHaptics } from '@/shared/lib/haptics';
-import { getFinancialMonthBounds, formatFinancialPeriod } from '@/shared/lib/utils/financialPeriod';
+import {
+  getFinancialMonthBounds,
+  getDaysInPeriod,
+  formatFinancialPeriod,
+} from '@/shared/lib/utils/financialPeriod';
 import { transactionQueryKeys } from '@/entities/transaction';
 import { budgetQueryKeys } from '@/entities/budget';
 import { useQueryClient } from '@tanstack/vue-query';
@@ -38,7 +42,7 @@ const previewLabel = computed(() =>
 
 const daysInPeriod = computed(() => {
   const { start, end } = getFinancialMonthBounds(currentYear, currentMonth, selectedDay.value);
-  return Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+  return getDaysInPeriod(start, end);
 });
 
 const isChanged = computed(() => selectedDay.value !== currentStartDay.value);

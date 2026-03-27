@@ -103,6 +103,13 @@ export function formatFinancialPeriod(year: number, month: number, startDay: num
 }
 
 /**
+ * Total days in a financial period (end is exclusive).
+ */
+export function getDaysInPeriod(start: Date, end: Date): number {
+  return Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+/**
  * Days remaining in current financial period, inclusive of today. Minimum 1.
  */
 export function getDaysRemainingInPeriod(startDay: number): number {

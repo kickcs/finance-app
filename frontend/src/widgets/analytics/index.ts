@@ -7,3 +7,5 @@ export { default as StatCard } from './ui/StatCard.vue';
 export { IncomeExpenseBar } from './income-expense-bar';
 export { DailyExpenseChart } from './daily-expense-chart';
 export { PeriodComparison } from './period-comparison';
+export { SpendingPaceChart } from './spending-pace';
+export type { SpendingPaceEntry } from './spending-pace';

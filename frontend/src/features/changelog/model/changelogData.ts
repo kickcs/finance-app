@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.41';
+export const CURRENT_VERSION = '1.0.42';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,29 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.42',
+    date: '2026-03-28',
+    title: 'Индикатор темпа расходов',
+    items: [
+      {
+        type: 'feature',
+        text: 'Новый график «Темп расходов» на странице аналитики — показывает, укладываетесь ли вы в бюджет на текущий момент',
+      },
+      {
+        type: 'feature',
+        text: 'Сравнение реальных трат с идеальным равномерным распределением бюджета по дням месяца',
+      },
+      {
+        type: 'improvement',
+        text: 'Индикатор учитывает настраиваемый финансовый период и мультивалютность',
+      },
+      {
+        type: 'fix',
+        text: 'Исправлено: расходы на главной и в аналитике теперь считаются за один и тот же финансовый период',
+      },
+    ],
+  },
   {
     version: '1.0.41',
     date: '2026-03-27',
