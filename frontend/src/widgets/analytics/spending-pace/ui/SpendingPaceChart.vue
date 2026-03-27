@@ -134,6 +134,39 @@ const labelStep = computed(() => {
   return 7;
 });
 
+// X-axis date labels from entry dates
+const SHORT_MONTHS = [
+  'янв',
+  'фев',
+  'мар',
+  'апр',
+  'мая',
+  'июн',
+  'июл',
+  'авг',
+  'сен',
+  'окт',
+  'ноя',
+  'дек',
+];
+
+function formatDayLabel(dateStr: string): string {
+  const [, m, d] = dateStr.split('-').map(Number);
+  return `${d} ${SHORT_MONTHS[m - 1]}`;
+}
+
+// Compute date string for any day number in the period
+function dateForDay(dayNum: number): string {
+  if (!hasEntries.value) return '';
+  const first = props.entries[0];
+  const [y, m, d] = first.date.split('-').map(Number);
+  const base = new Date(y, m - 1, d);
+  base.setDate(base.getDate() + (dayNum - first.day));
+  const mm = String(base.getMonth() + 1).padStart(2, '0');
+  const dd = String(base.getDate()).padStart(2, '0');
+  return `${base.getFullYear()}-${mm}-${dd}`;
+}
+
 // Y-axis ticks: 0 and 50% of budget (100% handled by dedicated budget line)
 const Y_AXIS_FORMAT = { compact: true, showSymbol: false } as const;
 const yTicks = computed(() => {
@@ -210,22 +243,6 @@ const yTicks = computed(() => {
 
     <!-- Chart -->
     <template v-else>
-      <!-- Tooltip -->
-      <div
-        v-if="activeEntry"
-        class="mb-2 px-3 py-1.5 bg-surface-light dark:bg-surface-dark rounded-lg inline-flex items-center gap-2 text-sm"
-      >
-        <span class="text-text-secondary-light dark:text-text-secondary-dark">
-          День {{ activeEntry.day }}
-        </span>
-        <span class="font-semibold text-text-primary-light dark:text-text-primary-dark">
-          {{ formatCurrency(activeEntry.actual, currency, COMPACT_FORMAT) }}
-        </span>
-        <span v-if="hasBudget" class="text-text-tertiary-light dark:text-text-tertiary-dark">
-          / {{ formatCurrency(activeEntry.ideal, currency, COMPACT_FORMAT) }}
-        </span>
-      </div>
-
       <!-- SVG -->
       <svg
         :viewBox="`0 0 ${W} ${H}`"
@@ -353,32 +370,41 @@ const yTicks = computed(() => {
             @click="toggleDay(i)"
           />
 
-          <!-- X-axis day labels -->
+          <!-- X-axis date labels -->
           <template v-for="d in totalDays" :key="d">
             <text
               v-if="d === 1 || d === totalDays || (d % labelStep === 0 && d < totalDays - 1)"
               :x="sx(d)"
-              :y="H - 12"
+              :y="H - 6"
               text-anchor="middle"
               class="fill-text-tertiary-light dark:fill-text-tertiary-dark"
-              style="font-size: 10px"
+              style="font-size: 9px"
             >
-              {{ d }}
+              {{ formatDayLabel(dateForDay(d)) }}
             </text>
           </template>
-
-          <!-- X-axis title -->
-          <text
-            :x="P.l + cw / 2"
-            :y="H - 1"
-            text-anchor="middle"
-            class="fill-text-tertiary-light dark:fill-text-tertiary-dark"
-            style="font-size: 9px"
-          >
-            Дни периода
-          </text>
         </g>
       </svg>
+
+      <!-- Tooltip (fixed below chart) -->
+      <div
+        class="mt-2 px-3 py-1.5 bg-surface-light dark:bg-surface-dark rounded-lg flex items-center gap-2 text-sm min-h-[32px]"
+      >
+        <template v-if="activeEntry">
+          <span class="text-text-secondary-light dark:text-text-secondary-dark">
+            {{ formatDayLabel(activeEntry.date) }}
+          </span>
+          <span class="font-semibold text-text-primary-light dark:text-text-primary-dark">
+            {{ formatCurrency(activeEntry.actual, currency, COMPACT_FORMAT) }}
+          </span>
+          <span v-if="hasBudget" class="text-text-tertiary-light dark:text-text-tertiary-dark">
+            / {{ formatCurrency(activeEntry.ideal, currency, COMPACT_FORMAT) }}
+          </span>
+        </template>
+        <span v-else class="text-text-tertiary-light dark:text-text-tertiary-dark">
+          Нажмите на точку графика
+        </span>
+      </div>
 
       <!-- Status summary -->
       <div v-if="hasBudget" class="mt-2 flex items-center gap-2">
