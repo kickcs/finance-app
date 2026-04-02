@@ -105,6 +105,7 @@ const {
   handleDetailClose,
   handleRefresh,
   toCurrencyItems,
+  groupTotal,
 } = useDebtsPageState();
 
 useIntersectionObserver(
@@ -315,10 +316,7 @@ useIntersectionObserver(
                           {{
                             group.debts.some((d) => d.is_private)
                               ? '••••'
-                              : formatCurrency(
-                                  group.debts.reduce((s, d) => s + d.remaining_amount, 0),
-                                  group.debts[0]?.currency ?? currency,
-                                )
+                              : formatCurrency(groupTotal(group), currency)
                           }}
                         </p>
                       </CollapsibleTrigger>

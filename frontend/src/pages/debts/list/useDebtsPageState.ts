@@ -119,6 +119,13 @@ export function useDebtsPageState() {
     return personFilter.value === group.person_name;
   }
 
+  function groupTotal(group: DebtGroupResponse): number {
+    return group.debts.reduce(
+      (s, d) => s + convert(d.remaining_amount, d.currency || DEFAULT_CURRENCY),
+      0,
+    );
+  }
+
   // --- Selected debt (desktop detail panel) ---
   const selectedDebtId = ref<string | null>(null);
   const selectedDebt = computed<Debt | null>(() => {
@@ -322,5 +329,6 @@ export function useDebtsPageState() {
 
     // Helpers
     toCurrencyItems,
+    groupTotal,
   };
 }
