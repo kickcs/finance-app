@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue';
+import { computed, ref, watch, onMounted, onUnmounted, useTemplateRef } from 'vue';
 import { useRoute } from 'vue-router';
+import { useQueryClient } from '@tanstack/vue-query';
 import { AppHeader } from '@/widgets/header';
 import {
   IncomeExpenseBar,
@@ -13,78 +14,51 @@ import {
   type DonutSegment,
 } from '@/widgets/analytics';
 import { PageContainer, UTabs, UCard, EmptyState, Skeleton } from '@/shared/ui';
-import { useDailyStats } from '@/entities/transaction';
+import { useDailyStats, transactionQueryKeys } from '@/entities/transaction';
 import { useBudget } from '@/entities/budget';
 import { useAccounts } from '@/entities/account';
-import { toLocalISODate, isPastDate } from '@/shared/lib/date';
-import { getCachedDateFormat } from '@/shared/lib/format/intlCache';
+import { toLocalISODate } from '@/shared/lib/date';
 import {
-  DateRangePicker,
   FilterChips,
+  SwipeablePeriodHeader,
   useAnalyticsFilters,
   useConvertedAnalytics,
+  usePeriodNavigation,
   mapCategoryStats,
-  type LitePeriod,
+  type PeriodScale,
 } from '@/features/analytics-filters';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 import { useFinancialPeriod } from '@/shared/lib/hooks/useFinancialPeriod';
-import { formatFinancialPeriod } from '@/shared/lib/utils/financialPeriod';
+import { useHaptics } from '@/shared/lib/haptics/haptics';
 
 const route = useRoute();
+const queryClient = useQueryClient();
 const { userId } = useCurrentUser();
 const { currency } = useUserCurrency();
+const { trigger } = useHaptics();
 
-// --- Filters ---
+// --- Period navigation ---
 const {
-  filters,
-  effectiveDateRange,
+  scale,
+  offset,
+  dateRange,
+  comparisonDateRange,
+  label,
+  sublabel,
+  isCurrentPeriod,
+  canGoNext,
+  canGoPrev,
   daysInPeriod,
-  daysRemainingInMonth,
-  setPeriod,
-  setCustomDateRange,
-  toggleAccount,
-  clearAccountFilters,
-} = useAnalyticsFilters();
+  setScale,
+  next,
+  prev,
+  goToday,
+} = usePeriodNavigation();
 
-const startDateStr = computed(() => {
-  const d = effectiveDateRange.value.startDate;
-  return d ? toLocalISODate(d) : null;
-});
+// --- Account filters ---
+const { filters, toggleAccount, clearAccountFilters } = useAnalyticsFilters();
 
-const endDateStr = computed(() => {
-  const d = effectiveDateRange.value.endDate;
-  return d ? toLocalISODate(d) : null;
-});
-
-// --- Active tab ---
-type AnalyticsTab = 'overview' | 'categories' | 'trends';
-const activeTab = ref<AnalyticsTab>('overview');
-
-const tabItems = [
-  { id: 'overview', label: 'Обзор' },
-  { id: 'categories', label: 'Категории' },
-  { id: 'trends', label: 'Тренды' },
-];
-
-// --- Period filter tabs ---
-const periodItems = [
-  { id: 'week-start', label: 'Неделя' },
-  { id: 'month-start', label: 'Месяц' },
-  { id: 'year-start', label: 'Год' },
-  { id: 'custom', label: 'Свой' },
-];
-
-const showCustomDatePicker = computed(() => filters.value.period === 'custom');
-
-const dateRangeLabel = computed(() => {
-  const { startDate, endDate } = effectiveDateRange.value;
-  if (!startDate || !endDate) return null;
-  const fmt = getCachedDateFormat('ru-RU', { day: 'numeric', month: 'short' });
-  return `${fmt.format(startDate)} – ${fmt.format(endDate)}`;
-});
-
-// --- Accounts ---
 const { accounts } = useAccounts(userId);
 
 const accountChips = computed(() =>
@@ -98,7 +72,17 @@ const accountChips = computed(() =>
 
 const showAccountFilter = computed(() => accountChips.value.length > 1);
 
-// --- Converted analytics (main data) ---
+// --- Scale tabs ---
+const scaleItems = [
+  { id: 'day', label: 'День' },
+  { id: 'month', label: 'Месяц' },
+  { id: 'year', label: 'Год' },
+];
+
+// --- Main analytics data ---
+const startDateStr = computed(() => dateRange.value.startDate);
+const endDateStr = computed(() => dateRange.value.endDate);
+
 const analyticsOptions = {
   startDate: startDateStr,
   endDate: endDateStr,
@@ -115,7 +99,28 @@ const {
   isFetching: analyticsFetching,
 } = useConvertedAnalytics(analyticsOptions, currency);
 
-// --- Available balance (for safe daily spending) ---
+// --- Comparison data (previous period) ---
+const {
+  convertedExpense: prevExpense,
+  convertedIncome: prevIncome,
+  savingsRate: prevSavingsRate,
+  isLoading: prevLoading,
+} = useConvertedAnalytics(
+  {
+    startDate: computed(() => comparisonDateRange.value.startDate),
+    endDate: computed(() => comparisonDateRange.value.endDate),
+    accountIds: computed(() => filters.value.selectedAccountIds),
+  },
+  currency,
+);
+
+const comparisonPercent = computed(() => {
+  if (prevLoading.value || prevExpense.value === 0) return undefined;
+  const diff = convertedExpense.value - prevExpense.value;
+  return (diff / prevExpense.value) * 100;
+});
+
+// --- Available balance ---
 const availableBalance = computed(() => {
   const selectedIds = filters.value.selectedAccountIds;
   const filtered =
@@ -134,45 +139,24 @@ const availableBalance = computed(() => {
   }, 0);
 });
 
-const balanceLabel = computed(() =>
-  filters.value.selectedAccountIds.length > 0 ? 'По выбранным счетам' : undefined,
-);
-
-// --- Is past period? ---
-const isPastPeriod = computed(() => {
-  const end = effectiveDateRange.value.endDate;
-  if (!end) return false;
-  return isPastDate(toLocalISODate(end));
-});
-
-// --- Spending Pace (always current financial month) ---
-const {
-  currentBounds,
-  currentPeriod,
-  startDay,
-  totalDays: paceTotalDays,
-  daysRemaining,
-} = useFinancialPeriod();
+// --- Spending Pace (Month scale only, for viewed month) ---
+const { daysRemaining: financialDaysRemaining } = useFinancialPeriod();
 const { budget, isLoading: budgetLoading } = useBudget(userId);
 
-const paceTodayIndex = computed(() => Math.max(0, paceTotalDays.value - daysRemaining.value));
+const showPace = computed(() => scale.value === 'month' && (!!budget.value || budgetLoading.value));
 
-const isOverviewActive = computed(() => activeTab.value === 'overview');
-
-const paceStartStr = computed(() => toLocalISODate(currentBounds.value.start));
-const paceEndStr = computed(() => {
-  const end = new Date(currentBounds.value.end);
-  end.setDate(end.getDate() - 1);
-  return toLocalISODate(end);
+const paceTodayIndex = computed(() => {
+  if (!isCurrentPeriod.value) return daysInPeriod.value;
+  const start = new Date(dateRange.value.startDate + 'T00:00:00');
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const diff = today.getTime() - start.getTime();
+  return Math.max(0, Math.round(diff / (1000 * 60 * 60 * 24)));
 });
 
-const paceEnabled = computed(
-  () => isOverviewActive.value && (!!budget.value || budgetLoading.value),
-);
-
 const { entries: paceRaw, isLoading: paceStatsLoading } = useDailyStats({
-  startDate: computed(() => (paceEnabled.value ? paceStartStr.value : null)),
-  endDate: computed(() => (paceEnabled.value ? paceEndStr.value : null)),
+  startDate: computed(() => (showPace.value ? startDateStr.value : null)),
+  endDate: computed(() => (showPace.value ? endDateStr.value : null)),
   accountIds: computed(() => filters.value.selectedAccountIds),
   groupBy: 'day',
 });
@@ -194,8 +178,8 @@ const paceEntries = computed(() => {
   if (paceRaw.value.length === 0) return [];
 
   const amount = paceBudgetAmount.value;
-  const days = paceTotalDays.value;
-  const today = paceTodayIndex.value;
+  const days = daysInPeriod.value;
+  const todayIdx = paceTodayIndex.value;
 
   const expenseMap = new Map<string, number>();
   for (const e of paceRaw.value) {
@@ -204,9 +188,9 @@ const paceEntries = computed(() => {
 
   let cum = 0;
   const result: { day: number; actual: number; ideal: number; date: string }[] = [];
-  const start = currentBounds.value.start;
+  const start = new Date(dateRange.value.startDate + 'T00:00:00');
 
-  for (let i = 0; i <= today; i++) {
+  for (let i = 0; i <= todayIdx; i++) {
     const d = new Date(start);
     d.setDate(d.getDate() + i);
     const ds = toLocalISODate(d);
@@ -222,21 +206,20 @@ const paceEntries = computed(() => {
   return result;
 });
 
-const pacePeriodLabel = computed(() =>
-  formatFinancialPeriod(currentPeriod.value.year, currentPeriod.value.month, startDay.value),
-);
+// --- Conditional widget visibility ---
+const showDailyStats = computed(() => scale.value === 'month');
+const showTrendsChart = computed(() => scale.value !== 'day');
 
-// --- Empty state ---
-const hasNoData = computed(
-  () => convertedIncome.value === 0 && convertedExpense.value === 0 && !analyticsLoading.value,
-);
-
-// --- Categories tab ---
+// --- Categories ---
 const categoryType = ref<'expense' | 'income'>('expense');
 const categoryTypeItems = [
   { id: 'expense', label: 'Расходы' },
   { id: 'income', label: 'Доходы' },
 ];
+
+function handleCategoryTypeChange(value: string | number) {
+  categoryType.value = value as 'expense' | 'income';
+}
 
 const categoryStats = computed(() =>
   mapCategoryStats(categoryBreakdown.value, categoryType.value, convertAmount),
@@ -255,26 +238,22 @@ const donutSegments = computed<DonutSegment[]>(() =>
   })),
 );
 
-// --- Trends tab ---
-const isTrendsActive = computed(() => activeTab.value === 'trends');
-
-// Auto groupBy based on period length
+// --- Trends chart ---
 const groupBy = computed<'day' | 'week' | 'month'>(() => {
+  if (scale.value === 'year') return 'month';
   const days = daysInPeriod.value;
   if (days <= 31) return 'day';
   if (days <= 90) return 'week';
   return 'month';
 });
 
-// Daily stats — lazy loaded when trends tab is active
 const { entries: dailyEntries, isLoading: dailyLoading } = useDailyStats({
-  startDate: computed(() => (isTrendsActive.value ? startDateStr.value : null)),
-  endDate: computed(() => (isTrendsActive.value ? endDateStr.value : null)),
+  startDate: computed(() => (showTrendsChart.value ? startDateStr.value : null)),
+  endDate: computed(() => (showTrendsChart.value ? endDateStr.value : null)),
   accountIds: computed(() => filters.value.selectedAccountIds),
   groupBy,
 });
 
-// Convert daily entries to chart format
 const chartEntries = computed(() =>
   dailyEntries.value.map((e) => ({
     date: e.date,
@@ -282,63 +261,119 @@ const chartEntries = computed(() =>
   })),
 );
 
-// Previous period analytics — lazy loaded when trends tab is active
-const previousPeriodDates = computed(() => {
-  const start = effectiveDateRange.value.startDate;
-  const end = effectiveDateRange.value.endDate;
-  if (!start || !end) return { startDate: null, endDate: null };
-
-  const periodMs = end.getTime() - start.getTime();
-  const prevEnd = new Date(start.getTime() - 1);
-  prevEnd.setHours(23, 59, 59, 999);
-  const prevStart = new Date(prevEnd.getTime() - periodMs);
-  prevStart.setHours(0, 0, 0, 0);
-
-  return {
-    startDate: toLocalISODate(prevStart),
-    endDate: toLocalISODate(prevEnd),
-  };
-});
-
-const {
-  convertedIncome: prevIncome,
-  convertedExpense: prevExpense,
-  savingsRate: prevSavingsRate,
-  isLoading: prevLoading,
-} = useConvertedAnalytics(
-  {
-    startDate: computed(() => (isTrendsActive.value ? previousPeriodDates.value.startDate : null)),
-    endDate: computed(() => (isTrendsActive.value ? previousPeriodDates.value.endDate : null)),
-    accountIds: computed(() => filters.value.selectedAccountIds),
-  },
-  currency,
-);
-
-const showComparison = computed(() => daysInPeriod.value >= 3);
+// --- Period comparison ---
 const noPrevData = computed(() => prevIncome.value === 0 && prevExpense.value === 0);
 
-// --- Handlers ---
-function handlePeriodChange(value: string | number) {
-  setPeriod(value as LitePeriod);
+// --- Empty state ---
+const hasNoData = computed(
+  () => convertedIncome.value === 0 && convertedExpense.value === 0 && !analyticsLoading.value,
+);
+
+// --- Transition ---
+const transitionName = ref<'slide-left' | 'slide-right' | 'fade'>('fade');
+const transitionKey = computed(() => `${scale.value}-${offset.value}`);
+
+function handlePrev() {
+  transitionName.value = 'slide-left';
+  prev();
 }
 
-function handleTabChange(value: string | number) {
-  activeTab.value = value as AnalyticsTab;
+function handleNext() {
+  transitionName.value = 'slide-right';
+  next();
 }
 
-function handleCategoryTypeChange(value: string | number) {
-  categoryType.value = value as 'expense' | 'income';
+function handleToday() {
+  transitionName.value = 'slide-right';
+  goToday();
 }
 
-// Read initial type filter from query param
+function handleScaleChange(value: string | number) {
+  transitionName.value = 'fade';
+  setScale(value as PeriodScale);
+}
+
+// --- Full-page swipe ---
+const swipeContent = useTemplateRef<HTMLElement>('swipeContent');
+let swipeStartX = 0;
+let swipeStartY = 0;
+let swipeIsHorizontal: boolean | null = null;
+
+const SWIPE_THRESHOLD = 50;
+
+function onSwipeTouchStart(e: TouchEvent) {
+  swipeStartX = e.touches[0].clientX;
+  swipeStartY = e.touches[0].clientY;
+  swipeIsHorizontal = null;
+}
+
+function onSwipeTouchMove(e: TouchEvent) {
+  const dx = e.touches[0].clientX - swipeStartX;
+  const dy = e.touches[0].clientY - swipeStartY;
+
+  if (swipeIsHorizontal === null && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
+    swipeIsHorizontal = Math.abs(dx) > Math.abs(dy);
+  }
+
+  // Only prevent default scroll when clearly horizontal
+  if (swipeIsHorizontal) {
+    e.preventDefault();
+  }
+}
+
+function onSwipeTouchEnd(e: TouchEvent) {
+  if (!swipeIsHorizontal) return;
+
+  const dx = e.changedTouches[0].clientX - swipeStartX;
+
+  if (Math.abs(dx) >= SWIPE_THRESHOLD) {
+    if (dx < 0) {
+      // Swipe left → previous period
+      trigger('light');
+      handlePrev();
+    } else if (dx > 0 && canGoNext.value) {
+      // Swipe right → next period
+      trigger('light');
+      handleNext();
+    } else if (dx > 0 && !canGoNext.value) {
+      trigger('warning');
+    }
+  }
+
+  swipeIsHorizontal = null;
+}
+
+onMounted(() => {
+  swipeContent.value?.addEventListener('touchmove', onSwipeTouchMove, { passive: false });
+});
+
+onUnmounted(() => {
+  swipeContent.value?.removeEventListener('touchmove', onSwipeTouchMove);
+});
+
+// --- Prefetch adjacent periods ---
+watch([startDateStr, endDateStr, () => filters.value.selectedAccountIds.join(',')], () => {
+  const accountIds = filters.value.selectedAccountIds;
+
+  const prevRange = comparisonDateRange.value;
+  if (prevRange.startDate && prevRange.endDate) {
+    queryClient.prefetchQuery({
+      queryKey: transactionQueryKeys.analyticsStats(
+        prevRange.startDate,
+        prevRange.endDate,
+        accountIds,
+      ),
+    });
+  }
+});
+
+// --- Read initial query param ---
 onMounted(() => {
   const queryType = route.query.type as string | undefined;
   if (queryType === 'income') {
     categoryType.value = 'income';
-    activeTab.value = 'categories';
   } else if (queryType === 'expense') {
     categoryType.value = 'expense';
-    activeTab.value = 'categories';
   }
 });
 </script>
@@ -349,47 +384,25 @@ onMounted(() => {
       <AppHeader title="Аналитика" />
     </template>
 
-    <!-- Sticky filters + tabs -->
+    <!-- Sticky filters -->
     <div
-      class="sticky z-20 -mx-5 lg:-mx-8 px-5 lg:px-8 py-2 space-y-3 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-border-light/50 dark:border-border-dark/50 shadow-sm"
-      :style="{ top: '0' }"
+      class="sticky top-0 z-20 -mx-5 lg:-mx-8 px-5 lg:px-8 py-2 space-y-3 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-border-light/50 dark:border-border-dark/50 shadow-sm"
     >
-      <!-- Period Tabs -->
-      <UTabs
-        :model-value="filters.period"
-        :items="periodItems"
-        @update:model-value="handlePeriodChange"
+      <UTabs :model-value="scale" :items="scaleItems" @update:model-value="handleScaleChange" />
+
+      <SwipeablePeriodHeader
+        :label="label"
+        :sublabel="sublabel"
+        :can-go-next="canGoNext"
+        :can-go-prev="canGoPrev"
+        :is-current-period="isCurrentPeriod"
+        :comparison-percent="comparisonPercent"
+        :comparison-loading="prevLoading"
+        @prev="handlePrev"
+        @next="handleNext"
+        @today="handleToday"
       />
 
-      <!-- Date Range Indicator -->
-      <p
-        v-if="dateRangeLabel && !showCustomDatePicker"
-        class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark flex items-center gap-1.5"
-      >
-        <span class="inline-block w-1 h-1 rounded-full bg-primary/60" />
-        {{ dateRangeLabel }}
-        <span class="text-text-tertiary-light dark:text-text-tertiary-dark opacity-60">
-          · {{ daysInPeriod }} дн
-        </span>
-      </p>
-
-      <!-- Custom Date Range Picker -->
-      <Transition
-        enter-active-class="transition-all duration-300 ease-out"
-        enter-from-class="opacity-0 -translate-y-2"
-        enter-to-class="opacity-100 translate-y-0"
-        leave-active-class="transition-all duration-200 ease-in"
-        leave-from-class="opacity-100 translate-y-0"
-        leave-to-class="opacity-0 -translate-y-2"
-      >
-        <DateRangePicker
-          v-if="showCustomDatePicker"
-          :model-value="filters.customDateRange"
-          @update:model-value="setCustomDateRange"
-        />
-      </Transition>
-
-      <!-- Account Filter Chips -->
       <FilterChips
         v-if="showAccountFilter"
         :items="accountChips"
@@ -398,24 +411,34 @@ onMounted(() => {
         @toggle="toggleAccount"
         @clear="clearAccountFilters"
       />
-
-      <!-- Section Tabs -->
-      <UTabs
-        :model-value="activeTab"
-        :items="tabItems"
-        variant="underline"
-        @update:model-value="handleTabChange"
-      />
     </div>
 
-    <!-- Content -->
-    <main class="pt-4 pb-28 md:pb-8 space-y-5">
-      <!-- ========== Tab: Overview ========== -->
-      <div v-show="activeTab === 'overview'" role="tabpanel">
-        <div
-          class="space-y-4 transition-opacity duration-300"
-          :class="{ 'opacity-50 pointer-events-none': analyticsFetching && !analyticsLoading }"
-        >
+    <!-- Content with swipe + slide transition -->
+    <main
+      ref="swipeContent"
+      class="pt-4 pb-28 md:pb-8"
+      @touchstart="onSwipeTouchStart"
+      @touchend="onSwipeTouchEnd"
+    >
+      <!-- Loading indicator for period navigation -->
+      <Transition
+        enter-active-class="transition-opacity duration-150"
+        enter-from-class="opacity-0"
+        leave-active-class="transition-opacity duration-150"
+        leave-from-class="opacity-100"
+        leave-to-class="opacity-0"
+      >
+        <div v-if="analyticsFetching && !analyticsLoading" class="flex justify-center py-1 mb-2">
+          <div class="h-0.5 w-16 rounded-full bg-primary/40 overflow-hidden">
+            <div
+              class="h-full w-1/2 rounded-full bg-primary animate-[shimmer_1s_ease-in-out_infinite]"
+            />
+          </div>
+        </div>
+      </Transition>
+
+      <Transition :name="transitionName" mode="out-in">
+        <div :key="transitionKey" class="space-y-4">
           <!-- Empty state -->
           <UCard v-if="hasNoData" variant="bordered" class="py-8">
             <EmptyState
@@ -426,9 +449,8 @@ onMounted(() => {
           </UCard>
 
           <template v-else>
-            <!-- Desktop: 2-column grid / Mobile: vertical stack -->
+            <!-- === OVERVIEW SECTION === -->
             <div class="flex flex-col lg:grid lg:grid-cols-2 lg:gap-4 space-y-4 lg:space-y-0">
-              <!-- Income/Expense — full width -->
               <div class="lg:col-span-2">
                 <IncomeExpenseBar
                   :income="convertedIncome"
@@ -438,123 +460,157 @@ onMounted(() => {
                 />
               </div>
 
-              <!-- Spending Pace — left column -->
               <SpendingPaceChart
-                v-if="budget || paceLoading"
+                v-if="showPace || paceLoading"
                 :entries="paceEntries"
                 :budget-amount="paceBudgetAmount"
-                :total-days="paceTotalDays"
+                :total-days="daysInPeriod"
                 :today-index="paceTodayIndex"
                 :currency="currency"
-                :period-label="pacePeriodLabel"
+                :period-label="label"
                 :loading="paceLoading"
               />
 
-              <!-- Savings Gauge — right column (pairs with pace chart) -->
               <SavingsGauge
                 :total-income="convertedIncome"
                 :total-expense="convertedExpense"
                 :available-balance="availableBalance"
                 :currency="currency"
+                :loading="analyticsLoading"
               />
 
-              <!-- Daily Stats — full width -->
-              <div class="lg:col-span-2">
+              <div v-if="showDailyStats" class="lg:col-span-2">
                 <DailyStatsCards
                   :total-expense="convertedExpense"
                   :available-balance="availableBalance"
                   :days-in-period="daysInPeriod"
-                  :days-remaining-in-month="daysRemainingInMonth"
+                  :days-remaining-in-month="isCurrentPeriod ? financialDaysRemaining : daysInPeriod"
                   :currency="currency"
-                  :is-past-period="isPastPeriod"
-                  :balance-label="balanceLabel"
+                  :is-past-period="!isCurrentPeriod"
+                  :balance-label="
+                    filters.selectedAccountIds.length > 0 ? 'По выбранным счетам' : undefined
+                  "
+                  :loading="analyticsLoading"
                 />
               </div>
             </div>
-          </template>
-        </div>
-      </div>
 
-      <!-- ========== Tab: Categories ========== -->
-      <div v-show="activeTab === 'categories'" role="tabpanel">
-        <div
-          class="space-y-4 transition-opacity duration-300"
-          :class="{ 'opacity-50 pointer-events-none': analyticsFetching && !analyticsLoading }"
-        >
-          <!-- Local type filter -->
-          <UTabs
-            :model-value="categoryType"
-            :items="categoryTypeItems"
-            size="sm"
-            @update:model-value="handleCategoryTypeChange"
-          />
-
-          <!-- Loading -->
-          <template v-if="analyticsLoading">
-            <Skeleton class="h-48 w-48 mx-auto rounded-full" />
-            <UCard v-for="i in 3" :key="i" class="p-4">
-              <div class="flex items-center gap-3 mb-3">
-                <Skeleton class="w-10 h-10 rounded-xl" />
-                <div class="flex-1">
-                  <Skeleton class="h-4 w-24 rounded mb-1" />
-                  <Skeleton class="h-3 w-12 rounded" />
-                </div>
-                <Skeleton class="h-5 w-28 rounded" />
-              </div>
-              <Skeleton class="h-2 rounded-full" />
-            </UCard>
-          </template>
-
-          <template v-else>
-            <!-- Donut Chart with legend -->
-            <DonutChart
-              v-if="donutSegments.length > 0"
-              :segments="donutSegments"
-              :total="donutTotal"
-              :currency="currency"
-            />
-
-            <!-- Empty -->
-            <UCard v-else variant="bordered" class="py-4">
-              <EmptyState
-                icon="pie_chart"
-                title="Нет данных"
-                description="Нет транзакций для анализа за выбранный период"
+            <!-- === CATEGORIES SECTION === -->
+            <div class="border-t border-border-light/50 dark:border-border-dark/50 pt-4 space-y-4">
+              <UTabs
+                :model-value="categoryType"
+                :items="categoryTypeItems"
+                size="sm"
+                @update:model-value="handleCategoryTypeChange"
               />
-            </UCard>
+
+              <template v-if="analyticsLoading">
+                <Skeleton class="h-48 w-48 mx-auto rounded-full" />
+              </template>
+
+              <template v-else>
+                <DonutChart
+                  v-if="donutSegments.length > 0"
+                  :segments="donutSegments"
+                  :total="donutTotal"
+                  :currency="currency"
+                />
+
+                <UCard v-else variant="bordered" class="py-4">
+                  <EmptyState
+                    icon="pie_chart"
+                    title="Нет данных"
+                    description="Нет транзакций для анализа за выбранный период"
+                  />
+                </UCard>
+              </template>
+            </div>
+
+            <!-- === TRENDS SECTION === -->
+            <template v-if="showTrendsChart">
+              <div
+                class="border-t border-border-light/50 dark:border-border-dark/50 pt-4 space-y-4"
+              >
+                <div class="flex flex-col lg:flex-row lg:gap-4 space-y-4 lg:space-y-0">
+                  <div class="lg:flex-1">
+                    <DailyExpenseChart
+                      :entries="chartEntries"
+                      :currency="currency"
+                      :loading="dailyLoading"
+                      :group-by="groupBy"
+                    />
+                  </div>
+
+                  <div class="lg:flex-1">
+                    <PeriodComparison
+                      :current-expense="convertedExpense"
+                      :previous-expense="prevExpense"
+                      :current-income="convertedIncome"
+                      :previous-income="prevIncome"
+                      :current-savings-rate="savingsRate"
+                      :previous-savings-rate="prevSavingsRate"
+                      :currency="currency"
+                      :loading="prevLoading"
+                      :no-data="noPrevData"
+                    />
+                  </div>
+                </div>
+              </div>
+            </template>
           </template>
         </div>
-      </div>
-
-      <!-- ========== Tab: Trends ========== -->
-      <div v-show="activeTab === 'trends'" role="tabpanel">
-        <div class="flex flex-col lg:flex-row lg:gap-4 space-y-4 lg:space-y-0">
-          <!-- Daily Expense Chart -->
-          <div class="lg:flex-1">
-            <DailyExpenseChart
-              :entries="chartEntries"
-              :currency="currency"
-              :loading="dailyLoading"
-              :group-by="groupBy"
-            />
-          </div>
-
-          <!-- Period Comparison -->
-          <div v-if="showComparison" class="lg:flex-1">
-            <PeriodComparison
-              :current-expense="convertedExpense"
-              :previous-expense="prevExpense"
-              :current-income="convertedIncome"
-              :previous-income="prevIncome"
-              :current-savings-rate="savingsRate"
-              :previous-savings-rate="prevSavingsRate"
-              :currency="currency"
-              :loading="prevLoading"
-              :no-data="noPrevData"
-            />
-          </div>
-        </div>
-      </div>
+      </Transition>
     </main>
   </PageContainer>
 </template>
+
+<style scoped>
+.slide-left-enter-active,
+.slide-left-leave-active {
+  transition: all 150ms ease-out;
+}
+
+.slide-left-enter-from {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+.slide-left-leave-to {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+.slide-right-enter-active,
+.slide-right-leave-active {
+  transition: all 150ms ease-out;
+}
+
+.slide-right-enter-from {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+.slide-right-leave-to {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 150ms ease-out;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(300%);
+  }
+}
+</style>

@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.42';
+export const CURRENT_VERSION = '1.0.43';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,37 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.43',
+    date: '2026-04-03',
+    title: 'Навигация по периодам в стиле Apple',
+    items: [
+      {
+        type: 'feature',
+        text: 'Новая навигация по периодам — свайпайте страницу влево/вправо для перехода между периодами',
+      },
+      {
+        type: 'feature',
+        text: 'Три масштаба: День, Месяц и Год — переключайтесь табами сверху',
+      },
+      {
+        type: 'feature',
+        text: 'Кнопка «Сегодня» для быстрого возврата к текущему периоду',
+      },
+      {
+        type: 'feature',
+        text: 'Мини-сравнение расходов с предыдущим периодом прямо в заголовке',
+      },
+      {
+        type: 'improvement',
+        text: 'Все виджеты аналитики теперь на одной странице без вкладок — обзор, категории и тренды в одном потоке',
+      },
+      {
+        type: 'improvement',
+        text: 'Предзагрузка соседних периодов для мгновенных переходов',
+      },
+    ],
+  },
   {
     version: '1.0.42',
     date: '2026-03-28',

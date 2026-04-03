@@ -43,6 +43,8 @@ const BAR_GAP = 2;
 const BAR_MIN_WIDTH = 8;
 const CHART_HEIGHT = 140;
 const LABEL_HEIGHT = 20;
+const Y_AXIS_WIDTH = 36;
+const Y_AXIS_FORMAT = { compact: true, showSymbol: false } as const;
 
 const barWidth = computed(() => {
   const count = props.entries.length || 1;
@@ -52,7 +54,7 @@ const barWidth = computed(() => {
 
 const chartWidth = computed(() => {
   const count = props.entries.length || 1;
-  return count * (barWidth.value + BAR_GAP);
+  return Y_AXIS_WIDTH + count * (barWidth.value + BAR_GAP);
 });
 
 function barHeight(expense: number): number {
@@ -61,7 +63,7 @@ function barHeight(expense: number): number {
 }
 
 function barX(index: number): number {
-  return index * (barWidth.value + BAR_GAP);
+  return Y_AXIS_WIDTH + index * (barWidth.value + BAR_GAP);
 }
 
 function formatLabel(dateStr: string): string {
@@ -93,6 +95,20 @@ const selectedEntry = computed(() => {
 function formatTooltipDate(dateStr: string): string {
   return formatDate(dateStr + 'T00:00:00', { format: 'short' });
 }
+
+const yTicks = computed(() => {
+  const max = maxExpense.value;
+  if (max <= 1) return [];
+  const mid = max / 2;
+  return [
+    {
+      value: mid,
+      y: CHART_HEIGHT - (mid / max) * CHART_HEIGHT,
+      label: formatCurrency(mid, props.currency, Y_AXIS_FORMAT),
+    },
+    { value: max, y: 4, label: formatCurrency(max, props.currency, Y_AXIS_FORMAT) },
+  ];
+});
 </script>
 
 <template>
@@ -142,6 +158,28 @@ function formatTooltipDate(dateStr: string): string {
           class="w-full"
           :style="{ minWidth: `${Math.min(chartWidth, 280)}px` }"
         >
+          <template v-for="tick in yTicks" :key="tick.value">
+            <line
+              :x1="Y_AXIS_WIDTH"
+              :y1="tick.y"
+              :x2="chartWidth"
+              :y2="tick.y"
+              stroke-dasharray="4 3"
+              class="stroke-border-light dark:stroke-border-dark"
+              stroke-width="1"
+              opacity="0.4"
+            />
+            <text
+              :x="Y_AXIS_WIDTH - 4"
+              :y="tick.y + 3"
+              text-anchor="end"
+              class="fill-text-tertiary-light dark:fill-text-tertiary-dark"
+              style="font-size: 10px"
+            >
+              {{ tick.label }}
+            </text>
+          </template>
+
           <g v-for="(entry, i) in entries" :key="entry.date">
             <!-- Bar -->
             <rect

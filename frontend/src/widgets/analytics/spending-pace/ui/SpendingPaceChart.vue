@@ -126,12 +126,38 @@ watch(activeEntry, (entry) => {
   if (entry) displayEntry.value = entry;
 });
 
-function toggleDay(i: number) {
-  activeIdx.value = activeIdx.value === i ? null : i;
+let cachedRect: DOMRect | null = null;
+
+function handlePointerMove(evt: PointerEvent) {
+  const svg = evt.currentTarget as SVGSVGElement;
+  if (!cachedRect) cachedRect = svg.getBoundingClientRect();
+  const svgX = ((evt.clientX - cachedRect.left) / cachedRect.width) * W;
+
+  let closest = -1;
+  let minDist = Infinity;
+  for (let i = 0; i < props.entries.length; i++) {
+    const dist = Math.abs(sx(props.entries[i].day) - svgX);
+    if (dist < minDist) {
+      minDist = dist;
+      closest = i;
+    }
+  }
+
+  if (closest >= 0) {
+    activeIdx.value = closest;
+  }
 }
 
-// Hit zone width per day
-const hitW = computed(() => cw / Math.max(props.totalDays, 1));
+function handlePointerLeave() {
+  activeIdx.value = null;
+  cachedRect = null;
+}
+
+// Budget % for tooltip
+const displayBudgetPercent = computed(() => {
+  if (!displayEntry.value || !hasBudget.value) return null;
+  return ((displayEntry.value.actual / props.budgetAmount) * 100).toFixed(1);
+});
 
 // X-axis label step
 const labelStep = computed(() => {
@@ -237,9 +263,10 @@ const yTicks = computed(() => {
       <!-- SVG -->
       <svg
         :viewBox="`0 0 ${W} ${H}`"
-        class="w-full"
+        class="w-full cursor-pointer"
         preserveAspectRatio="xMidYMid meet"
-        @pointerleave="activeIdx = null"
+        @pointermove="handlePointerMove"
+        @pointerleave="handlePointerLeave"
       >
         <defs>
           <linearGradient id="spending-pace-fill" x1="0" y1="0" x2="0" y2="1">
@@ -270,7 +297,7 @@ const yTicks = computed(() => {
               :y="tick.y + 3"
               text-anchor="end"
               class="fill-text-tertiary-light dark:fill-text-tertiary-dark"
-              style="font-size: 9px"
+              style="font-size: 10px"
             >
               {{ tick.label }}
             </text>
@@ -293,7 +320,7 @@ const yTicks = computed(() => {
               :y="sy(budgetAmount) - 5"
               text-anchor="end"
               class="fill-warning"
-              style="font-size: 9px; font-weight: 500"
+              style="font-size: 10px; font-weight: 500"
             >
               Бюджет
             </text>
@@ -305,9 +332,9 @@ const yTicks = computed(() => {
             :d="idealPath"
             fill="none"
             stroke-dasharray="6 4"
-            stroke-width="1.5"
+            stroke-width="1.8"
             class="stroke-text-tertiary-light dark:stroke-text-tertiary-dark"
-            opacity="0.35"
+            opacity="0.5"
           />
 
           <!-- Actual area fill -->
@@ -325,7 +352,7 @@ const yTicks = computed(() => {
 
           <!-- Today vertical marker -->
           <line
-            v-if="todayX != null"
+            v-if="todayX !== null"
             :x1="todayX"
             :y1="P.t"
             :x2="todayX"
@@ -347,20 +374,6 @@ const yTicks = computed(() => {
             stroke-width="2"
           />
 
-          <!-- Touch/hover zones -->
-          <rect
-            v-for="(e, i) in entries"
-            :key="e.day"
-            :x="sx(e.day) - hitW / 2"
-            :y="P.t"
-            :width="hitW"
-            :height="ch"
-            fill="transparent"
-            class="cursor-pointer"
-            @pointerenter="activeIdx = i"
-            @click="toggleDay(i)"
-          />
-
           <!-- X-axis date labels -->
           <template v-for="d in totalDays" :key="d">
             <text
@@ -369,7 +382,7 @@ const yTicks = computed(() => {
               :y="H - 6"
               text-anchor="middle"
               class="fill-text-tertiary-light dark:fill-text-tertiary-dark"
-              style="font-size: 9px"
+              style="font-size: 10px"
             >
               {{ formatDayLabel(dateForDay(d)) }}
             </text>
@@ -403,6 +416,13 @@ const yTicks = computed(() => {
                 ? `/ ${formatCurrency(displayEntry.ideal, currency, COMPACT_FORMAT)}`
                 : ''
             }}
+          </span>
+          <span
+            v-if="hasBudget && displayBudgetPercent !== null"
+            class="text-xs font-medium whitespace-nowrap"
+            :style="{ color: color }"
+          >
+            · {{ displayBudgetPercent }}%
           </span>
         </div>
         <!-- Placeholder -->

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, watch, onUnmounted } from 'vue';
 import { UCard, UProgressBar, Skeleton } from '@/shared/ui';
 import { formatCurrency, COMPACT_FORMAT } from '@/shared/lib/format/currency';
 
@@ -16,6 +16,41 @@ const incomeWidth = computed(() => Math.max(4, (props.income / maxValue.value) *
 const expenseWidth = computed(() => Math.max(4, (props.expense / maxValue.value) * 100));
 
 const balance = computed(() => props.income - props.expense);
+
+function useAnimatedValue(getter: () => number) {
+  const animated = ref(getter());
+  let rafId = 0;
+
+  watch(
+    getter,
+    (to) => {
+      const from = animated.value;
+      if (from === to) return;
+
+      cancelAnimationFrame(rafId);
+      const start = performance.now();
+      const duration = 400;
+
+      function tick(now: number) {
+        const t = Math.min((now - start) / duration, 1);
+        const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
+        animated.value = from + (to - from) * eased;
+        if (t < 1) rafId = requestAnimationFrame(tick);
+      }
+
+      rafId = requestAnimationFrame(tick);
+    },
+    { immediate: true },
+  );
+
+  onUnmounted(() => cancelAnimationFrame(rafId));
+
+  return animated;
+}
+
+const animatedIncome = useAnimatedValue(() => props.income);
+const animatedExpense = useAnimatedValue(() => props.expense);
+const animatedBalance = computed(() => animatedIncome.value - animatedExpense.value);
 </script>
 
 <template>
@@ -43,7 +78,7 @@ const balance = computed(() => props.income - props.expense);
             Доходы
           </span>
           <span class="text-base font-semibold text-success">
-            +{{ formatCurrency(income, currency, COMPACT_FORMAT) }}
+            +{{ formatCurrency(animatedIncome, currency, COMPACT_FORMAT) }}
           </span>
         </div>
         <UProgressBar :value="incomeWidth" color="success" size="lg" />
@@ -56,7 +91,7 @@ const balance = computed(() => props.income - props.expense);
             Расходы
           </span>
           <span class="text-base font-semibold text-danger">
-            -{{ formatCurrency(expense, currency, COMPACT_FORMAT) }}
+            -{{ formatCurrency(animatedExpense, currency, COMPACT_FORMAT) }}
           </span>
         </div>
         <UProgressBar :value="expenseWidth" color="danger" size="lg" />
@@ -70,7 +105,8 @@ const balance = computed(() => props.income - props.expense);
           Баланс
         </span>
         <span class="text-lg font-bold" :class="balance >= 0 ? 'text-primary' : 'text-danger'">
-          {{ balance >= 0 ? '+' : '' }}{{ formatCurrency(balance, currency, COMPACT_FORMAT) }}
+          {{ animatedBalance >= 0 ? '+' : ''
+          }}{{ formatCurrency(animatedBalance, currency, COMPACT_FORMAT) }}
         </span>
       </div>
     </template>

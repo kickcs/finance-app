@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { UCard, UIcon } from '@/shared/ui';
+import { UCard, UIcon, Skeleton } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
 
 const props = defineProps<{
@@ -11,6 +11,7 @@ const props = defineProps<{
   currency: string;
   isPastPeriod?: boolean;
   balanceLabel?: string;
+  loading?: boolean;
 }>();
 
 // Average daily expense
@@ -56,81 +57,101 @@ const statusConfig = {
 
 <template>
   <div class="space-y-3">
-    <!-- Average Daily Expense Card -->
-    <UCard padding="md">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <div class="w-9 h-9 rounded-lg bg-primary-light flex items-center justify-center">
-            <UIcon name="calendar_today" size="sm" class="text-primary" />
+    <template v-if="loading">
+      <UCard v-for="i in isPastPeriod ? 1 : 2" :key="i" padding="md">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <Skeleton class="w-9 h-9 rounded-lg" />
+            <div class="space-y-1">
+              <Skeleton class="h-4 w-24 rounded" />
+              <Skeleton class="h-3 w-16 rounded" />
+            </div>
           </div>
-          <div>
-            <p class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
-              Средний расход
-            </p>
-            <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
-              за {{ daysInPeriod }} дн.
-            </p>
+          <div class="text-right space-y-1">
+            <Skeleton class="h-5 w-20 rounded" />
+            <Skeleton class="h-3 w-10 rounded" />
           </div>
         </div>
-        <div class="text-right">
-          <p class="text-base font-semibold text-text-primary-light dark:text-text-primary-dark">
-            {{ formatCurrency(avgDailyExpense, currency) }}
-          </p>
-          <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">/день</p>
-        </div>
-      </div>
-    </UCard>
+      </UCard>
+    </template>
 
-    <!-- Safe Daily Spending Card -->
-    <UCard v-if="!isPastPeriod" padding="md">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <div
-            class="w-9 h-9 rounded-lg flex items-center justify-center"
-            :class="statusConfig[safeDailyStatus].bg"
-          >
-            <UIcon name="savings" size="sm" :class="statusConfig[safeDailyStatus].text" />
+    <template v-else>
+      <!-- Average Daily Expense Card -->
+      <UCard padding="md">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-lg bg-primary-light flex items-center justify-center">
+              <UIcon name="calendar_today" size="sm" class="text-primary" />
+            </div>
+            <div>
+              <p class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
+                Средний расход
+              </p>
+              <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
+                за {{ daysInPeriod }} дн.
+              </p>
+            </div>
           </div>
-          <div>
-            <p class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
-              Безопасный остаток
+          <div class="text-right">
+            <p class="text-base font-semibold text-text-primary-light dark:text-text-primary-dark">
+              {{ formatCurrency(avgDailyExpense, currency) }}
             </p>
-            <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
-              {{
-                daysRemainingInMonth <= 0
-                  ? 'Последний день'
-                  : `осталось ${daysRemainingInMonth} дн.`
-              }}
+            <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">/день</p>
+          </div>
+        </div>
+      </UCard>
+
+      <!-- Safe Daily Spending Card -->
+      <UCard v-if="!isPastPeriod" padding="md">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div
+              class="w-9 h-9 rounded-lg flex items-center justify-center"
+              :class="statusConfig[safeDailyStatus].bg"
+            >
+              <UIcon name="savings" size="sm" :class="statusConfig[safeDailyStatus].text" />
+            </div>
+            <div>
+              <p class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
+                Безопасный остаток
+              </p>
+              <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
+                {{
+                  daysRemainingInMonth <= 0
+                    ? 'Последний день'
+                    : `осталось ${daysRemainingInMonth} дн.`
+                }}
+              </p>
+              <p
+                v-if="balanceLabel"
+                class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark mt-0.5"
+              >
+                {{ balanceLabel }}
+              </p>
+            </div>
+          </div>
+          <div class="text-right">
+            <p class="text-base font-semibold" :class="statusConfig[safeDailyStatus].text">
+              {{ formatCurrency(Math.max(0, safeDaily), currency) }}
             </p>
             <p
-              v-if="balanceLabel"
-              class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark mt-0.5"
+              v-if="daysRemainingInMonth > 0"
+              class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
             >
-              {{ balanceLabel }}
+              /день
             </p>
           </div>
         </div>
-        <div class="text-right">
-          <p class="text-base font-semibold" :class="statusConfig[safeDailyStatus].text">
-            {{ formatCurrency(Math.max(0, safeDaily), currency) }}
-          </p>
-          <p
-            v-if="daysRemainingInMonth > 0"
-            class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
-          >
-            /день
-          </p>
-        </div>
-      </div>
 
-      <!-- Status indicator -->
-      <div
-        class="mt-3 pt-3 border-t border-border-light dark:border-border-dark flex items-center gap-2 text-xs"
-        :class="statusConfig[safeDailyStatus].text"
-      >
-        <UIcon :name="statusConfig[safeDailyStatus].icon" size="xs" />
-        <span>{{ statusConfig[safeDailyStatus].message }}</span>
-      </div>
-    </UCard>
+        <!-- Status indicator -->
+        <div
+          class="mt-3 pt-3 border-t border-border-light dark:border-border-dark flex items-center gap-2 text-xs"
+          :class="statusConfig[safeDailyStatus].text"
+        >
+          <UIcon :name="statusConfig[safeDailyStatus].icon" size="xs" />
+          <span>{{ statusConfig[safeDailyStatus].message }}</span>
+        </div>
+      </UCard>
+    </template>
   </div>
 </template>
