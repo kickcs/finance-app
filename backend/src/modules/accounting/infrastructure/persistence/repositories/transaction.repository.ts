@@ -443,8 +443,8 @@ export class TransactionRepository implements ITransactionRepository {
     const debtReturnsToMe = Number(result?.debtReturnsToMe ?? 0);
     const debtReturnsFromMe = Number(result?.debtReturnsFromMe ?? 0);
 
-    const netIncome = Math.max(0, regularIncome + debtTaken - debtReturnsFromMe);
-    const netExpense = Math.max(0, regularExpense + debtGiven - debtReturnsToMe);
+    const netIncome = regularIncome + Math.max(0, debtTaken - debtReturnsFromMe);
+    const netExpense = regularExpense + Math.max(0, debtGiven - debtReturnsToMe);
 
     // Query 2: By-currency breakdown with same conditional logic
     const byCurrencyResult = await this.ormRepository
@@ -492,8 +492,8 @@ export class TransactionRepository implements ITransactionRepository {
       const returnsToMe = Number(row.debtReturnsToMe ?? 0);
       const returnsFromMe = Number(row.debtReturnsFromMe ?? 0);
 
-      const netIncomeForCurrency = Math.max(0, incomeVal + takenVal - returnsFromMe);
-      const netExpenseForCurrency = Math.max(0, expenseVal + givenVal - returnsToMe);
+      const netIncomeForCurrency = incomeVal + Math.max(0, takenVal - returnsFromMe);
+      const netExpenseForCurrency = expenseVal + Math.max(0, givenVal - returnsToMe);
 
       if (netIncomeForCurrency > 0) {
         incomeByCurrency[row.currency] = netIncomeForCurrency;
@@ -609,10 +609,9 @@ export class TransactionRepository implements ITransactionRepository {
       }
     }
 
-    // Income = regular + debt_taken - returns_from_me
-    const netIncome = Math.max(0, regularIncome + debtTaken - debtReturnsFromMe);
-    // Expense = regular + debt_given - returns_to_me
-    const netExpense = Math.max(0, regularExpense + debtGiven - debtReturnsToMe);
+    // Debt returns only offset their corresponding debt amounts, not regular transactions
+    const netIncome = regularIncome + Math.max(0, debtTaken - debtReturnsFromMe);
+    const netExpense = regularExpense + Math.max(0, debtGiven - debtReturnsToMe);
 
     // Calculate NET by currency
     const allCurrencies = new Set([
@@ -635,10 +634,9 @@ export class TransactionRepository implements ITransactionRepository {
       const returnsToMe = debtReturnsToMeByCurrency[currency] ?? 0;
       const returnsFromMe = debtReturnsFromMeByCurrency[currency] ?? 0;
 
-      // Income = regular + debt_taken - returns_from_me
-      const netIncomeForCurrency = Math.max(0, incomeVal + takenVal - returnsFromMe);
-      // Expense = regular + debt_given - returns_to_me
-      const netExpenseForCurrency = Math.max(0, expenseVal + givenVal - returnsToMe);
+      // Debt returns only offset debt amounts, never regular income/expense
+      const netIncomeForCurrency = incomeVal + Math.max(0, takenVal - returnsFromMe);
+      const netExpenseForCurrency = expenseVal + Math.max(0, givenVal - returnsToMe);
 
       if (netIncomeForCurrency > 0) {
         incomeByCurrency[currency] = netIncomeForCurrency;
@@ -756,23 +754,28 @@ export class TransactionRepository implements ITransactionRepository {
       }
     }
 
-    // Apply offsets to expense categories
+    // Apply offsets to expense categories — cap at category amount to prevent spill-over
     for (const offset of categoryOffsetsResult) {
       const key = `${offset.categoryId}-expense`;
       const category = categoryMap.get(key);
 
       if (category) {
         const offsetAmount = Number(offset.offsetAmount);
-        category.amount -= offsetAmount;
-        category.amountByCurrency[offset.currency] =
-          (category.amountByCurrency[offset.currency] ?? 0) - offsetAmount;
 
-        // Remove currency if it becomes <= 0
-        if (category.amountByCurrency[offset.currency] <= 0) {
-          delete category.amountByCurrency[offset.currency];
+        // Cap offset so it never exceeds what the category actually has
+        const currencyAmount = category.amountByCurrency[offset.currency] ?? 0;
+        const cappedTotalOffset = Math.min(offsetAmount, category.amount);
+        const cappedCurrencyOffset = Math.min(cappedTotalOffset, currencyAmount);
+
+        category.amount -= cappedTotalOffset;
+        if (cappedCurrencyOffset > 0) {
+          category.amountByCurrency[offset.currency] = currencyAmount - cappedCurrencyOffset;
+          if (category.amountByCurrency[offset.currency] <= 0) {
+            delete category.amountByCurrency[offset.currency];
+          }
         }
 
-        // Remove category if total amount becomes <= 0
+        // Remove category only if it genuinely has no remaining amount
         if (category.amount <= 0) {
           categoryMap.delete(key);
         }
