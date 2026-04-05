@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, nextTick, computed } from 'vue';
+import { ref, watch, onMounted, nextTick, computed } from 'vue';
 import { useEventListener } from '@vueuse/core';
 import { UIcon } from '@/shared/ui';
 import { getCurrencyByCode } from '@/entities/currency';
@@ -27,6 +27,17 @@ const hiddenInputRef = ref<HTMLInputElement | null>(null);
 const currencyOpen = ref(false);
 const amountBounce = ref(false);
 const isFocused = ref(false);
+const rawValue = ref(props.amount ? String(props.amount) : '');
+
+watch(
+  () => props.amount,
+  (newAmount) => {
+    const currentParsed = parseFloat(rawValue.value) || 0;
+    if (currentParsed !== newAmount) {
+      rawValue.value = newAmount ? String(newAmount) : '';
+    }
+  },
+);
 
 useEventListener(hiddenInputRef, 'focus', () => (isFocused.value = true));
 useEventListener(hiddenInputRef, 'blur', () => (isFocused.value = false));
@@ -42,7 +53,12 @@ function focusInput() {
 
 function onInput(event: Event) {
   const value = (event.target as HTMLInputElement).value;
-  const num = Number(value) || 0;
+  const withDot = value.replace(/,/g, '.');
+  const cleaned = withDot.replace(/[^\d.]/g, '');
+  const parts = cleaned.split('.');
+  const sanitized = parts.length > 2 ? `${parts[0]}.${parts.slice(1).join('')}` : cleaned;
+  rawValue.value = sanitized;
+  const num = parseFloat(sanitized) || 0;
   // Bounce animation on first digit
   if (!props.amount && num > 0) {
     amountBounce.value = true;
@@ -82,9 +98,9 @@ onMounted(() => {
         <input
           :id="`amount-input-${currency}`"
           ref="hiddenInputRef"
-          type="number"
-          inputmode="numeric"
-          :value="amount || ''"
+          type="text"
+          inputmode="decimal"
+          :value="rawValue"
           :aria-label="label || 'Сумма'"
           class="absolute inset-0 w-full h-full opacity-0 caret-transparent cursor-text"
           @input="onInput"

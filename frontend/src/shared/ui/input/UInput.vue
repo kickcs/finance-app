@@ -63,33 +63,63 @@ watch(
   },
 );
 
+// For non-currency variants
 const inputValue = computed({
-  get: () => {
-    if (props.variant === 'currency') {
-      const value = props.modelValue;
-      if (!value && value !== 0) return '';
-      return formatNumberWithSpaces(value);
-    }
-    return props.modelValue;
-  },
-  set: (value) => {
-    if (props.variant === 'currency') {
-      const cleaned = String(value)
-        .replace(/,/g, '.')
-        .replace(/[^\d.]/g, '');
-      const parts = cleaned.split('.');
-      const sanitized = parts.length > 2 ? `${parts[0]}.${parts.slice(1).join('')}` : cleaned;
-      if (sanitized === '') {
-        emit('update:modelValue', '');
-      } else {
-        const num = Number(sanitized);
-        emit('update:modelValue', Number.isNaN(num) ? '' : num);
-      }
-    } else {
-      emit('update:modelValue', value);
-    }
-  },
+  get: () => props.modelValue,
+  set: (value) => emit('update:modelValue', value),
 });
+
+// For currency variant: local display string that preserves trailing dot while typing
+const rawInput = ref('');
+const isInputFocused = ref(false);
+
+watch(
+  () => props.modelValue,
+  (val) => {
+    if (props.variant !== 'currency' || isInputFocused.value) return;
+    rawInput.value =
+      val !== null && val !== undefined && val !== '' ? formatNumberWithSpaces(Number(val)) : '';
+  },
+  { immediate: true },
+);
+
+function handleInput(event: Event) {
+  const value = (event.target as HTMLInputElement).value;
+  if (props.variant === 'currency') {
+    const withDot = value.replace(/,/g, '.');
+    const cleaned = withDot.replace(/[^\d.]/g, '');
+    const parts = cleaned.split('.');
+    const sanitized = parts.length > 2 ? `${parts[0]}.${parts.slice(1).join('')}` : cleaned;
+    rawInput.value = sanitized;
+    if (!sanitized || sanitized === '.') {
+      emit('update:modelValue', '');
+    } else {
+      const num = parseFloat(sanitized);
+      emit('update:modelValue', isNaN(num) ? '' : num);
+    }
+  } else {
+    emit('update:modelValue', value);
+  }
+}
+
+function handleFocus(event: FocusEvent) {
+  if (props.variant === 'currency') {
+    isInputFocused.value = true;
+    const val = props.modelValue;
+    rawInput.value = val !== null && val !== undefined && val !== '' ? String(Number(val)) : '';
+  }
+  emit('focus', event);
+}
+
+function handleBlur(event: FocusEvent) {
+  if (props.variant === 'currency') {
+    isInputFocused.value = false;
+    const val = props.modelValue;
+    rawInput.value =
+      val !== null && val !== undefined && val !== '' ? formatNumberWithSpaces(Number(val)) : '';
+  }
+  emit('blur', event);
+}
 
 const inputType = computed(() => {
   if (props.variant === 'currency') return 'text';
@@ -149,7 +179,7 @@ defineExpose({
       <input
         :id="inputId"
         ref="inputRef"
-        v-model="inputValue"
+        :value="variant === 'currency' ? rawInput : inputValue"
         :type="inputType"
         :inputmode="inputMode"
         :placeholder="placeholder"
@@ -170,9 +200,10 @@ defineExpose({
             variant !== 'currency' && 'flex-1 min-w-0 text-sm',
           )
         "
+        @input="handleInput"
         @keydown="$emit('keydown', $event)"
-        @focus="$emit('focus', $event)"
-        @blur="$emit('blur', $event)"
+        @focus="handleFocus"
+        @blur="handleBlur"
       />
 
       <!-- Suffix -->
