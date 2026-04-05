@@ -292,10 +292,12 @@ const feeDisplayAmount = computed(() => {
 });
 
 const rawFeeValue = ref(props.formData.feeAmount ? String(props.formData.feeAmount) : '');
+const isFeeInputFocused = ref(false);
 
 watch(
   () => props.formData.feeAmount,
   (newAmount) => {
+    if (isFeeInputFocused.value) return;
     const currentParsed = parseFloat(rawFeeValue.value) || 0;
     if (currentParsed !== newAmount) {
       rawFeeValue.value = newAmount ? String(newAmount) : '';
@@ -571,6 +573,8 @@ function handleFeeTypeToggle() {
             placeholder="0"
             class="flex-1 min-w-0 bg-transparent text-sm text-right text-text-primary-light dark:text-text-primary-dark outline-none tabular-nums"
             @input="handleFeeAmountChange(($event.target as HTMLInputElement).value)"
+            @focus="isFeeInputFocused = true"
+            @blur="isFeeInputFocused = false"
           />
           <button
             type="button"
