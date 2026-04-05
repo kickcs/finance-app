@@ -101,11 +101,16 @@ export function formatNumberWithSpaces(value: number | string): string {
  * Replaces commas with dots, strips non-numeric chars, and enforces a single decimal point.
  * "1,5" → "1.5", "1..2" → "1.2", "abc" → ""
  */
-export function sanitizeCurrencyInput(value: string): string {
+export function sanitizeCurrencyInput(value: string, maxDecimals = 3): string {
   const withDot = value.replace(/,/g, '.');
   const cleaned = withDot.replace(/[^\d.]/g, '');
   const parts = cleaned.split('.');
-  return parts.length > 2 ? `${parts[0]}.${parts.slice(1).join('')}` : cleaned;
+  const joined = parts.length > 2 ? `${parts[0]}.${parts.slice(1).join('')}` : cleaned;
+  const dotIdx = joined.indexOf('.');
+  if (dotIdx !== -1 && joined.length - dotIdx - 1 > maxDecimals) {
+    return joined.slice(0, dotIdx + maxDecimals + 1);
+  }
+  return joined;
 }
 
 /**

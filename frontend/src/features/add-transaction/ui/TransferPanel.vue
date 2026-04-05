@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import { UIcon } from '@/shared/ui';
 import { getCurrencyByCode, DEFAULT_CURRENCY } from '@/entities/currency';
-import { formatCurrency } from '@/shared/lib/format/currency';
+import { formatCurrency, sanitizeCurrencyInput } from '@/shared/lib/format/currency';
 import { useExchangeRates } from '@/shared/api';
 import type { AccountWithBalances } from '@/entities/account';
 import type { TransactionFormData } from '../model/useTransactionForm';
@@ -291,13 +291,28 @@ const feeDisplayAmount = computed(() => {
   return props.formData.feeAmount;
 });
 
+const rawFeeValue = ref(props.formData.feeAmount ? String(props.formData.feeAmount) : '');
+
+watch(
+  () => props.formData.feeAmount,
+  (newAmount) => {
+    const currentParsed = parseFloat(rawFeeValue.value) || 0;
+    if (currentParsed !== newAmount) {
+      rawFeeValue.value = newAmount ? String(newAmount) : '';
+    }
+  },
+);
+
 function handleFeeAmountChange(value: string) {
-  const num = parseDecimalInput(value);
+  const sanitized = sanitizeCurrencyInput(value);
+  rawFeeValue.value = sanitized;
+  const num = parseFloat(sanitized);
   emit('update:formData', { ...props.formData, feeAmount: Number.isNaN(num) ? 0 : num });
 }
 
 function handleFeeTypeToggle() {
   const newType = props.formData.feeType === 'fixed' ? 'percent' : 'fixed';
+  rawFeeValue.value = '';
   emit('update:formData', { ...props.formData, feeType: newType, feeAmount: 0 });
 }
 </script>
@@ -550,12 +565,11 @@ function handleFeeTypeToggle() {
             Комиссия
           </span>
           <input
-            type="number"
+            type="text"
             inputmode="decimal"
-            step="any"
-            :value="formData.feeAmount || ''"
+            :value="rawFeeValue"
             placeholder="0"
-            class="flex-1 min-w-0 bg-transparent text-sm text-right text-text-primary-light dark:text-text-primary-dark outline-none tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            class="flex-1 min-w-0 bg-transparent text-sm text-right text-text-primary-light dark:text-text-primary-dark outline-none tabular-nums"
             @input="handleFeeAmountChange(($event.target as HTMLInputElement).value)"
           />
           <button
