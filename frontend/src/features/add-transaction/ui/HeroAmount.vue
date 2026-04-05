@@ -3,7 +3,11 @@ import { ref, watch, onMounted, nextTick, computed } from 'vue';
 import { useEventListener } from '@vueuse/core';
 import { UIcon } from '@/shared/ui';
 import { getCurrencyByCode } from '@/entities/currency';
-import { formatNumberWithSpaces, formatCurrency } from '@/shared/lib/format/currency';
+import {
+  formatNumberWithSpaces,
+  formatCurrency,
+  sanitizeCurrencyInput,
+} from '@/shared/lib/format/currency';
 import { Popover, PopoverTrigger, PopoverContent } from '@/shared/ui/primitives/popover';
 
 const props = defineProps<{
@@ -32,6 +36,7 @@ const rawValue = ref(props.amount ? String(props.amount) : '');
 watch(
   () => props.amount,
   (newAmount) => {
+    if (isFocused.value) return;
     const currentParsed = parseFloat(rawValue.value) || 0;
     if (currentParsed !== newAmount) {
       rawValue.value = newAmount ? String(newAmount) : '';
@@ -52,14 +57,9 @@ function focusInput() {
 }
 
 function onInput(event: Event) {
-  const value = (event.target as HTMLInputElement).value;
-  const withDot = value.replace(/,/g, '.');
-  const cleaned = withDot.replace(/[^\d.]/g, '');
-  const parts = cleaned.split('.');
-  const sanitized = parts.length > 2 ? `${parts[0]}.${parts.slice(1).join('')}` : cleaned;
+  const sanitized = sanitizeCurrencyInput((event.target as HTMLInputElement).value);
   rawValue.value = sanitized;
   const num = parseFloat(sanitized) || 0;
-  // Bounce animation on first digit
   if (!props.amount && num > 0) {
     amountBounce.value = true;
     setTimeout(() => (amountBounce.value = false), 200);

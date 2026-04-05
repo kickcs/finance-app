@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, useId, ref, watch } from 'vue';
 import { cn } from '@/shared/lib/utils';
-import { formatNumberWithSpaces } from '@/shared/lib/format/currency';
+import { formatNumberWithSpaces, sanitizeCurrencyInput } from '@/shared/lib/format/currency';
 import { UIcon } from '@/shared/ui';
 
 export interface InputProps {
@@ -63,13 +63,9 @@ watch(
   },
 );
 
-// For non-currency variants
-const inputValue = computed({
-  get: () => props.modelValue,
-  set: (value) => emit('update:modelValue', value),
-});
+const inputValue = computed(() => props.modelValue);
 
-// For currency variant: local display string that preserves trailing dot while typing
+// Separate ref so trailing dot/zero input state is not lost on each keystroke
 const rawInput = ref('');
 const isInputFocused = ref(false);
 
@@ -77,8 +73,9 @@ watch(
   () => props.modelValue,
   (val) => {
     if (props.variant !== 'currency' || isInputFocused.value) return;
-    rawInput.value =
+    const formatted =
       val !== null && val !== undefined && val !== '' ? formatNumberWithSpaces(Number(val)) : '';
+    if (rawInput.value !== formatted) rawInput.value = formatted;
   },
   { immediate: true },
 );
@@ -86,10 +83,7 @@ watch(
 function handleInput(event: Event) {
   const value = (event.target as HTMLInputElement).value;
   if (props.variant === 'currency') {
-    const withDot = value.replace(/,/g, '.');
-    const cleaned = withDot.replace(/[^\d.]/g, '');
-    const parts = cleaned.split('.');
-    const sanitized = parts.length > 2 ? `${parts[0]}.${parts.slice(1).join('')}` : cleaned;
+    const sanitized = sanitizeCurrencyInput(value);
     rawInput.value = sanitized;
     if (!sanitized || sanitized === '.') {
       emit('update:modelValue', '');
@@ -115,8 +109,9 @@ function handleBlur(event: FocusEvent) {
   if (props.variant === 'currency') {
     isInputFocused.value = false;
     const val = props.modelValue;
-    rawInput.value =
+    const formatted =
       val !== null && val !== undefined && val !== '' ? formatNumberWithSpaces(Number(val)) : '';
+    if (rawInput.value !== formatted) rawInput.value = formatted;
   }
   emit('blur', event);
 }

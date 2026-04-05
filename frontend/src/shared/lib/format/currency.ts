@@ -97,6 +97,18 @@ export function formatNumberWithSpaces(value: number | string): string {
 }
 
 /**
+ * Normalize a raw amount input string to a valid decimal string.
+ * Replaces commas with dots, strips non-numeric chars, and enforces a single decimal point.
+ * "1,5" → "1.5", "1..2" → "1.2", "abc" → ""
+ */
+export function sanitizeCurrencyInput(value: string): string {
+  const withDot = value.replace(/,/g, '.');
+  const cleaned = withDot.replace(/[^\d.]/g, '');
+  const parts = cleaned.split('.');
+  return parts.length > 2 ? `${parts[0]}.${parts.slice(1).join('')}` : cleaned;
+}
+
+/**
  * Format currency with optional masking for hidden balances
  * Replaces the repeated pattern: hidden ? '••••' : formatCurrency(...)
  */
