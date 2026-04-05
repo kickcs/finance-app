@@ -3,7 +3,6 @@ import { profileQueryKeys } from '@/shared/api/queryKeys';
 import { accountQueryKeys } from '@/entities/account';
 import { transactionQueryKeys } from '@/entities/transaction';
 import { debtQueryKeys } from '@/entities/debt';
-import { reminderQueryKeys } from '@/entities/reminder';
 import { DEFAULT_CURRENCY } from '@/entities/currency';
 import { STORAGE_KEYS } from '@/shared/config/storageKeys';
 
@@ -35,13 +34,6 @@ export function prefetchDashboardData(userId: string) {
     queryClient.prefetchQuery({
       queryKey: debtQueryKeys.list(userId),
       queryFn: () => debtsApi.getAll(userId),
-    });
-  });
-
-  import('@/entities/reminder/api/remindersApi').then(({ remindersApi }) => {
-    queryClient.prefetchQuery({
-      queryKey: reminderQueryKeys.list(userId),
-      queryFn: () => remindersApi.getAll(userId),
     });
   });
 

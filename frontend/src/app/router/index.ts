@@ -28,9 +28,6 @@ const prefetchPages = () => {
     import('@/pages/debts/list/DebtsListPage.vue');
     import('@/pages/debts/detail/DebtDetailPage.vue');
     import('@/pages/debts/new/AddDebtPage.vue');
-    import('@/pages/reminders/list/RemindersListPage.vue');
-    import('@/pages/reminders/detail/ReminderDetailPage.vue');
-    import('@/pages/reminders/new/AddReminderPage.vue');
     import('@/pages/changelog/ChangelogPage.vue');
     import('@/pages/settings/currency/CurrencySettingsPage.vue');
     import('@/pages/settings/categories/CategoriesPage.vue');
@@ -112,19 +109,19 @@ export const router = createRouter({
           component: () => import('@/pages/transactions/new/AddTransactionPage.vue'),
         },
         {
-          path: 'reminders/new',
-          name: ROUTE_NAMES.NEW_REMINDER,
-          component: () => import('@/pages/reminders/new/AddReminderPage.vue'),
+          path: 'subscriptions',
+          name: ROUTE_NAMES.SUBSCRIPTIONS_LIST,
+          component: () => import('@/pages/subscriptions/SubscriptionsPage.vue'),
         },
         {
-          path: 'reminders/:id',
-          name: ROUTE_NAMES.REMINDER_DETAIL,
-          component: () => import('@/pages/reminders/detail/ReminderDetailPage.vue'),
+          path: 'subscriptions/new',
+          name: ROUTE_NAMES.NEW_SUBSCRIPTION,
+          component: () => import('@/pages/subscription-detail/SubscriptionDetailPage.vue'),
         },
         {
-          path: 'reminders',
-          name: ROUTE_NAMES.REMINDERS_LIST,
-          component: () => import('@/pages/reminders/list/RemindersListPage.vue'),
+          path: 'subscriptions/:id',
+          name: ROUTE_NAMES.SUBSCRIPTION_DETAIL,
+          component: () => import('@/pages/subscription-detail/SubscriptionDetailPage.vue'),
         },
         {
           path: 'debts',

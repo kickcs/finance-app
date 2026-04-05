@@ -40,6 +40,7 @@ describe('LogoutHandler', () => {
       quickActionsHidden: false,
       quickActionsHintDismissed: false,
       financialMonthStartDay: 1,
+      timezone: 'Asia/Tashkent',
       createdAt: new Date(),
     });
     mockRepository.findById.mockResolvedValue(profile);

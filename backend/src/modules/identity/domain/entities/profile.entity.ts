@@ -34,6 +34,7 @@ export interface ProfileProps {
   quickActionsHidden: boolean;
   quickActionsHintDismissed: boolean;
   financialMonthStartDay: number;
+  timezone: string;
   createdAt: Date;
 }
 
@@ -55,6 +56,7 @@ export class Profile extends AggregateRoot<string> {
   private _quickActionsHidden: boolean;
   private _quickActionsHintDismissed: boolean;
   private _financialMonthStartDay: number;
+  private _timezone: string;
   private _createdAt: Date;
 
   private constructor(props: ProfileProps) {
@@ -72,6 +74,7 @@ export class Profile extends AggregateRoot<string> {
     this._quickActionsHidden = props.quickActionsHidden;
     this._quickActionsHintDismissed = props.quickActionsHintDismissed;
     this._financialMonthStartDay = props.financialMonthStartDay;
+    this._timezone = props.timezone;
     this._createdAt = props.createdAt;
   }
 
@@ -100,6 +103,7 @@ export class Profile extends AggregateRoot<string> {
       quickActionsHidden: false,
       quickActionsHintDismissed: false,
       financialMonthStartDay: 1,
+      timezone: 'Asia/Tashkent',
       createdAt: new Date(),
     });
 
@@ -129,6 +133,7 @@ export class Profile extends AggregateRoot<string> {
       quickActionsHidden: false,
       quickActionsHintDismissed: false,
       financialMonthStartDay: 1,
+      timezone: 'Asia/Tashkent',
       createdAt: new Date(),
     });
 
@@ -201,6 +206,10 @@ export class Profile extends AggregateRoot<string> {
     return this._financialMonthStartDay;
   }
 
+  get timezone(): string {
+    return this._timezone;
+  }
+
   get createdAt(): Date {
     return this._createdAt;
   }
@@ -215,6 +224,7 @@ export class Profile extends AggregateRoot<string> {
     quickActionsHidden?: boolean;
     quickActionsHintDismissed?: boolean;
     financialMonthStartDay?: number;
+    timezone?: string;
   }): void {
     const changes: Record<string, unknown> = {};
 
@@ -256,6 +266,11 @@ export class Profile extends AggregateRoot<string> {
     if (data.financialMonthStartDay !== undefined) {
       this._financialMonthStartDay = data.financialMonthStartDay;
       changes.financialMonthStartDay = data.financialMonthStartDay;
+    }
+
+    if (data.timezone !== undefined) {
+      this._timezone = data.timezone;
+      changes.timezone = data.timezone;
     }
 
     if (Object.keys(changes).length > 0) {

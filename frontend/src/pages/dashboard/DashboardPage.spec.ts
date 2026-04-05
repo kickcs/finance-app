@@ -6,7 +6,6 @@ import { http, HttpResponse } from 'msw';
 import DashboardPage from './DashboardPage.vue';
 import { mockAccountResponse, mockSecondAccountResponse } from '@/test/mocks/handlers/accounts';
 import { mockGivenDebtResponse, mockTakenDebtResponse } from '@/test/mocks/handlers/debts';
-import { mockReminderResponse } from '@/test/mocks/handlers/reminders';
 import { mockBudgetResponse } from '@/test/mocks/handlers/budgets';
 import { mockAnalyticsWithDataResponse } from '@/test/mocks/handlers/analytics';
 import { mockProfileResponse } from '@/test/mocks/handlers/profiles';
@@ -88,9 +87,6 @@ const routes = [
   { path: '/debts', component: { template: '<div />' }, name: 'debts-list' },
   { path: '/debts/new', component: { template: '<div />' }, name: 'new-debt' },
   { path: '/debts/:id', component: { template: '<div />' }, name: 'debt-detail' },
-  { path: '/reminders', component: { template: '<div />' }, name: 'reminders-list' },
-  { path: '/reminders/new', component: { template: '<div />' }, name: 'new-reminder' },
-  { path: '/reminders/:id', component: { template: '<div />' }, name: 'reminder-detail' },
   { path: '/analytics', component: { template: '<div />' }, name: 'analytics' },
   {
     path: '/settings/quick-actions',
@@ -307,7 +303,7 @@ describe('DashboardPage', () => {
       expect(mobileLayout.exists()).toBe(true);
 
       // Default order includes all standard widgets
-      // quick_actions, accounts, top_expenses, transactions (via activity), budget, debts, reminders
+      // quick_actions, accounts, top_expenses, transactions (via activity), budget, debts
       expect(wrapper.find('[data-testid="widget-quick-actions"]').exists()).toBe(true);
       expect(wrapper.find('[data-testid="widget-accounts"]').exists()).toBe(true);
       expect(wrapper.find('[data-testid="widget-activity"]').exists()).toBe(true);
@@ -327,7 +323,6 @@ describe('DashboardPage', () => {
                 'top_expenses',
                 'transactions',
                 'debts',
-                'reminders',
               ],
               hiddenWidgets: [],
               hiddenAccountIds: [],
@@ -361,7 +356,6 @@ describe('DashboardPage', () => {
                 'transactions',
                 'budget',
                 'debts',
-                'reminders',
               ],
               hiddenWidgets: ['quick_actions', 'budget'],
               hiddenAccountIds: [],
@@ -393,7 +387,6 @@ describe('DashboardPage', () => {
                 'transactions',
                 'budget',
                 'debts',
-                'reminders',
               ],
               hiddenWidgets: ['accounts'],
               hiddenAccountIds: [],
@@ -428,12 +421,6 @@ describe('DashboardPage', () => {
 
     it('handles empty transactions gracefully', async () => {
       // Default handler returns empty transactions
-      const wrapper = await renderPage();
-      expect(wrapper.find('[data-testid="dashboard-main"]').exists()).toBe(true);
-    });
-
-    it('handles empty reminders gracefully', async () => {
-      // Default handler returns empty reminders
       const wrapper = await renderPage();
       expect(wrapper.find('[data-testid="dashboard-main"]').exists()).toBe(true);
     });
@@ -632,14 +619,6 @@ describe('DashboardPage', () => {
       const activityColumn = wrapper.findComponent({ name: 'DashboardActivityColumn' });
       expect(activityColumn.exists()).toBe(true);
       expect(activityColumn.props('debts')).toHaveLength(2);
-    });
-
-    it('passes reminders data to activity column', async () => {
-      server.use(http.get('*/api/reminders', () => HttpResponse.json([mockReminderResponse])));
-      const wrapper = await renderPage();
-      const activityColumn = wrapper.findComponent({ name: 'DashboardActivityColumn' });
-      expect(activityColumn.exists()).toBe(true);
-      expect(activityColumn.props('reminders')).toHaveLength(1);
     });
   });
 

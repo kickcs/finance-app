@@ -24,11 +24,12 @@ import { DebtOrmEntity } from './modules/debt/infrastructure/persistence/typeorm
 import {
   BudgetOrmEntity,
   GoalOrmEntity,
-  ReminderOrmEntity,
 } from './modules/planning/infrastructure/persistence/typeorm';
 import { ExchangeRateOrmEntity } from './modules/exchange/infrastructure/persistence/typeorm';
 import { UserSubscriptionOrmEntity } from './modules/subscription/infrastructure/persistence/typeorm';
 import { PersonOrmEntity } from './modules/person/infrastructure/persistence/typeorm';
+import { PushSubscriptionOrmEntity } from './modules/notification/infrastructure/persistence/typeorm';
+import { RecurringSubscriptionOrmEntity } from './modules/recurring-subscription/infrastructure/persistence/typeorm';
 
 // Legacy entity (to be migrated)
 import { Settings } from './database/entities';
@@ -42,6 +43,8 @@ import { ExchangeModule } from './modules/exchange';
 import { SubscriptionModule } from './modules/subscription';
 import { ReceiptModule } from './modules/receipt/receipt.module';
 import { PersonModule } from './modules/person';
+import { NotificationModule } from './modules/notification';
+import { RecurringSubscriptionModule } from './modules/recurring-subscription';
 @Module({
   imports: [
     // Configuration
@@ -79,10 +82,11 @@ import { PersonModule } from './modules/person';
           DebtOrmEntity,
           BudgetOrmEntity,
           GoalOrmEntity,
-          ReminderOrmEntity,
           ExchangeRateOrmEntity,
           UserSubscriptionOrmEntity,
           PersonOrmEntity,
+          PushSubscriptionOrmEntity,
+          RecurringSubscriptionOrmEntity,
           // Legacy (to be migrated)
           Settings,
         ],
@@ -108,6 +112,8 @@ import { PersonModule } from './modules/person';
     SubscriptionModule,
     ReceiptModule,
     PersonModule,
+    NotificationModule,
+    RecurringSubscriptionModule,
 
     // Health check module
     HealthModule,

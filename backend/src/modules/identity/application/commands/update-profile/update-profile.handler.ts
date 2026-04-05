@@ -46,6 +46,7 @@ export class UpdateProfileHandler implements ICommandHandler<UpdateProfileComman
       quickActionsHidden: profile.quickActionsHidden,
       quickActionsHintDismissed: profile.quickActionsHintDismissed,
       financialMonthStartDay: profile.financialMonthStartDay,
+      timezone: profile.timezone,
       createdAt: profile.createdAt,
     };
   }

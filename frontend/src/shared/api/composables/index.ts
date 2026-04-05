@@ -8,4 +8,3 @@ export { useAccounts } from '@/entities/account/api';
 export { useTransactions } from '@/entities/transaction/api';
 export { useGoals } from '@/entities/goal/api';
 export { useDebts } from '@/entities/debt/api';
-export { useReminders } from '@/entities/reminder/api';

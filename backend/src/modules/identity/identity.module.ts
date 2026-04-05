@@ -38,7 +38,6 @@ import {
   TransactionOrmEntity,
 } from '../accounting/infrastructure/persistence/typeorm';
 import { DebtOrmEntity } from '../debt/infrastructure/persistence/typeorm';
-import { ReminderOrmEntity } from '../planning/infrastructure/persistence/typeorm';
 
 @Module({
   imports: [
@@ -50,7 +49,6 @@ import { ReminderOrmEntity } from '../planning/infrastructure/persistence/typeor
       AccountOrmEntity,
       TransactionOrmEntity,
       DebtOrmEntity,
-      ReminderOrmEntity,
     ]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({

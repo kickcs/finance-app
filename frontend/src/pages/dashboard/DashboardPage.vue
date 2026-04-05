@@ -4,9 +4,12 @@ import { useLocalStorage, useEventListener, useTimeoutFn } from '@vueuse/core';
 import { STORAGE_KEYS } from '@/shared/config/storageKeys';
 import { ACTIVITY_WIDGET_IDS } from '@/shared/config/dashboard';
 import { queryClient } from '@/shared/api/queryClient';
-import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
+import {
+  invalidateTransactionRelated,
+  invalidateAccountRelated,
+  invalidateSubscriptionRelated,
+} from '@/shared/api/invalidation';
 import { debtQueryKeys } from '@/entities/debt';
-import { reminderQueryKeys } from '@/entities/reminder';
 import { budgetQueryKeys } from '@/entities/budget';
 import { PageContainer, PullToRefresh, UIcon, DiscoveryDot } from '@/shared/ui';
 import { InstallPwaBanner, InstallPwaModal, usePwaInstall } from '@/features/install-pwa';
@@ -24,6 +27,7 @@ import { useStaggerAnimation } from './model/useStaggerAnimation';
 
 import { getGreeting } from '@/shared/lib/format/greeting';
 import { BalanceCard } from '@/widgets/balance-card';
+import { PushNotificationBanner } from '@/widgets/push-notification-banner';
 
 import { FinancialPeriodModal } from '@/features/configure-financial-period';
 
@@ -86,7 +90,6 @@ const {
   visibleAccounts,
   hiddenAccountCount,
   debts,
-  reminders,
   expenseCategories,
   allCategories,
   recentTransactions,
@@ -94,7 +97,6 @@ const {
   categoryBreakdown,
   accountsLoading,
   debtsLoading,
-  remindersLoading,
   recentTxLoading,
   analyticsLoading,
   ratesLoading,
@@ -164,8 +166,8 @@ async function handleRefresh() {
     invalidateTransactionRelated(queryClient, uid),
     invalidateAccountRelated(queryClient, uid),
     queryClient.invalidateQueries({ queryKey: debtQueryKeys.list(uid) }),
-    queryClient.invalidateQueries({ queryKey: reminderQueryKeys.list(uid) }),
     queryClient.invalidateQueries({ queryKey: budgetQueryKeys.all }),
+    invalidateSubscriptionRelated(queryClient, uid),
   ]);
 }
 
@@ -234,6 +236,10 @@ function handleSettingsClick() {
             />
           </section>
 
+          <section>
+            <PushNotificationBanner :transaction-count="recentTransactions.length" />
+          </section>
+
           <template v-for="widgetId in widgetOrder" :key="widgetId">
             <section
               v-if="widgetId === 'quick_actions' && !hiddenWidgets.has('quick_actions')"
@@ -283,7 +289,7 @@ function handleSettingsClick() {
               />
             </section>
 
-            <!-- Single DashboardActivityColumn for transactions/debts/reminders on mobile -->
+            <!-- Single DashboardActivityColumn for transactions/debts on mobile -->
             <section
               v-if="widgetId === firstActivityWidgetId"
               data-testid="widget-activity"
@@ -292,13 +298,11 @@ function handleSettingsClick() {
               <DashboardActivityColumn
                 :transactions="mobileTransactions"
                 :debts="debts"
-                :reminders="reminders"
                 :user-id="userId"
                 :currency="currency"
                 :is-hidden="isHidden"
                 :recent-tx-loading="recentTxLoading"
                 :debts-loading="debtsLoading"
-                :reminders-loading="remindersLoading"
                 :widget-order="widgetOrder"
                 :hidden-widgets="hiddenWidgets"
                 @transaction-click="nav.toHistory"
@@ -308,9 +312,9 @@ function handleSettingsClick() {
                 @person-click="nav.toDebts"
                 @add-debt="nav.toNewDebt"
                 @view-all-debts="nav.toDebts"
-                @reminder-click="nav.toReminder"
-                @add-reminder="nav.toNewReminder"
-                @view-all-reminders="nav.toReminders"
+                @subscription-click="nav.toSubscription"
+                @add-subscription="nav.toNewSubscription"
+                @view-all-subscriptions="nav.toSubscriptions"
               />
             </section>
 
@@ -373,17 +377,19 @@ function handleSettingsClick() {
             />
           </section>
 
+          <section>
+            <PushNotificationBanner :transaction-count="recentTransactions.length" />
+          </section>
+
           <section :class="staggerClass('delay-150')">
             <DashboardActivityColumn
               :transactions="recentTransactions"
               :debts="debts"
-              :reminders="reminders"
               :user-id="userId"
               :currency="currency"
               :is-hidden="isHidden"
               :recent-tx-loading="recentTxLoading"
               :debts-loading="debtsLoading"
-              :reminders-loading="remindersLoading"
               :hidden-widgets="hiddenWidgets"
               :widget-order="widgetOrder"
               class="bg-surface-light dark:bg-surface-dark rounded-2xl border border-border-light dark:border-border-dark p-6"
@@ -394,14 +400,14 @@ function handleSettingsClick() {
               @person-click="nav.toDebts"
               @add-debt="nav.toNewDebt"
               @view-all-debts="nav.toDebts"
-              @reminder-click="nav.toReminder"
-              @add-reminder="nav.toNewReminder"
-              @view-all-reminders="nav.toReminders"
+              @subscription-click="nav.toSubscription"
+              @add-subscription="nav.toNewSubscription"
+              @view-all-subscriptions="nav.toSubscriptions"
             />
           </section>
         </div>
 
-        <!-- Right Column: Quick Actions + Accounts + Debts + Reminders -->
+        <!-- Right Column: Quick Actions + Accounts + Debts -->
         <div class="md:col-span-4 self-start md:sticky md:top-0">
           <section :class="staggerClass('delay-200')">
             <DashboardSidePanel
@@ -418,8 +424,7 @@ function handleSettingsClick() {
               :debts="debts"
               :currency="currency"
               :debts-loading="debtsLoading"
-              :reminders="reminders"
-              :reminders-loading="remindersLoading"
+              :user-id="userId"
               :budget="budget"
               :budget-loading="budgetLoading"
               :is-hidden="isHidden"
@@ -437,13 +442,13 @@ function handleSettingsClick() {
               @person-click="nav.toDebts"
               @add-debt="nav.toNewDebt"
               @view-all-debts="nav.toDebts"
-              @reminder-click="nav.toReminder"
-              @add-reminder="nav.toNewReminder"
-              @view-all-reminders="nav.toReminders"
               @budget-setup="showBudgetSheet = true"
               @budget-edit="showBudgetSheet = true"
               @dashboard-settings-click="handleSettingsClick"
               @configure-period="showFinancialPeriodModal = true"
+              @subscription-click="nav.toSubscription"
+              @add-subscription="nav.toNewSubscription"
+              @view-all-subscriptions="nav.toSubscriptions"
             />
           </section>
         </div>

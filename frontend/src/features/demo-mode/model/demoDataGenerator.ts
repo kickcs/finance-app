@@ -54,21 +54,11 @@ export interface DemoPersonData {
   color: string;
 }
 
-export interface DemoReminderData {
-  name: string;
-  amount: number;
-  frequency: 'weekly' | 'monthly' | 'yearly' | 'once';
-  next_date: string;
-  icon: string;
-  color: string;
-}
-
 export interface GeneratedDemoData {
   accounts: DemoAccountData[];
   transactions: DemoTransactionData[];
   debts: DemoDebtData[];
   people: DemoPersonData[];
-  reminders: DemoReminderData[];
 }
 
 // Category amounts in UZS (realistic ranges)
@@ -167,18 +157,6 @@ function pickRandom<T>(items: T[]): T {
 }
 
 const formatDate = toLocalISODate;
-
-function getNextMonthDate(dayOfMonth: number): string {
-  const now = new Date();
-  const nextDate = new Date(now.getFullYear(), now.getMonth(), dayOfMonth);
-
-  // If the day has passed this month, move to next month
-  if (nextDate <= now) {
-    nextDate.setMonth(nextDate.getMonth() + 1);
-  }
-
-  return formatDate(nextDate);
-}
 
 function generateTransactions(): DemoTransactionData[] {
   const transactions: DemoTransactionData[] = [];
@@ -376,32 +354,6 @@ export function generateDemoData(): GeneratedDemoData {
       { name: 'Анна', color: '#f43f5e' },
       { name: 'Коля', color: '#10b981' },
       { name: 'Дима', color: '#f59e0b' },
-    ],
-    reminders: [
-      {
-        name: 'Аренда квартиры',
-        amount: 3000000,
-        frequency: 'monthly',
-        next_date: getNextMonthDate(5),
-        icon: 'home',
-        color: '#6366f1',
-      },
-      {
-        name: 'Netflix',
-        amount: 85000,
-        frequency: 'monthly',
-        next_date: getNextMonthDate(15),
-        icon: 'tv',
-        color: '#e50914',
-      },
-      {
-        name: 'Spotify',
-        amount: 55000,
-        frequency: 'monthly',
-        next_date: getNextMonthDate(20),
-        icon: 'music_note',
-        color: '#1db954',
-      },
     ],
   };
 }

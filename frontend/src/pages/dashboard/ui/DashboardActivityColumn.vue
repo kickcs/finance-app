@@ -2,30 +2,27 @@
 import { computed, defineAsyncComponent } from 'vue';
 import type { Transaction } from '@/entities/transaction';
 import type { Debt } from '@/entities/debt';
-import type { Reminder } from '@/entities/reminder';
 import type { WidgetId } from '@/shared/api/database.types';
 import { ACTIVITY_WIDGET_IDS } from '@/shared/config/dashboard';
 import { DebtsSectionSkeleton } from '@/widgets/debts-section';
-import { RemindersSectionSkeleton } from '@/widgets/reminders-section';
 import { RecentTransactionsSkeleton } from '@/widgets/recent-transactions';
+import { UpcomingSubscriptionsSkeleton } from '@/widgets/upcoming-subscriptions';
 
 const props = withDefaults(
   defineProps<{
     transactions: Transaction[];
     debts: Debt[];
-    reminders: Reminder[];
     userId: string | null;
     currency: string;
     isHidden: boolean;
     recentTxLoading: boolean;
     debtsLoading: boolean;
-    remindersLoading: boolean;
     hiddenWidgets?: Set<WidgetId>;
     widgetOrder?: WidgetId[];
   }>(),
   {
     hiddenWidgets: () => new Set<WidgetId>(),
-    widgetOrder: () => ['transactions', 'debts', 'reminders'] as WidgetId[],
+    widgetOrder: () => ['transactions', 'debts'] as WidgetId[],
   },
 );
 
@@ -37,14 +34,14 @@ const emit = defineEmits<{
   'person-click': [person: string, type: 'given' | 'taken'];
   'add-debt': [];
   'view-all-debts': [];
-  'reminder-click': [reminder: Reminder];
-  'add-reminder': [];
-  'view-all-reminders': [];
+  'subscription-click': [id: string];
+  'add-subscription': [];
+  'view-all-subscriptions': [];
 }>();
 
 const orderedWidgets = computed(() =>
   props.widgetOrder.filter(
-    (id): id is 'transactions' | 'debts' | 'reminders' =>
+    (id): id is 'transactions' | 'debts' | 'subscriptions' =>
       ACTIVITY_WIDGET_IDS.has(id) && !props.hiddenWidgets.has(id),
   ),
 );
@@ -57,8 +54,8 @@ const DebtsSection = defineAsyncComponent({
   loader: () => import('@/widgets/debts-section').then((m) => m.DebtsSection),
   delay: 0,
 });
-const RemindersSection = defineAsyncComponent({
-  loader: () => import('@/widgets/reminders-section').then((m) => m.RemindersSection),
+const UpcomingSubscriptions = defineAsyncComponent({
+  loader: () => import('@/widgets/upcoming-subscriptions').then((m) => m.UpcomingSubscriptions),
   delay: 0,
 });
 </script>
@@ -107,21 +104,17 @@ const RemindersSection = defineAsyncComponent({
         </Suspense>
       </section>
 
-      <!-- Reminders (mobile only — on desktop rendered via DashboardSidePanel) -->
-      <section v-if="widgetId === 'reminders'" class="grid grid-cols-1 md:hidden">
+      <!-- Subscriptions -->
+      <section v-if="widgetId === 'subscriptions'" class="grid grid-cols-1">
         <Suspense>
-          <RemindersSection
-            :reminders="reminders"
-            :currency="currency"
-            :loading="remindersLoading"
-            :hidden="isHidden"
-            class="md:hover:-translate-y-1 md:hover:shadow-md transition-[transform,box-shadow] duration-300 rounded-3xl"
-            @reminder-click="emit('reminder-click', $event)"
-            @add-click="emit('add-reminder')"
-            @view-all="emit('view-all-reminders')"
+          <UpcomingSubscriptions
+            :user-id="userId ?? ''"
+            @subscription-click="emit('subscription-click', $event)"
+            @add-click="emit('add-subscription')"
+            @view-all="emit('view-all-subscriptions')"
           />
           <template #fallback>
-            <RemindersSectionSkeleton />
+            <UpcomingSubscriptionsSkeleton />
           </template>
         </Suspense>
       </section>

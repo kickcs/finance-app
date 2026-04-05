@@ -19,11 +19,12 @@ import { DebtOrmEntity } from '../modules/debt/infrastructure/persistence/typeor
 import {
   BudgetOrmEntity,
   GoalOrmEntity,
-  ReminderOrmEntity,
 } from '../modules/planning/infrastructure/persistence/typeorm';
 import { ExchangeRateOrmEntity } from '../modules/exchange/infrastructure/persistence/typeorm';
 import { UserSubscriptionOrmEntity } from '../modules/subscription/infrastructure/persistence/typeorm';
 import { PersonOrmEntity } from '../modules/person/infrastructure/persistence/typeorm';
+import { PushSubscriptionOrmEntity } from '../modules/notification/infrastructure/persistence/typeorm';
+import { RecurringSubscriptionOrmEntity } from '../modules/recurring-subscription/infrastructure/persistence/typeorm';
 
 // Legacy entity
 import { Settings } from '../database/entities';
@@ -46,10 +47,11 @@ export const dataSourceOptions: DataSourceOptions = {
     DebtOrmEntity,
     BudgetOrmEntity,
     GoalOrmEntity,
-    ReminderOrmEntity,
     ExchangeRateOrmEntity,
     UserSubscriptionOrmEntity,
     PersonOrmEntity,
+    PushSubscriptionOrmEntity,
+    RecurringSubscriptionOrmEntity,
     // Legacy
     Settings,
   ],

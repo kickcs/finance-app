@@ -114,7 +114,7 @@ describe('DashboardSettingsPage', () => {
   // Widget list
   // -----------------------------------------------------------------------
   describe('widget list', () => {
-    it('renders all 7 default widgets with correct labels', async () => {
+    it('renders all 6 default widgets with correct labels', async () => {
       const wrapper = await renderPage();
 
       expect(wrapper.text()).toContain('Быстрые действия');
@@ -123,7 +123,6 @@ describe('DashboardSettingsPage', () => {
       expect(wrapper.text()).toContain('Последние транзакции');
       expect(wrapper.text()).toContain('Бюджет');
       expect(wrapper.text()).toContain('Долги');
-      expect(wrapper.text()).toContain('Напоминания');
     });
 
     it('renders widget items with data-testid attributes', async () => {
@@ -135,7 +134,6 @@ describe('DashboardSettingsPage', () => {
       expect(wrapper.find('[data-testid="widget-item-transactions"]').exists()).toBe(true);
       expect(wrapper.find('[data-testid="widget-item-budget"]').exists()).toBe(true);
       expect(wrapper.find('[data-testid="widget-item-debts"]').exists()).toBe(true);
-      expect(wrapper.find('[data-testid="widget-item-reminders"]').exists()).toBe(true);
     });
 
     it('all widgets are visible (toggled on) by default', async () => {
@@ -143,7 +141,7 @@ describe('DashboardSettingsPage', () => {
 
       const widgetSection = wrapper.find('[data-testid="widgets-section"]');
       const widgetToggles = widgetSection.findAll('[role="switch"]');
-      expect(widgetToggles.length).toBe(7);
+      expect(widgetToggles.length).toBe(6);
 
       for (const toggle of widgetToggles) {
         expect(toggle.attributes('aria-checked')).toBe('true');
@@ -463,7 +461,6 @@ describe('DashboardSettingsPage', () => {
             'top_expenses',
             'transactions',
             'debts',
-            'reminders',
           ],
           hidden_widgets: ['budget'],
           hidden_account_ids: [],
@@ -484,7 +481,7 @@ describe('DashboardSettingsPage', () => {
 
       // Check order: first widget should be "accounts" (Счета), second "quick_actions"
       const widgetItems = wrapper.findAll('[data-testid^="widget-item-"]');
-      expect(widgetItems.length).toBe(7);
+      expect(widgetItems.length).toBe(6);
       expect(widgetItems[0].attributes('data-testid')).toBe('widget-item-accounts');
       expect(widgetItems[1].attributes('data-testid')).toBe('widget-item-quick_actions');
     });
@@ -512,7 +509,6 @@ describe('DashboardSettingsPage', () => {
             'transactions',
             'budget',
             'debts',
-            'reminders',
           ],
           hidden_widgets: [],
           hidden_account_ids: ['acc-2'],
@@ -577,7 +573,7 @@ describe('DashboardSettingsPage', () => {
       const dashSettings = (savedPayload as any).dashboardSettings;
       expect(dashSettings).toBeDefined();
       expect(dashSettings.widgetOrder).toBeDefined();
-      expect(dashSettings.widgetOrder.length).toBe(7);
+      expect(dashSettings.widgetOrder.length).toBe(6);
     });
   });
 });

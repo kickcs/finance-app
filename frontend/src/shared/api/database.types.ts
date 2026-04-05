@@ -8,7 +8,7 @@ export type WidgetId =
   | 'top_expenses'
   | 'transactions'
   | 'debts'
-  | 'reminders';
+  | 'subscriptions';
 
 export interface DashboardSettings {
   widget_order: WidgetId[];
@@ -347,45 +347,6 @@ export type Database = {
         };
         Relationships: [];
       };
-      reminders: {
-        Row: {
-          id: string;
-          user_id: string;
-          name: string;
-          amount: number;
-          frequency: 'weekly' | 'monthly' | 'yearly' | 'once';
-          next_date: string;
-          icon: string;
-          color: string;
-          is_active: boolean;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          user_id: string;
-          name: string;
-          amount: number;
-          frequency: 'weekly' | 'monthly' | 'yearly' | 'once';
-          next_date: string;
-          icon: string;
-          color: string;
-          is_active?: boolean;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          user_id?: string;
-          name?: string;
-          amount?: number;
-          frequency?: 'weekly' | 'monthly' | 'yearly' | 'once';
-          next_date?: string;
-          icon?: string;
-          color?: string;
-          is_active?: boolean;
-          created_at?: string;
-        };
-        Relationships: [];
-      };
       settings: {
         Row: {
           id: string;
@@ -525,7 +486,6 @@ export type ExchangeRate = Database['public']['Tables']['exchange_rates']['Row']
 export type Transaction = Database['public']['Tables']['transactions']['Row'];
 export type Goal = Database['public']['Tables']['goals']['Row'];
 export type Debt = Database['public']['Tables']['debts']['Row'];
-export type Reminder = Database['public']['Tables']['reminders']['Row'];
 export type Settings = Database['public']['Tables']['settings']['Row'];
 
 export type AccountInsert = Database['public']['Tables']['accounts']['Insert'];
@@ -533,7 +493,6 @@ export type AccountBalanceInsert = Database['public']['Tables']['account_balance
 export type TransactionInsert = Database['public']['Tables']['transactions']['Insert'];
 export type GoalInsert = Database['public']['Tables']['goals']['Insert'];
 export type DebtInsert = Database['public']['Tables']['debts']['Insert'];
-export type ReminderInsert = Database['public']['Tables']['reminders']['Insert'];
 export type UserCategory = Database['public']['Tables']['categories']['Row'];
 export type UserCategoryInsert = Database['public']['Tables']['categories']['Insert'];
 export type QuickAction = Database['public']['Tables']['quick_actions']['Row'];

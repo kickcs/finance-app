@@ -1,0 +1,167 @@
+import { toLocalISODate } from '@/shared/lib/date';
+import type { RecurringSubscription, SubscriptionFrequency } from './types';
+
+/**
+ * Returns the number of days from today to the subscription's billing date.
+ * Negative values mean the billing date has already passed this period.
+ */
+export function daysUntilBilling(billingDate: string): number {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const billing = new Date(billingDate);
+  billing.setHours(0, 0, 0, 0);
+
+  const diffMs = billing.getTime() - today.getTime();
+  return Math.round(diffMs / (1000 * 60 * 60 * 24));
+}
+
+/**
+ * Returns a short human-readable frequency label.
+ * Examples: '/мес', '/год', '/нед', '/квартал', '/7 дн'
+ */
+export function formatFrequencyShort(
+  frequency: SubscriptionFrequency,
+  days?: number | null,
+): string {
+  switch (frequency) {
+    case 'monthly':
+      return '/мес';
+    case 'yearly':
+      return '/год';
+    case 'weekly':
+      return '/нед';
+    case 'quarterly':
+      return '/квартал';
+    case 'custom':
+      return days !== null && days !== undefined ? `/${days} дн` : '/дн';
+    default:
+      return '';
+  }
+}
+
+/**
+ * Returns true if the subscription is active and its billing date falls
+ * within the next `withinDays` days (inclusive of today).
+ */
+export function isSubscriptionDueSoon(sub: RecurringSubscription, withinDays: number = 3): boolean {
+  if (sub.status !== 'active') return false;
+  const days = daysUntilBilling(sub.billing_date);
+  return days >= 0 && days <= withinDays;
+}
+
+/**
+ * Advance a date by one billing period.
+ */
+export function getNextBillingDate(
+  currentDate: Date,
+  frequency: SubscriptionFrequency,
+  frequencyDays?: number | null,
+): Date {
+  const next = new Date(currentDate);
+
+  switch (frequency) {
+    case 'weekly':
+      next.setDate(next.getDate() + 7);
+      break;
+    case 'monthly':
+      next.setMonth(next.getMonth() + 1);
+      break;
+    case 'quarterly':
+      next.setMonth(next.getMonth() + 3);
+      break;
+    case 'yearly':
+      next.setFullYear(next.getFullYear() + 1);
+      break;
+    case 'custom':
+      if (frequencyDays !== null && frequencyDays !== undefined && frequencyDays > 0) {
+        next.setDate(next.getDate() + frequencyDays);
+      }
+      break;
+  }
+
+  return next;
+}
+
+/**
+ * Compute all billing dates for a subscription that fall in the target month.
+ * Uses the subscription's billingDate as the anchor and iterates forward/backward
+ * to find all occurrences within the given year/month.
+ *
+ * @param sub - the subscription
+ * @param year - 4-digit year
+ * @param month - 1-based month (1=January, 12=December)
+ * @returns sorted array of ISO date strings (YYYY-MM-DD) within the target month
+ */
+export function computeBillingDatesForMonth(
+  sub: RecurringSubscription,
+  year: number,
+  month: number,
+): string[] {
+  const monthStart = new Date(year, month - 1, 1);
+  const monthEnd = new Date(year, month, 0); // last day of month
+
+  // Parse anchor date (billing_date is stored as YYYY-MM-DD)
+  const [anchorYear, anchorMonth, anchorDay] = sub.billing_date.split('-').map(Number);
+  let anchor = new Date(anchorYear, anchorMonth - 1, anchorDay);
+
+  const results: string[] = [];
+
+  // If anchor is after the month end, rewind until we're at or before monthEnd
+  while (anchor > monthEnd) {
+    const prev = rewindByPeriod(anchor, sub.frequency, sub.frequency_days);
+    if (prev.getTime() === anchor.getTime()) break; // guard infinite loop for custom 0
+    anchor = prev;
+  }
+
+  // If anchor is before month start, advance until we reach monthStart or overshoot
+  while (anchor < monthStart) {
+    const next = getNextBillingDate(anchor, sub.frequency, sub.frequency_days);
+    if (next.getTime() === anchor.getTime()) break; // guard infinite loop
+    anchor = next;
+  }
+
+  // Collect all dates that fall within the month
+  let current = new Date(anchor);
+  while (current <= monthEnd) {
+    if (current >= monthStart) {
+      results.push(toLocalISODate(current));
+    }
+    const next = getNextBillingDate(current, sub.frequency, sub.frequency_days);
+    if (next.getTime() === current.getTime()) break; // guard infinite loop
+    current = next;
+  }
+
+  return results.sort();
+}
+
+/** Rewind a date by one period (inverse of getNextBillingDate). */
+function rewindByPeriod(
+  date: Date,
+  frequency: SubscriptionFrequency,
+  frequencyDays?: number | null,
+): Date {
+  const prev = new Date(date);
+
+  switch (frequency) {
+    case 'weekly':
+      prev.setDate(prev.getDate() - 7);
+      break;
+    case 'monthly':
+      prev.setMonth(prev.getMonth() - 1);
+      break;
+    case 'quarterly':
+      prev.setMonth(prev.getMonth() - 3);
+      break;
+    case 'yearly':
+      prev.setFullYear(prev.getFullYear() - 1);
+      break;
+    case 'custom':
+      if (frequencyDays !== null && frequencyDays !== undefined && frequencyDays > 0) {
+        prev.setDate(prev.getDate() - frequencyDays);
+      }
+      break;
+  }
+
+  return prev;
+}

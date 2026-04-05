@@ -23,6 +23,7 @@ describe('ProfileMapper', () => {
       };
       orm.quickActionsHidden = false;
       orm.quickActionsHintDismissed = true;
+      orm.timezone = 'Asia/Tashkent';
       orm.createdAt = new Date('2024-01-01');
 
       const domain = ProfileMapper.toDomain(orm);
@@ -54,6 +55,7 @@ describe('ProfileMapper', () => {
       orm.dashboardSettings = null;
       orm.quickActionsHidden = false;
       orm.quickActionsHintDismissed = false;
+      orm.timezone = 'Asia/Tashkent';
       orm.createdAt = new Date('2024-12-31');
 
       const domain = ProfileMapper.toDomain(orm);
@@ -87,6 +89,7 @@ describe('ProfileMapper', () => {
         quickActionsHidden: true,
         quickActionsHintDismissed: false,
         financialMonthStartDay: 1,
+        timezone: 'Asia/Tashkent',
         createdAt: new Date('2024-01-01'),
       });
 
@@ -120,6 +123,8 @@ describe('ProfileMapper', () => {
       orm.dashboardSettings = null;
       orm.quickActionsHidden = false;
       orm.quickActionsHintDismissed = false;
+      orm.financialMonthStartDay = 1;
+      orm.timezone = 'Asia/Tashkent';
       orm.createdAt = new Date('2024-06-15');
 
       const domain = ProfileMapper.toDomain(orm);

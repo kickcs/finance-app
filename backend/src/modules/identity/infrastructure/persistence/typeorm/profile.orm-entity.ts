@@ -54,4 +54,7 @@ export class ProfileOrmEntity {
 
   @Column({ name: 'financial_month_start_day', type: 'integer', default: 1 })
   financialMonthStartDay: number;
+
+  @Column({ type: 'varchar', default: 'Asia/Tashkent' })
+  timezone: string;
 }

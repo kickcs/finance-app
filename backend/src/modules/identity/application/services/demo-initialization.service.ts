@@ -22,10 +22,6 @@ import {
   DEBT_REPOSITORY,
 } from '../../../debt/domain/repositories/debt.repository.interface';
 import {
-  IReminderRepository,
-  REMINDER_REPOSITORY,
-} from '../../../planning/domain/repositories/reminder.repository.interface';
-import {
   IPersonRepository,
   PERSON_REPOSITORY,
 } from '../../../person/domain/repositories/person.repository.interface';
@@ -36,7 +32,6 @@ import {
 import { Account, AccountTypeFields } from '../../../accounting/domain/aggregates/account';
 import { Transaction } from '../../../accounting/domain/aggregates/transaction';
 import { Debt } from '../../../debt/domain/aggregates/debt';
-import { Reminder, ReminderFrequency } from '../../../planning/domain/aggregates/reminder';
 import { Person } from '../../../person/domain/aggregates/person';
 import { Profile } from '../../domain';
 import { DomainEventPublisher } from '../../../../shared';
@@ -135,8 +130,6 @@ export class DemoInitializationService {
     private readonly transactionRepository: ITransactionRepository,
     @Inject(DEBT_REPOSITORY)
     private readonly debtRepository: IDebtRepository,
-    @Inject(REMINDER_REPOSITORY)
-    private readonly reminderRepository: IReminderRepository,
     @Inject(PERSON_REPOSITORY)
     private readonly personRepository: IPersonRepository,
     private readonly eventPublisher: DomainEventPublisher,
@@ -168,10 +161,7 @@ export class DemoInitializationService {
       // 4. Create debts
       await this.createDebts(userId, mainId);
 
-      // 5. Create reminders
-      await this.createReminders(userId);
-
-      // 6. Create people (contacts)
+      // 5. Create people (contacts)
       await this.createPeople(userId);
 
       this.logger.log(`Demo data initialized for user ${userId}`);
@@ -302,57 +292,6 @@ export class DemoInitializationService {
 
     await Promise.all(debts.map((debt) => this.debtRepository.save(debt)));
     await this.eventPublisher.publishEventsFromMultiple(debts);
-  }
-
-  private async createReminders(userId: string): Promise<void> {
-    const remindersData: Array<{
-      name: string;
-      amount: number;
-      frequency: ReminderFrequency;
-      nextDate: Date;
-      icon: string;
-      color: string;
-    }> = [
-      {
-        name: 'Аренда квартиры',
-        amount: 3000000,
-        frequency: 'monthly',
-        nextDate: this.getNextMonthDate(5),
-        icon: 'home',
-        color: '#6366f1',
-      },
-      {
-        name: 'Netflix',
-        amount: 85000,
-        frequency: 'monthly',
-        nextDate: this.getNextMonthDate(15),
-        icon: 'tv',
-        color: '#e50914',
-      },
-      {
-        name: 'Spotify',
-        amount: 55000,
-        frequency: 'monthly',
-        nextDate: this.getNextMonthDate(20),
-        icon: 'music_note',
-        color: '#1db954',
-      },
-    ];
-
-    const reminders = remindersData.map((data) =>
-      Reminder.create(
-        crypto.randomUUID(),
-        userId,
-        data.name,
-        data.amount,
-        data.frequency,
-        data.nextDate,
-        data.icon,
-        data.color,
-      ),
-    );
-
-    await Promise.all(reminders.map((r) => this.reminderRepository.save(r)));
   }
 
   private async createPeople(userId: string): Promise<void> {

@@ -13,6 +13,7 @@ export interface ProfileResponse {
   quickActionsHidden: boolean;
   quickActionsHintDismissed: boolean;
   financialMonthStartDay: number;
+  timezone: string;
   createdAt: Date;
 }
 

@@ -12,6 +12,7 @@ export class UpdateProfileCommand {
       quickActionsHidden?: boolean;
       quickActionsHintDismissed?: boolean;
       financialMonthStartDay?: number;
+      timezone?: string;
     },
   ) {}
 }

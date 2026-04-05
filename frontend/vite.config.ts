@@ -15,7 +15,9 @@ export default defineConfig({
     VueDevTools(),
     VitePWA({
       registerType: 'prompt',
+      devOptions: { enabled: true },
       workbox: {
+        importScripts: ['/push-sw.js'],
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
         navigateFallback: '/index.html',
         navigateFallbackAllowlist: [/^(?!\/?api\/).*/],

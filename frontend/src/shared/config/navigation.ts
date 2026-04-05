@@ -27,9 +27,9 @@ export const DESKTOP_NAV_ITEMS: NavItem[] = [
 export const CHILD_ROUTE_MAP: Record<string, string> = {
   '/accounts': 'home',
   '/debts': 'home',
-  '/reminders': 'home',
   '/dashboard/settings': 'home',
   '/settings': 'profile',
+  '/subscriptions': 'home',
   '/changelog': 'profile',
   '/people': 'profile',
 };

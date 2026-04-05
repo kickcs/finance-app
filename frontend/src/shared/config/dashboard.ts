@@ -7,7 +7,7 @@ export const DEFAULT_WIDGET_ORDER: WidgetId[] = [
   'transactions',
   'budget',
   'debts',
-  'reminders',
+  'subscriptions',
 ];
 
 export const WIDGET_LABELS: Record<WidgetId, string> = {
@@ -17,14 +17,14 @@ export const WIDGET_LABELS: Record<WidgetId, string> = {
   top_expenses: 'Топ расходов',
   transactions: 'Последние транзакции',
   debts: 'Долги',
-  reminders: 'Напоминания',
+  subscriptions: 'Подписки',
 };
 
 /** Widget IDs that are rendered inside the combined DashboardActivityColumn. */
 export const ACTIVITY_WIDGET_IDS: ReadonlySet<string> = new Set<WidgetId>([
   'transactions',
   'debts',
-  'reminders',
+  'subscriptions',
 ]);
 
 export const WIDGET_ICONS: Record<WidgetId, string> = {
@@ -34,5 +34,5 @@ export const WIDGET_ICONS: Record<WidgetId, string> = {
   top_expenses: 'pie_chart',
   transactions: 'receipt_long',
   debts: 'handshake',
-  reminders: 'notifications',
+  subscriptions: 'subscriptions',
 };

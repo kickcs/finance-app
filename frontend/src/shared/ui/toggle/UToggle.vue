@@ -1,6 +1,7 @@
 <script setup lang="ts">
 defineProps<{
   modelValue: boolean;
+  disabled?: boolean;
 }>();
 
 defineEmits<{
@@ -14,7 +15,9 @@ defineEmits<{
     role="switch"
     :aria-checked="modelValue"
     class="relative inline-flex"
-    @click="$emit('update:modelValue', !modelValue)"
+    :disabled="disabled"
+    :class="{ 'opacity-40 cursor-not-allowed': disabled }"
+    @click="!disabled && $emit('update:modelValue', !modelValue)"
   >
     <div
       class="w-11 h-6 rounded-full relative transition-colors duration-200"

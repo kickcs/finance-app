@@ -3,7 +3,6 @@ import { useTimestamp } from '@vueuse/core';
 import { useAccounts } from '@/entities/account';
 import { useRecentTransactions, useAnalyticsStats } from '@/entities/transaction';
 import { useDebts } from '@/entities/debt';
-import { useReminders } from '@/entities/reminder';
 import { useCategories } from '@/entities/category';
 import { useBudget } from '@/entities/budget';
 import { useProfile, useExchangeRates } from '@/shared/api';
@@ -24,7 +23,6 @@ export function useDashboardData() {
 
   const { accounts, isLoading: accountsLoading } = useAccounts(userId);
   const { debts, isLoading: debtsLoading } = useDebts(userId);
-  const { reminders, isLoading: remindersLoading } = useReminders(userId);
   const {
     budget,
     isLoading: budgetLoading,
@@ -147,7 +145,6 @@ export function useDashboardData() {
     visibleAccounts,
     hiddenAccountCount,
     debts,
-    reminders,
     expenseCategories,
     allCategories,
     recentTransactions,
@@ -155,7 +152,6 @@ export function useDashboardData() {
     categoryBreakdown,
     accountsLoading,
     debtsLoading,
-    remindersLoading,
     recentTxLoading,
     analyticsLoading,
     ratesLoading,

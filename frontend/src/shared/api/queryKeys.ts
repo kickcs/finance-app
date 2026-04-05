@@ -3,7 +3,6 @@ import { accountQueryKeys } from '@/entities/account';
 import { transactionQueryKeys } from '@/entities/transaction';
 import { goalQueryKeys } from '@/entities/goal';
 import { debtQueryKeys } from '@/entities/debt';
-import { reminderQueryKeys } from '@/entities/reminder';
 
 // Profile keys stay here (profile is in shared)
 export const profileQueryKeys = {
@@ -18,7 +17,6 @@ export const queryKeys = {
   transactions: transactionQueryKeys,
   goals: goalQueryKeys,
   debts: debtQueryKeys,
-  reminders: reminderQueryKeys,
 } as const;
 
 export type QueryKeys = typeof queryKeys;
@@ -28,4 +26,3 @@ export { accountQueryKeys } from '@/entities/account';
 export { transactionQueryKeys } from '@/entities/transaction';
 export { goalQueryKeys } from '@/entities/goal';
 export { debtQueryKeys } from '@/entities/debt';
-export { reminderQueryKeys } from '@/entities/reminder';

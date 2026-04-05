@@ -7,4 +7,3 @@ export { accountsApi } from '@/entities/account/api';
 export { transactionsApi } from '@/entities/transaction/api';
 export { goalsApi } from '@/entities/goal/api';
 export { debtsApi } from '@/entities/debt/api';
-export { remindersApi } from '@/entities/reminder/api';

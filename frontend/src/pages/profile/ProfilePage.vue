@@ -3,7 +3,7 @@ import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { ROUTE_NAMES } from '@/app/router/routeNames';
 import { AppHeader } from '@/widgets/header';
-import { PageContainer, UButton, UIcon, UCard, UModal, IconBadge, useToast } from '@/shared/ui';
+import { PageContainer, UButton, UIcon, UCard, UModal, useToast } from '@/shared/ui';
 import { getCurrencyByCode } from '@/entities/currency';
 import { useAuth, useProfile } from '@/shared/api';
 import { EditProfileModal } from '@/features/edit-profile';
@@ -18,6 +18,9 @@ import { usePwaUpdate } from '@/shared/lib/composables/usePwaUpdate';
 import { usePrimaryColor, PRIMARY_COLORS } from '@/features/select-primary-color';
 import { FinancialPeriodModal } from '@/features/configure-financial-period';
 import { useFinancialPeriod } from '@/shared/lib/hooks/useFinancialPeriod';
+import { PushNotificationToggle } from '@/features/manage-push-notifications';
+import { ThemeToggle } from '@/features/toggle-theme';
+import { getInitial } from '@/shared/lib/format/text';
 
 const router = useRouter();
 const { signOut } = useAuth();
@@ -71,58 +74,36 @@ const { isLoading: isCheckingUpdate, execute: handleCheckUpdate } = useAsyncOper
 const showLogoutModal = ref(false);
 const showEditProfileModal = ref(false);
 
-// Menu Groups
 const settingsGroup = [
   {
     id: 'currency',
     icon: 'currency_exchange',
     label: 'Главная валюта',
     value: () => currency.value?.code,
-    color: '#10b981', // success
   },
   {
     id: 'financial-period',
     icon: 'calendar_month',
     label: 'Начало месяца',
     value: () => financialPeriodLabel.value,
-    color: '#6366f1',
   },
-  {
-    id: 'color',
-    icon: 'palette',
-    label: 'Основной цвет',
-    color: '#a855f7',
-  }, // purple
-  { id: 'categories', icon: 'category', label: 'Категории', color: '#f59e0b' }, // warning
-  { id: 'people', icon: 'group', label: 'Люди', color: '#06b6d4' }, // cyan
-  {
-    id: 'quick-actions',
-    icon: 'bolt',
-    label: 'Быстрые действия',
-    color: '#8b5cf6',
-  }, // purple
+  { id: 'color', icon: 'palette', label: 'Основной цвет' },
+  { id: 'categories', icon: 'category', label: 'Категории' },
+  { id: 'people', icon: 'group', label: 'Люди' },
+  { id: 'quick-actions', icon: 'bolt', label: 'Быстрые действия' },
 ];
 
-const dataGroup = [
-  { id: 'import', icon: 'download', label: 'Импорт данных', color: '#3b82f6' }, // primary
-];
+const dataGroup = [{ id: 'import', icon: 'download', label: 'Импорт данных' }];
 
 const appGroup = [
-  {
-    id: 'whats-new',
-    icon: 'new_releases',
-    label: 'Что нового',
-    badge: hasUnseenChanges,
-    color: '#ec4899', // pink
-  },
+  { id: 'whats-new', icon: 'new_releases', label: 'Что нового', badge: hasUnseenChanges },
   {
     id: 'update',
     icon: 'refresh',
     label: 'Обновление',
     value: () => (isCheckingUpdate.value ? 'Проверка...' : `v${CURRENT_VERSION}`),
-    color: '#10b981', // success
   },
-  { id: 'about', icon: 'info', label: 'О приложении', color: '#64748b' }, // slate
+  { id: 'about', icon: 'info', label: 'О приложении' },
 ];
 
 function handleMenuClick(itemId: string) {
@@ -165,10 +146,6 @@ function handleLogout() {
   showLogoutModal.value = true;
 }
 
-function closeLogoutModal() {
-  showLogoutModal.value = false;
-}
-
 async function confirmLogout() {
   try {
     await signOut();
@@ -182,44 +159,48 @@ async function confirmLogout() {
 <template>
   <PageContainer max-width="2xl" class="relative bg-background-light dark:bg-background-dark">
     <template #header>
-      <AppHeader title="Профиль" />
+      <AppHeader title="Профиль">
+        <template #actions>
+          <ThemeToggle />
+        </template>
+      </AppHeader>
     </template>
 
-    <!-- Content -->
-    <main class="pt-8 pb-28 md:pb-8 space-y-6">
-      <!-- User Card -->
-      <UCard data-testid="user-card" class="p-5" variant="bordered">
-        <div class="flex items-center gap-4">
-          <IconBadge icon="person" size="lg" color="#3b82f6" class="shrink-0" />
-          <div class="flex-1 min-w-0">
-            <p
-              data-testid="user-name"
-              class="text-lg font-bold text-text-primary-light dark:text-text-primary-dark truncate"
-            >
-              {{ userName }}
-            </p>
-            <p
-              data-testid="user-email"
-              class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark truncate"
-            >
-              {{ userEmail }}
-            </p>
-          </div>
-          <UButton
-            data-testid="edit-profile-btn"
-            variant="icon"
-            class="shrink-0 bg-surface-light dark:bg-surface-dark hover:bg-border-light dark:hover:bg-border-dark rounded-xl"
-            @click="showEditProfileModal = true"
-          >
-            <UIcon name="edit" size="sm" />
-          </UButton>
+    <main class="pt-6 pb-28 md:pb-8 space-y-6">
+      <!-- User Section -->
+      <section data-testid="user-card" class="flex items-center gap-3.5">
+        <div
+          class="w-12 h-12 rounded-full bg-primary/10 dark:bg-primary/15 flex items-center justify-center text-base font-bold text-primary shrink-0"
+        >
+          {{ getInitial(userName) }}
         </div>
-      </UCard>
+        <div class="flex-1 min-w-0">
+          <p
+            data-testid="user-name"
+            class="text-base font-semibold text-text-primary-light dark:text-text-primary-dark truncate"
+          >
+            {{ userName }}
+          </p>
+          <p
+            data-testid="user-email"
+            class="text-sm text-text-secondary-light dark:text-text-secondary-dark truncate"
+          >
+            {{ userEmail }}
+          </p>
+        </div>
+        <button
+          data-testid="edit-profile-btn"
+          class="text-sm font-medium text-primary hover:text-primary-hover transition-colors shrink-0"
+          @click="showEditProfileModal = true"
+        >
+          Редактировать
+        </button>
+      </section>
 
-      <!-- Settings Group -->
-      <div>
+      <!-- Settings -->
+      <section>
         <h2
-          class="text-sm font-semibold text-text-secondary-light dark:text-text-secondary-dark px-2 mb-2 uppercase tracking-wider"
+          class="text-xs font-semibold text-text-secondary-light dark:text-text-secondary-dark px-2 mb-2"
         >
           Настройки
         </h2>
@@ -228,25 +209,29 @@ async function confirmLogout() {
             v-for="item in settingsGroup"
             :key="item.id"
             :data-testid="`menu-item-${item.id}`"
-            class="w-full flex items-center gap-4 p-4 transition-colors hover:bg-surface-light dark:hover:bg-surface-dark active:bg-surface-light dark:active:bg-surface-dark"
+            class="w-full flex items-center gap-3.5 px-4 py-3.5 transition-colors hover:bg-surface-light dark:hover:bg-surface-dark active:bg-surface-light dark:active:bg-surface-dark"
             @click="handleMenuClick(item.id)"
           >
-            <IconBadge :icon="item.icon" size="sm" :color="item.color" />
+            <UIcon
+              :name="item.icon"
+              size="sm"
+              class="text-text-secondary-light dark:text-text-secondary-dark shrink-0"
+            />
             <span
-              class="flex-1 text-left font-medium text-text-primary-light dark:text-text-primary-dark"
+              class="flex-1 text-left text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
             >
               {{ item.label }}
             </span>
             <span
               v-if="item.value"
-              class="text-sm font-semibold text-text-secondary-light dark:text-text-secondary-dark mr-2"
+              class="text-sm text-text-tertiary-light dark:text-text-tertiary-dark mr-1"
             >
               {{ item.value() }}
             </span>
             <span
               v-if="item.id === 'color'"
               data-testid="color-dot"
-              class="w-5 h-5 rounded-full border border-border-light dark:border-border-dark mr-2 shrink-0"
+              class="w-5 h-5 rounded-full border border-border-light dark:border-border-dark mr-1 shrink-0"
               :style="{ backgroundColor: currentPrimaryColor }"
             />
             <UIcon
@@ -256,15 +241,27 @@ async function confirmLogout() {
             />
           </button>
         </UCard>
-      </div>
+      </section>
 
-      <!-- Subscription Section -->
+      <!-- Subscription -->
       <SubscriptionSection @upgrade="requirePremium('Premium подписка')" />
 
-      <!-- Data Group -->
-      <div>
+      <!-- Notifications -->
+      <section>
         <h2
-          class="text-sm font-semibold text-text-secondary-light dark:text-text-secondary-dark px-2 mb-2 uppercase tracking-wider"
+          class="text-xs font-semibold text-text-secondary-light dark:text-text-secondary-dark px-2 mb-2"
+        >
+          Уведомления
+        </h2>
+        <UCard class="px-4 py-3.5">
+          <PushNotificationToggle />
+        </UCard>
+      </section>
+
+      <!-- Data -->
+      <section>
+        <h2
+          class="text-xs font-semibold text-text-secondary-light dark:text-text-secondary-dark px-2 mb-2"
         >
           Данные
         </h2>
@@ -273,12 +270,16 @@ async function confirmLogout() {
             v-for="item in dataGroup"
             :key="item.id"
             :data-testid="`menu-item-${item.id}`"
-            class="w-full flex items-center gap-4 p-4 transition-colors hover:bg-surface-light dark:hover:bg-surface-dark active:bg-surface-light dark:active:bg-surface-dark"
+            class="w-full flex items-center gap-3.5 px-4 py-3.5 transition-colors hover:bg-surface-light dark:hover:bg-surface-dark active:bg-surface-light dark:active:bg-surface-dark"
             @click="handleMenuClick(item.id)"
           >
-            <IconBadge :icon="item.icon" size="sm" :color="item.color" />
+            <UIcon
+              :name="item.icon"
+              size="sm"
+              class="text-text-secondary-light dark:text-text-secondary-dark shrink-0"
+            />
             <span
-              class="flex-1 text-left font-medium text-text-primary-light dark:text-text-primary-dark"
+              class="flex-1 text-left text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
             >
               {{ item.label }}
             </span>
@@ -289,12 +290,12 @@ async function confirmLogout() {
             />
           </button>
         </UCard>
-      </div>
+      </section>
 
-      <!-- App Group -->
-      <div>
+      <!-- App -->
+      <section>
         <h2
-          class="text-sm font-semibold text-text-secondary-light dark:text-text-secondary-dark px-2 mb-2 uppercase tracking-wider"
+          class="text-xs font-semibold text-text-secondary-light dark:text-text-secondary-dark px-2 mb-2"
         >
           Приложение
         </h2>
@@ -303,26 +304,32 @@ async function confirmLogout() {
             v-for="item in appGroup"
             :key="item.id"
             :data-testid="`menu-item-${item.id}`"
-            class="w-full flex items-center gap-4 p-4 transition-colors hover:bg-surface-light dark:hover:bg-surface-dark active:bg-surface-light dark:active:bg-surface-dark relative"
+            class="w-full flex items-center gap-3.5 px-4 py-3.5 transition-colors hover:bg-surface-light dark:hover:bg-surface-dark active:bg-surface-light dark:active:bg-surface-dark"
             @click="handleMenuClick(item.id)"
           >
-            <div class="relative">
-              <IconBadge
-                :icon="item.icon"
+            <div class="relative shrink-0">
+              <UIcon
+                :name="item.icon"
                 size="sm"
-                :color="item.color"
+                class="text-text-secondary-light dark:text-text-secondary-dark"
                 :class="item.id === 'update' && isCheckingUpdate ? 'animate-spin' : ''"
               />
               <span
                 v-if="item.badge?.value"
                 data-testid="unseen-badge"
-                class="absolute -top-0.5 -right-0.5 w-3 h-3 border-2 border-card-light dark:border-card-dark rounded-full bg-danger"
+                class="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-danger"
               />
             </div>
             <span
-              class="flex-1 text-left font-medium text-text-primary-light dark:text-text-primary-dark"
+              class="flex-1 text-left text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
             >
               {{ item.label }}
+            </span>
+            <span
+              v-if="item.value"
+              class="text-sm text-text-tertiary-light dark:text-text-tertiary-dark mr-1"
+            >
+              {{ item.value() }}
             </span>
             <UIcon
               name="chevron_right"
@@ -331,26 +338,21 @@ async function confirmLogout() {
             />
           </button>
         </UCard>
-      </div>
+      </section>
 
-      <!-- Logout Button -->
-      <UCard
-        variant="bordered"
-        class="overflow-hidden border-danger/20 dark:border-danger/20 hover:border-danger/40 transition-colors"
+      <!-- Logout -->
+      <button
+        data-testid="logout-btn"
+        class="w-full flex items-center justify-center gap-2 py-3 text-sm font-medium text-danger hover:text-danger/80 transition-colors"
+        @click="handleLogout"
       >
-        <button
-          data-testid="logout-btn"
-          class="w-full flex items-center justify-center gap-2 p-4 text-danger font-semibold active:bg-danger/5"
-          @click="handleLogout"
-        >
-          <UIcon name="logout" size="sm" />
-          Выйти из аккаунта
-        </button>
-      </UCard>
+        <UIcon name="logout" size="sm" />
+        Выйти из аккаунта
+      </button>
     </main>
 
     <!-- Logout Confirmation Modal -->
-    <UModal v-model="showLogoutModal" title="Выход из аккаунта" @close="closeLogoutModal">
+    <UModal v-model="showLogoutModal" title="Выход из аккаунта" @close="showLogoutModal = false">
       <p class="text-text-secondary-light dark:text-text-secondary-dark">
         Вы уверены, что хотите выйти из аккаунта?
       </p>
@@ -360,7 +362,7 @@ async function confirmLogout() {
           data-testid="logout-cancel-btn"
           variant="secondary"
           full-width
-          @click="closeLogoutModal"
+          @click="showLogoutModal = false"
         >
           Отмена
         </UButton>

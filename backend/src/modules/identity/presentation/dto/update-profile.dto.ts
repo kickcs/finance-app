@@ -63,4 +63,8 @@ export class UpdateProfileDto {
   @Min(1)
   @Max(31)
   financialMonthStartDay?: number;
+
+  @IsOptional()
+  @IsString()
+  timezone?: string;
 }

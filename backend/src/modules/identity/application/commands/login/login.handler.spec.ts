@@ -57,6 +57,7 @@ describe('LoginHandler', () => {
       quickActionsHidden: false,
       quickActionsHintDismissed: false,
       financialMonthStartDay: 1,
+      timezone: 'Asia/Tashkent',
       createdAt: new Date(),
     });
   }
@@ -111,6 +112,7 @@ describe('LoginHandler', () => {
       quickActionsHidden: false,
       quickActionsHintDismissed: false,
       financialMonthStartDay: 1,
+      timezone: 'Asia/Tashkent',
       createdAt: new Date(),
     });
     mockRepository.findByEmail.mockResolvedValue(profile);

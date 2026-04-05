@@ -54,6 +54,7 @@ describe('RefreshHandler', () => {
       quickActionsHidden: false,
       quickActionsHintDismissed: false,
       financialMonthStartDay: 1,
+      timezone: 'Asia/Tashkent',
       createdAt: new Date(),
     });
   }

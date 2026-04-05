@@ -18,9 +18,11 @@ FROM oven/bun:1 AS builder
 
 WORKDIR /app
 
-# Build argument for API URL (required at build time for Vite)
+# Build arguments (required at build time for Vite)
 ARG VITE_API_URL
+ARG VITE_VAPID_PUBLIC_KEY
 ENV VITE_API_URL=${VITE_API_URL}
+ENV VITE_VAPID_PUBLIC_KEY=${VITE_VAPID_PUBLIC_KEY}
 
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules

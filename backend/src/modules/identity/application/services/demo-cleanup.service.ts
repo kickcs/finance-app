@@ -6,10 +6,7 @@ import { ProfileOrmEntity } from '../../infrastructure/persistence/typeorm';
 import { AccountOrmEntity } from '../../../accounting/infrastructure/persistence/typeorm';
 import { TransactionOrmEntity } from '../../../accounting/infrastructure/persistence/typeorm';
 import { DebtOrmEntity } from '../../../debt/infrastructure/persistence/typeorm';
-import {
-  GoalOrmEntity,
-  ReminderOrmEntity,
-} from '../../../planning/infrastructure/persistence/typeorm';
+import { GoalOrmEntity } from '../../../planning/infrastructure/persistence/typeorm';
 
 /**
  * Service responsible for cleaning up expired demo accounts and their data
@@ -66,10 +63,7 @@ export class DemoCleanupService {
         // 4. Delete goals
         await manager.delete(GoalOrmEntity, { userId: In(userIds) });
 
-        // 5. Delete reminders
-        await manager.delete(ReminderOrmEntity, { userId: In(userIds) });
-
-        // 6. Finally delete the profiles
+        // 5. Finally delete the profiles
         await manager.delete(ProfileOrmEntity, { id: In(userIds) });
       });
 

@@ -41,6 +41,9 @@ export const STORAGE_KEYS = {
   /** Whether the PWA install banner has been dismissed */
   PWA_INSTALL_DISMISSED: 'pwa-install-dismissed',
 
+  /** Whether the push notification prompt banner has been dismissed */
+  PUSH_BANNER_DISMISSED: 'push-banner-dismissed',
+
   /** User's chosen primary accent color name (e.g. 'blue', 'rose') */
   PRIMARY_COLOR: 'primary_color',
 } as const;

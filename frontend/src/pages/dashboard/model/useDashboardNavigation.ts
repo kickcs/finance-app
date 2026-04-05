@@ -2,7 +2,6 @@ import { useRouter } from 'vue-router';
 import { ROUTE_NAMES } from '@/app/router/routeNames';
 import type { AccountWithBalances } from '@/entities/account';
 import type { Debt } from '@/entities/debt';
-import type { Reminder } from '@/entities/reminder';
 
 export function useDashboardNavigation() {
   const router = useRouter();
@@ -26,13 +25,13 @@ export function useDashboardNavigation() {
       person
         ? router.push({ name: ROUTE_NAMES.DEBTS_LIST, query: { person, type: debtType } })
         : router.push({ name: ROUTE_NAMES.DEBTS_LIST }),
-    toReminder: (reminder: Reminder) =>
-      router.push({ name: ROUTE_NAMES.REMINDER_DETAIL, params: { id: reminder.id } }),
-    toNewReminder: () => router.push({ name: ROUTE_NAMES.NEW_REMINDER }),
-    toReminders: () => router.push({ name: ROUTE_NAMES.REMINDERS_LIST }),
     toAnalytics: (type: 'income' | 'expense') =>
       router.push({ name: ROUTE_NAMES.ANALYTICS, query: { type } }),
     toQuickActionsSettings: () => router.push({ name: ROUTE_NAMES.SETTINGS_QUICK_ACTIONS }),
     toDashboardSettings: () => router.push({ name: ROUTE_NAMES.DASHBOARD_SETTINGS }),
+    toSubscriptions: () => router.push({ name: ROUTE_NAMES.SUBSCRIPTIONS_LIST }),
+    toNewSubscription: () => router.push({ name: ROUTE_NAMES.NEW_SUBSCRIPTION }),
+    toSubscription: (id: string) =>
+      router.push({ name: ROUTE_NAMES.SUBSCRIPTION_DETAIL, params: { id } }),
   };
 }

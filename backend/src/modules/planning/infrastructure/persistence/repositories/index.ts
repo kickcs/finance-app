@@ -1,3 +1,2 @@
 export * from './budget.repository';
 export * from './goal.repository';
-export * from './reminder.repository';

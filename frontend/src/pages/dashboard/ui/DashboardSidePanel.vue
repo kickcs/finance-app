@@ -3,7 +3,6 @@ import { computed, defineAsyncComponent } from 'vue';
 import type { AccountWithBalances } from '@/entities/account';
 import type { CategoryBreakdown } from '@/entities/transaction';
 import type { Debt } from '@/entities/debt';
-import type { Reminder } from '@/entities/reminder';
 import type { BudgetCurrentResponse } from '@/entities/budget';
 import type { QuickAction } from '@/features/configure-quick-action';
 import type { WidgetId } from '@/shared/api/database.types';
@@ -11,7 +10,7 @@ import { DEFAULT_WIDGET_ORDER } from '@/shared/config/dashboard';
 import { AccountStack } from '@/widgets/account-stack';
 import { BudgetSection, BudgetSectionSkeleton } from '@/widgets/budget-section';
 import { DebtsSectionSkeleton } from '@/widgets/debts-section';
-import { RemindersSectionSkeleton } from '@/widgets/reminders-section';
+import { UpcomingSubscriptionsSkeleton } from '@/widgets/upcoming-subscriptions';
 import { UIcon, DiscoveryDot } from '@/shared/ui';
 import DashboardQuickActions from './DashboardQuickActions.vue';
 import DashboardTopExpenses from './DashboardTopExpenses.vue';
@@ -35,9 +34,8 @@ const props = withDefaults(
     debts: Debt[];
     currency: string;
     debtsLoading: boolean;
-    // Reminders
-    reminders: Reminder[];
-    remindersLoading: boolean;
+    // User
+    userId: string | null;
     // Budget
     budget: BudgetCurrentResponse | null;
     budgetLoading: boolean;
@@ -70,21 +68,21 @@ const emit = defineEmits<{
   'person-click': [person: string, type: 'given' | 'taken'];
   'add-debt': [];
   'view-all-debts': [];
-  // Reminders
-  'reminder-click': [reminder: Reminder];
-  'add-reminder': [];
-  'view-all-reminders': [];
   // Budget
   'budget-setup': [];
   'budget-edit': [];
   'dashboard-settings-click': [];
   'configure-period': [];
+  // Subscriptions
+  'subscription-click': [id: string];
+  'add-subscription': [];
+  'view-all-subscriptions': [];
 }>();
 
 const sidePanelWidgets = computed(() =>
-  (['quick_actions', 'budget', 'accounts', 'top_expenses', 'debts', 'reminders'] as const).filter(
-    (id) => props.widgetOrder.includes(id) && !props.hiddenWidgets.has(id),
-  ),
+  (
+    ['quick_actions', 'budget', 'accounts', 'top_expenses', 'debts', 'subscriptions'] as const
+  ).filter((id) => props.widgetOrder.includes(id) && !props.hiddenWidgets.has(id)),
 );
 
 const orderedWidgets = computed(() =>
@@ -99,8 +97,8 @@ const DebtsSection = defineAsyncComponent({
   loader: () => import('@/widgets/debts-section').then((m) => m.DebtsSection),
   delay: 0,
 });
-const RemindersSection = defineAsyncComponent({
-  loader: () => import('@/widgets/reminders-section').then((m) => m.RemindersSection),
+const UpcomingSubscriptions = defineAsyncComponent({
+  loader: () => import('@/widgets/upcoming-subscriptions').then((m) => m.UpcomingSubscriptions),
   delay: 0,
 });
 </script>
@@ -187,21 +185,18 @@ const RemindersSection = defineAsyncComponent({
         </Suspense>
       </section>
 
-      <!-- Reminders -->
-      <section v-if="widgetId === 'reminders'">
+      <!-- Subscriptions -->
+      <section v-if="widgetId === 'subscriptions'">
         <Suspense>
-          <RemindersSection
-            :reminders="reminders"
-            :currency="currency"
-            :loading="remindersLoading"
-            :hidden="isHidden"
-            class="hover:-translate-y-0.5 hover:shadow-md transition-[transform,box-shadow] duration-300 rounded-3xl"
-            @reminder-click="emit('reminder-click', $event)"
-            @add-click="emit('add-reminder')"
-            @view-all="emit('view-all-reminders')"
+          <UpcomingSubscriptions
+            :user-id="userId ?? ''"
+            class="hover:-translate-y-0.5 hover:shadow-md transition-[transform,box-shadow] duration-300 rounded-2xl"
+            @subscription-click="emit('subscription-click', $event)"
+            @add-click="emit('add-subscription')"
+            @view-all="emit('view-all-subscriptions')"
           />
           <template #fallback>
-            <RemindersSectionSkeleton />
+            <UpcomingSubscriptionsSkeleton />
           </template>
         </Suspense>
       </section>
