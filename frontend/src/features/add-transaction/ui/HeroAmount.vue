@@ -48,8 +48,12 @@ useEventListener(hiddenInputRef, 'focus', () => (isFocused.value = true));
 useEventListener(hiddenInputRef, 'blur', () => (isFocused.value = false));
 
 const displayAmount = computed(() => {
-  if (!props.amount) return '0';
-  return formatNumberWithSpaces(props.amount);
+  if (!rawValue.value) return '0';
+  const dotIndex = rawValue.value.indexOf('.');
+  if (dotIndex === -1) return formatNumberWithSpaces(rawValue.value) || '0';
+  const intPart = rawValue.value.slice(0, dotIndex);
+  const decPart = rawValue.value.slice(dotIndex); // includes the dot
+  return (formatNumberWithSpaces(intPart || '0') || '0') + decPart;
 });
 
 function focusInput() {
