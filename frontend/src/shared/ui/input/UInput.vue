@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, useId, ref, watch } from 'vue';
-import { cn } from '@/shared/lib/utils';
+import { cn, isNonEmpty } from '@/shared/lib/utils';
 import { formatNumberWithSpaces, sanitizeCurrencyInput } from '@/shared/lib/format/currency';
 import { UIcon } from '@/shared/ui';
 
@@ -63,8 +63,6 @@ watch(
   },
 );
 
-const inputValue = computed(() => props.modelValue);
-
 // Separate ref so trailing dot/zero input state is not lost on each keystroke
 const rawInput = ref('');
 const isInputFocused = ref(false);
@@ -73,8 +71,7 @@ watch(
   () => props.modelValue,
   (val) => {
     if (props.variant !== 'currency' || isInputFocused.value) return;
-    const formatted =
-      val !== null && val !== undefined && val !== '' ? formatNumberWithSpaces(Number(val)) : '';
+    const formatted = isNonEmpty(val) ? formatNumberWithSpaces(Number(val)) : '';
     if (rawInput.value !== formatted) rawInput.value = formatted;
   },
   { immediate: true },
@@ -99,8 +96,7 @@ function handleInput(event: Event) {
 function handleFocus(event: FocusEvent) {
   if (props.variant === 'currency') {
     isInputFocused.value = true;
-    const val = props.modelValue;
-    rawInput.value = val !== null && val !== undefined && val !== '' ? String(Number(val)) : '';
+    rawInput.value = isNonEmpty(props.modelValue) ? String(Number(props.modelValue)) : '';
   }
   emit('focus', event);
 }
@@ -108,9 +104,9 @@ function handleFocus(event: FocusEvent) {
 function handleBlur(event: FocusEvent) {
   if (props.variant === 'currency') {
     isInputFocused.value = false;
-    const val = props.modelValue;
-    const formatted =
-      val !== null && val !== undefined && val !== '' ? formatNumberWithSpaces(Number(val)) : '';
+    const formatted = isNonEmpty(props.modelValue)
+      ? formatNumberWithSpaces(Number(props.modelValue))
+      : '';
     if (rawInput.value !== formatted) rawInput.value = formatted;
   }
   emit('blur', event);
@@ -174,7 +170,7 @@ defineExpose({
       <input
         :id="inputId"
         ref="inputRef"
-        :value="variant === 'currency' ? rawInput : inputValue"
+        :value="variant === 'currency' ? rawInput : modelValue"
         :type="inputType"
         :inputmode="inputMode"
         :placeholder="placeholder"
