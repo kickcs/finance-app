@@ -106,4 +106,10 @@ const containerRef = ref<HTMLDivElement>();
 :deep(.glass > div) {
   width: 100% !important;
 }
+
+/* Prevent width/height from animating on route changes.
+   Library sets transition: all 0.2s on root elements. */
+:deep(> div) {
+  transition: transform 0.2s ease-in-out !important;
+}
 </style>
