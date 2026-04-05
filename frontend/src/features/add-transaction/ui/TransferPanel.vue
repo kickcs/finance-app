@@ -262,12 +262,8 @@ function handleTargetAmountChange(newToAmount: number) {
   });
 }
 
-function parseDecimalInput(value: string): number {
-  return parseFloat(value.replace(',', '.'));
-}
-
 function handleRateChange(value: string) {
-  const num = parseDecimalInput(value);
+  const num = parseFloat(sanitizeCurrencyInput(value));
   if (Number.isNaN(num) || num <= 0) {
     exchangeRate.value = null;
     return;
