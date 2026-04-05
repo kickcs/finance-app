@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.43';
+export const CURRENT_VERSION = '1.0.44';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,17 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.44',
+    date: '2026-04-05',
+    title: 'Жидкое стекло',
+    items: [
+      {
+        type: 'feature',
+        text: 'Новый стиль панели навигации «Liquid Glass» — парящая стеклянная панель в стиле iOS 26. Переключается в Профиль → Оформление',
+      },
+    ],
+  },
   {
     version: '1.0.43',
     date: '2026-04-03',

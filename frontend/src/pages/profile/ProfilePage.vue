@@ -12,14 +12,16 @@ import { InstallPwaModal, usePwaInstall } from '@/features/install-pwa';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 import { useAsyncOperation } from '@/shared/lib/hooks/useAsyncOperation';
-import { SubscriptionSection } from '@/features/manage-subscription';
+import { useSubscription, PLAN_LABELS } from '@/entities/subscription';
 import { usePremiumFeature } from '@/shared/lib/composables/usePremiumFeature';
+import { formatDate } from '@/shared/lib/format/date';
 import { usePwaUpdate } from '@/shared/lib/composables/usePwaUpdate';
 import { usePrimaryColor, PRIMARY_COLORS } from '@/features/select-primary-color';
 import { FinancialPeriodModal } from '@/features/configure-financial-period';
 import { useFinancialPeriod } from '@/shared/lib/hooks/useFinancialPeriod';
 import { PushNotificationToggle } from '@/features/manage-push-notifications';
 import { ThemeToggle } from '@/features/toggle-theme';
+import { NavbarStyleSelector } from '@/features/select-navbar-style';
 import { getInitial } from '@/shared/lib/format/text';
 
 const router = useRouter();
@@ -46,6 +48,14 @@ const { showModal: showInstallModal, openModal: openInstallModal } = usePwaInsta
 
 // Premium
 const { requirePremium } = usePremiumFeature();
+
+// Subscription
+const { subscription, isPremium } = useSubscription(userId);
+const subscriptionStatusLabel = computed(() => {
+  if (subscription.value.status === 'trialing') return 'Пробный период';
+  if (subscription.value.cancel_at_period_end) return 'Отменена';
+  return isPremium.value ? 'Активна' : 'Бесплатный';
+});
 
 // Primary color
 const { colorName: primaryColorName } = usePrimaryColor();
@@ -167,35 +177,81 @@ async function confirmLogout() {
     </template>
 
     <main class="pt-6 pb-28 md:pb-8 space-y-6">
-      <!-- User Section -->
-      <section data-testid="user-card" class="flex items-center gap-3.5">
-        <div
-          class="w-12 h-12 rounded-full bg-primary/10 dark:bg-primary/15 flex items-center justify-center text-base font-bold text-primary shrink-0"
-        >
-          {{ getInitial(userName) }}
-        </div>
-        <div class="flex-1 min-w-0">
-          <p
-            data-testid="user-name"
-            class="text-base font-semibold text-text-primary-light dark:text-text-primary-dark truncate"
+      <!-- User + Subscription -->
+      <UCard class="divide-y divide-border-light dark:divide-border-dark overflow-hidden">
+        <!-- User row -->
+        <section data-testid="user-card" class="flex items-center gap-3.5 px-4 py-3.5">
+          <div
+            class="w-12 h-12 rounded-full bg-primary/10 dark:bg-primary/15 flex items-center justify-center text-base font-bold text-primary shrink-0"
           >
-            {{ userName }}
-          </p>
-          <p
-            data-testid="user-email"
-            class="text-sm text-text-secondary-light dark:text-text-secondary-dark truncate"
+            {{ getInitial(userName) }}
+          </div>
+          <div class="flex-1 min-w-0">
+            <p
+              data-testid="user-name"
+              class="text-base font-semibold text-text-primary-light dark:text-text-primary-dark truncate"
+            >
+              {{ userName }}
+            </p>
+            <p
+              data-testid="user-email"
+              class="text-sm text-text-secondary-light dark:text-text-secondary-dark truncate"
+            >
+              {{ userEmail }}
+            </p>
+          </div>
+          <button
+            data-testid="edit-profile-btn"
+            class="text-sm font-medium text-primary hover:text-primary-hover transition-colors shrink-0"
+            @click="showEditProfileModal = true"
           >
-            {{ userEmail }}
-          </p>
-        </div>
+            Редактировать
+          </button>
+        </section>
+
+        <!-- Subscription row -->
         <button
-          data-testid="edit-profile-btn"
-          class="text-sm font-medium text-primary hover:text-primary-hover transition-colors shrink-0"
-          @click="showEditProfileModal = true"
+          data-testid="subscription-button"
+          class="w-full flex items-center gap-3.5 px-4 py-3.5 transition-colors hover:bg-surface-light dark:hover:bg-surface-dark active:bg-surface-light dark:active:bg-surface-dark text-left"
+          @click="requirePremium('Premium подписка')"
         >
-          Редактировать
+          <UIcon
+            name="workspace_premium"
+            size="sm"
+            class="text-text-secondary-light dark:text-text-secondary-dark shrink-0"
+          />
+          <div class="flex-1 min-w-0">
+            <p
+              data-testid="subscription-plan-label"
+              class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark truncate"
+            >
+              {{ isPremium ? PLAN_LABELS[subscription.plan] || 'Premium' : 'Premium подписка' }}
+            </p>
+            <p
+              v-if="isPremium && subscription.current_period_end"
+              data-testid="subscription-period-end"
+              class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark truncate"
+            >
+              {{ subscription.cancel_at_period_end ? 'Действует до' : 'Следующая оплата' }}:
+              {{ formatDate(subscription.current_period_end) }}
+            </p>
+          </div>
+          <span
+            data-testid="subscription-status-label"
+            class="text-sm shrink-0"
+            :class="
+              isPremium ? 'text-success' : 'text-text-tertiary-light dark:text-text-tertiary-dark'
+            "
+          >
+            {{ subscriptionStatusLabel }}
+          </span>
+          <UIcon
+            name="chevron_right"
+            size="sm"
+            class="text-text-tertiary-light dark:text-text-tertiary-dark"
+          />
         </button>
-      </section>
+      </UCard>
 
       <!-- Settings -->
       <section>
@@ -243,8 +299,17 @@ async function confirmLogout() {
         </UCard>
       </section>
 
-      <!-- Subscription -->
-      <SubscriptionSection @upgrade="requirePremium('Premium подписка')" />
+      <!-- Appearance -->
+      <section>
+        <h2
+          class="text-xs font-semibold text-text-secondary-light dark:text-text-secondary-dark px-2 mb-2"
+        >
+          Оформление
+        </h2>
+        <UCard class="px-4 py-3.5">
+          <NavbarStyleSelector />
+        </UCard>
+      </section>
 
       <!-- Notifications -->
       <section>

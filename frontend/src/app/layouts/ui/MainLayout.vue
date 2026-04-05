@@ -1,15 +1,18 @@
 <script setup lang="ts">
-import { RouterView, useRouter } from 'vue-router';
+import { computed, defineAsyncComponent, inject, ref } from 'vue';
+import type { Ref } from 'vue';
+import { RouterView, useRoute, useRouter } from 'vue-router';
 import { SidebarNav } from '@/widgets/sidebar-nav';
-import { BottomNav } from '@/widgets/bottom-nav';
 import { transitionName } from '@/app/router';
 import { ROUTE_NAMES } from '@/app/router/routeNames';
 import { useLayoutData } from '../model/useLayoutData';
-
-import { computed, inject, ref } from 'vue';
-import { useRoute } from 'vue-router';
-import type { Ref } from 'vue';
+import { useNavbarStyle } from '@/shared/lib/composables';
 import { useFeatureHints } from '@/features/feature-hints';
+
+const BottomNav = defineAsyncComponent(() => import('@/widgets/bottom-nav/ui/BottomNav.vue'));
+const LiquidGlassBottomNav = defineAsyncComponent(
+  () => import('@/widgets/bottom-nav/ui/LibLiquidGlassBottomNav.vue'),
+);
 
 const isDemo = inject<Ref<boolean>>('isDemo', ref(false));
 const { isDotDismissed, dismissDot } = useFeatureHints();
@@ -19,6 +22,7 @@ const router = useRouter();
 const route = useRoute();
 const { userName, greeting, totalBalance, currency, isHidden, toggleHidden, isLoading } =
   useLayoutData();
+const { style: navbarStyle } = useNavbarStyle();
 
 const hideBottomNav = computed(() => route.name === ROUTE_NAMES.SCAN_RECEIPT);
 
@@ -77,16 +81,26 @@ function handleAddTransaction() {
       </div>
 
       <!-- Bottom Navigation (Mobile Only) -->
-      <div
-        v-if="!hideBottomNav"
-        class="md:hidden shrink-0 border-t border-border-light dark:border-border-dark relative z-40 bg-background-light dark:bg-background-dark"
-      >
-        <BottomNav
+      <template v-if="!hideBottomNav">
+        <div
+          v-if="navbarStyle === 'classic'"
+          class="md:hidden shrink-0 border-t border-border-light dark:border-border-dark relative z-40 bg-background-light dark:bg-background-dark"
+        >
+          <BottomNav
+            :show-add-dot="showAddDot"
+            @add-click="handleAddTransaction"
+            @add-dot-dismiss="dismissDot('add-button')"
+          />
+        </div>
+
+        <LiquidGlassBottomNav
+          v-else-if="navbarStyle === 'liquid-glass'"
+          class="md:hidden"
           :show-add-dot="showAddDot"
           @add-click="handleAddTransaction"
           @add-dot-dismiss="dismissDot('add-button')"
         />
-      </div>
+      </template>
     </div>
   </div>
 </template>

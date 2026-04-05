@@ -46,4 +46,7 @@ export const STORAGE_KEYS = {
 
   /** User's chosen primary accent color name (e.g. 'blue', 'rose') */
   PRIMARY_COLOR: 'primary_color',
+
+  /** Navbar visual style: 'classic' | 'liquid-glass' */
+  NAVBAR_STYLE: 'navbar-style',
 } as const;
