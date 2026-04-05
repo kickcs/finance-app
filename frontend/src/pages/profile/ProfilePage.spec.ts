@@ -306,9 +306,9 @@ describe('ProfilePage', () => {
   // Subscription Section
   // -----------------------------------------------------------------------
   describe('subscription section', () => {
-    it('renders subscription section with "Подписка" header', async () => {
+    it('renders subscription row with "Premium подписка" label', async () => {
       const wrapper = await renderPage();
-      expect(wrapper.text()).toContain('Подписка');
+      expect(wrapper.text()).toContain('Premium подписка');
     });
 
     it('shows free plan status by default', async () => {
