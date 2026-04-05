@@ -141,7 +141,7 @@ describe('DashboardSettingsPage', () => {
 
       const widgetSection = wrapper.find('[data-testid="widgets-section"]');
       const widgetToggles = widgetSection.findAll('[role="switch"]');
-      expect(widgetToggles.length).toBe(6);
+      expect(widgetToggles.length).toBe(7);
 
       for (const toggle of widgetToggles) {
         expect(toggle.attributes('aria-checked')).toBe('true');
@@ -481,7 +481,7 @@ describe('DashboardSettingsPage', () => {
 
       // Check order: first widget should be "accounts" (Счета), second "quick_actions"
       const widgetItems = wrapper.findAll('[data-testid^="widget-item-"]');
-      expect(widgetItems.length).toBe(6);
+      expect(widgetItems.length).toBe(7);
       expect(widgetItems[0].attributes('data-testid')).toBe('widget-item-accounts');
       expect(widgetItems[1].attributes('data-testid')).toBe('widget-item-quick_actions');
     });
@@ -573,7 +573,7 @@ describe('DashboardSettingsPage', () => {
       const dashSettings = (savedPayload as any).dashboardSettings;
       expect(dashSettings).toBeDefined();
       expect(dashSettings.widgetOrder).toBeDefined();
-      expect(dashSettings.widgetOrder.length).toBe(6);
+      expect(dashSettings.widgetOrder.length).toBe(7);
     });
   });
 });
