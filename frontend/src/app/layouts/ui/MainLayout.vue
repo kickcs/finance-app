@@ -3,13 +3,13 @@ import { computed, defineAsyncComponent, inject, ref } from 'vue';
 import type { Ref } from 'vue';
 import { RouterView, useRoute, useRouter } from 'vue-router';
 import { SidebarNav } from '@/widgets/sidebar-nav';
+import BottomNav from '@/widgets/bottom-nav/ui/BottomNav.vue';
 import { transitionName } from '@/app/router';
 import { ROUTE_NAMES } from '@/app/router/routeNames';
 import { useLayoutData } from '../model/useLayoutData';
 import { useNavbarStyle } from '@/shared/lib/composables';
 import { useFeatureHints } from '@/features/feature-hints';
 
-const BottomNav = defineAsyncComponent(() => import('@/widgets/bottom-nav/ui/BottomNav.vue'));
 const LiquidGlassBottomNav = defineAsyncComponent(
   () => import('@/widgets/bottom-nav/ui/LibLiquidGlassBottomNav.vue'),
 );
