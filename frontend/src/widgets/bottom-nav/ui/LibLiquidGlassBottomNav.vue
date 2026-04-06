@@ -100,7 +100,7 @@ onMounted(() => {
         >
           <!-- Sliding glass indicator -->
           <span
-            class="absolute rounded-2xl pointer-events-none z-0 sliding-indicator bg-black/[0.12] dark:bg-white/[0.14] backdrop-blur-sm"
+            class="absolute rounded-2xl pointer-events-none z-0 sliding-indicator bg-black/[0.12] dark:bg-white/[0.14]"
             :style="indicatorStyle"
           />
 
