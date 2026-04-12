@@ -15,7 +15,7 @@ import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useIsDesktop } from '@/shared/lib/composables/useIsDesktop';
 import { useDrawerKeyboard } from '@/shared/lib/composables';
 import { useEditDebt } from '../model/useEditDebt';
-import { ToggleRow } from '@/features/create-debt';
+import ToggleRow from '@/features/add-transaction/ui/ToggleRow.vue';
 
 const props = defineProps<{
   open: boolean;
