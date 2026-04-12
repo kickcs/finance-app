@@ -40,6 +40,7 @@ const routes = [
   { path: '/debts', component: DebtsListPage, name: 'debts-list' },
   { path: '/debts/new', component: { template: '<div />' }, name: 'new-debt' },
   { path: '/debts/:id', component: { template: '<div />' }, name: 'debt-detail' },
+  { path: '/transactions/new', component: { template: '<div />' }, name: 'new-transaction' },
   { path: '/', component: { template: '<div />' }, name: 'home' },
 ];
 
@@ -286,14 +287,15 @@ describe('DebtsListPage', () => {
       // Empty state should be showing
       expect(wrapper.find('[data-testid="empty-state"]').exists()).toBe(true);
 
-      // Click the action button inside empty state — opens drawer, not navigates
+      // Click the action button inside empty state — navigates to new-transaction with type=debt
       const actionBtn = wrapper.findAll('button').find((b) => b.text().includes('Создать долг'));
       expect(actionBtn).toBeDefined();
       await actionBtn!.trigger('click');
       await flushPromises();
 
-      // Drawer should be open (route stays on debts-list)
-      expect(router.currentRoute.value.name).toBe('debts-list');
+      // Should navigate to new-transaction page with debt type
+      expect(router.currentRoute.value.name).toBe('new-transaction');
+      expect(router.currentRoute.value.query.type).toBe('debt');
     });
   });
 
@@ -391,7 +393,7 @@ describe('DebtsListPage', () => {
   // Navigation
   // -----------------------------------------------------------------------
   describe('navigation', () => {
-    it('opens create debt drawer on add button click', async () => {
+    it('navigates to new-transaction with type=debt on add button click', async () => {
       const { wrapper, router } = await renderPage();
 
       const addBtn = wrapper.find('[data-testid="add-debt-btn"]');
@@ -399,8 +401,9 @@ describe('DebtsListPage', () => {
       await addBtn.trigger('click');
       await flushPromises();
 
-      // Stays on debts-list (drawer opens instead of navigation)
-      expect(router.currentRoute.value.name).toBe('debts-list');
+      // Navigates to new-transaction page with debt type
+      expect(router.currentRoute.value.name).toBe('new-transaction');
+      expect(router.currentRoute.value.query.type).toBe('debt');
     });
 
     it('navigates to debt detail on card click', async () => {
