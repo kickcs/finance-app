@@ -19,8 +19,8 @@ import { useDrawerKeyboard } from '@/shared/lib/composables';
 import { useDebtForm as useCreateDebt } from '@/features/add-transaction/model/useDebtForm';
 import { useHaptics } from '@/shared/lib/haptics';
 import type { AccountWithBalances } from '@/entities/account';
-import DatePickerField from './DatePickerField.vue';
-import ToggleRow from './ToggleRow.vue';
+import DatePickerField from '@/features/add-transaction/ui/DatePickerField.vue';
+import ToggleRow from '@/features/add-transaction/ui/ToggleRow.vue';
 
 const props = defineProps<{
   open: boolean;
