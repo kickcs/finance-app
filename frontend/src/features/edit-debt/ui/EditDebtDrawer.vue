@@ -8,14 +8,13 @@ import {
   DrawerHandle,
   DrawerTitle,
 } from 'vaul-vue';
-import { UInput, UButton, UIcon } from '@/shared/ui';
+import { UInput, UButton, UIcon, ToggleRow } from '@/shared/ui';
 import type { Debt } from '@/entities/debt';
 import { getCurrencySymbol } from '@/shared/lib/format/currency';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useIsDesktop } from '@/shared/lib/composables/useIsDesktop';
 import { useDrawerKeyboard } from '@/shared/lib/composables';
 import { useEditDebt } from '../model/useEditDebt';
-import { ToggleRow } from '@/features/create-debt';
 
 const props = defineProps<{
   open: boolean;

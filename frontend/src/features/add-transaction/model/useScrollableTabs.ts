@@ -2,7 +2,7 @@ import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import type { Ref } from 'vue';
 import { useHaptics } from '@/shared/lib/haptics';
 
-export const TRANSACTION_TYPE_ORDER = ['expense', 'income', 'transfer'] as const;
+export const TRANSACTION_TYPE_ORDER = ['expense', 'income', 'transfer', 'debt'] as const;
 export type TransactionType = (typeof TRANSACTION_TYPE_ORDER)[number];
 
 // Generated from TRANSACTION_TYPE_ORDER: [last_clone, ...real, first_clone]

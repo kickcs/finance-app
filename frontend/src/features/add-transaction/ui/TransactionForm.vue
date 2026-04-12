@@ -27,6 +27,7 @@ import { CalendarDate, type DateValue } from '@internationalized/date';
 import ExpensePanel from './ExpensePanel.vue';
 import IncomePanel from './IncomePanel.vue';
 import TransferPanel from './TransferPanel.vue';
+import DebtPanel from './DebtPanel.vue';
 
 const props = defineProps<{
   formData: TransactionFormData;
@@ -34,6 +35,7 @@ const props = defineProps<{
   expenseCategories: Category[];
   incomeCategories: Category[];
   userCurrency?: string;
+  defaultAccountId?: string | null;
   isSubmitting?: boolean;
   isValid?: boolean;
   error?: string | null;
@@ -45,6 +47,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:formData': [value: TransactionFormData];
   submit: [];
+  'debt-submitted': [];
   addParticipant: [name: string, fromContacts: boolean, personColor?: string];
   removeParticipant: [id: string];
   updateParticipantAmount: [id: string, amount: number];
@@ -58,6 +61,7 @@ const tabItems = [
   { id: 'expense', label: 'Расход' },
   { id: 'income', label: 'Доход' },
   { id: 'transfer', label: 'Перевод' },
+  { id: 'debt', label: 'Долг' },
 ];
 
 const type = computed(() => props.formData.type);
@@ -65,7 +69,7 @@ const type = computed(() => props.formData.type);
 function applyTypeChange(newType: string) {
   emit('update:formData', {
     ...props.formData,
-    type: newType as 'income' | 'expense' | 'transfer',
+    type: newType as 'income' | 'expense' | 'transfer' | 'debt',
     categoryId: newType === 'transfer' ? CATEGORY_IDS.TRANSFER : '',
     toAccountId: null,
     toAmount: null,
@@ -197,11 +201,11 @@ const { shouldShowHint, dismissHint, markHintShown, getHintConfig } = useFeature
 const showSplitHint = ref(false);
 const splitHintConfig = getHintConfig('split-expense');
 
-// Smart defaults
+// Smart defaults (not applicable to debt flow — debt has its own form state)
 const { transactions } = useRecentTransactions(userId, 20);
 const { defaults } = useSmartDefaults(
   transactions,
-  () => props.formData.type,
+  () => (props.formData.type === 'debt' ? 'expense' : props.formData.type),
   () => props.formData.accountId,
 );
 
@@ -220,6 +224,7 @@ const smartDefaultsAppliedForType = ref<string | null>(null);
 watch(
   defaults,
   (val) => {
+    if (props.formData.type === 'debt') return;
     if (smartDefaultsAppliedForType.value === props.formData.type) return;
     if (!val.defaultCategoryId && !val.defaultAccountId) return;
 
@@ -376,12 +381,20 @@ const { isMounted } = useMountedAnimation();
             :user-currency="userCurrency"
             @update:form-data="$emit('update:formData', $event)"
           />
+          <DebtPanel
+            v-else-if="panelType === 'debt'"
+            :accounts="accounts"
+            :default-account-id="defaultAccountId"
+            :autofocus-amount="autofocusAmount && realPanelIndices.has(idx)"
+            @submitted="$emit('debt-submitted')"
+          />
         </div>
       </div>
     </div>
 
     <!-- Bottom section -->
     <div
+      v-if="formData.type !== 'debt'"
       class="space-y-3 stagger-3 transform transition-all duration-500 ease-out delay-150"
       :class="isMounted ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'"
     >

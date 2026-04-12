@@ -38,7 +38,7 @@ function makeInitialFormData(): DebtFormData {
   };
 }
 
-export function useCreateDebt() {
+export function useDebtForm() {
   const { toast } = useToast();
   const formData = ref<DebtFormData>(makeInitialFormData());
   const error = ref<string | null>(null);
@@ -54,15 +54,15 @@ export function useCreateDebt() {
 
   const mutation = useMutation({
     mutationFn: async (userId: string): Promise<string> => {
+      const accountId = formData.value.account_id;
+      if (!accountId) throw new Error('account_id is required');
       const isGiven = formData.value.debt_type === 'given';
-      const accountId = formData.value.account_id!;
       const currency = formData.value.currency;
       const categoryId = isGiven ? CATEGORY_IDS.DEBT_GIVEN : CATEGORY_IDS.DEBT_TAKEN;
 
       let transactionId: string | null = null;
 
       try {
-        // 1. Create the linked transaction (backend handles balance update) — unless skip_transaction
         if (!formData.value.skip_transaction) {
           const transaction = await transactionsApi.create({
             user_id: userId,
@@ -82,7 +82,6 @@ export function useCreateDebt() {
           transactionId = transaction.id;
         }
 
-        // 2. Create the debt record
         const debtName = buildDebtName(formData.value.debt_type, formData.value.person_name);
         const debt = await debtsApi.create({
           user_id: userId,
@@ -100,14 +99,12 @@ export function useCreateDebt() {
           next_payment_date: formData.value.due_date,
         });
 
-        // 3. Link transaction back to debt (debt_id for reliable cleanup on deletion)
         if (transactionId) {
           await transactionsApi.update(transactionId, { debt_id: debt.id });
         }
 
         return debt.id;
       } catch (e) {
-        // Rollback: delete transaction if it was created (backend reverses balance on delete)
         if (transactionId) {
           try {
             await transactionsApi.delete(transactionId);

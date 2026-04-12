@@ -4,7 +4,7 @@ import { flushPromises } from '@vue/test-utils';
 import { renderWithProviders } from '@/test/test-utils';
 import { server } from '@/test/mocks/server';
 import { http, HttpResponse } from 'msw';
-import { useCreateDebt } from './useCreateDebt';
+import { useDebtForm } from './useDebtForm';
 import { CATEGORY_IDS } from '@/entities/category';
 import { buildMockDebtResponse } from '@/test/mocks/handlers/debts';
 import { mockTransactionResponse } from '@/test/mocks/handlers/transactions';
@@ -31,10 +31,10 @@ const USER_ID = 'test-user-1';
 let currentWrapper: ReturnType<typeof renderWithProviders> | null = null;
 
 function mountComposable() {
-  let result!: ReturnType<typeof useCreateDebt>;
+  let result!: ReturnType<typeof useDebtForm>;
   const Stub = defineComponent({
     setup() {
-      result = useCreateDebt();
+      result = useDebtForm();
       return () => h('div');
     },
   });
@@ -43,7 +43,7 @@ function mountComposable() {
 }
 
 function fillValidForm(
-  c: ReturnType<typeof useCreateDebt>,
+  c: ReturnType<typeof useDebtForm>,
   overrides: { debt_type?: 'given' | 'taken'; skip_transaction?: boolean } = {},
 ) {
   c.updateField('person_name', 'Алексей');
@@ -57,7 +57,7 @@ function fillValidForm(
 
 // ── Tests ──────────────────────────────────────────────────────────────────
 
-describe('useCreateDebt', () => {
+describe('useDebtForm', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

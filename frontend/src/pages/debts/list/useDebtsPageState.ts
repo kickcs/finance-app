@@ -147,10 +147,8 @@ export function useDebtsPageState() {
     }
   }
 
-  const showCreateDrawer = ref(false);
-
   function handleAddDebt() {
-    showCreateDrawer.value = true;
+    router.push({ name: ROUTE_NAMES.NEW_TRANSACTION, query: { type: 'debt' } });
   }
 
   function clearFilter() {
@@ -300,9 +298,6 @@ export function useDebtsPageState() {
     progress,
     total,
     accounts,
-
-    // Create drawer
-    showCreateDrawer,
 
     // Detail panel modals
     showDeleteModal,
