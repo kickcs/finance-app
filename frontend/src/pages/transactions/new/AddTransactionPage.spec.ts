@@ -63,7 +63,7 @@ function findSubmitBtn(wrapper: ReturnType<typeof renderWithProviders>) {
 
 /** Helper: set amount via the expense amount input */
 async function setAmount(wrapper: ReturnType<typeof renderWithProviders>, value: number) {
-  const input = wrapper.find('input[aria-label="Сумма"]');
+  const input = wrapper.find('[data-testid="expense-panel"] input[aria-label="Сумма"]');
   if (!input.exists()) throw new Error('Amount input not found');
   await input.setValue(value);
   await nextTick();

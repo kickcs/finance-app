@@ -71,7 +71,7 @@ const dashedBtnBase =
 </script>
 
 <template>
-  <div class="space-y-2">
+  <div class="space-y-2" data-testid="expense-panel">
     <HeroAmount
       :amount="formData.amount"
       :currency="formData.currency"
