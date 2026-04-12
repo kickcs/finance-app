@@ -163,15 +163,17 @@ const infoText = computed(() => {
     />
 
     <ToggleRow
-      v-model="formData.is_private"
+      :model-value="formData.is_private"
       title="Скрыть сумму"
       description="Сумма не будет видна в общем списке"
+      @update:model-value="updateField('is_private', $event)"
     />
 
     <ToggleRow
-      v-model="formData.skip_transaction"
+      :model-value="formData.skip_transaction"
       :title="skipToggleTitle"
       description="Транзакция не будет создана"
+      @update:model-value="updateField('skip_transaction', $event)"
     />
 
     <div
