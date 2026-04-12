@@ -57,7 +57,12 @@ onMounted(() => {
   resetSplit();
 
   const typeParam = route.query.type as string;
-  if (typeParam === 'income' || typeParam === 'expense' || typeParam === 'transfer') {
+  if (
+    typeParam === 'income' ||
+    typeParam === 'expense' ||
+    typeParam === 'transfer' ||
+    typeParam === 'debt'
+  ) {
     setType(typeParam);
   }
 
@@ -122,6 +127,11 @@ async function handleSplitSubmit(uid: string): Promise<boolean> {
 
 async function handleSubmit() {
   validationError.value = null;
+
+  if (formData.value.type === 'debt') {
+    // DebtPanel owns its own submit flow and emits `debt-submitted`.
+    return;
+  }
 
   if (!userId.value) {
     validationError.value = 'Пользователь не авторизован';
@@ -210,6 +220,7 @@ async function handleSubmit() {
           :split-validation-error="splitValidationError"
           :autofocus-amount="isQuickAction"
           @submit="handleSubmit"
+          @debt-submitted="navigateBack"
           @add-participant="addParticipant"
           @remove-participant="removeParticipant"
           @update-participant-amount="updateParticipantAmount"
