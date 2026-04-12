@@ -16,7 +16,7 @@ import { PersonSelector, usePeople } from '@/entities/person';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useIsDesktop } from '@/shared/lib/composables/useIsDesktop';
 import { useDrawerKeyboard } from '@/shared/lib/composables';
-import { useCreateDebt } from '../model/useCreateDebt';
+import { useDebtForm as useCreateDebt } from '@/features/add-transaction/model/useDebtForm';
 import { useHaptics } from '@/shared/lib/haptics';
 import type { AccountWithBalances } from '@/entities/account';
 import DatePickerField from './DatePickerField.vue';
