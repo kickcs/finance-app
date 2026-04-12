@@ -213,6 +213,7 @@ async function handleSubmit() {
           :expense-categories="expenseCategories"
           :income-categories="incomeCategories"
           :user-currency="userCurrency"
+          :default-account-id="defaultAccountId"
           :is-submitting="isSubmitting"
           :is-valid="isValid"
           :error="validationError"

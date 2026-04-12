@@ -16,6 +16,7 @@ import ToggleRow from './ToggleRow.vue';
 
 const props = defineProps<{
   accounts: AccountWithBalances[];
+  defaultAccountId?: string | null;
   autofocusAmount?: boolean;
 }>();
 
@@ -38,13 +39,15 @@ const isMultiCurrency = computed(() => availableCurrencies.value.length > 1);
 const currencySymbol = computed(() => getCurrencySymbol(formData.value.currency));
 
 watch(
-  () => props.accounts,
-  (accs) => {
-    if (accs.length > 0 && !formData.value.account_id) {
-      const first = accs[0];
-      updateField('account_id', first.id);
-      updateField('currency', first.balances[0]?.currency || DEFAULT_CURRENCY);
-    }
+  [() => props.accounts, () => props.defaultAccountId],
+  ([accs, defaultId]) => {
+    if (accs.length === 0 || formData.value.account_id) return;
+    const preferred =
+      defaultId && accs.some((a) => a.id === defaultId)
+        ? accs.find((a) => a.id === defaultId)!
+        : accs[0];
+    updateField('account_id', preferred.id);
+    updateField('currency', preferred.balances[0]?.currency || DEFAULT_CURRENCY);
   },
   { immediate: true },
 );

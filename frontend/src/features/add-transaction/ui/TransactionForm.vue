@@ -35,6 +35,7 @@ const props = defineProps<{
   expenseCategories: Category[];
   incomeCategories: Category[];
   userCurrency?: string;
+  defaultAccountId?: string | null;
   isSubmitting?: boolean;
   isValid?: boolean;
   error?: string | null;
@@ -382,6 +383,7 @@ const { isMounted } = useMountedAnimation();
           <DebtPanel
             v-else-if="panelType === 'debt'"
             :accounts="accounts"
+            :default-account-id="defaultAccountId"
             :autofocus-amount="autofocusAmount && realPanelIndices.has(idx)"
             @submitted="$emit('debt-submitted')"
           />

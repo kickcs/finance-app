@@ -16,11 +16,20 @@ import type { TransactionFormData } from './useTransactionForm';
 import type { Transaction, AccountWithBalances } from '@/shared/api/database.types';
 import type { MonthlyStats, PaginatedResult } from '@/entities/transaction/api/transactionsApi';
 
-const TRANSACTION_TYPE_LABELS: Record<TransactionFormData['type'], string> = {
+type NonDebtTransactionType = Exclude<TransactionFormData['type'], 'debt'>;
+
+function assertNonDebt(
+  formData: TransactionFormData,
+): asserts formData is TransactionFormData & { type: NonDebtTransactionType } {
+  if (formData.type === 'debt') {
+    throw new Error('useSubmitTransaction does not handle debt type; use useDebtForm instead');
+  }
+}
+
+const TRANSACTION_TYPE_LABELS: Record<NonDebtTransactionType, string> = {
   income: 'Доход',
   expense: 'Расход',
   transfer: 'Перевод',
-  debt: 'Долг',
 };
 
 interface SubmitPayload {
@@ -41,16 +50,6 @@ interface OptimisticSnapshots {
   previousAccounts: AccountWithBalances[] | undefined;
   previousMonthlyStats: MonthlyStats | undefined;
   previousInfinite: [readonly unknown[], InfiniteData<PaginatedResult<Transaction>> | undefined][];
-}
-
-type NonDebtTransactionType = Exclude<TransactionFormData['type'], 'debt'>;
-
-function assertNonDebt(
-  formData: TransactionFormData,
-): asserts formData is TransactionFormData & { type: NonDebtTransactionType } {
-  if (formData.type === 'debt') {
-    throw new Error('useSubmitTransaction does not handle debt type; use useDebtForm instead');
-  }
 }
 
 function buildApiPayload(userId: string, formData: TransactionFormData) {
@@ -304,7 +303,8 @@ export function useSubmitTransaction() {
     },
 
     onSuccess: (data, { userId, formData }) => {
-      // Increment hint counters
+      assertNonDebt(formData);
+
       if (formData.type === 'expense') {
         incrementCounter('expenses_count');
       }
