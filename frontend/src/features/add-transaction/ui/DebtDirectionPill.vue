@@ -22,8 +22,9 @@ function select(value: DebtDirection) {
 <template>
   <div class="flex justify-center">
     <div
-      class="inline-flex items-center gap-0 p-1 rounded-full bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark"
+      class="inline-flex items-center p-1 rounded-full bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark"
       role="tablist"
+      aria-label="Направление долга"
     >
       <button
         type="button"
