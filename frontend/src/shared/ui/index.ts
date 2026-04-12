@@ -32,7 +32,7 @@ export { IconBadge } from './icon-badge';
 export { USpinner } from './spinner';
 export { NotFoundState } from './not-found-state';
 export { ConfirmDeleteModal } from './confirm-delete-modal';
-export { UToggle } from './toggle';
+export { UToggle, ToggleRow } from './toggle';
 export { InitialAvatar } from './initial-avatar';
 export { PageContainer } from './page-container';
 export { MasterDetailLayout } from './master-detail-layout';

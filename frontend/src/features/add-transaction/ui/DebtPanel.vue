@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
-import { UInput, UButton, UIcon } from '@/shared/ui';
+import { UInput, UButton, UIcon, ToggleRow } from '@/shared/ui';
 import { DEFAULT_CURRENCY } from '@/entities/currency';
 import { getCurrencySymbol } from '@/shared/lib/format/currency';
 import { PersonSelector, usePeople } from '@/entities/person';
@@ -12,7 +12,6 @@ import { useDebtForm } from '../model/useDebtForm';
 import HeroAmount from './HeroAmount.vue';
 import DebtDirectionPill from './DebtDirectionPill.vue';
 import DatePickerField from './DatePickerField.vue';
-import ToggleRow from './ToggleRow.vue';
 
 const props = defineProps<{
   accounts: AccountWithBalances[];

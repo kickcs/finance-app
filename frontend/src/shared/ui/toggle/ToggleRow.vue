@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { UToggle } from '@/shared/ui';
+import UToggle from './UToggle.vue';
 
 defineProps<{
   title: string;
