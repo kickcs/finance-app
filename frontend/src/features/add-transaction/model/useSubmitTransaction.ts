@@ -43,7 +43,18 @@ interface OptimisticSnapshots {
   previousInfinite: [readonly unknown[], InfiniteData<PaginatedResult<Transaction>> | undefined][];
 }
 
+type NonDebtTransactionType = Exclude<TransactionFormData['type'], 'debt'>;
+
+function assertNonDebt(
+  formData: TransactionFormData,
+): asserts formData is TransactionFormData & { type: NonDebtTransactionType } {
+  if (formData.type === 'debt') {
+    throw new Error('useSubmitTransaction does not handle debt type; use useDebtForm instead');
+  }
+}
+
 function buildApiPayload(userId: string, formData: TransactionFormData) {
+  assertNonDebt(formData);
   const isTransfer = formData.type === 'transfer';
   const categoryId = isTransfer ? CATEGORY_IDS.TRANSFER : formData.categoryId;
 
@@ -60,7 +71,7 @@ function buildApiPayload(userId: string, formData: TransactionFormData) {
     category_id: categoryId,
     amount: formData.amount,
     currency: formData.currency,
-    type: formData.type as 'income' | 'expense' | 'transfer' | 'adjustment',
+    type: formData.type,
     description: formData.description || null,
     date: new Date(formData.date).toISOString(),
     to_account_id: isTransfer ? formData.toAccountId : null,
