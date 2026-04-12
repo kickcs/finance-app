@@ -4,7 +4,8 @@ import { type DateValue } from '@internationalized/date';
 import { UIcon } from '@/shared/ui';
 import { Popover, PopoverTrigger, PopoverContent } from '@/shared/ui/primitives/popover';
 import { Calendar } from '@/shared/ui/primitives/calendar';
-import { isoToCalendarDate, isoToDisplayDate, dateValueToISO } from '@/shared/lib/date';
+import { isoToCalendarDate, dateValueToISO } from '@/shared/lib/date';
+import { formatDate } from '@/shared/lib/format/date';
 
 const props = defineProps<{
   modelValue: string | null;
@@ -20,8 +21,16 @@ const emit = defineEmits<{
 const isOpen = defineModel<boolean>('open', { default: false });
 
 const calendarValue = computed(() => isoToCalendarDate(props.modelValue));
+
+function formatCompact(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  const base = formatDate(date, { format: 'short' });
+  return date.getFullYear() === new Date().getFullYear() ? base : `${base} ${y}`;
+}
+
 const displayText = computed(() =>
-  props.modelValue ? isoToDisplayDate(props.modelValue) : (props.placeholder ?? 'Без срока'),
+  props.modelValue ? formatCompact(props.modelValue) : (props.placeholder ?? 'Без срока'),
 );
 
 function handleChange(value: DateValue | undefined) {
