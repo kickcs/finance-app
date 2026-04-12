@@ -42,10 +42,7 @@ watch(
   [() => props.accounts, () => props.defaultAccountId],
   ([accs, defaultId]) => {
     if (accs.length === 0 || formData.value.account_id) return;
-    const preferred =
-      defaultId && accs.some((a) => a.id === defaultId)
-        ? accs.find((a) => a.id === defaultId)!
-        : accs[0];
+    const preferred = (defaultId && accs.find((a) => a.id === defaultId)) || accs[0];
     updateField('account_id', preferred.id);
     updateField('currency', preferred.balances[0]?.currency || DEFAULT_CURRENCY);
   },
