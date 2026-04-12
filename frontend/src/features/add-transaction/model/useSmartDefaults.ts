@@ -19,7 +19,7 @@ function topByFrequency<T>(items: T[], key: (item: T) => string): string | null 
 
 export function useSmartDefaults(
   transactions: MaybeRefOrGetter<Transaction[] | undefined>,
-  type: MaybeRefOrGetter<'expense' | 'income' | 'transfer' | 'debt'>,
+  type: MaybeRefOrGetter<'expense' | 'income' | 'transfer'>,
   currentAccountId?: MaybeRefOrGetter<string | null>,
 ) {
   const defaults = computed<SmartDefaults>(() => {

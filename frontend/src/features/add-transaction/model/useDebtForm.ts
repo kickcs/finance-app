@@ -54,8 +54,9 @@ export function useDebtForm() {
 
   const mutation = useMutation({
     mutationFn: async (userId: string): Promise<string> => {
+      const accountId = formData.value.account_id;
+      if (!accountId) throw new Error('account_id is required');
       const isGiven = formData.value.debt_type === 'given';
-      const accountId = formData.value.account_id!;
       const currency = formData.value.currency;
       const categoryId = isGiven ? CATEGORY_IDS.DEBT_GIVEN : CATEGORY_IDS.DEBT_TAKEN;
 

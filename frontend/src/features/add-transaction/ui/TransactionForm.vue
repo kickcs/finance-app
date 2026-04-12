@@ -201,11 +201,11 @@ const { shouldShowHint, dismissHint, markHintShown, getHintConfig } = useFeature
 const showSplitHint = ref(false);
 const splitHintConfig = getHintConfig('split-expense');
 
-// Smart defaults
+// Smart defaults (not applicable to debt flow — debt has its own form state)
 const { transactions } = useRecentTransactions(userId, 20);
 const { defaults } = useSmartDefaults(
   transactions,
-  () => props.formData.type,
+  () => (props.formData.type === 'debt' ? 'expense' : props.formData.type),
   () => props.formData.accountId,
 );
 
@@ -224,6 +224,7 @@ const smartDefaultsAppliedForType = ref<string | null>(null);
 watch(
   defaults,
   (val) => {
+    if (props.formData.type === 'debt') return;
     if (smartDefaultsAppliedForType.value === props.formData.type) return;
     if (!val.defaultCategoryId && !val.defaultAccountId) return;
 
