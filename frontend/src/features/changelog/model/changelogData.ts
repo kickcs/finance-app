@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.44';
+export const CURRENT_VERSION = '1.0.45';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,25 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.45',
+    date: '2026-04-12',
+    title: 'Долги на странице новой транзакции',
+    items: [
+      {
+        type: 'feature',
+        text: 'Долг теперь можно создавать со страницы «Новая транзакция» — новый таб «Долг» рядом с Расход / Доход / Перевод',
+      },
+      {
+        type: 'improvement',
+        text: 'Поле суммы в долгах теперь разделяет цифры по разрядам — как и в остальных транзакциях',
+      },
+      {
+        type: 'improvement',
+        text: 'Компактный переключатель направления долга (Дал / Взял) вместо крупных табов',
+      },
+    ],
+  },
   {
     version: '1.0.44',
     date: '2026-04-05',
