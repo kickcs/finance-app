@@ -57,7 +57,7 @@ function fillValidForm(
 
 // ── Tests ──────────────────────────────────────────────────────────────────
 
-describe('useCreateDebt', () => {
+describe('useDebtForm', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
