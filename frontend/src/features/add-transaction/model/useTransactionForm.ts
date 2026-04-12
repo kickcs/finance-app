@@ -7,7 +7,7 @@ export interface TransactionFormData {
   categoryId: string;
   amount: number;
   currency: string;
-  type: 'income' | 'expense' | 'transfer';
+  type: 'income' | 'expense' | 'transfer' | 'debt';
   description: string;
   date: number;
   toAccountId: string | null;
@@ -65,7 +65,7 @@ export function useTransactionForm() {
     formData.value[field] = value;
   }
 
-  function setType(type: 'income' | 'expense' | 'transfer') {
+  function setType(type: 'income' | 'expense' | 'transfer' | 'debt') {
     formData.value.type = type;
     formData.value.categoryId = type === 'transfer' ? CATEGORY_IDS.TRANSFER : '';
     if (type !== 'transfer') {

@@ -20,6 +20,7 @@ const TRANSACTION_TYPE_LABELS: Record<TransactionFormData['type'], string> = {
   income: 'Доход',
   expense: 'Расход',
   transfer: 'Перевод',
+  debt: 'Долг',
 };
 
 interface SubmitPayload {
@@ -59,7 +60,7 @@ function buildApiPayload(userId: string, formData: TransactionFormData) {
     category_id: categoryId,
     amount: formData.amount,
     currency: formData.currency,
-    type: formData.type,
+    type: formData.type as 'income' | 'expense' | 'transfer' | 'adjustment',
     description: formData.description || null,
     date: new Date(formData.date).toISOString(),
     to_account_id: isTransfer ? formData.toAccountId : null,
