@@ -119,7 +119,7 @@ useIntersectionObserver(
 
 <template>
   <div
-    class="h-full flex flex-col relative bg-background-light dark:bg-background-dark overflow-hidden"
+    class="h-full flex flex-col relative bg-background-light dark:bg-background-dark pb-28 md:pb-8 overflow-hidden"
   >
     <!-- Header -->
     <AppHeader blur show-back title="Долги" @back="goBack">
@@ -145,7 +145,7 @@ useIntersectionObserver(
     >
       <template #master>
         <PullToRefresh :on-refresh="handleRefresh" :container-ref="scrollContainerRef">
-          <div ref="masterContentRef" class="pt-8 space-y-6 pb-28 md:pb-8">
+          <div ref="masterContentRef" class="pt-8 space-y-6">
             <!-- Status Tabs -->
             <UTabs
               v-model="statusFilter"
