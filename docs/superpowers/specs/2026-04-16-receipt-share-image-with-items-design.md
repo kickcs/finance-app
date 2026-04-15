@@ -33,7 +33,7 @@ Current code counts only `owers.length * PARTICIPANT_NAME_HEIGHT`.
 
 After rendering the participant name/amount row, iterate `p.items` and for each item render:
 
-- **Left column** — item name with `(1/N)` suffix if `sharedWith > 1`. Indented at `PADDING_X + 12`. Font: `400 12px`, color: `TEXT_SECONDARY`.
+- **Left column** — item name with `(1/N)` suffix if `sharedWith > 1`. Indented at `PADDING_X + 12`. Font: `400 12px`, color: `TEXT_SECONDARY`. `maxWidth` capped at `NAME_MAX_WIDTH - 12` to prevent overflow into the amount column.
 - **Right column** — `formatCurrency(item.share, currency)`. Font: `400 12px`, color: `TEXT_SECONDARY`. Right-aligned at `AMOUNT_X`.
 - **Y position** — cumulative, stepping `ITEM_HEIGHT` per row.
 

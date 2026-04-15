@@ -29,6 +29,7 @@ const PARTICIPANT_NAME_HEIGHT = 36;
 const PARTICIPANT_GAP = 12;
 const PARTICIPANT_SECTION_HEADER = 40; // "КТО СКОЛЬКО ДОЛЖЕН" title
 const DIVIDER_GAP = 24;
+const ITEM_HEIGHT = 22; // px per item row under a participant
 const SERVICE_CHARGE_HEIGHT = 30;
 const WATERMARK_SECTION_HEIGHT = 80; // logo + name + URL
 const CONTENT_WIDTH = CARD_WIDTH - PADDING_X * 2;
@@ -160,8 +161,10 @@ function calcParticipantsHeight(data: ReceiptShareData): number {
     return h + 40; // empty state text
   }
 
-  // Each participant row
-  h += owers.length * PARTICIPANT_NAME_HEIGHT;
+  // Each participant row + their item rows
+  for (const p of owers) {
+    h += PARTICIPANT_NAME_HEIGHT + p.items.length * ITEM_HEIGHT;
+  }
   // Gaps between participants (not after last)
   if (owers.length > 1) {
     h += (owers.length - 1) * PARTICIPANT_GAP;
@@ -241,6 +244,30 @@ function drawParticipants(
     }
 
     y += PARTICIPANT_NAME_HEIGHT;
+
+    // Item rows
+    for (const item of p.items) {
+      const itemCenterY = y + ITEM_HEIGHT / 2;
+      const itemName = formatItemName(item);
+      const itemAmount = formatCurrency(item.share, data.currency);
+
+      // Item name
+      ctx.font = `400 12px ${FONT_FAMILY}`;
+      ctx.fillStyle = TEXT_SECONDARY;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(itemName, PADDING_X + 40, itemCenterY, NAME_MAX_WIDTH - 12);
+
+      // Item amount
+      ctx.textAlign = 'right';
+      ctx.fillStyle = TEXT_TERTIARY;
+      ctx.fillText(itemAmount, AMOUNT_X, itemCenterY);
+
+      y += ITEM_HEIGHT;
+    }
+
+    // Reset baseline for subsequent participant rows
+    ctx.textBaseline = 'alphabetic';
 
     // Gap between participants
     if (i < owers.length - 1) {
@@ -408,10 +435,9 @@ export function useReceiptShare() {
       canvas.height = 0;
       const filename = buildFilename(data);
       const file = new File([blob], filename, { type: 'image/png' });
-      const text = buildShareText(data);
 
       if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], text });
+        await navigator.share({ files: [file] });
         trigger('success');
       } else {
         downloadBlob(blob, filename);
