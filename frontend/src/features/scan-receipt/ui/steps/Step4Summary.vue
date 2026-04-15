@@ -8,6 +8,7 @@ import { pluralize } from '@/shared/lib/format/pluralize';
 import { useHaptics } from '@/shared/lib/haptics';
 import type { ParticipantSummary, ReceiptCharge, ScanReceiptFormData } from '../../model/types';
 import type { AccountWithBalances } from '@/entities/account';
+import type { Category } from '@/entities/category';
 import { useReceiptShare, type ReceiptShareData } from '../../model/useReceiptShare';
 import SuccessOverlay from '../SuccessOverlay.vue';
 import ReceiptTotalCard from '../ReceiptTotalCard.vue';
@@ -19,6 +20,7 @@ const props = defineProps<{
   currency: string;
   formData: ScanReceiptFormData;
   accounts: AccountWithBalances[];
+  categories: Category[];
   subtotal: number;
   charges: ReceiptCharge[];
   chargesAmount: number;
@@ -399,6 +401,7 @@ const shareActions = computed(() => [
       <TransactionFormSection
         :form-data="formData"
         :accounts="accounts"
+        :categories="categories"
         @update:form-data="$emit('update:formData', $event)"
       />
 

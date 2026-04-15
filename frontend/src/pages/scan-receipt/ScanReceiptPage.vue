@@ -12,6 +12,7 @@ import {
   Step4Summary,
 } from '@/features/scan-receipt';
 import { useAccounts } from '@/entities/account';
+import { useCategories } from '@/entities/category';
 
 const STEP_LABELS = ['Фото чека', 'Позиции', 'Участники', 'Итог'];
 const TOTAL_STEPS = STEP_LABELS.length;
@@ -22,6 +23,7 @@ const { userId } = useCurrentUser();
 const wizard = useReceiptWizard(() => userId.value);
 
 const { accounts } = useAccounts(userId);
+const { expenseCategories } = useCategories(userId);
 
 const transitionName = computed(() =>
   wizard.direction.value === 'back' ? 'step-back' : 'step-forward',
@@ -122,6 +124,7 @@ function handleBack() {
           :currency="wizard.currency.value"
           :form-data="wizard.formData.value"
           :accounts="accounts ?? []"
+          :categories="expenseCategories"
           :subtotal="wizard.subtotal.value"
           :charges="wizard.charges.value"
           :charges-amount="wizard.chargesAmount.value"

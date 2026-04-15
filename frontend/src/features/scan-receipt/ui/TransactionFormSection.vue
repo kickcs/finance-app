@@ -3,7 +3,7 @@ import { ref, computed } from 'vue';
 import { UIcon } from '@/shared/ui';
 import { formatDate } from '@/shared/lib/format/date';
 import { AccountSelector } from '@/entities/account';
-import { CategoryChips, EXPENSE_CATEGORIES } from '@/entities/category';
+import { CategoryChips, type Category } from '@/entities/category';
 import { Popover, PopoverTrigger, PopoverContent } from '@/shared/ui/primitives/popover';
 import { Calendar } from '@/shared/ui/primitives/calendar';
 import { CalendarDate, type DateValue } from '@internationalized/date';
@@ -13,6 +13,7 @@ import type { AccountWithBalances } from '@/entities/account';
 const props = defineProps<{
   formData: ScanReceiptFormData;
   accounts: AccountWithBalances[];
+  categories: Category[];
 }>();
 
 const emit = defineEmits<{
@@ -63,7 +64,7 @@ function onDateSelect(value: DateValue | undefined) {
       <!-- Category -->
       <div class="px-4 py-3">
         <CategoryChips
-          :categories="EXPENSE_CATEGORIES"
+          :categories="categories"
           :selected-id="formData.categoryId"
           label="Категория"
           @select="$emit('update:formData', { ...formData, categoryId: $event })"
