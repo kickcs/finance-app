@@ -11,5 +11,8 @@ export { default as ClosedDebtCard } from './ui/ClosedDebtCard.vue';
 export * from './model/types';
 export { useDebtPaymentForm } from './model/useDebtPaymentForm';
 
+// Lib
+export * from './lib/groupDebtsByPerson';
+
 // API
 export * from './api';

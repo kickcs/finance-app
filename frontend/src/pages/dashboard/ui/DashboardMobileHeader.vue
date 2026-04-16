@@ -3,6 +3,7 @@ import { AppHeader } from '@/widgets/header';
 import { ThemeToggle } from '@/features/toggle-theme';
 import { UIcon, DiscoveryDot } from '@/shared/ui';
 import { formatMasked } from '@/shared/lib/format/currency';
+import DashboardCompactToggle from './DashboardCompactToggle.vue';
 
 defineProps<{
   userName: string;
@@ -94,6 +95,7 @@ const emit = defineEmits<{
         </div>
       </template>
       <template #actions>
+        <DashboardCompactToggle variant="icon" />
         <div class="relative">
           <button
             type="button"

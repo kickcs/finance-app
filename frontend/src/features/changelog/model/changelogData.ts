@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.45';
+export const CURRENT_VERSION = '1.0.47';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,32 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.47',
+    date: '2026-04-16',
+    title: 'Дашборд работает быстрее',
+    items: [
+      {
+        type: 'improvement',
+        text: 'Дашборд стал отзывчивее — переключение вкладок долгов теперь без задержек, а виджеты обновляются эффективнее',
+      },
+    ],
+  },
+  {
+    version: '1.0.46',
+    date: '2026-04-16',
+    title: 'Компактный режим дашборда',
+    items: [
+      {
+        type: 'feature',
+        text: 'Новый компактный режим главной — всё важное на одном экране без скролла: баланс, ежедневные лимиты, быстрые действия, счета и последние транзакции',
+      },
+      {
+        type: 'feature',
+        text: 'Переключение между стандартным и компактным режимом через иконку в шапке дашборда',
+      },
+    ],
+  },
   {
     version: '1.0.45',
     date: '2026-04-12',

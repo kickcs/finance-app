@@ -24,6 +24,9 @@ export const ENTITY_COLORS = [
 /** Default color for transfer transactions (Indigo 600) */
 export const TRANSFER_COLOR = '#4F46E5';
 
+/** Fallback color used when a category is missing (Slate 500). Shared by quick actions, transactions, etc. */
+export const FALLBACK_CATEGORY_COLOR = '#64748b';
+
 /** Pick a random color from ENTITY_COLORS */
 export function getRandomEntityColor(): string {
   return ENTITY_COLORS[Math.floor(Math.random() * ENTITY_COLORS.length)];

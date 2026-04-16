@@ -5,6 +5,7 @@ import { useRecentTransactions, useAnalyticsStats } from '@/entities/transaction
 import { useDebts } from '@/entities/debt';
 import { useCategories } from '@/entities/category';
 import { useBudget } from '@/entities/budget';
+import { useUpcomingSubscriptions } from '@/entities/recurring-subscription';
 import { useProfile, useExchangeRates } from '@/shared/api';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { toLocalISODate } from '@/shared/lib/date';
@@ -14,6 +15,7 @@ import { DEFAULT_WIDGET_ORDER } from '@/shared/config/dashboard';
 import { DEFAULT_CURRENCY } from '@/shared/config/currency';
 
 const MIN_DAYS_FOR_SPENDING_METRICS = 7;
+const UPCOMING_SUBSCRIPTION_DAYS = 7;
 
 export function useDashboardData() {
   const { user, userId } = useCurrentUser();
@@ -31,15 +33,25 @@ export function useDashboardData() {
     setOverride,
     removeOverride,
   } = useBudget(userId);
-  const { expenseCategories, allCategories } = useCategories(userId);
+  const { expenseCategories, allCategories, getCategoryById } = useCategories(userId);
   const { transactions: recentTransactions, isLoading: recentTxLoading } = useRecentTransactions(
     userId,
     10,
   );
+  const { upcoming: upcomingSubscriptions, isLoading: subscriptionsLoading } =
+    useUpcomingSubscriptions(userId, UPCOMING_SUBSCRIPTION_DAYS);
 
-  // Reactive timestamp — keeps day calculations and month boundaries fresh across midnight
-  const timestamp = useTimestamp({ interval: 60_000 });
-  const currentDate = computed(() => new Date(timestamp.value));
+  // Reactive timestamp — keeps day calculations and month boundaries fresh across midnight.
+  // 5 min is plenty: only the day-rollover transition matters, not minute precision.
+  // todayStartMs is a cached primitive so currentDate only re-emits when the calendar day
+  // actually changes — prevents downstream (analytics, balance, daysElapsed) recomputing every tick.
+  const timestamp = useTimestamp({ interval: 5 * 60_000 });
+  const todayStartMs = computed(() => {
+    const d = new Date(timestamp.value);
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  });
+  const currentDate = computed(() => new Date(todayStartMs.value));
 
   // Current financial month analytics (respects financialMonthStartDay)
   const { currentBounds, daysRemaining } = useFinancialPeriod();
@@ -65,7 +77,6 @@ export function useDashboardData() {
     return fullName.split(' ')[0];
   });
 
-  // Dashboard customization settings
   const dashboardSettings = computed(() => profile.value?.dashboard_settings ?? null);
 
   const widgetOrder = computed<WidgetId[]>(() => {
@@ -110,7 +121,6 @@ export function useDashboardData() {
     const diffMs = today.getTime() - start.getTime();
     return Math.max(1, Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1);
   });
-  const daysRemainingInMonth = computed(() => daysRemaining.value);
 
   // Show spending metrics only after the first week of the month (7+ days of data)
   const showSpendingMetrics = computed(
@@ -134,12 +144,17 @@ export function useDashboardData() {
   // B) Safe daily balance = totalBalance (non-hidden accounts) / daysRemaining
   const safeDailyLimit = computed(() => {
     if (!showSpendingMetrics.value) return null;
-    return totalBalance.value / daysRemainingInMonth.value;
+    return totalBalance.value / daysRemaining.value;
   });
+
+  const balanceLoading = computed(
+    () => accountsLoading.value || ratesLoading.value || analyticsLoading.value,
+  );
 
   return {
     userId,
     currency,
+    convert,
     userName,
     accounts,
     visibleAccounts,
@@ -147,7 +162,9 @@ export function useDashboardData() {
     debts,
     expenseCategories,
     allCategories,
+    getCategoryById,
     recentTransactions,
+    upcomingSubscriptions,
     totalBalance,
     categoryBreakdown,
     accountsLoading,
@@ -155,6 +172,8 @@ export function useDashboardData() {
     recentTxLoading,
     analyticsLoading,
     ratesLoading,
+    subscriptionsLoading,
+    balanceLoading,
     widgetOrder,
     hiddenWidgets,
     budget,
@@ -162,7 +181,7 @@ export function useDashboardData() {
     budgetSaving,
     avgDailyExpense,
     safeDailyLimit,
-    daysRemainingInMonth,
+    daysRemainingInMonth: daysRemaining,
     setBudgetDefault: setDefault,
     setBudgetOverride: setOverride,
     removeBudgetOverride: removeOverride,

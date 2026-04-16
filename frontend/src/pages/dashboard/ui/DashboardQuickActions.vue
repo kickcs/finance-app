@@ -1,68 +1,42 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useTimeoutFn } from '@vueuse/core';
 import { UIcon, Skeleton } from '@/shared/ui';
 import { formatNumberWithSpaces } from '@/shared/lib/format/currency';
-import { useHaptics } from '@/shared/lib/haptics';
-import type { QuickAction } from '@/features/configure-quick-action';
+import { useQuickActionLongPress } from '@/features/configure-quick-action';
+import { DEFAULT_QUICK_ACTION_CATEGORY } from '@/entities/quick-action';
+import { useDashboardContext } from '../model/dashboardContext';
+import { quickActionFillStyle, quickActionBadgeStyle } from './compact/constants';
 
-const props = defineProps<{
-  slots: (QuickAction | null)[];
-  categoryMap: Map<string, { name: string; icon: string; color: string }>;
-  hintDismissed: boolean;
-  hidden: boolean;
-  loading?: boolean;
-}>();
-const emit = defineEmits<{
-  click: [action: QuickAction | null];
-  'long-press': [action: QuickAction | null];
-  'dismiss-hint': [];
-  'settings-click': [];
-}>();
-const DEFAULT_CAT = { name: '', icon: 'receipt_long', color: '#64748b' };
-const LONG_PRESS_MS = 500;
+const {
+  quickActionSlots,
+  quickActionsHidden,
+  quickActionsHintDismissed,
+  quickActionsLoading,
+  categoryMap,
+  nav,
+  handleQuickActionClick,
+  handleQuickActionLongPress,
+  dismissQuickActionsHint,
+} = useDashboardContext();
 
-const { trigger } = useHaptics();
-
-// Resolve category data once per slot to avoid repeated Map lookups in template
 const resolvedSlots = computed(() =>
-  props.slots.map((action) => ({
+  quickActionSlots.value.map((action) => ({
     action,
-    cat: action ? (props.categoryMap.get(action.categoryId) ?? DEFAULT_CAT) : DEFAULT_CAT,
+    cat: action
+      ? (categoryMap.value.get(action.categoryId) ?? DEFAULT_QUICK_ACTION_CATEGORY)
+      : DEFAULT_QUICK_ACTION_CATEGORY,
   })),
 );
 
-// Long-press via useTimeoutFn (auto-cleanup on unmount)
-let longPressAction: QuickAction | null = null;
-let longPressTriggered = false;
-
-const { start: startLongPress, stop: stopLongPress } = useTimeoutFn(
-  () => {
-    longPressTriggered = true;
-    trigger('selection');
-    emit('long-press', longPressAction);
-  },
-  LONG_PRESS_MS,
-  { immediate: false },
-);
-
-function onTouchStart(action: QuickAction | null) {
-  stopLongPress();
-  longPressTriggered = false;
-  longPressAction = action;
-  startLongPress();
-}
-
-function onClick(action: QuickAction | null) {
-  if (longPressTriggered) return;
-  emit('click', action);
-}
+const { onTouchStart, onClick, stopLongPress } = useQuickActionLongPress({
+  onLongPress: handleQuickActionLongPress,
+  onClick: handleQuickActionClick,
+});
 </script>
 
 <template>
-  <section v-if="!hidden">
-    <!-- Loading skeleton -->
-    <div v-if="loading" class="flex gap-2.5 pb-1 md:grid md:grid-cols-3 md:pb-0">
+  <section v-if="!quickActionsHidden">
+    <div v-if="quickActionsLoading" class="flex gap-2.5 pb-1 md:grid md:grid-cols-3 md:pb-0">
       <Skeleton
         v-for="i in 4"
         :key="i"
@@ -74,7 +48,6 @@ function onClick(action: QuickAction | null) {
       v-else
       class="flex gap-2.5 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-1 pt-1.5 -mt-1.5 px-1.5 -mx-1.5 md:grid md:grid-cols-3 md:overflow-visible md:pb-0 md:pt-0 md:mt-0 md:px-0 md:mx-0"
     >
-      <!-- Quick action slots -->
       <button
         v-for="({ action, cat }, index) in resolvedSlots"
         :key="action?.id ?? `empty-${index}`"
@@ -84,21 +57,14 @@ function onClick(action: QuickAction | null) {
             : `Настроить быстрое действие, слот ${index + 1}`
         "
         :class="[
-          'qa-card relative flex items-end justify-center aspect-square rounded-2xl overflow-hidden group cursor-pointer snap-start shrink-0 w-[calc((100%-30px)/4)] md:w-auto md:shrink select-none',
+          'qa-card-shell relative flex items-end justify-center aspect-square rounded-2xl overflow-hidden group cursor-pointer snap-start shrink-0 w-[calc((100%-30px)/4)] md:w-auto md:shrink select-none',
           action
-            ? 'qa-filled border-0'
+            ? 'qa-card-filled border-0'
             : 'bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark items-center',
         ]"
-        :style="
-          action
-            ? {
-                '--qa-color': cat.color,
-                backgroundColor: cat.color + '0A',
-              }
-            : undefined
-        "
+        :style="action ? quickActionFillStyle(cat.color) : undefined"
         @click="onClick(action)"
-        @contextmenu.prevent="emit('long-press', action)"
+        @contextmenu.prevent="handleQuickActionLongPress(action)"
         @touchstart.passive="onTouchStart(action)"
         @touchend.passive="stopLongPress()"
         @touchmove.passive="stopLongPress()"
@@ -117,20 +83,19 @@ function onClick(action: QuickAction | null) {
 
           <span
             v-if="action.amount != null"
-            class="absolute top-1.5 right-1.5 z-10 text-[9px] md:text-[10px] font-semibold leading-none tabular-nums px-1.5 py-[3px] rounded-md"
-            :style="{ color: cat.color, backgroundColor: cat.color + '18' }"
+            class="absolute top-1.5 right-1.5 z-10 text-caption-xs md:text-caption-sm font-semibold leading-none tabular-nums px-1.5 py-[3px] rounded-md"
+            :style="quickActionBadgeStyle(cat.color)"
           >
             {{ formatNumberWithSpaces(action.amount) }}
           </span>
 
           <span
-            class="relative z-10 text-[11px] md:text-xs font-semibold truncate w-full text-center leading-tight tracking-tight px-1 pb-2.5 md:pb-3 text-text-primary-light dark:text-text-primary-dark"
+            class="relative z-10 text-caption md:text-xs font-semibold truncate w-full text-center leading-tight tracking-tight px-1 pb-2.5 md:pb-3 text-text-primary-light dark:text-text-primary-dark"
           >
             {{ action.label }}
           </span>
         </template>
 
-        <!-- Empty slot -->
         <template v-else>
           <div class="flex flex-col items-center justify-center gap-1.5 w-full h-full">
             <UIcon
@@ -139,7 +104,7 @@ function onClick(action: QuickAction | null) {
               class="text-text-tertiary-light dark:text-text-tertiary-dark opacity-40 group-hover:text-primary group-hover:opacity-60 transition-all duration-200"
             />
             <span
-              class="text-[11px] md:text-xs font-medium text-text-tertiary-light dark:text-text-tertiary-dark group-hover:text-text-secondary-light dark:group-hover:text-text-secondary-dark transition-colors duration-200"
+              class="text-caption md:text-xs font-medium text-text-tertiary-light dark:text-text-tertiary-dark group-hover:text-text-secondary-light dark:group-hover:text-text-secondary-dark transition-colors duration-200"
             >
               Добавить
             </span>
@@ -148,13 +113,15 @@ function onClick(action: QuickAction | null) {
       </button>
     </div>
 
-    <!-- Hint -->
-    <div v-if="!loading && !hintDismissed" class="mt-3 flex items-start gap-2 px-1">
+    <div
+      v-if="!quickActionsLoading && !quickActionsHintDismissed"
+      class="mt-3 flex items-start gap-2 px-1"
+    >
       <p class="text-caption-xs leading-snug text-text-tertiary-light dark:text-text-tertiary-dark">
         Удерживайте (или правый клик) для редактирования. Настроить или скрыть — в
         <button
           class="underline text-primary hover:text-primary-hover transition-colors"
-          @click="emit('settings-click')"
+          @click="nav.toQuickActionsSettings"
         >
           Профиль → Быстрые действия
         </button>
@@ -163,52 +130,10 @@ function onClick(action: QuickAction | null) {
       <button
         aria-label="Закрыть подсказку"
         class="shrink-0 p-0.5 rounded text-text-tertiary-light dark:text-text-tertiary-dark hover:text-text-secondary-light dark:hover:text-text-secondary-dark transition-colors"
-        @click="emit('dismiss-hint')"
+        @click="dismissQuickActionsHint"
       >
         <UIcon name="close" size="xs" />
       </button>
     </div>
   </section>
 </template>
-
-<style scoped>
-.qa-card {
-  box-shadow:
-    0 1px 3px -1px rgba(0, 0, 0, 0.08),
-    0 2px 6px -2px rgba(0, 0, 0, 0.05);
-  transition:
-    transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 0.2s cubic-bezier(0.22, 1, 0.36, 1),
-    background-color 0.2s ease;
-}
-
-.qa-card:hover {
-  transform: translateY(-2px);
-  box-shadow:
-    0 4px 12px -2px rgba(0, 0, 0, 0.1),
-    0 2px 6px -2px rgba(0, 0, 0, 0.06);
-}
-
-.qa-card:active {
-  transform: scale(0.96) translateY(0);
-  box-shadow:
-    0 1px 2px -1px rgba(0, 0, 0, 0.06),
-    0 1px 3px -1px rgba(0, 0, 0, 0.03);
-}
-
-:where(.dark) .qa-card {
-  box-shadow:
-    0 1px 3px -1px rgba(0, 0, 0, 0.3),
-    0 0 0 0.5px rgba(255, 255, 255, 0.04);
-}
-
-:where(.dark) .qa-card:hover {
-  box-shadow:
-    0 4px 16px -2px rgba(0, 0, 0, 0.4),
-    0 0 0 0.5px rgba(255, 255, 255, 0.08);
-}
-
-:where(.dark) .qa-filled {
-  background-color: color-mix(in srgb, var(--qa-color, #64748b) 6%, #18181b);
-}
-</style>
