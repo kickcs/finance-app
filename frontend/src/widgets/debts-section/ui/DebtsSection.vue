@@ -3,8 +3,12 @@ import { computed, ref } from 'vue';
 import {
   DebtCardSkeleton,
   type Debt,
+  type DebtByPerson,
+  type DebtDirection,
   DEBT_DIRECTION_COLORS,
-  getDebtDisplayName,
+  countOverdueDebts,
+  groupDebtsByPerson,
+  bucketDebtsByType,
 } from '@/entities/debt';
 import { UBadge, UTabs, SectionHeader, IconBadge, EmptyState } from '@/shared/ui';
 import { formatMasked } from '@/shared/lib/format/currency';
@@ -12,18 +16,8 @@ import { pluralize } from '@/shared/lib/format/pluralize';
 import { formatDate } from '@/shared/lib/format/date';
 import { isPastDate } from '@/shared/lib/date';
 import { useExchangeRates } from '@/shared/api';
-import { DEFAULT_CURRENCY } from '@/shared/config/currency';
 import { listTransition } from '@/shared/lib/transitions';
 import { useHaptics } from '@/shared/lib/haptics';
-
-interface DebtByPerson {
-  personName: string;
-  debts: Debt[];
-  totalRemaining: number;
-  debtType: 'given' | 'taken';
-  nearestDueDate: string | null;
-  hasPrivate: boolean;
-}
 
 const props = defineProps<{
   debts: Debt[];
@@ -74,55 +68,9 @@ function handleViewAll() {
 
 const { convert } = useExchangeRates(computed(() => props.currency));
 
-const activeDebts = computed(() => {
-  return props.debts.filter((d) => !d.is_closed);
-});
-
-const debtsByPerson = computed<DebtByPerson[]>(() => {
-  const grouped: Record<string, DebtByPerson> = {};
-
-  for (const debt of activeDebts.value) {
-    const personName = getDebtDisplayName(debt);
-    const key = `${personName}_${debt.debt_type}`;
-
-    if (!grouped[key]) {
-      grouped[key] = {
-        personName,
-        debts: [],
-        totalRemaining: 0,
-        debtType: debt.debt_type,
-        nearestDueDate: null,
-        hasPrivate: false,
-      };
-    }
-
-    grouped[key].debts.push(debt);
-    if (debt.is_private) grouped[key].hasPrivate = true;
-    grouped[key].totalRemaining += convert(
-      debt.remaining_amount,
-      debt.currency || DEFAULT_CURRENCY,
-    );
-
-    if (debt.next_payment_date) {
-      if (!grouped[key].nearestDueDate || debt.next_payment_date < grouped[key].nearestDueDate!) {
-        grouped[key].nearestDueDate = debt.next_payment_date;
-      }
-    }
-  }
-
-  return Object.values(grouped).sort((a, b) => {
-    if (a.nearestDueDate && b.nearestDueDate) {
-      return a.nearestDueDate!.localeCompare(b.nearestDueDate!);
-    }
-    if (a.nearestDueDate) return -1;
-    if (b.nearestDueDate) return 1;
-    return 0;
-  });
-});
-
-const filteredDebts = computed(() => {
-  return debtsByPerson.value.filter((g) => g.debtType === activeTab.value);
-});
+const debtsByPerson = computed<DebtByPerson[]>(() => groupDebtsByPerson(props.debts, convert));
+const debtsByType = computed(() => bucketDebtsByType(debtsByPerson.value));
+const filteredDebts = computed(() => debtsByType.value[activeTab.value as DebtDirection]);
 
 const MAX_VISIBLE_GROUPS = 4;
 
@@ -130,10 +78,7 @@ const hiddenCount = computed(() => {
   return Math.max(0, filteredDebts.value.length - MAX_VISIBLE_GROUPS);
 });
 
-const overdueCount = computed(() => {
-  return activeDebts.value.filter((d) => d.next_payment_date && isPastDate(d.next_payment_date))
-    .length;
-});
+const overdueCount = computed(() => countOverdueDebts(props.debts));
 </script>
 
 <template>
@@ -141,7 +86,7 @@ const overdueCount = computed(() => {
     <!-- Header -->
     <SectionHeader
       title="Долги"
-      :count="activeDebts.length"
+      :count="debtsByPerson.length"
       show-view-all
       @add-click="handleAddClick"
       @view-all="handleViewAll"
@@ -155,7 +100,7 @@ const overdueCount = computed(() => {
 
     <!-- Tabs -->
     <UTabs
-      v-if="activeDebts.length > 0 && !loading"
+      v-if="debtsByPerson.length > 0 && !loading"
       :model-value="activeTab"
       :items="debtTabs"
       size="sm"
@@ -244,7 +189,7 @@ const overdueCount = computed(() => {
 
     <!-- Empty state for current tab (no debts of this type, but other type exists) -->
     <EmptyState
-      v-if="filteredDebts.length === 0 && activeDebts.length > 0 && !loading"
+      v-if="filteredDebts.length === 0 && debtsByPerson.length > 0 && !loading"
       variant="inline"
       :icon="activeTab === 'given' ? 'arrow_upward' : 'arrow_downward'"
       :title="activeTab === 'given' ? 'Нет долгов «вам должны»' : 'Нет долгов «вы должны»'"
@@ -253,7 +198,7 @@ const overdueCount = computed(() => {
 
     <!-- Empty state — no debts at all -->
     <EmptyState
-      v-else-if="activeDebts.length === 0 && !loading"
+      v-else-if="debtsByPerson.length === 0 && !loading"
       variant="inline"
       icon="check_circle"
       title="Вы без долгов!"

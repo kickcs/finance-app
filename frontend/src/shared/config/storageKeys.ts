@@ -49,4 +49,7 @@ export const STORAGE_KEYS = {
 
   /** Navbar visual style: 'classic' | 'liquid-glass' */
   NAVBAR_STYLE: 'navbar-style',
+
+  /** Dashboard compact mode: dense layout for power users */
+  DASHBOARD_COMPACT_MODE: 'dashboard_compact_mode',
 } as const;

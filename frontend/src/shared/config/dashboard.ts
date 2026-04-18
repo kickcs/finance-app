@@ -27,6 +27,16 @@ export const ACTIVITY_WIDGET_IDS: ReadonlySet<string> = new Set<WidgetId>([
   'subscriptions',
 ]);
 
+/** Widget IDs that the desktop side panel is allowed to render. */
+export const SIDE_PANEL_WIDGET_IDS: ReadonlySet<WidgetId> = new Set<WidgetId>([
+  'quick_actions',
+  'budget',
+  'accounts',
+  'top_expenses',
+  'debts',
+  'subscriptions',
+]);
+
 export const WIDGET_ICONS: Record<WidgetId, string> = {
   quick_actions: 'bolt',
   budget: 'savings',

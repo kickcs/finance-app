@@ -593,9 +593,10 @@ describe('DashboardPage', () => {
       );
       const wrapper = await renderPage();
       const quickActions = wrapper.findComponent({ name: 'DashboardQuickActions' });
-      // The component is rendered but the section inside it is hidden via v-if on `!hidden`
+      // Component pulls quickActionsHidden from context; when hidden, the root <section>
+      // is absent so the wrapper renders no children.
       if (quickActions.exists()) {
-        expect(quickActions.props('hidden')).toBe(true);
+        expect(quickActions.find('section').exists()).toBe(false);
       }
     });
   });
@@ -618,7 +619,9 @@ describe('DashboardPage', () => {
       const wrapper = await renderPage();
       const activityColumn = wrapper.findComponent({ name: 'DashboardActivityColumn' });
       expect(activityColumn.exists()).toBe(true);
-      expect(activityColumn.props('debts')).toHaveLength(2);
+      const debtsSection = activityColumn.findComponent({ name: 'DebtsSection' });
+      expect(debtsSection.exists()).toBe(true);
+      expect(debtsSection.props('debts')).toHaveLength(2);
     });
   });
 
@@ -705,6 +708,45 @@ describe('DashboardPage', () => {
       await flushPromises();
 
       expect(pushSpy).toHaveBeenCalledWith({ name: 'dashboard-settings' });
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Compact Pro Mode (XDS-30)
+  // -----------------------------------------------------------------------
+  describe('compact pro mode', () => {
+    it('renders standard layout by default', async () => {
+      const wrapper = await renderPage();
+      expect(wrapper.find('[data-testid="dashboard-mobile-layout"]').exists()).toBe(true);
+      expect(wrapper.find('[data-testid="dashboard-compact-layout"]').exists()).toBe(false);
+    });
+
+    it('renders compact layout when localStorage flag is set', async () => {
+      localStorage.setItem('dashboard_compact_mode', 'true');
+      const wrapper = await renderPage();
+      expect(wrapper.find('[data-testid="dashboard-compact-layout"]').exists()).toBe(true);
+      expect(wrapper.find('[data-testid="dashboard-mobile-layout"]').exists()).toBe(false);
+    });
+
+    it('reflects compact state on the DashboardCompactToggle', async () => {
+      localStorage.setItem('dashboard_compact_mode', 'true');
+      const wrapper = await renderPage();
+      const toggle = wrapper.findComponent({ name: 'DashboardCompactToggle' });
+      expect(toggle.exists()).toBe(true);
+      // aria-pressed on the underlying button reflects the context state
+      expect(toggle.find('button').attributes('aria-pressed')).toBe('true');
+    });
+
+    it('toggles compact mode when DashboardCompactToggle is clicked', async () => {
+      const wrapper = await renderPage();
+      expect(wrapper.find('[data-testid="dashboard-compact-layout"]').exists()).toBe(false);
+
+      const toggle = wrapper.findComponent({ name: 'DashboardCompactToggle' });
+      await toggle.find('button').trigger('click');
+      await flushPromises();
+
+      expect(wrapper.find('[data-testid="dashboard-compact-layout"]').exists()).toBe(true);
+      expect(localStorage.getItem('dashboard_compact_mode')).toBe('true');
     });
   });
 });

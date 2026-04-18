@@ -1,96 +1,40 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent } from 'vue';
-import type { AccountWithBalances } from '@/entities/account';
-import type { CategoryBreakdown } from '@/entities/transaction';
-import type { Debt } from '@/entities/debt';
-import type { BudgetCurrentResponse } from '@/entities/budget';
-import type { QuickAction } from '@/features/configure-quick-action';
-import type { WidgetId } from '@/shared/api/database.types';
-import { DEFAULT_WIDGET_ORDER } from '@/shared/config/dashboard';
 import { AccountStack } from '@/widgets/account-stack';
 import { BudgetSection, BudgetSectionSkeleton } from '@/widgets/budget-section';
 import { DebtsSectionSkeleton } from '@/widgets/debts-section';
 import { UpcomingSubscriptionsSkeleton } from '@/widgets/upcoming-subscriptions';
 import { UIcon, DiscoveryDot } from '@/shared/ui';
+import { SIDE_PANEL_WIDGET_IDS } from '@/shared/config/dashboard';
 import DashboardQuickActions from './DashboardQuickActions.vue';
 import DashboardTopExpenses from './DashboardTopExpenses.vue';
+import DashboardCompactToggle from './DashboardCompactToggle.vue';
+import { useDashboardContext } from '../model/dashboardContext';
 
-const props = withDefaults(
-  defineProps<{
-    // Quick Actions
-    quickActionSlots: (QuickAction | null)[];
-    categoryMap: Map<string, { name: string; icon: string; color: string }>;
-    hintDismissed: boolean;
-    quickActionsHidden: boolean;
-    quickActionsLoading?: boolean;
-    // Accounts
-    accounts: AccountWithBalances[];
-    accountsLoading: boolean;
-    hiddenAccountCount?: number;
-    // Top Expenses
-    categoryBreakdown: CategoryBreakdown[];
-    analyticsLoading: boolean;
-    // Debts
-    debts: Debt[];
-    currency: string;
-    debtsLoading: boolean;
-    // User
-    userId: string | null;
-    // Budget
-    budget: BudgetCurrentResponse | null;
-    budgetLoading: boolean;
-    // Shared
-    isHidden: boolean;
-    // Dashboard settings
-    hiddenWidgets?: Set<WidgetId>;
-    widgetOrder?: WidgetId[];
-    // Discovery dots
-    showSettingsDot?: boolean;
-  }>(),
-  {
-    hiddenWidgets: () => new Set<WidgetId>(),
-    widgetOrder: () => DEFAULT_WIDGET_ORDER,
-  },
-);
-
-const emit = defineEmits<{
-  // Quick Actions
-  'quick-action-click': [action: QuickAction | null];
-  'quick-action-long-press': [action: QuickAction | null];
-  'dismiss-hint': [];
-  'settings-click': [];
-  // Accounts
-  'account-click': [account: AccountWithBalances];
-  'add-account': [];
-  'view-all-accounts': [];
-  // Debts
-  'debt-click': [debt: Debt];
-  'person-click': [person: string, type: 'given' | 'taken'];
-  'add-debt': [];
-  'view-all-debts': [];
-  // Budget
-  'budget-setup': [];
-  'budget-edit': [];
-  'dashboard-settings-click': [];
-  'configure-period': [];
-  // Subscriptions
-  'subscription-click': [id: string];
-  'add-subscription': [];
-  'view-all-subscriptions': [];
-}>();
-
-const sidePanelWidgets = computed(() =>
-  (
-    ['quick_actions', 'budget', 'accounts', 'top_expenses', 'debts', 'subscriptions'] as const
-  ).filter((id) => props.widgetOrder.includes(id) && !props.hiddenWidgets.has(id)),
-);
+const {
+  visibleAccounts,
+  hiddenAccountCount,
+  accountsLoading,
+  categoryBreakdown,
+  analyticsLoading,
+  debts,
+  debtsLoading,
+  currency,
+  userId,
+  budget,
+  budgetLoading,
+  isHidden,
+  widgetOrder,
+  hiddenWidgets,
+  showSettingsDot,
+  nav,
+  openBudgetSheet,
+  openFinancialPeriodModal,
+  openDashboardSettings,
+} = useDashboardContext();
 
 const orderedWidgets = computed(() =>
-  sidePanelWidgets.value.slice().sort((a, b) => {
-    const orderA = props.widgetOrder.indexOf(a);
-    const orderB = props.widgetOrder.indexOf(b);
-    return orderA - orderB;
-  }),
+  widgetOrder.value.filter((id) => SIDE_PANEL_WIDGET_IDS.has(id) && !hiddenWidgets.value.has(id)),
 );
 
 const DebtsSection = defineAsyncComponent({
@@ -106,31 +50,19 @@ const UpcomingSubscriptions = defineAsyncComponent({
 <template>
   <div class="flex flex-col gap-6">
     <template v-for="widgetId in orderedWidgets" :key="widgetId">
-      <!-- Quick Actions -->
       <section v-if="widgetId === 'quick_actions'">
-        <DashboardQuickActions
-          :slots="quickActionSlots"
-          :category-map="categoryMap"
-          :hint-dismissed="hintDismissed"
-          :hidden="quickActionsHidden"
-          :loading="quickActionsLoading"
-          @click="emit('quick-action-click', $event)"
-          @long-press="emit('quick-action-long-press', $event)"
-          @dismiss-hint="emit('dismiss-hint')"
-          @settings-click="emit('settings-click')"
-        />
+        <DashboardQuickActions />
       </section>
 
-      <!-- Budget -->
-      <section v-if="widgetId === 'budget'">
+      <section v-else-if="widgetId === 'budget'">
         <Suspense>
           <BudgetSection
             :budget="budget"
             :loading="budgetLoading"
             :hidden="isHidden"
             class="hover:-translate-y-0.5 hover:shadow-md transition-[transform,box-shadow] duration-300 rounded-2xl"
-            @setup="emit('budget-setup')"
-            @edit="emit('budget-edit')"
+            @setup="openBudgetSheet"
+            @edit="openBudgetSheet"
           />
           <template #fallback>
             <BudgetSectionSkeleton />
@@ -138,33 +70,30 @@ const UpcomingSubscriptions = defineAsyncComponent({
         </Suspense>
       </section>
 
-      <!-- Accounts -->
-      <section v-if="widgetId === 'accounts'">
+      <section v-else-if="widgetId === 'accounts'">
         <AccountStack
-          :accounts="accounts"
+          :accounts="visibleAccounts"
           :loading="accountsLoading"
           :hidden="isHidden"
           :hidden-count="hiddenAccountCount"
           class="hover:shadow-md transition-shadow duration-300 rounded-3xl"
-          @account-click="emit('account-click', $event)"
-          @add-click="emit('add-account')"
-          @view-all="emit('view-all-accounts')"
+          @account-click="nav.toAccount"
+          @add-click="nav.toNewAccount"
+          @view-all="nav.toAccounts"
         />
       </section>
 
-      <!-- Top Expenses -->
-      <section v-if="widgetId === 'top_expenses'">
+      <section v-else-if="widgetId === 'top_expenses'">
         <DashboardTopExpenses
           :category-breakdown="categoryBreakdown"
           :currency="currency"
           :loading="analyticsLoading"
           :is-hidden="isHidden"
-          @configure-period="emit('configure-period')"
+          @configure-period="openFinancialPeriodModal"
         />
       </section>
 
-      <!-- Debts -->
-      <section v-if="widgetId === 'debts'">
+      <section v-else-if="widgetId === 'debts'">
         <Suspense>
           <DebtsSection
             :debts="debts"
@@ -172,12 +101,10 @@ const UpcomingSubscriptions = defineAsyncComponent({
             :loading="debtsLoading"
             :hidden="isHidden"
             class="hover:-translate-y-0.5 hover:shadow-md transition-[transform,box-shadow] duration-300 rounded-3xl"
-            @debt-click="emit('debt-click', $event)"
-            @person-click="
-              (person: string, type: 'given' | 'taken') => emit('person-click', person, type)
-            "
-            @add-click="emit('add-debt')"
-            @view-all="emit('view-all-debts')"
+            @debt-click="nav.toDebt"
+            @person-click="nav.toDebts"
+            @add-click="nav.toNewDebt"
+            @view-all="nav.toDebts"
           />
           <template #fallback>
             <DebtsSectionSkeleton />
@@ -185,15 +112,14 @@ const UpcomingSubscriptions = defineAsyncComponent({
         </Suspense>
       </section>
 
-      <!-- Subscriptions -->
-      <section v-if="widgetId === 'subscriptions'">
+      <section v-else-if="widgetId === 'subscriptions'">
         <Suspense>
           <UpcomingSubscriptions
             :user-id="userId ?? ''"
             class="hover:-translate-y-0.5 hover:shadow-md transition-[transform,box-shadow] duration-300 rounded-2xl"
-            @subscription-click="emit('subscription-click', $event)"
-            @add-click="emit('add-subscription')"
-            @view-all="emit('view-all-subscriptions')"
+            @subscription-click="nav.toSubscription"
+            @add-click="nav.toNewSubscription"
+            @view-all="nav.toSubscriptions"
           />
           <template #fallback>
             <UpcomingSubscriptionsSkeleton />
@@ -202,12 +128,13 @@ const UpcomingSubscriptions = defineAsyncComponent({
       </section>
     </template>
 
-    <div class="flex justify-center mt-2 pb-4 md:pb-0">
+    <div class="flex justify-center items-center gap-2 mt-2 pb-4 md:pb-0">
+      <DashboardCompactToggle variant="inline" />
       <div class="relative">
         <button
           type="button"
           class="flex items-center gap-2 text-body-sm font-medium text-text-tertiary-light dark:text-text-tertiary-dark hover:text-text-secondary-light dark:hover:text-text-secondary-dark transition-colors px-4 py-2 rounded-xl hover:bg-surface-light dark:hover:bg-surface-dark"
-          @click="emit('dashboard-settings-click')"
+          @click="openDashboardSettings"
         >
           <UIcon name="tune" size="sm" />
           Настроить вид дашборда

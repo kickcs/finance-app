@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { BudgetCurrentResponse } from '@/entities/budget';
+import { type BudgetCurrentResponse, useBudgetProgress } from '@/entities/budget';
 import { EmptyState, IconBadge } from '@/shared/ui';
 import { formatMasked } from '@/shared/lib/format/currency';
 import BudgetSectionSkeleton from './BudgetSectionSkeleton.vue';
@@ -16,31 +16,14 @@ defineEmits<{
   edit: [];
 }>();
 
-function getBudgetColor(percentage: number): string {
-  if (percentage <= 50) return 'var(--color-success)';
-  if (percentage <= 75) {
-    const t = (percentage - 50) / 25;
-    return `color-mix(in srgb, var(--color-success) ${Math.round((1 - t) * 100)}%, var(--color-warning))`;
-  }
-  const t = Math.min((percentage - 75) / 25, 1);
-  return `color-mix(in srgb, var(--color-warning) ${Math.round((1 - t) * 100)}%, var(--color-danger))`;
-}
+const {
+  percentage,
+  isOverspent,
+  barColor: progressBarColor,
+  barWidth: progressBarWidth,
+} = useBudgetProgress(() => props.budget);
 
-const percentage = computed(() => props.budget?.percentage ?? 0);
-const isOverspent = computed(() => (props.budget?.remaining ?? 0) < 0);
-
-const progressBarColor = computed(() => {
-  if (isOverspent.value) return 'var(--color-danger)';
-  return getBudgetColor(percentage.value);
-});
-
-const progressBarWidth = computed(() => {
-  return `${Math.min(percentage.value, 100)}%`;
-});
-
-const remainingColor = computed(() => {
-  return isOverspent.value ? 'text-danger' : 'text-success';
-});
+const remainingColor = computed(() => (isOverspent.value ? 'text-danger' : 'text-success'));
 </script>
 
 <template>
