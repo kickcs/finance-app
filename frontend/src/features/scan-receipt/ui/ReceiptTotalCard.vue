@@ -51,7 +51,8 @@ const hasCharges = computed(() => enabledCharges.value.length > 0 && props.charg
           class="flex justify-between items-baseline mb-1.5"
         >
           <span class="text-xs text-primary uppercase tracking-wider font-medium">
-            {{ charge.label }} ({{ charge.percent }}%)
+            {{ charge.label }}
+            <template v-if="charge.type === 'percent'">({{ charge.percent }}%)</template>
           </span>
           <span class="text-sm text-primary tabular-nums">
             +{{ formatCurrency(calcChargeAmount(subtotal, charge), currency) }}

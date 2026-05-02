@@ -15,6 +15,7 @@ const props = defineProps<{
   hasMe: boolean;
   unassignedCount: number;
   charges: ReceiptCharge[];
+  subtotal: number;
 }>();
 const emit = defineEmits<{
   addParticipant: [name: string, isMe: boolean, paidById: string | null];
@@ -189,6 +190,7 @@ function handleTapRow(item: ReceiptItem) {
           :participants="participants"
           :currency="currency"
           :charges="charges"
+          :subtotal="subtotal"
           :active-brush-id="activeParticipantId"
           @tap-row="handleTapRow(item)"
         />

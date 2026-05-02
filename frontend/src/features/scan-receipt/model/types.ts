@@ -45,11 +45,22 @@ export interface ScanReceiptFormData {
   currency: string;
 }
 
-export interface ReceiptCharge {
+interface ReceiptChargeBase {
   id: string;
   label: string;
-  percent: number;
   enabled: boolean;
 }
+
+export interface PercentReceiptCharge extends ReceiptChargeBase {
+  type: 'percent';
+  percent: number;
+}
+
+export interface AmountReceiptCharge extends ReceiptChargeBase {
+  type: 'amount';
+  amount: number;
+}
+
+export type ReceiptCharge = PercentReceiptCharge | AmountReceiptCharge;
 
 export type WizardDirection = 'forward' | 'back';

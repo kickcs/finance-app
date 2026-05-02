@@ -24,6 +24,7 @@ const emit = defineEmits<{
   removeCharge: [id: string];
   toggleCharge: [id: string];
   updateChargePercent: [id: string, percent: number];
+  updateChargeAmount: [id: string, amount: number];
   requestNext: [];
 }>();
 
@@ -79,6 +80,7 @@ function handleAddPreset(preset: (typeof CHARGE_PRESETS)[number]) {
           :currency="currency"
           @toggle="emit('toggleCharge', charge.id)"
           @update-percent="emit('updateChargePercent', charge.id, $event)"
+          @update-amount="emit('updateChargeAmount', charge.id, $event)"
           @remove="emit('removeCharge', charge.id)"
         />
       </template>

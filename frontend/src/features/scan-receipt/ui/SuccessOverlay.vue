@@ -5,7 +5,7 @@ import { UButton, UIcon, InitialAvatar } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import type { ParticipantSummary, ReceiptCharge } from '../model/types';
 
-defineProps<{
+const props = defineProps<{
   isSuccess: boolean;
   totalAmount: number;
   currency: string;
@@ -19,6 +19,13 @@ defineProps<{
 }>();
 
 const router = useRouter();
+
+function formatChargeBadge(charge: ReceiptCharge): string {
+  if (charge.type === 'amount') {
+    return `${formatCurrency(charge.amount, props.currency)} ${charge.label.toLowerCase()}`;
+  }
+  return `${charge.percent}% ${charge.label.toLowerCase()}`;
+}
 </script>
 
 <template>
@@ -112,7 +119,7 @@ const router = useRouter();
             class="text-caption-sm text-text-tertiary-light dark:text-text-tertiary-dark text-center mt-6"
           >
             Суммы включают
-            {{ enabledCharges.map((c) => `${c.percent}% ${c.label.toLowerCase()}`).join(', ') }}
+            {{ enabledCharges.map(formatChargeBadge).join(', ') }}
           </p>
 
           <!-- Watermark for shared image (hidden in UI via CSS, shown in canvas) -->

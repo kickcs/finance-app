@@ -5,6 +5,7 @@ import { useHaptics } from '@/shared/lib/haptics';
 import ReceiptItemRow from '../ReceiptItemRow.vue';
 import SplitItemModal from '../SplitItemModal.vue';
 import TotalFooter from '../TotalFooter.vue';
+import { formatCurrency } from '@/shared/lib/format/currency';
 import type { ReceiptItem, ReceiptCharge } from '../../model/types';
 
 const props = defineProps<{
@@ -25,9 +26,17 @@ const emit = defineEmits<{
   removeCharge: [id: string];
   toggleCharge: [id: string];
   updateChargePercent: [id: string, percent: number];
+  updateChargeAmount: [id: string, amount: number];
   next: [];
   back: [];
 }>();
+
+function formatChargeBadge(charge: ReceiptCharge): string {
+  if (charge.type === 'amount') {
+    return `+${formatCurrency(charge.amount, props.currency)} ${charge.label.toLowerCase()}`;
+  }
+  return `+${charge.percent}% ${charge.label.toLowerCase()}`;
+}
 
 const { trigger } = useHaptics();
 
@@ -130,7 +139,7 @@ function handleFocusNext(index: number, currentField: 'name' | 'price' | 'qty') 
               :key="charge.id"
               class="text-caption font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full tabular-nums"
             >
-              +{{ charge.percent }}% {{ charge.label.toLowerCase() }}
+              {{ formatChargeBadge(charge) }}
             </span>
           </div>
           <UBadge variant="neutral" size="sm" shape="pill">
@@ -147,7 +156,6 @@ function handleFocusNext(index: number, currentField: 'name' | 'price' | 'qty') 
             :item="item"
             :index="index"
             :currency="currency"
-            :charges="charges"
             :is-invalid="invalidItemId === item.id"
             @update="
               emit('updateItem', item.id, $event);
@@ -188,6 +196,7 @@ function handleFocusNext(index: number, currentField: 'name' | 'price' | 'qty') 
       @remove-charge="(id) => emit('removeCharge', id)"
       @toggle-charge="(id) => emit('toggleCharge', id)"
       @update-charge-percent="(id, percent) => emit('updateChargePercent', id, percent)"
+      @update-charge-amount="(id, amount) => emit('updateChargeAmount', id, amount)"
       @request-next="validateAndNext"
     />
 

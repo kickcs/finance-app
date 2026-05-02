@@ -29,8 +29,8 @@ CRITICAL — NUMBER READING:
 
 STEP-BY-STEP PROCESS:
 1. Find the FINAL total at the bottom ("ИТОГО К ОПЛАТЕ", "ИТОГО", "Total", "Grand Total") → "totalAmount"
-2. Check for additional charges (service, НДС, VAT, tax, tips) between subtotal and final total → "serviceChargePercent"
-3. Calculate subtotal: if serviceChargePercent exists, subtotal = totalAmount / (1 + serviceChargePercent/100), otherwise subtotal = totalAmount
+2. Check for additional charges (service, НДС, VAT, tax, tips) between subtotal and final total. Extract EXACTLY as written: a percentage → "serviceChargePercent"; a flat amount → "serviceChargeAmount". Never convert between them.
+3. Calculate subtotal: subtotal = totalAmount − serviceChargeAmount (if any) − round(subtotal × serviceChargePercent / 100) (if any). Otherwise subtotal = totalAmount.
 4. Extract each item: name, quantity (from "Кол-во" column), and LINE TOTAL (from "Сумма" column) → totalPrice. Then unitPrice = totalPrice / quantity
 5. VERIFY: sum of all totalPrice must equal subtotal (step 3). If not, re-read the receipt carefully — you likely misread a number
 
@@ -46,6 +46,7 @@ Return JSON:
   ],
   "totalAmount": number (FINAL total at the bottom),
   "serviceChargePercent": number or null,
+  "serviceChargeAmount": number or null,
   "currency": "3-letter ISO code (e.g. UZS, USD, RUB)",
   "date": "YYYY-MM-DD or null",
   "storeName": "store name or null",
@@ -56,9 +57,15 @@ Rules:
 - All prices: whole numbers, no decimals (e.g. 35000 for "35 000")
 - Handle Uzbek, Russian, English receipts
 - If quantity not specified, use 1
-- Do NOT include charges/taxes/VAT as items. Extract into "serviceChargePercent": "Обслуживание 10%" → 10, "НДС +12%" → 12, "VAT 15%" → 15
-- If charge is a flat amount, calculate percentage from subtotal
-- No charges found → serviceChargePercent: null
+- Do NOT include charges/taxes/VAT as items. Extract them into "serviceChargePercent" or "serviceChargeAmount":
+  - "Обслуживание 10%" → serviceChargePercent: 10
+  - "НДС +12%" → serviceChargePercent: 12
+  - "VAT 15%" → serviceChargePercent: 15
+  - "Сервисный сбор 7 990 СУМ" / "Service fee 7990 UZS" → serviceChargeAmount: 7990
+  - "Чаевые 5 000" → serviceChargeAmount: 5000
+- Use whichever form the receipt actually shows. If the receipt only shows a flat amount, return serviceChargeAmount and leave serviceChargePercent null. If only a percent is shown, return serviceChargePercent and leave serviceChargeAmount null. Never compute one from the other.
+- If a single line is ambiguous (e.g. "10% (5000)") prefer the percent.
+- No charges found → both serviceChargePercent and serviceChargeAmount: null
 - "hashtags": 1-3 short Russian hashtags for the PLACE TYPE and WHAT was bought (e.g. restaurant → ["#кафе", "#обед"], grocery → ["#продукты"]). Lowercase, no spaces
 - Return only valid JSON, no markdown`;
 
@@ -128,23 +135,28 @@ Rules:
       }
     }
 
-    // Fallback: if GPT missed serviceChargePercent but totalAmount > sum of items,
-    // auto-calculate the percentage (handles НДС/VAT/tax the model failed to extract)
-    if (!result.serviceChargePercent && result.totalAmount > 0) {
+    // Default missing fields
+    if (typeof result.serviceChargePercent !== 'number') {
+      result.serviceChargePercent = null;
+    }
+    if (typeof result.serviceChargeAmount !== 'number') {
+      result.serviceChargeAmount = null;
+    }
+
+    // Fallback: if GPT missed both charge fields but totalAmount > sum of items,
+    // record the gap as a flat serviceChargeAmount (no lossy percentage conversion).
+    if (!result.serviceChargePercent && !result.serviceChargeAmount && result.totalAmount > 0) {
       const itemsSubtotal = result.items.reduce(
         (sum, item) => sum + (item.totalPrice || item.unitPrice * item.quantity),
         0,
       );
-      if (itemsSubtotal > 0 && result.totalAmount > itemsSubtotal) {
-        const diff = result.totalAmount - itemsSubtotal;
-        const percent = (diff / itemsSubtotal) * 100;
-        // Only apply if it looks like a real charge (0.5% – 30%)
-        if (percent >= 0.5 && percent <= 30) {
-          result.serviceChargePercent = Math.round(percent * 10) / 10;
-          this.logger.debug(
-            `Auto-detected service charge: ${result.serviceChargePercent}% (subtotal=${itemsSubtotal}, total=${result.totalAmount})`,
-          );
-        }
+      const diff = result.totalAmount - itemsSubtotal;
+      // Only apply if it looks like a real charge (positive, < 50% of total)
+      if (itemsSubtotal > 0 && diff > 0 && diff <= result.totalAmount * 0.5) {
+        result.serviceChargeAmount = diff;
+        this.logger.debug(
+          `Auto-detected service charge: ${diff} (subtotal=${itemsSubtotal}, total=${result.totalAmount})`,
+        );
       }
     }
 

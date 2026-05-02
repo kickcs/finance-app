@@ -328,7 +328,11 @@ function renderCardToCanvas(data: ReceiptShareData): HTMLCanvasElement {
     ctx.fillStyle = TEXT_TERTIARY;
     ctx.textAlign = 'center';
     const chargeLabels = enabledCharges
-      .map((c) => `${c.percent}% ${c.label.toLowerCase()}`)
+      .map((c) =>
+        c.type === 'amount'
+          ? `${formatCurrency(c.amount, data.currency)} ${c.label.toLowerCase()}`
+          : `${c.percent}% ${c.label.toLowerCase()}`,
+      )
       .join(', ');
     ctx.fillText(`Суммы включают ${chargeLabels}`, CARD_WIDTH / 2, y + 24);
   }
@@ -403,7 +407,11 @@ function buildShareText(data: ReceiptShareData): string {
   const enabledShareCharges = data.charges.filter((c) => c.enabled);
   if (enabledShareCharges.length > 0 && data.chargesAmount > 0) {
     const chargeLabels = enabledShareCharges
-      .map((c) => `${c.percent}% ${c.label.toLowerCase()}`)
+      .map((c) =>
+        c.type === 'amount'
+          ? `${formatCurrency(c.amount, data.currency)} ${c.label.toLowerCase()}`
+          : `${c.percent}% ${c.label.toLowerCase()}`,
+      )
       .join(', ');
     lines.push('', `Включает ${chargeLabels}`);
   }

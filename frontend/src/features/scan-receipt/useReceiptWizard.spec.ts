@@ -49,6 +49,7 @@ function makeOcrResponse(overrides: Partial<ScanReceiptResponse> = {}): ScanRece
     ],
     totalAmount: 18000,
     serviceChargePercent: null,
+    serviceChargeAmount: null,
     currency: 'UZS',
     date: '2026-03-20',
     storeName: 'Korzinka',
@@ -115,29 +116,44 @@ describe('calcLineTotal', () => {
 describe('calcLineTotalWithCharges', () => {
   it('returns base total when no charges', () => {
     const item = makeReceiptItem({ qty: 1, unitPrice: 10000, ocrTotalPrice: null });
-    expect(calcLineTotalWithCharges(item, [])).toBe(10000);
+    expect(calcLineTotalWithCharges(item, [], 10000)).toBe(10000);
   });
 
-  it('applies enabled charge percentage', () => {
+  it('distributes percent charge proportionally to line share', () => {
     const item = makeReceiptItem({ qty: 1, unitPrice: 10000, ocrTotalPrice: null });
-    const charges: ReceiptCharge[] = [{ id: 'c1', label: 'НДС', percent: 10, enabled: true }];
-    expect(calcLineTotalWithCharges(item, charges)).toBe(11000);
+    const charges: ReceiptCharge[] = [
+      { id: 'c1', label: 'НДС', type: 'percent', percent: 10, enabled: true },
+    ];
+    // Whole subtotal IS this line → full charge applies: 10000 + round(1000 * 10000/10000) = 11000
+    expect(calcLineTotalWithCharges(item, charges, 10000)).toBe(11000);
   });
 
   it('ignores disabled charges', () => {
     const item = makeReceiptItem({ qty: 1, unitPrice: 10000, ocrTotalPrice: null });
-    const charges: ReceiptCharge[] = [{ id: 'c1', label: 'НДС', percent: 10, enabled: false }];
-    expect(calcLineTotalWithCharges(item, charges)).toBe(10000);
+    const charges: ReceiptCharge[] = [
+      { id: 'c1', label: 'НДС', type: 'percent', percent: 10, enabled: false },
+    ];
+    expect(calcLineTotalWithCharges(item, charges, 10000)).toBe(10000);
   });
 
-  it('stacks multiple enabled charges', () => {
+  it('stacks multiple enabled percent charges proportionally', () => {
     const item = makeReceiptItem({ qty: 1, unitPrice: 10000, ocrTotalPrice: null });
     const charges: ReceiptCharge[] = [
-      { id: 'c1', label: 'НДС', percent: 10, enabled: true },
-      { id: 'c2', label: 'Обслуживание', percent: 5, enabled: true },
+      { id: 'c1', label: 'НДС', type: 'percent', percent: 10, enabled: true },
+      { id: 'c2', label: 'Обслуживание', type: 'percent', percent: 5, enabled: true },
     ];
-    // 10000 * 1.15 = 11500
-    expect(calcLineTotalWithCharges(item, charges)).toBe(11500);
+    // chargesAmount = 1000 + 500 = 1500; line=subtotal so all 1500 apply
+    expect(calcLineTotalWithCharges(item, charges, 10000)).toBe(11500);
+  });
+
+  it('distributes flat-amount charge proportionally to line share', () => {
+    // Burger embassy line: 5000 of 379000 subtotal with 7990 fee
+    const item = makeReceiptItem({ qty: 1, unitPrice: 5000, ocrTotalPrice: null });
+    const charges: ReceiptCharge[] = [
+      { id: 'c1', label: 'Обслуживание', type: 'amount', amount: 7990, enabled: true },
+    ];
+    // 5000 + round(7990 * 5000 / 379000) = 5000 + round(105.408) = 5105
+    expect(calcLineTotalWithCharges(item, charges, 379000)).toBe(5105);
   });
 });
 
@@ -237,13 +253,16 @@ describe('useItemsStep', () => {
     expect(items.value[1].qty).toBe(3);
   });
 
-  it('addCharge appends charge', () => {
+  it('addCharge appends a percent-type charge', () => {
     const { addCharge, charges } = mountComposable(() => useItemsStep());
     addCharge('НДС', 12);
     expect(charges.value).toHaveLength(1);
-    expect(charges.value[0].label).toBe('НДС');
-    expect(charges.value[0].percent).toBe(12);
-    expect(charges.value[0].enabled).toBe(true);
+    const charge = charges.value[0];
+    expect(charge.label).toBe('НДС');
+    expect(charge.type).toBe('percent');
+    if (charge.type !== 'percent') throw new Error('expected percent charge');
+    expect(charge.percent).toBe(12);
+    expect(charge.enabled).toBe(true);
   });
 
   it('removeCharge removes charge by id', () => {
@@ -265,7 +284,7 @@ describe('useItemsStep', () => {
     expect(charges.value[0].enabled).toBe(true);
   });
 
-  it('chargesAmount applies charge to subtotal', () => {
+  it('chargesAmount applies percent charge to subtotal', () => {
     const { addItem, updateItem, addCharge, chargesAmount, subtotal } = mountComposable(() =>
       useItemsStep(),
     );
@@ -543,7 +562,7 @@ describe('useReceiptWizard', () => {
     expect(wizard.formData.value.description).toBe('#korzinka');
   });
 
-  it('OCR result with serviceChargePercent adds a charge', async () => {
+  it('OCR result with serviceChargePercent adds a percent charge', async () => {
     server.use(
       http.post('*/api/receipts/scan', () =>
         HttpResponse.json(makeOcrResponse({ serviceChargePercent: 10 })),
@@ -556,14 +575,63 @@ describe('useReceiptWizard', () => {
     await flushPromises();
 
     expect(wizard.charges.value).toHaveLength(1);
-    expect(wizard.charges.value[0].percent).toBe(10);
-    expect(wizard.charges.value[0].enabled).toBe(true);
+    const charge = wizard.charges.value[0];
+    expect(charge.type).toBe('percent');
+    if (charge.type !== 'percent') throw new Error('expected percent charge');
+    expect(charge.percent).toBe(10);
+    expect(charge.enabled).toBe(true);
   });
 
-  it('OCR result with no serviceChargePercent has no charges', async () => {
+  it('OCR result with serviceChargeAmount adds a flat-amount charge (preserves exact value)', async () => {
+    // Burger embassy: 7990 UZS flat fee on 379000 subtotal → must NOT be lossy-converted to %
     server.use(
       http.post('*/api/receipts/scan', () =>
-        HttpResponse.json(makeOcrResponse({ serviceChargePercent: null })),
+        HttpResponse.json(
+          makeOcrResponse({
+            items: [{ name: 'Бургер', quantity: 1, unitPrice: 379000, totalPrice: 379000 }],
+            totalAmount: 386990,
+            serviceChargePercent: null,
+            serviceChargeAmount: 7990,
+          }),
+        ),
+      ),
+    );
+
+    const wizard = mountComposable(() => useReceiptWizard(() => USER_ID));
+    wizard.selectFile(new File(['data'], 'r.jpg', { type: 'image/jpeg' }));
+    await flushPromises();
+
+    expect(wizard.charges.value).toHaveLength(1);
+    const charge = wizard.charges.value[0];
+    expect(charge.type).toBe('amount');
+    if (charge.type !== 'amount') throw new Error('expected amount charge');
+    expect(charge.amount).toBe(7990);
+    expect(wizard.subtotal.value).toBe(379000);
+    expect(wizard.chargesAmount.value).toBe(7990);
+    expect(wizard.totalAmount.value).toBe(386990);
+  });
+
+  it('OCR result prefers serviceChargeAmount when both fields are returned', async () => {
+    server.use(
+      http.post('*/api/receipts/scan', () =>
+        HttpResponse.json(makeOcrResponse({ serviceChargePercent: 10, serviceChargeAmount: 1234 })),
+      ),
+    );
+
+    const wizard = mountComposable(() => useReceiptWizard(() => USER_ID));
+    wizard.selectFile(new File(['data'], 'r.jpg', { type: 'image/jpeg' }));
+    await flushPromises();
+
+    expect(wizard.charges.value).toHaveLength(1);
+    expect(wizard.charges.value[0].type).toBe('amount');
+  });
+
+  it('OCR result with no charges has no charges', async () => {
+    server.use(
+      http.post('*/api/receipts/scan', () =>
+        HttpResponse.json(
+          makeOcrResponse({ serviceChargePercent: null, serviceChargeAmount: null }),
+        ),
       ),
     );
 

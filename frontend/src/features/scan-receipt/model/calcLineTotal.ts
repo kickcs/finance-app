@@ -10,9 +10,9 @@ export function calcLineTotal(
   return item.qty * item.unitPrice;
 }
 
-/** Sum of enabled charge percentages */
+/** Sum of enabled percentage charges (for participant share rounding) */
 export function getTotalChargePercent(charges: ReceiptCharge[]): number {
-  return charges.filter((c) => c.enabled).reduce((sum, c) => sum + c.percent, 0);
+  return charges.reduce((sum, c) => (c.enabled && c.type === 'percent' ? sum + c.percent : sum), 0);
 }
 
 /** Preview amounts for splitting an item by quantity. Returns [firstAmount, secondAmount]. */
@@ -30,19 +30,31 @@ export function calcSplitAmounts(
   return [Math.round(item.unitPrice * firstQty), Math.round(item.unitPrice * secondQty)];
 }
 
-/** Individual charge amount for a given subtotal */
+/** Concrete amount of a single charge applied to a given subtotal */
 export function calcChargeAmount(subtotal: number, charge: ReceiptCharge): number {
   if (!charge.enabled) return 0;
+  if (charge.type === 'amount') return charge.amount;
   return Math.round((subtotal * charge.percent) / 100);
 }
 
-/** Line total with proportional charges applied (additive: base × (1 + totalPercent/100)) */
+/** Sum of all enabled charges (percent and amount), in receipt currency */
+export function getTotalChargesAmount(subtotal: number, charges: ReceiptCharge[]): number {
+  return charges.reduce((sum, c) => sum + calcChargeAmount(subtotal, c), 0);
+}
+
+/**
+ * Line total with charges distributed proportionally to this line's share of subtotal.
+ * Used for per-participant share calculation when splitting a receipt — NOT for the
+ * visual line total in the items list (that always shows the bare item price).
+ */
 export function calcLineTotalWithCharges(
   item: Pick<ReceiptItem, 'qty' | 'unitPrice' | 'ocrTotalPrice'>,
   charges: ReceiptCharge[],
+  subtotal: number,
 ): number {
   const base = calcLineTotal(item);
-  const totalPercent = getTotalChargePercent(charges);
-  if (!totalPercent) return base;
-  return Math.round(base * (1 + totalPercent / 100));
+  if (subtotal <= 0) return base;
+  const totalCharges = getTotalChargesAmount(subtotal, charges);
+  if (totalCharges === 0) return base;
+  return base + Math.round((totalCharges * base) / subtotal);
 }

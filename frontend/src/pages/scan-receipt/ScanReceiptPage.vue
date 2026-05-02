@@ -98,6 +98,7 @@ function handleBack() {
           @remove-charge="wizard.removeCharge"
           @toggle-charge="wizard.toggleCharge"
           @update-charge-percent="wizard.updateChargePercent"
+          @update-charge-amount="wizard.updateChargeAmount"
           @next="wizard.goNext"
           @back="wizard.goBack"
         />
@@ -110,6 +111,7 @@ function handleBack() {
           :has-me="wizard.hasMe.value"
           :unassigned-count="wizard.unassignedCount.value"
           :charges="wizard.charges.value"
+          :subtotal="wizard.subtotal.value"
           @add-participant="wizard.addParticipant"
           @remove-participant="wizard.removeParticipant"
           @toggle-item-participant="wizard.toggleItemParticipant"

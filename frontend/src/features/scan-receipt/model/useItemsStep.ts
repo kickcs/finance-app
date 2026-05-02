@@ -1,6 +1,6 @@
 import { ref, computed } from 'vue';
 import { useHaptics } from '@/shared/lib/haptics';
-import { calcLineTotal, calcLineTotalWithCharges, getTotalChargePercent } from './calcLineTotal';
+import { calcLineTotal, calcLineTotalWithCharges, getTotalChargesAmount } from './calcLineTotal';
 import { uid } from './uid';
 import type { ReceiptItem, ReceiptCharge } from './types';
 
@@ -15,18 +15,13 @@ export function useItemsStep() {
   // Computed
   const subtotal = computed(() => items.value.reduce((sum, item) => sum + calcLineTotal(item), 0));
 
-  const totalChargePercent = computed(() => getTotalChargePercent(charges.value));
-
-  const chargesAmount = computed(() => {
-    if (!totalChargePercent.value) return 0;
-    return Math.round((subtotal.value * totalChargePercent.value) / 100);
-  });
+  const chargesAmount = computed(() => getTotalChargesAmount(subtotal.value, charges.value));
 
   const totalAmount = computed(() => subtotal.value + chargesAmount.value);
 
-  // Per-item charge-inclusive price (proportionally distributed)
+  // Per-item charge-inclusive price (proportionally distributed) — used by submit/split
   function getItemWithChargesTotal(item: ReceiptItem): number {
-    return calcLineTotalWithCharges(item, charges.value);
+    return calcLineTotalWithCharges(item, charges.value, subtotal.value);
   }
 
   // Item editing
@@ -93,9 +88,10 @@ export function useItemsStep() {
     trigger('success');
   }
 
-  // Charge management
+  // Charge management — UI presets are all percent-based. Flat-amount charges
+  // come exclusively from OCR seeding in useReceiptWizard.
   function addCharge(label: string, percent: number) {
-    charges.value.push({ id: uid(), label, percent, enabled: true });
+    charges.value.push({ id: uid(), label, type: 'percent', percent, enabled: true });
     trigger('selection');
   }
 
@@ -114,8 +110,15 @@ export function useItemsStep() {
 
   function updateChargePercent(id: string, percent: number) {
     const charge = charges.value.find((c) => c.id === id);
-    if (charge) {
+    if (charge && charge.type === 'percent') {
       charge.percent = percent;
+    }
+  }
+
+  function updateChargeAmount(id: string, amount: number) {
+    const charge = charges.value.find((c) => c.id === id);
+    if (charge && charge.type === 'amount') {
+      charge.amount = amount;
     }
   }
 
@@ -126,7 +129,6 @@ export function useItemsStep() {
     charges,
     subtotal,
     chargesAmount,
-    totalChargePercent,
     totalAmount,
     getItemWithChargesTotal,
     updateItem,
@@ -137,5 +139,6 @@ export function useItemsStep() {
     removeCharge,
     toggleCharge,
     updateChargePercent,
+    updateChargeAmount,
   };
 }

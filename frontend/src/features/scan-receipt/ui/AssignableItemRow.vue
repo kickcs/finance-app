@@ -13,6 +13,7 @@ const props = defineProps<{
   participants: Participant[];
   currency: string;
   charges?: ReceiptCharge[];
+  subtotal?: number;
   activeBrushId?: string | null;
 }>();
 
@@ -36,7 +37,9 @@ function getParticipantColor(participantId: string): string {
   return participantMap.value.get(participantId)?.color ?? '#888888';
 }
 
-const displayTotal = computed(() => calcLineTotalWithCharges(props.item, props.charges ?? []));
+const displayTotal = computed(() =>
+  calcLineTotalWithCharges(props.item, props.charges ?? [], props.subtotal ?? 0),
+);
 
 const perPersonAmount = computed(() => {
   if (props.item.assignedParticipantIds.length <= 1) return null;

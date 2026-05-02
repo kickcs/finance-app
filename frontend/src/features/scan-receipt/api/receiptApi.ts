@@ -11,6 +11,7 @@ export interface ScanReceiptResponse {
   items: ReceiptItemResponse[];
   totalAmount: number;
   serviceChargePercent: number | null;
+  serviceChargeAmount: number | null;
   currency: string;
   date: string | null;
   storeName: string | null;

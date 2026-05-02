@@ -64,10 +64,28 @@ export function useReceiptWizard(userId: () => string | null) {
     formData.value.currency = result.currency;
     storeName.value = result.storeName;
 
-    // Seed charges from OCR serviceChargePercent
-    const rawPercent = result.serviceChargePercent;
-    if (rawPercent && rawPercent >= 0.1) {
-      charges.value = [{ id: uid(), label: 'Обслуживание', percent: rawPercent, enabled: true }];
+    // Seed charges from OCR. Prefer flat amount when present (preserves exact value);
+    // fall back to percent when only that is given.
+    if (result.serviceChargeAmount && result.serviceChargeAmount > 0) {
+      charges.value = [
+        {
+          id: uid(),
+          label: 'Обслуживание',
+          type: 'amount',
+          amount: result.serviceChargeAmount,
+          enabled: true,
+        },
+      ];
+    } else if (result.serviceChargePercent && result.serviceChargePercent >= 0.1) {
+      charges.value = [
+        {
+          id: uid(),
+          label: 'Обслуживание',
+          type: 'percent',
+          percent: result.serviceChargePercent,
+          enabled: true,
+        },
+      ];
     } else {
       charges.value = [];
     }

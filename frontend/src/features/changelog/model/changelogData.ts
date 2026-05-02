@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.47';
+export const CURRENT_VERSION = '1.0.48';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,21 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.48',
+    date: '2026-05-03',
+    title: 'Сканирование чека: точный сервисный сбор',
+    items: [
+      {
+        type: 'fix',
+        text: 'Фиксированный сервисный сбор (например, 7 990 сум) больше не округляется до процента — итоговая сумма теперь совпадает с чеком до копейки',
+      },
+      {
+        type: 'improvement',
+        text: 'В списке позиций показывается чистая цена позиции; обслуживание идёт отдельной строкой внизу',
+      },
+    ],
+  },
   {
     version: '1.0.47',
     date: '2026-04-16',

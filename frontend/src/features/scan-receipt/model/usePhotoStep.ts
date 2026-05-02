@@ -12,6 +12,7 @@ export interface OcrResult {
   currency: string;
   storeName: string | null;
   serviceChargePercent: number | null;
+  serviceChargeAmount: number | null;
   hashtags: string[];
   date: string | null;
 }
@@ -60,6 +61,7 @@ export function usePhotoStep(onOcrSuccess: (result: OcrResult) => void, goNext: 
         currency: result.currency,
         storeName: result.storeName,
         serviceChargePercent: result.serviceChargePercent,
+        serviceChargeAmount: result.serviceChargeAmount,
         hashtags: result.hashtags,
         date: result.date,
       });

@@ -5,18 +5,13 @@ import { formatCurrency, getCurrencySymbol } from '@/shared/lib/format/currency'
 import { cn } from '@/shared/lib/utils';
 import { useHaptics } from '@/shared/lib/haptics';
 import { useIsDesktop } from '@/shared/lib/composables/useIsDesktop';
-import {
-  calcLineTotal,
-  calcLineTotalWithCharges,
-  getTotalChargePercent,
-} from '../model/calcLineTotal';
-import type { ReceiptItem, ReceiptCharge } from '../model/types';
+import { calcLineTotal } from '../model/calcLineTotal';
+import type { ReceiptItem } from '../model/types';
 
 const props = defineProps<{
   item: ReceiptItem;
   index: number;
   currency: string;
-  charges: ReceiptCharge[];
   isInvalid?: boolean;
 }>();
 
@@ -47,11 +42,6 @@ defineExpose({ focusField });
 
 const currencySymbol = computed(() => getCurrencySymbol(props.currency));
 const lineTotal = computed(() => calcLineTotal(props.item));
-const lineTotalWithCharges = computed(() => calcLineTotalWithCharges(props.item, props.charges));
-const chargesAmount = computed(() => lineTotalWithCharges.value - lineTotal.value);
-const hasCharges = computed(
-  () => getTotalChargePercent(props.charges) > 0 && chargesAmount.value > 0,
-);
 
 function decrementQty() {
   trigger('selection');
@@ -113,7 +103,7 @@ function incrementQty() {
           @keydown.enter.prevent="emit('focusNext', 'name')"
         />
         <span class="text-body-sm font-bold tabular-nums shrink-0 text-primary">
-          {{ formatCurrency(hasCharges ? lineTotalWithCharges : lineTotal, currency) }}
+          {{ formatCurrency(lineTotal, currency) }}
         </span>
         <!-- Desktop action buttons -->
         <div v-if="isDesktop" class="flex items-center gap-0.5 shrink-0">

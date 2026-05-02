@@ -5,7 +5,7 @@ import { formatCurrency } from '@/shared/lib/format/currency';
 import { cn } from '@/shared/lib/utils';
 import type { ReceiptCharge } from '../model/types';
 
-defineProps<{
+const props = defineProps<{
   charge: ReceiptCharge;
   amount: number;
   currency: string;
@@ -14,25 +14,26 @@ defineProps<{
 const emit = defineEmits<{
   toggle: [];
   updatePercent: [percent: number];
+  updateAmount: [amount: number];
   remove: [];
 }>();
 
-const isEditingPercent = ref(false);
+const isEditing = ref(false);
 
-function handlePercentInput(event: Event) {
+function handleInput(event: Event) {
   const value = parseFloat((event.target as HTMLInputElement).value);
-  if (!isNaN(value) && value >= 0) {
-    emit('updatePercent', value);
-  }
+  if (isNaN(value) || value < 0) return;
+  if (props.charge.type === 'amount') emit('updateAmount', value);
+  else emit('updatePercent', value);
 }
 
-function handlePercentBlur() {
-  isEditingPercent.value = false;
+function handleBlur() {
+  isEditing.value = false;
 }
 
-function handlePercentKeydown(event: KeyboardEvent) {
+function handleKeydown(event: KeyboardEvent) {
   if (event.key === 'Enter') {
-    isEditingPercent.value = false;
+    isEditing.value = false;
   }
 }
 </script>
@@ -60,7 +61,7 @@ function handlePercentKeydown(event: KeyboardEvent) {
       />
     </button>
 
-    <!-- Label + percent -->
+    <!-- Label + percent / amount editor -->
     <div class="flex items-baseline gap-1 flex-1 min-w-0">
       <span
         class="text-caption font-medium text-text-secondary-light dark:text-text-secondary-dark truncate"
@@ -68,15 +69,15 @@ function handlePercentKeydown(event: KeyboardEvent) {
         {{ charge.label }}
       </span>
       <button
-        v-if="!isEditingPercent"
+        v-if="!isEditing && charge.type === 'percent'"
         type="button"
         class="text-caption font-semibold text-primary tabular-nums hover:underline"
-        @click="isEditingPercent = true"
+        @click="isEditing = true"
       >
         {{ charge.percent }}%
       </button>
       <input
-        v-else
+        v-else-if="charge.type === 'percent'"
         :value="charge.percent"
         type="number"
         inputmode="decimal"
@@ -85,14 +86,35 @@ function handlePercentKeydown(event: KeyboardEvent) {
         step="0.1"
         class="w-12 text-caption font-semibold text-primary tabular-nums bg-primary/10 rounded px-1 py-0.5 outline-none border border-primary/30"
         autofocus
-        @input="handlePercentInput"
-        @blur="handlePercentBlur"
-        @keydown="handlePercentKeydown"
+        @input="handleInput"
+        @blur="handleBlur"
+        @keydown="handleKeydown"
       />
     </div>
 
-    <!-- Amount -->
-    <span class="text-caption font-medium text-primary tabular-nums flex-shrink-0">
+    <!-- Amount: editable for amount-type, read-only for percent-type -->
+    <button
+      v-if="!isEditing && charge.type === 'amount'"
+      type="button"
+      class="text-caption font-medium text-primary tabular-nums hover:underline flex-shrink-0"
+      @click="isEditing = true"
+    >
+      +{{ formatCurrency(charge.amount, currency) }}
+    </button>
+    <input
+      v-else-if="isEditing && charge.type === 'amount'"
+      :value="charge.amount"
+      type="number"
+      inputmode="decimal"
+      min="0"
+      step="1"
+      class="w-24 text-caption font-semibold text-primary tabular-nums bg-primary/10 rounded px-1 py-0.5 outline-none border border-primary/30 text-right flex-shrink-0"
+      autofocus
+      @input="handleInput"
+      @blur="handleBlur"
+      @keydown="handleKeydown"
+    />
+    <span v-else class="text-caption font-medium text-primary tabular-nums flex-shrink-0">
       +{{ formatCurrency(amount, currency) }}
     </span>
 
