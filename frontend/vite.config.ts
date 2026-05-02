@@ -19,7 +19,6 @@ export default defineConfig({
       workbox: {
         importScripts: ['/push-sw.js'],
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
-        globIgnores: ['**/LibLiquidGlass*'],
         navigateFallback: '/index.html',
         navigateFallbackAllowlist: [/^(?!\/?api\/).*/],
         runtimeCaching: [

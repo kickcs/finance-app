@@ -10,9 +10,11 @@ import { useLayoutData } from '../model/useLayoutData';
 import { useNavbarStyle } from '@/shared/lib/composables';
 import { useFeatureHints } from '@/features/feature-hints';
 
-const LiquidGlassBottomNav = defineAsyncComponent(
-  () => import('@/widgets/bottom-nav/ui/LibLiquidGlassBottomNav.vue'),
-);
+const LiquidGlassBottomNav = defineAsyncComponent({
+  loader: () => import('@/widgets/bottom-nav/ui/LibLiquidGlassBottomNav.vue'),
+  errorComponent: BottomNav,
+  timeout: 10000,
+});
 
 const isDemo = inject<Ref<boolean>>('isDemo', ref(false));
 const { isDotDismissed, dismissDot } = useFeatureHints();
