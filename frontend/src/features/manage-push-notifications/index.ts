@@ -1,1 +1,1 @@
-export { default as PushNotificationToggle } from './ui/PushNotificationToggle.vue';
+export { default as NotificationSettings } from './ui/NotificationSettings.vue';

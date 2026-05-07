@@ -34,6 +34,7 @@ export type Database = {
           quick_actions_hidden: boolean;
           quick_actions_hint_dismissed: boolean;
           financial_month_start_day: number;
+          notification_hour: number;
         };
         Insert: {
           id: string;
@@ -49,6 +50,7 @@ export type Database = {
           quick_actions_hidden?: boolean;
           quick_actions_hint_dismissed?: boolean;
           financial_month_start_day?: number;
+          notification_hour?: number;
         };
         Update: {
           id?: string;
@@ -64,6 +66,7 @@ export type Database = {
           quick_actions_hidden?: boolean;
           quick_actions_hint_dismissed?: boolean;
           financial_month_start_day?: number;
+          notification_hour?: number;
         };
         Relationships: [];
       };

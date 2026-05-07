@@ -46,6 +46,7 @@ describe('GetProfileHandler', () => {
       quickActionsHintDismissed: true,
       financialMonthStartDay: 1,
       timezone: 'Asia/Tashkent',
+      notificationHour: 12,
       createdAt: new Date('2024-01-15'),
     });
     mockRepository.findById.mockResolvedValue(profile);
@@ -71,6 +72,7 @@ describe('GetProfileHandler', () => {
       quickActionsHintDismissed: true,
       financialMonthStartDay: 1,
       timezone: 'Asia/Tashkent',
+      notificationHour: 12,
       createdAt: new Date('2024-01-15'),
     });
     expect(mockRepository.findById).toHaveBeenCalledWith('user-1');
@@ -102,6 +104,7 @@ describe('GetProfileHandler', () => {
       quickActionsHintDismissed: false,
       financialMonthStartDay: 1,
       timezone: 'Asia/Tashkent',
+      notificationHour: 12,
       createdAt: new Date('2024-12-31'),
     });
     mockRepository.findById.mockResolvedValue(profile);

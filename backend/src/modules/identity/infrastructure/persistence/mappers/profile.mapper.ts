@@ -27,6 +27,7 @@ export class ProfileMapper {
       quickActionsHintDismissed: ormEntity.quickActionsHintDismissed,
       financialMonthStartDay: ormEntity.financialMonthStartDay,
       timezone: ormEntity.timezone,
+      notificationHour: ormEntity.notificationHour,
       createdAt: ormEntity.createdAt,
     });
   }
@@ -52,6 +53,7 @@ export class ProfileMapper {
     ormEntity.quickActionsHintDismissed = domainEntity.quickActionsHintDismissed;
     ormEntity.financialMonthStartDay = domainEntity.financialMonthStartDay;
     ormEntity.timezone = domainEntity.timezone;
+    ormEntity.notificationHour = domainEntity.notificationHour;
     ormEntity.createdAt = domainEntity.createdAt;
 
     return ormEntity;

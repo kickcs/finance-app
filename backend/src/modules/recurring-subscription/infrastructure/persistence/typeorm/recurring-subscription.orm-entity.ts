@@ -38,8 +38,8 @@ export class RecurringSubscriptionOrmEntity {
   @Column({ name: 'billing_date', type: 'date' })
   billingDate: Date;
 
-  @Column({ name: 'notify_days_before', type: 'int', default: 2 })
-  notifyDaysBefore: number;
+  @Column({ name: 'notify_days_before', type: 'integer', array: true, default: [2] })
+  notifyDaysBefore: number[];
 
   @Column({ name: 'category_id', type: 'varchar' })
   categoryId: string;

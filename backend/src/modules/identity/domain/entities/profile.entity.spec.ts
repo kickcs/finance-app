@@ -101,6 +101,7 @@ describe('Profile Entity', () => {
         quickActionsHintDismissed: false,
         financialMonthStartDay: 1,
         timezone: 'Asia/Tashkent',
+        notificationHour: 12,
         createdAt: new Date('2024-01-01'),
       });
 

@@ -19,7 +19,7 @@ import { usePwaUpdate } from '@/shared/lib/composables/usePwaUpdate';
 import { usePrimaryColor, PRIMARY_COLORS } from '@/features/select-primary-color';
 import { FinancialPeriodModal } from '@/features/configure-financial-period';
 import { useFinancialPeriod } from '@/shared/lib/hooks/useFinancialPeriod';
-import { PushNotificationToggle } from '@/features/manage-push-notifications';
+import { NotificationSettings } from '@/features/manage-push-notifications';
 import { ThemeToggle } from '@/features/toggle-theme';
 import { NavbarStyleSelector } from '@/features/select-navbar-style';
 import { getInitial } from '@/shared/lib/format/text';
@@ -318,9 +318,7 @@ async function confirmLogout() {
         >
           Уведомления
         </h2>
-        <UCard class="px-4 py-3.5">
-          <PushNotificationToggle />
-        </UCard>
+        <NotificationSettings />
       </section>
 
       <!-- Data -->

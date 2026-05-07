@@ -4,6 +4,8 @@ import { Password } from '../value-objects/password.vo';
 import { ProfileCreatedEvent } from '../events/profile-created.event';
 import { ProfileUpdatedEvent } from '../events/profile-updated.event';
 
+const DEFAULT_NOTIFICATION_HOUR = 12;
+
 export type WidgetId =
   | 'quick_actions'
   | 'accounts'
@@ -35,6 +37,7 @@ export interface ProfileProps {
   quickActionsHintDismissed: boolean;
   financialMonthStartDay: number;
   timezone: string;
+  notificationHour: number;
   createdAt: Date;
 }
 
@@ -57,6 +60,7 @@ export class Profile extends AggregateRoot<string> {
   private _quickActionsHintDismissed: boolean;
   private _financialMonthStartDay: number;
   private _timezone: string;
+  private _notificationHour: number;
   private _createdAt: Date;
 
   private constructor(props: ProfileProps) {
@@ -75,6 +79,7 @@ export class Profile extends AggregateRoot<string> {
     this._quickActionsHintDismissed = props.quickActionsHintDismissed;
     this._financialMonthStartDay = props.financialMonthStartDay;
     this._timezone = props.timezone;
+    this._notificationHour = props.notificationHour;
     this._createdAt = props.createdAt;
   }
 
@@ -104,6 +109,7 @@ export class Profile extends AggregateRoot<string> {
       quickActionsHintDismissed: false,
       financialMonthStartDay: 1,
       timezone: 'Asia/Tashkent',
+      notificationHour: DEFAULT_NOTIFICATION_HOUR,
       createdAt: new Date(),
     });
 
@@ -134,6 +140,7 @@ export class Profile extends AggregateRoot<string> {
       quickActionsHintDismissed: false,
       financialMonthStartDay: 1,
       timezone: 'Asia/Tashkent',
+      notificationHour: DEFAULT_NOTIFICATION_HOUR,
       createdAt: new Date(),
     });
 
@@ -210,8 +217,19 @@ export class Profile extends AggregateRoot<string> {
     return this._timezone;
   }
 
+  get notificationHour(): number {
+    return this._notificationHour;
+  }
+
   get createdAt(): Date {
     return this._createdAt;
+  }
+
+  setNotificationHour(hour: number): void {
+    if (!Number.isInteger(hour) || hour < 0 || hour > 23) {
+      throw new Error('notificationHour must be an integer between 0 and 23');
+    }
+    this._notificationHour = hour;
   }
 
   // Behaviors
@@ -225,6 +243,7 @@ export class Profile extends AggregateRoot<string> {
     quickActionsHintDismissed?: boolean;
     financialMonthStartDay?: number;
     timezone?: string;
+    notificationHour?: number;
   }): void {
     const changes: Record<string, unknown> = {};
 
@@ -271,6 +290,11 @@ export class Profile extends AggregateRoot<string> {
     if (data.timezone !== undefined) {
       this._timezone = data.timezone;
       changes.timezone = data.timezone;
+    }
+
+    if (data.notificationHour !== undefined) {
+      this.setNotificationHour(data.notificationHour);
+      changes.notificationHour = data.notificationHour;
     }
 
     if (Object.keys(changes).length > 0) {

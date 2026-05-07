@@ -14,7 +14,7 @@ export class CreateSubscriptionCommand {
     public readonly description?: string | null,
     public readonly accountId?: string | null,
     public readonly frequencyDays?: number | null,
-    public readonly notifyDaysBefore?: number,
+    public readonly notifyDaysBefore?: number[],
     public readonly autoCharge?: boolean,
   ) {}
 }

@@ -6,6 +6,7 @@ import {
   IsInt,
   IsIn,
   IsDateString,
+  IsArray,
   Min,
   Max,
 } from 'class-validator';
@@ -55,10 +56,11 @@ export class UpdateSubscriptionDto {
   billingDate?: string;
 
   @IsOptional()
-  @IsInt()
-  @Min(1)
-  @Max(30)
-  notifyDaysBefore?: number;
+  @IsArray()
+  @IsInt({ each: true })
+  @Min(1, { each: true })
+  @Max(30, { each: true })
+  notifyDaysBefore?: number[];
 
   @IsOptional()
   @IsString()

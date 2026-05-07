@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.48';
+export const CURRENT_VERSION = '1.0.49';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,37 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.49',
+    date: '2026-05-08',
+    title: 'Уведомления о подписках стали надёжнее',
+    items: [
+      {
+        type: 'feature',
+        text: 'Можно настраивать несколько напоминаний о подписке (например, за 7, 3 и 1 день до списания)',
+      },
+      {
+        type: 'feature',
+        text: 'В профиле появились настройки уведомлений: выбор типов (предстоящие списания, успешные/неуспешные авто-списания) и удобного часа отправки',
+      },
+      {
+        type: 'feature',
+        text: 'Если автосписание не удалось, придёт push «Не удалось списать. Проверьте счёт»',
+      },
+      {
+        type: 'feature',
+        text: 'Клик по уведомлению теперь открывает страницу нужной подписки',
+      },
+      {
+        type: 'fix',
+        text: 'Устранены повторные списания и дубликаты push-уведомлений при сбоях фоновой задачи',
+      },
+      {
+        type: 'improvement',
+        text: 'Для iOS показывается подсказка установить приложение на главный экран — без этого Apple не доставляет push',
+      },
+    ],
+  },
   {
     version: '1.0.48',
     date: '2026-05-03',

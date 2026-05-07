@@ -1,9 +1,6 @@
 import { ref, computed } from 'vue';
 import { pushSubscriptionApi } from './pushSubscriptionApi';
 
-// Module-level cache — avoids re-checking SW on every dashboard mount
-let checkedOnce = false;
-
 export function usePushSubscription() {
   const isSupported = computed(() => 'Notification' in window && 'PushManager' in window);
   const permission = ref<NotificationPermission>(
@@ -14,8 +11,7 @@ export function usePushSubscription() {
   const isSubscribed = ref(false);
 
   async function checkExistingSubscription(): Promise<void> {
-    if (!isSupported.value || checkedOnce) return;
-    checkedOnce = true;
+    if (!isSupported.value) return;
     try {
       const sw = await swReadyWithTimeout();
       const sub = await sw.pushManager.getSubscription();

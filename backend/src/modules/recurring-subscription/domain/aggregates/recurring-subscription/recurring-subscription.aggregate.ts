@@ -16,7 +16,7 @@ export interface RecurringSubscriptionProps {
   frequency: SubscriptionFrequency;
   frequencyDays: number | null;
   billingDate: Date;
-  notifyDaysBefore: number;
+  notifyDaysBefore: number[];
   categoryId: string;
   autoCharge: boolean;
   status: SubscriptionStatus;
@@ -36,7 +36,7 @@ export class RecurringSubscription extends AggregateRoot<string> {
   private _frequency: SubscriptionFrequency;
   private _frequencyDays: number | null;
   private _billingDate: Date;
-  private _notifyDaysBefore: number;
+  private _notifyDaysBefore: number[];
   private _categoryId: string;
   private _autoCharge: boolean;
   private _status: SubscriptionStatus;
@@ -78,7 +78,7 @@ export class RecurringSubscription extends AggregateRoot<string> {
     description?: string | null,
     accountId?: string | null,
     frequencyDays?: number | null,
-    notifyDaysBefore: number = 2,
+    notifyDaysBefore: number[] = [2],
     autoCharge: boolean = false,
   ): RecurringSubscription {
     const now = new Date();
@@ -141,7 +141,7 @@ export class RecurringSubscription extends AggregateRoot<string> {
   get billingDate(): Date {
     return this._billingDate;
   }
-  get notifyDaysBefore(): number {
+  get notifyDaysBefore(): number[] {
     return this._notifyDaysBefore;
   }
   get categoryId(): string {
@@ -171,7 +171,7 @@ export class RecurringSubscription extends AggregateRoot<string> {
     frequency?: SubscriptionFrequency;
     frequencyDays?: number | null;
     billingDate?: Date;
-    notifyDaysBefore?: number;
+    notifyDaysBefore?: number[];
     categoryId?: string;
     autoCharge?: boolean;
   }): void {

@@ -88,7 +88,7 @@ export class RecurringSubscriptionsController {
         dto.description,
         dto.accountId,
         dto.frequencyDays,
-        dto.notifyDaysBefore ?? 2,
+        dto.notifyDaysBefore ?? [2],
         dto.autoCharge ?? false,
       ),
     );

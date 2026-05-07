@@ -2,28 +2,34 @@ import {
   Controller,
   Post,
   Delete,
+  Get,
+  Patch,
   Body,
   Param,
   Inject,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { CommandBus } from '@nestjs/cqrs';
+import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { CurrentUser } from '../../../../common';
-import { RegisterPushSubscriptionDto } from '../dto';
+import { RegisterPushSubscriptionDto, UpdateNotificationPreferencesDto } from '../dto';
 import {
   RegisterPushSubscriptionCommand,
   UnregisterPushSubscriptionCommand,
+  UpdateNotificationPreferencesCommand,
 } from '../../application/commands';
+import { GetNotificationPreferencesQuery } from '../../application/queries';
 import {
   PUSH_NOTIFICATION_SERVICE,
   IPushNotificationService,
 } from '../../application/services/push-notification.service';
+import { NotificationPreferencesResponse } from '../../application/types';
 
 @Controller('push-subscriptions')
 export class PushSubscriptionController {
   constructor(
     private readonly commandBus: CommandBus,
+    private readonly queryBus: QueryBus,
     @Inject(PUSH_NOTIFICATION_SERVICE)
     private readonly pushNotificationService: IPushNotificationService,
   ) {}
@@ -57,5 +63,25 @@ export class PushSubscriptionController {
       body: 'Push-уведомления работают!',
       tag: 'test',
     });
+  }
+
+  @Get('preferences')
+  async getPreferences(
+    @CurrentUser('sub') userId: string,
+  ): Promise<NotificationPreferencesResponse> {
+    return this.queryBus.execute<GetNotificationPreferencesQuery, NotificationPreferencesResponse>(
+      new GetNotificationPreferencesQuery(userId),
+    );
+  }
+
+  @Patch('preferences')
+  async updatePreferences(
+    @CurrentUser('sub') userId: string,
+    @Body() dto: UpdateNotificationPreferencesDto,
+  ): Promise<NotificationPreferencesResponse> {
+    return this.commandBus.execute<
+      UpdateNotificationPreferencesCommand,
+      NotificationPreferencesResponse
+    >(new UpdateNotificationPreferencesCommand(userId, dto));
   }
 }

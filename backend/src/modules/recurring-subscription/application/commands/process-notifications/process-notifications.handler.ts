@@ -9,7 +9,9 @@ import {
   IRecurringSubscriptionRepository,
   RECURRING_SUBSCRIPTION_REPOSITORY,
 } from '../../../domain/repositories';
+import { buildDedupKey } from '../../../../notification/domain/types';
 import { TimezoneUserResolverService } from '../../services/timezone-user-resolver.service';
+import { formatDateUTC, subtractDaysISO } from '../../../../../shared/utils/date';
 
 @CommandHandler(ProcessNotificationsCommand)
 export class ProcessNotificationsHandler implements ICommandHandler<ProcessNotificationsCommand> {
@@ -24,12 +26,9 @@ export class ProcessNotificationsHandler implements ICommandHandler<ProcessNotif
   ) {}
 
   async execute(command: ProcessNotificationsCommand): Promise<void> {
-    const { targetHour } = command;
-
-    const users = await this.timezoneUserResolver.getUsersAtLocalHour(targetHour);
-    if (users.length === 0) {
-      return;
-    }
+    void command;
+    const users = await this.timezoneUserResolver.getUsersDueForNotification();
+    if (users.length === 0) return;
 
     for (const { userId, timezone } of users) {
       try {
@@ -50,26 +49,42 @@ export class ProcessNotificationsHandler implements ICommandHandler<ProcessNotif
     const todayInTz = new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(now);
 
     for (const subscription of subscriptions) {
-      if (subscription.notifyDaysBefore <= 0) continue;
+      if (!subscription.notifyDaysBefore.length) continue;
 
-      const billingDateStr = subscription.billingDate.toISOString().split('T')[0];
-      const notifyDate = new Date(billingDateStr);
-      notifyDate.setDate(notifyDate.getDate() - subscription.notifyDaysBefore);
-      const notifyDateStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'UTC' }).format(
-        notifyDate,
-      );
+      const billingDateStr = formatDateUTC(subscription.billingDate);
 
-      if (notifyDateStr === todayInTz) {
-        await this.pushNotificationService.sendToUser(userId, {
-          title: subscription.name,
-          body: `Списание ${subscription.amount} ${subscription.currency} через ${subscription.notifyDaysBefore} дн.`,
-          url: `/subscriptions/${subscription.id}`,
-        });
+      for (const daysBefore of subscription.notifyDaysBefore) {
+        const notifyDateStr = subtractDaysISO(billingDateStr, daysBefore);
+        if (notifyDateStr !== todayInTz) continue;
 
-        this.logger.log(
-          `Sent notification reminder to user ${userId} for subscription "${subscription.name}"`,
+        const dedupKey = buildDedupKey(
+          'subscription_upcoming',
+          subscription.id,
+          todayInTz,
+          daysBefore,
         );
+        const sent = await this.pushNotificationService.sendToUser(
+          userId,
+          {
+            title: subscription.name,
+            body: `Списание ${subscription.amount} ${subscription.currency} ${formatDaysBefore(daysBefore)}`,
+            url: `/subscriptions/${subscription.id}`,
+          },
+          { type: 'subscription_upcoming', dedupKey },
+        );
+
+        if (sent) {
+          this.logger.log(
+            `Sent notification reminder to user ${userId} for subscription "${subscription.name}" (${daysBefore} days before)`,
+          );
+        }
       }
     }
   }
+}
+
+function formatDaysBefore(daysBefore: number): string {
+  if (daysBefore === 0) return 'сегодня';
+  if (daysBefore === 1) return 'завтра';
+  return `через ${daysBefore} дн.`;
 }

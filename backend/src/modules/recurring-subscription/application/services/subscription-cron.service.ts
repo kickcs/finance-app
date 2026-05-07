@@ -6,22 +6,16 @@ import { ProcessAutoChargesCommand } from '../commands/process-auto-charges/proc
 
 @Injectable()
 export class SubscriptionCronService {
-  private static readonly NOTIFICATION_HOUR = 12;
-
   private readonly logger = new Logger(SubscriptionCronService.name);
 
   constructor(private readonly commandBus: CommandBus) {}
 
-  @Cron('0 * * * *') // Every hour at :00
+  @Cron('0 * * * *')
   async handleHourlyCron(): Promise<void> {
     this.logger.log('Running hourly subscription processing...');
     try {
-      await this.commandBus.execute(
-        new ProcessNotificationsCommand(SubscriptionCronService.NOTIFICATION_HOUR),
-      );
-      await this.commandBus.execute(
-        new ProcessAutoChargesCommand(SubscriptionCronService.NOTIFICATION_HOUR),
-      );
+      await this.commandBus.execute(new ProcessNotificationsCommand());
+      await this.commandBus.execute(new ProcessAutoChargesCommand());
       this.logger.log('Hourly subscription processing completed');
     } catch (error) {
       this.logger.error(

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, provide, defineAsyncComponent } from 'vue';
-import { RouterView } from 'vue-router';
+import { RouterView, useRouter } from 'vue-router';
+import { useEventListener } from '@vueuse/core';
 import { useTheme } from '@/features/toggle-theme';
 import { initPrimaryColor } from '@/features/select-primary-color';
 import { initializeAuth, useAuth } from '@/shared/api/composables/useAuth';
@@ -33,9 +34,19 @@ initPrimaryColor();
 // Initialize PWA updates watcher
 usePwaUpdate();
 
+const router = useRouter();
+
 // Auth state
 const { user, isAuthenticated } = useAuth();
 const isAppReady = ref(false);
+
+if ('serviceWorker' in navigator) {
+  useEventListener(navigator.serviceWorker, 'message', (event: MessageEvent) => {
+    if (event.data?.type === 'NAVIGATE' && typeof event.data.url === 'string') {
+      router.push(event.data.url);
+    }
+  });
+}
 
 // Categories - get getCategoryById for global use
 const userId = computed(() => user.value?.id ?? null);
@@ -58,7 +69,6 @@ const showChangelogModal = ref(false);
 
 // Initialize auth on app mount
 onMounted(async () => {
-  // Start auth initialization immediately
   await initializeAuth();
 
   // Wait for router to be ready before removing skeleton

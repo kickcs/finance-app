@@ -28,7 +28,11 @@ import {
 import { ExchangeRateOrmEntity } from './modules/exchange/infrastructure/persistence/typeorm';
 import { UserSubscriptionOrmEntity } from './modules/subscription/infrastructure/persistence/typeorm';
 import { PersonOrmEntity } from './modules/person/infrastructure/persistence/typeorm';
-import { PushSubscriptionOrmEntity } from './modules/notification/infrastructure/persistence/typeorm';
+import {
+  PushSubscriptionOrmEntity,
+  NotificationLogOrmEntity,
+  NotificationPreferencesOrmEntity,
+} from './modules/notification/infrastructure/persistence/typeorm';
 import { RecurringSubscriptionOrmEntity } from './modules/recurring-subscription/infrastructure/persistence/typeorm';
 
 // Legacy entity (to be migrated)
@@ -86,6 +90,8 @@ import { RecurringSubscriptionModule } from './modules/recurring-subscription';
           UserSubscriptionOrmEntity,
           PersonOrmEntity,
           PushSubscriptionOrmEntity,
+          NotificationLogOrmEntity,
+          NotificationPreferencesOrmEntity,
           RecurringSubscriptionOrmEntity,
           // Legacy (to be migrated)
           Settings,

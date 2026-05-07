@@ -14,6 +14,7 @@ export interface ProfileResponse {
   quickActionsHintDismissed: boolean;
   financialMonthStartDay: number;
   timezone: string;
+  notificationHour: number;
   createdAt: Date;
 }
 

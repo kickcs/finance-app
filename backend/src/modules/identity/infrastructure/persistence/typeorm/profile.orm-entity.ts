@@ -57,4 +57,7 @@ export class ProfileOrmEntity {
 
   @Column({ type: 'varchar', default: 'Asia/Tashkent' })
   timezone: string;
+
+  @Column({ name: 'notification_hour', type: 'smallint', default: 12 })
+  notificationHour: number;
 }

@@ -15,7 +15,7 @@ export class UpdateSubscriptionCommand {
       frequency?: SubscriptionFrequency;
       frequencyDays?: number | null;
       billingDate?: Date;
-      notifyDaysBefore?: number;
+      notifyDaysBefore?: number[];
       categoryId?: string;
       autoCharge?: boolean;
     },

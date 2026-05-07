@@ -4,3 +4,9 @@ export interface PushSubscriptionData {
   user_agent: string | null;
   created_at: string;
 }
+
+export interface NotificationPreferences {
+  subscriptionUpcoming: boolean;
+  subscriptionCharged: boolean;
+  subscriptionFailed: boolean;
+}

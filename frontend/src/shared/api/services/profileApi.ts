@@ -20,6 +20,7 @@ interface ProfileResponse {
   quickActionsHidden: boolean;
   quickActionsHintDismissed: boolean;
   financialMonthStartDay: number;
+  notificationHour: number;
 }
 
 function transformProfile(profile: ProfileResponse): Profile {
@@ -43,6 +44,7 @@ function transformProfile(profile: ProfileResponse): Profile {
     quick_actions_hidden: profile.quickActionsHidden,
     quick_actions_hint_dismissed: profile.quickActionsHintDismissed,
     financial_month_start_day: profile.financialMonthStartDay,
+    notification_hour: profile.notificationHour,
   };
 }
 
@@ -81,6 +83,7 @@ export const profileApi = {
       quickActionsHidden: updates.quick_actions_hidden,
       quickActionsHintDismissed: updates.quick_actions_hint_dismissed,
       financialMonthStartDay: updates.financial_month_start_day,
+      notificationHour: updates.notification_hour,
     });
     return transformProfile(data);
   },
