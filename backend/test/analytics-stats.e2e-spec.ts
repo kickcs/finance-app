@@ -47,8 +47,8 @@ describe('TransactionRepository.getAnalyticsStats — debt-offset for regular ex
       isClosed: true,
     });
 
-    await seedDebtReturn({ ctx, amount: 35000, date: IN_RANGE, debtId: debt1, direction: 'to_me' });
-    await seedDebtReturn({ ctx, amount: 35000, date: IN_RANGE, debtId: debt2, direction: 'to_me' });
+    await seedDebtReturn({ ctx, amount: 35000, date: IN_RANGE, debtId: debt1 });
+    await seedDebtReturn({ ctx, amount: 35000, date: IN_RANGE, debtId: debt2 });
 
     const stats = await ctx.repository.getAnalyticsStats(ctx.userId, {
       startDate: RANGE_START,
@@ -77,7 +77,7 @@ describe('TransactionRepository.getAnalyticsStats — debt-offset for regular ex
       sourceTransactionId: sourceTxId,
     });
 
-    await seedDebtReturn({ ctx, amount: 30000, date: IN_RANGE, debtId: debt, direction: 'to_me' });
+    await seedDebtReturn({ ctx, amount: 30000, date: IN_RANGE, debtId: debt });
 
     const stats = await ctx.repository.getAnalyticsStats(ctx.userId, {
       startDate: RANGE_START,
@@ -107,7 +107,7 @@ describe('TransactionRepository.getAnalyticsStats — debt-offset for regular ex
 
     // Return is bigger than the source expense (could happen via combining returns
     // from debts with different sources)
-    await seedDebtReturn({ ctx, amount: 80000, date: IN_RANGE, debtId: debt, direction: 'to_me' });
+    await seedDebtReturn({ ctx, amount: 80000, date: IN_RANGE, debtId: debt });
 
     const stats = await ctx.repository.getAnalyticsStats(ctx.userId, {
       startDate: RANGE_START,
@@ -138,7 +138,7 @@ describe('TransactionRepository.getAnalyticsStats — debt-offset for regular ex
       isClosed: true,
     });
 
-    await seedDebtReturn({ ctx, amount: 50000, date: IN_RANGE, debtId: debt, direction: 'to_me' });
+    await seedDebtReturn({ ctx, amount: 50000, date: IN_RANGE, debtId: debt });
 
     const stats = await ctx.repository.getAnalyticsStats(ctx.userId, {
       startDate: RANGE_START,
@@ -180,7 +180,6 @@ describe('TransactionRepository.getAnalyticsStats — debt-offset for regular ex
       amount: 30,
       date: IN_RANGE,
       debtId: usdDebt,
-      direction: 'to_me',
       currency: 'USD',
     });
 
@@ -195,14 +194,14 @@ describe('TransactionRepository.getAnalyticsStats — debt-offset for regular ex
   });
 
   it('respects accountIds filter on offsets', async () => {
-    const accountB = await seedExtraAccount(ctx);
+    const accountB = await seedExtraAccount({ ctx });
 
     const sourceTxId = await seedExpense({
       ctx,
       amount: 100000,
       categoryId: 'groceries',
       date: IN_RANGE,
-      accountId: ctx.accountId, // account A
+      accountId: ctx.accountId,
     });
 
     const debt = await seedDebt({
@@ -214,17 +213,15 @@ describe('TransactionRepository.getAnalyticsStats — debt-offset for regular ex
       isClosed: true,
       accountId: accountB,
     });
-    // Return recorded on account B
     await seedDebtReturn({
       ctx,
       amount: 50000,
       date: IN_RANGE,
       debtId: debt,
-      direction: 'to_me',
       accountId: accountB,
     });
 
-    // Filter by account A only — return on B should NOT offset A's expense
+    // Filtering by account A: the return on account B must not offset A's expense.
     const stats = await ctx.repository.getAnalyticsStats(ctx.userId, {
       startDate: RANGE_START,
       endDate: RANGE_END,
@@ -258,7 +255,6 @@ describe('TransactionRepository.getAnalyticsStats — debt-offset for regular ex
       amount: 50000,
       date: new Date('2026-05-15T12:00:00Z'),
       debtId: debt,
-      direction: 'to_me',
     });
 
     const stats = await ctx.repository.getAnalyticsStats(ctx.userId, {

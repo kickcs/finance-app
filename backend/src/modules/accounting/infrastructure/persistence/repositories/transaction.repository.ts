@@ -46,6 +46,8 @@ interface DebtBreakdownRow {
   debtReturnsFromMe: string | null;
 }
 
+const parseDecimal = (v: string | null | undefined): number => Number(v ?? 0);
+
 @Injectable()
 export class TransactionRepository implements ITransactionRepository {
   constructor(
@@ -629,73 +631,33 @@ export class TransactionRepository implements ITransactionRepository {
       .addGroupBy('t.type')
       .addGroupBy('t.currency');
 
-    // Get category offsets from debt returns (debt_return_to_me → debt → source transaction → category)
-    // When someone returns money to me, subtract from the original expense category
-    let categoryOffsetsQuery = this.ormRepository
-      .createQueryBuilder('return_tx')
-      .innerJoin(
-        DebtOrmEntity,
-        'd',
-        '(return_tx.debt_id IS NOT NULL AND return_tx.debt_id = d.id) OR (return_tx.debt_id IS NULL AND d.close_transaction_id = return_tx.id)',
-      )
-      .innerJoin(
-        TransactionOrmEntity,
-        'source_tx',
-        'source_tx.id = COALESCE(d.source_transaction_id, d.transaction_id)',
-      )
-      .where('return_tx.user_id = :userId', { userId })
-      .andWhere('return_tx.date >= :startDate', { startDate })
-      .andWhere('return_tx.date <= :endDate', { endDate })
-      .andWhere('return_tx.category_id = :returnToMeId', {
-        returnToMeId: DEBT_CATEGORY_IDS.RETURN_TO_ME,
-      })
+    // When someone returns money to me, subtract from the original expense category.
+    const categoryOffsetsQuery = this.createDebtReturnBaseQuery(
+      userId,
+      startDate,
+      endDate,
+      accountIds,
+    )
       .select('source_tx.category_id', 'categoryId')
       .addSelect('source_tx.currency', 'currency')
       .addSelect('SUM(return_tx.amount)', 'offsetAmount')
       .groupBy('source_tx.category_id')
       .addGroupBy('source_tx.currency');
 
-    if (accountIds && accountIds.length > 0) {
-      categoryOffsetsQuery = categoryOffsetsQuery.andWhere(
-        'return_tx.account_id IN (:...accountIds)',
-        { accountIds },
-      );
-    }
-
-    // Get total offsets from debt returns whose source is a REGULAR expense (not a debt category).
-    // Mirrors categoryOffsetsQuery but groups only by currency and excludes debt_given/taken sources
-    // to avoid double-counting with the `max(0, debtGiven - debtReturnsToMe)` formula.
-    let regularExpenseOffsetsQuery = this.ormRepository
-      .createQueryBuilder('return_tx')
-      .innerJoin(
-        DebtOrmEntity,
-        'd',
-        '(return_tx.debt_id IS NOT NULL AND return_tx.debt_id = d.id) OR (return_tx.debt_id IS NULL AND d.close_transaction_id = return_tx.id)',
-      )
-      .innerJoin(
-        TransactionOrmEntity,
-        'source_tx',
-        'source_tx.id = COALESCE(d.source_transaction_id, d.transaction_id)',
-      )
-      .where('return_tx.user_id = :userId', { userId })
-      .andWhere('return_tx.date >= :startDate', { startDate })
-      .andWhere('return_tx.date <= :endDate', { endDate })
-      .andWhere('return_tx.category_id = :returnToMeId', {
-        returnToMeId: DEBT_CATEGORY_IDS.RETURN_TO_ME,
-      })
+    // Excludes debt_given/taken sources to avoid double-counting with the
+    // `max(0, debtGiven - debtReturnsToMe)` formula applied to scalar totals.
+    const regularExpenseOffsetsQuery = this.createDebtReturnBaseQuery(
+      userId,
+      startDate,
+      endDate,
+      accountIds,
+    )
       .andWhere('return_tx.is_debt_related = true')
-      .andWhere("source_tx.type = 'expense'")
+      .andWhere('source_tx.type = :expenseType', { expenseType: 'expense' })
       .andWhere('source_tx.category_id NOT IN (:...debtIds)', { debtIds: ALL_DEBT_CATEGORY_IDS })
       .select('source_tx.currency', 'currency')
       .addSelect('SUM(return_tx.amount)', 'offsetAmount')
       .groupBy('source_tx.currency');
-
-    if (accountIds && accountIds.length > 0) {
-      regularExpenseOffsetsQuery = regularExpenseOffsetsQuery.andWhere(
-        'return_tx.account_id IN (:...accountIds)',
-        { accountIds },
-      );
-    }
 
     // All three queries are read-only and independent — run them in parallel
     const [categoryBreakdownResult, categoryOffsetsResult, regularExpenseOffsetsResult] =
@@ -720,22 +682,22 @@ export class TransactionRepository implements ITransactionRepository {
         }>(),
       ]);
 
-    // Aggregate regular-expense offsets (returns whose source is a non-debt expense)
     const regularExpenseOffsetsByCurrency: Record<string, number> = {};
-    let regularExpenseOffsetsTotal = 0;
     for (const row of regularExpenseOffsetsResult) {
-      const amount = Number(row.offsetAmount ?? 0);
+      const amount = parseDecimal(row.offsetAmount);
       regularExpenseOffsetsByCurrency[row.currency] =
         (regularExpenseOffsetsByCurrency[row.currency] ?? 0) + amount;
-      regularExpenseOffsetsTotal += amount;
     }
+    const regularExpenseOffsetsTotal = Object.values(regularExpenseOffsetsByCurrency).reduce(
+      (sum, v) => sum + v,
+      0,
+    );
 
-    // Compute scalar totals — apply regular-expense offsets with cap to avoid negative
     const adjustedRegularExpense = Math.max(0, regularExpense - regularExpenseOffsetsTotal);
     const netIncome = regularIncome + Math.max(0, debtTaken - debtReturnsFromMe);
     const netExpense = adjustedRegularExpense + Math.max(0, debtGiven - debtReturnsToMe);
 
-    // Compute per-currency NET — extend allCurrencies with offset keys so we don't miss any
+    // Include offset-only currencies so a currency present only in returns is still considered.
     const allCurrencies = new Set([
       ...Object.keys(regularIncomeByCurrency),
       ...Object.keys(regularExpenseByCurrency),
@@ -758,7 +720,6 @@ export class TransactionRepository implements ITransactionRepository {
       const returnsFromMe = debtReturnsFromMeByCurrency[currency] ?? 0;
       const offset = regularExpenseOffsetsByCurrency[currency] ?? 0;
 
-      // Cap regular expense offset to avoid negative
       const adjustedExpenseForCurrency = Math.max(0, expenseVal - offset);
       const netIncomeForCurrency = incomeVal + Math.max(0, takenVal - returnsFromMe);
       const netExpenseForCurrency =
@@ -1029,6 +990,43 @@ export class TransactionRepository implements ITransactionRepository {
     );
 
     return result;
+  }
+
+  /**
+   * Shared foundation for debt-return offset queries — extracted to keep
+   * the three-table join + RETURN_TO_ME scoping in one place so callers
+   * don't drift apart on the JOIN condition.
+   */
+  private createDebtReturnBaseQuery(
+    userId: string,
+    startDate: Date,
+    endDate: Date,
+    accountIds?: string[],
+  ) {
+    let query = this.ormRepository
+      .createQueryBuilder('return_tx')
+      .innerJoin(
+        DebtOrmEntity,
+        'd',
+        '(return_tx.debt_id IS NOT NULL AND return_tx.debt_id = d.id) OR (return_tx.debt_id IS NULL AND d.close_transaction_id = return_tx.id)',
+      )
+      .innerJoin(
+        TransactionOrmEntity,
+        'source_tx',
+        'source_tx.id = COALESCE(d.source_transaction_id, d.transaction_id)',
+      )
+      .where('return_tx.user_id = :userId', { userId })
+      .andWhere('return_tx.date >= :startDate', { startDate })
+      .andWhere('return_tx.date <= :endDate', { endDate })
+      .andWhere('return_tx.category_id = :returnToMeId', {
+        returnToMeId: DEBT_CATEGORY_IDS.RETURN_TO_ME,
+      });
+
+    if (accountIds && accountIds.length > 0) {
+      query = query.andWhere('return_tx.account_id IN (:...accountIds)', { accountIds });
+    }
+
+    return query;
   }
 
   private mergeByDateDesc(

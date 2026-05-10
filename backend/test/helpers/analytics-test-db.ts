@@ -53,8 +53,11 @@ export async function setupAnalyticsTestContext(): Promise<AnalyticsTestContext>
   } as Partial<AccountOrmEntity>);
 
   const closeAndCleanup = async () => {
-    await dataSource.getRepository(TransactionOrmEntity).delete({ userId });
-    await dataSource.getRepository(DebtOrmEntity).delete({ userId });
+    // Transactions and debts are FK-independent; delete in parallel before account/profile.
+    await Promise.all([
+      dataSource.getRepository(TransactionOrmEntity).delete({ userId }),
+      dataSource.getRepository(DebtOrmEntity).delete({ userId }),
+    ]);
     await dataSource.getRepository(AccountOrmEntity).delete({ userId });
     await dataSource.getRepository(ProfileOrmEntity).delete({ id: userId });
     await app.close();
@@ -145,18 +148,15 @@ export interface SeedDebtReturnInput {
   amount: number;
   date: Date;
   debtId: string;
-  direction: 'to_me' | 'from_me';
   currency?: string;
   accountId?: string;
 }
 
 export async function seedDebtReturn(input: SeedDebtReturnInput): Promise<string> {
-  const categoryId =
-    input.direction === 'to_me' ? DEBT_CATEGORY_IDS.RETURN_TO_ME : DEBT_CATEGORY_IDS.RETURN_FROM_ME;
   return seedExpense({
     ctx: input.ctx,
     amount: input.amount,
-    categoryId,
+    categoryId: DEBT_CATEGORY_IDS.RETURN_TO_ME,
     date: input.date,
     currency: input.currency,
     isDebtRelated: true,
@@ -165,14 +165,19 @@ export async function seedDebtReturn(input: SeedDebtReturnInput): Promise<string
   });
 }
 
-export async function seedExtraAccount(ctx: AnalyticsTestContext, currency = 'UZS'): Promise<string> {
+export interface SeedExtraAccountInput {
+  ctx: AnalyticsTestContext;
+  currency?: string;
+}
+
+export async function seedExtraAccount(input: SeedExtraAccountInput): Promise<string> {
   const id = randomUUID();
-  await ctx.dataSource.getRepository(AccountOrmEntity).insert({
+  await input.ctx.dataSource.getRepository(AccountOrmEntity).insert({
     id,
-    userId: ctx.userId,
+    userId: input.ctx.userId,
     name: 'Extra Account',
     balance: 0,
-    currency,
+    currency: input.currency ?? 'UZS',
     icon: 'wallet',
     color: '#000000',
     type: 'basic',
