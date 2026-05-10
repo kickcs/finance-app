@@ -9,9 +9,10 @@ import {
   Query,
   HttpCode,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
-import { CurrentUser } from '../../../../common';
+import { CurrentUser, JwtAuthGuard } from '../../../../common';
 import {
   CreateSubscriptionDto,
   UpdateSubscriptionDto,
@@ -34,6 +35,7 @@ import {
 import { SubscriptionFrequency } from '../../domain/aggregates/recurring-subscription';
 
 @Controller('recurring-subscriptions')
+@UseGuards(JwtAuthGuard)
 export class RecurringSubscriptionsController {
   constructor(
     private readonly commandBus: CommandBus,

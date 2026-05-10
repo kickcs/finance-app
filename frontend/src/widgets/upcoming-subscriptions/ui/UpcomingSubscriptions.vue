@@ -6,10 +6,10 @@ import {
   useUpcomingSubscriptions,
 } from '@/entities/recurring-subscription';
 import { SectionHeader } from '@/shared/ui';
+import { UPCOMING_SUBSCRIPTION_DAYS } from '@/shared/config/dashboard';
 
 const props = defineProps<{
   userId: string;
-  currency?: string;
 }>();
 
 const emit = defineEmits<{
@@ -18,13 +18,14 @@ const emit = defineEmits<{
   'view-all': [];
 }>();
 
+const PREVIEW_LIMIT = 3;
+
 const { upcoming, isLoading } = useUpcomingSubscriptions(
-  computed(() => props.userId),
-  7,
+  () => props.userId,
+  UPCOMING_SUBSCRIPTION_DAYS,
 );
 
-const displayItems = computed(() => upcoming.value.slice(0, 3));
-const hasSubscriptions = computed(() => upcoming.value.length > 0);
+const preview = computed(() => upcoming.value.slice(0, PREVIEW_LIMIT));
 </script>
 
 <template>
@@ -40,15 +41,13 @@ const hasSubscriptions = computed(() => upcoming.value.length > 0);
     />
 
     <div class="mt-3 space-y-2">
-      <!-- Loading state -->
       <template v-if="isLoading">
-        <SubscriptionCardSkeleton v-for="i in 3" :key="i" />
+        <SubscriptionCardSkeleton v-for="i in PREVIEW_LIMIT" :key="i" />
       </template>
 
-      <!-- Subscription list -->
-      <template v-else-if="hasSubscriptions">
+      <template v-else-if="preview.length">
         <SubscriptionCard
-          v-for="sub in displayItems"
+          v-for="sub in preview"
           :key="sub.id"
           :subscription="sub"
           compact
@@ -56,7 +55,6 @@ const hasSubscriptions = computed(() => upcoming.value.length > 0);
         />
       </template>
 
-      <!-- Empty state -->
       <p
         v-else
         class="text-sm text-text-tertiary-light dark:text-text-tertiary-dark py-3 text-center"

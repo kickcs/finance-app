@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { UIcon } from '@/shared/ui';
+import { UIcon, BrandIcon, hasBrandIcon } from '@/shared/ui';
 import { formatCurrency, formatMasked, COMPACT_FORMAT } from '@/shared/lib/format/currency';
 import { formatDate } from '@/shared/lib/format/date';
-import { isPastDate } from '@/shared/lib/date';
+import { isPastDate, isToday } from '@/shared/lib/date';
 import { useDashboardContext } from '../../model/dashboardContext';
 import {
   SECTION_LABEL_CLASS,
@@ -19,13 +19,16 @@ const { upcomingSubscriptions, subscriptionsLoading, isHidden, nav } = useDashbo
 const COMPACT_SUBSCRIPTION_LIMIT = 3;
 
 const visibleSubscriptions = computed(() =>
-  upcomingSubscriptions.value.slice(0, COMPACT_SUBSCRIPTION_LIMIT),
+  upcomingSubscriptions.value.slice(0, COMPACT_SUBSCRIPTION_LIMIT).map((sub) => {
+    const today = isToday(sub.billing_date);
+    const overdue = !today && isPastDate(sub.billing_date);
+    let dueLabel: string;
+    if (today) dueLabel = 'Сегодня';
+    else if (overdue) dueLabel = 'Просрочено';
+    else dueLabel = formatDate(sub.billing_date, { format: 'short' });
+    return { ...sub, dueLabel, isDueSoon: today || overdue };
+  }),
 );
-
-function dueLabel(billingDate: string): string {
-  if (isPastDate(billingDate)) return 'Сегодня';
-  return formatDate(billingDate, { format: 'short' });
-}
 </script>
 
 <template>
@@ -68,7 +71,13 @@ function dueLabel(billingDate: string): string {
           class="shrink-0 w-7 h-7 rounded-lg flex items-center justify-center"
           :style="iconTileStyle(sub.color)"
         >
-          <UIcon :name="sub.icon" size="xs" :style="{ color: sub.color }" />
+          <BrandIcon
+            v-if="hasBrandIcon(sub.icon)"
+            :name="sub.icon"
+            size="xs"
+            :style="{ color: sub.color }"
+          />
+          <UIcon v-else :name="sub.icon" size="xs" :style="{ color: sub.color }" />
         </div>
         <div class="flex-1 min-w-0">
           <p
@@ -79,12 +88,12 @@ function dueLabel(billingDate: string): string {
           <p
             class="text-caption-sm"
             :class="
-              isPastDate(sub.billing_date)
+              sub.isDueSoon
                 ? 'text-warning font-semibold'
                 : 'text-text-tertiary-light dark:text-text-tertiary-dark'
             "
           >
-            {{ dueLabel(sub.billing_date) }}
+            {{ sub.dueLabel }}
           </p>
         </div>
         <span

@@ -116,10 +116,18 @@ export class PushNotificationService implements IPushNotificationService {
             notificationPayload,
           );
         } catch (error: unknown) {
-          const webPushError = error as { statusCode?: number };
-          if (webPushError.statusCode === 410 || webPushError.statusCode === 404) {
+          const statusCode = (error as { statusCode?: number }).statusCode;
+          // 404/410: endpoint gone. 401/403: VAPID auth rejected (typically
+          // after key rotation). Either way the subscription is permanently
+          // dead — drop it so the cron stops retrying forever.
+          if (
+            statusCode === 404 ||
+            statusCode === 410 ||
+            statusCode === 401 ||
+            statusCode === 403
+          ) {
             this.logger.log(
-              `Removing expired subscription ${subscription.id} (status ${webPushError.statusCode})`,
+              `Removing dead push subscription ${subscription.id} (status ${statusCode})`,
             );
             await this.subscriptionRepository.delete(subscription.id);
           } else {

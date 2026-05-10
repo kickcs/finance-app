@@ -5,7 +5,6 @@ import type {
   CalendarEntry,
 } from '../model/types';
 
-// Response type from NestJS backend (camelCase)
 interface SubscriptionResponse {
   id: string;
   userId: string;
@@ -19,7 +18,7 @@ interface SubscriptionResponse {
   frequency: string;
   frequencyDays: number | null;
   billingDate: string;
-  notifyDaysBefore: number;
+  notifyDaysBefore: number[];
   categoryId: string;
   autoCharge: boolean;
   status: string;
@@ -46,7 +45,7 @@ function transformSubscription(sub: SubscriptionResponse): RecurringSubscription
     frequency: sub.frequency as RecurringSubscription['frequency'],
     frequency_days: sub.frequencyDays,
     billing_date: sub.billingDate,
-    notify_days_before: sub.notifyDaysBefore,
+    notify_days_before: sub.notifyDaysBefore ?? [2],
     category_id: sub.categoryId,
     auto_charge: sub.autoCharge,
     status: sub.status as RecurringSubscription['status'],

@@ -10,13 +10,23 @@ export class SubscriptionCronService {
 
   constructor(private readonly commandBus: CommandBus) {}
 
-  @Cron('0 * * * *')
+  // Run every 30 minutes so users in half-hour timezones (IST, NPT) are
+  // matched within their notification-hour window. The
+  // TimezoneUserResolverService gates by `MINUTE < 30` so duplicate sends
+  // are not a concern.
+  @Cron('0,30 * * * *')
   async handleHourlyCron(): Promise<void> {
-    this.logger.log('Running hourly subscription processing...');
+    this.logger.log('Running subscription processing...');
     try {
-      await this.commandBus.execute(new ProcessNotificationsCommand());
-      await this.commandBus.execute(new ProcessAutoChargesCommand());
-      this.logger.log('Hourly subscription processing completed');
+      // BUG-21: notifications and auto-charges operate on independent state
+      // (notifications are read-only; auto-charges write subscriptions and
+      // accounts). Running them concurrently keeps them in the same hour
+      // bucket even if one is slow.
+      await Promise.all([
+        this.commandBus.execute(new ProcessNotificationsCommand()),
+        this.commandBus.execute(new ProcessAutoChargesCommand()),
+      ]);
+      this.logger.log('Subscription processing completed');
     } catch (error) {
       this.logger.error(
         `Subscription cron failed: ${error instanceof Error ? error.message : 'Unknown error'}`,

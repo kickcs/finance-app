@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { UIcon } from '@/shared/ui';
+import { UIcon, BrandIcon, hasBrandIcon } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { formatDate } from '@/shared/lib/format/date';
 import { useHaptics } from '@/shared/lib/haptics';
@@ -29,9 +29,9 @@ function handleClick() {
 
 const isPaused = computed(() => props.subscription.status === 'paused');
 
-const billingDateFormatted = computed(() => {
-  return formatDate(props.subscription.billing_date, { format: 'short' });
-});
+const billingDateFormatted = computed(() =>
+  formatDate(props.subscription.billing_date, { format: 'short' }),
+);
 
 const daysLeft = computed(() => daysUntilBilling(props.subscription.billing_date));
 
@@ -50,15 +50,8 @@ const frequencyLabel = computed(() =>
 
 <template>
   <button
-    :class="[
-      'w-full text-left rounded-xl transition-all duration-200',
-      'hover:scale-[1.01] active:scale-[0.99]',
-      'bg-card-light dark:bg-card-dark',
-      'border border-border-light dark:border-border-dark',
-      'focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-none',
-      compact ? 'p-2.5' : 'p-3',
-      isPaused && 'opacity-60',
-    ]"
+    class="w-full text-left rounded-xl transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-none"
+    :class="[compact ? 'p-2.5' : 'p-3', isPaused && 'opacity-60']"
     :aria-label="`${subscription.name}, ${formatCurrency(subscription.amount, subscription.currency)}`"
     @click="handleClick"
   >
@@ -68,7 +61,13 @@ const frequencyLabel = computed(() =>
         class="flex items-center justify-center w-10 h-10 rounded-lg shrink-0"
         :style="{ backgroundColor: subscription.color + '20' }"
       >
-        <UIcon :name="subscription.icon" size="md" :style="{ color: subscription.color }" />
+        <BrandIcon
+          v-if="hasBrandIcon(subscription.icon)"
+          :name="subscription.icon"
+          size="md"
+          :style="{ color: subscription.color }"
+        />
+        <UIcon v-else :name="subscription.icon" size="md" :style="{ color: subscription.color }" />
       </div>
 
       <!-- Content -->

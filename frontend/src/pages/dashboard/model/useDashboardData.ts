@@ -11,11 +11,10 @@ import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { toLocalISODate } from '@/shared/lib/date';
 import { useFinancialPeriod } from '@/shared/lib/hooks/useFinancialPeriod';
 import type { WidgetId } from '@/shared/api/database.types';
-import { DEFAULT_WIDGET_ORDER } from '@/shared/config/dashboard';
+import { DEFAULT_WIDGET_ORDER, UPCOMING_SUBSCRIPTION_DAYS } from '@/shared/config/dashboard';
 import { DEFAULT_CURRENCY } from '@/shared/config/currency';
 
 const MIN_DAYS_FOR_SPENDING_METRICS = 7;
-const UPCOMING_SUBSCRIPTION_DAYS = 7;
 
 export function useDashboardData() {
   const { user, userId } = useCurrentUser();

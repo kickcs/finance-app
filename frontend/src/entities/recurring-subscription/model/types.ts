@@ -14,7 +14,7 @@ export interface RecurringSubscription {
   frequency: SubscriptionFrequency;
   frequency_days: number | null;
   billing_date: string;
-  notify_days_before: number;
+  notify_days_before: number[];
   category_id: string;
   auto_charge: boolean;
   status: SubscriptionStatus;
@@ -33,7 +33,7 @@ export interface RecurringSubscriptionInsert {
   frequency: SubscriptionFrequency;
   frequency_days?: number;
   billing_date: string;
-  notify_days_before?: number;
+  notify_days_before?: number[];
   category_id?: string;
   auto_charge?: boolean;
 }

@@ -11,12 +11,14 @@ import { RecurringSubscriptionsController } from './presentation/controllers';
 import { SubscriptionCronService } from './application/services/subscription-cron.service';
 import { TimezoneUserResolverService } from './application/services/timezone-user-resolver.service';
 import { NotificationModule } from '../notification/notification.module';
+import { AccountingModule } from '../accounting';
 
 @Module({
   imports: [
     CqrsModule,
     TypeOrmModule.forFeature([RecurringSubscriptionOrmEntity]),
     NotificationModule,
+    AccountingModule,
   ],
   controllers: [RecurringSubscriptionsController],
   providers: [

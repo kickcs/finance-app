@@ -20,7 +20,7 @@ function makeInitialFormData(): SubscriptionFormData {
     color: '#6366f1',
     frequency: 'monthly',
     billing_date: getTodayISO(),
-    notify_days_before: 2,
+    notify_days_before: [2],
     auto_charge: false,
     category_id: 'entertainment',
   };
@@ -44,8 +44,7 @@ export function useCreateSubscription(userId: MaybeRefOrGetter<string | null>) {
   const mutation = useMutation({
     mutationFn: (data: SubscriptionFormData) => recurringSubscriptionApi.create(data),
     onSuccess: () => {
-      const uid = toValue(userId);
-      if (uid) {
+      if (toValue(userId)) {
         queryClient.invalidateQueries({
           queryKey: recurringSubscriptionQueryKeys.all,
         });

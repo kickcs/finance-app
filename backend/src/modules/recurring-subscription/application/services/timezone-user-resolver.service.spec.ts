@@ -35,6 +35,9 @@ describe('TimezoneUserResolverService', () => {
     expect(sql).toContain('FROM profiles');
     expect(sql).toContain('AT TIME ZONE timezone');
     expect(sql).toMatch(/=\s*notification_hour/);
+    // Half-hour timezones require a sub-hour minute filter so users in
+    // Asia/Kolkata, Asia/Kathmandu, etc. are not dropped at hour boundaries.
+    expect(sql).toMatch(/EXTRACT\(MINUTE FROM NOW\(\) AT TIME ZONE timezone\)/);
   });
 
   it('should return [] when no rows match', async () => {

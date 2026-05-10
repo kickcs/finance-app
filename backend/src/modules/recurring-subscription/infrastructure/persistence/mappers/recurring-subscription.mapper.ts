@@ -6,6 +6,16 @@ import {
 import { RecurringSubscriptionOrmEntity } from '../typeorm/recurring-subscription.orm-entity';
 
 export class RecurringSubscriptionMapper {
+  // TypeORM returns PostgreSQL `date` columns as `YYYY-MM-DD` strings via the
+  // pg driver, even though the entity declares the field as `Date`. Normalise
+  // to a real UTC-midnight Date so all downstream domain math (which uses
+  // getUTC.../setUTC...) is type-safe.
+  private static toUtcDate(value: Date | string): Date {
+    if (value instanceof Date) return value;
+    const [y, m, d] = value.split('-').map(Number);
+    return new Date(Date.UTC(y, m - 1, d));
+  }
+
   static toDomain(ormEntity: RecurringSubscriptionOrmEntity): RecurringSubscription {
     return RecurringSubscription.reconstitute({
       id: ormEntity.id,
@@ -19,7 +29,7 @@ export class RecurringSubscriptionMapper {
       color: ormEntity.color,
       frequency: ormEntity.frequency as SubscriptionFrequency,
       frequencyDays: ormEntity.frequencyDays,
-      billingDate: ormEntity.billingDate,
+      billingDate: RecurringSubscriptionMapper.toUtcDate(ormEntity.billingDate),
       notifyDaysBefore: ormEntity.notifyDaysBefore,
       categoryId: ormEntity.categoryId,
       autoCharge: ormEntity.autoCharge,

@@ -11,7 +11,7 @@ import {
 } from '../../../domain/repositories';
 import { buildDedupKey } from '../../../../notification/domain/types';
 import { TimezoneUserResolverService } from '../../services/timezone-user-resolver.service';
-import { formatDateUTC, subtractDaysISO } from '../../../../../shared/utils/date';
+import { formatDateUTC, subtractDaysISO, todayInTz } from '../../../../../shared/utils/date';
 
 @CommandHandler(ProcessNotificationsCommand)
 export class ProcessNotificationsHandler implements ICommandHandler<ProcessNotificationsCommand> {
@@ -25,8 +25,7 @@ export class ProcessNotificationsHandler implements ICommandHandler<ProcessNotif
     private readonly pushNotificationService: IPushNotificationService,
   ) {}
 
-  async execute(command: ProcessNotificationsCommand): Promise<void> {
-    void command;
+  async execute(_command: ProcessNotificationsCommand): Promise<void> {
     const users = await this.timezoneUserResolver.getUsersDueForNotification();
     if (users.length === 0) return;
 
@@ -45,8 +44,7 @@ export class ProcessNotificationsHandler implements ICommandHandler<ProcessNotif
     const subscriptions = await this.subscriptionRepository.findActiveByUserId(userId);
     if (subscriptions.length === 0) return;
 
-    const now = new Date();
-    const todayInTz = new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(now);
+    const today = todayInTz(timezone);
 
     for (const subscription of subscriptions) {
       if (!subscription.notifyDaysBefore.length) continue;
@@ -54,15 +52,9 @@ export class ProcessNotificationsHandler implements ICommandHandler<ProcessNotif
       const billingDateStr = formatDateUTC(subscription.billingDate);
 
       for (const daysBefore of subscription.notifyDaysBefore) {
-        const notifyDateStr = subtractDaysISO(billingDateStr, daysBefore);
-        if (notifyDateStr !== todayInTz) continue;
+        if (subtractDaysISO(billingDateStr, daysBefore) !== today) continue;
 
-        const dedupKey = buildDedupKey(
-          'subscription_upcoming',
-          subscription.id,
-          todayInTz,
-          daysBefore,
-        );
+        const dedupKey = buildDedupKey('subscription_upcoming', subscription.id, today, daysBefore);
         const sent = await this.pushNotificationService.sendToUser(
           userId,
           {

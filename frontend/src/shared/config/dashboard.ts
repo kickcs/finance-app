@@ -1,5 +1,8 @@
 import type { WidgetId } from '@/shared/api/database.types';
 
+/** How far ahead to look for "upcoming" subscriptions on the dashboard. */
+export const UPCOMING_SUBSCRIPTION_DAYS = 31;
+
 export const DEFAULT_WIDGET_ORDER: WidgetId[] = [
   'quick_actions',
   'accounts',

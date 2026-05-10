@@ -4,7 +4,7 @@ export { UButton } from './button';
 export { UInput } from './input';
 export { UCard } from './card';
 export { UProgressBar } from './progress-bar';
-export { UIcon } from './icon';
+export { UIcon, BrandIcon, hasBrandIcon } from './icon';
 export { UTabs } from './tabs';
 export { UModal } from './modal';
 export { Skeleton, SkeletonListItem } from './primitives/skeleton';

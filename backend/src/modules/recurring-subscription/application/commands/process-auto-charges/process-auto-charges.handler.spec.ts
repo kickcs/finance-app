@@ -36,13 +36,16 @@ describe('ProcessAutoChargesHandler', () => {
   };
 
   let managerQueryMock: jest.Mock;
+  let managerSaveMock: jest.Mock;
   let dataSourceTransaction: jest.Mock;
   let mockDataSource: { transaction: jest.Mock };
 
   beforeEach(async () => {
     managerQueryMock = jest.fn();
+    managerSaveMock = jest.fn().mockResolvedValue(undefined);
+    const managerGetRepository = jest.fn(() => ({ save: managerSaveMock }));
     dataSourceTransaction = jest.fn((cb: (manager: unknown) => unknown) => {
-      return cb({ query: managerQueryMock });
+      return cb({ query: managerQueryMock, getRepository: managerGetRepository });
     });
     mockDataSource = { transaction: dataSourceTransaction };
 
@@ -97,19 +100,20 @@ describe('ProcessAutoChargesHandler', () => {
     // 2) INSERT notification_log → RETURNING id (recorded)
     // 3) SELECT account name
     managerQueryMock
-      .mockResolvedValueOnce([{ id: 'sub-1' }])
+      .mockResolvedValueOnce([{ id: 'sub-1', status: 'active' }])
       .mockResolvedValueOnce([{ id: 'log-id' }])
       .mockResolvedValueOnce([{ name: 'Visa' }]);
 
     mockCommandBus.execute.mockResolvedValue(undefined);
-    mockSubscriptionRepository.save.mockResolvedValue(subscription);
     mockPushService.sendToUser.mockResolvedValue(true);
 
     await handler.execute(new ProcessAutoChargesCommand());
 
     expect(dataSourceTransaction).toHaveBeenCalledTimes(1);
     expect(mockCommandBus.execute).toHaveBeenCalledTimes(1);
-    expect(mockSubscriptionRepository.save).toHaveBeenCalledTimes(1);
+    // BUG-6: save now goes through the locked manager, not the injected repo.
+    expect(managerSaveMock).toHaveBeenCalledTimes(1);
+    expect(mockSubscriptionRepository.save).not.toHaveBeenCalled();
     // billing advanced from 2026-05-08 → next month
     expect(subscription.billingDate.getUTCMonth()).toBe(5);
 
@@ -133,7 +137,7 @@ describe('ProcessAutoChargesHandler', () => {
     mockSubscriptionRepository.findActiveByUserId.mockResolvedValue([subscription]);
 
     managerQueryMock
-      .mockResolvedValueOnce([{ id: 'sub-1' }])
+      .mockResolvedValueOnce([{ id: 'sub-1', status: 'active' }])
       .mockResolvedValueOnce([{ id: 'log-id' }])
       .mockResolvedValueOnce([{ name: 'Visa' }]);
 
@@ -142,8 +146,9 @@ describe('ProcessAutoChargesHandler', () => {
 
     await handler.execute(new ProcessAutoChargesCommand());
 
-    // Save not called because transaction threw
+    // Save not called because transaction threw before reaching it
     expect(mockSubscriptionRepository.save).not.toHaveBeenCalled();
+    expect(managerSaveMock).not.toHaveBeenCalled();
     // Billing date was advanced in-memory before save threw, but since we never saved and the
     // aggregate is in-memory in this test, we accept either state. The contract is: DB rolled back.
     // Push was sent for failure
@@ -165,7 +170,29 @@ describe('ProcessAutoChargesHandler', () => {
     const subscription = buildSubscription(new Date('2026-05-08T00:00:00Z'));
     mockSubscriptionRepository.findActiveByUserId.mockResolvedValue([subscription]);
 
-    managerQueryMock.mockResolvedValueOnce([{ id: 'sub-1' }]).mockResolvedValueOnce([]); // tryRecord returns no row → already exists
+    managerQueryMock
+      .mockResolvedValueOnce([{ id: 'sub-1', status: 'active' }])
+      .mockResolvedValueOnce([]); // tryRecord returns no row → already exists
+
+    await handler.execute(new ProcessAutoChargesCommand());
+
+    expect(mockCommandBus.execute).not.toHaveBeenCalled();
+    expect(mockSubscriptionRepository.save).not.toHaveBeenCalled();
+    expect(mockPushService.sendToUser).not.toHaveBeenCalled();
+
+    jest.useRealTimers();
+  });
+
+  it('skips when locked row reports non-active status (race with pause)', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-05-08T12:00:00Z'));
+    mockResolver.getUsersDueForNotification.mockResolvedValue([
+      { userId: 'user-1', timezone: 'UTC', notificationHour: 12 },
+    ]);
+    const subscription = buildSubscription(new Date('2026-05-08T00:00:00Z'));
+    mockSubscriptionRepository.findActiveByUserId.mockResolvedValue([subscription]);
+
+    // Locked row says 'paused' — user paused between findActive and lock.
+    managerQueryMock.mockResolvedValueOnce([{ id: 'sub-1', status: 'paused' }]);
 
     await handler.execute(new ProcessAutoChargesCommand());
 

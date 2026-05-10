@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.49';
+export const CURRENT_VERSION = '1.0.50';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,21 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.50',
+    date: '2026-05-09',
+    title: 'Подписки: настоящие иконки сервисов',
+    items: [
+      {
+        type: 'feature',
+        text: 'Добавили официальные иконки для 30+ популярных сервисов: Netflix, Spotify, YouTube, Disney+, HBO Max, Apple Music, ChatGPT, GitHub, Notion, Figma, Steam, PlayStation, Duolingo и других.',
+      },
+      {
+        type: 'improvement',
+        text: 'Длинные названия сервисов теперь полностью видны при выборе — переносятся на две строки.',
+      },
+    ],
+  },
   {
     version: '1.0.49',
     date: '2026-05-08',

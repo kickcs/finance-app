@@ -25,7 +25,7 @@ export function useEditSubscription(
     color: '#6366f1',
     frequency: 'monthly',
     billing_date: '',
-    notify_days_before: 2,
+    notify_days_before: [2],
     auto_charge: false,
     category_id: 'entertainment',
   });

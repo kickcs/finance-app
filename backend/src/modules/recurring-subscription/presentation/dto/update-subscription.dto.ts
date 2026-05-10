@@ -9,7 +9,12 @@ import {
   IsArray,
   Min,
   Max,
+  ArrayUnique,
+  ArrayMaxSize,
+  Validate,
+  ValidateIf,
 } from 'class-validator';
+import { IsReasonableDateConstraint } from './create-subscription.dto';
 
 export class UpdateSubscriptionDto {
   @IsOptional()
@@ -46,20 +51,26 @@ export class UpdateSubscriptionDto {
   @IsIn(['weekly', 'monthly', 'quarterly', 'yearly', 'custom'])
   frequency?: string;
 
+  // Required when frequency is being set to 'custom'; otherwise null/undefined OK.
+  @ValidateIf((dto: UpdateSubscriptionDto, value) => dto.frequency === 'custom' || value !== null)
   @IsOptional()
   @IsInt()
   @Min(1)
+  @Max(3650)
   frequencyDays?: number | null;
 
   @IsOptional()
   @IsDateString()
+  @Validate(IsReasonableDateConstraint)
   billingDate?: string;
 
   @IsOptional()
   @IsArray()
+  @ArrayUnique()
+  @ArrayMaxSize(5)
   @IsInt({ each: true })
-  @Min(1, { each: true })
-  @Max(30, { each: true })
+  @Min(0, { each: true })
+  @Max(90, { each: true })
   notifyDaysBefore?: number[];
 
   @IsOptional()

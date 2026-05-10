@@ -1,6 +1,6 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { Inject, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { DataSource, EntityManager } from 'typeorm';
 import { CreateTransactionCommand } from './create-transaction.command';
 import { Transaction } from '../../../domain/aggregates/transaction';
 import { TransferDomainService } from '../../../domain/services';
@@ -14,6 +14,12 @@ import {
 } from '../../../domain/repositories/account.repository.interface';
 import { DomainEventPublisher } from '../../../../../shared';
 import { toTransactionResponse } from '../../helpers/to-transaction-response';
+import { AccountOrmEntity } from '../../../infrastructure/persistence/typeorm/account.orm-entity';
+import { AccountBalanceOrmEntity } from '../../../infrastructure/persistence/typeorm/account-balance.orm-entity';
+import { TransactionOrmEntity } from '../../../infrastructure/persistence/typeorm/transaction.orm-entity';
+import { AccountMapper } from '../../../infrastructure/persistence/mappers/account.mapper';
+import { TransactionMapper } from '../../../infrastructure/persistence/mappers/transaction.mapper';
+import { Account } from '../../../domain/aggregates/account';
 
 @CommandHandler(CreateTransactionCommand)
 export class CreateTransactionHandler implements ICommandHandler<CreateTransactionCommand> {
@@ -41,6 +47,8 @@ export class CreateTransactionHandler implements ICommandHandler<CreateTransacti
       toAmount,
       toCurrency,
       debtId,
+      feeAmount,
+      manager: outerManager,
     } = command;
 
     const transactionId = crypto.randomUUID();
@@ -84,7 +92,6 @@ export class CreateTransactionHandler implements ICommandHandler<CreateTransacti
       });
 
       // Create commission expense if fee specified
-      const feeAmount = command.feeAmount;
       let feeTransaction: Transaction | null = null;
 
       if (feeAmount && feeAmount > 0) {
@@ -103,15 +110,27 @@ export class CreateTransactionHandler implements ICommandHandler<CreateTransacti
         account.debit(feeAmount, currency);
       }
 
-      // Save all within a database transaction
-      await this.dataSource.transaction(async () => {
-        await this.accountRepository.save(account);
-        await this.accountRepository.save(toAccount);
-        await this.transactionRepository.save(transaction);
+      // Save all within a database transaction. If an outer manager was
+      // supplied we participate in that transaction via manager.getRepository.
+      // Otherwise we go through the injected default-connection repositories
+      // wrapped in our own transaction (existing behaviour).
+      if (outerManager) {
+        await this.persistAccount(outerManager, account);
+        await this.persistAccount(outerManager, toAccount);
+        await this.persistTransaction(outerManager, transaction);
         if (feeTransaction) {
-          await this.transactionRepository.save(feeTransaction);
+          await this.persistTransaction(outerManager, feeTransaction);
         }
-      });
+      } else {
+        await this.dataSource.transaction(async () => {
+          await this.accountRepository.save(account);
+          await this.accountRepository.save(toAccount);
+          await this.transactionRepository.save(transaction);
+          if (feeTransaction) {
+            await this.transactionRepository.save(feeTransaction);
+          }
+        });
+      }
 
       // Publish events after commit
       await this.eventPublisher.publishEvents(account);
@@ -154,11 +173,18 @@ export class CreateTransactionHandler implements ICommandHandler<CreateTransacti
         account.debit(amount, currency);
       }
 
-      // Save within a database transaction
-      await this.dataSource.transaction(async () => {
-        await this.accountRepository.save(account);
-        await this.transactionRepository.save(transaction);
-      });
+      // Save within a database transaction. If an outer manager was supplied,
+      // run the writes through it; otherwise fall back to the injected
+      // repositories inside their own transaction (existing behaviour).
+      if (outerManager) {
+        await this.persistAccount(outerManager, account);
+        await this.persistTransaction(outerManager, transaction);
+      } else {
+        await this.dataSource.transaction(async () => {
+          await this.accountRepository.save(account);
+          await this.transactionRepository.save(transaction);
+        });
+      }
 
       // Publish events after commit
       await this.eventPublisher.publishEvents(account);
@@ -166,5 +192,59 @@ export class CreateTransactionHandler implements ICommandHandler<CreateTransacti
     }
 
     return toTransactionResponse(transaction);
+  }
+
+  /**
+   * Persist an account aggregate via the supplied EntityManager. Mirrors the
+   * behaviour of `AccountRepository.save` so the same write semantics apply
+   * whether the call goes through the default-connection repository or an
+   * outer-transaction manager.
+   */
+  private async persistAccount(manager: EntityManager, account: Account): Promise<void> {
+    const accountRepo = manager.getRepository(AccountOrmEntity);
+    const balanceRepo = manager.getRepository(AccountBalanceOrmEntity);
+    const ormEntity = AccountMapper.toOrm(account);
+
+    await accountRepo.save({
+      id: ormEntity.id,
+      userId: ormEntity.userId,
+      name: ormEntity.name,
+      balance: ormEntity.balance,
+      currency: ormEntity.currency,
+      icon: ormEntity.icon,
+      color: ormEntity.color,
+      type: ormEntity.type,
+      order: ormEntity.order,
+      creditLimit: ormEntity.creditLimit,
+      gracePeriodDays: ormEntity.gracePeriodDays,
+      billingDay: ormEntity.billingDay,
+      totalAmount: ormEntity.totalAmount,
+      interestRate: ormEntity.interestRate,
+      monthlyPayment: ormEntity.monthlyPayment,
+      startDate: ormEntity.startDate,
+      endDate: ormEntity.endDate,
+      maturityDate: ormEntity.maturityDate,
+      isReplenishable: ormEntity.isReplenishable,
+      isWithdrawable: ormEntity.isWithdrawable,
+    });
+
+    if (ormEntity.balances.length > 0) {
+      const balanceRecords = ormEntity.balances.map((balance) => ({
+        id: balance.id,
+        accountId: ormEntity.id,
+        currency: balance.currency,
+        balance: balance.balance,
+      }));
+      await balanceRepo.upsert(balanceRecords, ['accountId', 'currency']);
+    }
+  }
+
+  private async persistTransaction(
+    manager: EntityManager,
+    transaction: Transaction,
+  ): Promise<void> {
+    const repo = manager.getRepository(TransactionOrmEntity);
+    const ormEntity = TransactionMapper.toOrm(transaction);
+    await repo.save(ormEntity);
   }
 }

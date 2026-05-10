@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { UIcon } from '@/shared/ui';
+import { UIcon, BrandIcon, hasBrandIcon } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { useHaptics } from '@/shared/lib/haptics';
 import type { RecurringSubscription } from '../model/types';
@@ -69,8 +69,7 @@ const calendarDays = computed(() => {
   const daysInMonth = lastDay.getDate();
 
   // Monday-based: getDay() returns 0=Sun, convert so Mon=0
-  let startOffset = firstDay.getDay() - 1;
-  if (startOffset < 0) startOffset = 6;
+  const startOffset = (firstDay.getDay() + 6) % 7;
 
   const cells: Array<{ day: number | null; subscriptions: RecurringSubscription[] }> = [];
 
@@ -222,7 +221,13 @@ function handleDayClick(day: number | null) {
           class="flex items-center gap-px flex-wrap justify-center"
         >
           <template v-for="sub in cell.subscriptions.slice(0, 3)" :key="sub.id">
-            <UIcon :name="sub.icon" size="xs" :style="{ color: sub.color }" />
+            <BrandIcon
+              v-if="hasBrandIcon(sub.icon)"
+              :name="sub.icon"
+              size="xs"
+              :style="{ color: sub.color }"
+            />
+            <UIcon v-else :name="sub.icon" size="xs" :style="{ color: sub.color }" />
           </template>
           <span
             v-if="cell.subscriptions.length > 3"

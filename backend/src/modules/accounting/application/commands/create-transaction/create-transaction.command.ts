@@ -1,3 +1,5 @@
+import type { EntityManager } from 'typeorm';
+
 export class CreateTransactionCommand {
   constructor(
     public readonly userId: string,
@@ -14,5 +16,12 @@ export class CreateTransactionCommand {
     public readonly toCurrency?: string,
     public readonly debtId?: string,
     public readonly feeAmount?: number,
+    /**
+     * Optional outer EntityManager. When provided, the handler reuses this
+     * manager instead of opening its own `dataSource.transaction(...)`. Lets
+     * callers (e.g. recurring auto-charge) compose this command into an
+     * outer transaction so failures roll back atomically.
+     */
+    public readonly manager?: EntityManager,
   ) {}
 }

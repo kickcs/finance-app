@@ -67,13 +67,17 @@ export async function invalidateDebtRelated(
 
 /**
  * Invalidate all subscription-related caches.
+ * Auto-charge debits an account and creates a transaction, so balances and
+ * transactions caches must also flush after any subscription mutation.
  */
 export async function invalidateSubscriptionRelated(
   queryClient: QueryClient,
-  _userId: string,
+  userId: string,
 ): Promise<void> {
   await Promise.all([
     queryClient.invalidateQueries({ queryKey: recurringSubscriptionQueryKeys.all }),
+    invalidateAccountRelated(queryClient, userId),
+    invalidateTransactionRelated(queryClient, userId),
   ]);
 }
 

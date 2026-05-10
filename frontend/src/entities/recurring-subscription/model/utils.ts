@@ -74,9 +74,7 @@ export function getNextBillingDate(
       next.setFullYear(next.getFullYear() + 1);
       break;
     case 'custom':
-      if (frequencyDays !== null && frequencyDays !== undefined && frequencyDays > 0) {
-        next.setDate(next.getDate() + frequencyDays);
-      }
+      next.setDate(next.getDate() + (frequencyDays && frequencyDays > 0 ? frequencyDays : 30));
       break;
   }
 
@@ -101,67 +99,25 @@ export function computeBillingDatesForMonth(
   const monthStart = new Date(year, month - 1, 1);
   const monthEnd = new Date(year, month, 0); // last day of month
 
-  // Parse anchor date (billing_date is stored as YYYY-MM-DD)
+  // Parse anchor date (billing_date is stored as YYYY-MM-DD).
+  // billing_date is the FIRST scheduled charge — never iterate before it.
   const [anchorYear, anchorMonth, anchorDay] = sub.billing_date.split('-').map(Number);
-  let anchor = new Date(anchorYear, anchorMonth - 1, anchorDay);
+  const firstBillingDate = new Date(anchorYear, anchorMonth - 1, anchorDay);
+
+  // Subscription hasn't started yet within this month — nothing to show.
+  if (firstBillingDate > monthEnd) return [];
 
   const results: string[] = [];
+  let current = new Date(firstBillingDate);
 
-  // If anchor is after the month end, rewind until we're at or before monthEnd
-  while (anchor > monthEnd) {
-    const prev = rewindByPeriod(anchor, sub.frequency, sub.frequency_days);
-    if (prev.getTime() === anchor.getTime()) break; // guard infinite loop for custom 0
-    anchor = prev;
-  }
-
-  // If anchor is before month start, advance until we reach monthStart or overshoot
-  while (anchor < monthStart) {
-    const next = getNextBillingDate(anchor, sub.frequency, sub.frequency_days);
-    if (next.getTime() === anchor.getTime()) break; // guard infinite loop
-    anchor = next;
-  }
-
-  // Collect all dates that fall within the month
-  let current = new Date(anchor);
   while (current <= monthEnd) {
+    const next = getNextBillingDate(current, sub.frequency, sub.frequency_days);
+    if (next.getTime() === current.getTime()) break; // guard infinite loop
     if (current >= monthStart) {
       results.push(toLocalISODate(current));
     }
-    const next = getNextBillingDate(current, sub.frequency, sub.frequency_days);
-    if (next.getTime() === current.getTime()) break; // guard infinite loop
     current = next;
   }
 
-  return results.sort();
-}
-
-/** Rewind a date by one period (inverse of getNextBillingDate). */
-function rewindByPeriod(
-  date: Date,
-  frequency: SubscriptionFrequency,
-  frequencyDays?: number | null,
-): Date {
-  const prev = new Date(date);
-
-  switch (frequency) {
-    case 'weekly':
-      prev.setDate(prev.getDate() - 7);
-      break;
-    case 'monthly':
-      prev.setMonth(prev.getMonth() - 1);
-      break;
-    case 'quarterly':
-      prev.setMonth(prev.getMonth() - 3);
-      break;
-    case 'yearly':
-      prev.setFullYear(prev.getFullYear() - 1);
-      break;
-    case 'custom':
-      if (frequencyDays !== null && frequencyDays !== undefined && frequencyDays > 0) {
-        prev.setDate(prev.getDate() - frequencyDays);
-      }
-      break;
-  }
-
-  return prev;
+  return results;
 }

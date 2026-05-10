@@ -2,17 +2,27 @@ import { computed, toValue, type MaybeRefOrGetter } from 'vue';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import { recurringSubscriptionQueryKeys } from './queryKeys';
 import { recurringSubscriptionApi } from './recurringSubscriptionApi';
+import { invalidateSubscriptionRelated } from '@/shared/api/invalidation';
+import { useExchangeRates } from '@/shared/api/composables/useExchangeRates';
 import type { RecurringSubscription, RecurringSubscriptionInsert } from '../model/types';
 
-export function useRecurringSubscriptions(userId: MaybeRefOrGetter<string | null>) {
+export function useRecurringSubscriptions(
+  userId: MaybeRefOrGetter<string | null>,
+  targetCurrency?: MaybeRefOrGetter<string | null>,
+) {
   const queryClient = useQueryClient();
+
+  // Resolve a non-null currency string for the exchange rates query; when no
+  // target currency is provided we still need a string but we won't actually
+  // call `convert` (see totalMonthlyAmount below).
+  const exchangeBaseCurrency = computed(() => toValue(targetCurrency) ?? 'USD');
+  const { convert } = useExchangeRates(exchangeBaseCurrency);
 
   const queryKey = computed(() => {
     const uid = toValue(userId);
     return uid ? recurringSubscriptionQueryKeys.list(uid) : recurringSubscriptionQueryKeys.all;
   });
 
-  // Main query
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: queryKey,
     queryFn: () => {
@@ -29,12 +39,11 @@ export function useRecurringSubscriptions(userId: MaybeRefOrGetter<string | null
     subscriptions.value.filter((s) => s.status === 'active'),
   );
 
-  /**
-   * Sum of all active subscriptions converted to a monthly-equivalent amount.
-   * weekly × ~4.33, quarterly ÷ 3, yearly ÷ 12, custom: amount / (days / 30.44)
-   * Only works meaningfully when all subscriptions share the same currency.
-   */
+  // Monthly-equivalent sum across active subscriptions, converted into
+  // `targetCurrency` when supplied. Without a target currency, sums raw
+  // amounts (legacy behavior, only meaningful for single-currency users).
   const totalMonthlyAmount = computed(() => {
+    const target = toValue(targetCurrency);
     return activeSubscriptions.value.reduce((sum, sub) => {
       let monthly: number;
       switch (sub.frequency) {
@@ -51,11 +60,7 @@ export function useRecurringSubscriptions(userId: MaybeRefOrGetter<string | null
           monthly = sub.amount / 12;
           break;
         case 'custom':
-          if (
-            sub.frequency_days !== null &&
-            sub.frequency_days !== undefined &&
-            sub.frequency_days > 0
-          ) {
+          if (sub.frequency_days && sub.frequency_days > 0) {
             monthly = sub.amount / (sub.frequency_days / 30.44);
           } else {
             monthly = sub.amount;
@@ -64,22 +69,20 @@ export function useRecurringSubscriptions(userId: MaybeRefOrGetter<string | null
         default:
           monthly = sub.amount;
       }
-      return sum + monthly;
+      const converted = target ? convert(monthly, sub.currency) : monthly;
+      return sum + converted;
     }, 0);
   });
 
-  // --- Invalidation helper ---
   function invalidateAll() {
     const uid = toValue(userId);
-    queryClient.invalidateQueries({ queryKey: queryKey.value });
     if (uid) {
-      queryClient.invalidateQueries({
-        queryKey: recurringSubscriptionQueryKeys.all,
-      });
+      invalidateSubscriptionRelated(queryClient, uid);
+    } else {
+      queryClient.invalidateQueries({ queryKey: queryKey.value });
     }
   }
 
-  // --- Create mutation ---
   const createMutation = useMutation({
     mutationFn: (data: RecurringSubscriptionInsert) => recurringSubscriptionApi.create(data),
     onMutate: async (newSub) => {
@@ -89,19 +92,20 @@ export function useRecurringSubscriptions(userId: MaybeRefOrGetter<string | null
       await queryClient.cancelQueries({ queryKey: queryKey.value });
       const previous = queryClient.getQueryData<RecurringSubscription[]>(queryKey.value);
 
+      const now = new Date().toISOString();
       const optimistic: RecurringSubscription = {
+        ...newSub,
         id: `temp-${Date.now()}`,
         user_id: uid,
         description: newSub.description ?? null,
         account_id: newSub.account_id ?? null,
         frequency_days: newSub.frequency_days ?? null,
-        notify_days_before: newSub.notify_days_before ?? 2,
+        notify_days_before: newSub.notify_days_before ?? [2],
         category_id: newSub.category_id ?? '',
         auto_charge: newSub.auto_charge ?? false,
         status: 'active',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        ...newSub,
+        created_at: now,
+        updated_at: now,
       };
 
       queryClient.setQueryData<RecurringSubscription[]>(queryKey.value, (old) => [
@@ -121,7 +125,6 @@ export function useRecurringSubscriptions(userId: MaybeRefOrGetter<string | null
     },
   });
 
-  // --- Update mutation ---
   const updateMutation = useMutation({
     mutationFn: ({ id, updates }: { id: string; updates: Partial<RecurringSubscription> }) =>
       recurringSubscriptionApi.update(id, updates),
@@ -146,7 +149,6 @@ export function useRecurringSubscriptions(userId: MaybeRefOrGetter<string | null
     },
   });
 
-  // --- Delete mutation ---
   const deleteMutation = useMutation({
     mutationFn: (id: string) => recurringSubscriptionApi.delete(id),
     onMutate: async (id) => {
@@ -170,7 +172,6 @@ export function useRecurringSubscriptions(userId: MaybeRefOrGetter<string | null
     },
   });
 
-  // --- Pause mutation ---
   const pauseMutation = useMutation({
     mutationFn: (id: string) => recurringSubscriptionApi.pause(id),
     onMutate: async (id) => {
@@ -194,7 +195,6 @@ export function useRecurringSubscriptions(userId: MaybeRefOrGetter<string | null
     },
   });
 
-  // --- Resume mutation ---
   const resumeMutation = useMutation({
     mutationFn: (id: string) => recurringSubscriptionApi.resume(id),
     onMutate: async (id) => {
@@ -218,38 +218,18 @@ export function useRecurringSubscriptions(userId: MaybeRefOrGetter<string | null
     },
   });
 
-  // --- Public helpers ---
-  async function createSubscription(data: RecurringSubscriptionInsert) {
-    return createMutation.mutateAsync(data);
-  }
-
-  async function updateSubscription(id: string, updates: Partial<RecurringSubscription>) {
-    return updateMutation.mutateAsync({ id, updates });
-  }
-
-  async function deleteSubscription(id: string) {
-    return deleteMutation.mutateAsync(id);
-  }
-
-  async function pauseSubscription(id: string) {
-    return pauseMutation.mutateAsync(id);
-  }
-
-  async function resumeSubscription(id: string) {
-    return resumeMutation.mutateAsync(id);
-  }
-
   return {
     subscriptions,
     activeSubscriptions,
     totalMonthlyAmount,
     isLoading,
     error,
-    createSubscription,
-    updateSubscription,
-    deleteSubscription,
-    pauseSubscription,
-    resumeSubscription,
+    createSubscription: (data: RecurringSubscriptionInsert) => createMutation.mutateAsync(data),
+    updateSubscription: (id: string, updates: Partial<RecurringSubscription>) =>
+      updateMutation.mutateAsync({ id, updates }),
+    deleteSubscription: (id: string) => deleteMutation.mutateAsync(id),
+    pauseSubscription: (id: string) => pauseMutation.mutateAsync(id),
+    resumeSubscription: (id: string) => resumeMutation.mutateAsync(id),
     refetch,
   };
 }

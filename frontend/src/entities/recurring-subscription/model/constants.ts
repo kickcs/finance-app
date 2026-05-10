@@ -4,15 +4,31 @@ export interface ServicePreset {
   color: string;
 }
 
+// Brand colors are official brand HEX values.
+// `icon` matches keys in `shared/ui/icon/brandIconPaths.ts`.
 export const SERVICE_PRESETS: Record<string, ServicePreset> = {
-  netflix: { name: 'Netflix', icon: 'netflix', color: '#e50914' },
+  // Видео
+  netflix: { name: 'Netflix', icon: 'netflix', color: '#E50914' },
+  youtube: { name: 'YouTube', icon: 'youtube', color: '#FF0000' },
+
+  // Музыка
   spotify: { name: 'Spotify', icon: 'spotify', color: '#1DB954' },
-  youtube: { name: 'YouTube Premium', icon: 'youtube', color: '#FF0000' },
-  apple_music: { name: 'Apple Music', icon: 'apple_music', color: '#FA2D48' },
-  icloud: { name: 'iCloud', icon: 'icloud', color: '#3498db' },
-  telegram: { name: 'Telegram Premium', icon: 'telegram', color: '#2AABEE' },
-  yandex_plus: { name: 'Яндекс Плюс', icon: 'yandex_plus', color: '#FFCC00' },
-  chatgpt: { name: 'ChatGPT Plus', icon: 'chatgpt', color: '#10A37F' },
+  apple_music: { name: 'Apple', icon: 'apple_music', color: '#FA2D48' },
+  yandex_plus: { name: 'Яндекс', icon: 'yandex_plus', color: '#FFCC00' },
+
+  // AI / Дизайн
+  chatgpt: { name: 'ChatGPT', icon: 'chatgpt', color: '#10A37F' },
+  figma: { name: 'Figma', icon: 'figma', color: '#F24E1E' },
+
+  // Облако
+  icloud: { name: 'iCloud', icon: 'icloud', color: '#3498DB' },
+
+  // Соцсети
+  telegram: { name: 'Telegram', icon: 'telegram', color: '#2AABEE' },
+  linkedin: { name: 'LinkedIn', icon: 'linkedin', color: '#0A66C2' },
+
+  // Игры
+  playstation: { name: 'PlayStation', icon: 'playstation', color: '#003791' },
 };
 
 export const FREQUENCY_LABELS: Record<string, string> = {

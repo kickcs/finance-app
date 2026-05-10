@@ -15,7 +15,12 @@ export class GetUpcomingSubscriptionsHandler implements IQueryHandler<GetUpcomin
   ) {}
 
   async execute(query: GetUpcomingSubscriptionsQuery) {
-    const subscriptions = await this.repository.findUpcoming(query.userId, query.days);
-    return SubscriptionResponseMapper.toResponseList(subscriptions);
+    const rows = await this.repository.findUpcoming(query.userId, query.days);
+    // Project nextDue into billingDate without mutating the aggregate, so
+    // updatedAt remains the real DB value (BUG-14).
+    return rows.map(({ subscription, nextDue }) => ({
+      ...SubscriptionResponseMapper.toResponse(subscription),
+      billingDate: nextDue,
+    }));
   }
 }

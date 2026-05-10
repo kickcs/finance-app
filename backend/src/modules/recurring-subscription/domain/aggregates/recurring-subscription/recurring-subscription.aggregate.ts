@@ -210,30 +210,58 @@ export class RecurringSubscription extends AggregateRoot<string> {
     this._updatedAt = new Date();
   }
 
+  /**
+   * Roll a billing anchor forward until it lands on or after `from`.
+   * Used when the stored billingDate is stale (auto-charge off, scheduler hasn't run).
+   *
+   * All arithmetic is performed in UTC to match the calendar-day semantics
+   * of the PostgreSQL `date` column (which is read back as a UTC-midnight Date).
+   */
+  static nextDueOnOrAfter(
+    anchor: Date,
+    from: Date,
+    frequency: SubscriptionFrequency,
+    frequencyDays: number | null,
+  ): Date {
+    // Normalise both ends to UTC midnight so comparisons are calendar-day clean.
+    let next = new Date(
+      Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth(), anchor.getUTCDate()),
+    );
+    const fromUtc = new Date(
+      Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), from.getUTCDate()),
+    );
+    for (let i = 0; next < fromUtc && i < 4000; i++) {
+      const advanced = RecurringSubscription.advanceDate(next, frequency, frequencyDays);
+      if (advanced.getTime() === next.getTime()) break;
+      next = advanced;
+    }
+    return next;
+  }
+
+  /**
+   * Advance a date by one period in UTC.
+   *
+   * For month/quarter/year frequencies, the original day-of-month is preserved
+   * when possible; if the target month is shorter, the result is clamped to
+   * that month's last day (so Jan 31 + 1mo = Feb 28/29, not Mar 3).
+   */
   static advanceDate(
     date: Date,
     frequency: SubscriptionFrequency,
     frequencyDays: number | null,
   ): Date {
-    const next = new Date(date);
     switch (frequency) {
       case 'weekly':
-        next.setDate(next.getDate() + 7);
-        break;
+        return RecurringSubscription.shiftDaysUtc(date, 7);
       case 'monthly':
-        next.setMonth(next.getMonth() + 1);
-        break;
+        return RecurringSubscription.shiftMonthsUtc(date, 1);
       case 'quarterly':
-        next.setMonth(next.getMonth() + 3);
-        break;
+        return RecurringSubscription.shiftMonthsUtc(date, 3);
       case 'yearly':
-        next.setFullYear(next.getFullYear() + 1);
-        break;
+        return RecurringSubscription.shiftMonthsUtc(date, 12);
       case 'custom':
-        next.setDate(next.getDate() + (frequencyDays ?? 30));
-        break;
+        return RecurringSubscription.shiftDaysUtc(date, frequencyDays ?? 30);
     }
-    return next;
   }
 
   static rewindDate(
@@ -241,24 +269,44 @@ export class RecurringSubscription extends AggregateRoot<string> {
     frequency: SubscriptionFrequency,
     frequencyDays: number | null,
   ): Date {
-    const prev = new Date(date);
     switch (frequency) {
       case 'weekly':
-        prev.setDate(prev.getDate() - 7);
-        break;
+        return RecurringSubscription.shiftDaysUtc(date, -7);
       case 'monthly':
-        prev.setMonth(prev.getMonth() - 1);
-        break;
+        return RecurringSubscription.shiftMonthsUtc(date, -1);
       case 'quarterly':
-        prev.setMonth(prev.getMonth() - 3);
-        break;
+        return RecurringSubscription.shiftMonthsUtc(date, -3);
       case 'yearly':
-        prev.setFullYear(prev.getFullYear() - 1);
-        break;
+        return RecurringSubscription.shiftMonthsUtc(date, -12);
       case 'custom':
-        prev.setDate(prev.getDate() - (frequencyDays ?? 30));
-        break;
+        return RecurringSubscription.shiftDaysUtc(date, -(frequencyDays ?? 30));
     }
-    return prev;
+  }
+
+  /**
+   * Add `days` to a date in UTC. Pure day arithmetic — no DST surprises.
+   */
+  private static shiftDaysUtc(date: Date, days: number): Date {
+    const next = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+    next.setUTCDate(next.getUTCDate() + days);
+    return next;
+  }
+
+  /**
+   * Add `months` (signed) to a date in UTC, preserving the original
+   * day-of-month and clamping to the last day of the target month if needed.
+   */
+  private static shiftMonthsUtc(date: Date, months: number): Date {
+    const day = date.getUTCDate();
+    // Pin to day 1 first so the intermediate setUTCMonth call cannot itself
+    // overflow (e.g. day 31 → month+1 → next-next month).
+    const next = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
+    next.setUTCMonth(next.getUTCMonth() + months);
+    // Last day of target month: day 0 of the following month.
+    const lastDay = new Date(
+      Date.UTC(next.getUTCFullYear(), next.getUTCMonth() + 1, 0),
+    ).getUTCDate();
+    next.setUTCDate(Math.min(day, lastDay));
+    return next;
   }
 }
