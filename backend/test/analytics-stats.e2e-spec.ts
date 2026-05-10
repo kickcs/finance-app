@@ -59,4 +59,31 @@ describe('TransactionRepository.getAnalyticsStats — debt-offset for regular ex
     const groceries = stats.categoryBreakdown.find((c) => c.categoryId === 'groceries');
     expect(groceries?.amount).toBe(30000);
   });
+
+  it('subtracts only the partially-returned amount from totalExpense', async () => {
+    const sourceTxId = await seedExpense({
+      ctx,
+      amount: 100000,
+      categoryId: 'groceries',
+      date: IN_RANGE,
+    });
+
+    const debt = await seedDebt({
+      ctx,
+      totalAmount: 70000,
+      remainingAmount: 40000,
+      debtType: 'given',
+      sourceTransactionId: sourceTxId,
+    });
+
+    await seedDebtReturn({ ctx, amount: 30000, date: IN_RANGE, debtId: debt, direction: 'to_me' });
+
+    const stats = await ctx.repository.getAnalyticsStats(ctx.userId, {
+      startDate: RANGE_START,
+      endDate: RANGE_END,
+    });
+
+    expect(stats.totalExpense).toBe(70000);
+    expect(stats.expenseByCurrency.UZS).toBe(70000);
+  });
 });
