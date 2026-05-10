@@ -118,4 +118,34 @@ describe('TransactionRepository.getAnalyticsStats — debt-offset for regular ex
     const groceries = stats.categoryBreakdown.find((c) => c.categoryId === 'groceries');
     expect(groceries).toBeUndefined();
   });
+
+  it('does not double-offset direct debt_given transactions', async () => {
+    // Direct debt: source_transaction_id points to a debt_given expense, not a regular one
+    const debtGivenTxId = await seedExpense({
+      ctx,
+      amount: 50000,
+      categoryId: 'debt_given',
+      date: IN_RANGE,
+    });
+
+    const debt = await seedDebt({
+      ctx,
+      totalAmount: 50000,
+      remainingAmount: 0,
+      debtType: 'given',
+      sourceTransactionId: debtGivenTxId,
+      isClosed: true,
+    });
+
+    await seedDebtReturn({ ctx, amount: 50000, date: IN_RANGE, debtId: debt, direction: 'to_me' });
+
+    const stats = await ctx.repository.getAnalyticsStats(ctx.userId, {
+      startDate: RANGE_START,
+      endDate: RANGE_END,
+    });
+
+    // Should be 0 (debtGiven 50k - returnsToMe 50k), not -50k (would happen on double-offset)
+    expect(stats.totalExpense).toBe(0);
+    expect(stats.expenseByCurrency.UZS).toBeUndefined();
+  });
 });
