@@ -148,4 +148,48 @@ describe('TransactionRepository.getAnalyticsStats — debt-offset for regular ex
     expect(stats.totalExpense).toBe(0);
     expect(stats.expenseByCurrency.UZS).toBeUndefined();
   });
+
+  it('offsets per-currency without bleeding into other currencies', async () => {
+    const usdSrc = await seedExpense({
+      ctx,
+      amount: 100,
+      categoryId: 'groceries',
+      date: IN_RANGE,
+      currency: 'USD',
+    });
+    await seedExpense({
+      ctx,
+      amount: 100000,
+      categoryId: 'groceries',
+      date: IN_RANGE,
+      currency: 'UZS',
+    });
+
+    const usdDebt = await seedDebt({
+      ctx,
+      totalAmount: 30,
+      remainingAmount: 0,
+      debtType: 'given',
+      sourceTransactionId: usdSrc,
+      isClosed: true,
+      currency: 'USD',
+    });
+    await seedDebtReturn({
+      ctx,
+      amount: 30,
+      date: IN_RANGE,
+      debtId: usdDebt,
+      direction: 'to_me',
+      currency: 'USD',
+    });
+
+    const stats = await ctx.repository.getAnalyticsStats(ctx.userId, {
+      startDate: RANGE_START,
+      endDate: RANGE_END,
+    });
+
+    expect(stats.expenseByCurrency.USD).toBe(70);
+    expect(stats.expenseByCurrency.UZS).toBe(100000);
+    expect(stats.totalExpense).toBe(100070); // 70 USD + 100000 UZS — both in scalar total
+  });
 });
