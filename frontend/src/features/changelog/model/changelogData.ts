@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.50';
+export const CURRENT_VERSION = '1.0.51';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,17 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.51',
+    date: '2026-05-10',
+    title: 'Аналитика: точная сумма расходов с долгами',
+    items: [
+      {
+        type: 'fix',
+        text: 'Общая сумма расходов в аналитике теперь корректно учитывает возвраты по разделённым тратам и сканированным чекам — раньше итог мог быть завышен, а суммы по категориям и графику расходов не сходились с шапкой.',
+      },
+    ],
+  },
   {
     version: '1.0.50',
     date: '2026-05-09',
