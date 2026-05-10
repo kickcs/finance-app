@@ -86,4 +86,36 @@ describe('TransactionRepository.getAnalyticsStats — debt-offset for regular ex
     expect(stats.totalExpense).toBe(70000);
     expect(stats.expenseByCurrency.UZS).toBe(70000);
   });
+
+  it('caps offset at source expense amount — never returns negative totalExpense', async () => {
+    const sourceTxId = await seedExpense({
+      ctx,
+      amount: 50000,
+      categoryId: 'groceries',
+      date: IN_RANGE,
+    });
+
+    const debt = await seedDebt({
+      ctx,
+      totalAmount: 50000,
+      remainingAmount: 0,
+      debtType: 'given',
+      sourceTransactionId: sourceTxId,
+      isClosed: true,
+    });
+
+    // Return is bigger than the source expense (could happen via combining returns
+    // from debts with different sources)
+    await seedDebtReturn({ ctx, amount: 80000, date: IN_RANGE, debtId: debt, direction: 'to_me' });
+
+    const stats = await ctx.repository.getAnalyticsStats(ctx.userId, {
+      startDate: RANGE_START,
+      endDate: RANGE_END,
+    });
+
+    expect(stats.totalExpense).toBe(0);
+    expect(stats.expenseByCurrency.UZS).toBeUndefined();
+    const groceries = stats.categoryBreakdown.find((c) => c.categoryId === 'groceries');
+    expect(groceries).toBeUndefined();
+  });
 });
