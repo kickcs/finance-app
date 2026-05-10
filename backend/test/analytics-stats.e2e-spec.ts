@@ -3,6 +3,7 @@ import {
   seedExpense,
   seedDebt,
   seedDebtReturn,
+  seedExtraAccount,
   type AnalyticsTestContext,
 } from './helpers/analytics-test-db';
 
@@ -191,5 +192,81 @@ describe('TransactionRepository.getAnalyticsStats — debt-offset for regular ex
     expect(stats.expenseByCurrency.USD).toBe(70);
     expect(stats.expenseByCurrency.UZS).toBe(100000);
     expect(stats.totalExpense).toBe(100070); // 70 USD + 100000 UZS — both in scalar total
+  });
+
+  it('respects accountIds filter on offsets', async () => {
+    const accountB = await seedExtraAccount(ctx);
+
+    const sourceTxId = await seedExpense({
+      ctx,
+      amount: 100000,
+      categoryId: 'groceries',
+      date: IN_RANGE,
+      accountId: ctx.accountId, // account A
+    });
+
+    const debt = await seedDebt({
+      ctx,
+      totalAmount: 50000,
+      remainingAmount: 0,
+      debtType: 'given',
+      sourceTransactionId: sourceTxId,
+      isClosed: true,
+      accountId: accountB,
+    });
+    // Return recorded on account B
+    await seedDebtReturn({
+      ctx,
+      amount: 50000,
+      date: IN_RANGE,
+      debtId: debt,
+      direction: 'to_me',
+      accountId: accountB,
+    });
+
+    // Filter by account A only — return on B should NOT offset A's expense
+    const stats = await ctx.repository.getAnalyticsStats(ctx.userId, {
+      startDate: RANGE_START,
+      endDate: RANGE_END,
+      accountIds: [ctx.accountId],
+    });
+
+    expect(stats.totalExpense).toBe(100000);
+    expect(stats.expenseByCurrency.UZS).toBe(100000);
+  });
+
+  it('ignores debt returns dated outside the analytics period', async () => {
+    const sourceTxId = await seedExpense({
+      ctx,
+      amount: 100000,
+      categoryId: 'groceries',
+      date: IN_RANGE, // April
+    });
+
+    const debt = await seedDebt({
+      ctx,
+      totalAmount: 50000,
+      remainingAmount: 0,
+      debtType: 'given',
+      sourceTransactionId: sourceTxId,
+      isClosed: true,
+    });
+
+    // Return is in May — outside the April range we'll query
+    await seedDebtReturn({
+      ctx,
+      amount: 50000,
+      date: new Date('2026-05-15T12:00:00Z'),
+      debtId: debt,
+      direction: 'to_me',
+    });
+
+    const stats = await ctx.repository.getAnalyticsStats(ctx.userId, {
+      startDate: RANGE_START,
+      endDate: RANGE_END,
+    });
+
+    expect(stats.totalExpense).toBe(100000);
+    expect(stats.expenseByCurrency.UZS).toBe(100000);
   });
 });

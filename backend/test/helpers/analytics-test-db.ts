@@ -75,7 +75,15 @@ export interface SeedExpenseInput {
 }
 
 export async function seedExpense(input: SeedExpenseInput): Promise<string> {
-  const { ctx, amount, categoryId, date, currency = 'UZS', isDebtRelated = false, debtId = null } = input;
+  const {
+    ctx,
+    amount,
+    categoryId,
+    date,
+    currency = 'UZS',
+    isDebtRelated = false,
+    debtId = null,
+  } = input;
   const id = randomUUID();
   await ctx.dataSource.getRepository(TransactionOrmEntity).insert({
     id,
@@ -144,9 +152,7 @@ export interface SeedDebtReturnInput {
 
 export async function seedDebtReturn(input: SeedDebtReturnInput): Promise<string> {
   const categoryId =
-    input.direction === 'to_me'
-      ? DEBT_CATEGORY_IDS.RETURN_TO_ME
-      : DEBT_CATEGORY_IDS.RETURN_FROM_ME;
+    input.direction === 'to_me' ? DEBT_CATEGORY_IDS.RETURN_TO_ME : DEBT_CATEGORY_IDS.RETURN_FROM_ME;
   return seedExpense({
     ctx: input.ctx,
     amount: input.amount,
@@ -157,4 +163,20 @@ export async function seedDebtReturn(input: SeedDebtReturnInput): Promise<string
     debtId: input.debtId,
     accountId: input.accountId,
   });
+}
+
+export async function seedExtraAccount(ctx: AnalyticsTestContext, currency = 'UZS'): Promise<string> {
+  const id = randomUUID();
+  await ctx.dataSource.getRepository(AccountOrmEntity).insert({
+    id,
+    userId: ctx.userId,
+    name: 'Extra Account',
+    balance: 0,
+    currency,
+    icon: 'wallet',
+    color: '#000000',
+    type: 'basic',
+    order: 1,
+  } as Partial<AccountOrmEntity>);
+  return id;
 }
