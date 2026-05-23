@@ -200,6 +200,7 @@ export type Database = {
           date: string;
           created_at: string;
           is_debt_related: boolean;
+          is_informational: boolean;
           debt_id: string | null;
           to_account_id: string | null;
           to_amount: number | null;
@@ -220,6 +221,7 @@ export type Database = {
           date: string;
           created_at?: string;
           is_debt_related?: boolean;
+          is_informational?: boolean;
           debt_id?: string | null;
           to_account_id?: string | null;
           to_amount?: number | null;
@@ -238,6 +240,7 @@ export type Database = {
           date?: string;
           created_at?: string;
           is_debt_related?: boolean;
+          is_informational?: boolean;
           debt_id?: string | null;
           to_account_id?: string | null;
           to_amount?: number | null;

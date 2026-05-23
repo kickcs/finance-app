@@ -66,4 +66,8 @@ export class CreateTransactionDto {
   @IsPositive({ message: 'Fee amount must be positive' })
   @Max(1_000_000_000_000)
   feeAmount?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  isInformational?: boolean;
 }

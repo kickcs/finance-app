@@ -34,6 +34,7 @@ export interface IDebtRepository {
   findById(id: string): Promise<Debt | null>;
   findByUserId(userId: string): Promise<Debt[]>;
   findByTransactionId(transactionId: string): Promise<Debt | null>;
+  findByCloseTransactionId(transactionId: string): Promise<Debt | null>;
   hasOpenDebtsForTransaction(transactionId: string): Promise<boolean>;
   save(debt: Debt): Promise<Debt>;
   delete(id: string): Promise<void>;

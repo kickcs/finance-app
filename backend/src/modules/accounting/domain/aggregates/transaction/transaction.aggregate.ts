@@ -18,6 +18,7 @@ export interface TransactionProps {
   description: string | null;
   date: Date;
   isDebtRelated: boolean;
+  isInformational: boolean;
   debtId: string | null;
   toAccountId: string | null;
   toAmount: Money | null;
@@ -36,6 +37,7 @@ export class Transaction extends AggregateRoot<string> {
   private _description: string | null;
   private _date: Date;
   private _isDebtRelated: boolean;
+  private _isInformational: boolean;
   private _debtId: string | null;
   private _toAccountId: string | null;
   private _toAmount: Money | null;
@@ -51,6 +53,7 @@ export class Transaction extends AggregateRoot<string> {
     this._description = props.description;
     this._date = props.date;
     this._isDebtRelated = props.isDebtRelated;
+    this._isInformational = props.isInformational;
     this._debtId = props.debtId;
     this._toAccountId = props.toAccountId;
     this._toAmount = props.toAmount;
@@ -71,6 +74,7 @@ export class Transaction extends AggregateRoot<string> {
     description?: string,
     isDebtRelated: boolean = false,
     debtId?: string,
+    isInformational: boolean = false,
   ): Transaction {
     const transaction = new Transaction({
       id,
@@ -82,6 +86,7 @@ export class Transaction extends AggregateRoot<string> {
       description: description || null,
       date,
       isDebtRelated,
+      isInformational,
       debtId: debtId ?? null,
       toAccountId: null,
       toAmount: null,
@@ -109,6 +114,7 @@ export class Transaction extends AggregateRoot<string> {
     description?: string,
     isDebtRelated: boolean = false,
     debtId?: string,
+    isInformational: boolean = false,
   ): Transaction {
     const transaction = new Transaction({
       id,
@@ -120,6 +126,7 @@ export class Transaction extends AggregateRoot<string> {
       description: description || null,
       date,
       isDebtRelated,
+      isInformational,
       debtId: debtId ?? null,
       toAccountId: null,
       toAmount: null,
@@ -167,6 +174,7 @@ export class Transaction extends AggregateRoot<string> {
       description: description || null,
       date,
       isDebtRelated: false,
+      isInformational: false,
       debtId: null,
       toAccountId,
       toAmount: Money.create(toAmount, toCurrency),
@@ -224,6 +232,7 @@ export class Transaction extends AggregateRoot<string> {
       description: description || null,
       date,
       isDebtRelated: isNegative,
+      isInformational: false,
       debtId: null,
       toAccountId: null,
       toAmount: null,
@@ -246,6 +255,18 @@ export class Transaction extends AggregateRoot<string> {
   }
 
   static reconstitute(props: TransactionProps): Transaction {
+    // Defense-in-depth: only income/expense rows are allowed to carry the
+    // informational flag. Transfers and adjustments move balances across one
+    // or two accounts and must always be reversed on delete — letting them be
+    // informational would let those balance moves silently leak.
+    if (
+      props.isInformational &&
+      (props.type.value === 'transfer' || props.type.value === 'adjustment')
+    ) {
+      throw new Error(
+        `Cannot reconstitute ${props.type.value} transaction with isInformational=true`,
+      );
+    }
     return new Transaction(props);
   }
 
@@ -292,6 +313,10 @@ export class Transaction extends AggregateRoot<string> {
 
   get isDebtRelated(): boolean {
     return this._isDebtRelated;
+  }
+
+  get isInformational(): boolean {
+    return this._isInformational;
   }
 
   get debtId(): string | null {

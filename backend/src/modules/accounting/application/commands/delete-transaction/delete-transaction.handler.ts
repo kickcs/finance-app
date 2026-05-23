@@ -48,8 +48,18 @@ export class DeleteTransactionHandler implements ICommandHandler<DeleteTransacti
       }
     }
 
-    // Get the account and reverse the transaction effect
-    const account = await this.accountRepository.findByIdWithBalances(transaction.accountId);
+    // Informational transactions never modified the account balance, so we skip
+    // the reversal step entirely. Loading the account is also unnecessary.
+    const account = transaction.isInformational
+      ? null
+      : await this.accountRepository.findByIdWithBalances(transaction.accountId);
+
+    // If this is the forgiveness info-tx attached to a closed debt, reverse the
+    // forgiveness on the debt side too — otherwise debts.close_transaction_id
+    // dangles (no FK) and the debt remains is_closed=true with no way to undo.
+    const linkedClosedDebt = transaction.isInformational
+      ? await this.debtRepository.findByCloseTransactionId(command.id)
+      : null;
 
     // Mark transaction as deleted (raises event)
     transaction.markDeleted();
@@ -81,12 +91,26 @@ export class DeleteTransactionHandler implements ICommandHandler<DeleteTransacti
         await this.accountRepository.save(account);
       }
 
+      if (linkedClosedDebt) {
+        const restoredRemaining = linkedClosedDebt.forgivenAmount;
+        linkedClosedDebt.update({
+          closeTransactionId: null,
+          forgivenAmount: 0,
+          isClosed: false,
+          remainingAmount: restoredRemaining,
+        });
+        await this.debtRepository.save(linkedClosedDebt);
+      }
+
       await this.transactionRepository.delete(command.id);
     });
 
     // Publish events after commit
     if (account) {
       await this.eventPublisher.publishEvents(account);
+    }
+    if (linkedClosedDebt) {
+      await this.eventPublisher.publishEvents(linkedClosedDebt);
     }
     await this.eventPublisher.publishEvents(transaction);
   }

@@ -20,6 +20,7 @@ import { TransactionOrmEntity } from '../../../infrastructure/persistence/typeor
 import { AccountMapper } from '../../../infrastructure/persistence/mappers/account.mapper';
 import { TransactionMapper } from '../../../infrastructure/persistence/mappers/transaction.mapper';
 import { Account } from '../../../domain/aggregates/account';
+import { DEBT_CATEGORY_IDS } from '../../../domain/constants/default-categories';
 
 @CommandHandler(CreateTransactionCommand)
 export class CreateTransactionHandler implements ICommandHandler<CreateTransactionCommand> {
@@ -49,10 +50,30 @@ export class CreateTransactionHandler implements ICommandHandler<CreateTransacti
       debtId,
       feeAmount,
       manager: outerManager,
+      isInformational,
     } = command;
 
     const transactionId = crypto.randomUUID();
     let transaction: Transaction;
+
+    // Cross-field guard: informational flag is reserved for the debt-forgiveness
+    // marker category, and forgiveness rows must be informational. Transfers can
+    // never be informational (Transaction.createTransfer hardcodes false anyway,
+    // but reject early so the contract is enforced at the API boundary too).
+    if (isInformational) {
+      if (type === 'transfer') {
+        throw new BadRequestException('Transfers cannot be informational');
+      }
+      if (categoryId !== DEBT_CATEGORY_IDS.FORGIVEN) {
+        throw new BadRequestException(
+          `Informational transactions are only allowed for category "${DEBT_CATEGORY_IDS.FORGIVEN}"`,
+        );
+      }
+    } else if (categoryId === DEBT_CATEGORY_IDS.FORGIVEN) {
+      throw new BadRequestException(
+        `Category "${DEBT_CATEGORY_IDS.FORGIVEN}" can only be used with isInformational=true`,
+      );
+    }
 
     // Get source account
     const account = await this.accountRepository.findByIdWithBalances(accountId);
@@ -155,8 +176,11 @@ export class CreateTransactionHandler implements ICommandHandler<CreateTransacti
           description,
           isDebtRelated,
           debtId,
+          isInformational,
         );
-        account.credit(amount, currency);
+        if (!isInformational) {
+          account.credit(amount, currency);
+        }
       } else {
         transaction = Transaction.createExpense(
           transactionId,
@@ -169,25 +193,34 @@ export class CreateTransactionHandler implements ICommandHandler<CreateTransacti
           description,
           isDebtRelated,
           debtId,
+          isInformational,
         );
-        account.debit(amount, currency);
+        if (!isInformational) {
+          account.debit(amount, currency);
+        }
       }
 
       // Save within a database transaction. If an outer manager was supplied,
       // run the writes through it; otherwise fall back to the injected
       // repositories inside their own transaction (existing behaviour).
       if (outerManager) {
-        await this.persistAccount(outerManager, account);
+        if (!isInformational) {
+          await this.persistAccount(outerManager, account);
+        }
         await this.persistTransaction(outerManager, transaction);
       } else {
         await this.dataSource.transaction(async () => {
-          await this.accountRepository.save(account);
+          if (!isInformational) {
+            await this.accountRepository.save(account);
+          }
           await this.transactionRepository.save(transaction);
         });
       }
 
       // Publish events after commit
-      await this.eventPublisher.publishEvents(account);
+      if (!isInformational) {
+        await this.eventPublisher.publishEvents(account);
+      }
       await this.eventPublisher.publishEvents(transaction);
     }
 

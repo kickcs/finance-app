@@ -23,5 +23,6 @@ export class CreateTransactionCommand {
      * outer transaction so failures roll back atomically.
      */
     public readonly manager?: EntityManager,
+    public readonly isInformational: boolean = false,
   ) {}
 }

@@ -296,6 +296,7 @@ describe('Transaction Aggregate', () => {
         description: 'Test',
         date: now,
         isDebtRelated: false,
+        isInformational: false,
         debtId: null,
         toAccountId: null,
         toAmount: null,

@@ -41,6 +41,7 @@ export class GetTransactionsByAccountWithIncomingHandler implements IQueryHandle
       description: t.description,
       date: t.date,
       isDebtRelated: t.isDebtRelated,
+      isInformational: t.isInformational,
       debtId: t.debtId,
       toAccountId: t.toAccountId,
       toAmount: t.toAmountValue,

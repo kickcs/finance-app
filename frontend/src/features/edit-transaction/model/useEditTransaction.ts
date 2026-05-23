@@ -13,6 +13,13 @@ export function useEditTransaction(userId: MaybeRefOrGetter<string | null>) {
   const error = ref<string | null>(null);
 
   async function update(transaction: Transaction, updates: Partial<Transaction>) {
+    // Informational records (e.g. debt forgiveness) are immutable — they have no balance
+    // impact and exist only as history. Editing would desync them from their source debt.
+    if (transaction.is_informational) {
+      error.value = 'Информационные записи нельзя редактировать';
+      return false;
+    }
+
     // Debt-related transactions cannot be edited (exclude adjustments which reuse is_debt_related as direction flag)
     if (transaction.is_debt_related && transaction.type !== 'adjustment') {
       error.value = 'Транзакции долгов нельзя редактировать. Управляйте долгом в разделе "Долги"';

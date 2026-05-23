@@ -221,6 +221,8 @@ export class TransactionsController {
         dto.toCurrency,
         dto.debtId,
         dto.feeAmount,
+        undefined,
+        dto.isInformational ?? false,
       ),
     );
   }

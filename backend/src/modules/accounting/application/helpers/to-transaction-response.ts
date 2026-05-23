@@ -12,6 +12,7 @@ export function toTransactionResponse(transaction: Transaction) {
     description: transaction.description,
     date: transaction.date,
     isDebtRelated: transaction.isDebtRelated,
+    isInformational: transaction.isInformational,
     debtId: transaction.debtId,
     toAccountId: transaction.toAccountId,
     toAmount: transaction.toAmountValue,

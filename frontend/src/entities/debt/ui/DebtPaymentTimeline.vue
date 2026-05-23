@@ -14,9 +14,12 @@ const props = defineProps<{
 
 const debtColor = computed(() => DEBT_DIRECTION_COLORS[props.debt.debt_type]);
 
-// Filter only payment transactions (exclude the creation transaction)
+// Filter only payment transactions: exclude the creation transaction AND any
+// informational records (forgiveness already gets its own timeline node below).
 const paymentTransactions = computed(() => {
-  return props.transactions.filter((t) => t.id !== props.debt.transaction_id);
+  return props.transactions.filter(
+    (t) => t.id !== props.debt.transaction_id && !t.is_informational,
+  );
 });
 </script>
 

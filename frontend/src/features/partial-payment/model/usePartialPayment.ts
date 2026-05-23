@@ -131,28 +131,46 @@ export function usePartialPayment() {
       // Remaining amount after payment (also used as forgiven amount when forgiving)
       const remainingAfterPayment = effectiveDebt.remaining_amount - actualPayment;
 
-      // 3. Create forgiveness expense transaction (gift)
-      // Only create balance-affecting forgiveness when debt has no source transaction,
-      // otherwise the money was already accounted for in the original expense
-      if (options?.forgiveRemainder) {
-        if (remainingAfterPayment > 0 && !hadBalanceEffect) {
-          const giftType = isGiven ? 'expense' : 'income';
-          const giftCategoryId = isGiven ? CATEGORY_IDS.GIFTS : CATEGORY_IDS.GIFTS_INCOME;
-          const tx = await transactionsApi.create({
-            user_id: userId,
-            account_id: selectedAccountId,
-            category_id: giftCategoryId,
-            amount: remainingAfterPayment,
-            currency: debtCurrency,
-            type: giftType,
-            description: `Прощение долга: ${getDebtDisplayName(effectiveDebt)}`,
-            date: new Date().toISOString(),
-            is_debt_related: false,
-          });
+      // 3. Create an informational forgiveness record (visible in feed, ignored by balance/analytics).
+      // Always created when there's a remainder to forgive — even when the original debt expense
+      // already moved money, because the user needs to see the forgiveness event in their history.
+      if (options?.forgiveRemainder && remainingAfterPayment > 0) {
+        const forgivenType = isGiven ? 'expense' : 'income';
+        const forgivenPayload = {
+          user_id: userId,
+          category_id: CATEGORY_IDS.DEBT_FORGIVEN,
+          amount: remainingAfterPayment,
+          currency: debtCurrency,
+          type: forgivenType,
+          description: `Прощение долга: ${getDebtDisplayName(effectiveDebt)}`,
+          date: new Date().toISOString(),
+          is_debt_related: false,
+          is_informational: true,
+          debt_id: effectiveDebt.id,
+        } as const;
 
-          if (!closeTransactionId) {
-            closeTransactionId = tx.id;
+        // debts.account_id has no FK in the DB — it can dangle if the account was deleted.
+        // We prefer debt.account_id (history accuracy) but retry on selectedAccountId if
+        // the first POST fails on a 404/403, so the partial-payment flow does not end up
+        // half-committed (payment-tx saved, debt not updated).
+        const primaryAccountId = effectiveDebt.account_id ?? selectedAccountId;
+        let tx: Awaited<ReturnType<typeof transactionsApi.create>>;
+        try {
+          tx = await transactionsApi.create({ ...forgivenPayload, account_id: primaryAccountId });
+        } catch (forgiveErr: unknown) {
+          const status = (forgiveErr as { status?: number } | null)?.status;
+          const isAccountIssue = status === 404 || status === 403;
+          if (!isAccountIssue || !selectedAccountId || selectedAccountId === primaryAccountId) {
+            throw forgiveErr;
           }
+          tx = await transactionsApi.create({
+            ...forgivenPayload,
+            account_id: selectedAccountId,
+          });
+        }
+
+        if (!closeTransactionId) {
+          closeTransactionId = tx.id;
         }
       }
 

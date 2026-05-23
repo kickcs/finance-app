@@ -34,6 +34,7 @@ function makeTx(overrides: Partial<Transaction> = {}): Transaction {
     date: '2025-06-01T00:00:00.000Z',
     created_at: '2025-06-01T12:00:00.000Z',
     is_debt_related: false,
+    is_informational: false,
     debt_id: null,
     to_account_id: null,
     to_amount: null,

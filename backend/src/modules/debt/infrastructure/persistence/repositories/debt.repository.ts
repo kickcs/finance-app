@@ -39,6 +39,14 @@ export class DebtRepository implements IDebtRepository {
     return DebtMapper.toDomain(ormEntity);
   }
 
+  async findByCloseTransactionId(transactionId: string): Promise<Debt | null> {
+    const ormEntity = await this.ormRepository.findOne({
+      where: { closeTransactionId: transactionId },
+    });
+    if (!ormEntity) return null;
+    return DebtMapper.toDomain(ormEntity);
+  }
+
   async hasOpenDebtsForTransaction(transactionId: string): Promise<boolean> {
     const count = await this.ormRepository.count({
       where: [

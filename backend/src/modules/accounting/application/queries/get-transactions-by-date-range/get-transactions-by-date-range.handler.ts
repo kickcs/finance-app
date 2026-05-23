@@ -31,6 +31,7 @@ export class GetTransactionsByDateRangeHandler implements IQueryHandler<GetTrans
       description: t.description,
       date: t.date,
       isDebtRelated: t.isDebtRelated,
+      isInformational: t.isInformational,
       debtId: t.debtId,
       toAccountId: t.toAccountId,
       toAmount: t.toAmountValue,

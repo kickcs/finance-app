@@ -1,5 +1,5 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { Inject, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Inject, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { UpdateTransactionCommand } from './update-transaction.command';
 import {
@@ -34,6 +34,13 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
 
     if (transaction.userId !== command.userId) {
       throw new ForbiddenException('Transaction does not belong to user');
+    }
+
+    // Informational transactions (e.g. debt forgiveness records) never touched account
+    // balances on creation, so any balance-affecting edit here would push the account
+    // by a phantom delta. Lock them to immutable.
+    if (transaction.isInformational) {
+      throw new BadRequestException('Informational transactions cannot be edited');
     }
 
     // Store old values for balance recalculation

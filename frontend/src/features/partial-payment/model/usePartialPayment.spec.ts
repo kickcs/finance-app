@@ -427,7 +427,7 @@ describe('usePartialPayment', () => {
   // ── Forgiveness ────────────────────────────────────────────────────────
 
   describe('forgiveness', () => {
-    it('creates forgiveness expense transaction for given debt with no transaction history', async () => {
+    it('creates informational expense forgiveness record for given debt with no transaction history', async () => {
       const txBodies: unknown[] = [];
       server.use(
         http.get('*/api/debts/:id', () =>
@@ -454,19 +454,85 @@ describe('usePartialPayment', () => {
       );
 
       const c = mountComposable();
-      // Forgive entire debt with no prior payment
       const result = await c.makePartialPayment(debtNoTransaction, 0, ACCOUNT_ID, USER_ID, {
         forgiveRemainder: true,
       });
       await flushPromises();
 
       expect(result).toBe(true);
-      // Forgiveness transaction should be expense (gift from creditor)
       const forgiveTx = txBodies.find(
-        (b) => (b as Record<string, unknown>).categoryId === CATEGORY_IDS.GIFTS,
+        (b) => (b as Record<string, unknown>).categoryId === CATEGORY_IDS.DEBT_FORGIVEN,
       ) as Record<string, unknown> | undefined;
       expect(forgiveTx).toBeDefined();
       expect(forgiveTx?.type).toBe('expense');
+      expect(forgiveTx?.isInformational).toBe(true);
+      expect(forgiveTx?.debtId).toBe(debtNoTransaction.id);
+    });
+
+    it('creates informational record for given debt WITH existing transaction_id', async () => {
+      const txBodies: unknown[] = [];
+      server.use(
+        http.post('*/api/transactions', async ({ request }) => {
+          const body = await request.json();
+          txBodies.push(body);
+          return HttpResponse.json({
+            ...mockTransactionResponse,
+            id: `tx-forg-${txBodies.length}`,
+          });
+        }),
+        http.patch('*/api/debts/:id', async ({ request, params }) => {
+          const body = (await request.json()) as Record<string, unknown>;
+          return HttpResponse.json({ ...mockGivenDebtResponse, id: params.id, ...body });
+        }),
+      );
+
+      const c = mountComposable();
+      const result = await c.makePartialPayment(givenDebt, 0, ACCOUNT_ID, USER_ID, {
+        forgiveRemainder: true,
+      });
+      await flushPromises();
+
+      expect(result).toBe(true);
+      const forgiveTx = txBodies.find(
+        (b) => (b as Record<string, unknown>).categoryId === CATEGORY_IDS.DEBT_FORGIVEN,
+      ) as Record<string, unknown> | undefined;
+      expect(forgiveTx).toBeDefined();
+      expect(forgiveTx?.type).toBe('expense');
+      expect(forgiveTx?.amount).toBe(givenDebt.remaining_amount);
+      expect(forgiveTx?.isInformational).toBe(true);
+      expect(forgiveTx?.accountId).toBe(givenDebt.account_id ?? ACCOUNT_ID);
+    });
+
+    it('creates informational income record for taken debt', async () => {
+      const txBodies: unknown[] = [];
+      server.use(
+        http.post('*/api/transactions', async ({ request }) => {
+          const body = await request.json();
+          txBodies.push(body);
+          return HttpResponse.json({
+            ...mockTransactionResponse,
+            id: `tx-forg-${txBodies.length}`,
+          });
+        }),
+        http.patch('*/api/debts/:id', async ({ request, params }) => {
+          const body = (await request.json()) as Record<string, unknown>;
+          return HttpResponse.json({ ...mockTakenDebtResponse, id: params.id, ...body });
+        }),
+      );
+
+      const c = mountComposable();
+      const result = await c.makePartialPayment(takenDebt, 0, ACCOUNT_ID, USER_ID, {
+        forgiveRemainder: true,
+      });
+      await flushPromises();
+
+      expect(result).toBe(true);
+      const forgiveTx = txBodies.find(
+        (b) => (b as Record<string, unknown>).categoryId === CATEGORY_IDS.DEBT_FORGIVEN,
+      ) as Record<string, unknown> | undefined;
+      expect(forgiveTx).toBeDefined();
+      expect(forgiveTx?.type).toBe('income');
+      expect(forgiveTx?.isInformational).toBe(true);
     });
 
     it('marks debt as closed after forgiveness', async () => {

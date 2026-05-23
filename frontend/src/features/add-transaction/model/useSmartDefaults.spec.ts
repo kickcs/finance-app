@@ -22,6 +22,7 @@ function makeTx(
     date: '2025-01-01T00:00:00.000Z',
     created_at: '2025-01-01T00:00:00.000Z',
     is_debt_related: false,
+    is_informational: false,
     debt_id: null,
     to_account_id: null,
     to_amount: null,

@@ -182,6 +182,7 @@ export const DEBT_CATEGORY_IDS = {
   TAKEN: 'debt_taken',
   RETURN_TO_ME: 'debt_return_to_me',
   RETURN_FROM_ME: 'debt_return_from_me',
+  FORGIVEN: 'debt_forgiven',
 } as const;
 
 export const ALL_DEBT_CATEGORY_IDS = Object.values(DEBT_CATEGORY_IDS);

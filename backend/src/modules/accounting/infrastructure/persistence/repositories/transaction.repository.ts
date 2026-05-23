@@ -412,27 +412,27 @@ export class TransactionRepository implements ITransactionRepository {
       .andWhere('t.date >= :startDate', { startDate })
       .andWhere('t.date < :endDate', { endDate })
       .select(
-        `SUM(CASE WHEN t.type = 'income' AND (t.is_debt_related = false OR t.is_debt_related IS NULL) AND t.category_id NOT IN (:...debtIds) THEN t.amount ELSE 0 END)`,
+        `SUM(CASE WHEN t.type = 'income' AND (t.is_debt_related = false OR t.is_debt_related IS NULL) AND (t.is_informational = false OR t.is_informational IS NULL) AND t.category_id NOT IN (:...debtIds) THEN t.amount ELSE 0 END)`,
         'regularIncome',
       )
       .addSelect(
-        `SUM(CASE WHEN t.type = 'expense' AND (t.is_debt_related = false OR t.is_debt_related IS NULL) AND t.category_id NOT IN (:...debtIds) THEN t.amount ELSE 0 END)`,
+        `SUM(CASE WHEN t.type = 'expense' AND (t.is_debt_related = false OR t.is_debt_related IS NULL) AND (t.is_informational = false OR t.is_informational IS NULL) AND t.category_id NOT IN (:...debtIds) THEN t.amount ELSE 0 END)`,
         'regularExpense',
       )
       .addSelect(
-        `SUM(CASE WHEN t.category_id = :debtGivenId THEN t.amount ELSE 0 END)`,
+        `SUM(CASE WHEN t.category_id = :debtGivenId AND (t.is_informational = false OR t.is_informational IS NULL) THEN t.amount ELSE 0 END)`,
         'debtGiven',
       )
       .addSelect(
-        `SUM(CASE WHEN t.category_id = :debtTakenId THEN t.amount ELSE 0 END)`,
+        `SUM(CASE WHEN t.category_id = :debtTakenId AND (t.is_informational = false OR t.is_informational IS NULL) THEN t.amount ELSE 0 END)`,
         'debtTaken',
       )
       .addSelect(
-        `SUM(CASE WHEN t.category_id = :debtReturnToMeId AND t.is_debt_related = true THEN t.amount ELSE 0 END)`,
+        `SUM(CASE WHEN t.category_id = :debtReturnToMeId AND t.is_debt_related = true AND (t.is_informational = false OR t.is_informational IS NULL) THEN t.amount ELSE 0 END)`,
         'debtReturnsToMe',
       )
       .addSelect(
-        `SUM(CASE WHEN t.category_id = :debtReturnFromMeId AND t.is_debt_related = true THEN t.amount ELSE 0 END)`,
+        `SUM(CASE WHEN t.category_id = :debtReturnFromMeId AND t.is_debt_related = true AND (t.is_informational = false OR t.is_informational IS NULL) THEN t.amount ELSE 0 END)`,
         'debtReturnsFromMe',
       )
       .setParameters(DEBT_PARAMS)
@@ -456,27 +456,27 @@ export class TransactionRepository implements ITransactionRepository {
       .andWhere('t.date < :endDate', { endDate })
       .select('t.currency', 'currency')
       .addSelect(
-        `SUM(CASE WHEN t.type = 'income' AND (t.is_debt_related = false OR t.is_debt_related IS NULL) AND t.category_id NOT IN (:...debtIds) THEN t.amount ELSE 0 END)`,
+        `SUM(CASE WHEN t.type = 'income' AND (t.is_debt_related = false OR t.is_debt_related IS NULL) AND (t.is_informational = false OR t.is_informational IS NULL) AND t.category_id NOT IN (:...debtIds) THEN t.amount ELSE 0 END)`,
         'regularIncome',
       )
       .addSelect(
-        `SUM(CASE WHEN t.type = 'expense' AND (t.is_debt_related = false OR t.is_debt_related IS NULL) AND t.category_id NOT IN (:...debtIds) THEN t.amount ELSE 0 END)`,
+        `SUM(CASE WHEN t.type = 'expense' AND (t.is_debt_related = false OR t.is_debt_related IS NULL) AND (t.is_informational = false OR t.is_informational IS NULL) AND t.category_id NOT IN (:...debtIds) THEN t.amount ELSE 0 END)`,
         'regularExpense',
       )
       .addSelect(
-        `SUM(CASE WHEN t.category_id = :debtGivenId THEN t.amount ELSE 0 END)`,
+        `SUM(CASE WHEN t.category_id = :debtGivenId AND (t.is_informational = false OR t.is_informational IS NULL) THEN t.amount ELSE 0 END)`,
         'debtGiven',
       )
       .addSelect(
-        `SUM(CASE WHEN t.category_id = :debtTakenId THEN t.amount ELSE 0 END)`,
+        `SUM(CASE WHEN t.category_id = :debtTakenId AND (t.is_informational = false OR t.is_informational IS NULL) THEN t.amount ELSE 0 END)`,
         'debtTaken',
       )
       .addSelect(
-        `SUM(CASE WHEN t.category_id = :debtReturnToMeId AND t.is_debt_related = true THEN t.amount ELSE 0 END)`,
+        `SUM(CASE WHEN t.category_id = :debtReturnToMeId AND t.is_debt_related = true AND (t.is_informational = false OR t.is_informational IS NULL) THEN t.amount ELSE 0 END)`,
         'debtReturnsToMe',
       )
       .addSelect(
-        `SUM(CASE WHEN t.category_id = :debtReturnFromMeId AND t.is_debt_related = true THEN t.amount ELSE 0 END)`,
+        `SUM(CASE WHEN t.category_id = :debtReturnFromMeId AND t.is_debt_related = true AND (t.is_informational = false OR t.is_informational IS NULL) THEN t.amount ELSE 0 END)`,
         'debtReturnsFromMe',
       )
       .setParameters(DEBT_PARAMS)
@@ -517,12 +517,15 @@ export class TransactionRepository implements ITransactionRepository {
     const { startDate, endDate, accountIds } = options;
 
     // Base query builder helper (without debt filter)
+    // Informational transactions are excluded from all analytics — they exist
+    // only for display in the transactions feed and never affect totals.
     const createBaseQuery = () => {
       let query = this.ormRepository
         .createQueryBuilder('t')
         .where('t.user_id = :userId', { userId })
         .andWhere('t.date >= :startDate', { startDate })
-        .andWhere('t.date <= :endDate', { endDate });
+        .andWhere('t.date <= :endDate', { endDate })
+        .andWhere('(t.is_informational = false OR t.is_informational IS NULL)');
 
       if (accountIds && accountIds.length > 0) {
         query = query.andWhere('t.account_id IN (:...accountIds)', {
@@ -594,6 +597,13 @@ export class TransactionRepository implements ITransactionRepository {
             debtReturnsFromMeByCurrency[row.currency] =
               (debtReturnsFromMeByCurrency[row.currency] || 0) + amount;
           }
+          continue;
+        case DEBT_CATEGORY_IDS.FORGIVEN:
+          // Forgiveness rows in this category exist only as bookkeeping markers.
+          // Informational ones are filtered upstream (createBaseQuery); any stray
+          // non-informational row with this category is still semantically a
+          // forgiveness event, not part of regular spending — drop it from totals
+          // rather than letting it leak into regularIncome/Expense.
           continue;
       }
 
@@ -821,6 +831,7 @@ export class TransactionRepository implements ITransactionRepository {
       .andWhere('t.date <= :endDate', { endDate })
       .andWhere('t.type IN (:...types)', { types: ['income', 'expense'] })
       .andWhere('(t.is_debt_related = false OR t.is_debt_related IS NULL)')
+      .andWhere('(t.is_informational = false OR t.is_informational IS NULL)')
       .andWhere('t.category_id NOT IN (:...debtIds)', { debtIds: ALL_DEBT_CATEGORY_IDS });
 
     if (accountIds && accountIds.length > 0) {
@@ -845,6 +856,7 @@ export class TransactionRepository implements ITransactionRepository {
       )
       .where('return_tx.user_id = :userId', { userId })
       .andWhere('return_tx.is_debt_related = true')
+      .andWhere('(return_tx.is_informational = false OR return_tx.is_informational IS NULL)')
       .andWhere('return_tx.category_id IN (:...returnCategoryIds)', {
         returnCategoryIds: [DEBT_CATEGORY_IDS.RETURN_TO_ME, DEBT_CATEGORY_IDS.RETURN_FROM_ME],
       })
@@ -1018,6 +1030,7 @@ export class TransactionRepository implements ITransactionRepository {
       .where('return_tx.user_id = :userId', { userId })
       .andWhere('return_tx.date >= :startDate', { startDate })
       .andWhere('return_tx.date <= :endDate', { endDate })
+      .andWhere('(return_tx.is_informational = false OR return_tx.is_informational IS NULL)')
       .andWhere('return_tx.category_id = :returnToMeId', {
         returnToMeId: DEBT_CATEGORY_IDS.RETURN_TO_ME,
       });

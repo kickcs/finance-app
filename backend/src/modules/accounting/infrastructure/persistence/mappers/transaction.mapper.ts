@@ -15,6 +15,7 @@ export class TransactionMapper {
       description: ormEntity.description,
       date: ormEntity.date,
       isDebtRelated: ormEntity.isDebtRelated,
+      isInformational: ormEntity.isInformational,
       debtId: ormEntity.debtId,
       toAccountId: ormEntity.toAccountId,
       toAmount:
@@ -38,6 +39,7 @@ export class TransactionMapper {
     ormEntity.description = transaction.description;
     ormEntity.date = transaction.date;
     ormEntity.isDebtRelated = transaction.isDebtRelated;
+    ormEntity.isInformational = transaction.isInformational;
     ormEntity.debtId = transaction.debtId;
     ormEntity.toAccountId = transaction.toAccountId;
     ormEntity.toAmount = transaction.toAmountValue;

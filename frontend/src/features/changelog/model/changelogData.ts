@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.52';
+export const CURRENT_VERSION = '1.0.53';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,21 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.53',
+    date: '2026-05-23',
+    title: 'Прощение долга в ленте',
+    items: [
+      {
+        type: 'feature',
+        text: 'Когда вы прощаете долг, в ленте транзакций появляется информационная запись со значком «Прощено». Она не влияет на баланс счёта и не учитывается в месячной статистике — просто фиксирует факт прощения для истории.',
+      },
+      {
+        type: 'fix',
+        text: 'Старые прощённые долги задним числом получили такую же информационную запись с правильной датой закрытия, чтобы их было легко найти в истории трат.',
+      },
+    ],
+  },
   {
     version: '1.0.52',
     date: '2026-05-23',
