@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.51';
+export const CURRENT_VERSION = '1.0.52';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,17 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.52',
+    date: '2026-05-23',
+    title: 'Фикс быстрых действий',
+    items: [
+      {
+        type: 'fix',
+        text: 'Быстрые действия больше не открывают форму добавления долга: при клике на действие без указанной суммы теперь корректно открывается форма расхода с предзаполненной категорией.',
+      },
+    ],
+  },
   {
     version: '1.0.51',
     date: '2026-05-10',
