@@ -12,7 +12,8 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
-  BUN_VERSION: '1.2.4'
+  # 1.2.15+ required for `bun audit`
+  BUN_VERSION: '1.2.15'
   REGISTRY: ghcr.io
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
@@ -105,6 +106,11 @@ jobs:
         working-directory: backend
         run: bun install --frozen-lockfile
 
+      - name: Audit backend dependencies
+        working-directory: backend
+        run: bun audit --audit-level=high
+        continue-on-error: true
+
       - name: Backend lint
         working-directory: backend
         run: bun run lint
@@ -112,6 +118,14 @@ jobs:
       - name: Backend tests
         working-directory: backend
         run: bun run test
+
+      - name: Apply migrations for E2E
+        working-directory: backend
+        run: bun run migration:run
+
+      - name: Backend E2E tests
+        working-directory: backend
+        run: bun run test:e2e
 
       - name: Set up Docker Buildx
         if: (github.event_name == 'push' && github.ref == 'refs/heads/master') || github.event_name == 'workflow_dispatch'
@@ -187,6 +201,11 @@ jobs:
         working-directory: frontend
         run: bun install --frozen-lockfile
 
+      - name: Audit frontend dependencies
+        working-directory: frontend
+        run: bun audit --audit-level=high
+        continue-on-error: true
+
       - name: Frontend tests
         working-directory: frontend
         run: bun run test
@@ -259,13 +278,25 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Copy files to server
+        env:
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+          SSH_HOST: ${{ secrets.SERVER_HOST }}
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+          # Prefer the pinned host key from secrets to defend against MITM on
+          # first connection. Fall back to ssh-keyscan with a warning so the
+          # pipeline keeps working until the secret is configured.
+          if [ -n "$SSH_KNOWN_HOSTS" ]; then
+            printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          else
+            echo "::warning::SSH_KNOWN_HOSTS secret not set — trusting host on first connect (MITM risk)"
+            ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          fi
+          chmod 644 ~/.ssh/known_hosts
           rsync -avz --relative -e "ssh -i ~/.ssh/deploy_key" \
-            docker-compose.prod.yml docker/postgres/init.sql docker/alloy/config.alloy \
+            docker-compose.prod.yml docker/postgres/init.sql docker/alloy/config.alloy docker/env.prod.template \
             ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:~/finance-app/
           rm -f ~/.ssh/deploy_key
 
@@ -307,47 +338,39 @@ jobs:
             set -e
             cd ~/finance-app
 
+            # Capture currently-deployed tag for potential rollback
+            PREVIOUS_TAG=""
+            if [ -f .env ]; then
+              PREVIOUS_TAG=$(grep -oP '^\s*GHCR_IMAGE_TAG=\K\S+' .env || echo "")
+            fi
+
             # Preserve previous image tag if no new images were built
             if [ "$BACKEND_CHANGED" = "true" ] || [ "$FRONTEND_CHANGED" = "true" ]; then
               IMAGE_TAG=$GHCR_IMAGE_TAG
-            elif [ -f .env ]; then
-              IMAGE_TAG=$(grep -oP '^\s*GHCR_IMAGE_TAG=\K\S+' .env || echo "$GHCR_IMAGE_TAG")
+            elif [ -n "$PREVIOUS_TAG" ]; then
+              IMAGE_TAG=$PREVIOUS_TAG
             else
               IMAGE_TAG=$GHCR_IMAGE_TAG
             fi
 
-            # Create/update environment file (sed strips leading whitespace)
-            sed 's/^ *//' > .env << EOF
-            GITHUB_REPOSITORY=$GITHUB_REPOSITORY
-            GHCR_IMAGE_TAG=$IMAGE_TAG
-            DATABASE_NAME=my_finance
-            DATABASE_USERNAME=postgres
-            DATABASE_PASSWORD=$DATABASE_PASSWORD
-            JWT_SECRET=$JWT_SECRET
-            JWT_EXPIRES_IN=15m
-            JWT_REFRESH_EXPIRES_IN=7d
-            CORS_ORIGIN=$CORS_ORIGIN
-            DATABASE_SYNCHRONIZE=false
-            LEMONSQUEEZY_API_KEY=$LEMONSQUEEZY_API_KEY
-            LEMONSQUEEZY_WEBHOOK_SECRET=$LEMONSQUEEZY_WEBHOOK_SECRET
-            LEMONSQUEEZY_STORE_ID=$LEMONSQUEEZY_STORE_ID
-            LEMONSQUEEZY_PREMIUM_MONTHLY_VARIANT_ID=$LEMONSQUEEZY_PREMIUM_MONTHLY_VARIANT_ID
-            LEMONSQUEEZY_PREMIUM_YEARLY_VARIANT_ID=$LEMONSQUEEZY_PREMIUM_YEARLY_VARIANT_ID
-            OPENAI_API_KEY=$OPENAI_API_KEY
-            VAPID_PUBLIC_KEY=$VAPID_PUBLIC_KEY
-            VAPID_PRIVATE_KEY=$VAPID_PRIVATE_KEY
-            VAPID_SUBJECT=$VAPID_SUBJECT
-            GRAFANA_CLOUD_API_KEY=$GRAFANA_CLOUD_API_KEY
-            GRAFANA_CLOUD_PROMETHEUS_URL=$GRAFANA_CLOUD_PROMETHEUS_URL
-            GRAFANA_CLOUD_PROMETHEUS_USER=$GRAFANA_CLOUD_PROMETHEUS_USER
-            GRAFANA_CLOUD_LOKI_URL=$GRAFANA_CLOUD_LOKI_URL
-            GRAFANA_CLOUD_LOKI_USER=$GRAFANA_CLOUD_LOKI_USER
-            GRAFANA_CLOUD_TEMPO_URL=$GRAFANA_CLOUD_TEMPO_URL
-            GRAFANA_CLOUD_TEMPO_USER=$GRAFANA_CLOUD_TEMPO_USER
-            OTEL_EXPORTER_OTLP_ENDPOINT=http://finance-alloy:4317
-            EOF
-
+            # Render .env from the versioned template. envsubst only substitutes
+            # ${VAR} placeholders for variables exported in this shell — adding a new
+            # required env var means updating both docker/env.prod.template AND the
+            # `envs:` whitelist above.
+            export GHCR_IMAGE_TAG="$IMAGE_TAG"
+            if [ ! -f docker/env.prod.template ]; then
+              echo "::error::docker/env.prod.template missing on server — rsync step failed?"
+              exit 1
+            fi
+            envsubst < docker/env.prod.template > .env
             chmod 600 .env
+
+            # Sanity-check: every placeholder should have been resolved.
+            if grep -qE '\$\{[A-Z_]+\}' .env; then
+              echo "::error::Unresolved \${VAR} placeholders in .env — missing exports:"
+              grep -nE '\$\{[A-Z_]+\}' .env
+              exit 1
+            fi
 
             # Login to GitHub Container Registry
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
@@ -408,41 +431,143 @@ jobs:
                 npx typeorm migration:run -d dist/config/data-source.js
             fi
 
-            # Recreate services, wait for health checks
-            docker compose -f docker-compose.prod.yml up -d --no-deps --force-recreate --wait --wait-timeout 60 $RESTART_SERVICES
+            # Recreate services, wait for health checks. On failure, roll back to the
+            # previously deployed tag (if we have one and it differs from the new tag).
+            # Note: this rolls back the image only — database migrations are not reverted,
+            # so all migrations must remain backward-compatible with the previous release.
+            if ! docker compose -f docker-compose.prod.yml up -d --no-deps --force-recreate --wait --wait-timeout 90 $RESTART_SERVICES; then
+              echo "::error::Deploy failed health check"
+              docker compose -f docker-compose.prod.yml ps
+              docker compose -f docker-compose.prod.yml logs --tail=80 $RESTART_SERVICES || true
 
-            # Clean up old images (fire-and-forget, detached from SSH session)
-            nohup sh -c '
+              if [ -n "$PREVIOUS_TAG" ] && [ "$PREVIOUS_TAG" != "$IMAGE_TAG" ]; then
+                echo "Rolling back to previous tag: $PREVIOUS_TAG"
+                sed -i "s|^GHCR_IMAGE_TAG=.*|GHCR_IMAGE_TAG=$PREVIOUS_TAG|" .env
+                if docker compose -f docker-compose.prod.yml up -d --no-deps --force-recreate --wait --wait-timeout 60 $RESTART_SERVICES; then
+                  echo "::warning::Rolled back to $PREVIOUS_TAG"
+                else
+                  echo "::error::Rollback also failed — manual intervention required"
+                fi
+              else
+                # Same-tag redeploy (workflow_dispatch on current SHA, or empty .env).
+                # --force-recreate has already destroyed the prior containers, so try to
+                # bring them back up without recreating again to recover from a transient
+                # health-check flake. If this also fails, manual intervention is required.
+                echo "::warning::No different previous tag available — attempting in-place restart"
+                if docker compose -f docker-compose.prod.yml up -d --no-deps --wait --wait-timeout 60 $RESTART_SERVICES; then
+                  echo "::warning::Recovered after retry"
+                else
+                  echo "::error::Recovery failed — manual intervention required"
+                fi
+              fi
+              exit 1
+            fi
+
+            # Post-deploy smoke check. Scope to what was actually redeployed so an
+            # unrelated backend outage cannot trigger a false rollback of a healthy
+            # frontend-only release.
+            SMOKE_FAILED=0
+            if [ "$BACKEND_CHANGED" = "true" ] || [ "$INFRA_CHANGED" = "true" ]; then
+              # Backend was touched: verify /api/health through nginx (covers full stack).
+              if ! docker compose -f docker-compose.prod.yml exec -T frontend \
+                  wget --no-verbose --tries=2 --spider http://127.0.0.1:80/api/health 2>/dev/null; then
+                echo "::error::Smoke check failed: /api/health not reachable through nginx"
+                docker compose -f docker-compose.prod.yml logs --tail=40 backend frontend || true
+                SMOKE_FAILED=1
+              fi
+            elif [ "$FRONTEND_CHANGED" = "true" ]; then
+              # Frontend-only deploy: only verify nginx is serving, do not depend on backend.
+              if ! docker compose -f docker-compose.prod.yml exec -T frontend \
+                  wget --no-verbose --tries=2 --spider http://127.0.0.1:80/health 2>/dev/null; then
+                echo "::error::Smoke check failed: nginx /health not reachable"
+                docker compose -f docker-compose.prod.yml logs --tail=40 frontend || true
+                SMOKE_FAILED=1
+              fi
+            fi
+            if [ "$SMOKE_FAILED" = "1" ]; then
+              exit 1
+            fi
+
+            # Clean up old images (fire-and-forget, detached from SSH session).
+            # docker images does not expand middle wildcards in the reference filter,
+            # so we filter by the concrete repository derived from GITHUB_REPOSITORY.
+            REPO_LC=$(echo "ghcr.io/$GITHUB_REPOSITORY" | tr '[:upper:]' '[:lower:]')
+            nohup sh -c "
               for svc in backend frontend; do
-                docker images "ghcr.io/*/finance-app/$svc" --format "{{.ID}} {{.CreatedAt}}" \
-                  | sort -k2 -r | tail -n +4 | awk "{print \$1}" \
+                docker images '${REPO_LC}/'\$svc --format '{{.ID}} {{.CreatedAt}}' \
+                  | sort -k2 -r | tail -n +4 | awk '{print \$1}' \
                   | xargs -r docker rmi -f 2>/dev/null || true
               done
               docker image prune -f > /dev/null 2>&1
-            ' > /dev/null 2>&1 &
+            " > /dev/null 2>&1 &
 
-      - name: Telegram notification
-        if: always()
+  # ===================
+  # Notify Telegram about the final pipeline state.
+  # Runs even when an upstream job fails, so red master builds are visible.
+  # ===================
+  notify:
+    name: Notify
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    needs: [changes, build-backend, build-frontend, deploy]
+    # Notify for both master pushes and manual workflow_dispatch runs;
+    # PRs from feature branches stay quiet.
+    if: |
+      always() &&
+      ((github.event_name == 'push' && github.ref == 'refs/heads/master') ||
+       github.event_name == 'workflow_dispatch')
+    steps:
+      - name: Determine pipeline status
+        id: status
+        env:
+          BACKEND_RESULT: ${{ needs.build-backend.result }}
+          FRONTEND_RESULT: ${{ needs.build-frontend.result }}
+          DEPLOY_RESULT: ${{ needs.deploy.result }}
+        run: |
+          # Treat any failure/cancellation as a red build. "skipped" is benign
+          # (paths-filter said nothing to build) and we don't notify in that case.
+          if [ "$BACKEND_RESULT" = "failure" ] || [ "$FRONTEND_RESULT" = "failure" ] || [ "$DEPLOY_RESULT" = "failure" ]; then
+            echo "status=failure" >> "$GITHUB_OUTPUT"
+            FAILED=""
+            [ "$BACKEND_RESULT" = "failure" ] && FAILED="$FAILED backend"
+            [ "$FRONTEND_RESULT" = "failure" ] && FAILED="$FAILED frontend"
+            [ "$DEPLOY_RESULT" = "failure" ] && FAILED="$FAILED deploy"
+            echo "failed_jobs=${FAILED# }" >> "$GITHUB_OUTPUT"
+          elif [ "$BACKEND_RESULT" = "cancelled" ] || [ "$FRONTEND_RESULT" = "cancelled" ] || [ "$DEPLOY_RESULT" = "cancelled" ]; then
+            echo "status=cancelled" >> "$GITHUB_OUTPUT"
+          elif [ "$DEPLOY_RESULT" = "success" ]; then
+            echo "status=success" >> "$GITHUB_OUTPUT"
+          else
+            # Builds passed but deploy was skipped (e.g. only infra-irrelevant change) — stay quiet.
+            echo "status=skipped" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Send Telegram message
+        if: steps.status.outputs.status != 'skipped'
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          DEPLOY_STATUS: ${{ job.status }}
+          PIPELINE_STATUS: ${{ steps.status.outputs.status }}
+          FAILED_JOBS: ${{ steps.status.outputs.failed_jobs }}
           COMMIT_MSG: ${{ github.event.head_commit.message }}
         run: |
-          if [ "$DEPLOY_STATUS" == "success" ]; then
-            EMOJI="✅"
-            STATUS="Успешно"
-          else
-            EMOJI="❌"
-            STATUS="Ошибка"
-          fi
+          # Use a literal newline ($'\n') so the failed-jobs line renders as a
+          # real new line in Telegram; "\n" in a double-quoted string is NOT
+          # interpreted by bash and would appear as backslash-n in the message.
+          NL=$'\n'
+          case "$PIPELINE_STATUS" in
+            success)   EMOJI="✅"; STATUS="Успешно";  EXTRA="" ;;
+            failure)   EMOJI="❌"; STATUS="Ошибка";   EXTRA="${NL}<b>Упало:</b> ${FAILED_JOBS}" ;;
+            cancelled) EMOJI="⏹"; STATUS="Отменено"; EXTRA="" ;;
+            *)         EMOJI="⚠"; STATUS="Unknown ($PIPELINE_STATUS)"; EXTRA="" ;;
+          esac
 
           TEXT="${EMOJI} <b>Deploy ${STATUS}</b>
           <b>Repo:</b> ${{ github.repository }}
           <b>Branch:</b> ${{ github.ref_name }}
           <b>Commit:</b> <code>${{ github.sha }}</code>
           <b>Сообщение:</b> $(echo "$COMMIT_MSG" | head -1)
-          <b>Автор:</b> ${{ github.actor }}
+          <b>Автор:</b> ${{ github.actor }}${EXTRA}
           <a href=\"https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\">Открыть в GitHub Actions</a>"
 
           curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
