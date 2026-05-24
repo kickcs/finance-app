@@ -6,7 +6,6 @@ import { AppHeader } from '@/widgets/header';
 import {
   IncomeExpenseBar,
   DailyStatsCards,
-  SavingsGauge,
   DonutChart,
   DailyExpenseChart,
   PeriodComparison,
@@ -469,14 +468,6 @@ onMounted(() => {
                 :currency="currency"
                 :period-label="label"
                 :loading="paceLoading"
-              />
-
-              <SavingsGauge
-                :total-income="convertedIncome"
-                :total-expense="convertedExpense"
-                :available-balance="availableBalance"
-                :currency="currency"
-                :loading="analyticsLoading"
               />
 
               <div v-if="showDailyStats" class="lg:col-span-2">
