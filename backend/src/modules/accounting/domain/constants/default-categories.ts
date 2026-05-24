@@ -187,6 +187,13 @@ export const DEBT_CATEGORY_IDS = {
 
 export const ALL_DEBT_CATEGORY_IDS = Object.values(DEBT_CATEGORY_IDS);
 
+/**
+ * Synthetic category id returned by analytics for outstanding given-debt balance.
+ * Not a real DB category — exists only in API responses to keep
+ * sum(categoryBreakdown) === totalExpense identity.
+ */
+export const UNRETURNED_DEBT_CATEGORY_ID = '__unreturned_debt__';
+
 export const ADJUSTMENT_CATEGORY: DefaultCategory = {
   id: 'balance_adjustment',
   name: 'Коррекция баланса',

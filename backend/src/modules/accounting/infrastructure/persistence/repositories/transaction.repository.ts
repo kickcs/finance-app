@@ -24,29 +24,9 @@ import {
   getDefaultCategoryById,
   DEBT_CATEGORY_IDS,
   ALL_DEBT_CATEGORY_IDS,
+  UNRETURNED_DEBT_CATEGORY_ID,
 } from '../../../domain/constants/default-categories';
 import { getFinancialMonthBounds } from '../../../../../shared/utils/financial-period';
-
-/** Shared query parameters for debt category filtering. */
-const DEBT_PARAMS = {
-  debtIds: ALL_DEBT_CATEGORY_IDS,
-  debtGivenId: DEBT_CATEGORY_IDS.GIVEN,
-  debtTakenId: DEBT_CATEGORY_IDS.TAKEN,
-  debtReturnToMeId: DEBT_CATEGORY_IDS.RETURN_TO_ME,
-  debtReturnFromMeId: DEBT_CATEGORY_IDS.RETURN_FROM_ME,
-} as const;
-
-/** Raw row shape returned by the debt-aware conditional SUM queries. */
-interface DebtBreakdownRow {
-  regularIncome: string | null;
-  regularExpense: string | null;
-  debtGiven: string | null;
-  debtTaken: string | null;
-  debtReturnsToMe: string | null;
-  debtReturnsFromMe: string | null;
-}
-
-const parseDecimal = (v: string | null | undefined): number => Number(v ?? 0);
 
 @Injectable()
 export class TransactionRepository implements ITransactionRepository {
@@ -403,113 +383,24 @@ export class TransactionRepository implements ITransactionRepository {
     month: number,
     startDay: number = 1,
   ): Promise<MonthlyStats> {
-    const { start: startDate, end: endDate } = getFinancialMonthBounds(year, month, startDay);
+    // Thin wrapper over getAnalyticsStats so monthly budget and analytics page
+    // share one formula (split-expense returns offset categories, etc).
+    const { start, end } = getFinancialMonthBounds(year, month, startDay);
+    // getFinancialMonthBounds returns end as the FIRST day of the next financial
+    // month (exclusive). getAnalyticsStats uses t.date <= endDate (inclusive),
+    // so step back one day to keep the same calendar window.
+    const endInclusive = new Date(end.getTime() - 24 * 60 * 60 * 1000);
 
-    // Query 1: All totals in one query using conditional SUM
-    const result = await this.ormRepository
-      .createQueryBuilder('t')
-      .where('t.user_id = :userId', { userId })
-      .andWhere('t.date >= :startDate', { startDate })
-      .andWhere('t.date < :endDate', { endDate })
-      .select(
-        `SUM(CASE WHEN t.type = 'income' AND (t.is_debt_related = false OR t.is_debt_related IS NULL) AND (t.is_informational = false OR t.is_informational IS NULL) AND t.category_id NOT IN (:...debtIds) THEN t.amount ELSE 0 END)`,
-        'regularIncome',
-      )
-      .addSelect(
-        `SUM(CASE WHEN t.type = 'expense' AND (t.is_debt_related = false OR t.is_debt_related IS NULL) AND (t.is_informational = false OR t.is_informational IS NULL) AND t.category_id NOT IN (:...debtIds) THEN t.amount ELSE 0 END)`,
-        'regularExpense',
-      )
-      .addSelect(
-        `SUM(CASE WHEN t.category_id = :debtGivenId AND (t.is_informational = false OR t.is_informational IS NULL) THEN t.amount ELSE 0 END)`,
-        'debtGiven',
-      )
-      .addSelect(
-        `SUM(CASE WHEN t.category_id = :debtTakenId AND (t.is_informational = false OR t.is_informational IS NULL) THEN t.amount ELSE 0 END)`,
-        'debtTaken',
-      )
-      .addSelect(
-        `SUM(CASE WHEN t.category_id = :debtReturnToMeId AND t.is_debt_related = true AND (t.is_informational = false OR t.is_informational IS NULL) THEN t.amount ELSE 0 END)`,
-        'debtReturnsToMe',
-      )
-      .addSelect(
-        `SUM(CASE WHEN t.category_id = :debtReturnFromMeId AND t.is_debt_related = true AND (t.is_informational = false OR t.is_informational IS NULL) THEN t.amount ELSE 0 END)`,
-        'debtReturnsFromMe',
-      )
-      .setParameters(DEBT_PARAMS)
-      .getRawOne<DebtBreakdownRow>();
-
-    const regularIncome = Number(result?.regularIncome ?? 0);
-    const regularExpense = Number(result?.regularExpense ?? 0);
-    const debtGiven = Number(result?.debtGiven ?? 0);
-    const debtTaken = Number(result?.debtTaken ?? 0);
-    const debtReturnsToMe = Number(result?.debtReturnsToMe ?? 0);
-    const debtReturnsFromMe = Number(result?.debtReturnsFromMe ?? 0);
-
-    const netIncome = regularIncome + Math.max(0, debtTaken - debtReturnsFromMe);
-    const netExpense = regularExpense + Math.max(0, debtGiven - debtReturnsToMe);
-
-    // Query 2: By-currency breakdown with same conditional logic
-    const byCurrencyResult = await this.ormRepository
-      .createQueryBuilder('t')
-      .where('t.user_id = :userId', { userId })
-      .andWhere('t.date >= :startDate', { startDate })
-      .andWhere('t.date < :endDate', { endDate })
-      .select('t.currency', 'currency')
-      .addSelect(
-        `SUM(CASE WHEN t.type = 'income' AND (t.is_debt_related = false OR t.is_debt_related IS NULL) AND (t.is_informational = false OR t.is_informational IS NULL) AND t.category_id NOT IN (:...debtIds) THEN t.amount ELSE 0 END)`,
-        'regularIncome',
-      )
-      .addSelect(
-        `SUM(CASE WHEN t.type = 'expense' AND (t.is_debt_related = false OR t.is_debt_related IS NULL) AND (t.is_informational = false OR t.is_informational IS NULL) AND t.category_id NOT IN (:...debtIds) THEN t.amount ELSE 0 END)`,
-        'regularExpense',
-      )
-      .addSelect(
-        `SUM(CASE WHEN t.category_id = :debtGivenId AND (t.is_informational = false OR t.is_informational IS NULL) THEN t.amount ELSE 0 END)`,
-        'debtGiven',
-      )
-      .addSelect(
-        `SUM(CASE WHEN t.category_id = :debtTakenId AND (t.is_informational = false OR t.is_informational IS NULL) THEN t.amount ELSE 0 END)`,
-        'debtTaken',
-      )
-      .addSelect(
-        `SUM(CASE WHEN t.category_id = :debtReturnToMeId AND t.is_debt_related = true AND (t.is_informational = false OR t.is_informational IS NULL) THEN t.amount ELSE 0 END)`,
-        'debtReturnsToMe',
-      )
-      .addSelect(
-        `SUM(CASE WHEN t.category_id = :debtReturnFromMeId AND t.is_debt_related = true AND (t.is_informational = false OR t.is_informational IS NULL) THEN t.amount ELSE 0 END)`,
-        'debtReturnsFromMe',
-      )
-      .setParameters(DEBT_PARAMS)
-      .groupBy('t.currency')
-      .getRawMany<{ currency: string } & DebtBreakdownRow>();
-
-    const incomeByCurrency: Record<string, number> = {};
-    const expenseByCurrency: Record<string, number> = {};
-
-    for (const row of byCurrencyResult) {
-      const incomeVal = Number(row.regularIncome ?? 0);
-      const expenseVal = Number(row.regularExpense ?? 0);
-      const givenVal = Number(row.debtGiven ?? 0);
-      const takenVal = Number(row.debtTaken ?? 0);
-      const returnsToMe = Number(row.debtReturnsToMe ?? 0);
-      const returnsFromMe = Number(row.debtReturnsFromMe ?? 0);
-
-      const netIncomeForCurrency = incomeVal + Math.max(0, takenVal - returnsFromMe);
-      const netExpenseForCurrency = expenseVal + Math.max(0, givenVal - returnsToMe);
-
-      if (netIncomeForCurrency > 0) {
-        incomeByCurrency[row.currency] = netIncomeForCurrency;
-      }
-      if (netExpenseForCurrency > 0) {
-        expenseByCurrency[row.currency] = netExpenseForCurrency;
-      }
-    }
+    const stats = await this.getAnalyticsStats(userId, {
+      startDate: start,
+      endDate: endInclusive,
+    });
 
     return {
-      totalIncome: netIncome,
-      totalExpense: netExpense,
-      incomeByCurrency,
-      expenseByCurrency,
+      totalIncome: stats.totalIncome,
+      totalExpense: stats.totalExpense,
+      incomeByCurrency: stats.incomeByCurrency,
+      expenseByCurrency: stats.expenseByCurrency,
     };
   }
 
@@ -555,15 +446,10 @@ export class TransactionRepository implements ITransactionRepository {
         total: string | null;
       }>();
 
-    // Compute all scalar totals and by-currency breakdowns from the single result set
-    let regularIncome = 0,
-      regularExpense = 0;
-    let debtGiven = 0,
-      debtTaken = 0,
-      debtReturnsToMe = 0,
-      debtReturnsFromMe = 0;
+    // Per-currency totals: income (regular) and debt buckets feed the income side and
+    // the synthetic "unreturned debts" category. Expense per category is sourced from
+    // categoryBreakdownQuery below — no scalar regularExpense needed here.
     const regularIncomeByCurrency: Record<string, number> = {};
-    const regularExpenseByCurrency: Record<string, number> = {};
     const debtGivenByCurrency: Record<string, number> = {};
     const debtTakenByCurrency: Record<string, number> = {};
     const debtReturnsToMeByCurrency: Record<string, number> = {};
@@ -575,17 +461,14 @@ export class TransactionRepository implements ITransactionRepository {
 
       switch (row.categoryId) {
         case DEBT_CATEGORY_IDS.GIVEN:
-          debtGiven += amount;
           debtGivenByCurrency[row.currency] = (debtGivenByCurrency[row.currency] || 0) + amount;
           continue;
         case DEBT_CATEGORY_IDS.TAKEN:
-          debtTaken += amount;
           debtTakenByCurrency[row.currency] = (debtTakenByCurrency[row.currency] || 0) + amount;
           continue;
         case DEBT_CATEGORY_IDS.RETURN_TO_ME:
           // Only counted when original debt affected balance (is_debt_related = true)
           if (isDebt) {
-            debtReturnsToMe += amount;
             debtReturnsToMeByCurrency[row.currency] =
               (debtReturnsToMeByCurrency[row.currency] || 0) + amount;
           }
@@ -593,7 +476,6 @@ export class TransactionRepository implements ITransactionRepository {
         case DEBT_CATEGORY_IDS.RETURN_FROM_ME:
           // Only counted when original debt affected balance (is_debt_related = true)
           if (isDebt) {
-            debtReturnsFromMe += amount;
             debtReturnsFromMeByCurrency[row.currency] =
               (debtReturnsFromMeByCurrency[row.currency] || 0) + amount;
           }
@@ -602,22 +484,15 @@ export class TransactionRepository implements ITransactionRepository {
           // Forgiveness rows in this category exist only as bookkeeping markers.
           // Informational ones are filtered upstream (createBaseQuery); any stray
           // non-informational row with this category is still semantically a
-          // forgiveness event, not part of regular spending — drop it from totals
-          // rather than letting it leak into regularIncome/Expense.
+          // forgiveness event, not part of regular spending — drop it from totals.
           continue;
       }
 
-      // Regular (non-debt) transactions — debt categories already handled by switch/continue above
-      if (!isDebt) {
-        if (row.type === 'income') {
-          regularIncome += amount;
-          regularIncomeByCurrency[row.currency] =
-            (regularIncomeByCurrency[row.currency] || 0) + amount;
-        } else if (row.type === 'expense') {
-          regularExpense += amount;
-          regularExpenseByCurrency[row.currency] =
-            (regularExpenseByCurrency[row.currency] || 0) + amount;
-        }
+      // Regular (non-debt) transactions — debt categories already handled by switch/continue above.
+      // Only income is tracked here; expense lives entirely in categoryBreakdownQuery.
+      if (!isDebt && row.type === 'income') {
+        regularIncomeByCurrency[row.currency] =
+          (regularIncomeByCurrency[row.currency] || 0) + amount;
       }
     }
 
@@ -654,94 +529,23 @@ export class TransactionRepository implements ITransactionRepository {
       .groupBy('source_tx.category_id')
       .addGroupBy('source_tx.currency');
 
-    // Excludes debt_given/taken sources to avoid double-counting with the
-    // `max(0, debtGiven - debtReturnsToMe)` formula applied to scalar totals.
-    const regularExpenseOffsetsQuery = this.createDebtReturnBaseQuery(
-      userId,
-      startDate,
-      endDate,
-      accountIds,
-    )
-      .andWhere('return_tx.is_debt_related = true')
-      .andWhere('source_tx.type = :expenseType', { expenseType: 'expense' })
-      .andWhere('source_tx.category_id NOT IN (:...debtIds)', { debtIds: ALL_DEBT_CATEGORY_IDS })
-      .select('source_tx.currency', 'currency')
-      .addSelect('SUM(return_tx.amount)', 'offsetAmount')
-      .groupBy('source_tx.currency');
-
-    // All three queries are read-only and independent — run them in parallel
-    const [categoryBreakdownResult, categoryOffsetsResult, regularExpenseOffsetsResult] =
-      await Promise.all([
-        categoryBreakdownQuery.getRawMany<{
-          categoryId: string;
-          categoryName: string | null;
-          categoryIcon: string | null;
-          categoryColor: string | null;
-          type: 'income' | 'expense';
-          currency: string;
-          amount: string;
-        }>(),
-        categoryOffsetsQuery.getRawMany<{
-          categoryId: string;
-          currency: string;
-          offsetAmount: string;
-        }>(),
-        regularExpenseOffsetsQuery.getRawMany<{
-          currency: string;
-          offsetAmount: string;
-        }>(),
-      ]);
-
-    const regularExpenseOffsetsByCurrency: Record<string, number> = {};
-    for (const row of regularExpenseOffsetsResult) {
-      const amount = parseDecimal(row.offsetAmount);
-      regularExpenseOffsetsByCurrency[row.currency] =
-        (regularExpenseOffsetsByCurrency[row.currency] ?? 0) + amount;
-    }
-    const regularExpenseOffsetsTotal = Object.values(regularExpenseOffsetsByCurrency).reduce(
-      (sum, v) => sum + v,
-      0,
-    );
-
-    const adjustedRegularExpense = Math.max(0, regularExpense - regularExpenseOffsetsTotal);
-    const netIncome = regularIncome + Math.max(0, debtTaken - debtReturnsFromMe);
-    const netExpense = adjustedRegularExpense + Math.max(0, debtGiven - debtReturnsToMe);
-
-    // Include offset-only currencies so a currency present only in returns is still considered.
-    const allCurrencies = new Set([
-      ...Object.keys(regularIncomeByCurrency),
-      ...Object.keys(regularExpenseByCurrency),
-      ...Object.keys(debtGivenByCurrency),
-      ...Object.keys(debtTakenByCurrency),
-      ...Object.keys(debtReturnsToMeByCurrency),
-      ...Object.keys(debtReturnsFromMeByCurrency),
-      ...Object.keys(regularExpenseOffsetsByCurrency),
+    // Two queries are read-only and independent — run them in parallel
+    const [categoryBreakdownResult, categoryOffsetsResult] = await Promise.all([
+      categoryBreakdownQuery.getRawMany<{
+        categoryId: string;
+        categoryName: string | null;
+        categoryIcon: string | null;
+        categoryColor: string | null;
+        type: 'income' | 'expense';
+        currency: string;
+        amount: string;
+      }>(),
+      categoryOffsetsQuery.getRawMany<{
+        categoryId: string;
+        currency: string;
+        offsetAmount: string;
+      }>(),
     ]);
-
-    const incomeByCurrency: Record<string, number> = {};
-    const expenseByCurrency: Record<string, number> = {};
-
-    for (const currency of allCurrencies) {
-      const incomeVal = regularIncomeByCurrency[currency] ?? 0;
-      const expenseVal = regularExpenseByCurrency[currency] ?? 0;
-      const givenVal = debtGivenByCurrency[currency] ?? 0;
-      const takenVal = debtTakenByCurrency[currency] ?? 0;
-      const returnsToMe = debtReturnsToMeByCurrency[currency] ?? 0;
-      const returnsFromMe = debtReturnsFromMeByCurrency[currency] ?? 0;
-      const offset = regularExpenseOffsetsByCurrency[currency] ?? 0;
-
-      const adjustedExpenseForCurrency = Math.max(0, expenseVal - offset);
-      const netIncomeForCurrency = incomeVal + Math.max(0, takenVal - returnsFromMe);
-      const netExpenseForCurrency =
-        adjustedExpenseForCurrency + Math.max(0, givenVal - returnsToMe);
-
-      if (netIncomeForCurrency > 0) {
-        incomeByCurrency[currency] = netIncomeForCurrency;
-      }
-      if (netExpenseForCurrency > 0) {
-        expenseByCurrency[currency] = netExpenseForCurrency;
-      }
-    }
 
     // Process category breakdown - aggregate by categoryId and type
     const categoryMap = new Map<string, CategoryBreakdown>();
@@ -808,9 +612,71 @@ export class TransactionRepository implements ITransactionRepository {
       }
     }
 
+    // Add synthetic "Невозвращённые долги" category for outstanding given-debt balance per currency.
+    // This guarantees the algebraic identity: totalExpense === sum(categoryBreakdown.amount).
+    const unreturnedDebtByCurrency: Record<string, number> = {};
+    const debtCurrencies = new Set<string>([
+      ...Object.keys(debtGivenByCurrency),
+      ...Object.keys(debtReturnsToMeByCurrency),
+    ]);
+    for (const currency of debtCurrencies) {
+      const outstanding =
+        (debtGivenByCurrency[currency] ?? 0) - (debtReturnsToMeByCurrency[currency] ?? 0);
+      if (outstanding > 0) {
+        unreturnedDebtByCurrency[currency] = outstanding;
+      }
+    }
+    const unreturnedDebtTotal = Object.values(unreturnedDebtByCurrency).reduce(
+      (sum, v) => sum + v,
+      0,
+    );
+    if (unreturnedDebtTotal > 0) {
+      categoryMap.set(`${UNRETURNED_DEBT_CATEGORY_ID}-expense`, {
+        categoryId: UNRETURNED_DEBT_CATEGORY_ID,
+        categoryName: 'Невозвращённые долги',
+        categoryIcon: 'handshake',
+        categoryColor: '#9CA3AF',
+        type: 'expense',
+        amount: unreturnedDebtTotal,
+        amountByCurrency: { ...unreturnedDebtByCurrency },
+      });
+    }
+
+    // Derive expenseByCurrency / totalExpense from categoryMap — single source of truth.
+    // This guarantees pie chart sum === StatCard total: there is no separate formula.
+    const expenseByCurrency: Record<string, number> = {};
+    let totalExpense = 0;
+    for (const cat of categoryMap.values()) {
+      if (cat.type !== 'expense') continue;
+      totalExpense += cat.amount;
+      for (const [c, amt] of Object.entries(cat.amountByCurrency)) {
+        expenseByCurrency[c] = (expenseByCurrency[c] ?? 0) + amt;
+      }
+    }
+
+    // Income side: no UX flow currently creates split-income offsets, so derive directly
+    // from per-currency buckets. Sum per currency, then total = sum across currencies.
+    const incomeByCurrency: Record<string, number> = {};
+    let totalIncome = 0;
+    const incomeCurrencies = new Set<string>([
+      ...Object.keys(regularIncomeByCurrency),
+      ...Object.keys(debtTakenByCurrency),
+      ...Object.keys(debtReturnsFromMeByCurrency),
+    ]);
+    for (const currency of incomeCurrencies) {
+      const incomeVal = regularIncomeByCurrency[currency] ?? 0;
+      const takenVal = debtTakenByCurrency[currency] ?? 0;
+      const returnsFromMe = debtReturnsFromMeByCurrency[currency] ?? 0;
+      const netIncomeForCurrency = incomeVal + Math.max(0, takenVal - returnsFromMe);
+      if (netIncomeForCurrency > 0) {
+        incomeByCurrency[currency] = netIncomeForCurrency;
+        totalIncome += netIncomeForCurrency;
+      }
+    }
+
     return {
-      totalIncome: netIncome,
-      totalExpense: netExpense,
+      totalIncome,
+      totalExpense,
       incomeByCurrency,
       expenseByCurrency,
       categoryBreakdown: Array.from(categoryMap.values()),
