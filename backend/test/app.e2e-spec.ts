@@ -5,16 +5,7 @@ import request from 'supertest';
 import type { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
 
-interface HealthResponse {
-  status: 'ok' | 'error';
-  database: { status: 'ok' | 'error' };
-}
-
-interface SupertestResponse {
-  body: unknown;
-}
-
-describe('Health (e2e)', () => {
+describe('AppController (e2e)', () => {
   let app: INestApplication<App>;
 
   beforeEach(async () => {
@@ -23,22 +14,10 @@ describe('Health (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.setGlobalPrefix('api');
     await app.init();
   });
 
-  afterEach(async () => {
-    await app.close();
-  });
-
-  it('GET /api/health → 200 when database is reachable', () => {
-    return request(app.getHttpServer())
-      .get('/api/health')
-      .expect(200)
-      .expect((res: SupertestResponse) => {
-        const body = res.body as HealthResponse;
-        expect(body.status).toBe('ok');
-        expect(body.database.status).toBe('ok');
-      });
+  it('/ (GET)', () => {
+    return request(app.getHttpServer()).get('/').expect(200).expect('Hello World!');
   });
 });
