@@ -17,7 +17,8 @@ import {
   iconTileStyle,
 } from './constants';
 
-const { categoryBreakdown, currency, isHidden, analyticsLoading, nav } = useDashboardContext();
+const { categoryBreakdown, currency, isHidden, analyticsLoading, nav, convert } =
+  useDashboardContext();
 
 const { startDay: financialPeriodStartDay, isCustomPeriod } = useFinancialPeriod();
 
@@ -27,7 +28,9 @@ const periodTitle = computed(() => {
   return formatFinancialPeriod(year, month, financialPeriodStartDay.value);
 });
 
-const topExpenses = computed(() => mapExpenseCategoryStats(categoryBreakdown.value).slice(0, 3));
+const topExpenses = computed(() =>
+  mapExpenseCategoryStats(categoryBreakdown.value, convert).slice(0, 3),
+);
 
 const maxAmount = computed(() =>
   topExpenses.value.length > 0 ? topExpenses.value[0].amount || 1 : 1,

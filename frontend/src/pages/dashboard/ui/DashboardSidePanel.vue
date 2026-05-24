@@ -20,6 +20,7 @@ const {
   debts,
   debtsLoading,
   currency,
+  convert,
   userId,
   budget,
   budgetLoading,
@@ -87,6 +88,7 @@ const UpcomingSubscriptions = defineAsyncComponent({
         <DashboardTopExpenses
           :category-breakdown="categoryBreakdown"
           :currency="currency"
+          :convert="convert"
           :loading="analyticsLoading"
           :is-hidden="isHidden"
           @configure-period="openFinancialPeriodModal"

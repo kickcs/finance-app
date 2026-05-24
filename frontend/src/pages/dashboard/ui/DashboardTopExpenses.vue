@@ -17,6 +17,7 @@ const props = defineProps<{
   currency: string;
   loading: boolean;
   isHidden: boolean;
+  convert: (amount: number, fromCurrency: string) => number;
 }>();
 
 const emit = defineEmits<{
@@ -31,7 +32,7 @@ const periodTitle = computed(() => {
   return formatFinancialPeriod(year, month, startDay.value);
 });
 
-const topExpenses = computed(() => mapExpenseCategoryStats(props.categoryBreakdown));
+const topExpenses = computed(() => mapExpenseCategoryStats(props.categoryBreakdown, props.convert));
 
 function goToAnalytics() {
   router.push({ name: ROUTE_NAMES.ANALYTICS });

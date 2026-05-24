@@ -18,6 +18,7 @@ const MOBILE_TX_LIMIT = 5;
 const {
   totalBalance,
   currency,
+  convert,
   avgDailyExpense,
   safeDailyLimit,
   daysRemainingInMonth,
@@ -108,6 +109,7 @@ const firstActivityWidgetId = computed(() =>
           <DashboardTopExpenses
             :category-breakdown="categoryBreakdown"
             :currency="currency"
+            :convert="convert"
             :loading="analyticsLoading"
             :is-hidden="isHidden"
             @configure-period="openFinancialPeriodModal"

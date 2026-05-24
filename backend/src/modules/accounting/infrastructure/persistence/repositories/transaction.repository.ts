@@ -387,9 +387,11 @@ export class TransactionRepository implements ITransactionRepository {
     // share one formula (split-expense returns offset categories, etc).
     const { start, end } = getFinancialMonthBounds(year, month, startDay);
     // getFinancialMonthBounds returns end as the FIRST day of the next financial
-    // month (exclusive). getAnalyticsStats uses t.date <= endDate (inclusive),
-    // so step back one day to keep the same calendar window.
-    const endInclusive = new Date(end.getTime() - 24 * 60 * 60 * 1000);
+    // month (exclusive: t.date < end). getAnalyticsStats uses t.date <= endDate
+    // (inclusive). t.date is `timestamp with time zone`, so we step back ONE
+    // MILLISECOND, not one day — otherwise every non-midnight transaction on the
+    // last day of the period is excluded.
+    const endInclusive = new Date(end.getTime() - 1);
 
     const stats = await this.getAnalyticsStats(userId, {
       startDate: start,
@@ -584,62 +586,68 @@ export class TransactionRepository implements ITransactionRepository {
       }
     }
 
-    // Apply offsets to expense categories — cap at category amount to prevent spill-over
+    // Apply offsets to expense categories — cap at THE OFFSET CURRENCY BUCKET so
+    // category.amount and sum(category.amountByCurrency) stay in lockstep. The
+    // return is denominated in source_tx.currency; allowing it to spill into
+    // other currency buckets would either cross-convert at 1:1 (wrong) or break
+    // the identity sum(amountByCurrency) === amount that downstream code relies on.
     for (const offset of categoryOffsetsResult) {
       const key = `${offset.categoryId}-expense`;
       const category = categoryMap.get(key);
+      if (!category) continue;
 
-      if (category) {
-        const offsetAmount = Number(offset.offsetAmount);
+      const offsetAmount = Number(offset.offsetAmount);
+      const currencyAmount = category.amountByCurrency[offset.currency] ?? 0;
+      const cappedOffset = Math.min(offsetAmount, currencyAmount);
+      if (cappedOffset <= 0) continue;
 
-        // Cap offset so it never exceeds what the category actually has
-        const currencyAmount = category.amountByCurrency[offset.currency] ?? 0;
-        const cappedTotalOffset = Math.min(offsetAmount, category.amount);
-        const cappedCurrencyOffset = Math.min(cappedTotalOffset, currencyAmount);
+      category.amount -= cappedOffset;
+      category.amountByCurrency[offset.currency] = currencyAmount - cappedOffset;
+      if (category.amountByCurrency[offset.currency] <= 0) {
+        delete category.amountByCurrency[offset.currency];
+      }
 
-        category.amount -= cappedTotalOffset;
-        if (cappedCurrencyOffset > 0) {
-          category.amountByCurrency[offset.currency] = currencyAmount - cappedCurrencyOffset;
-          if (category.amountByCurrency[offset.currency] <= 0) {
-            delete category.amountByCurrency[offset.currency];
-          }
-        }
-
-        // Remove category only if it genuinely has no remaining amount
-        if (category.amount <= 0) {
-          categoryMap.delete(key);
-        }
+      if (category.amount <= 0) {
+        categoryMap.delete(key);
       }
     }
 
     // Add synthetic "Невозвращённые долги" category for outstanding given-debt balance per currency.
     // This guarantees the algebraic identity: totalExpense === sum(categoryBreakdown.amount).
-    const unreturnedDebtByCurrency: Record<string, number> = {};
-    const debtCurrencies = new Set<string>([
-      ...Object.keys(debtGivenByCurrency),
-      ...Object.keys(debtReturnsToMeByCurrency),
-    ]);
-    for (const currency of debtCurrencies) {
-      const outstanding =
-        (debtGivenByCurrency[currency] ?? 0) - (debtReturnsToMeByCurrency[currency] ?? 0);
-      if (outstanding > 0) {
-        unreturnedDebtByCurrency[currency] = outstanding;
+    //
+    // Skip when the user filtered by accountIds: a debt and its return often live on
+    // different accounts (give from Cash, repaid into Bank), so a per-account view
+    // sees only one half and would inflate the bucket with already-repaid debt.
+    // Better hide it than display a false outstanding figure.
+    const isAccountFiltered = !!accountIds && accountIds.length > 0;
+    if (!isAccountFiltered) {
+      const unreturnedDebtByCurrency: Record<string, number> = {};
+      const debtCurrencies = new Set<string>([
+        ...Object.keys(debtGivenByCurrency),
+        ...Object.keys(debtReturnsToMeByCurrency),
+      ]);
+      for (const currency of debtCurrencies) {
+        const outstanding =
+          (debtGivenByCurrency[currency] ?? 0) - (debtReturnsToMeByCurrency[currency] ?? 0);
+        if (outstanding > 0) {
+          unreturnedDebtByCurrency[currency] = outstanding;
+        }
       }
-    }
-    const unreturnedDebtTotal = Object.values(unreturnedDebtByCurrency).reduce(
-      (sum, v) => sum + v,
-      0,
-    );
-    if (unreturnedDebtTotal > 0) {
-      categoryMap.set(`${UNRETURNED_DEBT_CATEGORY_ID}-expense`, {
-        categoryId: UNRETURNED_DEBT_CATEGORY_ID,
-        categoryName: 'Невозвращённые долги',
-        categoryIcon: 'handshake',
-        categoryColor: '#9CA3AF',
-        type: 'expense',
-        amount: unreturnedDebtTotal,
-        amountByCurrency: { ...unreturnedDebtByCurrency },
-      });
+      const unreturnedDebtTotal = Object.values(unreturnedDebtByCurrency).reduce(
+        (sum, v) => sum + v,
+        0,
+      );
+      if (unreturnedDebtTotal > 0) {
+        categoryMap.set(`${UNRETURNED_DEBT_CATEGORY_ID}-expense`, {
+          categoryId: UNRETURNED_DEBT_CATEGORY_ID,
+          categoryName: 'Невозвращённые долги',
+          categoryIcon: 'handshake',
+          categoryColor: '#9CA3AF',
+          type: 'expense',
+          amount: unreturnedDebtTotal,
+          amountByCurrency: { ...unreturnedDebtByCurrency },
+        });
+      }
     }
 
     // Derive expenseByCurrency / totalExpense from categoryMap — single source of truth.
@@ -654,20 +662,27 @@ export class TransactionRepository implements ITransactionRepository {
       }
     }
 
-    // Income side: no UX flow currently creates split-income offsets, so derive directly
-    // from per-currency buckets. Sum per currency, then total = sum across currencies.
+    // Income side: regular income plus outstanding taken-debt balance (money still owed by me).
+    // Same account-filter caveat as expense: a taken debt and its return may live on different
+    // accounts, so when scoped to one account skip the debt term entirely rather than show
+    // inflated income.
     const incomeByCurrency: Record<string, number> = {};
     let totalIncome = 0;
     const incomeCurrencies = new Set<string>([
       ...Object.keys(regularIncomeByCurrency),
-      ...Object.keys(debtTakenByCurrency),
-      ...Object.keys(debtReturnsFromMeByCurrency),
+      ...(isAccountFiltered
+        ? []
+        : [...Object.keys(debtTakenByCurrency), ...Object.keys(debtReturnsFromMeByCurrency)]),
     ]);
     for (const currency of incomeCurrencies) {
       const incomeVal = regularIncomeByCurrency[currency] ?? 0;
-      const takenVal = debtTakenByCurrency[currency] ?? 0;
-      const returnsFromMe = debtReturnsFromMeByCurrency[currency] ?? 0;
-      const netIncomeForCurrency = incomeVal + Math.max(0, takenVal - returnsFromMe);
+      const debtTerm = isAccountFiltered
+        ? 0
+        : Math.max(
+            0,
+            (debtTakenByCurrency[currency] ?? 0) - (debtReturnsFromMeByCurrency[currency] ?? 0),
+          );
+      const netIncomeForCurrency = incomeVal + debtTerm;
       if (netIncomeForCurrency > 0) {
         incomeByCurrency[currency] = netIncomeForCurrency;
         totalIncome += netIncomeForCurrency;
