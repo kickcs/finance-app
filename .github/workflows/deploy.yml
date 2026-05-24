@@ -124,12 +124,13 @@ jobs:
         working-directory: backend
         run: bun run test
 
-      - name: Apply migrations for E2E
-        working-directory: backend
-        run: bun run migration:run
-
       - name: Backend E2E tests
         working-directory: backend
+        # Boot schema from entity metadata; the repo has no baseline migration,
+        # so `migration:run` on a fresh database is non-viable (early migrations
+        # ALTER tables that no migration creates).
+        env:
+          DATABASE_SYNCHRONIZE: 'true'
         run: bun run test:e2e
 
       - name: Set up Docker Buildx

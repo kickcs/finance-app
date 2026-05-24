@@ -96,7 +96,9 @@ import { RecurringSubscriptionModule } from './modules/recurring-subscription';
           // Legacy (to be migrated)
           Settings,
         ],
-        synchronize: false,
+        // Production runs migrations explicitly; e2e and dev can opt-in by setting
+        // DATABASE_SYNCHRONIZE=true so a fresh database boots without baseline migrations.
+        synchronize: configService.get<string>('DATABASE_SYNCHRONIZE') === 'true',
         logging: process.env.NODE_ENV === 'development',
         extra: DATABASE_POOL_CONFIG,
       }),
