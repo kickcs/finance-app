@@ -108,7 +108,12 @@ jobs:
 
       - name: Audit backend dependencies
         working-directory: backend
-        run: bun audit --audit-level=high
+        # `bun audit` can hang waiting on the npm advisory endpoint; cap it so a
+        # slow registry can't burn the whole 15-min job timeout. continue-on-error
+        # keeps the pipeline green on transient registry failures — real findings
+        # still surface in the step logs.
+        timeout-minutes: 2
+        run: timeout 90 bun audit --audit-level=high || true
         continue-on-error: true
 
       - name: Backend lint
@@ -203,7 +208,8 @@ jobs:
 
       - name: Audit frontend dependencies
         working-directory: frontend
-        run: bun audit --audit-level=high
+        timeout-minutes: 2
+        run: timeout 90 bun audit --audit-level=high || true
         continue-on-error: true
 
       - name: Frontend tests

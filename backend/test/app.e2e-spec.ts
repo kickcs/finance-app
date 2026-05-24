@@ -5,6 +5,15 @@ import request from 'supertest';
 import type { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
 
+interface HealthResponse {
+  status: 'ok' | 'error';
+  database: { status: 'ok' | 'error' };
+}
+
+interface SupertestResponse {
+  body: unknown;
+}
+
 describe('Health (e2e)', () => {
   let app: INestApplication<App>;
 
@@ -26,9 +35,10 @@ describe('Health (e2e)', () => {
     return request(app.getHttpServer())
       .get('/api/health')
       .expect(200)
-      .expect((res) => {
-        expect(res.body.status).toBe('ok');
-        expect(res.body.database.status).toBe('ok');
+      .expect((res: SupertestResponse) => {
+        const body = res.body as HealthResponse;
+        expect(body.status).toBe('ok');
+        expect(body.database.status).toBe('ok');
       });
   });
 });
