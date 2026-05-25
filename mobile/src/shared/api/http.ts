@@ -8,10 +8,14 @@ let refreshPromise: Promise<string | null> | null = null;
 async function refreshAccessToken(): Promise<string | null> {
   if (refreshPromise) return refreshPromise;
   refreshPromise = (async () => {
-    // Backend currently keeps refresh_token in an httpOnly cookie set during
-    // /api/auth/login. iOS NSURLSession and Android OkHttp persist that cookie
-    // across requests, so we just call refresh and rely on the platform jar.
-    const res = await fetch(`${API_URL}/api/refresh`, {
+    // Backend (backend/.../auth.controller.ts) issues refresh_token only as an
+    // httpOnly cookie (path /api/auth, sameSite=lax) from /api/auth/login.
+    // iOS NSURLSession persists this in the shared HTTPCookieStorage; Android
+    // OkHttp does the same when credentials:include is set on both login and
+    // refresh requests. If you see the user being signed out on access-token
+    // expiry, plumb @react-native-cookies/cookies OR add a mobile body-based
+    // refresh endpoint on the backend (tracked separately).
+    const res = await fetch(`${API_URL}/api/auth/refresh`, {
       method: 'POST',
       credentials: 'include',
     });
@@ -36,7 +40,6 @@ export async function setAccessToken(accessToken: string) {
 
 export async function clearTokens() {
   await SecureStore.deleteItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
-  await SecureStore.deleteItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
 }
 
 export async function getAccessToken() {
@@ -52,6 +55,7 @@ export async function http<T = unknown>(path: string, opts: RequestOptions = {})
   const doRequest = (authToken: string | null) =>
     fetch(`${API_URL}${path}`, {
       ...rest,
+      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
         ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),

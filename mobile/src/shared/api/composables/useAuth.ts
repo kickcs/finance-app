@@ -82,10 +82,33 @@ export async function signInAnonymously() {
 }
 
 export async function signOut() {
+  // Server clears the refresh_token cookie; ignore failures so the local
+  // session always tears down even if the network is unreachable.
+  try {
+    await http('/api/auth/logout', { method: 'POST' });
+  } catch {
+    /* noop */
+  }
   await clearTokens();
   useAuthStore.getState().setUser(null);
 }
 
+/** Subscribe to the current user only. Most callers want this. */
+export function useUser() {
+  return useAuthStore((s) => s.user);
+}
+
+/** Subscribe to bootstrap-ready flag only. */
+export function useAuthReady() {
+  return useAuthStore((s) => s.ready);
+}
+
+/**
+ * Subscribes to the full auth slice. Avoid in widely-rendered components —
+ * prefer `useUser` / `useAuthReady` to keep re-renders scoped.
+ */
 export function useAuth() {
-  return useAuthStore();
+  const user = useUser();
+  const ready = useAuthReady();
+  return { user, ready };
 }

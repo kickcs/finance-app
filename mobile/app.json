@@ -15,12 +15,14 @@
       "package": "com.hamkor.finance",
       "predictiveBackGestureEnabled": true
     },
-    "web": {
-      "output": "static"
-    },
+    "platforms": [
+      "ios",
+      "android"
+    ],
     "plugins": [
       "expo-router",
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-splash-screen"
     ],
     "experiments": {
       "typedRoutes": true,

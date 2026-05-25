@@ -1,14 +1,20 @@
 import '../global.css';
 
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { SplashScreen, Stack, useRouter, useSegments } from 'expo-router';
 import { useEffect } from 'react';
-import { ActivityIndicator, View } from 'react-native';
 
 import { Providers } from '@/providers/Providers';
-import { bootstrapAuth, useAuth } from '@/shared/api/composables/useAuth';
+import { bootstrapAuth, useAuthReady, useUser } from '@/shared/api/composables/useAuth';
+
+// Keep the native splash visible until auth bootstrap finishes — avoids a
+// no-route flash and lets useSegments resolve against a real router tree.
+SplashScreen.preventAutoHideAsync().catch(() => {
+  /* already hidden */
+});
 
 function AppShell() {
-  const { user, ready } = useAuth();
+  const user = useUser();
+  const ready = useAuthReady();
   const segments = useSegments();
   const router = useRouter();
 
@@ -18,18 +24,11 @@ function AppShell() {
 
   useEffect(() => {
     if (!ready) return;
+    void SplashScreen.hideAsync();
     const inAuth = segments[0] === 'auth';
     if (!user && !inAuth) router.replace('/auth/sign-in');
     if (user && inAuth) router.replace('/');
   }, [ready, user, segments, router]);
-
-  if (!ready) {
-    return (
-      <View className="flex-1 items-center justify-center bg-background-light dark:bg-background-dark">
-        <ActivityIndicator />
-      </View>
-    );
-  }
 
   return <Stack screenOptions={{ headerShown: false }} />;
 }
