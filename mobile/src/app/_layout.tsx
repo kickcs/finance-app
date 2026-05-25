@@ -2,6 +2,12 @@ import '../global.css';
 
 import { Stack } from 'expo-router';
 
+import { Providers } from '@/providers/Providers';
+
 export default function RootLayout() {
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <Providers>
+      <Stack screenOptions={{ headerShown: false }} />
+    </Providers>
+  );
 }
