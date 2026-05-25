@@ -1,6 +1,6 @@
 import '../global.css';
 
-import { Stack } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 
@@ -8,11 +8,20 @@ import { Providers } from '@/providers/Providers';
 import { bootstrapAuth, useAuth } from '@/shared/api/composables/useAuth';
 
 function AppShell() {
-  const { ready } = useAuth();
+  const { user, ready } = useAuth();
+  const segments = useSegments();
+  const router = useRouter();
 
   useEffect(() => {
     void bootstrapAuth();
   }, []);
+
+  useEffect(() => {
+    if (!ready) return;
+    const inAuth = segments[0] === 'auth';
+    if (!user && !inAuth) router.replace('/auth/sign-in');
+    if (user && inAuth) router.replace('/');
+  }, [ready, user, segments, router]);
 
   if (!ready) {
     return (
