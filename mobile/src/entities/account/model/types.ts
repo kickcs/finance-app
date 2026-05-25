@@ -1,0 +1,25 @@
+// Re-export from database types for consistency
+export type { Account, AccountWithBalances, AccountBalance } from '@/shared/api/database.types';
+
+export interface AccountTypeFieldValues {
+  creditLimit: number | null;
+  gracePeriodDays: number | null;
+  billingDay: number | null;
+  totalAmount: number | null;
+  interestRate: number | null;
+  monthlyPayment: number | null;
+  startDate: string | null;
+  endDate: string | null;
+  maturityDate: string | null;
+  isReplenishable: boolean | null;
+  isWithdrawable: boolean | null;
+}
+
+export const ACCOUNT_ICONS = [
+  'account_balance_wallet',
+  'credit_card',
+  'savings',
+  'payments',
+  'account_balance',
+  'diamond',
+] as const;
