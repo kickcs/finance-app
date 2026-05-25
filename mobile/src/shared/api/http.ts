@@ -8,23 +8,19 @@ let refreshPromise: Promise<string | null> | null = null;
 async function refreshAccessToken(): Promise<string | null> {
   if (refreshPromise) return refreshPromise;
   refreshPromise = (async () => {
-    const refresh = await SecureStore.getItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
-    if (!refresh) return null;
-    const res = await fetch(`${API_URL}/api/auth/refresh`, {
+    // Backend currently keeps refresh_token in an httpOnly cookie set during
+    // /api/auth/login. iOS NSURLSession and Android OkHttp persist that cookie
+    // across requests, so we just call refresh and rely on the platform jar.
+    const res = await fetch(`${API_URL}/api/refresh`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken: refresh }),
+      credentials: 'include',
     });
     if (!res.ok) {
       await clearTokens();
       return null;
     }
-    const { accessToken, refreshToken } = (await res.json()) as {
-      accessToken: string;
-      refreshToken?: string;
-    };
+    const { accessToken } = (await res.json()) as { accessToken: string };
     await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
-    if (refreshToken) await SecureStore.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
     return accessToken;
   })();
   try {
@@ -34,9 +30,8 @@ async function refreshAccessToken(): Promise<string | null> {
   }
 }
 
-export async function setTokens(accessToken: string, refreshToken: string) {
+export async function setAccessToken(accessToken: string) {
   await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
-  await SecureStore.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
 }
 
 export async function clearTokens() {
