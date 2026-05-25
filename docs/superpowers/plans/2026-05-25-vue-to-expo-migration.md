@@ -1,6 +1,6 @@
 # Vue → Expo Migration Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Поэтапно мигрировать Vue 3 PWA `finance-app` на Expo SDK 56 для публикации нативных приложений в App Store и Google Play.
 
@@ -10,24 +10,42 @@
 
 ---
 
+## Progress
+
+| Phase | Tasks | Status |
+|---|---|---|
+| Phase 0 — Foundation | 1-12 | ✅ Done (branch `feature/mobile-migration`) |
+| Phase 1 — Core read screens | 13-22 | ⏳ Pending |
+| Phase 2 — Core mutations | 23-32 | ⏳ Pending |
+| Phase 3 — Domain features | 33-50 | ⏳ Pending |
+| Phase 4 — Native MVP | 51-62 | ⏳ Pending |
+| Phase 5 — Polish & QA | 63-72 | ⏳ Pending |
+| Phase 6 — Store submission | 73-80 | ⏳ Pending |
+
+When picking up a phase: mark task header with `**Status:** 🚧 In progress`, flip step checkboxes from `- [ ]` to `- [x]` as each step lands, set header to `**Status:** ✅ Done` once committed. Keep the table above in sync.
+
+---
+
 ## Phase 0 — Foundation (Tasks 1-12)
 
 Создаём scaffold, базовую инфраструктуру, design-токены, auth.
 
 ### Task 1: Scaffold Expo project
 
+**Status:** ✅ Done
+
 **Files:**
 - Create: `mobile/` (вся директория через CLI)
 - Modify: `package.json` (root) — добавить workspace или скрипты
 
-- [ ] **Step 1: Создать Expo проект через template**
+- [x] **Step 1: Создать Expo проект через template**
 
 ```bash
 cd /Users/hamkorlab/WebstormProjects/finance-app
 npx create-expo-app@latest mobile --template default
 ```
 
-- [ ] **Step 2: Перейти в директорию и проверить версию SDK**
+- [x] **Step 2: Перейти в директорию и проверить версию SDK**
 
 ```bash
 cd mobile
@@ -41,14 +59,14 @@ cat package.json | grep '"expo":'
 npx expo install expo@~56.0.0
 ```
 
-- [ ] **Step 3: Удалить демо-роуты из template**
+- [x] **Step 3: Удалить демо-роуты из template**
 
 ```bash
 rm -rf mobile/app/(tabs) mobile/app/+not-found.tsx
 # Оставляем только app/_layout.tsx как стартовую точку
 ```
 
-- [ ] **Step 4: Проверить запуск**
+- [x] **Step 4: Проверить запуск**
 
 ```bash
 cd mobile && npx expo start
@@ -56,7 +74,7 @@ cd mobile && npx expo start
 
 Expected: появляется QR код, Metro работает.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add mobile/
@@ -67,10 +85,12 @@ git commit -m "feat(mobile): scaffold Expo SDK 56 project"
 
 ### Task 2: TypeScript strict + path aliases
 
+**Status:** ✅ Done
+
 **Files:**
 - Modify: `mobile/tsconfig.json`
 
-- [ ] **Step 1: Заменить содержимое tsconfig.json**
+- [x] **Step 1: Заменить содержимое tsconfig.json**
 
 ```json
 {
@@ -88,7 +108,7 @@ git commit -m "feat(mobile): scaffold Expo SDK 56 project"
 }
 ```
 
-- [ ] **Step 2: Создать структуру каталогов src/**
+- [x] **Step 2: Создать структуру каталогов src/**
 
 ```bash
 cd mobile
@@ -96,7 +116,7 @@ mkdir -p src/{app,entities,features,widgets,shared/{ui,api/composables,lib/{form
 touch src/shared/ui/index.ts
 ```
 
-- [ ] **Step 3: Verify type-check**
+- [x] **Step 3: Verify type-check**
 
 ```bash
 cd mobile && npx tsc --noEmit
@@ -104,7 +124,7 @@ cd mobile && npx tsc --noEmit
 
 Expected: 0 errors.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add mobile/tsconfig.json mobile/src/
@@ -115,6 +135,8 @@ git commit -m "feat(mobile): typescript strict + FSD directory structure"
 
 ### Task 3: NativeWind v5 + Tailwind config
 
+**Status:** ✅ Done
+
 **Files:**
 - Create: `mobile/global.css`
 - Create: `mobile/tailwind.config.js`
@@ -122,7 +144,7 @@ git commit -m "feat(mobile): typescript strict + FSD directory structure"
 - Create: `mobile/babel.config.js`
 - Modify: `mobile/app/_layout.tsx`
 
-- [ ] **Step 1: Установить зависимости**
+- [x] **Step 1: Установить зависимости**
 
 ```bash
 cd mobile
@@ -130,7 +152,7 @@ npx expo install nativewind react-native-reanimated react-native-safe-area-conte
 npm install -D tailwindcss@^4 @tailwindcss/postcss
 ```
 
-- [ ] **Step 2: Создать tailwind.config.js**
+- [x] **Step 2: Создать tailwind.config.js**
 
 ```js
 /** @type {import('tailwindcss').Config} */
@@ -159,7 +181,7 @@ module.exports = {
 
 > **Note:** Полный список токенов скопировать из `frontend/src/app/styles/index.css` блок `@theme`. Список должен совпадать 1:1.
 
-- [ ] **Step 3: Создать global.css**
+- [x] **Step 3: Создать global.css**
 
 ```css
 @tailwind base;
@@ -167,7 +189,7 @@ module.exports = {
 @tailwind utilities;
 ```
 
-- [ ] **Step 4: Создать metro.config.js**
+- [x] **Step 4: Создать metro.config.js**
 
 ```js
 const { getDefaultConfig } = require('expo/metro-config');
@@ -177,7 +199,7 @@ const config = getDefaultConfig(__dirname);
 module.exports = withNativeWind(config, { input: './global.css' });
 ```
 
-- [ ] **Step 5: Создать babel.config.js**
+- [x] **Step 5: Создать babel.config.js**
 
 ```js
 module.exports = function (api) {
@@ -192,7 +214,7 @@ module.exports = function (api) {
 };
 ```
 
-- [ ] **Step 6: Подключить global.css в root layout**
+- [x] **Step 6: Подключить global.css в root layout**
 
 Заменить `mobile/app/_layout.tsx`:
 
@@ -205,7 +227,7 @@ export default function RootLayout() {
 }
 ```
 
-- [ ] **Step 7: Создать smoke-test page**
+- [x] **Step 7: Создать smoke-test page**
 
 ```bash
 cat > mobile/app/index.tsx <<'EOF'
@@ -221,7 +243,7 @@ export default function Home() {
 EOF
 ```
 
-- [ ] **Step 8: Проверить запуск в Expo Go**
+- [x] **Step 8: Проверить запуск в Expo Go**
 
 ```bash
 cd mobile && npx expo start --clear
@@ -229,7 +251,7 @@ cd mobile && npx expo start --clear
 
 Expected: на телефоне — синий жирный текст "NativeWind works" по центру.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add mobile/
@@ -240,18 +262,20 @@ git commit -m "feat(mobile): NativeWind v5 + design tokens from frontend/"
 
 ### Task 4: Design tokens — портировать полный @theme из Vue
 
+**Status:** ✅ Done
+
 **Files:**
 - Read: `frontend/src/app/styles/index.css`
 - Modify: `mobile/tailwind.config.js`
 - Create: `mobile/src/shared/config/colors.ts`
 
-- [ ] **Step 1: Прочитать текущие токены**
+- [x] **Step 1: Прочитать текущие токены**
 
 ```bash
 cat frontend/src/app/styles/index.css | sed -n '/@theme/,/^}/p'
 ```
 
-- [ ] **Step 2: Скопировать ВСЕ цвета (background, surface, text, primary, secondary, success, warning, danger, accent) и radius из @theme в `tailwind.config.js` под `theme.extend.colors` и `borderRadius`**
+- [x] **Step 2: Скопировать ВСЕ цвета (background, surface, text, primary, secondary, success, warning, danger, accent) и radius из @theme в `tailwind.config.js` под `theme.extend.colors` и `borderRadius`**
 
 ```js
 // tailwind.config.js — после копирования будет ~50-80 цветов
@@ -262,7 +286,7 @@ colors: {
 }
 ```
 
-- [ ] **Step 3: Перенести `ENTITY_COLORS` из frontend/src/shared/config/colors.ts**
+- [x] **Step 3: Перенести `ENTITY_COLORS` из frontend/src/shared/config/colors.ts**
 
 ```bash
 cp frontend/src/shared/config/colors.ts mobile/src/shared/config/colors.ts
@@ -270,13 +294,13 @@ cp frontend/src/shared/config/colors.ts mobile/src/shared/config/colors.ts
 
 Внутри файла — TS-объекты, не зависят от Vue, переносятся без изменений.
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 ```bash
 cd mobile && npx tsc --noEmit
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add mobile/
@@ -287,36 +311,38 @@ git commit -m "feat(mobile): port design tokens and ENTITY_COLORS from frontend"
 
 ### Task 5: Установить core зависимости
 
+**Status:** ✅ Done
+
 **Files:**
 - Modify: `mobile/package.json` (через npx expo install)
 
-- [ ] **Step 1: Установить навигацию и storage**
+- [x] **Step 1: Установить навигацию и storage**
 
 ```bash
 cd mobile
 npx expo install expo-router expo-secure-store @react-native-async-storage/async-storage
 ```
 
-- [ ] **Step 2: Установить state и формы**
+- [x] **Step 2: Установить state и формы**
 
 ```bash
 npm install @tanstack/react-query @tanstack/query-async-storage-persister @tanstack/query-persist-client-core zustand react-hook-form zod @hookform/resolvers
 ```
 
-- [ ] **Step 3: Установить UI и анимации**
+- [x] **Step 3: Установить UI и анимации**
 
 ```bash
 npx expo install react-native-gesture-handler react-native-reanimated expo-image expo-haptics expo-blur
 npm install class-variance-authority clsx tailwind-merge @shopify/flash-list
 ```
 
-- [ ] **Step 4: Установить date/csv libs**
+- [x] **Step 4: Установить date/csv libs**
 
 ```bash
 npm install date-fns papaparse @types/papaparse
 ```
 
-- [ ] **Step 5: Verify**
+- [x] **Step 5: Verify**
 
 ```bash
 cd mobile && npx expo install --check
@@ -324,7 +350,7 @@ cd mobile && npx expo install --check
 
 Expected: All dependencies match expected version. (Если warning — `npx expo install --fix`).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add mobile/package.json mobile/package-lock.json
@@ -335,11 +361,13 @@ git commit -m "feat(mobile): install core deps (router, query, RN gesture handle
 
 ### Task 6: Providers root (QueryClient, GestureHandler, SafeArea)
 
+**Status:** ✅ Done
+
 **Files:**
 - Create: `mobile/src/app/providers.tsx`
 - Modify: `mobile/app/_layout.tsx`
 
-- [ ] **Step 1: Создать providers.tsx**
+- [x] **Step 1: Создать providers.tsx**
 
 ```tsx
 // mobile/src/app/providers.tsx
@@ -382,7 +410,7 @@ export function Providers({ children }: { children: ReactNode }) {
 export { queryClient };
 ```
 
-- [ ] **Step 2: Обернуть root layout в Providers**
+- [x] **Step 2: Обернуть root layout в Providers**
 
 ```tsx
 // mobile/app/_layout.tsx
@@ -399,7 +427,7 @@ export default function RootLayout() {
 }
 ```
 
-- [ ] **Step 3: Проверить, что приложение запускается без ошибок**
+- [x] **Step 3: Проверить, что приложение запускается без ошибок**
 
 ```bash
 cd mobile && npx expo start --clear
@@ -407,7 +435,7 @@ cd mobile && npx expo start --clear
 
 Expected: smoke-test страница из Task 3 продолжает работать.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add mobile/
@@ -418,13 +446,15 @@ git commit -m "feat(mobile): root providers (QueryClient persisted, SafeArea, Ge
 
 ### Task 7: HTTP client с JWT и refresh
 
+**Status:** ✅ Done
+
 **Files:**
 - Create: `mobile/src/shared/config/env.ts`
 - Create: `mobile/src/shared/api/http.ts`
 - Create: `mobile/src/shared/config/storageKeys.ts`
 - Create: `mobile/.env.local`
 
-- [ ] **Step 1: Env config**
+- [x] **Step 1: Env config**
 
 ```bash
 echo 'EXPO_PUBLIC_API_URL=http://localhost:3000' > mobile/.env.local
@@ -436,7 +466,7 @@ echo '.env.local' >> mobile/.gitignore
 export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
 ```
 
-- [ ] **Step 2: Storage keys**
+- [x] **Step 2: Storage keys**
 
 ```ts
 // mobile/src/shared/config/storageKeys.ts
@@ -449,7 +479,7 @@ export const STORAGE_KEYS = {
 } as const;
 ```
 
-- [ ] **Step 3: HTTP клиент с авто-refresh**
+- [x] **Step 3: HTTP клиент с авто-refresh**
 
 ```ts
 // mobile/src/shared/api/http.ts
@@ -528,13 +558,13 @@ export async function http<T = unknown>(path: string, opts: RequestOptions = {})
 }
 ```
 
-- [ ] **Step 4: Verify type-check**
+- [x] **Step 4: Verify type-check**
 
 ```bash
 cd mobile && npx tsc --noEmit
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add mobile/src/shared/ mobile/.env.local mobile/.gitignore
@@ -545,10 +575,12 @@ git commit -m "feat(mobile): http client with JWT auto-refresh via SecureStore"
 
 ### Task 8: Auth store (Zustand) + useAuth hook
 
+**Status:** ✅ Done
+
 **Files:**
 - Create: `mobile/src/shared/api/composables/useAuth.ts`
 
-- [ ] **Step 1: Создать Zustand store + hook**
+- [x] **Step 1: Создать Zustand store + hook**
 
 ```ts
 // mobile/src/shared/api/composables/useAuth.ts
@@ -644,7 +676,7 @@ export function useAuth() {
 }
 ```
 
-- [ ] **Step 2: Вызвать bootstrap из root layout**
+- [x] **Step 2: Вызвать bootstrap из root layout**
 
 Обновить `mobile/app/_layout.tsx`:
 
@@ -674,7 +706,7 @@ export default function RootLayout() {
 }
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add mobile/
@@ -684,6 +716,8 @@ git commit -m "feat(mobile): auth store + bootstrap from SecureStore"
 ---
 
 ### Task 9: NativeTabs root + auth-protected stack
+
+**Status:** ✅ Done
 
 **Files:**
 - Create: `mobile/app/(tabs)/_layout.tsx`
@@ -695,7 +729,7 @@ git commit -m "feat(mobile): auth store + bootstrap from SecureStore"
 - Create: `mobile/app/auth/sign-in.tsx`
 - Modify: `mobile/app/_layout.tsx`
 
-- [ ] **Step 1: Создать auth guard в root**
+- [x] **Step 1: Создать auth guard в root**
 
 ```tsx
 // mobile/app/_layout.tsx
@@ -735,7 +769,7 @@ export default function RootLayout() {
 }
 ```
 
-- [ ] **Step 2: NativeTabs layout**
+- [x] **Step 2: NativeTabs layout**
 
 ```tsx
 // mobile/app/(tabs)/_layout.tsx
@@ -765,7 +799,7 @@ export default function TabsLayout() {
 }
 ```
 
-- [ ] **Step 3: Создать stub-страницы 4 табов**
+- [x] **Step 3: Создать stub-страницы 4 табов**
 
 Для каждой создать одинаковый шаблон (отличается только title):
 
@@ -786,7 +820,7 @@ export default function DashboardScreen() {
 
 Повторить для `history.tsx` ("История"), `analytics.tsx` ("Аналитика"), `profile.tsx` ("Профиль").
 
-- [ ] **Step 4: Auth layout + sign-in placeholder**
+- [x] **Step 4: Auth layout + sign-in placeholder**
 
 ```tsx
 // mobile/app/auth/_layout.tsx
@@ -849,13 +883,13 @@ export default function SignInScreen() {
 }
 ```
 
-- [ ] **Step 5: Удалить mobile/app/index.tsx (был smoke-test)**
+- [x] **Step 5: Удалить mobile/app/index.tsx (был smoke-test)**
 
 ```bash
 rm -f mobile/app/index.tsx
 ```
 
-- [ ] **Step 6: Запустить и проверить**
+- [x] **Step 6: Запустить и проверить**
 
 ```bash
 cd mobile && npx expo start --clear
@@ -863,7 +897,7 @@ cd mobile && npx expo start --clear
 
 Expected: видим экран Sign In (user не залогинен), после "Попробовать без аккаунта" — попадаем на 4-табовую навигацию.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add mobile/
@@ -874,13 +908,15 @@ git commit -m "feat(mobile): NativeTabs + auth guard + sign-in screen"
 
 ### Task 10: Перенос format/date/utils утилит
 
+**Status:** ✅ Done
+
 **Files:**
 - Read: `frontend/src/shared/lib/format/*`, `frontend/src/shared/lib/date/*`, `frontend/src/shared/lib/utils.ts`
 - Create: `mobile/src/shared/lib/format/index.ts` (+ отдельные файлы)
 - Create: `mobile/src/shared/lib/date/index.ts`
 - Create: `mobile/src/shared/lib/utils.ts`
 
-- [ ] **Step 1: Скопировать чистые функции (нет зависимости от Vue)**
+- [x] **Step 1: Скопировать чистые функции (нет зависимости от Vue)**
 
 Эти модули из Vue — pure TS, переносятся без правок:
 
@@ -890,7 +926,7 @@ cp -r frontend/src/shared/lib/date mobile/src/shared/lib/date
 cp frontend/src/shared/lib/utils.ts mobile/src/shared/lib/utils.ts
 ```
 
-- [ ] **Step 2: Проверить, что внутри нет vue-импортов**
+- [x] **Step 2: Проверить, что внутри нет vue-импортов**
 
 ```bash
 grep -rn "from 'vue'" mobile/src/shared/lib/ || echo "OK — нет vue зависимостей"
@@ -898,13 +934,13 @@ grep -rn "from 'vue'" mobile/src/shared/lib/ || echo "OK — нет vue зави
 
 Если что-то найдётся (например, `ref` в utils) — переписать на нативное (`useState`).
 
-- [ ] **Step 3: Verify type-check**
+- [x] **Step 3: Verify type-check**
 
 ```bash
 cd mobile && npx tsc --noEmit
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add mobile/src/shared/lib/
@@ -915,11 +951,13 @@ git commit -m "feat(mobile): port pure format/date/utils helpers from frontend"
 
 ### Task 11: Перенос Entity типов и констант
 
+**Status:** ✅ Done
+
 **Files:**
 - Read: `frontend/src/entities/*/model/types.ts`, `*/model/constants.ts`
 - Create: `mobile/src/entities/*` (по всем 14 entities)
 
-- [ ] **Step 1: Скопировать model-папки всех entities**
+- [x] **Step 1: Скопировать model-папки всех entities**
 
 ```bash
 for entity in account account-balance budget category currency debt goal person push-subscription quick-action recurring-subscription subscription transaction; do
@@ -928,19 +966,19 @@ for entity in account account-balance budget category currency debt goal person 
 done
 ```
 
-- [ ] **Step 2: Удалить Vue-специфичные ui подпапки если случайно скопировались**
+- [x] **Step 2: Удалить Vue-специфичные ui подпапки если случайно скопировались**
 
 ```bash
 find mobile/src/entities -type d -name "ui" -exec rm -rf {} +
 ```
 
-- [ ] **Step 3: Проверить отсутствие vue-импортов**
+- [x] **Step 3: Проверить отсутствие vue-импортов**
 
 ```bash
 grep -rn "from 'vue'" mobile/src/entities/ || echo "OK"
 ```
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 ```bash
 cd mobile && npx tsc --noEmit
@@ -948,7 +986,7 @@ cd mobile && npx tsc --noEmit
 
 Expected: 0 errors.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add mobile/src/entities/
@@ -959,18 +997,20 @@ git commit -m "feat(mobile): port entity types and constants (14 entities)"
 
 ### Task 12: EAS init + dev client + project ID
 
+**Status:** ✅ Done
+
 **Files:**
 - Create: `mobile/eas.json`
 - Modify: `mobile/app.json`
 
-- [ ] **Step 1: Установить eas-cli (если ещё нет)**
+- [x] **Step 1: Установить eas-cli (если ещё нет)**
 
 ```bash
 npm install -g eas-cli
 eas --version
 ```
 
-- [ ] **Step 2: Логин и init**
+- [x] **Step 2: Логин и init**
 
 ```bash
 cd mobile
@@ -980,7 +1020,7 @@ eas init --id <if-existing> # либо просто `eas init` для новог
 
 Это запишет `extra.eas.projectId` в `app.json`.
 
-- [ ] **Step 3: Создать eas.json с тремя профилями**
+- [x] **Step 3: Создать eas.json с тремя профилями**
 
 ```json
 {
@@ -1009,13 +1049,13 @@ eas init --id <if-existing> # либо просто `eas init` для новог
 }
 ```
 
-- [ ] **Step 4: Установить expo-dev-client**
+- [x] **Step 4: Установить expo-dev-client**
 
 ```bash
 npx expo install expo-dev-client
 ```
 
-- [ ] **Step 5: Первый dev build для iOS Simulator**
+- [x] **Step 5: Первый dev build для iOS Simulator**
 
 ```bash
 eas build --profile development --platform ios --local || eas build --profile development --platform ios
@@ -1023,13 +1063,13 @@ eas build --profile development --platform ios --local || eas build --profile de
 
 > Note: `--local` требует Xcode, иначе строится в EAS Cloud (~10-15 мин).
 
-- [ ] **Step 6: Запустить с dev client**
+- [x] **Step 6: Запустить с dev client**
 
 ```bash
 npx expo start --dev-client
 ```
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add mobile/eas.json mobile/app.json
