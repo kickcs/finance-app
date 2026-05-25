@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "Finance",
+    "slug": "finance-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "finance",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "bundleIdentifier": "com.hamkor.finance",
+      "supportsTablet": false
+    },
+    "android": {
+      "package": "com.hamkor.finance",
+      "predictiveBackGestureEnabled": true
+    },
+    "web": {
+      "output": "static"
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}
