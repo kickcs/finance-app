@@ -87,4 +87,44 @@ export const accountsApi = {
     const data = await http<AccountResponse>(`/api/accounts/${accountId}`);
     return transformAccount(data);
   },
+
+  async create(input: {
+    name: string;
+    icon: string;
+    color: string;
+    type: Account['type'];
+    balance: number;
+    currency: string;
+  }): Promise<Account> {
+    const data = await http<AccountResponse>('/api/accounts', {
+      method: 'POST',
+      body: JSON.stringify({
+        name: input.name,
+        icon: input.icon,
+        color: input.color,
+        type: input.type,
+        order: 0,
+        balances: [{ currency: input.currency, balance: input.balance }],
+      }),
+    });
+    return transformAccount(data);
+  },
+
+  async update(id: string, updates: Partial<Account>): Promise<Account> {
+    const data = await http<AccountResponse>(`/api/accounts/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        name: updates.name,
+        icon: updates.icon,
+        color: updates.color,
+        type: updates.type,
+        order: updates.order,
+      }),
+    });
+    return transformAccount(data);
+  },
+
+  async delete(id: string): Promise<void> {
+    await http(`/api/accounts/${id}`, { method: 'DELETE' });
+  },
 };

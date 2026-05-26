@@ -38,6 +38,12 @@ export interface TransactionFormProps {
   /** When set, form acts as edit. Otherwise create. */
   editId?: string;
   initialValues?: Partial<FormValues>;
+  /**
+   * ISO date of the transaction being edited. Preserved on save instead of
+   * overwriting with "now" — otherwise editing an old transaction silently
+   * moves it to today and corrupts month grouping / cursor pagination.
+   */
+  initialDate?: string;
   onDone?: () => void;
 }
 
@@ -47,6 +53,7 @@ export function TransactionForm({
   defaultCurrency,
   editId,
   initialValues,
+  initialDate,
   onDone,
 }: TransactionFormProps) {
   const create = useCreateTransaction();
@@ -79,7 +86,8 @@ export function TransactionForm({
         category_id: values.categoryId,
         account_id: values.accountId,
         description: values.description?.length ? values.description : null,
-        date: new Date().toISOString(),
+        // Preserve original date on edit; stamp current time only on create.
+        date: editId && initialDate ? initialDate : new Date().toISOString(),
       };
       if (editId) {
         await update.mutateAsync({ id: editId, updates: payload });

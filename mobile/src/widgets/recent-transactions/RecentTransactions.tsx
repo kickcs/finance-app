@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
 import { Text, View } from 'react-native';
 
@@ -12,6 +13,7 @@ interface Props {
 
 export function RecentTransactions({ limit = 5 }: Props) {
   const user = useUser();
+  const router = useRouter();
   const { data: transactions, isLoading } = useRecentTransactions(user?.id ?? null, limit);
   const { data: accounts } = useAccounts(user?.id ?? null);
 
@@ -55,6 +57,15 @@ export function RecentTransactions({ limit = 5 }: Props) {
               transaction={tx}
               accountName={accountById.get(tx.account_id)}
               toAccountName={tx.to_account_id ? accountById.get(tx.to_account_id) : undefined}
+              onPress={
+                tx.type === 'income' || tx.type === 'expense'
+                  ? () =>
+                      router.push({
+                        pathname: '/transactions/[id]/edit',
+                        params: { id: tx.id },
+                      })
+                  : undefined
+              }
             />
           </View>
         );

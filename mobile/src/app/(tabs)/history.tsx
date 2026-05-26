@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { SectionList, Text, View } from 'react-native';
 
 import { useAccounts } from '@/entities/account/api';
@@ -12,6 +13,7 @@ import { useMemo } from 'react';
 
 export default function HistoryScreen() {
   const user = useUser();
+  const router = useRouter();
   const {
     data,
     isLoading,
@@ -66,6 +68,15 @@ export default function HistoryScreen() {
             transaction={item}
             accountName={accountById.get(item.account_id)}
             toAccountName={item.to_account_id ? accountById.get(item.to_account_id) : undefined}
+            onPress={
+              item.type === 'income' || item.type === 'expense'
+                ? () =>
+                    router.push({
+                      pathname: '/transactions/[id]/edit',
+                      params: { id: item.id },
+                    })
+                : undefined
+            }
           />
         </View>
       )}

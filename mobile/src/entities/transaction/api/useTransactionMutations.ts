@@ -15,13 +15,20 @@ export function useCreateTransaction() {
 
 interface UpdateInput {
   id: string;
-  updates: Partial<Transaction>;
+  /**
+   * Narrowed to TransactionCreateInput so callers can't try to PATCH server-derived
+   * fields (user_id, net_amount, has_debt_returns). transactionsApi.update only
+   * forwards a subset to backend anyway — keeping the signature tight prevents
+   * silent drops at the API boundary.
+   */
+  updates: Partial<TransactionCreateInput>;
 }
 
 export function useUpdateTransaction() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, updates }: UpdateInput) => transactionsApi.update(id, updates),
+    mutationFn: ({ id, updates }: UpdateInput) =>
+      transactionsApi.update(id, updates as Partial<Transaction>),
     onSuccess: () => invalidateTransactionRelated(qc),
   });
 }

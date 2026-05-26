@@ -1,6 +1,6 @@
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { Link, Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo } from 'react';
-import { SectionList, Text, View } from 'react-native';
+import { Pressable, SectionList, Text, View } from 'react-native';
 
 import { useAccount, useAccounts } from '@/entities/account/api';
 import {
@@ -14,6 +14,7 @@ import { Spinner } from '@/shared/ui/spinner';
 export default function AccountDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const user = useUser();
+  const router = useRouter();
   const { data: account } = useAccount(user?.id ?? null, id ?? null);
   const { data: accounts } = useAccounts(user?.id ?? null);
   const {
@@ -49,7 +50,19 @@ export default function AccountDetailScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: account?.name ?? 'Счёт' }} />
+      <Stack.Screen
+        options={{
+          title: account?.name ?? 'Счёт',
+          headerRight: () =>
+            id ? (
+              <Link href={{ pathname: '/accounts/[id]/adjust', params: { id } }} asChild>
+                <Pressable accessibilityRole="button" accessibilityLabel="Корректировка баланса">
+                  <Text className="text-sm font-medium text-primary">Коррекция</Text>
+                </Pressable>
+              </Link>
+            ) : null,
+        }}
+      />
       <SectionList
         contentInsetAdjustmentBehavior="automatic"
         className="flex-1 bg-background-light dark:bg-background-dark"
@@ -65,6 +78,15 @@ export default function AccountDetailScreen() {
                 item.to_account_id ? accountById.get(item.to_account_id) : undefined
               }
               viewingAccountId={id ?? undefined}
+              onPress={
+                item.type === 'income' || item.type === 'expense'
+                  ? () =>
+                      router.push({
+                        pathname: '/transactions/[id]/edit',
+                        params: { id: item.id },
+                      })
+                  : undefined
+              }
             />
           </View>
         )}

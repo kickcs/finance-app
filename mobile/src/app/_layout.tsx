@@ -58,7 +58,7 @@ function AppShell() {
           presentation: 'formSheet',
           headerShown: true,
           sheetGrabberVisible: true,
-          sheetAllowedDetents: [0.75, 1.0],
+          sheetAllowedDetents: [0.85, 1.0],
           title: 'Новый счёт',
         }}
       />
