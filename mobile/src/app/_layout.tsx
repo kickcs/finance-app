@@ -63,6 +63,46 @@ function AppShell() {
         }}
       />
       <Stack.Screen
+        name="debts/new"
+        options={{
+          presentation: 'formSheet',
+          headerShown: true,
+          sheetGrabberVisible: true,
+          sheetAllowedDetents: [0.85, 1.0],
+          title: 'Новый долг',
+        }}
+      />
+      <Stack.Screen
+        name="debts/[id]/edit"
+        options={{
+          presentation: 'formSheet',
+          headerShown: true,
+          sheetGrabberVisible: true,
+          sheetAllowedDetents: [0.85, 1.0],
+          title: 'Редактировать долг',
+        }}
+      />
+      <Stack.Screen
+        name="debts/[id]/partial-pay"
+        options={{
+          presentation: 'formSheet',
+          headerShown: true,
+          sheetGrabberVisible: true,
+          sheetAllowedDetents: [0.6],
+          title: 'Частичная оплата',
+        }}
+      />
+      <Stack.Screen
+        name="debts/[id]/close"
+        options={{
+          presentation: 'formSheet',
+          headerShown: true,
+          sheetGrabberVisible: true,
+          sheetAllowedDetents: [0.6],
+          title: 'Закрыть долг',
+        }}
+      />
+      <Stack.Screen
         name="accounts/[id]/adjust"
         options={{
           presentation: 'formSheet',
