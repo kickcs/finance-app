@@ -1,9 +1,9 @@
 # Vue → Expo Migration Design
 
 **Date**: 2026-05-25
-**Status**: In progress — Phase 0–3 shipped on `feature/mobile-migration`, Phase 4+ pending
+**Status**: In progress — Phase 0–3 shipped on `feature/mobile-migration`, Phase 4 partial (51-55, 60-62 done; 56-59 pending)
 **Author**: Generated via /goal brainstorming session
-**Last sync**: 2026-05-26 (Phase 3 close)
+**Last sync**: 2026-05-26 (Phase 4 — Tasks 60 + 62 close)
 
 ---
 
@@ -348,6 +348,8 @@ Tasks 33–50. Сделано: Debts (CRUD + group-by-person cursor pagination +
   - `@MaxLength(512)` на token в DTO (Expo ~50, APNs 64, FCM ≤256).
   - DB-level `CHECK (platform IN ('ios','android'))`.
 - **Task 61 — Push subscription endpoint mapping** ✅ Покрыт Task 53 (lifecycle в `useAuth`).
+- **Task 60 — usePremiumFeature gate** ✅ Zustand store в `mobile/src/features/upgrade-to-premium/` (`usePremiumFeature` для call sites + `usePremiumModalState` для модалки + `setPremiumStatus` helper). Источник правды — `useSubscription(user?.id)`, синкается в Zustand-mirror через `useEffect` в `_layout.tsx`. `<PremiumUpgradeModal />` отрендерен глобально рядом со Stack в `AppShell` (RN `<Modal presentationStyle="pageSheet">`). Кнопки покупки — placeholder Alert до Task 57. `PremiumBadge` — простой pill-style View+Text. Barrel `entities/subscription/index.ts` создан. Commit `101e316`.
+- **Task 62 — EAS Update** ✅ expo-updates установлен (`~56.0.16`). В `app.json`: `runtimeVersion.policy = "fingerprint"` + `updates.fallbackToCacheTimeout = 0`. Workflow `.github/workflows/eas-update.yml` на push в `master` под `mobile/**` с `[skip-ota]` опт-аутом, `concurrency` группой и `--non-interactive` флагом. Channel `production` совпадает с `eas.json`. **Не сделано** (требует interactive eas-cli auth от мейнтейнера): `eas update:configure` для добавления `extra.eas.projectId` + `updates.url` в `app.json` и `EXPO_TOKEN` secret на GitHub. До этого первый запуск workflow упадёт на publish step — флаг намеренный. Commit `de46d98`.
 
 **Real APNs/FCM delivery не проверена** — нужен EAS dev build на физическом девайсе + APNs key / FCM service account. Blocked на open question #1.
 
@@ -357,10 +359,8 @@ Tasks 33–50. Сделано: Debts (CRUD + group-by-person cursor pagination +
 |---|---|
 | 56 — Camera + Receipt OCR | Physical device для камеры; OPENAI_API_KEY уже есть на бэке. |
 | 57 — IAP (expo-iap 2.9) | Apple Developer + Google Play accounts (open question #1). |
-| 58 — PremiumUpgradeModal | Зависит от Task 57. |
+| 58 — PremiumUpgradeModal | UI-shell готов в Task 60; remaining — `expo-iap.fetchProducts` + `requestPurchase` wiring (Task 57). |
 | 59 — Backend IAP receipt validation | App-Specific Shared Secret + Google Play service account JSON. |
-| 60 — usePremiumFeature gate | Можно начать без IAP (UI + Zustand). |
-| 62 — EAS Update | Конфиг-only, можно сделать. |
 
 **Внешние зависимости перед стартом Phase 4:**
 - Apple Developer Program account + App Store Connect app record (open question #1 в спеке).

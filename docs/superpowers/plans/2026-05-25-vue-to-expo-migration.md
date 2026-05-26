@@ -20,7 +20,7 @@
 | Phase 1 — Core read screens | 13-22 + 21a | ✅ Done (12 commits) |
 | Phase 2 — Core mutations | 23-32 | ✅ Done (4 commits, 2 HIGH review fixes applied) |
 | Phase 3 — Domain features | 33-50 | ✅ Done with deferrals (see table below) |
-| Phase 4 — Native MVP | 51-62 | 🚧 In progress — 51, 52, 53, 55 done; 54, 56-62 pending |
+| Phase 4 — Native MVP | 51-62 | 🚧 In progress — 51, 52, 53, 54, 55, 60, 61, 62 done; 56-59 pending (need physical device / store accounts) |
 | Phase 5 — Polish & QA | 63-72 | ⏳ Pending — also absorbs Phase 0–3 deferrals |
 | Phase 6 — Store submission | 73-80 | ⏳ Pending — blocked on App Store / Google Play accounts |
 
@@ -35,11 +35,11 @@
 | 55 — Backend POST /api/push-devices | ✅ Done | New `push_devices` table, FK to profiles ON DELETE CASCADE, CHECK constraint on platform, UNIQUE (user_id, token), capped token length. 4 HIGH review fixes applied (PK preserved across upsert, FK cascade, DELETE-with-body → POST /unregister, token MaxLength). Commit `f98d7ac`. |
 | 56 — Camera + receipt OCR | ⏳ Pending | Code can be written, needs physical device for camera + existing `/api/receipt/scan` OPENAI_API_KEY config check. |
 | 57 — IAP setup (expo-iap 2.9) | ⏳ Pending | Needs App Store / Google Play developer accounts (spec open question #1). |
-| 58 — PremiumUpgradeModal + IAP UI | ⏳ Pending | Blocked on Task 57. |
+| 58 — PremiumUpgradeModal + IAP UI | ⚠️ Partial | UI shell shipped in Task 60 (`<PremiumUpgradeModal />` rendered globally in `_layout.tsx`); purchase buttons placeholder Alert until Task 57 wires `requestPurchase`. Commit `101e316`. |
 | 59 — Backend IAP receipt validation | ⏳ Pending | Needs App-Specific Shared Secret + Google Play service account JSON. |
-| 60 — usePremiumFeature gate | ⏳ Pending | Can do UI/Zustand-only without IAP. |
+| 60 — usePremiumFeature gate | ✅ Done | Zustand store (`usePremiumFeature` + `usePremiumModalState` + `setPremiumStatus`) synced from `useSubscription` in `_layout.tsx`. `PremiumBadge` shipped. Commit `101e316`. |
 | 61 — Push subscription endpoint mapping (Vue parity) | ✅ Done (covered by Task 53/55) | Already wired in `useAuth` lifecycle. |
-| 62 — EAS Update setup | ⏳ Pending | Config-only, can be done. |
+| 62 — EAS Update setup | ✅ Done (modulo `eas update:configure`) | expo-updates installed, `runtimeVersion.policy=fingerprint` + `updates.fallbackToCacheTimeout=0` in `app.json`, `.github/workflows/eas-update.yml` with `[skip-ota]` opt-out + path filter on `mobile/**`. `extra.eas.projectId` + `updates.url` deferred — produced by interactive `eas update:configure`. `EXPO_TOKEN` secret pending on the GitHub repo. Commit `de46d98`. |
 
 ### Deferrals (carry forward to later phases)
 
