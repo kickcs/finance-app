@@ -32,6 +32,67 @@ export interface MonthlyStats {
   expense_by_currency: Record<string, number>;
 }
 
+export interface CategoryBreakdown {
+  category_id: string;
+  category_name: string;
+  category_icon: string;
+  category_color: string;
+  type: 'income' | 'expense';
+  amount: number;
+  amount_by_currency: Record<string, number>;
+}
+
+export interface AnalyticsStats {
+  total_income: number;
+  total_expense: number;
+  income_by_currency: Record<string, number>;
+  expense_by_currency: Record<string, number>;
+  category_breakdown: CategoryBreakdown[];
+}
+
+export interface AnalyticsOptions {
+  startDate: string;
+  endDate: string;
+  accountIds?: string[];
+}
+
+export interface DailyStatsEntry {
+  date: string;
+  income_by_currency: Record<string, number>;
+  expense_by_currency: Record<string, number>;
+}
+
+export interface DailyStatsOptions {
+  startDate: string;
+  endDate: string;
+  accountIds?: string[];
+  groupBy?: 'day' | 'week' | 'month';
+}
+
+interface CategoryBreakdownResponse {
+  categoryId: string;
+  categoryName: string;
+  categoryIcon: string;
+  categoryColor: string;
+  type: 'income' | 'expense';
+  amount: number;
+  amountByCurrency: Record<string, number>;
+}
+
+interface AnalyticsStatsResponse {
+  totalIncome: number;
+  totalExpense: number;
+  incomeByCurrency: Record<string, number>;
+  expenseByCurrency: Record<string, number>;
+  categoryBreakdown: CategoryBreakdownResponse[];
+}
+
+interface DailyStatsEntryResponse {
+  date: string;
+  incomeByCurrency: Record<string, number>;
+  expenseByCurrency: Record<string, number>;
+}
+
 interface TransactionResponse {
   id: string;
   userId: string;
@@ -157,6 +218,55 @@ export const transactionsApi = {
       nextCursor: data.nextCursor,
       hasMore: data.hasMore,
     };
+  },
+
+  async getAnalyticsStats(options: AnalyticsOptions): Promise<AnalyticsStats> {
+    const qs = buildQuery({
+      startDate: options.startDate,
+      endDate: options.endDate,
+      accountIds:
+        options.accountIds && options.accountIds.length > 0
+          ? options.accountIds.join(',')
+          : undefined,
+    });
+    const data = await http<AnalyticsStatsResponse>(
+      `/api/transactions/stats/analytics${qs}`,
+    );
+    return {
+      total_income: data.totalIncome,
+      total_expense: data.totalExpense,
+      income_by_currency: data.incomeByCurrency,
+      expense_by_currency: data.expenseByCurrency,
+      category_breakdown: data.categoryBreakdown.map((c) => ({
+        category_id: c.categoryId,
+        category_name: c.categoryName,
+        category_icon: c.categoryIcon,
+        category_color: c.categoryColor,
+        type: c.type,
+        amount: c.amount,
+        amount_by_currency: c.amountByCurrency,
+      })),
+    };
+  },
+
+  async getDailyStats(options: DailyStatsOptions): Promise<DailyStatsEntry[]> {
+    const qs = buildQuery({
+      startDate: options.startDate,
+      endDate: options.endDate,
+      groupBy: options.groupBy,
+      accountIds:
+        options.accountIds && options.accountIds.length > 0
+          ? options.accountIds.join(',')
+          : undefined,
+    });
+    const data = await http<DailyStatsEntryResponse[]>(
+      `/api/transactions/stats/daily${qs}`,
+    );
+    return data.map((entry) => ({
+      date: entry.date,
+      income_by_currency: entry.incomeByCurrency,
+      expense_by_currency: entry.expenseByCurrency,
+    }));
   },
 
   async getMonthlyStats(year: number, month: number): Promise<MonthlyStats> {
