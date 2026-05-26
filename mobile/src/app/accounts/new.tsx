@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { router, Stack } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { Controller, useForm } from 'react-hook-form';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { z } from 'zod';
@@ -10,7 +10,7 @@ import { ACCOUNT_ICONS } from '@/entities/account/model/types';
 import { VISIBLE_ACCOUNT_TYPES, ACCOUNT_TYPE_LABELS } from '@/entities/account/model/account-types';
 import { CURRENCIES } from '@/entities/currency';
 import { useUser } from '@/shared/api/composables/useAuth';
-import { useProfile } from '@/shared/api/composables/useProfile';
+import { useCompleteOnboarding, useProfile } from '@/shared/api/composables/useProfile';
 import { ENTITY_COLORS } from '@/shared/config/colors';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
@@ -30,8 +30,11 @@ type FormValues = z.infer<typeof schema>;
 
 export default function NewAccountScreen() {
   const user = useUser();
+  const { onboarding } = useLocalSearchParams<{ onboarding?: string }>();
+  const isOnboarding = onboarding === '1';
   const { data: profile } = useProfile(user?.id ?? null);
   const create = useCreateAccount();
+  const { completeOnboarding } = useCompleteOnboarding(user?.id ?? null);
 
   const { control, handleSubmit, formState } = useForm<FormValues>({
     mode: 'onChange',
@@ -57,6 +60,9 @@ export default function NewAccountScreen() {
         balance: Number(values.balance.replace(',', '.')),
         currency: values.currency,
       });
+      if (isOnboarding) {
+        await completeOnboarding();
+      }
       await trigger('success');
       router.back();
     } catch (err) {

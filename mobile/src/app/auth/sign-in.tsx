@@ -76,6 +76,18 @@ export default function SignInScreen() {
       >
         <Text className="text-primary">Попробовать без аккаунта</Text>
       </Pressable>
+      <Pressable
+        onPress={onAnonymous}
+        disabled={loading}
+        accessibilityRole="button"
+        accessibilityLabel="Попробовать в демо"
+        accessibilityState={{ disabled: loading }}
+        className="py-3 items-center"
+      >
+        <Text className="text-text-secondary-light dark:text-text-secondary-dark">
+          Попробовать в демо
+        </Text>
+      </Pressable>
     </View>
   );
 }

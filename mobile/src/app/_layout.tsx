@@ -4,6 +4,7 @@ import { SplashScreen, Stack, useRouter, useSegments } from 'expo-router';
 import { useEffect } from 'react';
 import { Toaster } from 'sonner-native';
 
+import { useAccounts } from '@/entities/account/api';
 import { useSubscription } from '@/entities/subscription';
 import { useThemeBootstrap } from '@/features/toggle-theme';
 import {
@@ -12,6 +13,7 @@ import {
 } from '@/features/upgrade-to-premium';
 import { Providers } from '@/providers/Providers';
 import { bootstrapAuth, useAuthReady, useUser } from '@/shared/api/composables/useAuth';
+import { useProfile } from '@/shared/api/composables/useProfile';
 import { track } from '@/shared/lib/analytics';
 
 // Keep the native splash visible until auth bootstrap finishes — avoids a
@@ -29,6 +31,8 @@ function AppShell() {
   // mirror in sync with the server-truth subscription query so requirePremium()
   // call sites don't need their own React Query subscription.
   const { isPremium } = useSubscription(user?.id ?? null);
+  const { data: profile } = useProfile(user?.id ?? null);
+  const { data: accounts } = useAccounts(user?.id ?? null);
   useThemeBootstrap();
 
   useEffect(() => {
@@ -47,6 +51,19 @@ function AppShell() {
     if (!user && !inAuth) router.replace('/auth/sign-in');
     if (user && inAuth) router.replace('/');
   }, [ready, user, segments, router]);
+
+  // Onboarding gate: when the user has no accounts and hasn't completed
+  // onboarding, redirect to the account creation screen with ?onboarding=1.
+  useEffect(() => {
+    if (!ready || !user) return;
+    if (profile === undefined || accounts === undefined) return;
+    const inOnboarding = segments[1] === 'new' && segments[0] === 'accounts';
+    const inAuth = segments[0] === 'auth';
+    if (inOnboarding || inAuth) return;
+    if (!profile?.has_completed_onboarding && accounts.length === 0) {
+      router.replace('/accounts/new?onboarding=1');
+    }
+  }, [ready, user, profile, accounts, segments, router]);
 
   return (
     <>
