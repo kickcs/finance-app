@@ -2,6 +2,7 @@ import { ScrollView, Text, View } from 'react-native';
 
 import { AccountStack } from '@/widgets/account-stack';
 import { BalanceCard } from '@/widgets/balance-card';
+import { RecentTransactions } from '@/widgets/recent-transactions';
 
 export default function DashboardScreen() {
   return (
@@ -19,6 +20,12 @@ export default function DashboardScreen() {
             Счета
           </Text>
           <AccountStack />
+        </View>
+        <View className="gap-2">
+          <Text className="text-base font-semibold text-text-primary-light dark:text-text-primary-dark">
+            Последние операции
+          </Text>
+          <RecentTransactions />
         </View>
       </View>
     </ScrollView>
