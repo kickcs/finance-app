@@ -1,10 +1,10 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { router } from 'expo-router';
-import * as Haptics from 'expo-haptics';
 import { Controller, useForm } from 'react-hook-form';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { z } from 'zod';
 
+import { trigger } from '@/shared/lib/haptics';
 import { AccountSelector } from '@/entities/account';
 import {
   useCreateTransaction,
@@ -75,7 +75,7 @@ export function TransactionForm({
   const txType = watch('type');
 
   const onSubmit = handleSubmit(async (values) => {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    await trigger('medium');
     try {
       const account = accounts.find((a) => a.id === values.accountId);
       const currency = account?.currency ?? defaultCurrency;
@@ -94,11 +94,11 @@ export function TransactionForm({
       } else {
         await create.mutateAsync(payload);
       }
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      await trigger('success');
       if (onDone) onDone();
       else router.back();
     } catch (err) {
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      await trigger('error');
       throw err;
     }
   });

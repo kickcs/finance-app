@@ -1,10 +1,10 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { Controller, useForm } from 'react-hook-form';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { z } from 'zod';
 
+import { trigger } from '@/shared/lib/haptics';
 import { AccountSelector } from '@/entities/account';
 import type { Account } from '@/shared/api/database.types';
 import {
@@ -65,7 +65,7 @@ export function DebtForm({
   });
 
   const onSubmit = handleSubmit(async (values) => {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    await trigger('medium');
     try {
       const total = Number(values.totalAmount.replace(',', '.'));
       const payload = {
@@ -88,10 +88,10 @@ export function DebtForm({
       } else {
         await create.mutateAsync(payload);
       }
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      await trigger('success');
       router.back();
     } catch (err) {
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      await trigger('error');
       throw err;
     }
   });

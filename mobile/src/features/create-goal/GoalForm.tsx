@@ -1,10 +1,10 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { Controller, useForm } from 'react-hook-form';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { z } from 'zod';
 
+import { trigger } from '@/shared/lib/haptics';
 import { useCreateGoal, useUpdateGoal } from '@/entities/goal';
 import { ENTITY_COLORS } from '@/shared/config/colors';
 import { cn } from '@/shared/lib/utils';
@@ -50,7 +50,7 @@ export function GoalForm({ editId, initialValues }: GoalFormProps) {
   });
 
   const onSubmit = handleSubmit(async (values) => {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    await trigger('medium');
     try {
       const payload = {
         name: values.name.trim(),
@@ -65,10 +65,10 @@ export function GoalForm({ editId, initialValues }: GoalFormProps) {
       } else {
         await create.mutateAsync(payload);
       }
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      await trigger('success');
       router.back();
     } catch (err) {
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      await trigger('error');
       throw err;
     }
   });

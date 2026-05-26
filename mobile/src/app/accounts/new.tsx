@@ -1,10 +1,10 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as Haptics from 'expo-haptics';
 import { router, Stack } from 'expo-router';
 import { Controller, useForm } from 'react-hook-form';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { z } from 'zod';
 
+import { trigger } from '@/shared/lib/haptics';
 import { useCreateAccount } from '@/entities/account/api';
 import { ACCOUNT_ICONS } from '@/entities/account/model/types';
 import { VISIBLE_ACCOUNT_TYPES, ACCOUNT_TYPE_LABELS } from '@/entities/account/model/account-types';
@@ -48,7 +48,7 @@ export default function NewAccountScreen() {
 
   const onSubmit = handleSubmit(async (values) => {
     try {
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      await trigger('medium');
       await create.mutateAsync({
         name: values.name,
         icon: values.icon,
@@ -57,10 +57,10 @@ export default function NewAccountScreen() {
         balance: Number(values.balance.replace(',', '.')),
         currency: values.currency,
       });
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      await trigger('success');
       router.back();
     } catch (err) {
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      await trigger('error');
       throw err;
     }
   });

@@ -1,8 +1,8 @@
-import * as Haptics from 'expo-haptics';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
+import { trigger } from '@/shared/lib/haptics';
 import { AccountSelector, useAccounts } from '@/entities/account';
 import { useDebt, usePartialPayment } from '@/entities/debt';
 import { useUser } from '@/shared/api/composables/useAuth';
@@ -46,13 +46,13 @@ export default function PartialPayScreen() {
 
   const onSubmit = async () => {
     if (!canSubmit || amount === null || !effectiveAccountId) return;
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    await trigger('medium');
     try {
       await partial.mutateAsync({ id: debt.id, amount, accountId: effectiveAccountId });
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      await trigger('success');
       router.back();
     } catch (err) {
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      await trigger('error');
       throw err;
     }
   };

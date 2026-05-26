@@ -1,7 +1,7 @@
-import * as Haptics from 'expo-haptics';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { Alert, ScrollView, Text, View } from 'react-native';
 
+import { trigger } from '@/shared/lib/haptics';
 import { useDeleteGoal, useGoal } from '@/entities/goal';
 import { useUser } from '@/shared/api/composables/useAuth';
 import { useProfile } from '@/shared/api/composables/useProfile';
@@ -44,9 +44,9 @@ export default function GoalDetailScreen() {
         text: 'Удалить',
         style: 'destructive',
         onPress: async () => {
-          await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          await trigger('medium');
           await deleteGoal.mutateAsync(goal.id);
-          await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          await trigger('success');
           router.back();
         },
       },

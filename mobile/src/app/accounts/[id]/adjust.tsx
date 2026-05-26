@@ -1,8 +1,8 @@
-import * as Haptics from 'expo-haptics';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
+import { trigger } from '@/shared/lib/haptics';
 import { useAccountsWithBalances } from '@/entities/account/api';
 import { useAdjustBalance } from '@/entities/transaction/api';
 import { useUser } from '@/shared/api/composables/useAuth';
@@ -55,17 +55,17 @@ export default function AdjustBalanceScreen() {
   const onSubmit = async () => {
     if (!canSubmit || !account || targetBalance === null) return;
     try {
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      await trigger('medium');
       await adjust.mutateAsync({
         accountId: account.id,
         targetBalance,
         currency,
         description: description.trim() ? description.trim() : undefined,
       });
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      await trigger('success');
       router.back();
     } catch (err) {
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      await trigger('error');
       throw err;
     }
   };

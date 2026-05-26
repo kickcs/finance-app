@@ -1,7 +1,7 @@
-import * as Haptics from 'expo-haptics';
 import { router, Stack } from 'expo-router';
 import { FlatList, Pressable, Text, View } from 'react-native';
 
+import { trigger } from '@/shared/lib/haptics';
 import { CURRENCIES, type Currency } from '@/entities/currency';
 import { useUser } from '@/shared/api/composables/useAuth';
 import { useProfile, useSetCurrency } from '@/shared/api/composables/useProfile';
@@ -16,13 +16,13 @@ export default function CurrencySettingsScreen() {
 
   const onSelect = async (currency: Currency) => {
     if (currency.code === profile?.currency || isPending) return;
-    await Haptics.selectionAsync();
+    await trigger('selection');
     try {
       await setCurrency(currency.code);
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      await trigger('success');
       router.back();
     } catch (err) {
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      await trigger('error');
       throw err;
     }
   };

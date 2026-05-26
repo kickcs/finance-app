@@ -1,7 +1,7 @@
-import * as Haptics from 'expo-haptics';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { Alert, ScrollView, Text, View } from 'react-native';
 
+import { trigger } from '@/shared/lib/haptics';
 import { useDebt, useDeleteDebt, getDebtDisplayName, getDebtProgress } from '@/entities/debt';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { Button } from '@/shared/ui/button';
@@ -31,9 +31,9 @@ export default function DebtDetailScreen() {
         text: 'Удалить',
         style: 'destructive',
         onPress: async () => {
-          await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          await trigger('medium');
           await deleteDebt.mutateAsync(debt.id);
-          await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          await trigger('success');
           router.back();
         },
       },
