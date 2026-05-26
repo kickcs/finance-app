@@ -12,6 +12,7 @@ import {
 } from '@/features/upgrade-to-premium';
 import { Providers } from '@/providers/Providers';
 import { bootstrapAuth, useAuthReady, useUser } from '@/shared/api/composables/useAuth';
+import { track } from '@/shared/lib/analytics';
 
 // Keep the native splash visible until auth bootstrap finishes — avoids a
 // no-route flash and lets useSegments resolve against a real router tree.
@@ -31,6 +32,7 @@ function AppShell() {
   useThemeBootstrap();
 
   useEffect(() => {
+    track('app_open');
     void bootstrapAuth();
   }, []);
 

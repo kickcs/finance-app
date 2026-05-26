@@ -1,4 +1,5 @@
 import { Pressable, Text, View } from 'react-native';
+import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
 
 import { Icon } from '@/shared/ui/icon';
 import { cn } from '@/shared/lib/utils';
@@ -35,6 +36,7 @@ export function AccountCard({
   const multiCurrency = balances.length > 1;
 
   return (
+    <Animated.View entering={FadeIn.duration(180)} layout={LinearTransition.duration(180)}>
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
@@ -115,5 +117,6 @@ export function AccountCard({
 
       <Icon name="chevron_right" size={16} color="#a1a1aa" />
     </Pressable>
+    </Animated.View>
   );
 }

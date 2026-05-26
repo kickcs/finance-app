@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 
 import { clearTokens, getAccessToken, http, setAccessToken } from '@/shared/api/http';
+import { identify as analyticsIdentify, reset as analyticsReset, track } from '@/shared/lib/analytics';
+import { setUserContext } from '@/shared/lib/errorReporter';
 
 export interface User {
   id: string;
@@ -66,6 +68,7 @@ export async function bootstrapAuth() {
   try {
     const me = await http<User>('/api/auth/me');
     useAuthStore.getState().setUser(me);
+    setUserContext(me.id, me.email);
     void registerPushAfterAuth();
   } catch {
     await clearTokens();
@@ -82,6 +85,9 @@ export async function signIn(email: string, password: string) {
   });
   await setAccessToken(res.accessToken);
   useAuthStore.getState().setUser(res.user);
+  setUserContext(res.user.id, res.user.email);
+  analyticsIdentify(res.user.id);
+  track('sign_in');
   void registerPushAfterAuth();
   return res.user;
 }
@@ -94,6 +100,9 @@ export async function signUp(email: string, password: string, name?: string) {
   });
   await setAccessToken(res.accessToken);
   useAuthStore.getState().setUser(res.user);
+  setUserContext(res.user.id, res.user.email);
+  analyticsIdentify(res.user.id);
+  track('sign_up');
   void registerPushAfterAuth();
   return res.user;
 }
@@ -105,6 +114,9 @@ export async function signInAnonymously() {
   });
   await setAccessToken(res.accessToken);
   useAuthStore.getState().setUser(res.user);
+  setUserContext(res.user.id, null);
+  analyticsIdentify(res.user.id, { anonymous: true });
+  track('sign_in_anonymous');
   void registerPushAfterAuth();
   return res.user;
 }
@@ -122,6 +134,9 @@ export async function signOut() {
   }
   await clearTokens();
   useAuthStore.getState().setUser(null);
+  setUserContext(null);
+  analyticsReset();
+  track('sign_out');
 }
 
 /** Subscribe to the current user only. Most callers want this. */

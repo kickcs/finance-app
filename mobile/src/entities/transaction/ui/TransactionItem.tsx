@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Pressable, Text, View } from 'react-native';
+import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
 
 import { getCategoryById } from '@/entities/category';
 import { TRANSFER_COLOR } from '@/shared/config/colors';
@@ -108,6 +109,7 @@ export function TransactionItem({
     : null;
 
   return (
+    <Animated.View entering={FadeIn.duration(180)} layout={LinearTransition.duration(180)}>
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
@@ -154,5 +156,6 @@ export function TransactionItem({
         </Text>
       </View>
     </Pressable>
+    </Animated.View>
   );
 }
