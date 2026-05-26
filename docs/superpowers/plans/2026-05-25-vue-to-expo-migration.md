@@ -19,7 +19,7 @@
 | Phase 0 — Foundation | 1-12 | ✅ Done (branch `feature/mobile-migration`) |
 | Phase 1 — Core read screens | 13-22 | ✅ Done |
 | Phase 2 — Core mutations | 23-32 | ✅ Done |
-| Phase 3 — Domain features | 33-50 | ⏳ Pending |
+| Phase 3 — Domain features | 33-50 | ✅ Done (Task 38 split-expense, 40 reminders, 46-48 category CRUD deferred — see commit notes) |
 | Phase 4 — Native MVP | 51-62 | ⏳ Pending |
 | Phase 5 — Polish & QA | 63-72 | ⏳ Pending |
 | Phase 6 — Store submission | 73-80 | ⏳ Pending |
