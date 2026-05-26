@@ -98,6 +98,16 @@ export default function ProfileScreen() {
           <NavRow icon="list" label="Долги" onPress={() => router.push('/debts')} />
           <NavRow icon="savings" label="Цели" onPress={() => router.push('/goals')} />
           <NavRow icon="account_balance" label="Счета" onPress={() => router.push('/accounts')} />
+          <NavRow
+            icon="category"
+            label="Категории"
+            onPress={() => router.push({ pathname: '/settings/categories' })}
+          />
+          <NavRow
+            icon="new_releases"
+            label="Что нового"
+            onPress={() => router.push({ pathname: '/changelog' })}
+          />
         </View>
 
         <Card>
