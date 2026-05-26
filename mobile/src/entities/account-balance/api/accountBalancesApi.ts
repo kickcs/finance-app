@@ -18,3 +18,21 @@ export function transformBalance(bal: AccountBalanceResponse): AccountBalance {
     created_at: bal.createdAt,
   };
 }
+
+export const accountBalancesApi = {
+  async getByAccountId(accountId: string): Promise<AccountBalance[]> {
+    const data = await http<AccountBalanceResponse[]>(
+      `/api/account-balances/by-account/${accountId}`,
+    );
+    return data.map(transformBalance);
+  },
+
+  async getByAccountIds(accountIds: string[]): Promise<AccountBalance[]> {
+    if (accountIds.length === 0) return [];
+    const data = await http<AccountBalanceResponse[]>('/api/account-balances/by-accounts', {
+      method: 'POST',
+      body: JSON.stringify({ accountIds }),
+    });
+    return data.map(transformBalance);
+  },
+};
