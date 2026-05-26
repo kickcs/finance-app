@@ -32,6 +32,30 @@ interface AuthResponse {
   user: User;
 }
 
+// Dynamic imports keep the expo-notifications module out of the cold-start
+// bundle path until a user is actually authenticated, and avoid pulling
+// http.ts → useAuth.ts cycles back into the push module.
+async function registerPushAfterAuth(): Promise<void> {
+  try {
+    const { registerForPushNotifications } = await import(
+      '@/features/manage-push-notifications/registerForPush'
+    );
+    await registerForPushNotifications();
+  } catch (err) {
+    if (__DEV__) console.warn('[auth] push registration failed', err);
+  }
+}
+
+async function unregisterPushBeforeSignOut(): Promise<void> {
+  try {
+    const { unregisterPushNotifications } = await import(
+      '@/features/manage-push-notifications/registerForPush'
+    );
+    await unregisterPushNotifications();
+  } catch {
+    /* silent — sign-out must proceed regardless */
+  }
+}
 
 export async function bootstrapAuth() {
   const token = await getAccessToken();
@@ -42,6 +66,7 @@ export async function bootstrapAuth() {
   try {
     const me = await http<User>('/api/auth/me');
     useAuthStore.getState().setUser(me);
+    void registerPushAfterAuth();
   } catch {
     await clearTokens();
   } finally {
@@ -57,6 +82,7 @@ export async function signIn(email: string, password: string) {
   });
   await setAccessToken(res.accessToken);
   useAuthStore.getState().setUser(res.user);
+  void registerPushAfterAuth();
   return res.user;
 }
 
@@ -68,6 +94,7 @@ export async function signUp(email: string, password: string, name?: string) {
   });
   await setAccessToken(res.accessToken);
   useAuthStore.getState().setUser(res.user);
+  void registerPushAfterAuth();
   return res.user;
 }
 
@@ -78,10 +105,14 @@ export async function signInAnonymously() {
   });
   await setAccessToken(res.accessToken);
   useAuthStore.getState().setUser(res.user);
+  void registerPushAfterAuth();
   return res.user;
 }
 
 export async function signOut() {
+  // Best-effort: tell the backend to drop our push token before the JWT
+  // becomes invalid. Don't block sign-out on its outcome.
+  await unregisterPushBeforeSignOut();
   // Server clears the refresh_token cookie; ignore failures so the local
   // session always tears down even if the network is unreachable.
   try {
