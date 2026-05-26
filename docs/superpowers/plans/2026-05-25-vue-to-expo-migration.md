@@ -20,7 +20,7 @@
 | Phase 1 — Core read screens | 13-22 + 21a | ✅ Done (12 commits) |
 | Phase 2 — Core mutations | 23-32 | ✅ Done (4 commits, 2 HIGH review fixes applied) |
 | Phase 3 — Domain features | 33-50 | ✅ Done with deferrals (see table below) |
-| Phase 4 — Native MVP | 51-62 | 🚧 In progress — 51, 52, 53, 54, 55, 60, 61, 62 done; 56-59 pending (need physical device / store accounts) |
+| Phase 4 — Native MVP | 51-62 | ✅ Code complete with deferrals (51-62 written; on-device validation + Apple/Google secrets still pending) |
 | Phase 5 — Polish & QA | 63-72 | ⏳ Pending — also absorbs Phase 0–3 deferrals |
 | Phase 6 — Store submission | 73-80 | ⏳ Pending — blocked on App Store / Google Play accounts |
 
@@ -33,10 +33,10 @@
 | 53 — expo-notifications setup + config plugin | ✅ Done | Plugin in `app.json`, `registerForPush.ts` with typed `reason` enum, dynamic-import wiring in `useAuth` (signIn/signUp/anon/bootstrap + signOut). Commit `34fe279`. Real APNs/FCM delivery not validated — needs EAS Build on physical device. |
 | 54 — Push registration flow + backend integration | ✅ Done (covered by Task 53) | Frontend call sites + backend endpoint integrated together. Same commits `34fe279` + `f98d7ac`. |
 | 55 — Backend POST /api/push-devices | ✅ Done | New `push_devices` table, FK to profiles ON DELETE CASCADE, CHECK constraint on platform, UNIQUE (user_id, token), capped token length. 4 HIGH review fixes applied (PK preserved across upsert, FK cascade, DELETE-with-body → POST /unregister, token MaxLength). Commit `f98d7ac`. |
-| 56 — Camera + receipt OCR | ⏳ Pending | Code can be written, needs physical device for camera + existing `/api/receipt/scan` OPENAI_API_KEY config check. |
-| 57 — IAP setup (expo-iap 2.9) | ⏳ Pending | Needs App Store / Google Play developer accounts (spec open question #1). |
-| 58 — PremiumUpgradeModal + IAP UI | ⚠️ Partial | UI shell shipped in Task 60 (`<PremiumUpgradeModal />` rendered globally in `_layout.tsx`); purchase buttons placeholder Alert until Task 57 wires `requestPurchase`. Commit `101e316`. |
-| 59 — Backend IAP receipt validation | ⏳ Pending | Needs App-Specific Shared Secret + Google Play service account JSON. |
+| 56 — Camera + receipt OCR | ✅ Done (MVP scope) | `expo-camera` + `expo-image-picker` + `expo-image-manipulator` installed; `ScanReceiptScreen` (capture / library / result list) at `/scan-receipt` as fullScreenModal; `useScanReceipt` resizes to 1600px + compress 0.7 before upload; `receiptApi.scan` uploads RN-style FormData `{uri,name,type}` to `/api/receipts/scan`. **HIGH fix:** `http.ts` was injecting `Content-Type: application/json` over multipart — fixed to skip the header for FormData bodies. Full split-wizard parity deferred to Phase 5+. Commit `144def9`. |
+| 57 — IAP contract layer (expo-iap 4.3.1) | ✅ Done | `iap.ts` with PRODUCT_IDS / ensureIAPConnection / shutdownIAP; `useUpgrade` hook wraps `useIAP` with backend verify-before-finish, transaction dedup via Set, UserCancelled silencing. expo-iap is 4.3.1, not the plan's 2.9 — same OpenIAP-style API. Commit `5a2b9df`. |
+| 58 — PremiumUpgradeModal + IAP UI | ✅ Done | Wired to `useUpgrade`: store displayPrice with PLAN_PRICES fallback; refreshSubscription on successful purchase; disabled state when products empty / loading / unavailable. Commit `5a2b9df`. |
+| 59 — Backend IAP receipt validation | ✅ Done (skeleton) | `POST /api/subscription/iap/verify-receipt` authenticated endpoint; `IapService` rejects with BadRequest when APPLE_IAP_SHARED_SECRET / GOOGLE_PLAY_SERVICE_ACCOUNT_JSON not set (fail loud, not silent activate); webhooks Apple/Google return 503 until JWS / OIDC verification wired; aggregate extended with `source`/`originalTransactionId`/`appAccountToken` + migration `1773810000000` + partial unique index on `(source, original_transaction_id)` for idempotency. **Real App Store / Google Play API calls are pseudocode comments — Task 59 follow-up needs the secrets to wire them.** Commit `aaf1b7c`. |
 | 60 — usePremiumFeature gate | ✅ Done | Zustand store (`usePremiumFeature` + `usePremiumModalState` + `setPremiumStatus`) synced from `useSubscription` in `_layout.tsx`. `PremiumBadge` shipped. Commit `101e316`. |
 | 61 — Push subscription endpoint mapping (Vue parity) | ✅ Done (covered by Task 53/55) | Already wired in `useAuth` lifecycle. |
 | 62 — EAS Update setup | ✅ Done (modulo `eas update:configure`) | expo-updates installed, `runtimeVersion.policy=fingerprint` + `updates.fallbackToCacheTimeout=0` in `app.json`, `.github/workflows/eas-update.yml` with `[skip-ota]` opt-out + path filter on `mobile/**`. `extra.eas.projectId` + `updates.url` deferred — produced by interactive `eas update:configure`. `EXPO_TOKEN` secret pending on the GitHub repo. Commit `de46d98`. |

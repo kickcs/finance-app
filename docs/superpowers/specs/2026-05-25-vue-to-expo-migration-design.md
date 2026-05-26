@@ -1,9 +1,9 @@
 # Vue → Expo Migration Design
 
 **Date**: 2026-05-25
-**Status**: In progress — Phase 0–3 shipped on `feature/mobile-migration`, Phase 4 partial (51-55, 60-62 done; 56-59 pending)
+**Status**: In progress — Phase 0–3 shipped on `feature/mobile-migration`, Phase 4 code-complete on 2026-05-26 (51-62 written; on-device + Apple/Google secrets needed to verify)
 **Author**: Generated via /goal brainstorming session
-**Last sync**: 2026-05-26 (Phase 4 — Tasks 60 + 62 close)
+**Last sync**: 2026-05-26 (Phase 4 — Tasks 56-59 close, code-complete state)
 
 ---
 
@@ -353,14 +353,24 @@ Tasks 33–50. Сделано: Debts (CRUD + group-by-person cursor pagination +
 
 **Real APNs/FCM delivery не проверена** — нужен EAS dev build на физическом девайсе + APNs key / FCM service account. Blocked на open question #1.
 
-Осталось в Phase 4 (отложено, требует external dependencies):
+- **Task 56 — Camera + Receipt OCR** ✅ MVP-scope. `expo-camera@~56.0.7` + `expo-image-picker@~56.0.13` + `expo-image-manipulator@~56.0.14`. `ScanReceiptScreen` (permission gate → CameraView fullscreen → capture/library pick → result list с items / service charge / total / hashtags) на route `/scan-receipt` как `fullScreenModal`. `useScanReceipt` делает resize 1600px + compress 0.7 перед upload чтобы держать 800ms budget. **HIGH fix:** `http.ts` инжектил `Content-Type: application/json` над multipart — починено через `body instanceof FormData` branch. Полный split-wizard (Vue's 4-step assign participants) отложен в Phase 5+. Commit `144def9`.
+- **Task 57 — IAP contract layer** ✅ `expo-iap@4.3.1` (новее плана 2.9, но same OpenIAP API: `fetchProducts({skus, type:'subs'})`, `requestPurchase({request: {ios:{sku}, android:{skus:[sku]}}, type:'subs'})`). `iap.ts`: `PRODUCT_IDS` (finance_premium_monthly/yearly), `ensureIAPConnection()` (shared init promise), `shutdownIAP()` вызывается из `useAuth.signOut`. `useUpgrade` хук оборачивает `useIAP`: backend verify-receipt ДО `finishTransaction`, txn dedup через Set originalTransactionId (StoreKit replay protection), `ErrorCode.UserCancelled` silenced. Commit `5a2b9df`.
+- **Task 58 — PremiumUpgradeModal IAP UI** ✅ Wired в `useUpgrade`: store-returned `displayPrice` с fallback на `PLAN_PRICES` (модалка работает в simulator до конфига App Store Connect), disabled state при empty products / loading / `Platform.OS === 'web'`, `refreshSubscription` после успешной покупки чтобы `setPremiumStatus` в `_layout.tsx` сразу подхватил entitlement. Commit `5a2b9df`.
+- **Task 59 — Backend IAP receipt validation** ✅ Skeleton. `POST /api/subscription/iap/verify-receipt` authenticated. `IapService.verifyApple/Google` отказывают с BadRequest если `APPLE_IAP_SHARED_SECRET`/`GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` не сконфигурированы — fail loud, чтобы не активировать премиум на unverified payload. Webhooks Apple/Google возвращают 503 пока не подключены JWS / Pub/Sub OIDC верификация. Aggregate расширен `source`/`originalTransactionId`/`appAccountToken` + migration `1773810000000` с CHECK constraint и partial unique index `(source, original_transaction_id) WHERE original_transaction_id IS NOT NULL` для идемпотентности webhook replay. Handler берёт productId из ответа store (spec §5: never trust client). Real App Store Server API / Google Play Developer API звонки — это TODO-pseudocode comments. Commit `aaf1b7c`.
 
-| Task | Что блокирует |
+Phase 4 follow-ups (требуют external secrets / accounts, не код):
+
+| Follow-up | Что требуется |
 |---|---|
-| 56 — Camera + Receipt OCR | Physical device для камеры; OPENAI_API_KEY уже есть на бэке. |
-| 57 — IAP (expo-iap 2.9) | Apple Developer + Google Play accounts (open question #1). |
-| 58 — PremiumUpgradeModal | UI-shell готов в Task 60; remaining — `expo-iap.fetchProducts` + `requestPurchase` wiring (Task 57). |
-| 59 — Backend IAP receipt validation | App-Specific Shared Secret + Google Play service account JSON. |
+| On-device push validation | Physical device + EAS dev build + APNs key / FCM service account JSON. |
+| App Store Connect product setup | `finance_premium_monthly` / `finance_premium_yearly` SKUs в subscription group + localizations + App-Specific Shared Secret. |
+| Google Play subscription setup | Те же SKUs в Play Console + service account JSON. |
+| Apple IAP server-side validation | Wire App Store Server API в `IapService.verifyApple` (либо StoreKit2 transaction JWS via `appstore-server-library`). |
+| Google IAP server-side validation | Wire `purchases.subscriptionsv2.get` в `IapService.verifyGoogle` через `googleapis` + service account JWT. |
+| Apple webhook JWS verification | Apple root CA chain + X5C-header parsing → unblock `iap/webhooks/apple`. |
+| Google RTDN OIDC verification | Pub/Sub subscriber service account OIDC token check via `google-auth-library` → unblock `iap/webhooks/google`. |
+| `eas update:configure` | Adds `extra.eas.projectId` + `updates.url` to app.json so the `eas-update.yml` workflow publish step succeeds. |
+| `EXPO_TOKEN` GitHub secret | Required by the `eas-update.yml` workflow to authenticate against EAS. |
 
 **Внешние зависимости перед стартом Phase 4:**
 - Apple Developer Program account + App Store Connect app record (open question #1 в спеке).
