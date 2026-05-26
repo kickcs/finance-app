@@ -6,17 +6,25 @@ import { z } from 'zod';
 
 import { trigger } from '@/shared/lib/haptics';
 import { AccountSelector } from '@/entities/account';
+import { debtsApi } from '@/entities/debt/api/debtsApi';
+import { usePeople } from '@/entities/person/api/usePeople';
 import {
   useCreateTransaction,
   useUpdateTransaction,
 } from '@/entities/transaction/api';
+import { useAuthStore } from '@/shared/api/composables/useAuth';
+import { invalidateDebtRelated } from '@/shared/api/invalidation';
 import type { Account } from '@/shared/api/database.types';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
+import { Toggle } from '@/shared/ui';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { CategoryPicker } from './CategoryPicker';
 import { HeroAmount } from './HeroAmount';
+import { useSplitExpense } from '@/features/split-expense/composables/useSplitExpense';
+import { SplitParticipants } from '@/features/split-expense/components/SplitParticipants';
 
 const schema = z.object({
   amount: z
@@ -59,6 +67,11 @@ export function TransactionForm({
   const create = useCreateTransaction();
   const update = useUpdateTransaction();
   const isPending = create.isPending || update.isPending;
+  const qc = useQueryClient();
+  const user = useAuthStore((s) => s.user);
+  const split = useSplitExpense();
+  // People list needed only to resolve personId → name when creating split debts.
+  const { data: splitPeople = [] } = usePeople(user?.id ?? null);
 
   const { control, handleSubmit, watch, formState } = useForm<FormValues>({
     mode: 'onChange',
@@ -79,6 +92,7 @@ export function TransactionForm({
     try {
       const account = accounts.find((a) => a.id === values.accountId);
       const currency = account?.currency ?? defaultCurrency;
+      const txDate = editId && initialDate ? initialDate : new Date().toISOString();
       const payload = {
         amount: Number(values.amount),
         currency,
@@ -87,12 +101,48 @@ export function TransactionForm({
         account_id: values.accountId,
         description: values.description?.length ? values.description : null,
         // Preserve original date on edit; stamp current time only on create.
-        date: editId && initialDate ? initialDate : new Date().toISOString(),
+        date: txDate,
       };
       if (editId) {
         await update.mutateAsync({ id: editId, updates: payload });
       } else {
-        await create.mutateAsync(payload);
+        const newTx = await create.mutateAsync(payload);
+
+        // Split expense: create one debt per participant that has a share > 0.
+        // Mirrors frontend: useSplitExpense.createDebtsForSplit — POST /api/debts
+        // one-by-one with source_transaction_id linking back to the transaction.
+        if (
+          split.enabled &&
+          split.participants.length > 0 &&
+          user?.id
+        ) {
+          const validParticipants = split.participants.filter((p) => p.share > 0);
+          for (const participant of validParticipants) {
+            // Resolve person name — SplitParticipants stores personId, debt API
+            // needs a name string (mirrors frontend's personName field).
+            const person = splitPeople.find((p) => p.id === participant.personId);
+            const personName = person?.name ?? participant.personId;
+            await debtsApi.create({
+              name: `Долг от ${personName}`,
+              total_amount: participant.share,
+              remaining_amount: participant.share,
+              monthly_payment: null,
+              next_payment_date: null,
+              debt_type: 'given',
+              person_name: personName,
+              account_id: values.accountId,
+              transaction_id: null,
+              source_transaction_id: newTx.id,
+              is_closed: false,
+              currency,
+              created_at: txDate,
+              description: null,
+              is_private: false,
+            });
+          }
+          await invalidateDebtRelated(qc);
+          split.reset();
+        }
       }
       await trigger('success');
       if (onDone) onDone();
@@ -183,6 +233,31 @@ export function TransactionForm({
           )}
         />
       </View>
+
+      {/* Split expense — only available for expense type and new transactions */}
+      {txType === 'expense' && !editId ? (
+        <View className="gap-3">
+          <View className="flex-row items-center justify-between">
+            <Text className="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
+              Разделить расход
+            </Text>
+            <Toggle
+              value={split.enabled}
+              onChange={split.setEnabled}
+              accessibilityLabel="Разделить расход"
+            />
+          </View>
+          {split.enabled ? (
+            <SplitParticipants
+              participants={split.participants}
+              totalAmount={Number(watch('amount')) || 0}
+              onAdd={split.add}
+              onRemove={split.remove}
+              onShareChange={split.setShare}
+            />
+          ) : null}
+        </View>
+      ) : null}
 
       <Button
         title={editId ? 'Сохранить' : 'Добавить'}
