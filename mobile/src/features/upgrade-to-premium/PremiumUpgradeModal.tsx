@@ -1,30 +1,39 @@
-import { useState } from 'react';
-import { Alert, Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PLAN_PRICES, PREMIUM_FEATURES } from '@/entities/subscription';
+import { useSubscription } from '@/entities/subscription/api';
+import { useUser } from '@/shared/api/composables/useAuth';
 import { Button } from '@/shared/ui/button';
 import { Icon } from '@/shared/ui/icon';
 
+import type { ProductPlan } from './iap';
 import { usePremiumModalState } from './usePremiumFeature';
-
-type Plan = 'premium_monthly' | 'premium_yearly';
+import { useUpgrade, type UpgradeProductOption } from './useUpgrade';
 
 export function PremiumUpgradeModal() {
   const { showUpgradeModal, upgradeFeatureName, closeModal } = usePremiumModalState();
-  const [loadingPlan, setLoadingPlan] = useState<Plan | null>(null);
+  const user = useUser();
+  const { refreshSubscription } = useSubscription(user?.id ?? null);
+  const {
+    options,
+    isLoadingProducts,
+    purchasingPlan,
+    lastError,
+    isAvailable,
+    purchase,
+  } = useUpgrade();
 
-  async function handlePurchase(plan: Plan) {
-    setLoadingPlan(plan);
-    try {
-      // IAP wiring lands in Task 57 (expo-iap). Until then keep the UX
-      // discoverable so designers can review the gate flow end-to-end.
-      Alert.alert(
-        'Скоро',
-        'Покупка через App Store / Google Play появится в ближайшем обновлении.',
-      );
-    } finally {
-      setLoadingPlan(null);
+  // When the store returns prices use them; otherwise fall back to the static
+  // PLAN_PRICES strings so the modal stays useful in the simulator / before
+  // products are configured in App Store Connect.
+  const yearlyOption = options.find((opt) => opt.plan === 'yearly');
+  const monthlyOption = options.find((opt) => opt.plan === 'monthly');
+
+  async function handlePurchase(plan: ProductPlan) {
+    await purchase(plan);
+    if (user?.id) {
+      void refreshSubscription();
     }
   }
 
@@ -61,7 +70,11 @@ export function PremiumUpgradeModal() {
           ) : null}
 
           <View className="gap-3">
-            {(PREMIUM_FEATURES as ReadonlyArray<{ icon: string; label: string; description: string }>).map((feature) => (
+            {(PREMIUM_FEATURES as ReadonlyArray<{
+              icon: string;
+              label: string;
+              description: string;
+            }>).map((feature) => (
               <View key={feature.label} className="flex-row items-start gap-3">
                 <Icon name={feature.icon} size={20} color="#FF9500" />
                 <View className="flex-1">
@@ -77,27 +90,83 @@ export function PremiumUpgradeModal() {
           </View>
 
           <Text className="text-xs text-center text-text-muted-light dark:text-text-muted-dark">
-            7 дней бесплатно, затем от {PLAN_PRICES.premium_monthly}
+            7 дней бесплатно, затем от {monthlyOption?.displayPrice ?? PLAN_PRICES.premium_monthly}
           </Text>
+
+          {lastError ? (
+            <Text className="text-center text-sm text-danger-light">{lastError}</Text>
+          ) : null}
+
+          {!isAvailable ? (
+            <Text className="text-center text-xs text-text-muted-light dark:text-text-muted-dark">
+              Покупки доступны только в мобильном приложении.
+            </Text>
+          ) : null}
         </ScrollView>
 
         <View className="px-5 pb-2 gap-2">
-          <Button
-            title={`${PLAN_PRICES.premium_yearly} — выгоднее`}
+          <PurchaseButton
+            option={yearlyOption}
+            fallbackPrice={PLAN_PRICES.premium_yearly}
+            fallbackLabel={`${PLAN_PRICES.premium_yearly} — выгоднее`}
+            buildLabel={(opt) => `${opt.displayPrice} — выгоднее`}
+            plan="yearly"
             variant="primary"
-            loading={loadingPlan === 'premium_yearly'}
-            disabled={loadingPlan !== null}
-            onPress={() => handlePurchase('premium_yearly')}
+            loading={purchasingPlan === 'yearly'}
+            disabled={!isAvailable || purchasingPlan !== null}
+            isLoadingProducts={isLoadingProducts}
+            onPress={handlePurchase}
           />
-          <Button
-            title={PLAN_PRICES.premium_monthly}
+          <PurchaseButton
+            option={monthlyOption}
+            fallbackPrice={PLAN_PRICES.premium_monthly}
+            fallbackLabel={PLAN_PRICES.premium_monthly}
+            buildLabel={(opt) => opt.displayPrice}
+            plan="monthly"
             variant="secondary"
-            loading={loadingPlan === 'premium_monthly'}
-            disabled={loadingPlan !== null}
-            onPress={() => handlePurchase('premium_monthly')}
+            loading={purchasingPlan === 'monthly'}
+            disabled={!isAvailable || purchasingPlan !== null}
+            isLoadingProducts={isLoadingProducts}
+            onPress={handlePurchase}
           />
         </View>
       </SafeAreaView>
     </Modal>
+  );
+}
+
+interface PurchaseButtonProps {
+  option: UpgradeProductOption | undefined;
+  fallbackPrice: string;
+  fallbackLabel: string;
+  buildLabel: (opt: UpgradeProductOption) => string;
+  plan: ProductPlan;
+  variant: 'primary' | 'secondary';
+  loading: boolean;
+  disabled: boolean;
+  isLoadingProducts: boolean;
+  onPress: (plan: ProductPlan) => void;
+}
+
+function PurchaseButton({
+  option,
+  fallbackLabel,
+  buildLabel,
+  plan,
+  variant,
+  loading,
+  disabled,
+  isLoadingProducts,
+  onPress,
+}: PurchaseButtonProps) {
+  const title = option ? buildLabel(option) : isLoadingProducts ? 'Загрузка…' : fallbackLabel;
+  return (
+    <Button
+      title={title}
+      variant={variant}
+      loading={loading}
+      disabled={disabled || isLoadingProducts}
+      onPress={() => onPress(plan)}
+    />
   );
 }

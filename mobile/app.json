@@ -40,7 +40,8 @@
         {
           "photosPermission": "Доступ к фото нужен для загрузки чеков"
         }
-      ]
+      ],
+      "expo-iap"
     ],
     "runtimeVersion": {
       "policy": "fingerprint"
