@@ -4,8 +4,12 @@ import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native'
 import { usePullToRefresh } from '@/shared/lib/hooks/usePullToRefresh';
 import { AccountStack } from '@/widgets/account-stack';
 import { BalanceCard } from '@/widgets/balance-card';
+import { BudgetSection } from '@/widgets/budget-section';
+import { DebtsSection } from '@/widgets/debts-section';
+import { GoalsSection } from '@/widgets/goals-section';
 import { RecentTransactions } from '@/widgets/recent-transactions';
 import { SaveSpendSection } from '@/widgets/save-spend-section';
+import { UpcomingSubscriptionsSection } from '@/widgets/upcoming-subscriptions';
 import { Icon } from '@/shared/ui/icon';
 
 export default function DashboardScreen() {
@@ -41,6 +45,10 @@ export default function DashboardScreen() {
           </Text>
           <RecentTransactions />
         </View>
+        <DebtsSection />
+        <GoalsSection />
+        <BudgetSection />
+        <UpcomingSubscriptionsSection />
       </ScrollView>
 
       <Link href="/transactions/new" asChild>
