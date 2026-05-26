@@ -63,6 +63,16 @@ function AppShell() {
         }}
       />
       <Stack.Screen
+        name="goals/new"
+        options={{
+          presentation: 'formSheet',
+          headerShown: true,
+          sheetGrabberVisible: true,
+          sheetAllowedDetents: [0.85, 1.0],
+          title: 'Новая цель',
+        }}
+      />
+      <Stack.Screen
         name="debts/new"
         options={{
           presentation: 'formSheet',
