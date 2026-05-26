@@ -6,6 +6,7 @@ import {
   PUSH_SUBSCRIPTION_REPOSITORY,
   NOTIFICATION_LOG_REPOSITORY,
   NOTIFICATION_PREFERENCES_REPOSITORY,
+  PUSH_DEVICE_REPOSITORY,
 } from './domain/repositories';
 import { CommandHandlers } from './application/commands';
 import { QueryHandlers } from './application/queries';
@@ -17,13 +18,15 @@ import {
   PushSubscriptionOrmEntity,
   NotificationLogOrmEntity,
   NotificationPreferencesOrmEntity,
+  PushDeviceOrmEntity,
 } from './infrastructure/persistence/typeorm';
 import {
   PushSubscriptionRepository,
   NotificationLogRepository,
   NotificationPreferencesRepository,
+  PushDeviceRepository,
 } from './infrastructure/persistence/repositories';
-import { PushSubscriptionController } from './presentation/controllers';
+import { PushSubscriptionController, PushDeviceController } from './presentation/controllers';
 
 @Module({
   imports: [
@@ -32,9 +35,10 @@ import { PushSubscriptionController } from './presentation/controllers';
       PushSubscriptionOrmEntity,
       NotificationLogOrmEntity,
       NotificationPreferencesOrmEntity,
+      PushDeviceOrmEntity,
     ]),
   ],
-  controllers: [PushSubscriptionController],
+  controllers: [PushSubscriptionController, PushDeviceController],
   providers: [
     {
       provide: PUSH_SUBSCRIPTION_REPOSITORY,
@@ -47,6 +51,10 @@ import { PushSubscriptionController } from './presentation/controllers';
     {
       provide: NOTIFICATION_PREFERENCES_REPOSITORY,
       useClass: NotificationPreferencesRepository,
+    },
+    {
+      provide: PUSH_DEVICE_REPOSITORY,
+      useClass: PushDeviceRepository,
     },
     {
       provide: PUSH_NOTIFICATION_SERVICE,

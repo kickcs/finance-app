@@ -27,6 +27,7 @@ import {
   PushSubscriptionOrmEntity,
   NotificationLogOrmEntity,
   NotificationPreferencesOrmEntity,
+  PushDeviceOrmEntity,
 } from '../modules/notification/infrastructure/persistence/typeorm';
 import { RecurringSubscriptionOrmEntity } from '../modules/recurring-subscription/infrastructure/persistence/typeorm';
 
@@ -57,6 +58,7 @@ export const dataSourceOptions: DataSourceOptions = {
     PushSubscriptionOrmEntity,
     NotificationLogOrmEntity,
     NotificationPreferencesOrmEntity,
+    PushDeviceOrmEntity,
     RecurringSubscriptionOrmEntity,
     // Legacy
     Settings,

@@ -32,6 +32,7 @@ import {
   PushSubscriptionOrmEntity,
   NotificationLogOrmEntity,
   NotificationPreferencesOrmEntity,
+  PushDeviceOrmEntity,
 } from './modules/notification/infrastructure/persistence/typeorm';
 import { RecurringSubscriptionOrmEntity } from './modules/recurring-subscription/infrastructure/persistence/typeorm';
 
@@ -92,6 +93,7 @@ import { RecurringSubscriptionModule } from './modules/recurring-subscription';
           PushSubscriptionOrmEntity,
           NotificationLogOrmEntity,
           NotificationPreferencesOrmEntity,
+          PushDeviceOrmEntity,
           RecurringSubscriptionOrmEntity,
           // Legacy (to be migrated)
           Settings,
