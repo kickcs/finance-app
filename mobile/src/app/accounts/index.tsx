@@ -1,14 +1,16 @@
 import { Stack, useRouter } from 'expo-router';
-import { FlatList, View } from 'react-native';
+import { FlatList, RefreshControl, View } from 'react-native';
 
 import { AccountCard, useAccountsWithBalances } from '@/entities/account';
 import { useUser } from '@/shared/api/composables/useAuth';
+import { usePullToRefresh } from '@/shared/lib/hooks/usePullToRefresh';
 import { Spinner } from '@/shared/ui/spinner';
 
 export default function AccountsScreen() {
   const user = useUser();
   const router = useRouter();
   const { data: accounts, isLoading } = useAccountsWithBalances(user?.id ?? null);
+  const { refreshing, onRefresh } = usePullToRefresh();
 
   if (isLoading) {
     return (
@@ -27,6 +29,7 @@ export default function AccountsScreen() {
         data={accounts ?? []}
         keyExtractor={(a) => a.id}
         contentContainerStyle={{ padding: 16, gap: 8 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         renderItem={({ item }) => (
           <AccountCard
             account={item}

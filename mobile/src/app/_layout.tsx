@@ -2,8 +2,10 @@ import '../global.css';
 
 import { SplashScreen, Stack, useRouter, useSegments } from 'expo-router';
 import { useEffect } from 'react';
+import { Toaster } from 'sonner-native';
 
 import { useSubscription } from '@/entities/subscription';
+import { useThemeBootstrap } from '@/features/toggle-theme';
 import {
   PremiumUpgradeModal,
   setPremiumStatus,
@@ -26,6 +28,7 @@ function AppShell() {
   // mirror in sync with the server-truth subscription query so requirePremium()
   // call sites don't need their own React Query subscription.
   const { isPremium } = useSubscription(user?.id ?? null);
+  useThemeBootstrap();
 
   useEffect(() => {
     void bootstrapAuth();
@@ -146,6 +149,7 @@ function AppShell() {
       />
       </Stack>
       <PremiumUpgradeModal />
+      <Toaster position="top-center" richColors />
     </>
   );
 }

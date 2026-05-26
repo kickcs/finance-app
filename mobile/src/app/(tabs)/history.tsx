@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useCallback, useMemo } from 'react';
-import { Alert, SectionList, Text, View } from 'react-native';
+import { Alert, RefreshControl, SectionList, Text, View } from 'react-native';
 
 import { useAccounts } from '@/entities/account/api';
 import {
@@ -11,6 +11,7 @@ import {
 import { useUser } from '@/shared/api/composables/useAuth';
 import { trigger } from '@/shared/lib/haptics';
 import { useGroupedTransactions } from '@/shared/lib/hooks/useGroupedTransactions';
+import { usePullToRefresh } from '@/shared/lib/hooks/usePullToRefresh';
 import { Spinner } from '@/shared/ui/spinner';
 import { SwipeableRow } from '@/shared/ui/swipeable-row';
 
@@ -25,6 +26,7 @@ export default function HistoryScreen() {
     isFetchingNextPage,
   } = useInfiniteTransactions(user?.id ?? null);
   const { data: accounts } = useAccounts(user?.id ?? null);
+  const { refreshing, onRefresh } = usePullToRefresh();
 
   const allTransactions = useMemo(
     () => data?.pages.flatMap((p) => p.data) ?? [],
@@ -85,6 +87,7 @@ export default function HistoryScreen() {
       contentInsetAdjustmentBehavior="automatic"
       className="flex-1 bg-background-light dark:bg-background-dark"
       contentContainerStyle={{ paddingBottom: 32 }}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       sections={sections}
       keyExtractor={(item) => item.id}
       renderItem={({ item }) => {

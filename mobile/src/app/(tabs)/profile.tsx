@@ -3,6 +3,7 @@ import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { useSubscription } from '@/entities/subscription/api';
+import { ThemeToggle } from '@/features/toggle-theme';
 import { signOut, useUser } from '@/shared/api/composables/useAuth';
 import { useProfile } from '@/shared/api/composables/useProfile';
 import { Button } from '@/shared/ui/button';
@@ -97,6 +98,15 @@ export default function ProfileScreen() {
           <NavRow icon="savings" label="Цели" onPress={() => router.push('/goals')} />
           <NavRow icon="account_balance" label="Счета" onPress={() => router.push('/accounts')} />
         </View>
+
+        <Card>
+          <Text className="text-xs font-medium uppercase tracking-wide text-text-tertiary-light dark:text-text-tertiary-dark">
+            Тема
+          </Text>
+          <View className="mt-2">
+            <ThemeToggle />
+          </View>
+        </Card>
 
         <Card>
           <Text className="text-xs font-medium uppercase tracking-wide text-text-tertiary-light dark:text-text-tertiary-dark">

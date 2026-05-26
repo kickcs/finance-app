@@ -1,6 +1,7 @@
 import { Link } from 'expo-router';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 
+import { usePullToRefresh } from '@/shared/lib/hooks/usePullToRefresh';
 import { AccountStack } from '@/widgets/account-stack';
 import { BalanceCard } from '@/widgets/balance-card';
 import { RecentTransactions } from '@/widgets/recent-transactions';
@@ -8,11 +9,13 @@ import { SaveSpendSection } from '@/widgets/save-spend-section';
 import { Icon } from '@/shared/ui/icon';
 
 export default function DashboardScreen() {
+  const { refreshing, onRefresh } = usePullToRefresh();
   return (
     <View className="flex-1 bg-background-light dark:bg-background-dark">
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: 96 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         <Text className="text-3xl font-bold text-text-primary-light dark:text-text-primary-dark">
           Главная
