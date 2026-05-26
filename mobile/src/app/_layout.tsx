@@ -136,6 +136,14 @@ function AppShell() {
           title: 'Корректировка',
         }}
       />
+      <Stack.Screen
+        name="scan-receipt"
+        options={{
+          presentation: 'fullScreenModal',
+          headerShown: false,
+          title: 'Чек',
+        }}
+      />
       </Stack>
       <PremiumUpgradeModal />
     </>

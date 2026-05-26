@@ -28,6 +28,18 @@
         {
           "color": "#0A84FF"
         }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Доступ к камере нужен для сканирования чеков"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Доступ к фото нужен для загрузки чеков"
+        }
       ]
     ],
     "runtimeVersion": {

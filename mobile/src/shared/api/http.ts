@@ -49,15 +49,21 @@ export async function getAccessToken() {
 type RequestOptions = RequestInit & { skipAuth?: boolean };
 
 export async function http<T = unknown>(path: string, opts: RequestOptions = {}): Promise<T> {
-  const { skipAuth, headers, ...rest } = opts;
+  const { skipAuth, headers, body, ...rest } = opts;
   const token = skipAuth ? null : await getAccessToken();
+
+  // RN's fetch fills in the multipart boundary in Content-Type automatically
+  // for FormData bodies — injecting application/json over it produces an
+  // unparseable request on the server side.
+  const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
 
   const doRequest = (authToken: string | null) =>
     fetch(`${API_URL}${path}`, {
       ...rest,
+      body,
       credentials: 'include',
       headers: {
-        'Content-Type': 'application/json',
+        ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
         ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
         ...headers,
       },
