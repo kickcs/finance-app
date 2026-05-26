@@ -12,7 +12,7 @@
 
 ---
 
-## Progress (last sync: 2026-05-26, after Phase 3 close)
+## Progress (last sync: 2026-05-26, after Phase 4 partial)
 
 | Phase | Tasks | Status |
 |---|---|---|
@@ -20,9 +20,26 @@
 | Phase 1 — Core read screens | 13-22 + 21a | ✅ Done (12 commits) |
 | Phase 2 — Core mutations | 23-32 | ✅ Done (4 commits, 2 HIGH review fixes applied) |
 | Phase 3 — Domain features | 33-50 | ✅ Done with deferrals (see table below) |
-| Phase 4 — Native MVP | 51-62 | ⏳ Pending — needs physical device + external accounts |
+| Phase 4 — Native MVP | 51-62 | 🚧 In progress — 51, 52, 53, 55 done; 54, 56-62 pending |
 | Phase 5 — Polish & QA | 63-72 | ⏳ Pending — also absorbs Phase 0–3 deferrals |
 | Phase 6 — Store submission | 73-80 | ⏳ Pending — blocked on App Store / Google Play accounts |
+
+### Phase 4 sub-status (2026-05-26)
+
+| Task | Status | Notes |
+|---|---|---|
+| 51 — useHaptics wrapper | ✅ Done | `mobile/src/shared/lib/haptics` + 10 sites refactored. Added `medium`/`heavy` patterns beyond plan. Commit `751a3b7`. |
+| 52 — Swipeable transaction items | ✅ Done | `SwipeableRow` in `shared/ui` via `ReanimatedSwipeable` (RNGH 2.31). Wired in History + AccountDetail; transfer/adjustment rows gated off. Commit `284a02c`. |
+| 53 — expo-notifications setup + config plugin | ✅ Done | Plugin in `app.json`, `registerForPush.ts` with typed `reason` enum, dynamic-import wiring in `useAuth` (signIn/signUp/anon/bootstrap + signOut). Commit `34fe279`. Real APNs/FCM delivery not validated — needs EAS Build on physical device. |
+| 54 — Push registration flow + backend integration | ✅ Done (covered by Task 53) | Frontend call sites + backend endpoint integrated together. Same commits `34fe279` + `f98d7ac`. |
+| 55 — Backend POST /api/push-devices | ✅ Done | New `push_devices` table, FK to profiles ON DELETE CASCADE, CHECK constraint on platform, UNIQUE (user_id, token), capped token length. 4 HIGH review fixes applied (PK preserved across upsert, FK cascade, DELETE-with-body → POST /unregister, token MaxLength). Commit `f98d7ac`. |
+| 56 — Camera + receipt OCR | ⏳ Pending | Code can be written, needs physical device for camera + existing `/api/receipt/scan` OPENAI_API_KEY config check. |
+| 57 — IAP setup (expo-iap 2.9) | ⏳ Pending | Needs App Store / Google Play developer accounts (spec open question #1). |
+| 58 — PremiumUpgradeModal + IAP UI | ⏳ Pending | Blocked on Task 57. |
+| 59 — Backend IAP receipt validation | ⏳ Pending | Needs App-Specific Shared Secret + Google Play service account JSON. |
+| 60 — usePremiumFeature gate | ⏳ Pending | Can do UI/Zustand-only without IAP. |
+| 61 — Push subscription endpoint mapping (Vue parity) | ✅ Done (covered by Task 53/55) | Already wired in `useAuth` lifecycle. |
+| 62 — EAS Update setup | ⏳ Pending | Config-only, can be done. |
 
 ### Deferrals (carry forward to later phases)
 

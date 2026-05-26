@@ -334,9 +334,33 @@ Tasks 33–50. Сделано: Debts (CRUD + group-by-person cursor pagination +
 - `_userId` параметр из Vue API убран — backend берёт `userId` из JWT.
 - Дополнительные зависимости установлены: `expo-document-picker@~56.0.4`, `expo-file-system@~56.0.7` (для Task 50). Уже в `package.json`.
 
-### Phase 4 — Native MVP ⏳ Не начата
+### Phase 4 — Native MVP 🚧 В работе
 
-См. план Task 51–62. Критическая зависимость: **physical device** для проверки большинства фич (push, IAP, camera) — iOS Simulator + Android Emulator закроют только haptics + swipeable + ОТА.
+Закрыты задачи, которые не требуют физ.девайса/external accounts:
+- **Task 51 — useHaptics** ✅ `mobile/src/shared/lib/haptics` wrapper + рефакторинг 10 файлов с raw `expo-haptics`. Поддерживаемые паттерны: `selection/success/error/warning/light/medium/heavy`.
+- **Task 52 — Swipeable transaction items** ✅ `SwipeableRow` в `shared/ui` (использует `ReanimatedSwipeable` из RNGH 2.31 — Reanimated 4-compatible). Wired в History + AccountDetail. Transfer/adjustment rows не свайпятся (delete только для income/expense).
+- **Task 53 — expo-notifications setup** ✅ Plugin в `app.json`, `registerForPush.ts` с typed `RegisterForPushResult.reason` enum, dynamic-import wiring в `useAuth` (signIn/signUp/anon/bootstrap → registerPush; signOut → unregisterPush). Foreground handler использует SDK 56's `shouldShowBanner`/`shouldShowList` (старый `shouldShowAlert` deprecated).
+- **Task 54 — Push registration flow** ✅ Покрыт Task 53.
+- **Task 55 — Backend POST /api/push-devices** ✅ Новая таблица `push_devices` параллельно с `push_subscriptions` (web-push), DDD-структура в `notification/`. После code-review применены 4 HIGH-фикса:
+  - upsert не переписывает `id`/`createdAt` (через `QueryBuilder.orUpdate(['platform','device_id','updated_at'], ['user_id','token'])`) — иначе PK мутировал бы при каждом ре-регистре.
+  - FK на `profiles(id) ON DELETE CASCADE` (паритет с `push_subscriptions`) — orphan rows после delete user исключены.
+  - Unregister — `POST /unregister`, не `DELETE` с body (RFC 7231 + RN fetch polyfill стрипает body на DELETE).
+  - `@MaxLength(512)` на token в DTO (Expo ~50, APNs 64, FCM ≤256).
+  - DB-level `CHECK (platform IN ('ios','android'))`.
+- **Task 61 — Push subscription endpoint mapping** ✅ Покрыт Task 53 (lifecycle в `useAuth`).
+
+**Real APNs/FCM delivery не проверена** — нужен EAS dev build на физическом девайсе + APNs key / FCM service account. Blocked на open question #1.
+
+Осталось в Phase 4 (отложено, требует external dependencies):
+
+| Task | Что блокирует |
+|---|---|
+| 56 — Camera + Receipt OCR | Physical device для камеры; OPENAI_API_KEY уже есть на бэке. |
+| 57 — IAP (expo-iap 2.9) | Apple Developer + Google Play accounts (open question #1). |
+| 58 — PremiumUpgradeModal | Зависит от Task 57. |
+| 59 — Backend IAP receipt validation | App-Specific Shared Secret + Google Play service account JSON. |
+| 60 — usePremiumFeature gate | Можно начать без IAP (UI + Zustand). |
+| 62 — EAS Update | Конфиг-only, можно сделать. |
 
 **Внешние зависимости перед стартом Phase 4:**
 - Apple Developer Program account + App Store Connect app record (open question #1 в спеке).
