@@ -58,9 +58,14 @@
     "zustand": "^5.0.13"
   },
   "devDependencies": {
+    "@react-native/jest-preset": "^0.85.3",
     "@tailwindcss/postcss": "^4.3.0",
+    "@testing-library/react-native": "^13.3.3",
+    "@types/jest": "^29.5.14",
     "@types/papaparse": "^5.5.2",
     "@types/react": "~19.2.2",
+    "jest": "~29.7.0",
+    "jest-expo": "~56.0.4",
     "postcss": "^8.5.15",
     "tailwindcss": "^4.3.0",
     "typescript": "~6.0.3"
@@ -70,7 +75,14 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "lint": "expo lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "jest"
+  },
+  "jest": {
+    "preset": "jest-expo",
+    "transformIgnorePatterns": [
+      "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@sentry/react-native|react-native-svg|sonner-native|nativewind|react-native-css)"
+    ]
   },
   "overrides": {
     "lightningcss": "1.30.1"
