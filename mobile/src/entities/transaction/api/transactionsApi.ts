@@ -164,6 +164,26 @@ export const transactionsApi = {
     };
   },
 
+  async adjustBalance(params: {
+    accountId: string;
+    targetBalance: number;
+    currency: string;
+    date?: string;
+    description?: string;
+  }): Promise<Transaction> {
+    const data = await http<TransactionResponse>('/api/transactions/adjust-balance', {
+      method: 'POST',
+      body: JSON.stringify({
+        accountId: params.accountId,
+        targetBalance: params.targetBalance,
+        currency: params.currency,
+        date: params.date,
+        description: params.description,
+      }),
+    });
+    return transformTransaction(data);
+  },
+
   async create(transaction: TransactionInsert): Promise<Transaction> {
     const data = await http<TransactionResponse>('/api/transactions', {
       method: 'POST',

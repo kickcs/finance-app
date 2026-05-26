@@ -16,3 +16,9 @@ export {
   useInfiniteAccountTransactions,
 } from './useInfiniteTransactions';
 export { useMonthlyStats } from './useMonthlyStats';
+export {
+  useCreateTransaction,
+  useUpdateTransaction,
+  useDeleteTransaction,
+  useAdjustBalance,
+} from './useTransactionMutations';
