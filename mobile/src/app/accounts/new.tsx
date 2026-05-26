@@ -107,6 +107,7 @@ export default function NewAccountScreen() {
                       key={icon}
                       onPress={() => field.onChange(icon)}
                       accessibilityRole="button"
+                      accessibilityLabel={`Иконка ${icon}`}
                       accessibilityState={{ selected: active }}
                       className={cn(
                         'h-12 w-12 items-center justify-center rounded-xl',
@@ -140,6 +141,7 @@ export default function NewAccountScreen() {
                       key={color}
                       onPress={() => field.onChange(color)}
                       accessibilityRole="button"
+                      accessibilityLabel={`Цвет ${color}`}
                       accessibilityState={{ selected: active }}
                       className={cn(
                         'h-10 w-10 rounded-full items-center justify-center',
@@ -172,6 +174,7 @@ export default function NewAccountScreen() {
                       key={type}
                       onPress={() => field.onChange(type)}
                       accessibilityRole="button"
+                      accessibilityLabel={`Тип: ${ACCOUNT_TYPE_LABELS[type]}`}
                       accessibilityState={{ selected: active }}
                       className={cn(
                         'rounded-full px-3 py-2 border',
@@ -214,6 +217,7 @@ export default function NewAccountScreen() {
                       key={c.code}
                       onPress={() => field.onChange(c.code)}
                       accessibilityRole="button"
+                      accessibilityLabel={`Валюта ${c.code}`}
                       accessibilityState={{ selected: active }}
                       className={cn(
                         'rounded-full px-3 py-2 border',

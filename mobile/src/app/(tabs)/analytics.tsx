@@ -77,6 +77,7 @@ export default function AnalyticsScreen() {
               key={p}
               onPress={() => setPeriod(p)}
               accessibilityRole="button"
+              accessibilityLabel={`Период: ${PERIOD_LABEL[p]}`}
               accessibilityState={{ selected: active }}
               className={cn(
                 'flex-1 items-center justify-center rounded-lg py-2',

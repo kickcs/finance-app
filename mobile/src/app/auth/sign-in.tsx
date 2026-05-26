@@ -59,11 +59,21 @@ export default function SignInScreen() {
       <Pressable
         onPress={onSubmit}
         disabled={loading}
+        accessibilityRole="button"
+        accessibilityLabel="Войти"
+        accessibilityState={{ disabled: loading, busy: loading }}
         className="bg-primary rounded-xl py-3 items-center mb-3"
       >
         <Text className="text-white font-semibold">{loading ? 'Вход…' : 'Войти'}</Text>
       </Pressable>
-      <Pressable onPress={onAnonymous} disabled={loading} className="py-3 items-center">
+      <Pressable
+        onPress={onAnonymous}
+        disabled={loading}
+        accessibilityRole="button"
+        accessibilityLabel="Попробовать без аккаунта"
+        accessibilityState={{ disabled: loading }}
+        className="py-3 items-center"
+      >
         <Text className="text-primary">Попробовать без аккаунта</Text>
       </Pressable>
     </View>

@@ -57,7 +57,8 @@ export default function CurrencySettingsScreen() {
               onPress={() => void onSelect(item)}
               disabled={isPending}
               accessibilityRole="button"
-              accessibilityState={{ selected }}
+              accessibilityLabel={`Выбрать валюту ${item.name}`}
+              accessibilityState={{ selected, disabled: isPending }}
               className={cn(
                 'flex-row items-center gap-3 rounded-xl px-4 py-3',
                 selected && 'bg-primary/10',

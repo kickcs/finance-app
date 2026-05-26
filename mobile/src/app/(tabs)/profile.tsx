@@ -79,6 +79,7 @@ export default function ProfileScreen() {
         <Pressable
           onPress={() => router.push('/settings/currency')}
           accessibilityRole="button"
+          accessibilityLabel="Сменить валюту"
         >
           <Card className="flex-row items-center gap-3">
             <View className="flex-1">
@@ -143,7 +144,7 @@ interface NavRowProps {
 
 function NavRow({ icon, label, onPress }: NavRowProps) {
   return (
-    <Pressable onPress={onPress} accessibilityRole="button">
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label}>
       <Card className="flex-row items-center gap-3">
         <View className="h-9 w-9 items-center justify-center rounded-lg bg-surface-light dark:bg-surface-dark">
           <Icon name={icon} size={18} color="#4f46e5" />
