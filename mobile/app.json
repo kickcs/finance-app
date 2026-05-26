@@ -30,6 +30,12 @@
         }
       ]
     ],
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "fallbackToCacheTimeout": 0
+    },
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true

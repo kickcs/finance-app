@@ -1,0 +1,55 @@
+name: EAS Update (mobile)
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/eas-update.yml'
+  workflow_dispatch:
+    inputs:
+      message:
+        description: 'Update message'
+        required: false
+        default: ''
+
+# Guard against parallel updates clobbering each other.
+concurrency:
+  group: eas-update-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish OTA to production channel
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Allow opting out per-commit by including [skip-ota] in the message.
+    # Useful when a commit touches mobile/ but should ship via store-build
+    # (e.g. native dep bumped — needs new EAS Build, not an OTA on top of
+    # an older runtimeVersion fingerprint).
+    if: ${{ !contains(github.event.head_commit.message, '[skip-ota]') }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install mobile dependencies
+        working-directory: mobile
+        run: npm ci
+
+      - name: Publish update
+        working-directory: mobile
+        env:
+          UPDATE_MESSAGE: ${{ github.event.inputs.message || github.event.head_commit.message }}
+        run: |
+          eas update --channel production --message "${UPDATE_MESSAGE}" --non-interactive
