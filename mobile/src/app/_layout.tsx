@@ -30,7 +30,50 @@ function AppShell() {
     if (user && inAuth) router.replace('/');
   }, [ready, user, segments, router]);
 
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen
+        name="transactions/new"
+        options={{
+          presentation: 'formSheet',
+          headerShown: true,
+          sheetGrabberVisible: true,
+          sheetAllowedDetents: [0.75, 1.0],
+          title: 'Новая операция',
+        }}
+      />
+      <Stack.Screen
+        name="transactions/[id]/edit"
+        options={{
+          presentation: 'formSheet',
+          headerShown: true,
+          sheetGrabberVisible: true,
+          sheetAllowedDetents: [0.75, 1.0],
+          title: 'Редактировать',
+        }}
+      />
+      <Stack.Screen
+        name="accounts/new"
+        options={{
+          presentation: 'formSheet',
+          headerShown: true,
+          sheetGrabberVisible: true,
+          sheetAllowedDetents: [0.75, 1.0],
+          title: 'Новый счёт',
+        }}
+      />
+      <Stack.Screen
+        name="accounts/[id]/adjust"
+        options={{
+          presentation: 'formSheet',
+          headerShown: true,
+          sheetGrabberVisible: true,
+          sheetAllowedDetents: [0.6],
+          title: 'Корректировка',
+        }}
+      />
+    </Stack>
+  );
 }
 
 export default function RootLayout() {

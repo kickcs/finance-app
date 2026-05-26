@@ -1,14 +1,14 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { invalidateTransactionRelated } from '@/shared/api/invalidation';
-import type { Transaction, TransactionInsert } from '@/shared/api/database.types';
+import type { Transaction } from '@/shared/api/database.types';
 
-import { transactionsApi } from './transactionsApi';
+import { transactionsApi, type TransactionCreateInput } from './transactionsApi';
 
 export function useCreateTransaction() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: TransactionInsert) => transactionsApi.create(input),
+    mutationFn: (input: TransactionCreateInput) => transactionsApi.create(input),
     onSuccess: () => invalidateTransactionRelated(qc),
   });
 }

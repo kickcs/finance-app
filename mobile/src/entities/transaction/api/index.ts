@@ -4,6 +4,7 @@ export type {
   PaginatedResult,
   TransactionFilters,
   MonthlyStats,
+  TransactionCreateInput,
 } from './transactionsApi';
 export { transactionKeys } from './queryKeys';
 export {

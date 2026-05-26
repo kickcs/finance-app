@@ -1,6 +1,12 @@
 import { http } from '@/shared/api/http';
 import type { Transaction, TransactionInsert } from '@/shared/api/database.types';
 
+/**
+ * Backend derives `user_id` from JWT, so callers don't supply it.
+ * Mirrors how the Vue frontend posts to /api/transactions.
+ */
+export type TransactionCreateInput = Omit<TransactionInsert, 'user_id' | 'id' | 'created_at'>;
+
 export interface PaginatedCursor {
   date: string;
   createdAt: string;
@@ -184,7 +190,7 @@ export const transactionsApi = {
     return transformTransaction(data);
   },
 
-  async create(transaction: TransactionInsert): Promise<Transaction> {
+  async create(transaction: TransactionCreateInput): Promise<Transaction> {
     const data = await http<TransactionResponse>('/api/transactions', {
       method: 'POST',
       body: JSON.stringify({
