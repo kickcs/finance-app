@@ -1,9 +1,9 @@
 # Vue → Expo Migration Design
 
 **Date**: 2026-05-25
-**Status**: In progress — Phase 0–3 shipped on `feature/mobile-migration`, Phase 4 code-complete on 2026-05-26 (51-62 written; on-device + Apple/Google secrets needed to verify)
+**Status**: In progress — Phase 0–3 shipped, Phase 4 code-complete, Phase 5 partial (63/64/66/67/68/69/70 done + 65 partial). Remaining: brand assets (71), dogfood build (72), Apple/Google IAP secrets, on-device verification.
 **Author**: Generated via /goal brainstorming session
-**Last sync**: 2026-05-26 (Phase 4 — Tasks 56-59 close, code-complete state)
+**Last sync**: 2026-05-26 (after Phase 5 batch — animations, toast, pull-to-refresh, theme, skeleton, analytics + error facades, a11y high-traffic)
 
 ---
 

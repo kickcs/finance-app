@@ -21,7 +21,7 @@
 | Phase 2 — Core mutations | 23-32 | ✅ Done (4 commits, 2 HIGH review fixes applied) |
 | Phase 3 — Domain features | 33-50 | ✅ Done with deferrals (see table below) |
 | Phase 4 — Native MVP | 51-62 | ✅ Code complete with deferrals (51-62 written; on-device validation + Apple/Google secrets still pending) |
-| Phase 5 — Polish & QA | 63-72 | ⏳ Pending — also absorbs Phase 0–3 deferrals |
+| Phase 5 — Polish & QA | 63-72 | 🚧 Partial — 63, 64, 66, 67, 68, 69, 70 done; 65 high-traffic screens covered (forms + BalanceCard deferred); 71 needs PNG assets; 72 needs interactive `eas build` |
 | Phase 6 — Store submission | 73-80 | ⏳ Pending — blocked on App Store / Google Play accounts |
 
 ### Phase 4 sub-status (2026-05-26)
