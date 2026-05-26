@@ -10,3 +10,4 @@ export {
   useCloseDebt,
   usePartialPayment,
 } from './useDebts';
+export { useDebtTransactions } from './useDebtTransactions';

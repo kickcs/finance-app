@@ -127,4 +127,8 @@ export const accountsApi = {
   async delete(id: string): Promise<void> {
     await http(`/api/accounts/${id}`, { method: 'DELETE' });
   },
+
+  async reorder(orderedIds: string[]): Promise<void> {
+    await http<void>('/api/accounts/reorder', { method: 'POST', body: JSON.stringify({ orderedIds }) });
+  },
 };

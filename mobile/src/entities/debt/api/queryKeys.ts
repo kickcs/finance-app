@@ -5,4 +5,5 @@ export const debtKeys = {
   infinite: (userId: string, filters?: unknown) =>
     [...debtKeys.all, 'infinite', userId, filters ?? {}] as const,
   detail: (id: string) => [...debtKeys.all, 'detail', id] as const,
+  transactions: (debtId: string) => [...debtKeys.all, 'transactions', debtId] as const,
 };
