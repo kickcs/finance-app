@@ -3,6 +3,11 @@ import '../global.css';
 import { SplashScreen, Stack, useRouter, useSegments } from 'expo-router';
 import { useEffect } from 'react';
 
+import { useSubscription } from '@/entities/subscription';
+import {
+  PremiumUpgradeModal,
+  setPremiumStatus,
+} from '@/features/upgrade-to-premium';
 import { Providers } from '@/providers/Providers';
 import { bootstrapAuth, useAuthReady, useUser } from '@/shared/api/composables/useAuth';
 
@@ -17,10 +22,18 @@ function AppShell() {
   const ready = useAuthReady();
   const segments = useSegments();
   const router = useRouter();
+  // Premium gate consumes a single global isPremium flag — keep the Zustand
+  // mirror in sync with the server-truth subscription query so requirePremium()
+  // call sites don't need their own React Query subscription.
+  const { isPremium } = useSubscription(user?.id ?? null);
 
   useEffect(() => {
     void bootstrapAuth();
   }, []);
+
+  useEffect(() => {
+    setPremiumStatus(isPremium);
+  }, [isPremium]);
 
   useEffect(() => {
     if (!ready) return;
@@ -31,7 +44,8 @@ function AppShell() {
   }, [ready, user, segments, router]);
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
+    <>
+      <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen
         name="transactions/new"
         options={{
@@ -122,7 +136,9 @@ function AppShell() {
           title: 'Корректировка',
         }}
       />
-    </Stack>
+      </Stack>
+      <PremiumUpgradeModal />
+    </>
   );
 }
 
