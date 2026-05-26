@@ -4,9 +4,11 @@
 
 **Goal:** Поэтапно мигрировать Vue 3 PWA `finance-app` на Expo SDK 56 для публикации нативных приложений в App Store и Google Play.
 
-**Architecture:** Greenfield rewrite в новом root-каталоге `mobile/` параллельно с действующим `frontend/` (Vue PWA продолжает работать в проде). Vue фичи переносятся 1:1 с сохранением FSD-структуры. Стек: Expo SDK 56, RN 0.81, React 19, Expo Router 6, NativeWind v5 + Expo UI, TanStack Query v5, react-native-reanimated 4, expo-iap (IAP), expo-notifications (push), expo-camera (OCR).
+**Architecture:** Greenfield rewrite в новом root-каталоге `mobile/` параллельно с действующим `frontend/` (Vue PWA продолжает работать в проде). Vue фичи переносятся 1:1 с сохранением FSD-структуры. Стек: Expo SDK 56, RN 0.85, React 19.2.3, Expo Router 6 (независим от React Navigation), NativeWind v5 + Expo UI, TanStack Query v5, react-native-reanimated 4 + react-native-worklets, expo-iap 2.9 (IAP), expo-notifications (push), expo-camera v17 (OCR).
 
-**Tech Stack:** Expo SDK 56, React Native 0.81, React 19, TypeScript 5.7, Expo Router 6, NativeWind v5 + react-native-css, react-native-reusables, @tanstack/react-query, Zustand, react-hook-form + zod, expo-secure-store, @react-native-async-storage/async-storage, react-native-reanimated 4, react-native-gesture-handler, expo-haptics, expo-notifications, expo-camera, expo-image-picker, expo-image, expo-iap, @shopify/flash-list, victory-native, papaparse, EAS Build + Submit + Update.
+**Tech Stack:** Expo SDK 56, React Native 0.85, React 19.2.3, TypeScript 6.0.3, Expo Router 6, NativeWind v5 + react-native-css (CSS-first, без tailwind.config.js / babel-плагина), react-native-reusables, @tanstack/react-query, Zustand, react-hook-form + zod, expo-secure-store, @react-native-async-storage/async-storage, react-native-reanimated 4, react-native-worklets, react-native-gesture-handler, expo-haptics, expo-notifications, expo-camera v17, expo-image-picker, expo-image, expo-iap 2.9 (либо react-native-iap Nitro на Phase 4), @shopify/flash-list, victory-native, papaparse, EAS Build + Submit + Update (runtimeVersion: fingerprint).
+
+**Минимальные требования платформы:** iOS 16.4+ (поднято с 15.1 в SDK 56), Android 8+, Xcode 26.4+ для локальной сборки.
 
 ---
 
@@ -15,7 +17,7 @@
 | Phase | Tasks | Status |
 |---|---|---|
 | Phase 0 — Foundation | 1-12 | ✅ Done (branch `feature/mobile-migration`) |
-| Phase 1 — Core read screens | 13-22 | ⏳ Pending |
+| Phase 1 — Core read screens | 13-22 | ✅ Done |
 | Phase 2 — Core mutations | 23-32 | ⏳ Pending |
 | Phase 3 — Domain features | 33-50 | ⏳ Pending |
 | Phase 4 — Native MVP | 51-62 | ⏳ Pending |
@@ -23,6 +25,54 @@
 | Phase 6 — Store submission | 73-80 | ⏳ Pending |
 
 When picking up a phase: mark task header with `**Status:** 🚧 In progress`, flip step checkboxes from `- [ ]` to `- [x]` as each step lands, set header to `**Status:** ✅ Done` once committed. Keep the table above in sync.
+
+---
+
+## Review workflow (применяется ко ВСЕМ задачам ниже)
+
+После завершения значимого шага (имплементация фичи, hook'а, API-layer'а, мутации, экрана) и **перед `git commit`** — обязательный цикл:
+
+1. **Stage всех изменений:** `git add <paths>` (не коммитить ещё).
+2. **Запуск `/code-review`** — встроенный skill анализирует staged diff и возвращает findings с severity (CRITICAL / HIGH / MEDIUM / LOW / INFO).
+3. **Severity gate:**
+   - **CRITICAL / HIGH** (bug, security, data loss, type unsafety, regression) — `git commit` блокируется. Исправить → re-stage → повторить `/code-review` пока чисто.
+   - **MEDIUM / LOW / INFO** — записать в commit message как `Review notes:` (или отдельный TODO-комментарий в коде), commit разрешён.
+4. **Только после прохождения review** — `git commit` с финальным message.
+
+> **Что считается «значимым шагом»:** любой шаг, который сам по себе мог бы быть отдельным PR'ом. Чистое создание директорий, копипаст pure-функций без правок, переименование констант — не требуют review. Любые новые тесты, hooks, экраны, mutations, API-trasformers, security-чувствительные места (auth, HTTP, IAP, push, file upload, backend endpoints) — требуют **обязательно**.
+>
+> Каждый Task ниже завершается шагом `git commit`. Шаг `/code-review` — неявный, но обязательный, между предпоследним и последним step'ом. В critical-path задачах (auth, mutations, IAP, push, backend) review-шаг прописан явно.
+
+---
+
+## SDK 56 caveats — обязательно к прочтению перед Phase 1
+
+Эта секция фиксирует расхождения между ранней редакцией плана и фактическим релизом Expo SDK 56. Применять **до начала Phase 1**.
+
+| # | Где в плане | Что было | Что должно быть |
+|---|---|---|---|
+| 1 | Шапка / Tech Stack | RN 0.81, React 19, TS 5.7 | **RN 0.85, React 19.2.3, TS 6.0.3, iOS 16.4+, Xcode 26.4+** |
+| 2 | Task 3 (NativeWind) | `tailwind.config.js` + `nativewind/babel` + `jsxImportSource: 'nativewind'` | CSS-first: `global.css` + `@theme`, `postcss.config.mjs`, **никакого** `tailwind.config.js`/babel-плагина, обёртки через `useCssElement` в `src/shared/ui/tw.tsx`. Пакеты: `nativewind@5.0.0-preview.2`, `react-native-css@0.0.0-nightly.5ce6396`, `@tailwindcss/postcss`, `tailwindcss@^4` + `resolutions.lightningcss` |
+| 3 | Task 4 (токены) | Цвета в `tailwind.config.js` | Цвета в `global.css` `@theme` блоке как `--color-<name>` |
+| 4 | Task 5 (зависимости) | `react-native-reanimated` без worklets | **Добавить `react-native-worklets`** (обязателен для Reanimated 4 в SDK 54+). Babel-плагин подключается автоматом — ручной `'react-native-reanimated/plugin'` НЕ нужен |
+| 5 | Task 9 (NativeTabs) | `import { ..., Icon, Label }`; `<Icon sf=... />` | Compound: `<NativeTabs.Trigger.Icon sf="..." md="..." />`, `<NativeTabs.Trigger.Label>...` |
+| 6 | Task 57 (IAP) | `getProducts(skus)`, `requestPurchase({ sku })` | **`fetchProducts({ skus, type: 'subs' })`**, **`requestPurchase({ request: { sku } })`**, `ProductPurchase` тип. expo-iap архивирован — оценить миграцию на `react-native-iap` (Nitro) к Phase 6 |
+| 7 | Task 62 (EAS Update) | `runtimeVersion.policy = 'appVersion'` | **`'fingerprint'`** (рекомендация Expo для SDK 56) |
+| 8 | Глобально | — | `expo/fetch` теперь default `globalThis.fetch` — для FormData upload в Task 56 (камера) при странностях opt-out через `EXPO_PUBLIC_USE_RN_FETCH=1` |
+| 9 | Глобально | `@expo/vector-icons` | Deprecated → `@react-native-vector-icons/*` scoped или `expo-symbols`. Expo CLI больше не тянет пакет автоматически |
+| 10 | Глобально | `@react-navigation/*` импорты | Expo Router 6 независим от React Navigation — использовать только `expo-router` entry points (есть codemod в skill `react-navigation-to-expo-router`) |
+
+### Phase 0 reconcile (одноразовая задача перед Phase 1)
+
+Поскольку Phase 0 был закоммичен по старому рецепту, перед стартом Phase 1 выполнить аудит уже существующих файлов:
+
+- [ ] **A. Проверить `mobile/babel.config.js`** — если в нём только `nativewind/babel` и/или `react-native-reanimated/plugin`, удалить файл целиком (SDK 54+ подключает оба автоматически через `babel-preset-expo`).
+- [ ] **B. Проверить `mobile/tailwind.config.js`** — удалить, перенести содержимое в `global.css` `@theme` (Task 3 + 4 переписаны выше).
+- [ ] **C. Проверить `mobile/metro.config.js`** — заменить опции `withNativewind` на `{ inlineVariables: false, globalClassNamePolyfill: false }` (старый `{ input: './global.css' }` больше не используется).
+- [ ] **D. Проверить `mobile/app/(tabs)/_layout.tsx`** — заменить `<Icon>/<Label>` на `<NativeTabs.Trigger.Icon>/<NativeTabs.Trigger.Label>` с `md=` prop'ом (Task 9).
+- [ ] **E. Проверить `package.json`** — добавить `react-native-worklets`, `react-native-css`, `@tailwindcss/postcss`, `resolutions.lightningcss = "1.30.1"`. Понизить `nativewind` до `5.0.0-preview.2` если стоит v4.
+- [ ] **F. Smoke-test** — `cd mobile && npx expo start --clear`, открыть smoke-page, убедиться что цвета из `@theme` применяются.
+- [ ] **G. Commit:** `fix(mobile): Phase 0 reconcile to SDK 56 actuals`.
 
 ---
 
@@ -133,92 +183,107 @@ git commit -m "feat(mobile): typescript strict + FSD directory structure"
 
 ---
 
-### Task 3: NativeWind v5 + Tailwind config
+### Task 3: NativeWind v5 + Tailwind v4 CSS-first
 
-**Status:** ✅ Done
+**Status:** ⚠️ Was marked Done with deprecated recipe (Tailwind v3-style + babel-плагин). Перед Phase 1 — выполнить reconcile (см. Step 0).
+
+> **SDK 56 caveat:** NativeWind v5 + Tailwind v4 настраиваются полностью CSS-first. **Нет** `tailwind.config.js`, **нет** `nativewind/babel`, **нет** `jsxImportSource: 'nativewind'`. Цвета и темы живут в `global.css` блоке `@theme`. Нативные RN-компоненты НЕ понимают `className` — нужны обёртки через `useCssElement` в `src/shared/ui/`.
 
 **Files:**
 - Create: `mobile/global.css`
-- Create: `mobile/tailwind.config.js`
+- Create: `mobile/postcss.config.mjs`
 - Create: `mobile/metro.config.js`
-- Create: `mobile/babel.config.js`
+- Delete (если есть): `mobile/babel.config.js` (когда только NativeWind), `mobile/tailwind.config.js`
+- Modify: `mobile/package.json` (resolutions для lightningcss)
 - Modify: `mobile/app/_layout.tsx`
+- Create: `mobile/src/shared/ui/tw.tsx` (CSS-wrapped View/Text/Pressable/ScrollView/TextInput)
 
-- [x] **Step 1: Установить зависимости**
+- [ ] **Step 0: Reconcile с уже закоммиченным Phase 0**
+
+Если `mobile/tailwind.config.js` существует — удалить. Если `mobile/babel.config.js` содержит только nativewind/reanimated конфиг — удалить (с SDK 54+ `babel-preset-expo` подключает плагины автоматически). Удалить `jsxImportSource: 'nativewind'`, если он попал в babel.
 
 ```bash
 cd mobile
-npx expo install nativewind react-native-reanimated react-native-safe-area-context
-npm install -D tailwindcss@^4 @tailwindcss/postcss
+rm -f tailwind.config.js
+# babel.config.js — открыть и удалить, если содержит только nativewind-блок
 ```
 
-- [x] **Step 2: Создать tailwind.config.js**
+- [ ] **Step 1: Установить актуальные пакеты NativeWind v5 + Tailwind v4**
+
+```bash
+cd mobile
+npx expo install tailwindcss@^4 nativewind@5.0.0-preview.2 react-native-css@0.0.0-nightly.5ce6396 @tailwindcss/postcss tailwind-merge clsx
+npx expo install react-native-reanimated react-native-worklets react-native-safe-area-context
+```
+
+> **Note:** `autoprefixer` не нужен (Expo использует lightningcss). PostCSS уже включён в Expo по умолчанию.
+
+- [ ] **Step 2: Добавить resolutions для lightningcss в `mobile/package.json`**
+
+```json
+{
+  "resolutions": {
+    "lightningcss": "1.30.1"
+  }
+}
+```
+
+- [ ] **Step 3: Создать `mobile/postcss.config.mjs`**
 
 ```js
-/** @type {import('tailwindcss').Config} */
-module.exports = {
-  content: ['./app/**/*.{js,jsx,ts,tsx}', './src/**/*.{js,jsx,ts,tsx}'],
-  presets: [require('nativewind/preset')],
-  theme: {
-    extend: {
-      colors: {
-        // Перенесено из frontend/src/app/styles/index.css @theme block
-        'background-light': '#FFFFFF',
-        'background-dark': '#0A0A0A',
-        'surface-light': '#F4F4F5',
-        'surface-dark': '#1C1C1E',
-        'primary-light': '#007AFF',
-        'primary-dark': '#0A84FF',
-        // ... остальные токены из DESIGN_SYSTEM.md
-      },
-      fontFamily: {
-        sans: ['Inter'],
-      },
-    },
+export default {
+  plugins: {
+    "@tailwindcss/postcss": {},
   },
 };
 ```
 
-> **Note:** Полный список токенов скопировать из `frontend/src/app/styles/index.css` блок `@theme`. Список должен совпадать 1:1.
-
-- [x] **Step 3: Создать global.css**
+- [ ] **Step 4: Создать `mobile/global.css` с импортами Tailwind v4 + platform fonts**
 
 ```css
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/preflight.css" layer(base);
+@import "tailwindcss/utilities.css";
+
+@media ios {
+  :root {
+    --font-sans: system-ui;
+    --font-rounded: ui-rounded;
+    --font-mono: ui-monospace;
+    --font-serif: ui-serif;
+  }
+}
+
+@media android {
+  :root {
+    --font-sans: normal;
+    --font-rounded: normal;
+    --font-mono: monospace;
+    --font-serif: serif;
+  }
+}
 ```
 
-- [x] **Step 4: Создать metro.config.js**
+> Все цвета и токены добавим в Task 4 через `@theme` блок в этом же файле.
+
+- [ ] **Step 5: Создать `mobile/metro.config.js`**
 
 ```js
 const { getDefaultConfig } = require('expo/metro-config');
-const { withNativeWind } = require('nativewind/metro');
+const { withNativewind } = require('nativewind/metro');
 
 const config = getDefaultConfig(__dirname);
-module.exports = withNativeWind(config, { input: './global.css' });
+
+module.exports = withNativewind(config, {
+  inlineVariables: false,        // ломает PlatformColor в CSS variables
+  globalClassNamePolyfill: false, // обёртки добавляем вручную (Step 7)
+});
 ```
 
-- [x] **Step 5: Создать babel.config.js**
-
-```js
-module.exports = function (api) {
-  api.cache(true);
-  return {
-    presets: [
-      ['babel-preset-expo', { jsxImportSource: 'nativewind' }],
-      'nativewind/babel',
-    ],
-    plugins: ['react-native-reanimated/plugin'],
-  };
-};
-```
-
-- [x] **Step 6: Подключить global.css в root layout**
-
-Заменить `mobile/app/_layout.tsx`:
+- [ ] **Step 6: Подключить global.css в root layout**
 
 ```tsx
+// mobile/app/_layout.tsx
 import '../global.css';
 import { Stack } from 'expo-router';
 
@@ -227,84 +292,155 @@ export default function RootLayout() {
 }
 ```
 
-- [x] **Step 7: Создать smoke-test page**
+- [ ] **Step 7: Создать CSS-обёртки `mobile/src/shared/ui/tw.tsx`**
+
+```tsx
+import { useCssElement } from 'react-native-css';
+import React from 'react';
+import {
+  View as RNView,
+  Text as RNText,
+  Pressable as RNPressable,
+  ScrollView as RNScrollView,
+  TextInput as RNTextInput,
+} from 'react-native';
+
+export const View = (props: React.ComponentProps<typeof RNView> & { className?: string }) =>
+  useCssElement(RNView, props, { className: 'style' });
+View.displayName = 'CSS(View)';
+
+export const Text = (props: React.ComponentProps<typeof RNText> & { className?: string }) =>
+  useCssElement(RNText, props, { className: 'style' });
+Text.displayName = 'CSS(Text)';
+
+export const Pressable = (props: React.ComponentProps<typeof RNPressable> & { className?: string }) =>
+  useCssElement(RNPressable, props, { className: 'style' });
+Pressable.displayName = 'CSS(Pressable)';
+
+export const ScrollView = (
+  props: React.ComponentProps<typeof RNScrollView> & {
+    className?: string;
+    contentContainerClassName?: string;
+  }
+) =>
+  useCssElement(RNScrollView, props, {
+    className: 'style',
+    contentContainerClassName: 'contentContainerStyle',
+  });
+ScrollView.displayName = 'CSS(ScrollView)';
+
+export const TextInput = (props: React.ComponentProps<typeof RNTextInput> & { className?: string }) =>
+  useCssElement(RNTextInput, props, { className: 'style' });
+TextInput.displayName = 'CSS(TextInput)';
+```
+
+> **Важно для всех последующих экранов:** импортировать `View/Text/Pressable/ScrollView/TextInput` из `@/shared/ui/tw`, а не из `react-native`. Использование сырого `react-native` импорта с `className` стилей не применит.
+
+- [ ] **Step 8: Создать smoke-test page**
 
 ```bash
 cat > mobile/app/index.tsx <<'EOF'
-import { View, Text } from 'react-native';
+import { View, Text } from '@/shared/ui/tw';
 
 export default function Home() {
   return (
     <View className="flex-1 items-center justify-center bg-background-light dark:bg-background-dark">
-      <Text className="text-2xl font-bold text-primary-light">NativeWind works</Text>
+      <Text className="text-2xl font-bold text-primary-light">NativeWind v5 works</Text>
     </View>
   );
 }
 EOF
 ```
 
-- [x] **Step 8: Проверить запуск в Expo Go**
+- [ ] **Step 9: Проверить запуск**
 
 ```bash
 cd mobile && npx expo start --clear
 ```
 
-Expected: на телефоне — синий жирный текст "NativeWind works" по центру.
+Expected: на телефоне — синий жирный текст "NativeWind v5 works" по центру. (Если белый текст без стилей — значит обёртки не сработали или PostCSS не подцепился.)
 
-- [x] **Step 9: Commit**
+- [ ] **Step 10: Commit**
 
 ```bash
 git add mobile/
-git commit -m "feat(mobile): NativeWind v5 + design tokens from frontend/"
+git commit -m "fix(mobile): migrate Task 3 to NativeWind v5 + Tailwind v4 CSS-first"
 ```
 
 ---
 
-### Task 4: Design tokens — портировать полный @theme из Vue
+### Task 4: Design tokens — портировать полный @theme из Vue в `global.css`
 
-**Status:** ✅ Done
+**Status:** ⚠️ Needs rework — токены сейчас в `tailwind.config.js`, нужно переехать в `global.css` `@theme` блок (после Task 3 reconcile).
+
+> **SDK 56 caveat:** в Tailwind v4 CSS-first нет `tailwind.config.js`. Цвета регистрируются как CSS custom properties `--color-<name>` внутри `@layer theme { @theme { ... } }` — после этого автоматически становятся доступны как Tailwind-классы `bg-<name>`, `text-<name>`, `border-<name>`.
 
 **Files:**
 - Read: `frontend/src/app/styles/index.css`
-- Modify: `mobile/tailwind.config.js`
+- Modify: `mobile/global.css` (добавить блок `@theme`)
 - Create: `mobile/src/shared/config/colors.ts`
 
-- [x] **Step 1: Прочитать текущие токены**
+- [ ] **Step 1: Прочитать текущие токены из Vue**
 
 ```bash
-cat frontend/src/app/styles/index.css | sed -n '/@theme/,/^}/p'
+sed -n '/@theme/,/^}/p' frontend/src/app/styles/index.css
 ```
 
-- [x] **Step 2: Скопировать ВСЕ цвета (background, surface, text, primary, secondary, success, warning, danger, accent) и radius из @theme в `tailwind.config.js` под `theme.extend.colors` и `borderRadius`**
+- [ ] **Step 2: Добавить в `mobile/global.css` блок `@theme` с цветами и radius**
 
-```js
-// tailwind.config.js — после копирования будет ~50-80 цветов
-colors: {
-  'background-light': '#...',
-  'background-dark': '#...',
-  // ... (полный список из index.css)
+Дописать в конец `mobile/global.css` (созданного в Task 3, Step 4):
+
+```css
+@layer theme {
+  @theme {
+    /* Цвета — перенесены 1:1 из frontend/src/app/styles/index.css. Имена с префиксом --color-<name> автоматически становятся bg-/text-/border-<name>. */
+    --color-background-light: #FFFFFF;
+    --color-background-dark: #0A0A0A;
+    --color-surface-light: #F4F4F5;
+    --color-surface-dark: #1C1C1E;
+    --color-primary-light: #007AFF;
+    --color-primary-dark: #0A84FF;
+    --color-text-light: #0A0A0A;
+    --color-text-dark: #FAFAFA;
+    --color-text-muted-light: #6B7280;
+    --color-text-muted-dark: #9CA3AF;
+    --color-success-light: #34C759;
+    --color-warning-light: #FF9500;
+    --color-danger-light: #FF3B30;
+    /* ... полный список (~50-80 переменных) из frontend/src/app/styles/index.css @theme — копировать построчно */
+
+    /* Радиусы */
+    --radius-xl: 16px;
+    --radius-2xl: 20px;
+    /* ... */
+  }
 }
 ```
 
-- [x] **Step 3: Перенести `ENTITY_COLORS` из frontend/src/shared/config/colors.ts**
+> **Важно:** список должен совпадать 1:1 с Vue, чтобы стили виджетов перенеслись без правок. Если что-то выглядит иначе на native — обычно дело в opacity-helpers (`bg-primary-light/70` работает только если цвет задан в OKLCH или RGB формате; HEX тоже допустим).
+
+- [ ] **Step 3: Перенести `ENTITY_COLORS` из frontend/src/shared/config/colors.ts**
 
 ```bash
 cp frontend/src/shared/config/colors.ts mobile/src/shared/config/colors.ts
 ```
 
-Внутри файла — TS-объекты, не зависят от Vue, переносятся без изменений.
+TS-объекты не зависят от Vue, переносятся без изменений.
 
-- [x] **Step 4: Verify**
+- [ ] **Step 4: Verify**
 
 ```bash
 cd mobile && npx tsc --noEmit
+cd mobile && npx expo start --clear
 ```
 
-- [x] **Step 5: Commit**
+Smoke-test страница из Task 3 должна по-прежнему показывать синий текст (цвет берётся уже из `@theme`, не из `tailwind.config.js`).
+
+- [ ] **Step 5: Commit**
 
 ```bash
 git add mobile/
-git commit -m "feat(mobile): port design tokens and ENTITY_COLORS from frontend"
+git commit -m "fix(mobile): move design tokens to global.css @theme block (Tailwind v4)"
 ```
 
 ---
@@ -326,15 +462,19 @@ npx expo install expo-router expo-secure-store @react-native-async-storage/async
 - [x] **Step 2: Установить state и формы**
 
 ```bash
-npm install @tanstack/react-query @tanstack/query-async-storage-persister @tanstack/query-persist-client-core zustand react-hook-form zod @hookform/resolvers
+npm install @tanstack/react-query @tanstack/react-query-persist-client @tanstack/query-async-storage-persister zustand react-hook-form zod @hookform/resolvers
 ```
 
 - [x] **Step 3: Установить UI и анимации**
 
 ```bash
-npx expo install react-native-gesture-handler react-native-reanimated expo-image expo-haptics expo-blur
-npm install class-variance-authority clsx tailwind-merge @shopify/flash-list
+npx expo install react-native-gesture-handler react-native-reanimated react-native-worklets expo-image expo-haptics expo-blur
+npm install class-variance-authority @shopify/flash-list
 ```
+
+> **SDK 56 caveat:** Reanimated 4 требует **`react-native-worklets`** как отдельный пакет (раньше worklets были встроены). Babel-плагин подключается автоматически через `babel-preset-expo` — ручной `'react-native-reanimated/plugin'` в `babel.config.js` НЕ нужен (см. Task 3 reconcile).
+>
+> **Note:** `clsx` и `tailwind-merge` уже установлены в Task 3 Step 1 — не дублируем.
 
 - [x] **Step 4: Установить date/csv libs**
 
@@ -373,8 +513,8 @@ git commit -m "feat(mobile): install core deps (router, query, RN gesture handle
 // mobile/src/app/providers.tsx
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { persistQueryClient } from '@tanstack/query-persist-client-core';
+import { QueryClient } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { ReactNode } from 'react';
@@ -391,17 +531,20 @@ const queryClient = new QueryClient({
 
 const persister = createAsyncStoragePersister({ storage: AsyncStorage });
 
-persistQueryClient({
-  queryClient,
-  persister,
-  maxAge: 1000 * 60 * 60 * 24 * 7,
-});
-
+// PersistQueryClientProvider holds queries in `isRestoring` state until
+// AsyncStorage hydration completes — preventing a "fetch with empty cache,
+// then re-render when persisted data arrives" flash. Calling the imperative
+// `persistQueryClient()` at module scope skips this gate.
 export function Providers({ children }: { children: ReactNode }) {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+        <PersistQueryClientProvider
+          client={queryClient}
+          persistOptions={{ persister, maxAge: 1000 * 60 * 60 * 24 * 7 }}
+        >
+          {children}
+        </PersistQueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
@@ -470,9 +613,11 @@ export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000
 
 ```ts
 // mobile/src/shared/config/storageKeys.ts
+// Refresh token is NEVER stored on the client — backend issues it as an
+// httpOnly cookie (path /api/auth, sameSite=lax) which iOS NSURLSession /
+// Android OkHttp persist automatically when credentials:'include' is set.
 export const STORAGE_KEYS = {
   ACCESS_TOKEN: 'finance.accessToken',
-  REFRESH_TOKEN: 'finance.refreshToken',
   USER_ID: 'finance.userId',
   THEME: 'finance.theme',
   PRIMARY_COLOR: 'finance.primaryColor',
@@ -492,20 +637,21 @@ let refreshPromise: Promise<string | null> | null = null;
 async function refreshAccessToken(): Promise<string | null> {
   if (refreshPromise) return refreshPromise;
   refreshPromise = (async () => {
-    const refresh = await SecureStore.getItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
-    if (!refresh) return null;
+    // Backend (backend/.../auth.controller.ts) issues refresh_token only as
+    // an httpOnly cookie (path /api/auth, sameSite=lax) on /api/auth/login.
+    // iOS NSURLSession and Android OkHttp persist it automatically when
+    // credentials:'include' is set on both login and refresh requests.
+    // Response body contains only { accessToken } — never refreshToken.
     const res = await fetch(`${API_URL}/api/auth/refresh`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken: refresh }),
+      credentials: 'include',
     });
     if (!res.ok) {
       await clearTokens();
       return null;
     }
-    const { accessToken, refreshToken } = await res.json();
+    const { accessToken } = (await res.json()) as { accessToken: string };
     await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
-    if (refreshToken) await SecureStore.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
     return accessToken;
   })();
   try {
@@ -515,14 +661,12 @@ async function refreshAccessToken(): Promise<string | null> {
   }
 }
 
-export async function setTokens(accessToken: string, refreshToken: string) {
+export async function setAccessToken(accessToken: string) {
   await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
-  await SecureStore.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
 }
 
 export async function clearTokens() {
   await SecureStore.deleteItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
-  await SecureStore.deleteItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
 }
 
 export async function getAccessToken() {
@@ -532,13 +676,20 @@ export async function getAccessToken() {
 type RequestOptions = RequestInit & { skipAuth?: boolean };
 
 export async function http<T = unknown>(path: string, opts: RequestOptions = {}): Promise<T> {
-  const { skipAuth, headers, ...rest } = opts;
+  const { skipAuth, headers, body, ...rest } = opts;
   const token = skipAuth ? null : await getAccessToken();
-  const doRequest = async (authToken: string | null) =>
+
+  // Browser/RN runtimes set the multipart boundary in Content-Type
+  // automatically for FormData — don't inject application/json over it.
+  const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
+
+  const doRequest = (authToken: string | null) =>
     fetch(`${API_URL}${path}`, {
       ...rest,
+      body,
+      credentials: 'include',
       headers: {
-        'Content-Type': 'application/json',
+        ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
         ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
         ...headers,
       },
@@ -550,11 +701,12 @@ export async function http<T = unknown>(path: string, opts: RequestOptions = {})
     if (newToken) res = await doRequest(newToken);
   }
   if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`HTTP ${res.status}: ${body}`);
+    const text = await res.text();
+    throw new Error(`HTTP ${res.status}: ${text}`);
   }
   const ct = res.headers.get('content-type');
-  return (ct?.includes('application/json') ? res.json() : (res.text() as unknown)) as Promise<T>;
+  if (ct?.includes('application/json')) return (await res.json()) as T;
+  return (await res.text()) as T;
 }
 ```
 
@@ -564,10 +716,22 @@ export async function http<T = unknown>(path: string, opts: RequestOptions = {})
 cd mobile && npx tsc --noEmit
 ```
 
-- [x] **Step 5: Commit**
+- [x] **Step 5: Stage + `/code-review`** ⚠️ **обязательно — security-критичный код (JWT, refresh race, SecureStore)**
 
 ```bash
 git add mobile/src/shared/ mobile/.env.local mobile/.gitignore
+# Запустить /code-review — проверить:
+# - shared refreshPromise предотвращает параллельные refresh-запросы
+# - 401 после refresh fail не зацикливает — `if (newToken)` гарантирует выход
+# - credentials:'include' стоит и на login, и на refresh (иначе cookie не передастся)
+# - FormData branch в http() не инжектит Content-Type (multipart boundary должен ставить runtime)
+# - access token не пишется в логи / error messages
+```
+При HIGH/CRITICAL findings — fix → re-stage → re-review до зелёного.
+
+- [x] **Step 6: Commit**
+
+```bash
 git commit -m "feat(mobile): http client with JWT auto-refresh via SecureStore"
 ```
 
@@ -585,17 +749,20 @@ git commit -m "feat(mobile): http client with JWT auto-refresh via SecureStore"
 ```ts
 // mobile/src/shared/api/composables/useAuth.ts
 import { create } from 'zustand';
-import * as SecureStore from 'expo-secure-store';
-import { http, setTokens, clearTokens } from '@/shared/api/http';
-import { STORAGE_KEYS } from '@/shared/config/storageKeys';
+import { clearTokens, getAccessToken, http, setAccessToken } from '@/shared/api/http';
+import { queryClient } from '@/app/providers';
 
+// Mirrors backend Profile response shape — DO NOT diverge.
 export interface User {
   id: string;
+  name: string | null;
   email: string | null;
-  displayName: string | null;
-  isAnonymous: boolean;
-  onboardingCompleted: boolean;
-  currency: string | null;
+  currency: string;
+  hasCompletedOnboarding: boolean;
+  defaultAccountId: string | null;
+  createdAt: string;
+  isDemo: boolean;
+  demoExpiresAt: string | null;
 }
 
 interface AuthState {
@@ -612,14 +779,14 @@ export const useAuthStore = create<AuthState>((set) => ({
   setReady: (ready) => set({ ready }),
 }));
 
+// Refresh token lives in an httpOnly cookie — backend returns only accessToken.
 interface AuthResponse {
   accessToken: string;
-  refreshToken: string;
   user: User;
 }
 
 export async function bootstrapAuth() {
-  const token = await SecureStore.getItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
+  const token = await getAccessToken();
   if (!token) {
     useAuthStore.getState().setReady(true);
     return;
@@ -635,44 +802,77 @@ export async function bootstrapAuth() {
 }
 
 export async function signIn(email: string, password: string) {
-  const res = await http<AuthResponse>('/api/auth/sign-in', {
+  const res = await http<AuthResponse>('/api/auth/login', {
     method: 'POST',
     body: JSON.stringify({ email, password }),
     skipAuth: true,
   });
-  await setTokens(res.accessToken, res.refreshToken);
+  await setAccessToken(res.accessToken);
   useAuthStore.getState().setUser(res.user);
   return res.user;
 }
 
-export async function signUp(email: string, password: string) {
-  const res = await http<AuthResponse>('/api/auth/sign-up', {
+export async function signUp(email: string, password: string, name?: string) {
+  const res = await http<AuthResponse>('/api/auth/register', {
     method: 'POST',
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email, password, name }),
     skipAuth: true,
   });
-  await setTokens(res.accessToken, res.refreshToken);
+  await setAccessToken(res.accessToken);
   useAuthStore.getState().setUser(res.user);
   return res.user;
 }
 
 export async function signInAnonymously() {
-  const res = await http<AuthResponse>('/api/auth/anonymous', {
+  const res = await http<AuthResponse>('/api/auth/login/anonymous', {
     method: 'POST',
     skipAuth: true,
   });
-  await setTokens(res.accessToken, res.refreshToken);
+  await setAccessToken(res.accessToken);
   useAuthStore.getState().setUser(res.user);
   return res.user;
 }
 
 export async function signOut() {
+  // Backend clears the refresh_token cookie; ignore failures so the local
+  // session always tears down even if the network is unreachable.
+  try {
+    await http('/api/auth/logout', { method: 'POST' });
+  } catch {
+    /* noop */
+  }
+  // Tear down listeners that hold per-user state (IAP, push) — see Task 57.
+  try {
+    const { shutdownIAP } = await import('@/features/upgrade-to-premium/iap');
+    await shutdownIAP();
+  } catch {
+    /* iap module may not be loaded yet — fine */
+  }
   await clearTokens();
   useAuthStore.getState().setUser(null);
+  // Purge in-memory + persisted query cache so the next user doesn't see
+  // the previous user's accounts/transactions/debts from AsyncStorage.
+  queryClient.clear();
 }
 
+/** Subscribe to the current user only. Most callers want this. */
+export function useUser() {
+  return useAuthStore((s) => s.user);
+}
+
+/** Subscribe to bootstrap-ready flag only. */
+export function useAuthReady() {
+  return useAuthStore((s) => s.ready);
+}
+
+/**
+ * Full auth slice. Avoid in widely-rendered components — prefer
+ * `useUser` / `useAuthReady` to keep re-renders scoped.
+ */
 export function useAuth() {
-  return useAuthStore();
+  const user = useUser();
+  const ready = useAuthReady();
+  return { user, ready };
 }
 ```
 
@@ -706,10 +906,24 @@ export default function RootLayout() {
 }
 ```
 
-- [x] **Step 3: Commit**
+- [x] **Step 3: Stage + `/code-review`** ⚠️ **security-критичный код (auth bootstrap, token persistence)**
 
 ```bash
 git add mobile/
+# /code-review должен проверить:
+# - bootstrap очищает access token при невалидном /api/auth/me ответе (clearTokens в catch)
+# - signIn/signUp атомарны: setAccessToken и setUser выполняются последовательно;
+#   если http() выбросил — токен не записан, store нетронут
+# - signOut очищает: backend cookie (/api/auth/logout), SecureStore (clearTokens),
+#   in-memory user (setUser(null)), queryClient.clear() и shutdownIAP (через dynamic import)
+# - запросы login/register/anonymous идут на актуальные пути backend'a
+#   (/api/auth/login, /api/auth/register, /api/auth/login/anonymous)
+# - нет утечек PII (email, accessToken) в логах
+```
+
+- [x] **Step 4: Commit**
+
+```bash
 git commit -m "feat(mobile): auth store + bootstrap from SecureStore"
 ```
 
@@ -769,35 +983,39 @@ export default function RootLayout() {
 }
 ```
 
-- [x] **Step 2: NativeTabs layout**
+- [x] **Step 2: NativeTabs layout** ⚠️ **Reconcile с SDK 55+ compound API**
+
+В SDK 55+ `Icon`/`Label`/`Badge` доступны **только** через compound-pattern `NativeTabs.Trigger.Icon`, а не как отдельные импорты. Старый импорт `import { ..., Icon, Label }` перестанет работать. Также добавляем `md=` prop для Android Material Symbols.
 
 ```tsx
 // mobile/app/(tabs)/_layout.tsx
-import { NativeTabs, Icon, Label } from 'expo-router/unstable-native-tabs';
+import { NativeTabs } from 'expo-router/unstable-native-tabs';
 
 export default function TabsLayout() {
   return (
     <NativeTabs>
       <NativeTabs.Trigger name="index">
-        <Icon sf="house.fill" />
-        <Label>Главная</Label>
+        <NativeTabs.Trigger.Icon sf="house.fill" md="home" />
+        <NativeTabs.Trigger.Label>Главная</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="history">
-        <Icon sf="list.bullet" />
-        <Label>История</Label>
+        <NativeTabs.Trigger.Icon sf="list.bullet" md="list" />
+        <NativeTabs.Trigger.Label>История</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="analytics">
-        <Icon sf="chart.pie.fill" />
-        <Label>Аналитика</Label>
+        <NativeTabs.Trigger.Icon sf="chart.pie.fill" md="pie_chart" />
+        <NativeTabs.Trigger.Label>Аналитика</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="profile">
-        <Icon sf="person.crop.circle" />
-        <Label>Профиль</Label>
+        <NativeTabs.Trigger.Icon sf="person.crop.circle" md="account_circle" />
+        <NativeTabs.Trigger.Label>Профиль</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
     </NativeTabs>
   );
 }
 ```
+
+> **Если Phase 0 уже закоммичен со старым API** — проверить `mobile/app/(tabs)/_layout.tsx` и при необходимости переписать (отдельный fix-коммит).
 
 - [x] **Step 3: Создать stub-страницы 4 табов**
 
@@ -805,7 +1023,9 @@ export default function TabsLayout() {
 
 ```tsx
 // mobile/app/(tabs)/index.tsx
-import { ScrollView, View, Text } from 'react-native';
+// Импорты ТОЛЬКО из @/shared/ui/tw — раз НативWind v5 в CSS-first режиме
+// className на сырых RN-компонентах не применяется (см. Task 3 Step 7).
+import { ScrollView, View, Text } from '@/shared/ui/tw';
 
 export default function DashboardScreen() {
   return (
@@ -818,7 +1038,7 @@ export default function DashboardScreen() {
 }
 ```
 
-Повторить для `history.tsx` ("История"), `analytics.tsx` ("Аналитика"), `profile.tsx` ("Профиль").
+Повторить для `history.tsx` ("История"), `analytics.tsx` ("Аналитика"), `profile.tsx` ("Профиль") — те же импорты из `@/shared/ui/tw`.
 
 - [x] **Step 4: Auth layout + sign-in placeholder**
 
@@ -832,7 +1052,7 @@ export default function AuthLayout() {
 
 ```tsx
 // mobile/app/auth/sign-in.tsx
-import { View, Text, TextInput, Pressable } from 'react-native';
+import { View, Text, TextInput, Pressable } from '@/shared/ui/tw';
 import { useState } from 'react';
 import { signIn, signInAnonymously } from '@/shared/api/composables/useAuth';
 
@@ -1225,6 +1445,19 @@ interface TransactionBackend {
   createdAt: string;
 }
 
+// Frontend uses snake_case (Vue parity); backend speaks camelCase.
+export interface CreateTransactionInput {
+  amount: number;
+  currency: string;
+  type: 'income' | 'expense' | 'transfer';
+  category_id: string;
+  account_id: string;
+  date: string;
+  note: string | null;
+  hashtags?: string[];
+  source_transaction_id?: string | null;
+}
+
 function transform(b: TransactionBackend): Transaction {
   return {
     id: b.id,
@@ -1238,6 +1471,21 @@ function transform(b: TransactionBackend): Transaction {
     hashtags: b.hashtags,
     source_transaction_id: b.sourceTransactionId,
     created_at: b.createdAt,
+  };
+}
+
+// Write-side mapper — snake_case → camelCase для backend.
+function toBackend(i: CreateTransactionInput) {
+  return {
+    amount: i.amount,
+    currency: i.currency,
+    type: i.type,
+    categoryId: i.category_id,
+    accountId: i.account_id,
+    date: i.date,
+    note: i.note,
+    hashtags: i.hashtags ?? [],
+    sourceTransactionId: i.source_transaction_id ?? null,
   };
 }
 
@@ -1255,6 +1503,13 @@ export const transactionApi = {
     if (cursor) { params.set('cursorDate', cursor.date); params.set('cursorCreatedAt', cursor.createdAt); }
     const data = await http<CursorPage<TransactionBackend>>(`/api/transactions/infinite?${params}`);
     return { items: data.items.map(transform), nextCursor: data.nextCursor };
+  },
+  create: async (input: CreateTransactionInput): Promise<Transaction> => {
+    const data = await http<TransactionBackend>('/api/transactions', {
+      method: 'POST',
+      body: JSON.stringify(toBackend(input)),
+    });
+    return transform(data);
   },
 };
 ```
@@ -1335,7 +1590,8 @@ export function cn(...inputs: ClassValue[]) { return twMerge(clsx(inputs)); }
 
 ```tsx
 // mobile/src/shared/ui/button.tsx
-import { Pressable, Text, type PressableProps } from 'react-native';
+import { Pressable, Text } from '@/shared/ui/tw';
+import type { PressableProps } from 'react-native';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/shared/lib/utils';
 
@@ -1387,7 +1643,8 @@ export function Button({ title, variant, size, className, disabled, ...props }: 
 
 ```tsx
 // mobile/src/shared/ui/card.tsx
-import { View, type ViewProps } from 'react-native';
+import { View } from '@/shared/ui/tw';
+import type { ViewProps } from 'react-native';
 import { cn } from '@/shared/lib/utils';
 
 export function Card({ className, style, ...props }: ViewProps & { className?: string }) {
@@ -1405,7 +1662,8 @@ export function Card({ className, style, ...props }: ViewProps & { className?: s
 
 ```tsx
 // mobile/src/shared/ui/input.tsx
-import { TextInput, type TextInputProps } from 'react-native';
+import { TextInput } from '@/shared/ui/tw';
+import type { TextInputProps } from 'react-native';
 import { cn } from '@/shared/lib/utils';
 
 export function Input({ className, ...props }: TextInputProps & { className?: string }) {
@@ -1670,7 +1928,8 @@ git commit -m "feat(mobile): HistoryPage with infinite scroll + grouped sections
 
 ```tsx
 // mobile/app/accounts/index.tsx
-import { FlatList, View } from 'react-native';
+import { FlatList } from 'react-native';
+import { Pressable } from '@/shared/ui/tw';
 import { Link, Stack } from 'expo-router';
 import { useAccounts } from '@/entities/account/api/useAccounts';
 import { useAuth } from '@/shared/api/composables/useAuth';
@@ -1687,10 +1946,12 @@ export default function AccountsScreen() {
         data={data ?? []}
         keyExtractor={(a) => a.id}
         renderItem={({ item }) => (
+          // Link asChild требует ребёнка, принимающего onPress + forwardRef —
+          // raw <View> молча игнорирует onPress, тап не сработает.
           <Link href={`/accounts/${item.id}`} asChild>
-            <View className="px-4 py-2">
+            <Pressable className="px-4 py-2">
               <AccountCard account={item} />
-            </View>
+            </Pressable>
           </Link>
         )}
       />
@@ -1750,6 +2011,88 @@ export default function AccountDetailScreen() {
 ```bash
 git add mobile/
 git commit -m "feat(mobile): AccountsPage list + AccountDetailPage with infinite tx"
+```
+
+---
+
+### Task 21a: useProfile composable
+
+Профиль (currency, defaultAccountId, hasCompletedOnboarding, displayName) хранится отдельно от auth-токена — нужен hook до `Task 22` (sign-out читает sub-плана) и до `Task 27` (AddTransaction берёт `defaultAccountId` / `currency` оттуда).
+
+**Files:**
+- Create: `mobile/src/shared/api/composables/useProfile.ts`
+
+- [ ] **Step 1: Hook**
+
+```ts
+// mobile/src/shared/api/composables/useProfile.ts
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { http } from '@/shared/api/http';
+
+export interface Profile {
+  id: string;
+  name: string | null;
+  email: string | null;
+  currency: string;
+  defaultAccountId: string | null;
+  hasCompletedOnboarding: boolean;
+  isDemo: boolean;
+}
+
+const profileKeys = {
+  byUser: (userId: string) => ['profile', userId] as const,
+};
+
+async function fetchProfile(): Promise<Profile> {
+  return http<Profile>('/api/profiles/me');
+}
+
+export function useProfile(userId: string | null) {
+  return useQuery({
+    queryKey: profileKeys.byUser(userId ?? '__anon__'),
+    queryFn: fetchProfile,
+    enabled: !!userId,
+    staleTime: 1000 * 60 * 5,
+  });
+}
+
+export function useSetCurrency(userId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (currency: string) =>
+      http<Profile>('/api/profiles/me/currency', {
+        method: 'PATCH',
+        body: JSON.stringify({ currency }),
+      }),
+    onSuccess: (next) => {
+      if (userId) qc.setQueryData(profileKeys.byUser(userId), next);
+    },
+  });
+}
+
+export function useCompleteOnboarding(userId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      http<Profile>('/api/profiles/me/onboarding', { method: 'PATCH' }),
+    onSuccess: (next) => {
+      if (userId) qc.setQueryData(profileKeys.byUser(userId), next);
+    },
+  });
+}
+```
+
+- [ ] **Step 2: Verify**
+
+```bash
+cd mobile && npx tsc --noEmit
+```
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add mobile/src/shared/api/composables/useProfile.ts
+git commit -m "feat(mobile): useProfile + setCurrency + completeOnboarding"
 ```
 
 ---
@@ -1842,27 +2185,41 @@ AddTransaction, AdjustBalance, CreateAccount, EditTransaction, CategoryPicker.
 
 ```ts
 // mobile/src/shared/api/invalidation.ts
+// Vue parity: frontend/src/shared/api/invalidation.ts.
+// Любая мутация транзакции инвалидирует ВСЕ зависимые срезы кэша:
+// list, infinite, recent, search, count, monthly, daily, analytics,
+// hashtags, budget. Уже одна забытая ветка — и пользователь видит
+// устаревшую аналитику или дублирующиеся транзакции в поиске.
 import { queryClient } from '@/app/providers';
 import { transactionKeys } from '@/entities/transaction/api/queryKeys';
 import { accountKeys } from '@/entities/account/api/queryKeys';
 
 export function invalidateTransactionRelated() {
   queryClient.invalidateQueries({ queryKey: transactionKeys.all });
+  queryClient.invalidateQueries({ queryKey: ['transactions', 'infinite'] });
+  queryClient.invalidateQueries({ queryKey: ['transactions', 'recent'] });
+  queryClient.invalidateQueries({ queryKey: ['transactions', 'search'] });
+  queryClient.invalidateQueries({ queryKey: ['transactions', 'count'] });
+  queryClient.invalidateQueries({ queryKey: ['transactions', 'account'] });
+  queryClient.invalidateQueries({ queryKey: ['monthly-stats'] });
+  queryClient.invalidateQueries({ queryKey: ['daily-stats'] });
+  queryClient.invalidateQueries({ queryKey: ['analytics-stats'] });
+  queryClient.invalidateQueries({ queryKey: ['hashtags'] });
+  queryClient.invalidateQueries({ queryKey: ['budget'] });
   queryClient.invalidateQueries({ queryKey: accountKeys.all });
   queryClient.invalidateQueries({ queryKey: ['account-balances'] });
-  queryClient.invalidateQueries({ queryKey: ['monthly-stats'] });
 }
 
 export function invalidateAccountRelated() {
   queryClient.invalidateQueries({ queryKey: accountKeys.all });
   queryClient.invalidateQueries({ queryKey: ['account-balances'] });
+  queryClient.invalidateQueries({ queryKey: ['monthly-stats'] });
 }
 
 export function invalidateDebtRelated() {
+  // Debt — supersеt transaction: долги влияют на транзакции, балансы, аналитику.
   queryClient.invalidateQueries({ queryKey: ['debts'] });
-  queryClient.invalidateQueries({ queryKey: transactionKeys.all });
-  queryClient.invalidateQueries({ queryKey: accountKeys.all });
-  queryClient.invalidateQueries({ queryKey: ['account-balances'] });
+  invalidateTransactionRelated();
 }
 ```
 
@@ -1879,18 +2236,9 @@ git commit -m "feat(mobile): cache invalidation helpers"
 
 Каждый — отдельная задача с TDD-циклом. Шаблон для **Task 24 (Create)**:
 
-- [ ] **Step 1: Extend transactionApi**
+- [ ] **Step 1: `create` уже определён в `transactionApi` (Task 14)**
 
-```ts
-// добавить в mobile/src/entities/transaction/api/transactionApi.ts
-create: async (input: CreateTransactionInput): Promise<Transaction> => {
-  const data = await http<TransactionBackend>('/api/transactions', {
-    method: 'POST',
-    body: JSON.stringify(toBackend(input)),
-  });
-  return transform(data);
-},
-```
+Тип `CreateTransactionInput` и mapper `toBackend(input)` — там же. Если расширяешь форму (например, добавляешь поле `tags`), правь оба интерфейса (`CreateTransactionInput` + `toBackend`) одновременно.
 
 - [ ] **Step 2: useCreateTransaction hook**
 
@@ -1908,9 +2256,24 @@ export function useCreateTransaction() {
 }
 ```
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 3: Stage + `/code-review`** ⚠️ **mutation код — следить за optimistic updates и invalidation**
 
-Аналогично для Update и Delete (Tasks 25, 26).
+```bash
+git add mobile/src/entities/transaction/api/
+# /code-review проверяет:
+# - вызывается ли invalidateTransactionRelated (а не голый invalidateQueries — иначе balance/monthly-stats не обновятся)
+# - onError откатывает optimistic update (если он был)
+# - mutationFn не возвращает stale data (transform отрабатывает)
+# - type safety: input ровно CreateTransactionInput, response — Transaction
+```
+
+- [ ] **Step 4: Commit**
+
+```bash
+git commit -m "feat(mobile): useCreateTransaction mutation"
+```
+
+Аналогично для Update и Delete (Tasks 25, 26) — каждый со своим `/code-review` циклом перед commit.
 
 ---
 
@@ -1941,9 +2304,19 @@ export function useCreateTransaction() {
 
 ```tsx
 // mobile/src/features/add-transaction/HeroAmount.tsx
-import { TextInput, View, Text } from 'react-native';
+import { TextInput, View, Text } from '@/shared/ui/tw';
 
 interface Props { value: string; onChange: (v: string) => void; currency: string }
+
+// iOS decimal-pad на ru-RU локали выдаёт запятую как разделитель,
+// на en-US — точку. Нормализуем оба в `.`, чтобы Number(v) парсилось
+// корректно. Также защищаемся от двух точек подряд (`1..5` → `1.5`).
+function normalizeAmount(input: string): string {
+  const replaced = input.replace(',', '.').replace(/[^\d.]/g, '');
+  const firstDot = replaced.indexOf('.');
+  if (firstDot === -1) return replaced;
+  return replaced.slice(0, firstDot + 1) + replaced.slice(firstDot + 1).replace(/\./g, '');
+}
 
 export function HeroAmount({ value, onChange, currency }: Props) {
   return (
@@ -1951,7 +2324,7 @@ export function HeroAmount({ value, onChange, currency }: Props) {
       <View className="flex-row items-baseline gap-2">
         <TextInput
           value={value}
-          onChangeText={(t) => onChange(t.replace(/[^\d.]/g, ''))}
+          onChangeText={(t) => onChange(normalizeAmount(t))}
           keyboardType="decimal-pad"
           placeholder="0"
           className="text-6xl font-bold text-text-light dark:text-text-dark min-w-[120px] text-center"
@@ -1971,7 +2344,7 @@ export function HeroAmount({ value, onChange, currency }: Props) {
 import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { View } from 'react-native';
+import { View } from '@/shared/ui/tw';
 import { Button, Input } from '@/shared/ui';
 import { HeroAmount } from './HeroAmount';
 import { useCreateTransaction } from '@/entities/transaction/api/useCreateTransaction';
@@ -1991,7 +2364,11 @@ type FormValues = z.infer<typeof schema>;
 interface Props { defaultAccountId: string; defaultCurrency: string }
 
 export function TransactionForm({ defaultAccountId, defaultCurrency }: Props) {
-  const { control, handleSubmit, watch, formState: { isValid } } = useForm<FormValues>({
+  const { control, handleSubmit, formState: { isValid } } = useForm<FormValues>({
+    // `onChange` обязателен — иначе formState.isValid не пересчитывается до
+    // первого submit, и кнопка "Сохранить" остаётся disabled на всё время
+    // заполнения формы.
+    mode: 'onChange',
     resolver: zodResolver(schema),
     defaultValues: { amount: '', type: 'expense', categoryId: '', accountId: defaultAccountId, note: '' },
   });
@@ -1999,6 +2376,7 @@ export function TransactionForm({ defaultAccountId, defaultCurrency }: Props) {
 
   const onSubmit = handleSubmit(async (values) => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    // CreateTransactionInput: см. Task 14 transactionApi.ts
     await create.mutateAsync({
       amount: Number(values.amount),
       currency: defaultCurrency,
@@ -2167,6 +2545,13 @@ Debts, Goals, Reminders, Budget, Subscriptions, Analytics, Categories management
 ### Task 38: Split expense (1 транзакция + N долгов)
 
 `mobile/src/features/split-expense/SplitExpenseForm.tsx`. **Критично:** сохранять транзакцию первой, потом долги через `source_transaction_id`. Использовать `invalidateDebtRelated`.
+
+⚠️ **Обязательный `/code-review` перед commit** — последовательность мутаций критична для целостности данных:
+
+- Если транзакция создалась, а долги упали — это «сирота» в БД: транзакция без своих долгов. Reviewer должен проверить, что есть либо rollback (удаление транзакции при падении долгов), либо явный warning в UI с возможностью retry.
+- `source_transaction_id` действительно проставляется в каждом долге.
+- `invalidateDebtRelated` (не `invalidateDebts`) — иначе balance/recent-transactions не обновятся.
+- Optimistic update на split — не делать (слишком сложно откатить, лучше показывать spinner).
 
 ### Task 39: Goals (CRUD + GoalCard + GoalsSection widget)
 
@@ -2338,17 +2723,35 @@ export async function registerForPushNotifications(): Promise<string | null> {
 
 Вызвать из `bootstrapAuth` после успешного логина (с silent failure если permission denied).
 
+⚠️ **`/code-review` перед commit:**
+- Permission flow корректен (existing → request → grant check) — не запрашиваем повторно если уже granted.
+- Silent failure не маскирует баги — хотя бы в dev mode warning в console.
+- `projectId` fallback (expoConfig → easConfig) рабочий и не молчит при отсутствии обоих.
+- Регистрация token идемпотентна на backend (повторный POST с тем же токеном не дублирует строку — Task 55 это обеспечивает).
+
 ### Task 55: Backend — endpoint POST /api/notifications/register-device
 
 **Files:**
 - Modify: `backend/src/modules/identity/...`
 
-- [ ] **Step 1:** Создать ORM entity `push_devices` (id, userId, token, platform, createdAt).
-- [ ] **Step 2:** Регистрация в `data-source.ts` + `app.module.ts`.
+- [ ] **Step 1:** Создать ORM entity `push_devices` (id, userId, token, platform, createdAt). Unique constraint на `(userId, token)` чтобы повторные регистрации не плодили строк.
+- [ ] **Step 2:** Регистрация в `data-source.ts` + `app.module.ts` (см. CLAUDE.md «TypeORM entity registration» gotcha — два места!).
 - [ ] **Step 3:** Migration.
-- [ ] **Step 4:** Controller + command handler.
-- [ ] **Step 5:** Тест.
-- [ ] **Step 6:** Commit.
+- [ ] **Step 4:** Controller + command handler. Endpoint защищён JWT (не `@Public()`).
+- [ ] **Step 5:** Тест (unit на handler + e2e на endpoint).
+- [ ] **Step 6:** Stage + `/code-review`** ⚠️ **backend security/data-integrity критично**
+
+```bash
+git add backend/src/modules/identity/ backend/src/database/migrations/
+# /code-review проверяет:
+# - JWT guard на endpoint (нет утечки чужих токенов в чужой userId)
+# - upsert семантика (повторный register не падает с unique constraint)
+# - валидация platform enum (только ios/android, не любая строка)
+# - migration реверсируется
+# - нет logging токена в plaintext
+```
+
+- [ ] **Step 7: Commit.**
 
 ### Task 56: Camera screen (expo-camera v17)
 
@@ -2365,10 +2768,18 @@ cd mobile && npx expo install expo-camera expo-image-picker expo-image-manipulat
 // mobile/app/scan-receipt.tsx
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRef, useState } from 'react';
-import { View, Pressable, Text } from 'react-native';
+import { Linking } from 'react-native';
+import { View, Pressable, Text } from '@/shared/ui/tw';
 import { router } from 'expo-router';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { http } from '@/shared/api/http';
+
+interface ReceiptScanResponse {
+  amount?: string;
+  currency?: string;
+  category_id?: string;
+  note?: string;
+}
 
 export default function ScanReceiptScreen() {
   const [permission, requestPermission] = useCameraPermissions();
@@ -2377,11 +2788,20 @@ export default function ScanReceiptScreen() {
 
   if (!permission) return null;
   if (!permission.granted) {
+    // После "Don't Allow" canAskAgain === false — requestPermission молча
+    // вернёт прежнее состояние. Открываем настройки приложения.
+    const onRequest = permission.canAskAgain
+      ? requestPermission
+      : () => Linking.openSettings();
     return (
-      <View className="flex-1 items-center justify-center px-6">
-        <Text className="text-text-light text-center mb-4">Нужен доступ к камере для сканирования чеков</Text>
-        <Pressable onPress={requestPermission} className="bg-primary-light rounded-xl px-6 py-3">
-          <Text className="text-white">Разрешить</Text>
+      <View className="flex-1 items-center justify-center px-6 bg-background-light dark:bg-background-dark">
+        <Text className="text-text-light dark:text-text-dark text-center mb-4">
+          Нужен доступ к камере для сканирования чеков
+        </Text>
+        <Pressable onPress={onRequest} className="bg-primary-light rounded-xl px-6 py-3">
+          <Text className="text-white">
+            {permission.canAskAgain ? 'Разрешить' : 'Открыть настройки'}
+          </Text>
         </Pressable>
       </View>
     );
@@ -2390,27 +2810,59 @@ export default function ScanReceiptScreen() {
   const capture = async () => {
     if (!cameraRef.current || busy) return;
     setBusy(true);
-    const photo = await cameraRef.current.takePictureAsync({ quality: 0.7, base64: false });
-    if (!photo) { setBusy(false); return; }
-    const resized = await manipulateAsync(photo.uri, [{ resize: { width: 1280 } }], { compress: 0.7, format: SaveFormat.JPEG });
-    const form = new FormData();
-    form.append('image', { uri: resized.uri, type: 'image/jpeg', name: 'receipt.jpg' } as never);
-    const result = await fetch('/api/receipt/scan', { method: 'POST', body: form });
-    const parsed = await result.json();
-    router.replace({ pathname: '/transactions/new', params: parsed });
-    setBusy(false);
+    try {
+      const photo = await cameraRef.current.takePictureAsync({ quality: 0.7, base64: false });
+      if (!photo) return;
+      const resized = await manipulateAsync(
+        photo.uri,
+        [{ resize: { width: 1280 } }],
+        { compress: 0.7, format: SaveFormat.JPEG },
+      );
+      const form = new FormData();
+      // RN допускает { uri, type, name } для FormData entries — приведение
+      // через `as unknown as Blob` лучше, чем `as never` (сохраняет тип FormData).
+      form.append('image', { uri: resized.uri, type: 'image/jpeg', name: 'receipt.jpg' } as unknown as Blob);
+      // http() автоматически: ставит API_URL, JWT Authorization,
+      // НЕ инжектит Content-Type (FormData ставит multipart boundary сам).
+      const parsed = await http<ReceiptScanResponse>('/api/receipt/scan', {
+        method: 'POST',
+        body: form,
+      });
+      router.replace({ pathname: '/transactions/new', params: parsed as Record<string, string> });
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
     <View className="flex-1">
       <CameraView ref={cameraRef} style={{ flex: 1 }} />
-      <Pressable onPress={capture} className="absolute bottom-12 self-center bg-white w-20 h-20 rounded-full" disabled={busy} />
+      <Pressable
+        onPress={capture}
+        className="absolute bottom-12 self-center bg-white w-20 h-20 rounded-full"
+        disabled={busy}
+      />
     </View>
   );
 }
 ```
 
-### Task 57: expo-iap setup
+⚠️ **`/code-review` перед commit — verify:**
+
+- Все запросы идут через `http()`, который **детектит FormData** (Task 7) и НЕ инжектит `Content-Type: application/json` поверх multipart boundary.
+- При SDK 56 `expo/fetch` теперь default — на FormData upload могут быть отличия от node `fetch`. Если падает — `EXPO_PUBLIC_USE_RN_FETCH=1`.
+- `permission.canAskAgain === false` после denied — открываем Settings через `Linking.openSettings()` (уже в коде).
+- Quality 0.7 + resize до 1280px → размер ~200-400KB. Если backend OCR timeout — поднять до 0.85.
+- `setBusy(false)` в `finally` — гарантия, что shutter-кнопка не залипает на network-ошибке.
+- Cleanup tempfile (`photo.uri`, `resized.uri`) после upload не критичен (OS сама), но для долго живущей сессии — стоит.
+
+### Task 57: IAP setup (expo-iap 2.9 → openiap)
+
+> **SDK 56 caveat:** Репозиторий `hyochan/expo-iap` **архивирован 26 апреля 2026**, разработка переехала в OpenIAP monorepo. Действующих преемника два:
+> - **`expo-iap` 2.9.x** — последняя опубликованная версия, всё ещё работает на SDK 56, поддерживает `useIAP` hook и OpenIAP-терминологию (`fetchProducts`/`requestPurchase({ request })`).
+> - **`react-native-iap` (Nitro Modules)** — новейший унифицированный API от того же автора, рекомендуется для green-field. Установка тяжелее (Nitro), но API стабильнее на длинной дистанции.
+>
+> На MVP берём **expo-iap 2.9.x** (миграция тривиальная, документация совпадает). К Phase 6 / пост-релизу — переоценить и при необходимости свапнуть на `react-native-iap` через контрактный слой `iap.ts` (см. spec §5 «Риски»).
 
 ```bash
 cd mobile && npx expo install expo-iap
@@ -2425,52 +2877,98 @@ cd mobile && npx expo install expo-iap
 import {
   initConnection,
   endConnection,
-  getProducts,
+  fetchProducts,
   requestPurchase,
   finishTransaction,
   purchaseUpdatedListener,
   purchaseErrorListener,
-  type Purchase,
+  type ProductPurchase,
 } from 'expo-iap';
 import { Platform } from 'react-native';
 import { http } from '@/shared/api/http';
 
-const SKU_MONTHLY = Platform.select({ ios: 'finance_premium_monthly', android: 'finance_premium_monthly' })!;
-const SKU_YEARLY = Platform.select({ ios: 'finance_premium_yearly', android: 'finance_premium_yearly' })!;
+const SKU_MONTHLY = 'finance_premium_monthly';
+const SKU_YEARLY = 'finance_premium_yearly';
 
-export const IAP_SKUS = [SKU_MONTHLY, SKU_YEARLY];
+export const IAP_SUBS_SKUS = [SKU_MONTHLY, SKU_YEARLY];
+
+let updateSub: { remove: () => void } | null = null;
+let errorSub: { remove: () => void } | null = null;
+let initialized = false;
 
 export async function initIAP() {
+  // Idempotency: HMR, re-login, повторный mount провайдера могут вызвать
+  // initIAP дважды. Без guard'а старые listener'ы остаются в памяти и
+  // verifyOnServer + finishTransaction срабатывают N раз на одну покупку.
+  if (initialized) return;
+  initialized = true;
+
   await initConnection();
-  purchaseUpdatedListener(async (purchase: Purchase) => {
-    await verifyOnServer(purchase);
-    await finishTransaction({ purchase, isConsumable: false });
+  updateSub = purchaseUpdatedListener(async (purchase: ProductPurchase) => {
+    try {
+      await verifyOnServer(purchase);
+      await finishTransaction({ purchase, isConsumable: false });
+    } catch (err) {
+      // Не финишируем при сбое валидации — стор повторит событие.
+      console.warn('IAP verify failed', err);
+    }
   });
-  purchaseErrorListener((err) => { console.warn('IAP error', err); });
+  errorSub = purchaseErrorListener((err) => { console.warn('IAP error', err); });
 }
 
-export async function listProducts() {
-  return getProducts(IAP_SKUS);
+export async function listSubscriptions() {
+  return fetchProducts({ skus: IAP_SUBS_SKUS, type: 'subs' });
 }
 
-export async function purchase(sku: string) {
-  return requestPurchase({ sku });
+export async function buy(sku: string) {
+  return requestPurchase({ request: { sku } });
 }
 
-async function verifyOnServer(purchase: Purchase) {
+async function verifyOnServer(purchase: ProductPurchase) {
   await http('/api/subscription/iap/verify-receipt', {
     method: 'POST',
     body: JSON.stringify({
       platform: Platform.OS,
-      productId: purchase.productId,
+      productId: purchase.id,
       transactionReceipt: purchase.transactionReceipt,
-      purchaseToken: 'purchaseToken' in purchase ? purchase.purchaseToken : undefined,
+      purchaseTokenAndroid: 'purchaseTokenAndroid' in purchase ? purchase.purchaseTokenAndroid : undefined,
+      packageNameAndroid: 'packageNameAndroid' in purchase ? purchase.packageNameAndroid : undefined,
     }),
   });
 }
 
-export async function shutdownIAP() { await endConnection(); }
+export async function shutdownIAP() {
+  if (!initialized) return;
+  updateSub?.remove(); updateSub = null;
+  errorSub?.remove(); errorSub = null;
+  try {
+    await endConnection();
+  } finally {
+    initialized = false;
+  }
+}
 ```
+
+> **Wiring (важно):**
+> - `initIAP()` вызывается из `bootstrapAuth()` (Task 8) **после** успешного `setUser` — иначе `verifyOnServer` отправит receipt без JWT.
+> - `shutdownIAP()` уже подцеплен внутри `signOut()` (Task 8) — динамический import избегает циклической зависимости `iap.ts ↔ useAuth.ts`.
+> - На `AppState 'background'` / `'inactive'` shutdown НЕ вызываем — встроенные listener'ы должны переживать backgrounding, чтобы корректно завершать pending purchases при возврате в foreground.
+
+> **Альтернатива через `useIAP()` hook** (компонентный путь, OpenIAP-style):
+>
+> ```tsx
+> const { connected, subscriptions, requestProducts, requestPurchase, finishTransaction } = useIAP();
+> ```
+>
+> Hook сам управляет lifecycle, подписками и хранит `currentPurchase` в state — удобно внутри `PremiumUpgradeModal` (Task 58).
+
+⚠️ **`/code-review` перед commit — критически важно (платежи, receipt forgery, race conditions):**
+
+- `finishTransaction` вызывается **только после** успешной server-side валидации (`verifyOnServer`). Иначе пользователь получит премиум без оплаты при подделанном чеке.
+- При сбое `verifyOnServer` — НЕ финишируем транзакцию (стор повторит событие на следующем launch — корректно).
+- Listener'ы (`updateSub`, `errorSub`) удаляются в `shutdownIAP` — иначе утечка subscribers при hot reload / re-login.
+- Нет логов с raw `transactionReceipt` (PII / commercial sensitive).
+- SKU константы совпадают точь-в-точь с product IDs в App Store Connect / Google Play (Task 75).
 
 ### Task 58: PremiumUpgradeModal + IAP UI
 
@@ -2486,6 +2984,16 @@ export async function shutdownIAP() { await endConnection(); }
 - [ ] Endpoint `POST /api/subscription/iap/webhooks/google` — RTDN (Pub/Sub push).
 - [ ] Расширить `subscription.entity`: `source`, `original_transaction_id`, `app_account_token`.
 - [ ] Migration.
+
+⚠️ **Обязательный `/code-review` перед commit — самое security-критичное место всего приложения:**
+
+- **Webhooks `@Public()` + cryptographic verify** — Apple JWS подпись через App Store root CA, Google RTDN через Pub/Sub OIDC token. Без проверки подписи любой может активировать премиум POST'ом.
+- **`verify-receipt` НЕ доверяет клиентскому `productId`** — берёт его из ответа App Store / Google Play API, иначе клиент может купить $0.99 SKU и активировать $99 годовой.
+- **Идемпотентность** — повторный webhook с тем же `original_transaction_id` не дублирует активацию (UNIQUE constraint или upsert).
+- **Дедупликация LemonSqueezy vs IAP** — пользователь не должен иметь две активные подписки из разных источников. Спека §5: «Унифицировать на уровне `SubscriptionService.activatePremium({ source, externalId, periodEnd })`».
+- **App-Specific Shared Secret + Google service account** — НЕ в коде, только в env. Логирование секретов запрещено.
+- **Migration** реверсируется + покрывает существующих LemonSqueezy-подписчиков (`source = 'lemonsqueezy'` default).
+
 - [ ] Commit.
 
 ### Task 60: usePremiumFeature gate
@@ -2507,8 +3015,10 @@ eas update:configure
 
 ```ts
 updates: { url: `https://u.expo.dev/${PROJECT_ID}` },
-runtimeVersion: { policy: 'appVersion' },
+runtimeVersion: { policy: 'fingerprint' },
 ```
+
+> **SDK 56 caveat:** `appVersion` policy чревата mismatch'ами, если забыл бампнуть version при изменении нативки. **`fingerprint`** (через `@expo/fingerprint`) автоматически хеширует всё, что влияет на нативный runtime, и предотвращает поломку OTA — это текущая рекомендация Expo для SDK 56. Доступные политики: `appVersion`, `nativeVersion`, `fingerprint` (политика `sdkVersion` больше не документирована).
 
 GitHub Action для publish OTA на push в main:
 
@@ -2524,6 +3034,15 @@ jobs:
         with: { eas-version: latest, token: ${{ secrets.EXPO_TOKEN }} }
       - run: cd mobile && eas update --channel production --message "${{ github.event.head_commit.message }}"
 ```
+
+⚠️ **`/code-review` перед commit — OTA на main = моментальный production rollout, ошибки потом сложно откатить:**
+
+- Workflow триггерится на push в `main`, а не на feature/* — иначе случайный push раскатает половину команды в прод.
+- `EXPO_TOKEN` в GitHub secrets, не hardcoded.
+- Channel `production` соответствует EAS Build `production` profile (eas.json, Task 12) — иначе update полетит мимо stores-билдов.
+- Подумать про staged rollout (`--rollout-percentage 10` для первых часов) — особенно для первых OTA после релиза.
+- `runtimeVersion: fingerprint` гарантирует, что JS update НЕ полетит на бинарник с другим нативом — но если на main меняется зависимость с native modules, нужно сначала EAS Build, потом EAS Update. Documented в commit message workflow.
+- В рамках Task 62 — добавить `if: ${{ !contains(github.event.head_commit.message, '[skip-ota]') }}` чтобы можно было пушить без раската.
 
 ---
 
