@@ -44,6 +44,15 @@ export class UserSubscriptionOrmEntity {
   @Column({ name: 'cancel_at_period_end', type: 'boolean', default: false })
   cancelAtPeriodEnd: boolean;
 
+  @Column({ type: 'varchar', length: 32, default: 'lemonsqueezy' })
+  source: 'lemonsqueezy' | 'apple_iap' | 'google_iap';
+
+  @Column({ name: 'original_transaction_id', type: 'varchar', length: 128, nullable: true })
+  originalTransactionId: string | null;
+
+  @Column({ name: 'app_account_token', type: 'varchar', length: 128, nullable: true })
+  appAccountToken: string | null;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

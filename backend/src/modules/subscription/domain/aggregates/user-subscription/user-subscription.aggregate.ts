@@ -1,6 +1,8 @@
 import { AggregateRoot } from '../../../../../shared/domain/base';
 import { SubscriptionPlan, SubscriptionStatus } from '../../value-objects';
 
+export type SubscriptionSource = 'lemonsqueezy' | 'apple_iap' | 'google_iap';
+
 export interface UserSubscriptionProps {
   id: string;
   userId: string;
@@ -14,6 +16,9 @@ export interface UserSubscriptionProps {
   currentPeriodStart: Date | null;
   currentPeriodEnd: Date | null;
   cancelAtPeriodEnd: boolean;
+  source: SubscriptionSource;
+  originalTransactionId: string | null;
+  appAccountToken: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -30,6 +35,9 @@ export class UserSubscription extends AggregateRoot<string> {
   private _currentPeriodStart: Date | null;
   private _currentPeriodEnd: Date | null;
   private _cancelAtPeriodEnd: boolean;
+  private _source: SubscriptionSource;
+  private _originalTransactionId: string | null;
+  private _appAccountToken: string | null;
   private _createdAt: Date;
   private _updatedAt: Date;
 
@@ -46,6 +54,9 @@ export class UserSubscription extends AggregateRoot<string> {
     this._currentPeriodStart = props.currentPeriodStart;
     this._currentPeriodEnd = props.currentPeriodEnd;
     this._cancelAtPeriodEnd = props.cancelAtPeriodEnd;
+    this._source = props.source;
+    this._originalTransactionId = props.originalTransactionId;
+    this._appAccountToken = props.appAccountToken;
     this._createdAt = props.createdAt;
     this._updatedAt = props.updatedAt;
   }
@@ -64,6 +75,9 @@ export class UserSubscription extends AggregateRoot<string> {
       currentPeriodStart: null,
       currentPeriodEnd: null,
       cancelAtPeriodEnd: false,
+      source: 'lemonsqueezy',
+      originalTransactionId: null,
+      appAccountToken: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -126,6 +140,18 @@ export class UserSubscription extends AggregateRoot<string> {
     return this._cancelAtPeriodEnd;
   }
 
+  get source(): SubscriptionSource {
+    return this._source;
+  }
+
+  get originalTransactionId(): string | null {
+    return this._originalTransactionId;
+  }
+
+  get appAccountToken(): string | null {
+    return this._appAccountToken;
+  }
+
   get createdAt(): Date {
     return this._createdAt;
   }
@@ -182,6 +208,26 @@ export class UserSubscription extends AggregateRoot<string> {
   deactivate(): void {
     this._plan = SubscriptionPlan.FREE;
     this._status = SubscriptionStatus.EXPIRED;
+    this._cancelAtPeriodEnd = false;
+    this._updatedAt = new Date();
+  }
+
+  activateFromIap(data: {
+    plan: string;
+    source: 'apple_iap' | 'google_iap';
+    originalTransactionId: string;
+    appAccountToken?: string | null;
+    currentPeriodStart: Date;
+    currentPeriodEnd: Date;
+    status?: string;
+  }): void {
+    this._plan = SubscriptionPlan.create(data.plan);
+    this._status = data.status ? SubscriptionStatus.create(data.status) : SubscriptionStatus.ACTIVE;
+    this._source = data.source;
+    this._originalTransactionId = data.originalTransactionId;
+    this._appAccountToken = data.appAccountToken ?? this._appAccountToken;
+    this._currentPeriodStart = data.currentPeriodStart;
+    this._currentPeriodEnd = data.currentPeriodEnd;
     this._cancelAtPeriodEnd = false;
     this._updatedAt = new Date();
   }

@@ -14,6 +14,7 @@ import { QueryHandlers } from './application/queries';
 import { UserSubscriptionOrmEntity } from './infrastructure/persistence/typeorm';
 import { UserSubscriptionRepository } from './infrastructure/persistence/repositories';
 import { LemonSqueezyService, LemonSqueezyWebhookService } from './infrastructure/lemonsqueezy';
+import { IapService } from './infrastructure/iap';
 
 // Presentation
 import { SubscriptionController } from './presentation/controllers';
@@ -40,6 +41,7 @@ import { PremiumGuard } from './guards';
     // Infrastructure Services
     LemonSqueezyService,
     LemonSqueezyWebhookService,
+    IapService,
 
     // Guards
     PremiumGuard,

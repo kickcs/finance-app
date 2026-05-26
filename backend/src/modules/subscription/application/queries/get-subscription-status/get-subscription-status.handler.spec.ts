@@ -67,6 +67,9 @@ describe('GetSubscriptionStatusHandler', () => {
       currentPeriodStart: now,
       currentPeriodEnd: periodEnd,
       cancelAtPeriodEnd: false,
+      source: 'lemonsqueezy',
+      originalTransactionId: null,
+      appAccountToken: null,
       createdAt: now,
       updatedAt: now,
     });
@@ -102,6 +105,9 @@ describe('GetSubscriptionStatusHandler', () => {
       currentPeriodStart: now,
       currentPeriodEnd: periodEnd,
       cancelAtPeriodEnd: false,
+      source: 'lemonsqueezy',
+      originalTransactionId: null,
+      appAccountToken: null,
       createdAt: now,
       updatedAt: now,
     });

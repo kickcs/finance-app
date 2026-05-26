@@ -155,6 +155,9 @@ describe('HandleWebhookHandler', () => {
       currentPeriodStart: new Date('2026-02-22'),
       currentPeriodEnd: new Date('2026-03-22'),
       cancelAtPeriodEnd: false,
+      source: 'lemonsqueezy',
+      originalTransactionId: null,
+      appAccountToken: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -189,6 +192,9 @@ describe('HandleWebhookHandler', () => {
       currentPeriodStart: new Date('2026-01-22'),
       currentPeriodEnd: new Date('2026-02-22'),
       cancelAtPeriodEnd: true,
+      source: 'lemonsqueezy',
+      originalTransactionId: null,
+      appAccountToken: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     });

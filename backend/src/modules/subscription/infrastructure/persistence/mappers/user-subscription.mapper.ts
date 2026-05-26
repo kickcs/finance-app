@@ -18,6 +18,9 @@ export class UserSubscriptionMapper {
       currentPeriodStart: orm.currentPeriodStart,
       currentPeriodEnd: orm.currentPeriodEnd,
       cancelAtPeriodEnd: orm.cancelAtPeriodEnd,
+      source: orm.source,
+      originalTransactionId: orm.originalTransactionId,
+      appAccountToken: orm.appAccountToken,
       createdAt: orm.createdAt,
       updatedAt: orm.updatedAt,
     });
@@ -37,6 +40,9 @@ export class UserSubscriptionMapper {
     orm.currentPeriodStart = sub.currentPeriodStart;
     orm.currentPeriodEnd = sub.currentPeriodEnd;
     orm.cancelAtPeriodEnd = sub.cancelAtPeriodEnd;
+    orm.source = sub.source;
+    orm.originalTransactionId = sub.originalTransactionId;
+    orm.appAccountToken = sub.appAccountToken;
     orm.createdAt = sub.createdAt;
     orm.updatedAt = sub.updatedAt;
     return orm;
