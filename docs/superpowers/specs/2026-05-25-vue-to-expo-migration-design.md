@@ -1,8 +1,9 @@
 # Vue → Expo Migration Design
 
 **Date**: 2026-05-25
-**Status**: Draft (awaiting user review)
+**Status**: In progress — Phase 0–3 shipped on `feature/mobile-migration`, Phase 4+ pending
 **Author**: Generated via /goal brainstorming session
+**Last sync**: 2026-05-26 (Phase 3 close)
 
 ---
 
@@ -16,7 +17,7 @@
 |---|---|
 | Целевая платформа | Только iOS + Android (web — отдельный продукт, остаётся на Vue PWA) |
 | Подход | Greenfield rewrite — новый Expo-проект в `mobile/`, Vue PWA продолжает жить в проде до фича-парити |
-| Стек | Expo SDK 56, RN 0.81, React 19, TS 5.7, Expo Router 6 |
+| Стек | Expo SDK 56, RN 0.85, React 19.2.3, TS 6.0.3, Expo Router 6 (независим от React Navigation) |
 | UI | Гибрид NativeWind v5 (основной layer) + Expo UI SwiftUI/Compose (там, где нужен maximal-native look) |
 | MVP-фичи native | Push (expo-notifications), Camera/OCR (expo-camera v17), Haptics (expo-haptics + RNGH), IAP (expo-iap) |
 | Backend | Минорные доработки — APNs/FCM push, App Store Server Notifications / Google RTDN webhooks, server-side receipt validation |
@@ -273,7 +274,7 @@ Analytics: `StatCard, DonutChart, DailyStatsCards, TopCategories, SavingsGauge`.
 
 ## 8. Success criteria
 
-1. ✅ Все 16 страниц портированы и работают на iOS 16+ и Android 8+.
+1. ✅ Все 16 страниц портированы и работают на iOS 16.4+ (минимум SDK 56) и Android 8+.
 2. ✅ Все 14 виджетов и 31 фич перенесены (минус 2 удалённых: install-pwa, select-navbar-style).
 3. ✅ Push-уведомления работают на iOS и Android.
 4. ✅ Receipt OCR работает через native камеру.
@@ -282,6 +283,78 @@ Analytics: `StatCard, DonutChart, DailyStatsCards, TopCategories, SavingsGauge`.
 7. ✅ Приложение прошло App Store Review и Google Play Review (production).
 8. ✅ Cold start < 2s на iPhone 12, < 3s на mid-range Android.
 9. ✅ Crash-free sessions > 99.5% за первые 2 недели после релиза.
+
+---
+
+## Implementation status (sync 2026-05-26)
+
+Этот раздел отражает **фактическое** состояние ветки `feature/mobile-migration` относительно дизайна выше. Источник правды — commit history; здесь — выжимка для будущих сессий.
+
+### Phase 0 — Foundation ✅
+Все 12 задач закоммичены. Расхождения с дизайном:
+- NativeWind v5 + Tailwind v4 — **CSS-first без `tailwind.config.js` и babel-плагина** (см. SDK 56 caveats в плане). Токены живут в `mobile/src/global.css` `@theme` блоке.
+- Структура — `mobile/src/app/` (а не `mobile/app/`); expo-router находит автоматом. Зафиксировано в `mobile/AGENTS.md`.
+- NativeTabs использует compound API (`NativeTabs.Trigger.Icon sf="…"`). `md=` prop для Material Symbols на Android **не добавлен** — TODO в Phase 5 polish.
+- `globalClassNamePolyfill` оказался включён по умолчанию в `withNativewind()`, поэтому **обёртки `tw.tsx` через `useCssElement` НЕ нужны** — `className` на сырых RN-компонентах работает. Это упрощение vs. план.
+
+### Phase 1 — Core read screens ✅
+Tasks 13–22 + 21a. Все экраны работают: Dashboard (BalanceCard + SaveSpendSection + AccountStack + RecentTransactions), History (SectionList + infinite scroll + group-by-date), Accounts list + detail, Profile.
+- **Disabled-query keys leak fix:** все hooks используют `'__disabled__'` sentinel вместо `…Keys.all` — иначе несколько disabled hook'ов схлопывались на один ключ и `invalidateQueries(.all)` будил их разом.
+- **Account keys hierarchy:** добавлены discriminators (`'list' | 'detail' | 'with-balances'`) для предотвращения коллизий слота `[2]` между UUID и string-keyed подзапросами.
+
+### Phase 2 — Core mutations ✅
+Tasks 23–32. Полный набор: AddTransaction formSheet + AdjustBalance + CreateAccount + EditTransaction + invalidation helpers.
+- **HIGH-фиксы из code-review (применены):**
+  - `TransactionForm` **preserves `initialDate` on edit** вместо `new Date().toISOString()`. Иначе редактирование старой транзакции переносит её на сегодня — ломает month grouping, cursor pagination и analytics buckets.
+  - `editableType` coercion (transfer/adjustment → expense) **заменён** на guard branch — раньше тап на transfer открывал форму, сохранение **rewrite'ило** `to_account_id`/`is_informational` и корруптило долговые цепочки.
+  - Tap-to-edit во всех трёх местах (History, AccountDetail, RecentTransactions) гейтится `tx.type === 'income' || tx.type === 'expense'`.
+- **Deferred (по решению автора):**
+  - `useUpdateAccount` намеренно **не в barrel** — payload не передаёт type-specific поля (`creditLimit`, `gracePeriodDays`, `totalAmount`, `interestRate`, …). Откроется вместе с edit-account screen.
+  - `transactionsApi.update` зеркалит Vue и **не отправляет** `isInformational`/`feeAmount` — паритет намеренный, не bug.
+  - `useUpdateTransaction` типизация сужена до `Partial<TransactionCreateInput>` чтобы коллер не мог попытаться PATCH-нуть server-derived поля.
+
+### Phase 3 — Domain features ✅ (с deferrals)
+Tasks 33–50. Сделано: Debts (CRUD + group-by-person cursor pagination + close + partial-pay + edit), Goals (CRUD + GoalCard + progress bar), Budget API, Recurring subscriptions API, Analytics tab (period toggle + income/expense/net cards + top-10 expense categories с share %), Currency settings, CSV Import preview (Money Lover format).
+
+**Отложено / упрощено:**
+| Task | Что отложено | Почему | Когда возвращаемся |
+|---|---|---|---|
+| 38 | Split-expense (1 tx + N debts через `source_transaction_id`) | Rollback semantics требуют отдельного design pass (что делать если tx создалась, а debts упали) | Отдельный sub-плана после Phase 6 |
+| 40 | Reminders entity целиком | В backend `planning` module нет endpoint'а (только `budgets` + `goals`) — это была aspirational ссылка из CLAUDE.md | Когда появится backend |
+| 43 (DonutChart) | Визуальный donut в Analytics | Требует `react-native-svg` + `victory-native` — не критично для MVP | Phase 5 polish |
+| 46–48 | Categories CRUD/reorder/custom | Drag-to-reorder требует `react-native-draggable-flatlist` + UX rework. Сейчас работают захардкоженные `EXPENSE_CATEGORIES` / `INCOME_CATEGORIES` константы | Когда появится Premium-фича «свои категории» |
+| 50 | Реальный server-side bulk-import CSV | Нужен mapping категорий/счетов из CSV → существующие сущности (UI + backend endpoint) | Когда категории станут CRUD |
+| — | Toggle-theme | Нет в плане как отдельной задачи, но в Phase 5 (Task 66) | Phase 5 |
+
+**Зависимости плана vs. реальности (исправлено по ходу):**
+- План говорил «vertical AccountStack горизонтальный scroll» — Vue делает вертикальный stack, мы тоже (1:1 паритет).
+- План говорил «accounts/[id].tsx + accounts/[id]/adjust.tsx» — это конфликт в Expo Router. Переименовано в `[id]/index.tsx` + `[id]/adjust.tsx`.
+- План говорил `account_type`/`is_hidden` в Account API — таких полей нет в backend; используется `type` + (нет `is_hidden`).
+- План говорил `useProfile` после Task 22 — но BalanceCard (Task 16) от него зависит. Task 21a перетасован раньше.
+- `_userId` параметр из Vue API убран — backend берёт `userId` из JWT.
+- Дополнительные зависимости установлены: `expo-document-picker@~56.0.4`, `expo-file-system@~56.0.7` (для Task 50). Уже в `package.json`.
+
+### Phase 4 — Native MVP ⏳ Не начата
+
+См. план Task 51–62. Критическая зависимость: **physical device** для проверки большинства фич (push, IAP, camera) — iOS Simulator + Android Emulator закроют только haptics + swipeable + ОТА.
+
+**Внешние зависимости перед стартом Phase 4:**
+- Apple Developer Program account + App Store Connect app record (open question #1 в спеке).
+- Google Play Console account + Service Account JSON (для server-side receipt validation, Task 59).
+- App-Specific Shared Secret из App Store Connect (Task 59).
+- OPENAI_API_KEY в backend `.env` (Task 56 — `/api/receipt/scan` уже существует, проверить что работает).
+- LemonSqueezy → IAP миграция: open question #2.
+
+**SDK 56 caveats для Phase 4 (зафиксированы в плане):**
+- IAP: `expo-iap` 2.9 (последняя опубликованная версия — репозиторий архивирован в апреле 2026). Использует OpenIAP-стиль API (`fetchProducts({ skus, type: 'subs' })`, `requestPurchase({ request: { sku } })`). К Phase 6 переоценить миграцию на `react-native-iap` (Nitro).
+- EAS Update: `runtimeVersion.policy = 'fingerprint'` (не `appVersion`).
+- `@expo/vector-icons` deprecated → `@react-native-vector-icons/*` scoped или `expo-symbols`. Сейчас используется `expo-symbols` с маппингом `material name → SF Symbol` в `src/shared/ui/icon.tsx` + текстовый fallback на Android. **Android visual polish — TODO в Phase 5**.
+
+### Phase 5 — Polish & QA ⏳ Не начата
+Tasks 63–72. Сюда же стекаются deferrals из Phase 0–3: NativeTabs `md=` prop для Android, DonutChart visual, Android Icon через vector-icons (или Material Symbols web → font).
+
+### Phase 6 — Store submission ⏳ Не начата
+Tasks 73–80. Зависит от наличия Developer аккаунтов (open question #1).
 
 ---
 

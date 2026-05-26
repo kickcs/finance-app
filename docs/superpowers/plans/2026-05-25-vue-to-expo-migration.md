@@ -12,19 +12,49 @@
 
 ---
 
-## Progress
+## Progress (last sync: 2026-05-26, after Phase 3 close)
 
 | Phase | Tasks | Status |
 |---|---|---|
 | Phase 0 — Foundation | 1-12 | ✅ Done (branch `feature/mobile-migration`) |
-| Phase 1 — Core read screens | 13-22 | ✅ Done |
-| Phase 2 — Core mutations | 23-32 | ✅ Done |
-| Phase 3 — Domain features | 33-50 | ✅ Done (Task 38 split-expense, 40 reminders, 46-48 category CRUD deferred — see commit notes) |
-| Phase 4 — Native MVP | 51-62 | ⏳ Pending |
-| Phase 5 — Polish & QA | 63-72 | ⏳ Pending |
-| Phase 6 — Store submission | 73-80 | ⏳ Pending |
+| Phase 1 — Core read screens | 13-22 + 21a | ✅ Done (12 commits) |
+| Phase 2 — Core mutations | 23-32 | ✅ Done (4 commits, 2 HIGH review fixes applied) |
+| Phase 3 — Domain features | 33-50 | ✅ Done with deferrals (see table below) |
+| Phase 4 — Native MVP | 51-62 | ⏳ Pending — needs physical device + external accounts |
+| Phase 5 — Polish & QA | 63-72 | ⏳ Pending — also absorbs Phase 0–3 deferrals |
+| Phase 6 — Store submission | 73-80 | ⏳ Pending — blocked on App Store / Google Play accounts |
 
-When picking up a phase: mark task header with `**Status:** 🚧 In progress`, flip step checkboxes from `- [ ]` to `- [x]` as each step lands, set header to `**Status:** ✅ Done` once committed. Keep the table above in sync.
+### Deferrals (carry forward to later phases)
+
+Single source of truth for what was *not* shipped in the marked-Done phases. Read this **before** picking up a deferred task — original commit message has the technical context.
+
+| # | Task | Phase | Reason deferred | Resume when | Commit |
+|---|---|---|---|---|---|
+| 1 | 38 — Split-expense (1 tx + N debts via `source_transaction_id`) | 3 | Rollback semantics need a separate design pass: tx-created-but-debts-failed leaves orphans | After Phase 6 | `49a0647` |
+| 2 | 40 — Reminders entity | 3 | Backend `planning` module has only budgets+goals — no reminders endpoint | When backend ships endpoint | `0d8babc` |
+| 3 | 43 — DonutChart in Analytics | 3 (Phase 5 polish) | Needs `react-native-svg` + `victory-native`; not critical for MVP | Phase 5 | `ad5ae10` |
+| 4 | 46-48 — Categories CRUD/reorder/custom | 3 | Drag-to-reorder needs `react-native-draggable-flatlist`; current hardcoded `EXPENSE/INCOME_CATEGORIES` suffice for MVP transactions | When "свои категории" becomes a Premium feature | `d632795` |
+| 5 | 50 — Server-side bulk CSV import | 3 | Needs CSV-categories → existing-categories mapping UI + backend endpoint. Preview is read-only | When categories become CRUD (#4) | `88ff087` |
+| 6 | — useUpdateAccount | 2 | Payload doesn't forward `creditLimit`/`gracePeriodDays`/etc. yet | When edit-account screen lands | `b7d2ad9` |
+| 7 | — transactionsApi.update fields | 2 | Mirrors Vue's omission of `isInformational`/`feeAmount` — intentional parity, fix only if business requires | When edit-info screen lands | `34625e1` |
+| 8 | — NativeTabs `md=` prop for Android | 0 | Material Symbols icon names not added | Phase 5 polish (Task 65) | `923b08d` |
+| 9 | — Android Icon via vector-icons | 0 | Currently text-glyph fallback in `src/shared/ui/icon.tsx`; iOS uses SF Symbols via `expo-symbols` | Phase 5 polish | `6486330` |
+
+### Design vs. reality reconciliation
+
+The plan was written before SDK 56 actuals; these correctives are already in the codebase:
+- **NativeWind v5 `globalClassNamePolyfill` is on by default** — `tw.tsx` wrappers via `useCssElement` (described in Task 3 Step 7) are NOT needed. Raw `react-native` imports with `className` work.
+- **App routes live in `mobile/src/app/`** (not `mobile/app/`). Expo Router auto-detects. Documented in `mobile/AGENTS.md`.
+- **Account schema:** plan referenced `account_type` / `is_hidden` — backend has `type` and no `is_hidden`. API layer uses real schema.
+- **`_userId` parameter:** removed from all mobile API functions (backend derives from JWT).
+- **`accounts/[id].tsx` + `accounts/[id]/adjust.tsx` route conflict:** resolved by moving to `accounts/[id]/index.tsx` so `[id]/` can host sibling routes.
+- **Tasks 21a ↔ 16 dependency:** plan listed Task 21a (useProfile) after Task 22, but Task 16 (BalanceCard) depends on it. Reshuffled.
+
+### Workflow notes
+
+When picking up a phase: mark task header with `**Status:** 🚧 In progress`, flip step checkboxes from `- [ ]` to `- [x]` as each step lands, set header to `**Status:** ✅ Done` once committed. Keep both the table above AND the spec's "Implementation status" section in sync.
+
+When deferring a task mid-phase: add a row to the Deferrals table above with the commit hash, note the technical context in the commit message under `Review notes:` or `Deferred:`. Don't let context live only in TaskList — TaskList is in-memory and dies with the session.
 
 ---
 
