@@ -1,5 +1,12 @@
 import { ref } from 'vue';
 import { usePartialPayment } from '@/features/partial-payment';
+import {
+  snapshotDebtCaches,
+  restoreDebtCaches,
+  applyDebtUpdate,
+  buildDebtPaymentPatch,
+  type DebtCacheSnapshot,
+} from '@/entities/debt';
 import { queryClient } from '@/shared/api/queryClient';
 import { invalidateDebtRelated } from '@/shared/api/invalidation';
 import { useToast } from '@/shared/ui';
@@ -40,6 +47,8 @@ export function useCloseAllDebts() {
 
     const sorted = sortDebtsByDateAsc(debts);
 
+    let snapshot: DebtCacheSnapshot | null = null;
+
     try {
       // Pre-compute (debt, allocatedAmount) pairs synchronously
       let budget = paymentAmount;
@@ -73,6 +82,18 @@ export function useCloseAllDebts() {
         });
       }
 
+      // Optimistically apply the whole payment plan upfront. Per-payment
+      // optimistic updates inside makePartialPayment are disabled in bulk
+      // mode (skipInvalidation=true), so this is the single source of truth.
+      snapshot = await snapshotDebtCaches(queryClient);
+      for (const plan of paymentPlan) {
+        applyDebtUpdate(
+          queryClient,
+          plan.debt.id,
+          buildDebtPaymentPatch(plan.debt, plan.amount, plan.forgive),
+        );
+      }
+
       // Execute payments sequentially (same account — parallel would cause balance race conditions)
       for (const plan of paymentPlan) {
         const success = await makePartialPayment(
@@ -102,6 +123,9 @@ export function useCloseAllDebts() {
       console.error('Failed to close all debts:', e);
       error.value = `Ошибка при закрытии долга ${progress.value + 1} из ${total.value}`;
       toast({ title: 'Не удалось закрыть все долги', variant: 'error' });
+      // Some payments may have succeeded — restore the snapshot, then refetch
+      // the actual partial result from the server.
+      if (snapshot) restoreDebtCaches(queryClient, snapshot);
       await invalidateDebtRelated(queryClient, userId).catch(() => {});
       return false;
     } finally {

@@ -1,6 +1,14 @@
 import { ref } from 'vue';
 import { transactionsApi } from '@/entities/transaction';
-import { debtsApi, getDebtDisplayName } from '@/entities/debt';
+import {
+  debtsApi,
+  getDebtDisplayName,
+  snapshotDebtCaches,
+  restoreDebtCaches,
+  applyDebtUpdate,
+  buildDebtPaymentPatch,
+  type DebtCacheSnapshot,
+} from '@/entities/debt';
 import { queryClient } from '@/shared/api/queryClient';
 import { invalidateDebtRelated } from '@/shared/api/invalidation';
 import { useToast } from '@/shared/ui';
@@ -49,6 +57,19 @@ export function usePartialPayment() {
 
     const debtCurrency = debt.currency || DEFAULT_CURRENCY;
 
+    // Optimistically apply the expected end state of the debt before the
+    // multi-step API flow. Skipped in bulk mode (skipInvalidation=true) —
+    // useCloseAllDebts applies the whole payment plan upfront itself.
+    let snapshot: DebtCacheSnapshot | null = null;
+    if (!options?.skipInvalidation) {
+      snapshot = await snapshotDebtCaches(queryClient);
+      applyDebtUpdate(
+        queryClient,
+        debt.id,
+        buildDebtPaymentPatch(debt, paymentAmount, !!options?.forgiveRemainder),
+      );
+    }
+
     try {
       // In single-payment mode, re-fetch debt to prevent stale cache double-close.
       // Skipped in bulk mode (skipInvalidation=true) where caller manages freshness.
@@ -63,6 +84,15 @@ export function usePartialPayment() {
         // Use fresh remaining_amount if available
         if (freshDebt) {
           effectiveDebt = { ...debt, remaining_amount: freshDebt.remaining_amount };
+          // The optimistic patch above was built from the (possibly stale)
+          // cached debt — re-apply it with the fresh remaining amount
+          if (snapshot && freshDebt.remaining_amount !== debt.remaining_amount) {
+            applyDebtUpdate(
+              queryClient,
+              debt.id,
+              buildDebtPaymentPatch(effectiveDebt, paymentAmount, !!options?.forgiveRemainder),
+            );
+          }
         }
       }
 
@@ -175,11 +205,10 @@ export function usePartialPayment() {
       }
 
       // 4. Update debt
-      const newRemaining = remainingAfterPayment;
-      const willClose = isOverpayment || options?.forgiveRemainder || newRemaining <= 0;
+      const willClose = isOverpayment || options?.forgiveRemainder || remainingAfterPayment <= 0;
 
       await debtsApi.update(effectiveDebt.id, {
-        remaining_amount: willClose ? 0 : Math.max(0, newRemaining),
+        remaining_amount: willClose ? 0 : Math.max(0, remainingAfterPayment),
         is_closed: !!willClose,
         ...(willClose && closeTransactionId ? { close_transaction_id: closeTransactionId } : {}),
         ...(options?.forgiveRemainder
@@ -196,6 +225,7 @@ export function usePartialPayment() {
       if (!options?.skipToast) toast({ title: 'Платёж проведён', variant: 'success' });
       return true;
     } catch (e) {
+      if (snapshot) restoreDebtCaches(queryClient, snapshot);
       console.error('Failed to make partial payment:', e);
       error.value = 'Не удалось внести платёж';
       if (!options?.skipToast) toast({ title: 'Не удалось внести платёж', variant: 'error' });

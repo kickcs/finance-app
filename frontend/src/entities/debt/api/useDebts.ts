@@ -2,6 +2,12 @@ import { computed, toValue, type MaybeRefOrGetter } from 'vue';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import { debtQueryKeys } from './queryKeys';
 import { debtsApi } from './debtsApi';
+import {
+  snapshotDebtCaches,
+  restoreDebtCaches,
+  applyDebtUpdate,
+  applyDebtRemove,
+} from './debtCache';
 import type { Debt, DebtInsert } from '@/shared/api/database.types';
 
 export function useDebts(userId: MaybeRefOrGetter<string | null>) {
@@ -25,7 +31,10 @@ export function useDebts(userId: MaybeRefOrGetter<string | null>) {
 
   const debts = computed(() => data.value ?? []);
 
-  // Create mutation
+  // Create mutation. Unlike update/delete below, it intentionally skips the
+  // snapshotDebtCaches/applyDebtUpdate helpers: a new debt can't be placed into
+  // the cursor-paginated infinite cache (server-side group ordering), so the
+  // optimistic insert covers only this list cache.
   const createMutation = useMutation({
     mutationFn: (debt: Omit<DebtInsert, 'user_id'>) => {
       const uid = toValue(userId);
@@ -70,56 +79,46 @@ export function useDebts(userId: MaybeRefOrGetter<string | null>) {
       }
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: queryKey.value });
+      // Created debt can't be optimistically placed into the cursor-paginated
+      // infinite cache (server-side group ordering) — invalidate everything instead.
+      queryClient.invalidateQueries({ queryKey: debtQueryKeys.all });
     },
   });
 
-  // Update mutation
+  // Update mutation — optimistic across list + infinite caches
   const updateMutation = useMutation({
     mutationFn: ({ id, updates }: { id: string; updates: Partial<Debt> }) =>
       debtsApi.update(id, updates),
     onMutate: async ({ id, updates }) => {
-      await queryClient.cancelQueries({ queryKey: queryKey.value });
-      const previousDebts = queryClient.getQueryData<Debt[]>(queryKey.value);
-
-      queryClient.setQueryData<Debt[]>(
-        queryKey.value,
-        (old) => old?.map((d) => (d.id === id ? { ...d, ...updates } : d)) ?? [],
-      );
-
-      return { previousDebts };
+      const snapshot = await snapshotDebtCaches(queryClient);
+      applyDebtUpdate(queryClient, id, updates);
+      return { snapshot };
     },
     onError: (_err, _variables, context) => {
-      if (context?.previousDebts) {
-        queryClient.setQueryData(queryKey.value, context.previousDebts);
+      if (context?.snapshot) {
+        restoreDebtCaches(queryClient, context.snapshot);
       }
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: queryKey.value });
+      queryClient.invalidateQueries({ queryKey: debtQueryKeys.all });
     },
   });
 
-  // Delete mutation
+  // Delete mutation — optimistic across list + infinite caches
   const deleteMutation = useMutation({
     mutationFn: (id: string) => debtsApi.delete(id),
     onMutate: async (id) => {
-      await queryClient.cancelQueries({ queryKey: queryKey.value });
-      const previousDebts = queryClient.getQueryData<Debt[]>(queryKey.value);
-
-      queryClient.setQueryData<Debt[]>(
-        queryKey.value,
-        (old) => old?.filter((d) => d.id !== id) ?? [],
-      );
-
-      return { previousDebts };
+      const snapshot = await snapshotDebtCaches(queryClient);
+      applyDebtRemove(queryClient, id);
+      return { snapshot };
     },
     onError: (_err, _id, context) => {
-      if (context?.previousDebts) {
-        queryClient.setQueryData(queryKey.value, context.previousDebts);
+      if (context?.snapshot) {
+        restoreDebtCaches(queryClient, context.snapshot);
       }
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: queryKey.value });
+      queryClient.invalidateQueries({ queryKey: debtQueryKeys.all });
     },
   });
 

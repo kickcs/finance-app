@@ -6,6 +6,9 @@ import {
   getDebtDisplayName,
   debtsApi,
   debtQueryKeys,
+  snapshotDebtCaches,
+  restoreDebtCaches,
+  applyDebtUpdate,
   type Debt,
   type DebtGroupResponse,
   type DebtsFilters,
@@ -247,10 +250,14 @@ export function useDebtsPageState() {
 
   async function handleDetailTogglePrivate(value: boolean) {
     if (!selectedDebt.value) return;
+    const debtId = selectedDebt.value.id;
+    const snapshot = await snapshotDebtCaches(queryClient);
+    applyDebtUpdate(queryClient, debtId, { is_private: value });
     try {
-      await debtsApi.update(selectedDebt.value.id, { is_private: value });
+      await debtsApi.update(debtId, { is_private: value });
       await queryClient.invalidateQueries({ queryKey: debtQueryKeys.all });
     } catch {
+      restoreDebtCaches(queryClient, snapshot);
       toast({ title: 'Не удалось обновить', variant: 'error' });
     }
   }
