@@ -97,6 +97,7 @@ const dashedBtnBase =
       :selected-id="formData.categoryId"
       :rows="4"
       label="Категория"
+      searchable
       @select="updateField('categoryId', $event)"
     />
 

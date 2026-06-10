@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.54';
+export const CURRENT_VERSION = '1.0.55';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,17 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.55',
+    date: '2026-06-11',
+    title: 'Поиск категорий',
+    items: [
+      {
+        type: 'feature',
+        text: 'На экране добавления транзакции появился поиск по категориям — нажмите «Поиск» рядом с заголовком «Категория» и начните вводить название.',
+      },
+    ],
+  },
   {
     version: '1.0.54',
     date: '2026-05-24',

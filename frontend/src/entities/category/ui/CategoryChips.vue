@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch, nextTick } from 'vue';
-import { UIcon } from '@/shared/ui';
+import { UIcon, UInput } from '@/shared/ui';
 import type { Category } from '@/entities/category';
 import { useSlidingIndicator, buildIndicatorRect } from '@/shared/lib/hooks/useSlidingIndicator';
 
@@ -10,6 +10,7 @@ const props = withDefaults(
     selectedId: string;
     label?: string;
     rows?: number;
+    searchable?: boolean;
   }>(),
   { rows: 2 },
 );
@@ -17,6 +18,33 @@ const props = withDefaults(
 const emit = defineEmits<{
   select: [categoryId: string];
 }>();
+
+// Search across all categories (frequent + infrequent)
+const searchActive = ref(false);
+const searchQuery = ref('');
+const searchInputRef = ref<InstanceType<typeof UInput> | null>(null);
+
+const normalizedQuery = computed(() => searchQuery.value.trim().toLowerCase());
+const isSearching = computed(() => searchActive.value && normalizedQuery.value.length > 0);
+
+function openSearch() {
+  searchActive.value = true;
+  nextTick(() => searchInputRef.value?.focus());
+}
+
+function closeSearch() {
+  searchActive.value = false;
+  searchQuery.value = '';
+}
+
+function handleSearchKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape') closeSearch();
+}
+
+function selectCategory(categoryId: string) {
+  emit('select', categoryId);
+  if (searchActive.value) closeSearch();
+}
 
 // Split into frequent and infrequent (only when isFrequent is explicitly set)
 const showInfrequent = ref(false);
@@ -42,11 +70,14 @@ watch(
   { immediate: true },
 );
 
-const visibleCategories = computed(() =>
-  showInfrequent.value
+const visibleCategories = computed(() => {
+  if (isSearching.value) {
+    return props.categories.filter((c) => c.name.toLowerCase().includes(normalizedQuery.value));
+  }
+  return showInfrequent.value
     ? [...frequentCategories.value, ...infrequentCategories.value]
-    : frequentCategories.value,
-);
+    : frequentCategories.value;
+});
 
 const categoryRows = computed(() => {
   const total = visibleCategories.value.length;
@@ -87,6 +118,8 @@ watch(
 
 watch(showInfrequent, () => nextTick(updateIndicator));
 
+watch([searchActive, normalizedQuery], () => nextTick(updateIndicator));
+
 function getChipStyle(category: Category) {
   if (category.id === props.selectedId) {
     return {
@@ -104,19 +137,55 @@ function toggleInfrequent() {
 
 <template>
   <div>
-    <div v-if="label" class="flex items-center gap-1.5 mb-2">
-      <span class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark">
-        {{ label }}
-      </span>
-      <span
-        v-if="!selectedId"
-        class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
+    <div v-if="label || searchable" class="flex items-center justify-between mb-2">
+      <div class="flex items-center gap-1.5">
+        <span class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark">
+          {{ label }}
+        </span>
+        <span
+          v-if="!selectedId"
+          class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
+        >
+          — выберите
+        </span>
+      </div>
+      <button
+        v-if="searchable"
+        type="button"
+        :aria-label="searchActive ? 'Закрыть поиск категорий' : 'Поиск категории'"
+        class="flex items-center gap-1 -my-1 px-1.5 py-1 rounded-md text-xs text-text-tertiary-light dark:text-text-tertiary-dark hover:text-text-secondary-light dark:hover:text-text-secondary-dark active:scale-95 transition-all"
+        @click="searchActive ? closeSearch() : openSearch()"
       >
-        — выберите
-      </span>
+        <UIcon :name="searchActive ? 'close' : 'search'" size="xs" />
+        {{ searchActive ? 'Закрыть' : 'Поиск' }}
+      </button>
     </div>
 
-    <div ref="containerRef" class="relative overflow-x-auto no-scrollbar -mx-4 px-4 pb-1">
+    <Transition name="search-fade">
+      <UInput
+        v-if="searchActive"
+        ref="searchInputRef"
+        v-model="searchQuery"
+        variant="search"
+        placeholder="Поиск категории..."
+        class="mb-2"
+        data-testid="category-search-input"
+        @keydown="handleSearchKeydown"
+      />
+    </Transition>
+
+    <p
+      v-if="isSearching && visibleCategories.length === 0"
+      class="text-sm text-text-tertiary-light dark:text-text-tertiary-dark py-2"
+    >
+      Ничего не найдено
+    </p>
+
+    <div
+      v-show="!(isSearching && visibleCategories.length === 0)"
+      ref="containerRef"
+      class="relative overflow-x-auto no-scrollbar -mx-4 px-4 pb-1"
+    >
       <!-- Sliding Indicator -->
       <span
         class="absolute rounded-lg pointer-events-none transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] z-0 border"
@@ -137,7 +206,7 @@ function toggleInfrequent() {
                 : ''
             "
             :style="getChipStyle(category)"
-            @click="emit('select', category.id)"
+            @click="selectCategory(category.id)"
           >
             <UIcon :name="category.icon" size="sm" :style="{ color: category.color }" />
             {{ category.name }}
@@ -145,7 +214,7 @@ function toggleInfrequent() {
 
           <!-- Toggle infrequent chip at the end of the last row -->
           <button
-            v-if="hasInfrequent && rowIdx === categoryRows.length - 1"
+            v-if="hasInfrequent && !isSearching && rowIdx === categoryRows.length - 1"
             type="button"
             class="relative z-10 flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm border border-dashed border-border-light dark:border-border-dark text-text-tertiary-light dark:text-text-tertiary-dark hover:text-text-secondary-light dark:hover:text-text-secondary-dark active:scale-95 transition-colors duration-300 whitespace-nowrap"
             @click="toggleInfrequent"
@@ -162,5 +231,19 @@ function toggleInfrequent() {
 <style scoped>
 .chips-grid {
   transition: opacity 0.15s ease;
+}
+
+.search-fade-enter-active {
+  transition: all 0.15s ease-out;
+}
+
+.search-fade-leave-active {
+  transition: all 0.1s ease-in;
+}
+
+.search-fade-enter-from,
+.search-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
 }
 </style>

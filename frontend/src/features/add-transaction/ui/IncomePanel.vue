@@ -51,6 +51,7 @@ const {
       :categories="categories"
       :selected-id="formData.categoryId"
       label="Категория"
+      searchable
       @select="updateField('categoryId', $event)"
     />
   </div>
