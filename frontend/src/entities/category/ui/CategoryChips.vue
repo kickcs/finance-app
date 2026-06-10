@@ -41,7 +41,16 @@ function handleSearchKeydown(event: KeyboardEvent) {
   if (event.key === 'Escape') closeSearch();
 }
 
+// Category picked from search results is pinned to the front of the list
+// until a different category is selected
+const pinnedCategoryId = ref<string | null>(null);
+
 function selectCategory(categoryId: string) {
+  if (isSearching.value) {
+    pinnedCategoryId.value = categoryId;
+  } else if (categoryId !== pinnedCategoryId.value) {
+    pinnedCategoryId.value = null;
+  }
   emit('select', categoryId);
   if (searchActive.value) closeSearch();
 }
@@ -59,11 +68,11 @@ const infrequentCategories = computed(() =>
   hasInfrequent.value ? props.categories.filter((c) => c.isFrequent === false) : [],
 );
 
-// If selected category is infrequent, auto-expand
+// If selected category is infrequent, auto-expand (pinned one is already visible at the front)
 watch(
   () => props.selectedId,
   (id) => {
-    if (infrequentCategories.value.some((c) => c.id === id)) {
+    if (id !== pinnedCategoryId.value && infrequentCategories.value.some((c) => c.id === id)) {
       showInfrequent.value = true;
     }
   },
@@ -74,9 +83,12 @@ const visibleCategories = computed(() => {
   if (isSearching.value) {
     return props.categories.filter((c) => c.name.toLowerCase().includes(normalizedQuery.value));
   }
-  return showInfrequent.value
+  const base = showInfrequent.value
     ? [...frequentCategories.value, ...infrequentCategories.value]
     : frequentCategories.value;
+  const pinned = props.categories.find((c) => c.id === pinnedCategoryId.value);
+  if (!pinned) return base;
+  return [pinned, ...base.filter((c) => c.id !== pinned.id)];
 });
 
 const categoryRows = computed(() => {
@@ -118,7 +130,7 @@ watch(
 
 watch(showInfrequent, () => nextTick(updateIndicator));
 
-watch([searchActive, normalizedQuery], () => nextTick(updateIndicator));
+watch([searchActive, normalizedQuery, pinnedCategoryId], () => nextTick(updateIndicator));
 
 function getChipStyle(category: Category) {
   if (category.id === props.selectedId) {
