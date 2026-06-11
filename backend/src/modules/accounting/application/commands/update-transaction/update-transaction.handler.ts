@@ -1,6 +1,6 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { Inject, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { DataSource, EntityManager } from 'typeorm';
 import { UpdateTransactionCommand } from './update-transaction.command';
 import {
   ITransactionRepository,
@@ -84,10 +84,11 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
     const pendingAccounts: Account[] = [];
 
     // Wrap all balance + transaction updates in a DB transaction
-    await this.dataSource.transaction(async () => {
+    await this.dataSource.transaction(async (manager) => {
       if (balanceChanged) {
         if (oldType !== 'transfer' && newType !== 'transfer') {
           await this.handleNonTransferBalanceUpdate(
+            manager,
             pendingAccounts,
             command.userId,
             oldAccountId,
@@ -101,6 +102,7 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
           );
         } else if (oldType === 'transfer' && newType === 'transfer') {
           await this.handleTransferBalanceUpdate(
+            manager,
             pendingAccounts,
             command.userId,
             oldAccountId,
@@ -118,6 +120,7 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
           );
         } else if (oldType === 'transfer' && newType !== 'transfer') {
           await this.reverseTransfer(
+            manager,
             pendingAccounts,
             command.userId,
             oldAccountId,
@@ -128,6 +131,7 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
             oldToCurrency!,
           );
           await this.applyNonTransfer(
+            manager,
             pendingAccounts,
             command.userId,
             newAccountId,
@@ -137,6 +141,7 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
           );
         } else {
           await this.reverseNonTransfer(
+            manager,
             pendingAccounts,
             command.userId,
             oldAccountId,
@@ -145,6 +150,7 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
             oldType,
           );
           await this.applyTransfer(
+            manager,
             pendingAccounts,
             command.userId,
             newAccountId,
@@ -157,7 +163,7 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
         }
       }
 
-      await this.transactionRepository.save(transaction);
+      await this.transactionRepository.save(transaction, manager);
     });
 
     // Publish events AFTER the DB transaction commits
@@ -181,6 +187,7 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
   }
 
   private async handleNonTransferBalanceUpdate(
+    manager: EntityManager,
     pendingAccounts: Account[],
     userId: string,
     oldAccountId: string,
@@ -210,11 +217,12 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
         account.debit(newAmount, newCurrency);
       }
 
-      await this.accountRepository.save(account);
+      await this.accountRepository.save(account, manager);
       pendingAccounts.push(account);
     } else {
       // Different accounts or currencies - reverse on old, apply on new
       await this.reverseNonTransfer(
+        manager,
         pendingAccounts,
         userId,
         oldAccountId,
@@ -223,6 +231,7 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
         oldType,
       );
       await this.applyNonTransfer(
+        manager,
         pendingAccounts,
         userId,
         newAccountId,
@@ -234,6 +243,7 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
   }
 
   private async handleTransferBalanceUpdate(
+    manager: EntityManager,
     pendingAccounts: Account[],
     userId: string,
     oldFromAccountId: string,
@@ -252,6 +262,7 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
     // Reverse old transfer
     if (oldToAccountId && oldToAmount !== null && oldToCurrency) {
       await this.reverseTransfer(
+        manager,
         pendingAccounts,
         userId,
         oldFromAccountId,
@@ -266,6 +277,7 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
     // Apply new transfer
     if (newToAccountId && newToAmount !== null && newToCurrency) {
       await this.applyTransfer(
+        manager,
         pendingAccounts,
         userId,
         newFromAccountId,
@@ -279,6 +291,7 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
   }
 
   private async reverseNonTransfer(
+    manager: EntityManager,
     pendingAccounts: Account[],
     userId: string,
     accountId: string,
@@ -294,11 +307,12 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
       account.credit(amount, currency);
     }
 
-    await this.accountRepository.save(account);
+    await this.accountRepository.save(account, manager);
     pendingAccounts.push(account);
   }
 
   private async applyNonTransfer(
+    manager: EntityManager,
     pendingAccounts: Account[],
     userId: string,
     accountId: string,
@@ -314,11 +328,12 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
       account.debit(amount, currency);
     }
 
-    await this.accountRepository.save(account);
+    await this.accountRepository.save(account, manager);
     pendingAccounts.push(account);
   }
 
   private async reverseTransfer(
+    manager: EntityManager,
     pendingAccounts: Account[],
     userId: string,
     fromAccountId: string,
@@ -328,11 +343,13 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
     toAmount: number,
     toCurrency: string,
   ): Promise<void> {
-    // Load both accounts in parallel since they are independent
-    const [fromAccount, toAccount] = await Promise.all([
-      this.validateAccountOwnership(fromAccountId, userId),
-      this.validateAccountOwnership(toAccountId, userId),
-    ]);
+    // Intra-account conversion: both sides must share one aggregate instance,
+    // otherwise the second save overwrites the first.
+    const fromAccount = await this.validateAccountOwnership(fromAccountId, userId);
+    const toAccount =
+      toAccountId === fromAccountId
+        ? fromAccount
+        : await this.validateAccountOwnership(toAccountId, userId);
 
     // Reverse debit from source (credit it back)
     fromAccount.credit(fromAmount, fromCurrency);
@@ -340,16 +357,19 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
     // Reverse credit to destination (debit it back)
     toAccount.debit(toAmount, toCurrency);
 
-    // Save both accounts in parallel
-    await Promise.all([
-      this.accountRepository.save(fromAccount),
-      this.accountRepository.save(toAccount),
-    ]);
-
-    pendingAccounts.push(fromAccount, toAccount);
+    // Sequential writes: a transactional EntityManager runs on a single
+    // connection, parallel queries on it are not safe.
+    await this.accountRepository.save(fromAccount, manager);
+    if (toAccount !== fromAccount) {
+      await this.accountRepository.save(toAccount, manager);
+      pendingAccounts.push(fromAccount, toAccount);
+    } else {
+      pendingAccounts.push(fromAccount);
+    }
   }
 
   private async applyTransfer(
+    manager: EntityManager,
     pendingAccounts: Account[],
     userId: string,
     fromAccountId: string,
@@ -359,11 +379,13 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
     toAmount: number,
     toCurrency: string,
   ): Promise<void> {
-    // Load both accounts in parallel since they are independent
-    const [fromAccount, toAccount] = await Promise.all([
-      this.validateAccountOwnership(fromAccountId, userId),
-      this.validateAccountOwnership(toAccountId, userId),
-    ]);
+    // Intra-account conversion: both sides must share one aggregate instance,
+    // otherwise the second save overwrites the first.
+    const fromAccount = await this.validateAccountOwnership(fromAccountId, userId);
+    const toAccount =
+      toAccountId === fromAccountId
+        ? fromAccount
+        : await this.validateAccountOwnership(toAccountId, userId);
 
     // Debit source account
     fromAccount.debit(fromAmount, fromCurrency);
@@ -371,12 +393,14 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
     // Credit destination account
     toAccount.credit(toAmount, toCurrency);
 
-    // Save both accounts in parallel
-    await Promise.all([
-      this.accountRepository.save(fromAccount),
-      this.accountRepository.save(toAccount),
-    ]);
-
-    pendingAccounts.push(fromAccount, toAccount);
+    // Sequential writes: a transactional EntityManager runs on a single
+    // connection, parallel queries on it are not safe.
+    await this.accountRepository.save(fromAccount, manager);
+    if (toAccount !== fromAccount) {
+      await this.accountRepository.save(toAccount, manager);
+      pendingAccounts.push(fromAccount, toAccount);
+    } else {
+      pendingAccounts.push(fromAccount);
+    }
   }
 }

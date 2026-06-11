@@ -131,22 +131,23 @@ export class BulkImportHandler implements ICommandHandler<BulkImportCommand> {
     }
 
     // Save everything in a single DB transaction
-    await this.dataSource.transaction(async () => {
+    await this.dataSource.transaction(async (manager) => {
       // Save new categories in a single batch insert
       const newCats = [...categoryMap.values()].filter((cat) =>
         createdCategories.includes(cat.name),
       );
       if (newCats.length > 0) {
-        await this.categoryRepository.saveMany(newCats);
+        await this.categoryRepository.saveMany(newCats, manager);
       }
 
-      // Save all accounts (new + updated balances) in parallel
-      await Promise.all(
-        [...accountsToSave.values()].map((account) => this.accountRepository.save(account)),
-      );
+      // Save all accounts sequentially: a transactional EntityManager runs on
+      // a single connection, parallel queries on it are not safe.
+      for (const account of accountsToSave.values()) {
+        await this.accountRepository.save(account, manager);
+      }
 
       // Batch save all transactions in a single call
-      await this.transactionRepository.saveMany(transactionsToSave);
+      await this.transactionRepository.saveMany(transactionsToSave, manager);
     });
 
     // Publish domain events after commit

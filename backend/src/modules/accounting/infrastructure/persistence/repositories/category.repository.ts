@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { Category } from '../../../domain/aggregates/category';
 import { ICategoryRepository } from '../../../domain/repositories/category.repository.interface';
 import { CategoryOrmEntity } from '../typeorm/category.orm-entity';
@@ -47,9 +47,10 @@ export class CategoryRepository implements ICategoryRepository {
     return CategoryMapper.toDomain(savedEntity);
   }
 
-  async saveMany(categories: Category[]): Promise<Category[]> {
+  async saveMany(categories: Category[], manager?: EntityManager): Promise<Category[]> {
+    const repo = manager ? manager.getRepository(CategoryOrmEntity) : this.ormRepository;
     const ormEntities = categories.map((category) => CategoryMapper.toOrm(category));
-    const savedEntities = await this.ormRepository.save(ormEntities);
+    const savedEntities = await repo.save(ormEntities);
     return savedEntities.map((entity) => CategoryMapper.toDomain(entity));
   }
 

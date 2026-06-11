@@ -5,5 +5,6 @@ export class GetTransactionsByAccountPaginatedQuery {
     public readonly pageSize: number,
     public readonly cursorDate?: string,
     public readonly cursorCreatedAt?: string,
+    public readonly cursorId?: string,
   ) {}
 }

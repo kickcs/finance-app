@@ -7,7 +7,6 @@ import { useHaptics } from '@/shared/lib/haptics';
 import { useToast } from '@/shared/ui';
 import { transactionsApi } from '@/entities/transaction';
 import { useAccounts } from '@/entities/account';
-import { getTodayISO } from '@/shared/lib/date';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
 
@@ -38,7 +37,10 @@ export function useDashboardQuickActions(
         currency: params.currency,
         type: 'expense',
         description: params.description,
-        date: getTodayISO(),
+        // Full timestamp, like the regular form: a bare YYYY-MM-DD date is
+        // parsed as UTC midnight on the backend and lands on the wrong local
+        // day for non-UTC users.
+        date: new Date().toISOString(),
       }),
     onSettled: () => {
       const uid = toValue(userId);
@@ -79,8 +81,19 @@ export function useDashboardQuickActions(
 
     // One-tap: create transaction immediately if amount is set
     if (action.amount !== null && action.amount > 0) {
+      // Double-tap guard: a second tap before the first request settles
+      // would create a duplicate transaction.
+      if (oneTapMutation.isPending.value) return;
+
       const account = getAccountById(action.accountId);
-      if (!account) return;
+      if (!account) {
+        toast({
+          title: 'Счёт не найден',
+          description: 'Счёт этого быстрого действия удалён. Настройте действие заново.',
+          variant: 'error',
+        });
+        return;
+      }
 
       const currency = account.balances[0]?.currency ?? 'USD';
 

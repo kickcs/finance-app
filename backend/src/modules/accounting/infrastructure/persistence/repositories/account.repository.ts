@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { Account } from '../../../domain/aggregates/account';
 import { IAccountRepository } from '../../../domain/repositories/account.repository.interface';
 import { AccountOrmEntity } from '../typeorm/account.orm-entity';
@@ -60,11 +60,15 @@ export class AccountRepository implements IAccountRepository {
     return ormEntities.map((entity) => AccountMapper.toDomain(entity));
   }
 
-  async save(account: Account): Promise<Account> {
+  async save(account: Account, manager?: EntityManager): Promise<Account> {
+    const accountRepo = manager ? manager.getRepository(AccountOrmEntity) : this.ormRepository;
+    const balanceRepo = manager
+      ? manager.getRepository(AccountBalanceOrmEntity)
+      : this.balanceOrmRepository;
     const ormEntity = AccountMapper.toOrm(account);
 
     // Save account first
-    await this.ormRepository.save({
+    await accountRepo.save({
       id: ormEntity.id,
       userId: ormEntity.userId,
       name: ormEntity.name,
@@ -95,15 +99,16 @@ export class AccountRepository implements IAccountRepository {
         currency: balance.currency,
         balance: balance.balance,
       }));
-      await this.balanceOrmRepository.upsert(balanceRecords, ['accountId', 'currency']);
+      await balanceRepo.upsert(balanceRecords, ['accountId', 'currency']);
     }
 
     // Return the domain object directly instead of re-fetching from DB
     return account;
   }
 
-  async delete(id: string): Promise<void> {
-    await this.ormRepository.delete(id);
+  async delete(id: string, manager?: EntityManager): Promise<void> {
+    const repo = manager ? manager.getRepository(AccountOrmEntity) : this.ormRepository;
+    await repo.delete(id);
   }
 
   async exists(id: string): Promise<boolean> {

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between } from 'typeorm';
+import { EntityManager, Repository, Between } from 'typeorm';
 import { Transaction } from '../../../domain/aggregates/transaction';
 import {
   ITransactionRepository,
@@ -27,6 +27,20 @@ import {
   UNRETURNED_DEBT_CATEGORY_ID,
 } from '../../../domain/constants/default-categories';
 import { getFinancialMonthBounds } from '../../../../../shared/utils/financial-period';
+
+// created_at is stored with microseconds in Postgres, but cursors round-trip
+// through JS Dates (ms precision). Both the ORDER BY and the cursor condition
+// truncate to ms so rows in the same millisecond compare as equal and the id
+// tiebreaker decides — otherwise such rows are skipped on page boundaries.
+const TRUNCATED_CREATED_AT = "date_trunc('milliseconds', t.created_at)";
+
+const CURSOR_CONDITION_WITH_ID =
+  `(t.date < :cursorDate` +
+  ` OR (t.date = :cursorDate AND ${TRUNCATED_CREATED_AT} < :cursorCreatedAt)` +
+  ` OR (t.date = :cursorDate AND ${TRUNCATED_CREATED_AT} = :cursorCreatedAt AND t.id < :cursorId))`;
+
+const LEGACY_CURSOR_CONDITION =
+  '(t.date < :cursorDate OR (t.date = :cursorDate AND t.created_at < :cursorCreatedAt))';
 
 @Injectable()
 export class TransactionRepository implements ITransactionRepository {
@@ -110,14 +124,16 @@ export class TransactionRepository implements ITransactionRepository {
     return ormEntities.map((entity) => TransactionMapper.toDomain(entity));
   }
 
-  async save(transaction: Transaction): Promise<Transaction> {
+  async save(transaction: Transaction, manager?: EntityManager): Promise<Transaction> {
+    const repo = manager ? manager.getRepository(TransactionOrmEntity) : this.ormRepository;
     const ormEntity = TransactionMapper.toOrm(transaction);
-    const savedEntity = await this.ormRepository.save(ormEntity);
+    const savedEntity = await repo.save(ormEntity);
     return TransactionMapper.toDomain(savedEntity);
   }
 
-  async saveMany(transactions: Transaction[]): Promise<Transaction[]> {
+  async saveMany(transactions: Transaction[], manager?: EntityManager): Promise<Transaction[]> {
     if (transactions.length === 0) return [];
+    const repo = manager ? manager.getRepository(TransactionOrmEntity) : this.ormRepository;
     const ormEntities = transactions.map((t) => TransactionMapper.toOrm(t));
 
     // Chunk to stay within PostgreSQL's ~32767 parameter limit.
@@ -126,23 +142,24 @@ export class TransactionRepository implements ITransactionRepository {
     const saved: TransactionOrmEntity[] = [];
     for (let i = 0; i < ormEntities.length; i += CHUNK_SIZE) {
       const chunk = ormEntities.slice(i, i + CHUNK_SIZE);
-      const result = await this.ormRepository.save(chunk);
+      const result = await repo.save(chunk);
       saved.push(...result);
     }
 
     return saved.map((entity) => TransactionMapper.toDomain(entity));
   }
 
-  async delete(id: string): Promise<void> {
-    await this.ormRepository.delete(id);
+  async delete(id: string, manager?: EntityManager): Promise<void> {
+    const repo = manager ? manager.getRepository(TransactionOrmEntity) : this.ormRepository;
+    await repo.delete(id);
   }
 
-  async deleteByAccountId(accountId: string): Promise<void> {
-    // Delete outgoing transactions and incoming transfers in parallel
-    await Promise.all([
-      this.ormRepository.delete({ accountId }),
-      this.ormRepository.delete({ toAccountId: accountId, type: 'transfer' }),
-    ]);
+  async deleteByAccountId(accountId: string, manager?: EntityManager): Promise<void> {
+    const repo = manager ? manager.getRepository(TransactionOrmEntity) : this.ormRepository;
+    // Sequential: a transactional EntityManager runs on a single connection,
+    // parallel queries on it are not safe.
+    await repo.delete({ accountId });
+    await repo.delete({ toAccountId: accountId, type: 'transfer' });
   }
 
   async countByAccountId(accountId: string): Promise<number> {
@@ -168,17 +185,29 @@ export class TransactionRepository implements ITransactionRepository {
       .createQueryBuilder('t')
       .where('t.user_id = :userId', { userId })
       .orderBy('t.date', 'DESC')
-      .addOrderBy('t.created_at', 'DESC')
+      // created_at is truncated to ms both here and in the cursor condition:
+      // JS Dates round-trip with ms precision, while Postgres stores
+      // microseconds — comparing untruncated values skips rows on page
+      // boundaries. Ties are broken by id.
+      .addOrderBy(TRUNCATED_CREATED_AT, 'DESC')
+      .addOrderBy('t.id', 'DESC')
       .limit(options.pageSize);
 
     if (options.cursorDate && options.cursorCreatedAt) {
-      query = query.andWhere(
-        '(t.date < :cursorDate OR (t.date = :cursorDate AND t.created_at < :cursorCreatedAt))',
-        {
+      if (options.cursorId) {
+        query = query.andWhere(CURSOR_CONDITION_WITH_ID, {
           cursorDate: options.cursorDate,
           cursorCreatedAt: options.cursorCreatedAt,
-        },
-      );
+          cursorId: options.cursorId,
+        });
+      } else {
+        // Legacy cursor without id (older clients): may skip rows that share
+        // (date, created_at) on a page boundary, but never duplicates.
+        query = query.andWhere(LEGACY_CURSOR_CONDITION, {
+          cursorDate: options.cursorDate,
+          cursorCreatedAt: options.cursorCreatedAt,
+        });
+      }
     }
 
     if (options.type) {
@@ -271,6 +300,7 @@ export class TransactionRepository implements ITransactionRepository {
         ? {
             date: lastItem.date.toISOString(),
             createdAt: lastItem.createdAt.toISOString(),
+            id: lastItem.id,
           }
         : null,
       hasMore: items.length === options.pageSize,
@@ -281,24 +311,30 @@ export class TransactionRepository implements ITransactionRepository {
     userId: string,
     searchTerm: string,
     pageSize: number,
-    cursor?: { date: string; createdAt: string },
+    cursor?: { date: string; createdAt: string; id?: string },
   ): Promise<PaginatedResult<Transaction>> {
     let query = this.ormRepository
       .createQueryBuilder('t')
       .where('t.user_id = :userId', { userId })
       .andWhere('t.description ILIKE :search', { search: `%${searchTerm}%` })
       .orderBy('t.date', 'DESC')
-      .addOrderBy('t.created_at', 'DESC')
+      .addOrderBy(TRUNCATED_CREATED_AT, 'DESC')
+      .addOrderBy('t.id', 'DESC')
       .limit(pageSize);
 
     if (cursor) {
-      query = query.andWhere(
-        '(t.date < :cursorDate OR (t.date = :cursorDate AND t.created_at < :cursorCreatedAt))',
-        {
+      if (cursor.id) {
+        query = query.andWhere(CURSOR_CONDITION_WITH_ID, {
           cursorDate: cursor.date,
           cursorCreatedAt: cursor.createdAt,
-        },
-      );
+          cursorId: cursor.id,
+        });
+      } else {
+        query = query.andWhere(LEGACY_CURSOR_CONDITION, {
+          cursorDate: cursor.date,
+          cursorCreatedAt: cursor.createdAt,
+        });
+      }
     }
 
     const items = await query.getMany();
@@ -310,6 +346,7 @@ export class TransactionRepository implements ITransactionRepository {
         ? {
             date: lastItem.date.toISOString(),
             createdAt: lastItem.createdAt.toISOString(),
+            id: lastItem.id,
           }
         : null,
       hasMore: items.length === pageSize,
@@ -319,7 +356,7 @@ export class TransactionRepository implements ITransactionRepository {
   async getByAccountPaginated(
     accountId: string,
     pageSize: number,
-    cursor?: { date: string; createdAt: string },
+    cursor?: { date: string; createdAt: string; id?: string },
   ): Promise<PaginatedResult<Transaction>> {
     // Request pageSize + 1 from each query to properly detect hasMore
     const fetchLimit = pageSize + 1;
@@ -328,7 +365,8 @@ export class TransactionRepository implements ITransactionRepository {
       .createQueryBuilder('t')
       .where('t.account_id = :accountId', { accountId })
       .orderBy('t.date', 'DESC')
-      .addOrderBy('t.created_at', 'DESC')
+      .addOrderBy(TRUNCATED_CREATED_AT, 'DESC')
+      .addOrderBy('t.id', 'DESC')
       .limit(fetchLimit);
 
     let incomingQuery = this.ormRepository
@@ -336,20 +374,19 @@ export class TransactionRepository implements ITransactionRepository {
       .where('t.to_account_id = :accountId', { accountId })
       .andWhere('t.type = :type', { type: 'transfer' })
       .orderBy('t.date', 'DESC')
-      .addOrderBy('t.created_at', 'DESC')
+      .addOrderBy(TRUNCATED_CREATED_AT, 'DESC')
+      .addOrderBy('t.id', 'DESC')
       .limit(fetchLimit);
 
     if (cursor) {
-      const cursorCondition =
-        '(t.date < :cursorDate OR (t.date = :cursorDate AND t.created_at < :cursorCreatedAt))';
-      outgoingQuery = outgoingQuery.andWhere(cursorCondition, {
+      const cursorCondition = cursor.id ? CURSOR_CONDITION_WITH_ID : LEGACY_CURSOR_CONDITION;
+      const cursorParams = {
         cursorDate: cursor.date,
         cursorCreatedAt: cursor.createdAt,
-      });
-      incomingQuery = incomingQuery.andWhere(cursorCondition, {
-        cursorDate: cursor.date,
-        cursorCreatedAt: cursor.createdAt,
-      });
+        ...(cursor.id ? { cursorId: cursor.id } : {}),
+      };
+      outgoingQuery = outgoingQuery.andWhere(cursorCondition, cursorParams);
+      incomingQuery = incomingQuery.andWhere(cursorCondition, cursorParams);
     }
 
     const [outgoing, incoming] = await Promise.all([
@@ -371,6 +408,7 @@ export class TransactionRepository implements ITransactionRepository {
         ? {
             date: lastItem.date.toISOString(),
             createdAt: lastItem.createdAt.toISOString(),
+            id: lastItem.id,
           }
         : null,
       hasMore,
@@ -932,7 +970,11 @@ export class TransactionRepository implements ITransactionRepository {
       .sort((x, y) => {
         const dateCompare = new Date(y.date).getTime() - new Date(x.date).getTime();
         if (dateCompare !== 0) return dateCompare;
-        return new Date(y.createdAt).getTime() - new Date(x.createdAt).getTime();
+        // getTime() is ms precision, matching the ms-truncated SQL ordering
+        const createdCompare = new Date(y.createdAt).getTime() - new Date(x.createdAt).getTime();
+        if (createdCompare !== 0) return createdCompare;
+        // id DESC: canonical uuid hex strings compare the same as Postgres uuids
+        return y.id < x.id ? -1 : y.id > x.id ? 1 : 0;
       })
       .slice(0, limit);
   }

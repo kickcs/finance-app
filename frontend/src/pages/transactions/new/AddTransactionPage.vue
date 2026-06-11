@@ -117,8 +117,10 @@ async function handleSplitSubmit(uid: string): Promise<boolean> {
   );
 
   if (!success) {
-    await rollbackTransaction(transactionId, uid);
-    validationError.value = 'Не удалось создать долги для раздельного счёта. Операция отменена.';
+    const rolledBack = await rollbackTransaction(transactionId, uid);
+    validationError.value = rolledBack
+      ? 'Не удалось создать долги для раздельного счёта. Операция отменена.'
+      : 'Не удалось создать часть долгов. Транзакция сохранена — проверьте её в истории.';
     return false;
   }
 
@@ -126,6 +128,10 @@ async function handleSplitSubmit(uid: string): Promise<boolean> {
 }
 
 async function handleSubmit() {
+  // Double-tap guard: a second tap before the first submit settles would
+  // create a duplicate transaction.
+  if (isSubmitting.value) return;
+
   validationError.value = null;
 
   if (formData.value.type === 'debt') {

@@ -68,6 +68,7 @@ export class TransactionsController {
         pagination.pageSize,
         pagination.cursorDate,
         pagination.cursorCreatedAt,
+        pagination.cursorId,
         pagination.type,
         pagination.accountId,
         pagination.categoryId,
@@ -174,6 +175,7 @@ export class TransactionsController {
         pagination.pageSize ?? 20,
         pagination.cursorDate,
         pagination.cursorCreatedAt,
+        pagination.cursorId,
       ),
     );
   }

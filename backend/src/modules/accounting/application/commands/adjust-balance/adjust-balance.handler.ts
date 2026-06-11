@@ -64,9 +64,9 @@ export class AdjustBalanceHandler implements ICommandHandler<AdjustBalanceComman
       account.credit(absoluteAmount, currency);
     }
 
-    await this.dataSource.transaction(async () => {
-      await this.accountRepository.save(account);
-      await this.transactionRepository.save(transaction);
+    await this.dataSource.transaction(async (manager) => {
+      await this.accountRepository.save(account, manager);
+      await this.transactionRepository.save(transaction, manager);
     });
 
     await this.eventPublisher.publishEvents(account);

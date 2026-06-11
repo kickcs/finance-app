@@ -18,6 +18,7 @@ export class GetTransactionsPaginatedHandler implements IQueryHandler<GetTransac
       pageSize: query.pageSize,
       cursorDate: query.cursorDate,
       cursorCreatedAt: query.cursorCreatedAt,
+      cursorId: query.cursorId,
       type: query.type,
       accountId: query.accountId,
       categoryId: query.categoryId,

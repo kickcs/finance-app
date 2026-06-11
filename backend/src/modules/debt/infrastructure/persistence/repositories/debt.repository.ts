@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { Debt } from '../../../domain/aggregates/debt';
 import {
   IDebtRepository,
@@ -57,9 +57,10 @@ export class DebtRepository implements IDebtRepository {
     return count > 0;
   }
 
-  async save(debt: Debt): Promise<Debt> {
+  async save(debt: Debt, manager?: EntityManager): Promise<Debt> {
+    const repo = manager ? manager.getRepository(DebtOrmEntity) : this.ormRepository;
     const ormEntity = DebtMapper.toOrm(debt);
-    const savedEntity = await this.ormRepository.save(ormEntity);
+    const savedEntity = await repo.save(ormEntity);
     return DebtMapper.toDomain(savedEntity);
   }
 

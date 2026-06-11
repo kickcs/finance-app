@@ -1,3 +1,4 @@
+import type { EntityManager } from 'typeorm';
 import type { Category } from '../aggregates/category';
 
 export const CATEGORY_REPOSITORY = Symbol('CATEGORY_REPOSITORY');
@@ -10,7 +11,8 @@ export interface ICategoryRepository {
   findByUserId(userId: string): Promise<Category[]>;
   findByUserIdAndType(userId: string, type: string): Promise<Category[]>;
   save(category: Category): Promise<Category>;
-  saveMany(categories: Category[]): Promise<Category[]>;
+  /** Pass `manager` to participate in an open DB transaction. */
+  saveMany(categories: Category[], manager?: EntityManager): Promise<Category[]>;
   delete(id: string): Promise<void>;
   exists(id: string): Promise<boolean>;
   updateSortOrder(categoryIds: string[]): Promise<void>;

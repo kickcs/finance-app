@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { EntityManager, Repository, In } from 'typeorm';
 import {
   IAccountBalanceRepository,
   AccountBalanceData,
@@ -115,8 +115,9 @@ export class AccountBalanceRepository implements IAccountBalanceRepository {
     await this.ormRepository.delete({ accountId, currency });
   }
 
-  async deleteByAccountId(accountId: string): Promise<void> {
-    await this.ormRepository.delete({ accountId });
+  async deleteByAccountId(accountId: string, manager?: EntityManager): Promise<void> {
+    const repo = manager ? manager.getRepository(AccountBalanceOrmEntity) : this.ormRepository;
+    await repo.delete({ accountId });
   }
 
   private toData(entity: AccountBalanceOrmEntity): AccountBalanceData {

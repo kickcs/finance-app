@@ -1,3 +1,4 @@
+import type { EntityManager } from 'typeorm';
 import type { Debt } from '../aggregates/debt';
 
 export const DEBT_REPOSITORY = Symbol('DEBT_REPOSITORY');
@@ -36,7 +37,8 @@ export interface IDebtRepository {
   findByTransactionId(transactionId: string): Promise<Debt | null>;
   findByCloseTransactionId(transactionId: string): Promise<Debt | null>;
   hasOpenDebtsForTransaction(transactionId: string): Promise<boolean>;
-  save(debt: Debt): Promise<Debt>;
+  /** Pass `manager` to participate in an open DB transaction. */
+  save(debt: Debt, manager?: EntityManager): Promise<Debt>;
   delete(id: string): Promise<void>;
   exists(id: string): Promise<boolean>;
   getPaginated(userId: string, options: DebtPaginationOptions): Promise<PaginatedDebtGroups>;

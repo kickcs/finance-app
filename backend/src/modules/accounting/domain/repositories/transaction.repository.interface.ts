@@ -1,10 +1,18 @@
+import type { EntityManager } from 'typeorm';
 import type { Transaction } from '../aggregates/transaction';
 
 export const TRANSACTION_REPOSITORY = Symbol('TRANSACTION_REPOSITORY');
 
+export interface PaginatedCursor {
+  date: string;
+  createdAt: string;
+  /** Unique tiebreaker: rows can share (date, createdAt), e.g. after bulk import. */
+  id: string;
+}
+
 export interface PaginatedResult<T> {
   data: T[];
-  nextCursor: { date: string; createdAt: string } | null;
+  nextCursor: PaginatedCursor | null;
   hasMore: boolean;
 }
 
@@ -12,6 +20,7 @@ export interface PaginationOptions {
   pageSize: number;
   cursorDate?: string;
   cursorCreatedAt?: string;
+  cursorId?: string;
   type?: string;
   accountId?: string;
   categoryId?: string;
@@ -81,10 +90,11 @@ export interface ITransactionRepository {
   findByAccountId(accountId: string): Promise<Transaction[]>;
   findByAccountIdWithIncoming(accountId: string, limit?: number): Promise<Transaction[]>;
   findByDateRange(userId: string, startDate: Date, endDate: Date): Promise<Transaction[]>;
-  save(transaction: Transaction): Promise<Transaction>;
-  saveMany(transactions: Transaction[]): Promise<Transaction[]>;
-  delete(id: string): Promise<void>;
-  deleteByAccountId(accountId: string): Promise<void>;
+  /** Pass `manager` to participate in an open DB transaction. */
+  save(transaction: Transaction, manager?: EntityManager): Promise<Transaction>;
+  saveMany(transactions: Transaction[], manager?: EntityManager): Promise<Transaction[]>;
+  delete(id: string, manager?: EntityManager): Promise<void>;
+  deleteByAccountId(accountId: string, manager?: EntityManager): Promise<void>;
   countByAccountId(accountId: string): Promise<number>;
   exists(id: string): Promise<boolean>;
 
@@ -97,12 +107,12 @@ export interface ITransactionRepository {
     userId: string,
     searchTerm: string,
     pageSize: number,
-    cursor?: { date: string; createdAt: string },
+    cursor?: { date: string; createdAt: string; id?: string },
   ): Promise<PaginatedResult<Transaction>>;
   getByAccountPaginated(
     accountId: string,
     pageSize: number,
-    cursor?: { date: string; createdAt: string },
+    cursor?: { date: string; createdAt: string; id?: string },
   ): Promise<PaginatedResult<Transaction>>;
 
   // Statistics

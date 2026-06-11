@@ -28,7 +28,7 @@ export class GetTransactionsByAccountPaginatedHandler implements IQueryHandler<G
 
     const cursor =
       query.cursorDate && query.cursorCreatedAt
-        ? { date: query.cursorDate, createdAt: query.cursorCreatedAt }
+        ? { date: query.cursorDate, createdAt: query.cursorCreatedAt, id: query.cursorId }
         : undefined;
 
     const result = await this.transactionRepository.getByAccountPaginated(

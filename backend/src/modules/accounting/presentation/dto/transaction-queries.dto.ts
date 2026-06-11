@@ -12,10 +12,11 @@ export class DateRangeDto {
 
 /**
  * Cursor-based pagination for account-scoped transaction queries.
- * Reuses pageSize/cursorDate/cursorCreatedAt validation from PaginationDto.
+ * Reuses pageSize/cursor* validation from PaginationDto.
  */
 export class AccountPaginationDto extends PickType(PaginationDto, [
   'pageSize',
   'cursorDate',
   'cursorCreatedAt',
+  'cursorId',
 ] as const) {}

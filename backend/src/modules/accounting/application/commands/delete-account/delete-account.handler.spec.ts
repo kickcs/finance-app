@@ -92,9 +92,9 @@ describe('DeleteAccountHandler', () => {
 
     await handler.execute(new DeleteAccountCommand('acc-1', 'user-1'));
 
-    expect(mockTransactionRepository.deleteByAccountId).toHaveBeenCalledWith('acc-1');
-    expect(mockAccountBalanceRepository.deleteByAccountId).toHaveBeenCalledWith('acc-1');
-    expect(mockAccountRepository.delete).toHaveBeenCalledWith('acc-1');
+    expect(mockTransactionRepository.deleteByAccountId).toHaveBeenCalledWith('acc-1', undefined);
+    expect(mockAccountBalanceRepository.deleteByAccountId).toHaveBeenCalledWith('acc-1', undefined);
+    expect(mockAccountRepository.delete).toHaveBeenCalledWith('acc-1', undefined);
     expect(mockEventPublisher.publishEvents).toHaveBeenCalledTimes(1);
   });
 

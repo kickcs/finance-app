@@ -1,4 +1,13 @@
-import { IsString, IsNumber, IsOptional, IsIn, IsUUID, Max, Min } from 'class-validator';
+import {
+  IsString,
+  IsNumber,
+  IsOptional,
+  IsIn,
+  IsUUID,
+  IsDateString,
+  Max,
+  Min,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class PaginationDto {
@@ -10,12 +19,16 @@ export class PaginationDto {
   pageSize?: number = 20;
 
   @IsOptional()
-  @IsString()
+  @IsDateString()
   cursorDate?: string;
 
   @IsOptional()
-  @IsString()
+  @IsDateString()
   cursorCreatedAt?: string;
+
+  @IsOptional()
+  @IsUUID()
+  cursorId?: string;
 
   @IsOptional()
   @IsIn(['income', 'expense', 'transfer', 'debt'])

@@ -1,3 +1,5 @@
+import type { EntityManager } from 'typeorm';
+
 export const ACCOUNT_BALANCE_REPOSITORY = Symbol('ACCOUNT_BALANCE_REPOSITORY');
 
 export interface AccountBalanceData {
@@ -26,5 +28,5 @@ export interface IAccountBalanceRepository {
     delta: number,
   ): Promise<AccountBalanceData | null>;
   delete(accountId: string, currency: string): Promise<void>;
-  deleteByAccountId(accountId: string): Promise<void>;
+  deleteByAccountId(accountId: string, manager?: EntityManager): Promise<void>;
 }

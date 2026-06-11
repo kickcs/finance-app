@@ -7,7 +7,12 @@ import {
 } from '@tanstack/vue-query';
 import { transactionsApi, transactionQueryKeys } from '@/entities/transaction';
 import { accountQueryKeys } from '@/entities/account';
-import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
+import { debtsApi } from '@/entities/debt';
+import {
+  invalidateTransactionRelated,
+  invalidateAccountRelated,
+  invalidateDebtRelated,
+} from '@/shared/api/invalidation';
 import { useToast } from '@/shared/ui';
 import { useFeatureHints } from '@/features/feature-hints';
 import { CATEGORY_IDS, getCategoryById } from '@/entities/category';
@@ -369,21 +374,41 @@ export function useSubmitTransaction() {
 
   /**
    * Rollback a created transaction and invalidate related caches.
-   * Used when split debt creation fails after transaction was already created.
+   * Used by the undo toast and when split debt creation fails after the
+   * transaction was already created. Returns false if the rollback failed.
    */
-  async function rollbackTransaction(transactionId: string, userId: string) {
+  async function rollbackTransaction(transactionId: string, userId: string): Promise<boolean> {
     try {
+      // Open split debts linked to the transaction block its deletion on the
+      // backend — remove them first.
+      const debts = await debtsApi.getAll(userId);
+      const linkedDebts = debts.filter(
+        (d) => d.source_transaction_id === transactionId && !d.is_closed,
+      );
+      for (const debt of linkedDebts) {
+        await debtsApi.delete(debt.id);
+      }
+
       await transactionsApi.delete(transactionId);
-      invalidateTransactionRelated(queryClient, userId);
-      invalidateAccountRelated(queryClient, userId);
+
+      if (linkedDebts.length > 0) {
+        await invalidateDebtRelated(queryClient, userId);
+      } else {
+        invalidateTransactionRelated(queryClient, userId);
+        invalidateAccountRelated(queryClient, userId);
+      }
+      return true;
     } catch (e) {
       console.error('Failed to rollback transaction:', e);
+      // Partial cleanup may have happened — sync caches with the server state.
+      await invalidateDebtRelated(queryClient, userId);
       toast({
         title: 'Ошибка отмены',
         description: 'Не удалось отменить транзакцию. Проверьте историю.',
         variant: 'error',
         duration: 5000,
       });
+      return false;
     }
   }
 

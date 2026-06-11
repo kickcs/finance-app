@@ -4,6 +4,8 @@ import type { Transaction, TransactionInsert } from '@/shared/api/database.types
 export interface PaginatedCursor {
   date: string;
   createdAt: string;
+  /** Tiebreaker for rows sharing (date, createdAt); absent in cached legacy cursors. */
+  id?: string;
 }
 
 export interface PaginatedResult<T> {
@@ -295,6 +297,7 @@ export const transactionsApi = {
         pageSize,
         cursorDate: cursor?.date,
         cursorCreatedAt: cursor?.createdAt,
+        cursorId: cursor?.id,
         type: filters?.type,
         accountId: filters?.accountId,
         categoryId: filters?.categoryId,
@@ -325,6 +328,7 @@ export const transactionsApi = {
         pageSize,
         cursorDate: cursor?.date,
         cursorCreatedAt: cursor?.createdAt,
+        cursorId: cursor?.id,
       },
     });
     return {
@@ -348,6 +352,7 @@ export const transactionsApi = {
         pageSize,
         cursorDate: cursor?.date,
         cursorCreatedAt: cursor?.createdAt,
+        cursorId: cursor?.id,
       },
     });
     return {

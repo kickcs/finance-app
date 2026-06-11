@@ -2,7 +2,6 @@ import { ref, computed, watch } from 'vue';
 import { debtsApi, buildDebtName } from '@/entities/debt';
 import { queryClient } from '@/shared/api/queryClient';
 import { invalidateDebtRelated } from '@/shared/api/invalidation';
-import { useToast } from '@/shared/ui';
 import type { SplitExpenseData, SplitMethod } from './types';
 import { initialSplitData } from './types';
 
@@ -13,8 +12,6 @@ function generateParticipantId(): string {
 }
 
 export function useSplitExpense(totalAmountRef: () => number) {
-  const { toast } = useToast();
-
   const splitData = ref<SplitExpenseData>({
     ...initialSplitData,
     participants: [], // Create new array to avoid sharing reference
@@ -233,25 +230,16 @@ export function useSplitExpense(totalAmountRef: () => number) {
 
       return true;
     } catch (e) {
-      console.error('Failed to create debts for split expense:', e);
+      console.error(
+        `Failed to create debts for split expense (${createdCount}/${validParticipants.length} created):`,
+        e,
+      );
 
       // Invalidate caches so any partially created debts are visible
       await invalidateDebtRelated(queryClient, userId);
 
-      if (createdCount > 0) {
-        toast({
-          title: `Создано ${createdCount} из ${validParticipants.length} долгов`,
-          description: 'Остальные можно добавить через редактирование транзакции',
-          variant: 'warning',
-        });
-      } else {
-        toast({
-          title: 'Не удалось создать долги',
-          description: 'Транзакция создана, долги можно добавить позже',
-          variant: 'error',
-        });
-      }
-
+      // Messaging is up to the caller: it decides whether to roll the
+      // transaction back (with its partially created debts) or keep it.
       return false;
     }
   }

@@ -44,9 +44,12 @@ export class TransferDomainService {
       throw new Error('Both accounts must belong to the same user');
     }
 
-    // Validate not transferring to same account
-    if (fromAccount.id === toAccount.id) {
-      throw new Error('Cannot transfer to the same account');
+    // Same-account transfers are allowed only as currency conversions
+    // (e.g. USD -> EUR inside one multi-currency account). The caller must
+    // pass the SAME aggregate instance for both sides in that case, otherwise
+    // the second save overwrites the first one's balance changes.
+    if (fromAccount.id === toAccount.id && fromCurrency === toCurrency) {
+      throw new Error('Cannot transfer to the same account in the same currency');
     }
 
     // Debit from source account

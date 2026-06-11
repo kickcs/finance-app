@@ -43,10 +43,10 @@ export class DeleteAccountHandler implements ICommandHandler<DeleteAccountComman
     account.markDeleted();
 
     // Delete related data and account atomically
-    await this.dataSource.transaction(async () => {
-      await this.transactionRepository.deleteByAccountId(command.id);
-      await this.accountBalanceRepository.deleteByAccountId(command.id);
-      await this.accountRepository.delete(command.id);
+    await this.dataSource.transaction(async (manager) => {
+      await this.transactionRepository.deleteByAccountId(command.id, manager);
+      await this.accountBalanceRepository.deleteByAccountId(command.id, manager);
+      await this.accountRepository.delete(command.id, manager);
     });
 
     await this.eventPublisher.publishEvents(account);

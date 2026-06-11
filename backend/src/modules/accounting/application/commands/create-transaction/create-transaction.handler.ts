@@ -14,12 +14,6 @@ import {
 } from '../../../domain/repositories/account.repository.interface';
 import { DomainEventPublisher } from '../../../../../shared';
 import { toTransactionResponse } from '../../helpers/to-transaction-response';
-import { AccountOrmEntity } from '../../../infrastructure/persistence/typeorm/account.orm-entity';
-import { AccountBalanceOrmEntity } from '../../../infrastructure/persistence/typeorm/account-balance.orm-entity';
-import { TransactionOrmEntity } from '../../../infrastructure/persistence/typeorm/transaction.orm-entity';
-import { AccountMapper } from '../../../infrastructure/persistence/mappers/account.mapper';
-import { TransactionMapper } from '../../../infrastructure/persistence/mappers/transaction.mapper';
-import { Account } from '../../../domain/aggregates/account';
 import { DEBT_CATEGORY_IDS } from '../../../domain/constants/default-categories';
 
 @CommandHandler(CreateTransactionCommand)
@@ -89,7 +83,26 @@ export class CreateTransactionHandler implements ICommandHandler<CreateTransacti
         throw new BadRequestException('toAccountId is required for transfers');
       }
 
-      const toAccount = await this.accountRepository.findByIdWithBalances(toAccountId);
+      const effectiveToCurrency = toCurrency ?? currency;
+
+      // Without an explicit toAmount a cross-currency transfer would silently
+      // credit the destination 1:1 (100 USD -> 100 EUR).
+      if (effectiveToCurrency !== currency && (toAmount === undefined || toAmount === null)) {
+        throw new BadRequestException('toAmount is required for cross-currency transfers');
+      }
+
+      // Intra-account transfer = currency conversion inside one multi-currency
+      // account. Both sides MUST share one aggregate instance: loading the
+      // account twice would make the second save overwrite the first one's
+      // balance change.
+      const isIntraAccount = toAccountId === accountId;
+      if (isIntraAccount && effectiveToCurrency === currency) {
+        throw new BadRequestException('Cannot transfer to the same account in the same currency');
+      }
+
+      const toAccount = isIntraAccount
+        ? account
+        : await this.accountRepository.findByIdWithBalances(toAccountId);
       if (!toAccount) {
         throw new NotFoundException('Destination account not found');
       }
@@ -132,30 +145,29 @@ export class CreateTransactionHandler implements ICommandHandler<CreateTransacti
       }
 
       // Save all within a database transaction. If an outer manager was
-      // supplied we participate in that transaction via manager.getRepository.
-      // Otherwise we go through the injected default-connection repositories
-      // wrapped in our own transaction (existing behaviour).
-      if (outerManager) {
-        await this.persistAccount(outerManager, account);
-        await this.persistAccount(outerManager, toAccount);
-        await this.persistTransaction(outerManager, transaction);
-        if (feeTransaction) {
-          await this.persistTransaction(outerManager, feeTransaction);
+      // supplied we participate in that transaction, otherwise we open our own.
+      const persistTransfer = async (manager: EntityManager) => {
+        await this.accountRepository.save(account, manager);
+        if (toAccount !== account) {
+          await this.accountRepository.save(toAccount, manager);
         }
+        await this.transactionRepository.save(transaction, manager);
+        if (feeTransaction) {
+          await this.transactionRepository.save(feeTransaction, manager);
+        }
+      };
+
+      if (outerManager) {
+        await persistTransfer(outerManager);
       } else {
-        await this.dataSource.transaction(async () => {
-          await this.accountRepository.save(account);
-          await this.accountRepository.save(toAccount);
-          await this.transactionRepository.save(transaction);
-          if (feeTransaction) {
-            await this.transactionRepository.save(feeTransaction);
-          }
-        });
+        await this.dataSource.transaction(persistTransfer);
       }
 
       // Publish events after commit
       await this.eventPublisher.publishEvents(account);
-      await this.eventPublisher.publishEvents(toAccount);
+      if (toAccount !== account) {
+        await this.eventPublisher.publishEvents(toAccount);
+      }
       await this.eventPublisher.publishEvents(transaction);
       if (feeTransaction) {
         await this.eventPublisher.publishEvents(feeTransaction);
@@ -201,20 +213,18 @@ export class CreateTransactionHandler implements ICommandHandler<CreateTransacti
       }
 
       // Save within a database transaction. If an outer manager was supplied,
-      // run the writes through it; otherwise fall back to the injected
-      // repositories inside their own transaction (existing behaviour).
-      if (outerManager) {
+      // run the writes through it; otherwise open our own transaction.
+      const persist = async (manager: EntityManager) => {
         if (!isInformational) {
-          await this.persistAccount(outerManager, account);
+          await this.accountRepository.save(account, manager);
         }
-        await this.persistTransaction(outerManager, transaction);
+        await this.transactionRepository.save(transaction, manager);
+      };
+
+      if (outerManager) {
+        await persist(outerManager);
       } else {
-        await this.dataSource.transaction(async () => {
-          if (!isInformational) {
-            await this.accountRepository.save(account);
-          }
-          await this.transactionRepository.save(transaction);
-        });
+        await this.dataSource.transaction(persist);
       }
 
       // Publish events after commit
@@ -225,59 +235,5 @@ export class CreateTransactionHandler implements ICommandHandler<CreateTransacti
     }
 
     return toTransactionResponse(transaction);
-  }
-
-  /**
-   * Persist an account aggregate via the supplied EntityManager. Mirrors the
-   * behaviour of `AccountRepository.save` so the same write semantics apply
-   * whether the call goes through the default-connection repository or an
-   * outer-transaction manager.
-   */
-  private async persistAccount(manager: EntityManager, account: Account): Promise<void> {
-    const accountRepo = manager.getRepository(AccountOrmEntity);
-    const balanceRepo = manager.getRepository(AccountBalanceOrmEntity);
-    const ormEntity = AccountMapper.toOrm(account);
-
-    await accountRepo.save({
-      id: ormEntity.id,
-      userId: ormEntity.userId,
-      name: ormEntity.name,
-      balance: ormEntity.balance,
-      currency: ormEntity.currency,
-      icon: ormEntity.icon,
-      color: ormEntity.color,
-      type: ormEntity.type,
-      order: ormEntity.order,
-      creditLimit: ormEntity.creditLimit,
-      gracePeriodDays: ormEntity.gracePeriodDays,
-      billingDay: ormEntity.billingDay,
-      totalAmount: ormEntity.totalAmount,
-      interestRate: ormEntity.interestRate,
-      monthlyPayment: ormEntity.monthlyPayment,
-      startDate: ormEntity.startDate,
-      endDate: ormEntity.endDate,
-      maturityDate: ormEntity.maturityDate,
-      isReplenishable: ormEntity.isReplenishable,
-      isWithdrawable: ormEntity.isWithdrawable,
-    });
-
-    if (ormEntity.balances.length > 0) {
-      const balanceRecords = ormEntity.balances.map((balance) => ({
-        id: balance.id,
-        accountId: ormEntity.id,
-        currency: balance.currency,
-        balance: balance.balance,
-      }));
-      await balanceRepo.upsert(balanceRecords, ['accountId', 'currency']);
-    }
-  }
-
-  private async persistTransaction(
-    manager: EntityManager,
-    transaction: Transaction,
-  ): Promise<void> {
-    const repo = manager.getRepository(TransactionOrmEntity);
-    const ormEntity = TransactionMapper.toOrm(transaction);
-    await repo.save(ormEntity);
   }
 }

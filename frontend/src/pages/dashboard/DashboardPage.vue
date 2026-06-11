@@ -23,6 +23,7 @@ import { useDashboardNavigation } from './model/useDashboardNavigation';
 import { provideDashboardContext } from './model/dashboardContext';
 
 import { getGreeting } from '@/shared/lib/format/greeting';
+import { useFinancialPeriod } from '@/shared/lib/hooks/useFinancialPeriod';
 import { FinancialPeriodModal } from '@/features/configure-financial-period';
 
 import DashboardMobileHeader from './ui/DashboardMobileHeader.vue';
@@ -115,10 +116,15 @@ async function handleRefresh() {
   ]);
 }
 
+// Budget overrides are stored per FINANCIAL month — the same one the backend
+// resolves for GET /budgets/current. Using the calendar month here would write
+// the override into a period the dashboard is not displaying.
+const { currentPeriod: financialPeriod } = useFinancialPeriod();
+
 async function handleBudgetSave(amount: number) {
   if (budget.value?.budget?.isDefault === false) {
-    const now = new Date();
-    await data.setBudgetOverride(now.getFullYear(), now.getMonth() + 1, amount);
+    const { year, month } = financialPeriod.value;
+    await data.setBudgetOverride(year, month, amount);
   } else {
     await data.setBudgetDefault(amount);
   }
@@ -126,8 +132,8 @@ async function handleBudgetSave(amount: number) {
 }
 
 async function handleBudgetReset() {
-  const now = new Date();
-  await data.removeBudgetOverride(now.getFullYear(), now.getMonth() + 1);
+  const { year, month } = financialPeriod.value;
+  await data.removeBudgetOverride(year, month);
   showBudgetSheet.value = false;
 }
 

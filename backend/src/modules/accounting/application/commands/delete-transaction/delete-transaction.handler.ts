@@ -65,12 +65,15 @@ export class DeleteTransactionHandler implements ICommandHandler<DeleteTransacti
     transaction.markDeleted();
 
     // Wrap all balance reversals + delete in a DB transaction
-    await this.dataSource.transaction(async () => {
+    await this.dataSource.transaction(async (manager) => {
       if (account) {
         if (transaction.type.isTransfer() && transaction.toAccountId) {
-          const toAccount = await this.accountRepository.findByIdWithBalances(
-            transaction.toAccountId,
-          );
+          // Intra-account conversion: both sides must share one aggregate
+          // instance, otherwise the second save overwrites the first.
+          const toAccount =
+            transaction.toAccountId === transaction.accountId
+              ? account
+              : await this.accountRepository.findByIdWithBalances(transaction.toAccountId);
           if (!toAccount) {
             throw new NotFoundException(
               'Destination account not found, cannot safely delete transfer',
@@ -84,11 +87,13 @@ export class DeleteTransactionHandler implements ICommandHandler<DeleteTransacti
             transaction.toAmountValue!,
             transaction.toCurrency!,
           );
-          await this.accountRepository.save(toAccount);
+          if (toAccount !== account) {
+            await this.accountRepository.save(toAccount, manager);
+          }
         } else {
           BalanceCalculationService.reverseTransaction(account, transaction);
         }
-        await this.accountRepository.save(account);
+        await this.accountRepository.save(account, manager);
       }
 
       if (linkedClosedDebt) {
@@ -99,10 +104,10 @@ export class DeleteTransactionHandler implements ICommandHandler<DeleteTransacti
           isClosed: false,
           remainingAmount: restoredRemaining,
         });
-        await this.debtRepository.save(linkedClosedDebt);
+        await this.debtRepository.save(linkedClosedDebt, manager);
       }
 
-      await this.transactionRepository.delete(command.id);
+      await this.transactionRepository.delete(command.id, manager);
     });
 
     // Publish events after commit

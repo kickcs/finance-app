@@ -102,7 +102,7 @@ describe('DeleteTransactionHandler', () => {
 
       // Balance should be reversed: 700 + 300 = 1000
       expect(account.getTotalBalance('USD')).toBe(1000);
-      expect(mockTransactionRepository.delete).toHaveBeenCalledWith('tx-1');
+      expect(mockTransactionRepository.delete).toHaveBeenCalledWith('tx-1', undefined);
       expect(mockEventPublisher.publishEvents).toHaveBeenCalledTimes(2);
     });
   });
@@ -121,7 +121,7 @@ describe('DeleteTransactionHandler', () => {
 
       // Balance should be reversed: 1500 - 500 = 1000
       expect(account.getTotalBalance('USD')).toBe(1000);
-      expect(mockTransactionRepository.delete).toHaveBeenCalledWith('tx-1');
+      expect(mockTransactionRepository.delete).toHaveBeenCalledWith('tx-1', undefined);
     });
   });
 
@@ -245,7 +245,7 @@ describe('DeleteTransactionHandler', () => {
 
       // Should not throw, debt check was skipped
       expect(mockDebtRepository.hasOpenDebtsForTransaction).not.toHaveBeenCalled();
-      expect(mockTransactionRepository.delete).toHaveBeenCalledWith('tx-1');
+      expect(mockTransactionRepository.delete).toHaveBeenCalledWith('tx-1', undefined);
     });
   });
 
@@ -266,7 +266,7 @@ describe('DeleteTransactionHandler', () => {
       await handler.execute(new DeleteTransactionCommand('tx-1', 'user-1'));
 
       // Should still delete the transaction
-      expect(mockTransactionRepository.delete).toHaveBeenCalledWith('tx-1');
+      expect(mockTransactionRepository.delete).toHaveBeenCalledWith('tx-1', undefined);
       // Should not try to save a null account
       expect(mockAccountRepository.save).not.toHaveBeenCalled();
     });

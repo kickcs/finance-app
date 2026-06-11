@@ -29,6 +29,11 @@ export function useSubmitStep(
   const submitError = ref<string | null>(null);
   const isSuccess = ref(false);
 
+  // Retry bookkeeping: keeps a failed submit from duplicating the transaction
+  // or already-created debts on the next attempt.
+  const createdTransactionId = ref<string | null>(null);
+  const createdDebtParticipantIds = new Set<string>();
+
   const participantSummaries = computed<ParticipantSummary[]>(() => {
     const summaries = participants.value.map((p) => {
       const assignedItems = items.value
@@ -79,47 +84,54 @@ export function useSubmitStep(
   async function handleSubmit() {
     const uid_ = userId();
     if (!uid_ || !formData.value.accountId || !formData.value.categoryId) return;
+    // Double-tap guard + no resubmission after success
+    if (isSubmitting.value || isSuccess.value) return;
 
     isSubmitting.value = true;
     submitError.value = null;
 
     try {
-      // Create the main expense transaction
-      const transaction = await transactionsApi.create({
-        user_id: uid_,
-        account_id: formData.value.accountId,
-        category_id: formData.value.categoryId,
-        amount: totalAmount.value,
-        currency: formData.value.currency,
-        type: 'expense',
-        description: formData.value.description || null,
-        date: new Date(formData.value.date).toISOString(),
-      });
+      // Create the main expense transaction (skipped on retry if it already
+      // succeeded in a previous attempt)
+      if (!createdTransactionId.value) {
+        const transaction = await transactionsApi.create({
+          user_id: uid_,
+          account_id: formData.value.accountId,
+          category_id: formData.value.categoryId,
+          amount: totalAmount.value,
+          currency: formData.value.currency,
+          type: 'expense',
+          description: formData.value.description || null,
+          date: new Date(formData.value.date).toISOString(),
+        });
+        createdTransactionId.value = transaction.id;
+      }
 
-      // Create debts for non-me participants
+      // Create debts for non-me participants, sequentially so a failure mid-way
+      // is retryable without duplicating the already-created ones
       if (formData.value.createDebts) {
         const nonMeSummaries = participantSummaries.value.filter((p) => {
           if (p.isMe) return false;
           if (p.total <= 0) return false;
+          if (createdDebtParticipantIds.has(p.id)) return false;
           const participant = participants.value.find((pp) => pp.id === p.id);
           if (participant?.paidById) return false;
           return true;
         });
-        await Promise.all(
-          nonMeSummaries.map((summary) =>
-            debtsApi.create({
-              user_id: uid_,
-              name: `Чек: ${storeName.value || 'Без названия'}`,
-              total_amount: summary.total,
-              remaining_amount: summary.total,
-              debt_type: 'given',
-              person_name: summary.name,
-              account_id: formData.value.accountId!,
-              currency: formData.value.currency,
-              source_transaction_id: transaction.id,
-            }),
-          ),
-        );
+        for (const summary of nonMeSummaries) {
+          await debtsApi.create({
+            user_id: uid_,
+            name: `Чек: ${storeName.value || 'Без названия'}`,
+            total_amount: summary.total,
+            remaining_amount: summary.total,
+            debt_type: 'given',
+            person_name: summary.name,
+            account_id: formData.value.accountId!,
+            currency: formData.value.currency,
+            source_transaction_id: createdTransactionId.value,
+          });
+          createdDebtParticipantIds.add(summary.id);
+        }
       }
 
       // Invalidate caches
