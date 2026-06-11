@@ -19,6 +19,19 @@ const variantIcons: Record<string, string> = {
   warning: 'warning',
 };
 
+const variantIconClasses: Record<string, string> = {
+  success: 'bg-success-light text-success',
+  error: 'bg-danger-light text-danger',
+  warning: 'bg-warning-light text-warning',
+};
+
+const variantProgressClasses: Record<string, string> = {
+  default: 'bg-primary',
+  success: 'bg-success',
+  error: 'bg-danger',
+  warning: 'bg-warning',
+};
+
 // Calculate animation duration (fallback to default 3000ms if not specified)
 const getDuration = (duration?: number) => duration || 3000;
 
@@ -69,25 +82,34 @@ onUnmounted(() => {
 <template>
   <ToastViewport>
     <template v-for="toast in toasts" :key="toast.id">
-      <!-- Transaction success: standalone dark toast -->
+      <!-- Transaction success: glass card on design tokens -->
       <div
         v-if="toast.variant === 'transaction-success' && toast.transactionData"
-        v-show="toast.open"
-        class="relative rounded-[14px] bg-slate-800 p-3.5 shadow-lg pointer-events-auto"
+        class="transaction-toast pointer-events-auto relative mt-1.5 w-full max-w-[min(90vw,360px)] overflow-hidden rounded-2xl border border-border-light/40 bg-card-light/85 p-3.5 shadow-lg shadow-black/5 backdrop-blur-md dark:border-border-dark/50 dark:bg-card-dark/85 dark:shadow-black/20"
+        :class="toast.open ? 'transaction-toast-enter' : 'transaction-toast-leave'"
       >
+        <!-- Soft success wash behind the badge -->
+        <div
+          class="pointer-events-none absolute inset-0"
+          style="
+            background: radial-gradient(
+              140px circle at 2.5rem 50%,
+              color-mix(in srgb, var(--color-success) 10%, transparent),
+              transparent 70%
+            );
+          "
+        />
         <TransactionSuccessToast
           :data="toast.transactionData"
           @undo="handleTransactionUndo(toast)"
           @dismiss="dismiss(toast.id)"
         />
         <!-- Progress bar -->
-        <div
-          class="absolute bottom-0 left-0 h-[2px] bg-white/10 w-full origin-left rounded-b-[14px] overflow-hidden"
-          :style="{
-            animation: `shrink ${getDuration(toast.duration)}ms linear forwards`,
-          }"
-        >
-          <div class="h-full w-full bg-emerald-500" />
+        <div class="absolute bottom-0 left-0 h-[2.5px] w-full bg-black/5 dark:bg-white/10">
+          <div
+            class="h-full w-full origin-left bg-success"
+            :style="{ animation: `shrink ${getDuration(toast.duration)}ms linear forwards` }"
+          />
         </div>
       </div>
 
@@ -100,18 +122,13 @@ onUnmounted(() => {
         class="relative overflow-hidden group"
         @update:open="(open: boolean) => !open && dismiss(toast.id)"
       >
-        <!-- Icon -->
-        <div v-if="toast.variant && toast.variant !== 'default'" class="flex-shrink-0">
-          <UIcon
-            :name="variantIcons[toast.variant || 'default']"
-            size="sm"
-            filled
-            :class="{
-              'text-success': toast.variant === 'success',
-              'text-danger': toast.variant === 'error',
-              'text-warning': toast.variant === 'warning',
-            }"
-          />
+        <!-- Icon in tinted badge -->
+        <div
+          v-if="toast.variant && toast.variant !== 'default'"
+          class="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full"
+          :class="variantIconClasses[toast.variant]"
+        >
+          <UIcon :name="variantIcons[toast.variant || 'default']" size="xs" filled />
         </div>
 
         <!-- Content -->
@@ -143,20 +160,11 @@ onUnmounted(() => {
         />
 
         <!-- Progress bar -->
-        <div
-          class="absolute bottom-0 left-0 h-[2px] bg-black/10 dark:bg-white/10 w-full origin-left"
-          :style="{
-            animation: `shrink ${getDuration(toast.duration)}ms linear forwards`,
-          }"
-        >
+        <div class="absolute bottom-0 left-0 h-[2px] w-full bg-black/5 dark:bg-white/10">
           <div
-            class="h-full w-full"
-            :class="{
-              'bg-success': toast.variant === 'success',
-              'bg-danger': toast.variant === 'error',
-              'bg-warning': toast.variant === 'warning',
-              'bg-primary': toast.variant === 'default' || !toast.variant,
-            }"
+            class="h-full w-full origin-left"
+            :class="variantProgressClasses[toast.variant || 'default']"
+            :style="{ animation: `shrink ${getDuration(toast.duration)}ms linear forwards` }"
           />
         </div>
       </Toast>
@@ -171,6 +179,35 @@ onUnmounted(() => {
   }
   to {
     transform: scaleX(0);
+  }
+}
+
+.transaction-toast-enter {
+  animation: tx-toast-in 0.35s cubic-bezier(0.21, 1.02, 0.73, 1);
+}
+
+.transaction-toast-leave {
+  animation: tx-toast-out 0.2s ease-in forwards;
+}
+
+@keyframes tx-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(100%) scale(0.92);
+  }
+}
+
+@keyframes tx-toast-out {
+  to {
+    opacity: 0;
+    transform: translateY(20%) scale(0.95);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .transaction-toast-enter,
+  .transaction-toast-leave {
+    animation-duration: 0.01ms;
   }
 }
 </style>
