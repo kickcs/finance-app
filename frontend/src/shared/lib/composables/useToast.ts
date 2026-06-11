@@ -1,7 +1,13 @@
 import { ref, computed } from 'vue';
 import { trigger } from '../haptics';
 
-export type ToastVariant = 'default' | 'success' | 'error' | 'warning' | 'transaction-success';
+export type ToastVariant =
+  | 'default'
+  | 'success'
+  | 'error'
+  | 'warning'
+  | 'undo'
+  | 'transaction-success';
 
 export interface ToastAction {
   label: string;

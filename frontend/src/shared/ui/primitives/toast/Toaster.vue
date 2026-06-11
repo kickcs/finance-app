@@ -17,12 +17,14 @@ const variantIcons: Record<string, string> = {
   success: 'check_circle',
   error: 'error',
   warning: 'warning',
+  undo: 'undo',
 };
 
 const variantIconClasses: Record<string, string> = {
   success: 'bg-success-light text-success',
   error: 'bg-danger-light text-danger',
   warning: 'bg-warning-light text-warning',
+  undo: 'bg-primary-light text-primary dark:text-primary-hover',
 };
 
 const variantProgressClasses: Record<string, string> = {
@@ -30,12 +32,13 @@ const variantProgressClasses: Record<string, string> = {
   success: 'bg-success',
   error: 'bg-danger',
   warning: 'bg-warning',
+  undo: 'bg-primary',
 };
 
 // Calculate animation duration (fallback to default 3000ms if not specified)
 const getDuration = (duration?: number) => duration || 3000;
 
-type StandardVariant = 'default' | 'success' | 'error' | 'warning';
+type StandardVariant = 'default' | 'success' | 'error' | 'warning' | 'undo';
 const toStandardVariant = (v?: string): StandardVariant => (v as StandardVariant) ?? 'default';
 
 function handleTransactionUndo(t: ToasterToast) {
@@ -43,7 +46,12 @@ function handleTransactionUndo(t: ToasterToast) {
   if (t.transactionData?.onUndo) {
     t.transactionData.onUndo();
   }
-  showToast({ title: 'Отменено', variant: 'default', duration: 1500 });
+  showToast({
+    title: 'Отменено',
+    description: 'Транзакция удалена',
+    variant: 'undo',
+    duration: 2000,
+  });
 }
 
 // Auto-dismiss transaction-success toasts (standalone divs don't use Reka UI auto-dismiss)

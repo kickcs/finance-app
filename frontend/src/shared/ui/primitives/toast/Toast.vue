@@ -28,6 +28,7 @@ const toastVariants = cva(
           'border-danger/30 bg-danger/15 dark:bg-danger/20 text-text-primary-light dark:text-text-primary-dark shadow-danger/5',
         warning:
           'border-warning/30 bg-warning/15 dark:bg-warning/20 text-text-primary-light dark:text-text-primary-dark shadow-warning/5',
+        undo: 'border-border-light/40 dark:border-border-dark/50 bg-card-light/85 dark:bg-card-dark/85 text-text-primary-light dark:text-text-primary-dark shadow-black/5 dark:shadow-black/20',
       },
     },
     defaultVariants: {
