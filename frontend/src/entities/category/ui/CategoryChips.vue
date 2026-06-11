@@ -41,6 +41,13 @@ function handleSearchKeydown(event: KeyboardEvent) {
   if (event.key === 'Escape') closeSearch();
 }
 
+// iOS: mousedown on a chip blurs the search input, the keyboard starts closing
+// and the layout shifts before click is dispatched — the tap misses the chip.
+// Keep focus until the click lands; closeSearch() will dismiss the keyboard.
+function keepSearchFocus(event: MouseEvent) {
+  if (searchActive.value) event.preventDefault();
+}
+
 // Category picked from search results is pinned to the front of the list
 // until a different category is selected
 const pinnedCategoryId = ref<string | null>(null);
@@ -166,6 +173,7 @@ function toggleInfrequent() {
         type="button"
         :aria-label="searchActive ? 'Закрыть поиск категорий' : 'Поиск категории'"
         class="flex items-center gap-1 -my-1 px-1.5 py-1 rounded-md text-xs text-text-tertiary-light dark:text-text-tertiary-dark hover:text-text-secondary-light dark:hover:text-text-secondary-dark active:scale-95 transition-all"
+        @mousedown="keepSearchFocus"
         @click="searchActive ? closeSearch() : openSearch()"
       >
         <UIcon :name="searchActive ? 'close' : 'search'" size="xs" />
@@ -218,6 +226,7 @@ function toggleInfrequent() {
                 : ''
             "
             :style="getChipStyle(category)"
+            @mousedown="keepSearchFocus"
             @click="selectCategory(category.id)"
           >
             <UIcon :name="category.icon" size="sm" :style="{ color: category.color }" />
@@ -229,6 +238,7 @@ function toggleInfrequent() {
             v-if="hasInfrequent && !isSearching && rowIdx === categoryRows.length - 1"
             type="button"
             class="relative z-10 flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm border border-dashed border-border-light dark:border-border-dark text-text-tertiary-light dark:text-text-tertiary-dark hover:text-text-secondary-light dark:hover:text-text-secondary-dark active:scale-95 transition-colors duration-300 whitespace-nowrap"
+            @mousedown="keepSearchFocus"
             @click="toggleInfrequent"
           >
             <UIcon :name="showInfrequent ? 'expand_less' : 'expand_more'" size="sm" />
