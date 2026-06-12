@@ -55,6 +55,7 @@ import { ReceiptModule } from './modules/receipt/receipt.module';
 import { PersonModule } from './modules/person';
 import { NotificationModule } from './modules/notification';
 import { RecurringSubscriptionModule } from './modules/recurring-subscription';
+import { TelegramImportModule } from './modules/telegram-import/telegram-import.module';
 @Module({
   imports: [
     // Configuration
@@ -130,6 +131,7 @@ import { RecurringSubscriptionModule } from './modules/recurring-subscription';
     PersonModule,
     NotificationModule,
     RecurringSubscriptionModule,
+    TelegramImportModule,
 
     // Health check module
     HealthModule,
