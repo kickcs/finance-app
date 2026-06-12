@@ -80,6 +80,21 @@ describe('HumoMessageParser', () => {
     const r = parser.parse(PAYMENT.replace('1.700,00', '500,00'))!;
     expect(r.amount).toBe(500);
   });
+
+  it('берёт валюту из строки суммы, а не из мерчанта', () => {
+    const msg = `💸 Оплата
+➖ 1.700,00 UZS
+📍 SHOP 99,00 EUR
+💳 HUMOCARD *1951
+🕓 22:11 12.06.2026
+💰 12.543.101,08 UZS`;
+    const r = parser.parse(msg)!;
+    expect(r.currency).toBe('UZS');
+  });
+
+  it('canParse возвращает false, если маркер не на первой строке', () => {
+    expect(parser.canParse('какой-то текст\n💸 Оплата\n➖ 1.700,00 UZS')).toBe(false);
+  });
 });
 
 describe('ParserRegistry', () => {

@@ -51,6 +51,7 @@ export class HumoMessageParser implements BankMessageParser {
 
     let amount: number | null = null;
     let balanceAfter: number | null = null;
+    let currency = 'UZS';
 
     if (type === 'balance_change') {
       // 💸 здесь — новый баланс карты, суммы операции нет
@@ -58,20 +59,19 @@ export class HumoMessageParser implements BankMessageParser {
       const m = balanceLine?.match(AMOUNT_RE);
       if (!m) return null;
       balanceAfter = parseUzAmount(m[1]);
+      currency = m[2] || 'UZS';
     } else {
       const amountLine = lines.find((l) => l.startsWith('➖') || l.startsWith('➕'));
       const am = amountLine?.match(AMOUNT_RE);
       if (!am) return null;
       amount = parseUzAmount(am[1]);
       if (amount === null) return null;
+      currency = am[2] || 'UZS';
 
       const balanceLine = lines.find((l) => l.startsWith('💰'));
       const bm = balanceLine?.match(AMOUNT_RE);
       balanceAfter = bm ? parseUzAmount(bm[1]) : null;
     }
-
-    const currencyMatch = text.match(AMOUNT_RE);
-    const currency = currencyMatch ? currencyMatch[2] : 'UZS';
 
     return {
       type,
