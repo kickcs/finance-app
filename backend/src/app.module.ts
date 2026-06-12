@@ -34,6 +34,12 @@ import {
   NotificationPreferencesOrmEntity,
 } from './modules/notification/infrastructure/persistence/typeorm';
 import { RecurringSubscriptionOrmEntity } from './modules/recurring-subscription/infrastructure/persistence/typeorm';
+import {
+  TelegramLinkOrmEntity,
+  TelegramLinkTokenOrmEntity,
+  ImportedTransactionOrmEntity,
+  CardAccountMappingOrmEntity,
+} from './modules/telegram-import/infrastructure/persistence/typeorm';
 
 // Legacy entity (to be migrated)
 import { Settings } from './database/entities';
@@ -93,6 +99,10 @@ import { RecurringSubscriptionModule } from './modules/recurring-subscription';
           NotificationLogOrmEntity,
           NotificationPreferencesOrmEntity,
           RecurringSubscriptionOrmEntity,
+          TelegramLinkOrmEntity,
+          TelegramLinkTokenOrmEntity,
+          ImportedTransactionOrmEntity,
+          CardAccountMappingOrmEntity,
           // Legacy (to be migrated)
           Settings,
         ],
