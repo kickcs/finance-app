@@ -20,7 +20,7 @@ export class CreateLinkTokenHandler implements ICommandHandler<CreateLinkTokenCo
   async execute(command: CreateLinkTokenCommand): Promise<{ deepLink: string }> {
     const token = crypto.randomBytes(24).toString('base64url');
     await this.tokenRepo.create(command.userId, token, new Date(Date.now() + TOKEN_TTL_MS));
-    const botUsername = this.configService.getOrThrow<string>('TELEGRAM_BOT_USERNAME');
+    const botUsername = this.configService.getOrThrow<string>('TELEGRAM_IMPORT_BOT_USERNAME');
     return { deepLink: `https://t.me/${botUsername}?start=${token}` };
   }
 }

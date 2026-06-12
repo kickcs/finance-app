@@ -33,7 +33,7 @@ export class TelegramWebhookController {
   async handleWebhook(@Req() req: TelegramWebhookRequest): Promise<{ ok: boolean }> {
     if (!this.botService.enabled) throw new ServiceUnavailableException('Telegram import disabled');
 
-    const secret = this.configService.getOrThrow<string>('TELEGRAM_WEBHOOK_SECRET');
+    const secret = this.configService.getOrThrow<string>('TELEGRAM_IMPORT_WEBHOOK_SECRET');
     const header = req.headers['x-telegram-bot-api-secret-token'];
     const provided = typeof header === 'string' ? header : '';
     const a = Buffer.from(provided);

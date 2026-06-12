@@ -33,14 +33,14 @@ export class TelegramBotService implements OnModuleInit, OnApplicationBootstrap 
     private readonly configService: ConfigService,
     private readonly commandBus: CommandBus,
   ) {
-    const token = this.configService.get<string>('TELEGRAM_BOT_TOKEN');
+    const token = this.configService.get<string>('TELEGRAM_IMPORT_BOT_TOKEN');
     this._enabled = Boolean(token);
     if (token) this.bot = new Bot(token);
   }
 
   async onModuleInit(): Promise<void> {
     if (!this.bot) {
-      this.logger.warn('TELEGRAM_BOT_TOKEN не задан — telegram-import отключён');
+      this.logger.warn('TELEGRAM_IMPORT_BOT_TOKEN не задан — telegram-import отключён');
       return;
     }
     this.registerHandlers(this.bot);
@@ -57,8 +57,8 @@ export class TelegramBotService implements OnModuleInit, OnApplicationBootstrap 
   }
 
   async onApplicationBootstrap(): Promise<void> {
-    const url = this.configService.get<string>('TELEGRAM_WEBHOOK_URL');
-    const secret = this.configService.get<string>('TELEGRAM_WEBHOOK_SECRET');
+    const url = this.configService.get<string>('TELEGRAM_IMPORT_WEBHOOK_URL');
+    const secret = this.configService.get<string>('TELEGRAM_IMPORT_WEBHOOK_SECRET');
     if (this.bot && url && secret) {
       try {
         await this.bot.api.setWebhook(url, { secret_token: secret });
