@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { IsNull, MoreThan, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { TelegramLinkTokenOrmEntity } from '../typeorm';
 import { ILinkTokenRepository } from '../../../domain/repositories/link-token.repository.interface';
 
@@ -16,11 +16,13 @@ export class LinkTokenRepository implements ILinkTokenRepository {
   }
 
   async consume(token: string): Promise<string | null> {
-    const row = await this.repo.findOne({
-      where: { token, usedAt: IsNull(), expiresAt: MoreThan(new Date()) },
-    });
-    if (!row) return null;
-    await this.repo.update(row.id, { usedAt: new Date() });
-    return row.userId;
+    const result = await this.repo
+      .createQueryBuilder()
+      .update()
+      .set({ usedAt: () => 'now()' })
+      .where('token = :token AND used_at IS NULL AND expires_at > now()', { token })
+      .returning('user_id')
+      .execute();
+    return (result.raw as Array<{ user_id: string }>)[0]?.user_id ?? null;
   }
 }

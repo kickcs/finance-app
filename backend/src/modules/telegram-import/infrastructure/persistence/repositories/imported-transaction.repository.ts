@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Not, Repository } from 'typeorm';
 import { ImportedTransactionOrmEntity } from '../typeorm';
 import {
   IImportedTransactionRepository,
@@ -70,11 +70,7 @@ export class ImportedTransactionRepository implements IImportedTransactionReposi
   }
 
   async countPending(userId: string): Promise<number> {
-    const total = await this.repo.count({ where: { userId, status: 'pending' } });
-    const unparsed = await this.repo.count({
-      where: { userId, status: 'pending', type: 'unparsed' },
-    });
-    return total - unparsed;
+    return this.repo.count({ where: { userId, status: 'pending', type: Not('unparsed') } });
   }
 
   async markConfirmed(id: string, transactionId: string): Promise<void> {
@@ -122,6 +118,7 @@ export class ImportedTransactionRepository implements IImportedTransactionReposi
       .andWhere('it.id != :excludeId', { excludeId: params.excludeId })
       .andWhere('it.status = :status', { status: 'pending' })
       .andWhere('it.type = :type', { type: params.oppositeType })
+      // точное сравнение корректно: колонка numeric(18,2), записи тоже идут через toFixed(2)
       .andWhere('it.amount = :amount', { amount: params.amount.toFixed(2) })
       .andWhere('it.occurredAt BETWEEN :from AND :to', { from, to })
       .getOne();
