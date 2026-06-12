@@ -21,11 +21,13 @@ import { TelegramWebhookController } from './presentation/controllers/telegram-w
 import { TelegramImportController } from './presentation/controllers/telegram-import.controller';
 import { CommandHandlers } from './application/commands';
 import { QueryHandlers } from './application/queries';
+import { AccountingModule } from '../accounting/accounting.module';
 
 @Module({
   imports: [
     CqrsModule,
     ConfigModule,
+    AccountingModule,
     TypeOrmModule.forFeature([
       TelegramLinkOrmEntity,
       TelegramLinkTokenOrmEntity,

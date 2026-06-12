@@ -23,14 +23,18 @@ export class TelegramBotService implements OnModuleInit, OnApplicationBootstrap 
   private readonly logger = new Logger(TelegramBotService.name);
   private bot: Bot | null = null;
   private readonly aggregator = new ReplyAggregator();
-  readonly enabled: boolean;
+  private _enabled: boolean;
+
+  get enabled(): boolean {
+    return this._enabled;
+  }
 
   constructor(
     private readonly configService: ConfigService,
     private readonly commandBus: CommandBus,
   ) {
     const token = this.configService.get<string>('TELEGRAM_BOT_TOKEN');
-    this.enabled = Boolean(token);
+    this._enabled = Boolean(token);
     if (token) this.bot = new Bot(token);
   }
 
@@ -40,15 +44,28 @@ export class TelegramBotService implements OnModuleInit, OnApplicationBootstrap 
       return;
     }
     this.registerHandlers(this.bot);
-    await this.bot.init();
+    try {
+      await this.bot.init();
+    } catch (err) {
+      this._enabled = false;
+      this.bot = null;
+      this.logger.error(
+        'Не удалось инициализировать Telegram-бота — telegram-import отключён',
+        err,
+      );
+    }
   }
 
   async onApplicationBootstrap(): Promise<void> {
     const url = this.configService.get<string>('TELEGRAM_WEBHOOK_URL');
     const secret = this.configService.get<string>('TELEGRAM_WEBHOOK_SECRET');
     if (this.bot && url && secret) {
-      await this.bot.api.setWebhook(url, { secret_token: secret });
-      this.logger.log(`Telegram webhook установлен: ${url}`);
+      try {
+        await this.bot.api.setWebhook(url, { secret_token: secret });
+        this.logger.log(`Telegram webhook установлен: ${url}`);
+      } catch (err) {
+        this.logger.error(`Не удалось установить Telegram webhook: ${url}`, err);
+      }
     }
   }
 
@@ -57,10 +74,14 @@ export class TelegramBotService implements OnModuleInit, OnApplicationBootstrap 
   }
 
   private registerHandlers(bot: Bot): void {
+    bot.catch((err) => {
+      this.logger.error('Ошибка в обработчике Telegram-апдейта', err.error ?? err);
+    });
+
     const pm = bot.chatType('private');
 
     pm.command('start', async (ctx) => {
-      const token = ctx.match?.trim();
+      const token = ctx.match.trim();
       if (!token) {
         await ctx.reply(
           'Привет! Я импортирую банковские уведомления в твоё финансовое приложение.\n\n' +

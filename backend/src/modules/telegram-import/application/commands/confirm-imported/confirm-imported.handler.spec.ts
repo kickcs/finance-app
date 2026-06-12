@@ -4,6 +4,7 @@ import { ConfirmImportedHandler } from './confirm-imported.handler';
 import { ConfirmImportedCommand } from './confirm-imported.command';
 import { IMPORTED_TRANSACTION_REPOSITORY } from '../../../domain/repositories/imported-transaction.repository.interface';
 import { CARD_MAPPING_REPOSITORY } from '../../../domain/repositories/card-mapping.repository.interface';
+import { ACCOUNT_REPOSITORY } from '../../../../accounting/domain/repositories/account.repository.interface';
 
 const basePending = {
   id: 'imp-1',
@@ -33,6 +34,9 @@ describe('ConfirmImportedHandler', () => {
     delete: jest.fn(),
     listCards: jest.fn(),
   };
+  const accountRepo = {
+    findById: jest.fn(),
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -40,10 +44,12 @@ describe('ConfirmImportedHandler', () => {
         ConfirmImportedHandler,
         { provide: IMPORTED_TRANSACTION_REPOSITORY, useValue: importedRepo },
         { provide: CARD_MAPPING_REPOSITORY, useValue: cardRepo },
+        { provide: ACCOUNT_REPOSITORY, useValue: accountRepo },
       ],
     }).compile();
     handler = module.get(ConfirmImportedHandler);
     jest.clearAllMocks();
+    accountRepo.findById.mockResolvedValue({ id: 'acc-1', userId: 'user-1' });
   });
 
   it('подтверждает, сохраняет маппинг карты', async () => {
@@ -77,6 +83,23 @@ describe('ConfirmImportedHandler', () => {
 
   it('Forbidden, если не pending', async () => {
     importedRepo.findById.mockResolvedValue({ ...basePending, status: 'confirmed' });
+    await expect(
+      handler.execute(new ConfirmImportedCommand('user-1', 'imp-1', 'tx-1', 'acc-1', undefined)),
+    ).rejects.toThrow(ForbiddenException);
+  });
+
+  it('Forbidden, если accountId принадлежит другому пользователю', async () => {
+    importedRepo.findById.mockResolvedValue(basePending);
+    accountRepo.findById.mockResolvedValue({ id: 'acc-1', userId: 'other' });
+    await expect(
+      handler.execute(new ConfirmImportedCommand('user-1', 'imp-1', 'tx-1', 'acc-1', undefined)),
+    ).rejects.toThrow(ForbiddenException);
+    expect(importedRepo.markConfirmed).not.toHaveBeenCalled();
+  });
+
+  it('Forbidden, если accountId не существует', async () => {
+    importedRepo.findById.mockResolvedValue(basePending);
+    accountRepo.findById.mockResolvedValue(null);
     await expect(
       handler.execute(new ConfirmImportedCommand('user-1', 'imp-1', 'tx-1', 'acc-1', undefined)),
     ).rejects.toThrow(ForbiddenException);

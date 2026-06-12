@@ -9,6 +9,10 @@ import {
   CARD_MAPPING_REPOSITORY,
   type ICardMappingRepository,
 } from '../../../domain/repositories/card-mapping.repository.interface';
+import {
+  ACCOUNT_REPOSITORY,
+  type IAccountRepository,
+} from '../../../../accounting/domain/repositories/account.repository.interface';
 
 @CommandHandler(ConfirmImportedCommand)
 export class ConfirmImportedHandler implements ICommandHandler<ConfirmImportedCommand> {
@@ -16,7 +20,15 @@ export class ConfirmImportedHandler implements ICommandHandler<ConfirmImportedCo
     @Inject(IMPORTED_TRANSACTION_REPOSITORY)
     private readonly importedRepo: IImportedTransactionRepository,
     @Inject(CARD_MAPPING_REPOSITORY) private readonly cardRepo: ICardMappingRepository,
+    @Inject(ACCOUNT_REPOSITORY) private readonly accountRepo: IAccountRepository,
   ) {}
+
+  private async assertAccountOwnership(accountId: string, userId: string): Promise<void> {
+    const account = await this.accountRepo.findById(accountId);
+    if (account?.userId !== userId) {
+      throw new ForbiddenException('Account does not belong to user');
+    }
+  }
 
   async execute(
     command: ConfirmImportedCommand,
@@ -25,6 +37,11 @@ export class ConfirmImportedHandler implements ICommandHandler<ConfirmImportedCo
     if (!item) throw new NotFoundException('Imported transaction not found');
     if (item.userId !== command.userId) throw new ForbiddenException();
     if (item.status !== 'pending') throw new ForbiddenException('Already processed');
+
+    await this.assertAccountOwnership(command.accountId, command.userId);
+    if (command.toAccountId) {
+      await this.assertAccountOwnership(command.toAccountId, command.userId);
+    }
 
     await this.importedRepo.markConfirmed(item.id, command.transactionId);
 
