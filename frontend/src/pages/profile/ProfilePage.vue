@@ -22,6 +22,7 @@ import { useFinancialPeriod } from '@/shared/lib/hooks/useFinancialPeriod';
 import { NotificationSettings } from '@/features/manage-push-notifications';
 import { ThemeToggle } from '@/features/toggle-theme';
 import { NavbarStyleSelector } from '@/features/select-navbar-style';
+import { TelegramSection } from '@/features/link-telegram';
 import { getInitial } from '@/shared/lib/format/text';
 
 const router = useRouter();
@@ -320,6 +321,9 @@ async function confirmLogout() {
         </h2>
         <NotificationSettings />
       </section>
+
+      <!-- Telegram import -->
+      <TelegramSection />
 
       <!-- Data -->
       <section>
