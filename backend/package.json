@@ -50,7 +50,7 @@
     "cookie-parser": "^1.4.7",
     "dotenv": "^16.4.5",
     "grammy": "^1.43.0",
-    "nestjs-pino": "^4.6.0",
+    "nestjs-pino": "^4.6.1",
     "openai": "^6.23.0",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
