@@ -43,7 +43,7 @@ function openInbox() {
     </div>
 
     <span
-      class="shrink-0 min-w-[22px] h-[22px] px-1.5 rounded-full bg-primary text-primary-foreground text-xs font-semibold flex items-center justify-center"
+      class="shrink-0 min-w-[22px] h-[22px] px-1.5 rounded-full bg-primary text-white text-xs font-semibold flex items-center justify-center"
     >
       {{ pendingCount > 99 ? '99+' : pendingCount }}
     </span>

@@ -94,7 +94,7 @@ const relativeDate = computed(() => formatRelativeDate(new Date(props.item.occur
           {{ title }}
         </p>
         <span
-          v-if="isBalanceChange"
+          v-if="isBalanceChange && item.merchant"
           class="shrink-0 text-caption-xs font-medium px-1.5 py-0.5 rounded-md bg-primary-light text-primary"
         >
           Изменение баланса
@@ -103,7 +103,14 @@ const relativeDate = computed(() => formatRelativeDate(new Date(props.item.occur
       <div
         class="mt-0.5 flex items-center gap-1.5 text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
       >
-        <span class="truncate">💳 {{ item.card_mask }}</span>
+        <span class="flex items-center gap-1 truncate">
+          <UIcon
+            name="credit_card"
+            size="sm"
+            class="shrink-0 text-text-tertiary-light dark:text-text-tertiary-dark"
+          />
+          {{ item.card_mask }}
+        </span>
         <span aria-hidden="true">·</span>
         <span class="shrink-0">{{ relativeDate }}</span>
       </div>
