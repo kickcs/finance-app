@@ -4,6 +4,10 @@ import { debtsApi, debtQueryKeys } from '@/entities/debt';
 import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
 import { useQueryClient } from '@tanstack/vue-query';
 import { useHaptics } from '@/shared/lib/haptics';
+import {
+  importedTransactionsApi,
+  importedTransactionQueryKeys,
+} from '@/entities/imported-transaction';
 import type { ReceiptItem, Participant, ParticipantSummary, ScanReceiptFormData } from './types';
 
 export function useSubmitStep(
@@ -13,6 +17,8 @@ export function useSubmitStep(
   storeName: Ref<string | null>,
   totalAmount: ComputedRef<number>,
   getItemWithChargesTotal: (item: ReceiptItem) => number,
+  /** When scanning a receipt for a Telegram-imported op, its id to confirm on success. */
+  importedId: () => string | null = () => null,
 ) {
   const { trigger } = useHaptics();
   const queryClient = useQueryClient();
@@ -33,6 +39,8 @@ export function useSubmitStep(
   // or already-created debts on the next attempt.
   const createdTransactionId = ref<string | null>(null);
   const createdDebtParticipantIds = new Set<string>();
+  // Idempotency for the linked-import confirm across retries.
+  const importConfirmed = ref(false);
 
   const participantSummaries = computed<ParticipantSummary[]>(() => {
     const summaries = participants.value.map((p) => {
@@ -131,6 +139,22 @@ export function useSubmitStep(
             source_transaction_id: createdTransactionId.value,
           });
           createdDebtParticipantIds.add(summary.id);
+        }
+      }
+
+      // Mark the linked Telegram import confirmed (best-effort: the transaction
+      // already exists, so a confirm failure must not fail the whole submit).
+      const linkedImportId = importedId();
+      if (linkedImportId && createdTransactionId.value && !importConfirmed.value) {
+        try {
+          await importedTransactionsApi.confirm(linkedImportId, {
+            transactionId: createdTransactionId.value,
+            accountId: formData.value.accountId!,
+          });
+          importConfirmed.value = true;
+          queryClient.invalidateQueries({ queryKey: importedTransactionQueryKeys.all });
+        } catch (e) {
+          console.error('Failed to confirm linked import:', e);
         }
       }
 

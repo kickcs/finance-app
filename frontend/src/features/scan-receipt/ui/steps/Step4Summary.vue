@@ -30,6 +30,8 @@ const props = defineProps<{
   submitError: string | null;
   isSuccess: boolean;
   isFormValid: boolean;
+  doneRoute?: string;
+  doneLabel?: string;
 }>();
 
 const emit = defineEmits<{
@@ -151,6 +153,8 @@ const shareActions = computed(() => [
       :enabled-charges="enabledCharges"
       :is-sharing="isSharing"
       :share-actions="shareActions"
+      :done-route="doneRoute"
+      :done-label="doneLabel"
     />
 
     <!-- Scrollable content -->

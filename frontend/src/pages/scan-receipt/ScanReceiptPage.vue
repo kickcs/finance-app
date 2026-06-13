@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { AppHeader } from '@/widgets/header';
+import { ROUTE_NAMES } from '@/shared/config/routeNames';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import {
   useReceiptWizard,
@@ -18,9 +19,20 @@ const STEP_LABELS = ['Фото чека', 'Позиции', 'Участники'
 const TOTAL_STEPS = STEP_LABELS.length;
 
 const router = useRouter();
+const route = useRoute();
 const { userId } = useCurrentUser();
 
-const wizard = useReceiptWizard(() => userId.value);
+// When opened from the Telegram-import confirmation flow, this carries the
+// imported op id (confirmed on submit) so the user returns to the inbox.
+const importedId = computed(() => {
+  const raw = route.query.importedId;
+  return typeof raw === 'string' && raw.length > 0 ? raw : null;
+});
+
+const wizard = useReceiptWizard(
+  () => userId.value,
+  () => importedId.value,
+);
 
 const { accounts } = useAccounts(userId);
 const { expenseCategories } = useCategories(userId);
@@ -136,6 +148,8 @@ function handleBack() {
           :submit-error="wizard.submitError.value"
           :is-success="wizard.isSuccess.value"
           :is-form-valid="wizard.isFormValid.value"
+          :done-route="importedId ? ROUTE_NAMES.IMPORT_INBOX : ROUTE_NAMES.DASHBOARD"
+          :done-label="importedId ? 'К инбоксу' : 'На главную'"
           @update:form-data="(val) => (wizard.formData.value = val)"
           @submit="wizard.handleSubmit"
           @back="wizard.goBack"

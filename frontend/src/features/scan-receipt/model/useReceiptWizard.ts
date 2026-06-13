@@ -7,7 +7,11 @@ import { useParticipantsStep } from './useParticipantsStep';
 import { useSubmitStep } from './useSubmitStep';
 import type { WizardDirection } from './types';
 
-export function useReceiptWizard(userId: () => string | null) {
+export function useReceiptWizard(
+  userId: () => string | null,
+  /** Optional Telegram-imported op id to confirm once the receipt is submitted. */
+  importedId: () => string | null = () => null,
+) {
   const { trigger } = useHaptics();
 
   // Step state
@@ -30,6 +34,7 @@ export function useReceiptWizard(userId: () => string | null) {
     storeName,
     totalAmount,
     getItemWithChargesTotal,
+    importedId,
   );
   const { formData } = submitStep;
 

@@ -5,18 +5,27 @@ import { UButton, UIcon, InitialAvatar } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import type { ParticipantSummary, ReceiptCharge } from '../model/types';
 
-const props = defineProps<{
-  isSuccess: boolean;
-  totalAmount: number;
-  currency: string;
-  storeName: string | null;
-  displayDate: string;
-  owers: ParticipantSummary[];
-  hasCharges: boolean;
-  enabledCharges: ReceiptCharge[];
-  isSharing: boolean;
-  shareActions: { icon: string; label: string; action: () => void }[];
-}>();
+const props = withDefaults(
+  defineProps<{
+    isSuccess: boolean;
+    totalAmount: number;
+    currency: string;
+    storeName: string | null;
+    displayDate: string;
+    owers: ParticipantSummary[];
+    hasCharges: boolean;
+    enabledCharges: ReceiptCharge[];
+    isSharing: boolean;
+    shareActions: { icon: string; label: string; action: () => void }[];
+    /** Route name for the "done" button. Defaults to the dashboard. */
+    doneRoute?: string;
+    doneLabel?: string;
+  }>(),
+  {
+    doneRoute: ROUTE_NAMES.DASHBOARD,
+    doneLabel: 'На главную',
+  },
+);
 
 const router = useRouter();
 
@@ -169,9 +178,9 @@ function formatChargeBadge(charge: ReceiptCharge): string {
             variant="primary"
             size="xl"
             full-width
-            @click="router.push({ name: ROUTE_NAMES.DASHBOARD })"
+            @click="router.push({ name: props.doneRoute })"
           >
-            На главную
+            {{ props.doneLabel }}
           </UButton>
         </div>
       </div>
