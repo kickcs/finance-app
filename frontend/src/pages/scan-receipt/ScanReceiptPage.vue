@@ -29,6 +29,15 @@ const importedId = computed(() => {
   return typeof raw === 'string' && raw.length > 0 ? raw : null;
 });
 
+// When opened from the Telegram-import flow, the expected operation amount is
+// passed along so Step 4 can warn if the receipt total diverges from it.
+const expectedAmount = computed<number | null>(() => {
+  const raw = route.query.expectedAmount;
+  if (typeof raw !== 'string' || raw.length === 0) return null;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+});
+
 const wizard = useReceiptWizard(
   () => userId.value,
   () => importedId.value,
@@ -143,6 +152,7 @@ function handleBack() {
           :charges="wizard.charges.value"
           :charges-amount="wizard.chargesAmount.value"
           :total-amount="wizard.totalAmount.value"
+          :expected-amount="expectedAmount"
           :store-name="wizard.storeName.value"
           :is-submitting="wizard.isSubmitting.value"
           :submit-error="wizard.submitError.value"

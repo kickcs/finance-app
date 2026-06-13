@@ -25,6 +25,8 @@ const props = defineProps<{
   charges: ReceiptCharge[];
   chargesAmount: number;
   totalAmount: number;
+  /** Operation amount from the Telegram-import flow; used to flag total mismatches. */
+  expectedAmount?: number | null;
   storeName: string | null;
   isSubmitting: boolean;
   submitError: string | null;
@@ -43,6 +45,14 @@ const emit = defineEmits<{
 const { trigger } = useHaptics();
 
 const displayDate = computed(() => formatDate(props.formData.date));
+
+// Non-blocking warning when the receipt total diverges from the imported
+// operation amount by more than 1%. Only relevant for the Telegram-import flow.
+const amountMismatch = computed(() => {
+  const expected = props.expectedAmount;
+  if (!expected || expected <= 0) return false;
+  return Math.abs(props.totalAmount - expected) / expected > 0.01;
+});
 
 // Create debts toggle
 const createDebts = computed({
@@ -170,6 +180,21 @@ const shareActions = computed(() => [
         :total-amount="totalAmount"
         :currency="currency"
       />
+
+      <!-- Amount mismatch warning (Telegram-import flow, non-blocking) -->
+      <Transition name="section-slide">
+        <div
+          v-if="amountMismatch"
+          class="flex items-start gap-2 px-3 py-2.5 rounded-xl bg-warning/[0.08] border border-warning/20"
+          role="alert"
+        >
+          <UIcon name="warning" size="sm" class="text-warning flex-shrink-0 mt-0.5" />
+          <p class="text-xs text-warning font-medium flex-1">
+            Сумма чека ({{ formatCurrency(totalAmount, currency) }}) отличается от суммы операции
+            ({{ formatCurrency(expectedAmount!, currency) }})
+          </p>
+        </div>
+      </Transition>
 
       <!-- Per-person breakdown (tree: payer -> dependents) -->
       <section aria-label="Разбивка по участникам">
