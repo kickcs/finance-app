@@ -18,6 +18,8 @@ export const ROUTE_NAMES = {
   SETTINGS_QUICK_ACTIONS: 'settings-quick-actions',
   SETTINGS_COLOR: 'settings-color',
   SCAN_RECEIPT: 'scan-receipt',
+  IMPORT_INBOX: 'import-inbox',
+  IMPORT_CONFIRM: 'import-confirm',
   DASHBOARD_SETTINGS: 'dashboard-settings',
   SUBSCRIPTIONS_LIST: 'subscriptions-list',
   SUBSCRIPTION_DETAIL: 'subscription-detail',

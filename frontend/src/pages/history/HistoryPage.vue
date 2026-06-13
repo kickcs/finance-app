@@ -26,6 +26,7 @@ import { CategoryChips } from '@/entities/category';
 import { UTabs, UIcon, UButton, MasterDetailLayout } from '@/shared/ui';
 import { useIsDesktop } from '@/shared/lib/composables/useIsDesktop';
 import { useExchangeRates } from '@/shared/api';
+import { ImportInboxBanner } from '@/widgets/ImportInboxBanner';
 
 // Page composables
 import { useHistoryFilters, TYPE_FILTER_ITEMS } from './model/useHistoryFilters';
@@ -267,6 +268,11 @@ async function handleRefresh() {
              makes flex-1/shrink-0 ineffective, causing the virtualizer's height:100%
              to resolve to auto — rendering ALL items and cascading fetchNextPage. -->
         <div class="h-full flex flex-col overflow-hidden">
+          <!-- Pending imports banner (Telegram) -->
+          <div class="pt-4 shrink-0">
+            <ImportInboxBanner />
+          </div>
+
           <!-- Fixed Controls -->
           <div class="pt-4 shrink-0 lg:pr-0">
             <!-- Type Filter Tabs (Always Visible) -->

@@ -180,6 +180,16 @@ export const router = createRouter({
           meta: { requiresAuth: true },
         },
         {
+          path: 'import-inbox',
+          name: ROUTE_NAMES.IMPORT_INBOX,
+          component: () => import('@/pages/import-inbox/ImportInboxPage.vue'),
+        },
+        {
+          path: 'import-inbox/:id',
+          name: ROUTE_NAMES.IMPORT_CONFIRM,
+          component: () => import('@/pages/import-inbox/confirm/ImportConfirmPage.vue'),
+        },
+        {
           path: 'dashboard/settings',
           name: ROUTE_NAMES.DASHBOARD_SETTINGS,
           component: () => import('@/pages/dashboard-settings/DashboardSettingsPage.vue'),
