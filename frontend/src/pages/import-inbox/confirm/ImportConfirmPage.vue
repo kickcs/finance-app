@@ -278,7 +278,9 @@ function toScanReceipt() {
     </div>
 
     <!-- Content -->
-    <main class="flex-1 overflow-y-auto px-4 md:px-8 pt-2 md:pt-4 pb-12">
+    <main
+      class="flex-1 overflow-y-auto px-4 md:px-8 pt-2 md:pt-4 pb-[max(4rem,calc(env(safe-area-inset-bottom)+1.5rem))]"
+    >
       <!-- Not found -->
       <NotFoundState
         v-if="!isLoading && !item"
@@ -354,6 +356,7 @@ function toScanReceipt() {
           :expense-categories="expenseCategories"
           :income-categories="incomeCategories"
           :user-currency="userCurrency"
+          :hide-scan-receipt="true"
           :is-submitting="isSubmitting"
           :is-valid="isValid"
           :error="validationError"

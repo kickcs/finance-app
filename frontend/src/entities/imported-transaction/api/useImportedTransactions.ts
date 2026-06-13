@@ -12,6 +12,11 @@ export function useImportedTransactions(userId: MaybeRefOrGetter<string | null>)
     queryKey,
     queryFn: () => importedTransactionsApi.getInbox(),
     enabled,
+    // Poll while the tab is active so freshly forwarded operations surface on
+    // their own (the History banner reads this same query). Vue Query keeps
+    // refetchIntervalInBackground false by default — no polling on hidden tabs.
+    refetchInterval: 30_000,
+    staleTime: 15_000,
   });
 
   const items = computed(() => inboxQuery.data.value?.items ?? []);

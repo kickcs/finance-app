@@ -42,6 +42,8 @@ const props = defineProps<{
   splitData?: SplitExpenseData;
   splitValidationError?: string | null;
   autofocusAmount?: boolean;
+  /** Hide the in-form receipt-scan shortcut (import-confirm uses its own scan button with context). */
+  hideScanReceipt?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -330,6 +332,7 @@ const { isMounted } = useMountedAnimation();
               :split-data="splitData"
               :split-validation-error="splitValidationError"
               :autofocus-amount="autofocusAmount && realPanelIndices.has(idx)"
+              :hide-scan-receipt="hideScanReceipt"
               @update:form-data="$emit('update:formData', $event)"
               @add-participant="
                 (name: string, fromContacts: boolean, color?: string) =>
@@ -353,6 +356,7 @@ const { isMounted } = useMountedAnimation();
             :split-data="splitData"
             :split-validation-error="splitValidationError"
             :autofocus-amount="autofocusAmount && realPanelIndices.has(idx)"
+            :hide-scan-receipt="hideScanReceipt"
             @update:form-data="$emit('update:formData', $event)"
             @add-participant="
               (name: string, fromContacts: boolean, color?: string) =>

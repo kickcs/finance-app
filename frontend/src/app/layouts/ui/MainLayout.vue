@@ -26,7 +26,14 @@ const { userName, greeting, totalBalance, currency, isHidden, toggleHidden, isLo
   useLayoutData();
 const { style: navbarStyle } = useNavbarStyle();
 
-const hideBottomNav = computed(() => route.name === ROUTE_NAMES.SCAN_RECEIPT);
+// Focused full-screen flows hide the bottom nav: it would otherwise float over
+// their footer actions (the liquid-glass nav is fixed near the bottom edge).
+const FULLSCREEN_FLOWS: string[] = [
+  ROUTE_NAMES.SCAN_RECEIPT,
+  ROUTE_NAMES.IMPORT_CONFIRM,
+  ROUTE_NAMES.IMPORT_INBOX,
+];
+const hideBottomNav = computed(() => FULLSCREEN_FLOWS.includes(route.name as string));
 
 function handleAddTransaction() {
   router.push({ name: ROUTE_NAMES.NEW_TRANSACTION });
