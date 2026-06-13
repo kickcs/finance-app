@@ -71,7 +71,9 @@ const amount = computed(() => {
   };
 });
 
-const relativeDate = computed(() => formatRelativeDate(new Date(props.item.occurred_at)));
+const relativeDate = computed(() =>
+  props.item.occurred_at ? formatRelativeDate(new Date(props.item.occurred_at)) : '',
+);
 </script>
 
 <template>
@@ -111,8 +113,10 @@ const relativeDate = computed(() => formatRelativeDate(new Date(props.item.occur
           />
           {{ item.card_mask }}
         </span>
-        <span aria-hidden="true">·</span>
-        <span class="shrink-0">{{ relativeDate }}</span>
+        <template v-if="relativeDate">
+          <span aria-hidden="true">·</span>
+          <span class="shrink-0">{{ relativeDate }}</span>
+        </template>
       </div>
     </div>
 

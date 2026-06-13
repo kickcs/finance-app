@@ -8,7 +8,7 @@ interface ImportedTransactionResponse {
   currency: string;
   merchant: string | null;
   cardMask: string;
-  occurredAt: string;
+  occurredAt: string | null;
   balanceAfter: number | null;
   status: ImportedTransaction['status'];
   transactionId: string | null;

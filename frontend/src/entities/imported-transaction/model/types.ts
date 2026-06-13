@@ -8,7 +8,7 @@ export interface ImportedTransaction {
   currency: string;
   merchant: string | null;
   card_mask: string;
-  occurred_at: string; // ISO
+  occurred_at: string | null; // ISO, null when backend has no parsed date
   balance_after: number | null;
   status: ImportedTransactionStatus;
   transaction_id: string | null;

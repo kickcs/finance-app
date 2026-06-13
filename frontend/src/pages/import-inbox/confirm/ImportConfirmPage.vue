@@ -97,7 +97,8 @@ watch(
     }
 
     updateField('currency', current.currency);
-    updateField('date', new Date(current.occurred_at).getTime());
+    // occurred_at may be null when the backend couldn't parse a date → default to now.
+    updateField('date', current.occurred_at ? new Date(current.occurred_at).getTime() : Date.now());
     updateField('description', current.merchant ?? '');
     if (current.suggested_account_id) {
       updateField('accountId', current.suggested_account_id);
@@ -110,7 +111,7 @@ watch(
 const isBalanceChange = computed(() => item.value?.type === 'balance_change');
 const needsManualAmount = computed(() => isBalanceChange.value && item.value?.amount === null);
 const relativeDate = computed(() =>
-  item.value ? formatRelativeDate(new Date(item.value.occurred_at)) : '',
+  item.value?.occurred_at ? formatRelativeDate(new Date(item.value.occurred_at)) : '',
 );
 
 // --- Navigation between pending imports --------------------------------------
