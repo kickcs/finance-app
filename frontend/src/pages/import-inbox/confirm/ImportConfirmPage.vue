@@ -40,6 +40,15 @@ const { isSubmitting, submitAndWait, rollbackTransaction } = useSubmitTransactio
 // Local validation error (mutation errors surface via toast).
 const validationError = ref<string | null>(null);
 
+// Retry bookkeeping: if submitAndWait succeeded but confirmImported failed
+// (e.g. network), the transaction (and any split debts) already exist. On a
+// second attempt we must reuse the created id and skip re-creation, otherwise
+// the user gets a duplicate transaction / duplicate debts. Reset on item switch
+// and after a successful confirm. (Mirrors the importConfirmed guard in
+// scan-receipt/useSubmitStep.ts.)
+const createdTransactionId = ref<string | null>(null);
+const splitDebtsCreated = ref(false);
+
 const {
   splitData,
   isValid: splitIsValid,
@@ -68,6 +77,9 @@ watch(
     resetForm();
     resetSplit();
     validationError.value = null;
+    // Fresh import → fresh retry bookkeeping.
+    createdTransactionId.value = null;
+    splitDebtsCreated.value = false;
 
     const absAmount = Math.abs(current.amount ?? 0);
 
@@ -135,10 +147,18 @@ async function handleSubmit() {
     return;
   }
 
-  const transactionId = await submitAndWait(userId.value, formData.value);
-  if (!transactionId) return; // error already shown by the mutation
+  // Retry-safe: if a previous attempt already created the transaction (confirm
+  // then failed), reuse that id instead of creating a second transaction.
+  let transactionId = createdTransactionId.value;
+  if (!transactionId) {
+    transactionId = await submitAndWait(userId.value, formData.value);
+    if (!transactionId) return; // error already shown by the mutation
+    createdTransactionId.value = transactionId;
+  }
 
-  if (isSplit) {
+  // Split debts: create only once. On a retry where the transaction already
+  // existed, the debts may have been created too — skip to avoid duplicates.
+  if (isSplit && !splitDebtsCreated.value) {
     const success = await createDebtsForSplit(
       transactionId,
       userId.value,
@@ -148,11 +168,16 @@ async function handleSubmit() {
     );
     if (!success) {
       const rolledBack = await rollbackTransaction(transactionId, userId.value);
+      if (rolledBack) {
+        // Transaction undone → clear bookkeeping so a fresh attempt starts clean.
+        createdTransactionId.value = null;
+      }
       validationError.value = rolledBack
         ? 'Не удалось создать долги для раздельного счёта. Операция отменена.'
         : 'Не удалось создать часть долгов. Транзакция сохранена — проверьте её в истории.';
       return;
     }
+    splitDebtsCreated.value = true;
   }
 
   try {
@@ -163,13 +188,20 @@ async function handleSubmit() {
         formData.value.type === 'transfer' ? (formData.value.toAccountId ?? undefined) : undefined,
     });
   } catch {
+    // Transaction (and split debts) already created; only the confirm failed.
+    // Keep createdTransactionId/splitDebtsCreated set so a retry resumes here
+    // without duplicating anything.
     toast({
       title: 'Транзакция создана',
       description: 'Но не удалось отметить импорт подтверждённым. Проверьте инбокс.',
       variant: 'warning',
     });
+    return;
   }
 
+  // Import fully handled → clear retry state before moving on.
+  createdTransactionId.value = null;
+  splitDebtsCreated.value = false;
   resetSplit();
   goNextOrBack();
 }

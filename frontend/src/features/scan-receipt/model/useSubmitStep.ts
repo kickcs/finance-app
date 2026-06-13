@@ -3,6 +3,7 @@ import { transactionsApi } from '@/entities/transaction';
 import { debtsApi, debtQueryKeys } from '@/entities/debt';
 import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
 import { useQueryClient } from '@tanstack/vue-query';
+import { useToast } from '@/shared/ui';
 import { useHaptics } from '@/shared/lib/haptics';
 import {
   importedTransactionsApi,
@@ -21,6 +22,7 @@ export function useSubmitStep(
   importedId: () => string | null = () => null,
 ) {
   const { trigger } = useHaptics();
+  const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const formData = ref<ScanReceiptFormData>({
@@ -155,6 +157,13 @@ export function useSubmitStep(
           queryClient.invalidateQueries({ queryKey: importedTransactionQueryKeys.all });
         } catch (e) {
           console.error('Failed to confirm linked import:', e);
+          // Best-effort: the receipt transaction is already saved, so don't fail
+          // the submit — but surface it so the import isn't silently left pending.
+          toast({
+            title: 'Чек сохранён',
+            description: 'Но импорт остался в списке на подтверждение — проверьте инбокс.',
+            variant: 'warning',
+          });
         }
       }
 
