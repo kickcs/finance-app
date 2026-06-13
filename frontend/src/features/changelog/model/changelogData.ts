@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.55';
+export const CURRENT_VERSION = '1.0.56';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,25 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.56',
+    date: '2026-06-13',
+    title: 'Импорт банковских уведомлений из Telegram',
+    items: [
+      {
+        type: 'feature',
+        text: 'Подключите Telegram в профиле и пересылайте боту уведомления банка — они автоматически превратятся в транзакции.',
+      },
+      {
+        type: 'feature',
+        text: 'Новый раздел «На подтверждение»: перед добавлением можно указать счёт и категорию, отметить перевод между картами, разделить расход с друзьями или прикрепить чек.',
+      },
+      {
+        type: 'feature',
+        text: 'Карты можно привязать к счетам — счёт будет подставляться автоматически при следующих импортах.',
+      },
+    ],
+  },
   {
     version: '1.0.55',
     date: '2026-06-11',
