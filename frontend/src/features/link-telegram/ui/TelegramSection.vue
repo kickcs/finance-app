@@ -75,7 +75,9 @@ async function handleUnlink() {
     <UCard class="overflow-hidden">
       <!-- Loading -->
       <div v-if="isLoading" class="flex items-center gap-3.5 px-4 py-4">
-        <div class="h-11 w-11 shrink-0 rounded-full bg-surface-light dark:bg-surface-dark animate-shimmer" />
+        <div
+          class="h-11 w-11 shrink-0 rounded-full bg-surface-light dark:bg-surface-dark animate-shimmer"
+        />
         <div class="flex-1 space-y-2">
           <div class="h-3.5 w-2/3 rounded bg-surface-light dark:bg-surface-dark animate-shimmer" />
           <div class="h-3 w-1/2 rounded bg-surface-light dark:bg-surface-dark animate-shimmer" />
@@ -99,7 +101,9 @@ async function handleUnlink() {
           <div class="min-w-0 flex-1">
             <p class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark">
               {{
-                status.telegram_username ? `Подключён как @${status.telegram_username}` : 'Подключён'
+                status.telegram_username
+                  ? `Подключён как @${status.telegram_username}`
+                  : 'Подключён'
               }}
             </p>
             <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
@@ -142,7 +146,7 @@ async function handleUnlink() {
           <UButton variant="primary" size="md" :loading="isChecking" @click="handleCheck">
             Проверить подключение
           </UButton>
-          <UButton variant="ghost" size="md" @click="waitingForLink = false"> Отмена </UButton>
+          <UButton variant="ghost" size="md" @click="waitingForLink = false">Отмена</UButton>
         </div>
       </div>
 
@@ -172,7 +176,7 @@ async function handleUnlink() {
           :loading="isConnecting"
           @click="handleConnect"
         >
-          <UIcon name="send" size="sm" class="mr-1.5" />
+          <UIcon name="telegram" size="sm" class="mr-1.5" />
           Подключить Telegram
         </UButton>
       </div>

@@ -79,10 +79,9 @@ async function handleUnlink(cardMask: string) {
     <!-- Cards -->
     <ul v-else class="space-y-2">
       <li
-        v-for="(card, i) in cards"
+        v-for="card in cards"
         :key="card.card_mask"
-        class="rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark overflow-hidden animate-fadeInUp"
-        :class="`stagger-${Math.min(i + 1, 5)}`"
+        class="rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark overflow-hidden"
       >
         <!-- Row -->
         <div class="flex items-center gap-3 px-3.5 py-3">
@@ -143,7 +142,7 @@ async function handleUnlink(cardMask: string) {
         <!-- Expanded selector -->
         <div
           v-if="expandedCard === card.card_mask"
-          class="border-t border-border-light dark:border-border-dark px-3.5 py-3 animate-fadeInUp"
+          class="border-t border-border-light dark:border-border-dark px-3.5 py-3"
         >
           <AccountSelector
             v-if="accounts.length"
@@ -152,10 +151,7 @@ async function handleUnlink(cardMask: string) {
             label="Привязать к счёту"
             @select="(accountId) => handleSelect(card.card_mask, accountId)"
           />
-          <p
-            v-else
-            class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
-          >
+          <p v-else class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
             Сначала создай счёт, чтобы привязать карту.
           </p>
         </div>
