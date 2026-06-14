@@ -47,7 +47,8 @@ A personal finance management application. A mobile-friendly PWA for tracking yo
 git clone https://github.com/kickcs/finance-app.git
 cd finance-app
 
-# Install dependencies
+# Install dependencies (root tooling + backend + frontend)
+bun install
 bun run install:all
 
 # Copy environment files
