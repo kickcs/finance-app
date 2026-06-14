@@ -1,105 +1,106 @@
 # Ouro Finance
 
-Приложение для управления личными финансами. PWA с поддержкой мобильных устройств.
+A personal finance management application. A mobile-friendly PWA for tracking your money.
 
-## Возможности
+## Features
 
-- Учёт доходов и расходов по счетам и категориям
-- Мультивалютность (UZS, USD, EUR, RUB, GBP, CNY) с автоматической конвертацией
-- Аналитика расходов с графиками и статистикой
-- Учёт долгов и частичных платежей
-- Финансовые цели и напоминания
-- Бюджетирование по категориям
-- Разделение расходов между друзьями
-- Импорт транзакций из Money Lover (CSV)
-- Тёмная/светлая тема
-- PWA — работает как нативное приложение на телефоне
+- Income and expense tracking by accounts and categories
+- Multi-currency support (UZS, USD, EUR, RUB, GBP, CNY) with automatic conversion
+- Expense analytics with charts and statistics
+- Debt tracking with partial payments
+- Financial goals and reminders
+- Per-category budgeting
+- Split expenses between friends
+- Transaction import from Money Lover (CSV)
+- Dark / light theme
+- PWA — works like a native app on your phone
 
-## Стек технологий
+## Tech Stack
 
 ### Frontend
 - **Vue 3** (Composition API, `<script setup>`)
 - **TypeScript**
-- **TanStack Vue Query** — кеширование и серверное состояние
-- **Tailwind CSS v4** — стилизация
-- **Reka UI** — headless UI-компоненты
-- **Feature-Sliced Design** — архитектура фронтенда
+- **TanStack Vue Query** — caching and server state
+- **Tailwind CSS v4** — styling
+- **Reka UI** — headless UI components
+- **Feature-Sliced Design** — frontend architecture
 - **vite-plugin-pwa** — Progressive Web App
 
 ### Backend
-- **NestJS 11** — фреймворк
-- **TypeORM** + **PostgreSQL** — база данных
-- **CQRS** + **DDD** — архитектура
-- **JWT + Passport** — аутентификация
-- **LemonSqueezy** — подписки и платежи
+- **NestJS 11** — framework
+- **TypeORM** + **PostgreSQL** — database
+- **CQRS** + **DDD** — architecture
+- **JWT + Passport** — authentication
+- **LemonSqueezy** — subscriptions and payments
 
-## Быстрый старт
+## Getting Started
 
-### Требования
+### Requirements
 
 - [Bun](https://bun.sh/) >= 1.0
-- [Docker](https://www.docker.com/) (для PostgreSQL)
+- [Docker](https://www.docker.com/) (for PostgreSQL)
 
-### Установка
+### Installation
 
 ```bash
-# Клонировать репозиторий
-git clone git@git-hackathon.mbabm.uz:mna-team-1386b2/ouro-finance.git
-cd ouro-finance
+# Clone the repository
+git clone https://github.com/kickcs/finance-app.git
+cd finance-app
 
-# Установить зависимости
+# Install dependencies
 bun run install:all
 
-# Скопировать .env
+# Copy environment files
+cp .env.example .env
 cp backend/.env.example backend/.env
 
-# Запустить PostgreSQL
+# Start PostgreSQL
 docker compose up -d postgres
 
-# Применить миграции
+# Run migrations
 cd backend && bun run migration:run && cd ..
 ```
 
-### Запуск
+### Running
 
 ```bash
-# Запустить frontend + backend одновременно
+# Start frontend + backend together
 bun run dev
 ```
 
 - Frontend: http://localhost:5173
 - Backend API: http://localhost:3000/api
 
-### Сборка
+### Build
 
 ```bash
 bun run build
 ```
 
-## Структура проекта
+## Project Structure
 
 ```
 ├── backend/                 # NestJS API
 │   └── src/
 │       ├── modules/         # Bounded Contexts (DDD)
-│       │   ├── identity/    # Аутентификация, профили
-│       │   ├── accounting/  # Счета, транзакции, категории
-│       │   ├── debt/        # Долги
-│       │   ├── planning/    # Цели, напоминания
-│       │   ├── exchange/    # Курсы валют
-│       │   └── subscription/# Подписки, платежи
-│       └── shared/          # DDD базовые классы
+│       │   ├── identity/    # Authentication, profiles
+│       │   ├── accounting/  # Accounts, transactions, categories
+│       │   ├── debt/        # Debts
+│       │   ├── planning/    # Goals, reminders
+│       │   ├── exchange/    # Currency rates
+│       │   └── subscription/# Subscriptions, payments
+│       └── shared/          # DDD base classes
 ├── frontend/                # Vue 3 SPA
 │   └── src/
-│       ├── app/             # Роутер, стили, точка входа
-│       ├── pages/           # Страницы
-│       ├── widgets/         # Составные UI-блоки
-│       ├── features/        # Пользовательские действия
-│       ├── entities/        # Бизнес-сущности + API слой
-│       └── shared/          # UI-компоненты, утилиты, API-клиент
-└── docker-compose.yml       # Docker для локальной разработки
+│       ├── app/             # Router, styles, entry point
+│       ├── pages/           # Pages
+│       ├── widgets/         # Composite UI blocks
+│       ├── features/        # User actions
+│       ├── entities/        # Business entities + API layer
+│       └── shared/          # UI components, utilities, API client
+└── docker-compose.yml       # Docker for local development
 ```
 
-## Команда
+## License
 
-**MNA Team** — Hackathon 2026
+This project is licensed under the [MIT License](./LICENSE).

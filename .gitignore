@@ -22,3 +22,6 @@ finance-app
 skills-lock.json
 package-lock.json
 yarn.lock
+
+# Internal infrastructure / deployment notes — not for public repo
+docs/plans/tracker-deployment-guide.md
