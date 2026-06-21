@@ -76,6 +76,7 @@ describe('ProfileMapper', () => {
         name: 'John',
         password: null,
         currency: 'USD',
+        language: 'ru',
         hasCompletedOnboarding: true,
         defaultAccountId: 'acc-1',
         isDemo: false,

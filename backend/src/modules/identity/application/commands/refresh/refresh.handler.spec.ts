@@ -44,6 +44,7 @@ describe('RefreshHandler', () => {
       name: 'John',
       password: null,
       currency: 'USD',
+      language: 'ru',
       hasCompletedOnboarding: true,
       defaultAccountId: null,
       isDemo: overrides.isDemo !== undefined ? overrides.isDemo : false,

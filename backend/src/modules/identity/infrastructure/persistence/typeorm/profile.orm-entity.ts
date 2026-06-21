@@ -18,6 +18,9 @@ export class ProfileOrmEntity {
   @Column({ default: 'RUB' })
   currency: string;
 
+  @Column({ default: 'ru' })
+  language: string;
+
   @Column({ name: 'has_completed_onboarding', default: false })
   hasCompletedOnboarding: boolean;
 

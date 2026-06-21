@@ -31,6 +31,7 @@ describe('LogoutHandler', () => {
       name: 'John',
       password: null,
       currency: 'USD',
+      language: 'ru',
       hasCompletedOnboarding: true,
       defaultAccountId: null,
       isDemo: false,
