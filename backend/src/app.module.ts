@@ -1,8 +1,11 @@
+import { join } from 'path';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
+import { I18nModule, AcceptLanguageResolver } from 'nestjs-i18n';
+import { ProfileLanguageResolver } from './modules/identity/infrastructure/i18n/profile-language.resolver';
 
 import { databaseConfig, jwtConfig } from './config';
 import { DATABASE_POOL_CONFIG } from './config/database.config';
@@ -114,6 +117,16 @@ import { TelegramImportModule } from './modules/telegram-import/telegram-import.
       inject: [ConfigService],
     }),
 
+    // Internationalisation
+    I18nModule.forRoot({
+      fallbackLanguage: 'ru',
+      loaderOptions: {
+        path: join(__dirname, '/i18n/'),
+        watch: true,
+      },
+      resolvers: [ProfileLanguageResolver, new AcceptLanguageResolver()],
+    }),
+
     // Shared Kernel
     SharedModule,
 
@@ -144,6 +157,7 @@ import { TelegramImportModule } from './modules/telegram-import/telegram-import.
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
     },
+    ProfileLanguageResolver,
   ],
 })
 export class AppModule {}

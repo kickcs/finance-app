@@ -1,0 +1,25 @@
+{
+  "test": {
+    "title": "Тестовое уведомление",
+    "body": "Push-уведомления работают!"
+  },
+  "subscriptionUpcoming": {
+    "body": "Списание {amount} {currency} {when}"
+  },
+  "when": {
+    "today": "сегодня",
+    "tomorrow": "завтра",
+    "inDays": "через {count} дн."
+  },
+  "subscriptionCharged": {
+    "body": "Списано {amount} {currency}",
+    "bodyWithAccount": "Списано {amount} {currency} · {accountName}"
+  },
+  "subscriptionFailed": {
+    "body": "Не удалось списать {amount} {currency}. {reason}."
+  },
+  "failReason": {
+    "noAccount": "не указан счёт для автосписания",
+    "currencyMismatch": "валюта подписки не совпадает с валютой счёта"
+  }
+}
