@@ -20,6 +20,7 @@
   },
   "failReason": {
     "noAccount": "no account set for auto-charge",
-    "currencyMismatch": "subscription currency does not match account currency"
+    "currencyMismatch": "subscription currency does not match account currency",
+    "checkAccount": "check the account"
   }
 }

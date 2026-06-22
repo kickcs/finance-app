@@ -1,6 +1,7 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { CommandBus } from '@nestjs/cqrs';
 import { DataSource } from 'typeorm';
+import { I18nService } from 'nestjs-i18n';
 import { ProcessAutoChargesHandler } from './process-auto-charges.handler';
 import { ProcessAutoChargesCommand } from './process-auto-charges.command';
 import { RECURRING_SUBSCRIPTION_REPOSITORY } from '../../../domain/repositories';
@@ -34,6 +35,9 @@ describe('ProcessAutoChargesHandler', () => {
   const mockPushService = {
     sendToUser: jest.fn(),
   };
+  const mockI18n = {
+    translate: jest.fn().mockImplementation((key: string) => key),
+  };
 
   let managerQueryMock: jest.Mock;
   let managerSaveMock: jest.Mock;
@@ -57,11 +61,13 @@ describe('ProcessAutoChargesHandler', () => {
         { provide: DataSource, useValue: mockDataSource },
         { provide: RECURRING_SUBSCRIPTION_REPOSITORY, useValue: mockSubscriptionRepository },
         { provide: PUSH_NOTIFICATION_SERVICE, useValue: mockPushService },
+        { provide: I18nService, useValue: mockI18n },
       ],
     }).compile();
 
     handler = module.get<ProcessAutoChargesHandler>(ProcessAutoChargesHandler);
     jest.clearAllMocks();
+    mockI18n.translate.mockImplementation((key: string) => key);
   });
 
   function buildSubscription(billingDate: Date): RecurringSubscription {
@@ -90,7 +96,7 @@ describe('ProcessAutoChargesHandler', () => {
   it('successful auto-charge advances billing, saves, and sends charged push', async () => {
     jest.useFakeTimers().setSystemTime(new Date('2026-05-08T12:00:00Z'));
     mockResolver.getUsersDueForNotification.mockResolvedValue([
-      { userId: 'user-1', timezone: 'UTC', notificationHour: 12 },
+      { userId: 'user-1', timezone: 'UTC', notificationHour: 12, language: 'en' },
     ]);
     const subscription = buildSubscription(new Date('2026-05-08T00:00:00Z'));
     mockSubscriptionRepository.findActiveByUserId.mockResolvedValue([subscription]);
@@ -119,10 +125,15 @@ describe('ProcessAutoChargesHandler', () => {
 
     expect(mockPushService.sendToUser).toHaveBeenCalledTimes(1);
     const [, payload, options] = mockPushService.sendToUser.mock.calls[0] as SendToUserCall;
-    expect(payload.body).toContain('Списано 9.99 USD');
-    expect(payload.body).toContain('· Visa');
+    // i18n mock returns the key; bodyWithAccount key used because accountName='Visa'
+    expect(payload.body).toBe('notifications.subscriptionCharged.bodyWithAccount');
     expect(options.type).toBe('subscription_charged');
     expect(options.dedupKey).toBe('subscription_charged:sub-1:2026-05-08');
+
+    expect(mockI18n.translate).toHaveBeenCalledWith(
+      'notifications.subscriptionCharged.bodyWithAccount',
+      expect.objectContaining({ lang: 'en' }),
+    );
 
     jest.useRealTimers();
   });
@@ -130,7 +141,7 @@ describe('ProcessAutoChargesHandler', () => {
   it('failed auto-charge sends failed push with correct dedup key, no advance', async () => {
     jest.useFakeTimers().setSystemTime(new Date('2026-05-08T12:00:00Z'));
     mockResolver.getUsersDueForNotification.mockResolvedValue([
-      { userId: 'user-1', timezone: 'UTC', notificationHour: 12 },
+      { userId: 'user-1', timezone: 'UTC', notificationHour: 12, language: 'en' },
     ]);
     const subscription = buildSubscription(new Date('2026-05-08T00:00:00Z'));
     const originalBillingDate = subscription.billingDate.getTime();
@@ -149,14 +160,21 @@ describe('ProcessAutoChargesHandler', () => {
     // Save not called because transaction threw before reaching it
     expect(mockSubscriptionRepository.save).not.toHaveBeenCalled();
     expect(managerSaveMock).not.toHaveBeenCalled();
-    // Billing date was advanced in-memory before save threw, but since we never saved and the
-    // aggregate is in-memory in this test, we accept either state. The contract is: DB rolled back.
     // Push was sent for failure
     expect(mockPushService.sendToUser).toHaveBeenCalledTimes(1);
     const [, payload, options] = mockPushService.sendToUser.mock.calls[0] as SendToUserCall;
-    expect(payload.body).toContain('Не удалось списать');
+    expect(payload.body).toBe('notifications.subscriptionFailed.body');
     expect(options.type).toBe('subscription_failed');
     expect(options.dedupKey).toBe('subscription_failed:sub-1:2026-05-08');
+
+    expect(mockI18n.translate).toHaveBeenCalledWith(
+      'notifications.failReason.checkAccount',
+      expect.objectContaining({ lang: 'en' }),
+    );
+    expect(mockI18n.translate).toHaveBeenCalledWith(
+      'notifications.subscriptionFailed.body',
+      expect.objectContaining({ lang: 'en' }),
+    );
 
     void originalBillingDate;
     jest.useRealTimers();
@@ -165,7 +183,7 @@ describe('ProcessAutoChargesHandler', () => {
   it('skips when auto_charge dedup key already exists (already charged today)', async () => {
     jest.useFakeTimers().setSystemTime(new Date('2026-05-08T12:00:00Z'));
     mockResolver.getUsersDueForNotification.mockResolvedValue([
-      { userId: 'user-1', timezone: 'UTC', notificationHour: 12 },
+      { userId: 'user-1', timezone: 'UTC', notificationHour: 12, language: 'ru' },
     ]);
     const subscription = buildSubscription(new Date('2026-05-08T00:00:00Z'));
     mockSubscriptionRepository.findActiveByUserId.mockResolvedValue([subscription]);
@@ -186,7 +204,7 @@ describe('ProcessAutoChargesHandler', () => {
   it('skips when locked row reports non-active status (race with pause)', async () => {
     jest.useFakeTimers().setSystemTime(new Date('2026-05-08T12:00:00Z'));
     mockResolver.getUsersDueForNotification.mockResolvedValue([
-      { userId: 'user-1', timezone: 'UTC', notificationHour: 12 },
+      { userId: 'user-1', timezone: 'UTC', notificationHour: 12, language: 'ru' },
     ]);
     const subscription = buildSubscription(new Date('2026-05-08T00:00:00Z'));
     mockSubscriptionRepository.findActiveByUserId.mockResolvedValue([subscription]);
@@ -206,7 +224,7 @@ describe('ProcessAutoChargesHandler', () => {
   it('skips subscriptions with autoCharge=false', async () => {
     jest.useFakeTimers().setSystemTime(new Date('2026-05-08T12:00:00Z'));
     mockResolver.getUsersDueForNotification.mockResolvedValue([
-      { userId: 'user-1', timezone: 'UTC', notificationHour: 12 },
+      { userId: 'user-1', timezone: 'UTC', notificationHour: 12, language: 'ru' },
     ]);
     const subscription = buildSubscription(new Date('2026-05-08T00:00:00Z'));
     Object.defineProperty(subscription, '_autoCharge', { value: false, writable: true });

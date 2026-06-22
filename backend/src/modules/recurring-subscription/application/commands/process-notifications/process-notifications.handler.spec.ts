@@ -1,4 +1,5 @@
 import { Test, type TestingModule } from '@nestjs/testing';
+import { I18nService } from 'nestjs-i18n';
 import { ProcessNotificationsHandler } from './process-notifications.handler';
 import { ProcessNotificationsCommand } from './process-notifications.command';
 import { RECURRING_SUBSCRIPTION_REPOSITORY } from '../../../domain/repositories';
@@ -29,6 +30,9 @@ describe('ProcessNotificationsHandler', () => {
   const mockPushService = {
     sendToUser: jest.fn(),
   };
+  const mockI18n = {
+    translate: jest.fn().mockImplementation((key: string) => key),
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -37,11 +41,13 @@ describe('ProcessNotificationsHandler', () => {
         { provide: TimezoneUserResolverService, useValue: mockResolver },
         { provide: RECURRING_SUBSCRIPTION_REPOSITORY, useValue: mockSubscriptionRepository },
         { provide: PUSH_NOTIFICATION_SERVICE, useValue: mockPushService },
+        { provide: I18nService, useValue: mockI18n },
       ],
     }).compile();
 
     handler = module.get<ProcessNotificationsHandler>(ProcessNotificationsHandler);
     jest.clearAllMocks();
+    mockI18n.translate.mockImplementation((key: string) => key);
   });
 
   function buildSubscription(billingDate: Date, notifyDaysBefore: number[]): RecurringSubscription {
@@ -70,7 +76,7 @@ describe('ProcessNotificationsHandler', () => {
   it('sends notification when daysBefore=2 matches today', async () => {
     // todayInTz=2026-05-08 (UTC tz), billingDate=2026-05-10 → daysBefore=2 matches
     mockResolver.getUsersDueForNotification.mockResolvedValue([
-      { userId: 'user-1', timezone: 'UTC', notificationHour: 12 },
+      { userId: 'user-1', timezone: 'UTC', notificationHour: 12, language: 'en' },
     ]);
     mockSubscriptionRepository.findActiveByUserId.mockResolvedValue([
       buildSubscription(new Date('2026-05-10T00:00:00Z'), [2]),
@@ -83,9 +89,18 @@ describe('ProcessNotificationsHandler', () => {
 
     expect(mockPushService.sendToUser).toHaveBeenCalledTimes(1);
     const [, payload, options] = mockPushService.sendToUser.mock.calls[0] as SendToUserCall;
-    expect(payload.body).toContain('через 2 дн.');
+    expect(payload.body).toBe('notifications.subscriptionUpcoming.body');
     expect(options.type).toBe('subscription_upcoming');
     expect(options.dedupKey).toBe('subscription_upcoming:sub-1:2026-05-08:2');
+
+    expect(mockI18n.translate).toHaveBeenCalledWith(
+      'notifications.subscriptionUpcoming.body',
+      expect.objectContaining({ lang: 'en' }),
+    );
+    expect(mockI18n.translate).toHaveBeenCalledWith(
+      'notifications.when.inDays',
+      expect.objectContaining({ lang: 'en' }),
+    );
 
     jest.useRealTimers();
   });
@@ -93,7 +108,7 @@ describe('ProcessNotificationsHandler', () => {
   it('multi-element notifyDaysBefore [3, 1, 0] only triggers matching days', async () => {
     // billing=2026-05-09. Today=2026-05-08 → daysBefore=1 matches. 3 and 0 do not.
     mockResolver.getUsersDueForNotification.mockResolvedValue([
-      { userId: 'user-1', timezone: 'UTC', notificationHour: 12 },
+      { userId: 'user-1', timezone: 'UTC', notificationHour: 12, language: 'en' },
     ]);
     mockSubscriptionRepository.findActiveByUserId.mockResolvedValue([
       buildSubscription(new Date('2026-05-09T00:00:00Z'), [3, 1, 0]),
@@ -105,16 +120,20 @@ describe('ProcessNotificationsHandler', () => {
     await handler.execute(new ProcessNotificationsCommand());
 
     expect(mockPushService.sendToUser).toHaveBeenCalledTimes(1);
-    const [, payload, options] = mockPushService.sendToUser.mock.calls[0] as SendToUserCall;
-    expect(payload.body).toContain('завтра');
+    const [, , options] = mockPushService.sendToUser.mock.calls[0] as SendToUserCall;
     expect(options.dedupKey).toBe('subscription_upcoming:sub-1:2026-05-08:1');
+
+    expect(mockI18n.translate).toHaveBeenCalledWith(
+      'notifications.when.tomorrow',
+      expect.objectContaining({ lang: 'en' }),
+    );
 
     jest.useRealTimers();
   });
 
   it('sends nothing when notifyDaysBefore is empty', async () => {
     mockResolver.getUsersDueForNotification.mockResolvedValue([
-      { userId: 'user-1', timezone: 'UTC', notificationHour: 12 },
+      { userId: 'user-1', timezone: 'UTC', notificationHour: 12, language: 'ru' },
     ]);
     mockSubscriptionRepository.findActiveByUserId.mockResolvedValue([
       buildSubscription(new Date('2026-05-10T00:00:00Z'), []),
@@ -125,9 +144,9 @@ describe('ProcessNotificationsHandler', () => {
     expect(mockPushService.sendToUser).not.toHaveBeenCalled();
   });
 
-  it('sends "сегодня" when daysBefore=0 matches today', async () => {
+  it('uses notifications.when.today key when daysBefore=0', async () => {
     mockResolver.getUsersDueForNotification.mockResolvedValue([
-      { userId: 'user-1', timezone: 'UTC', notificationHour: 12 },
+      { userId: 'user-1', timezone: 'UTC', notificationHour: 12, language: 'en' },
     ]);
     mockSubscriptionRepository.findActiveByUserId.mockResolvedValue([
       buildSubscription(new Date('2026-05-08T00:00:00Z'), [0]),
@@ -139,8 +158,10 @@ describe('ProcessNotificationsHandler', () => {
     await handler.execute(new ProcessNotificationsCommand());
 
     expect(mockPushService.sendToUser).toHaveBeenCalledTimes(1);
-    const [, payload] = mockPushService.sendToUser.mock.calls[0] as SendToUserCall;
-    expect(payload.body).toContain('сегодня');
+    expect(mockI18n.translate).toHaveBeenCalledWith(
+      'notifications.when.today',
+      expect.objectContaining({ lang: 'en' }),
+    );
 
     jest.useRealTimers();
   });

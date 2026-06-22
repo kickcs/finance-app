@@ -19,15 +19,15 @@ describe('TimezoneUserResolverService', () => {
 
   it('should return mapped users when query yields rows', async () => {
     mockDataSource.query.mockResolvedValue([
-      { id: 'user-1', timezone: 'Asia/Tashkent', notification_hour: 9 },
-      { id: 'user-2', timezone: 'Europe/Berlin', notification_hour: 12 },
+      { id: 'user-1', timezone: 'Asia/Tashkent', notification_hour: 9, language: 'ru' },
+      { id: 'user-2', timezone: 'Europe/Berlin', notification_hour: 12, language: 'en' },
     ]);
 
     const result = await service.getUsersDueForNotification();
 
     expect(result).toEqual([
-      { userId: 'user-1', timezone: 'Asia/Tashkent', notificationHour: 9 },
-      { userId: 'user-2', timezone: 'Europe/Berlin', notificationHour: 12 },
+      { userId: 'user-1', timezone: 'Asia/Tashkent', notificationHour: 9, language: 'ru' },
+      { userId: 'user-2', timezone: 'Europe/Berlin', notificationHour: 12, language: 'en' },
     ]);
     expect(mockDataSource.query).toHaveBeenCalledTimes(1);
     const firstCall = mockDataSource.query.mock.calls[0] as [string];
