@@ -42,7 +42,7 @@ RUN bun install --frozen-lockfile --production
 # ================================
 # Stage 4: Production runtime
 # ================================
-FROM node:22-alpine AS runner
+FROM node:26-alpine AS runner
 
 WORKDIR /app
 
