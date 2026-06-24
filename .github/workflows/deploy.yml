@@ -95,7 +95,7 @@ jobs:
           bun-version: ${{ env.BUN_VERSION }}
 
       - name: Cache bun dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.bun/install/cache
           key: bun-backend-${{ runner.os }}-${{ hashFiles('backend/bun.lockb') }}
@@ -192,7 +192,7 @@ jobs:
           bun-version: ${{ env.BUN_VERSION }}
 
       - name: Cache bun dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.bun/install/cache
           key: bun-frontend-${{ runner.os }}-${{ hashFiles('frontend/bun.lockb') }}
