@@ -30,7 +30,7 @@
         "cookie-parser": "^1.4.7",
         "dotenv": "^16.4.5",
         "grammy": "^1.43.0",
-        "nestjs-pino": "^4.6.0",
+        "nestjs-pino": "^4.6.1",
         "openai": "^6.23.0",
         "passport": "^0.7.0",
         "passport-jwt": "^4.0.1",
@@ -1377,7 +1377,7 @@
 
     "neo-async": ["neo-async@2.6.2", "", {}, ""],
 
-    "nestjs-pino": ["nestjs-pino@4.6.0", "", { "peerDependencies": { "@nestjs/common": "^8.0.0 || ^9.0.0 || ^10.0.0 || ^11.0.0", "pino": "^7.5.0 || ^8.0.0 || ^9.0.0 || ^10.0.0", "pino-http": "^6.4.0 || ^7.0.0 || ^8.0.0 || ^9.0.0 || ^10.0.0 || ^11.0.0", "rxjs": "^7.1.0" } }, "sha512-MzSgnOu9MhRT/f7MsvoDnxat11D9JRJYwL1t+tI6J44UrNz9rUVDpceEh9VFsyfiiIJKUri5S+/snMOoaWh7YA=="],
+    "nestjs-pino": ["nestjs-pino@4.6.1", "", { "peerDependencies": { "@nestjs/common": "^8.0.0 || ^9.0.0 || ^10.0.0 || ^11.0.0", "pino": "^7.5.0 || ^8.0.0 || ^9.0.0 || ^10.0.0", "pino-http": "^6.4.0 || ^7.0.0 || ^8.0.0 || ^9.0.0 || ^10.0.0 || ^11.0.0", "rxjs": "^7.1.0" } }, "sha512-nuARXa0xpdJ1lY2+fgycIQr6H3g0VgqAWNK3xMYjOFcj2DoPETNXj0lV3Y86nRuI7BUfQp5PGiVoZvT4dTWbpQ=="],
 
     "node-abort-controller": ["node-abort-controller@3.1.1", "", {}, ""],
 
