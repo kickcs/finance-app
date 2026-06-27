@@ -5,11 +5,9 @@
 import { getCachedDateFormat } from './intlCache';
 import { i18n } from '@/shared/i18n';
 
-/** Maps the active app locale to a BCP-47 Intl locale tag. */
-const INTL_LOCALE: Record<string, string> = { ru: 'ru-RU', en: 'en-US' };
-
+/** Maps the active app locale ('ru' | 'en') to a BCP-47 Intl locale tag. */
 function activeIntlLocale(): string {
-  return INTL_LOCALE[i18n.global.locale.value] ?? 'ru-RU';
+  return i18n.global.locale.value === 'en' ? 'en-US' : 'ru-RU';
 }
 
 /**

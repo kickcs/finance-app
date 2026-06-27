@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { UCard, UIcon } from '@/shared/ui';
+import { PageContainer, UCard, UIcon } from '@/shared/ui';
 import { AppHeader } from '@/widgets/header';
 import { useLocale } from '@/shared/i18n/useLocale';
 import { navigateBack } from '@/app/router';
@@ -27,17 +27,15 @@ async function choose(code: AppLocale) {
     await setLanguage(code).catch(() => undefined);
   }
 }
-
-function goBack() {
-  navigateBack();
-}
 </script>
 
 <template>
-  <div class="min-h-screen bg-background-light dark:bg-background-dark flex flex-col pb-28">
-    <AppHeader :title="t('pages.settings.language.title')" show-back blur @back="goBack" />
+  <PageContainer max-width="2xl" class="relative bg-background-light dark:bg-background-dark">
+    <template #header>
+      <AppHeader :title="t('pages.settings.language.title')" show-back @back="navigateBack" />
+    </template>
 
-    <main class="flex-1 px-5 pt-6 pb-10">
+    <main class="pt-8 pb-28 md:pb-8">
       <UCard
         variant="bordered"
         class="overflow-hidden divide-y divide-border-light dark:divide-border-dark"
@@ -66,5 +64,5 @@ function goBack() {
         </button>
       </UCard>
     </main>
-  </div>
+  </PageContainer>
 </template>

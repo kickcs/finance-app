@@ -24,12 +24,9 @@ function buildMessages(): Record<AppLocale, LocaleJson> {
     const [, slicePath, locale] = match;
     const data = (mod as { default: LocaleJson }).default;
 
-    if (slicePath === 'shared/i18n/locales/shared') {
-      // shared namespace: merge at top level under "shared"
-      assignDeep(messages[locale as AppLocale], ['shared'], data);
-      continue;
-    }
-    // layer/slice → camelCase segments → nested namespace
+    // FSD path → camelCase segments → nested namespace.
+    // e.g. features/add-transaction → features.addTransaction; the shared dict
+    // at shared/locales → shared.* (no special-casing needed).
     const segments = slicePath.split('/').map(toCamel);
     assignDeep(messages[locale as AppLocale], segments, data);
   }
