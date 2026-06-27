@@ -32,4 +32,9 @@ describe('formatRelativeDate (locale-aware)', () => {
     d.setDate(d.getDate() - 3);
     expect(formatRelativeDate(d)).toBe('3 days ago');
   });
+  it('treats future / later-today dates as "today" (no negative days)', () => {
+    const d = new Date();
+    d.setHours(d.getHours() + 5); // a few hours ahead → negative diff
+    expect(formatRelativeDate(d)).toBe('Today');
+  });
 });
