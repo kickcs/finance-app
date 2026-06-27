@@ -1,6 +1,6 @@
 # i18n extraction progress
 
-**Слайсов:** 0 done / 0 partial / 80 pending из 80
+**Слайсов:** 1 done / 0 partial / 79 pending из 80
 
 | Слайс | Статус | Ключей найдено | Извлечено | Переведено (en) | needs_human | Прогон от |
 |---|---|---|---|---|---|---|
@@ -21,7 +21,7 @@
 | features/edit-transaction | pending | 63 | 0 | 0 | 0 | — |
 | features/feature-hints | pending | 7 | 0 | 0 | 0 | — |
 | features/import-data | pending | 22 | 0 | 0 | 0 | — |
-| features/install-pwa | pending | 34 | 0 | 0 | 0 | — |
+| features/install-pwa | done | 24 | 21 | 21 | 0 | 2026-06-27 |
 | features/link-telegram | pending | 29 | 0 | 0 | 0 | — |
 | features/manage-categories | pending | 26 | 0 | 0 | 0 | — |
 | features/manage-push-notifications | pending | 23 | 0 | 0 | 0 | — |

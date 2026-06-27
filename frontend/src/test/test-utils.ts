@@ -2,6 +2,7 @@ import { mount, type ComponentMountingOptions } from '@vue/test-utils';
 import { createRouter, createMemoryHistory, type RouteRecordRaw } from 'vue-router';
 import { VueQueryPlugin, QueryClient } from '@tanstack/vue-query';
 import { defineComponent, h, type Component } from 'vue';
+import { i18n } from '@/shared/i18n';
 import type { User } from '@/shared/api/composables/useAuth';
 
 const defaultRoute: RouteRecordRaw = {
@@ -50,6 +51,7 @@ export function renderWithProviders(component: Component, options: RenderOptions
       ...mountOptions.global,
       plugins: [
         ...(mountOptions.global?.plugins ?? []),
+        i18n,
         testRouter,
         [VueQueryPlugin, { queryClient: testQueryClient }],
       ],
