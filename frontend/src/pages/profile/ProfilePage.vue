@@ -24,9 +24,11 @@ import { ThemeToggle } from '@/features/toggle-theme';
 import { NavbarStyleSelector } from '@/features/select-navbar-style';
 import { TelegramSection } from '@/features/link-telegram';
 import { getInitial } from '@/shared/lib/format/text';
+import { useLocale } from '@/shared/i18n/useLocale';
 
 const router = useRouter();
 const { signOut } = useAuth();
+const { locale } = useLocale();
 
 const { user, userId } = useCurrentUser();
 
@@ -93,6 +95,12 @@ const settingsGroup = [
     value: () => currency.value?.code,
   },
   {
+    id: 'language',
+    icon: 'language',
+    label: 'Язык',
+    value: () => (locale.value === 'en' ? 'English' : 'Русский'),
+  },
+  {
     id: 'financial-period',
     icon: 'calendar_month',
     label: 'Начало месяца',
@@ -128,6 +136,9 @@ function handleMenuClick(itemId: string) {
       break;
     case 'currency':
       router.push({ name: ROUTE_NAMES.SETTINGS_CURRENCY });
+      break;
+    case 'language':
+      router.push({ name: ROUTE_NAMES.SETTINGS_LANGUAGE });
       break;
     case 'financial-period':
       showFinancialPeriodModal.value = true;
