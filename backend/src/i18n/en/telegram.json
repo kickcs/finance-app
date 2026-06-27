@@ -1,0 +1,16 @@
+{
+  "summary": {
+    "imported": "✅ Imported: {count}",
+    "duplicates": "⏭ Skipped duplicates: {count}",
+    "unparsed": "⚠️ Unrecognized: {count}",
+    "confirmHint": "\nConfirm the transactions in the app — the \"Pending confirmation\" section.",
+    "nothing": "Nothing processed."
+  },
+  "start": {
+    "noToken": "Hi! I import bank notifications into your finance app.\n\nLink your account: open the app → Profile → Telegram import → \"Connect\".",
+    "linked": "✅ Account linked! Now forward me a bank notification — I'll turn it into a transaction.",
+    "invalidToken": "⚠️ The link has expired or was already used. Generate a new one in the app.",
+    "alreadyLinkedOther": "⚠️ This Telegram is already linked to another account. Unlink it there first."
+  },
+  "notLinked": "First link your account: app → Profile → Telegram import → \"Connect\"."
+}

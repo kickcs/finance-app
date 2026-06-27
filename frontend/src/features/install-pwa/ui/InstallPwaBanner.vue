@@ -35,10 +35,10 @@ function handleDismiss(e: Event) {
         <!-- Text -->
         <div class="flex-1 min-w-0">
           <p class="font-semibold text-text-primary-light dark:text-text-primary-dark">
-            Установите приложение
+            {{ $t('features.installPwa.bannerTitle') }}
           </p>
           <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
-            Быстрый доступ с главного экрана
+            {{ $t('features.installPwa.bannerSubtitle') }}
           </p>
         </div>
 

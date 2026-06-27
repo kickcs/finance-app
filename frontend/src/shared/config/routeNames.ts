@@ -12,6 +12,7 @@ export const ROUTE_NAMES = {
   PROFILE: 'profile',
   CHANGELOG: 'changelog',
   SETTINGS_CURRENCY: 'settings-currency',
+  SETTINGS_LANGUAGE: 'settings-language',
   SETTINGS_IMPORT: 'settings-import',
   SETTINGS_CATEGORIES: 'settings-categories',
   PEOPLE_LIST: 'people-list',

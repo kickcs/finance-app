@@ -5,6 +5,7 @@ import { RegisterCommand } from './register.command';
 import { PROFILE_REPOSITORY } from '../../../domain/repositories/profile.repository.interface';
 import { DomainEventPublisher } from '../../../../../shared';
 import { TokenService } from '../../services/token.service';
+import type { Profile } from '../../../domain';
 
 jest.mock('bcrypt', () => ({
   hash: jest.fn().mockResolvedValue('hashed-password'),
@@ -108,5 +109,21 @@ describe('RegisterHandler', () => {
     const result = await handler.execute(command);
 
     expect(result.user.name).toBeNull();
+  });
+
+  it('passes language to the created profile', async () => {
+    mockRepository.existsByEmail.mockResolvedValue(false);
+    mockRepository.save.mockResolvedValue(undefined);
+    mockTokenService.generateTokens.mockResolvedValue({
+      accessToken: 'access-token',
+      refreshToken: 'refresh-token',
+    });
+    mockTokenService.hashToken.mockReturnValue('hashed-refresh-token');
+    mockEventPublisher.publishEvents.mockResolvedValue(undefined);
+
+    const command = new RegisterCommand('e@test.com', 'password123', 'Jane', 'en');
+    await handler.execute(command);
+    const [savedProfile] = mockRepository.save.mock.calls[0] as [Profile];
+    expect(savedProfile.language).toBe('en');
   });
 });

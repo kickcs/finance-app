@@ -41,6 +41,7 @@ describe('UpdateProfileHandler', () => {
       name: 'John',
       password: null,
       currency: 'USD',
+      language: 'ru',
       hasCompletedOnboarding: false,
       defaultAccountId: null,
       isDemo: false,
@@ -83,6 +84,18 @@ describe('UpdateProfileHandler', () => {
     const result = await handler.execute(command);
 
     expect(result.currency).toBe('EUR');
+  });
+
+  it('updates language and returns it in the response', async () => {
+    const profile = createProfile();
+    mockRepository.findById.mockResolvedValue(profile);
+    mockRepository.save.mockImplementation((p) => Promise.resolve(p));
+    mockEventPublisher.publishEvents.mockResolvedValue(undefined);
+
+    const command = new UpdateProfileCommand('user-1', { language: 'en' });
+    const result = await handler.execute(command);
+
+    expect(result.language).toBe('en');
   });
 
   it('should update hasCompletedOnboarding', async () => {
@@ -151,6 +164,7 @@ describe('UpdateProfileHandler', () => {
       email: 'user@test.com',
       name: 'John',
       currency: 'USD',
+      language: 'ru',
       hasCompletedOnboarding: false,
       defaultAccountId: null,
       isDemo: false,

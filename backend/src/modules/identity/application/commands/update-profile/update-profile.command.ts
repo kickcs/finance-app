@@ -6,6 +6,7 @@ export class UpdateProfileCommand {
     public readonly data: {
       name?: string;
       currency?: string;
+      language?: string;
       hasCompletedOnboarding?: boolean;
       defaultAccountId?: string | null;
       dashboardSettings?: DashboardSettings | null;

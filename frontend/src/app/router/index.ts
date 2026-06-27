@@ -149,6 +149,11 @@ export const router = createRouter({
           component: () => import('@/pages/settings/currency/CurrencySettingsPage.vue'),
         },
         {
+          path: 'settings/language',
+          name: ROUTE_NAMES.SETTINGS_LANGUAGE,
+          component: () => import('@/pages/settings/language/SettingsLanguagePage.vue'),
+        },
+        {
           path: 'settings/import',
           name: ROUTE_NAMES.SETTINGS_IMPORT,
           component: () => import('@/pages/settings/import/ImportPage.vue'),

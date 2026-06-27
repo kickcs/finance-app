@@ -1,5 +1,6 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { Inject, Logger } from '@nestjs/common';
+import { I18nService } from 'nestjs-i18n';
 import { ProcessNotificationsCommand } from './process-notifications.command';
 import {
   IPushNotificationService,
@@ -23,15 +24,16 @@ export class ProcessNotificationsHandler implements ICommandHandler<ProcessNotif
     private readonly subscriptionRepository: IRecurringSubscriptionRepository,
     @Inject(PUSH_NOTIFICATION_SERVICE)
     private readonly pushNotificationService: IPushNotificationService,
+    private readonly i18n: I18nService,
   ) {}
 
   async execute(_command: ProcessNotificationsCommand): Promise<void> {
     const users = await this.timezoneUserResolver.getUsersDueForNotification();
     if (users.length === 0) return;
 
-    for (const { userId, timezone } of users) {
+    for (const { userId, timezone, language } of users) {
       try {
-        await this.processUserNotifications(userId, timezone);
+        await this.processUserNotifications(userId, timezone, language);
       } catch (error) {
         this.logger.error(
           `Failed to process notifications for user ${userId}: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -40,7 +42,11 @@ export class ProcessNotificationsHandler implements ICommandHandler<ProcessNotif
     }
   }
 
-  private async processUserNotifications(userId: string, timezone: string): Promise<void> {
+  private async processUserNotifications(
+    userId: string,
+    timezone: string,
+    language: string,
+  ): Promise<void> {
     const subscriptions = await this.subscriptionRepository.findActiveByUserId(userId);
     if (subscriptions.length === 0) return;
 
@@ -59,7 +65,14 @@ export class ProcessNotificationsHandler implements ICommandHandler<ProcessNotif
           userId,
           {
             title: subscription.name,
-            body: `Списание ${subscription.amount} ${subscription.currency} ${formatDaysBefore(daysBefore)}`,
+            body: this.i18n.translate('notifications.subscriptionUpcoming.body', {
+              lang: language,
+              args: {
+                amount: subscription.amount,
+                currency: subscription.currency,
+                when: this.formatDaysBefore(daysBefore, language),
+              },
+            }),
             url: `/subscriptions/${subscription.id}`,
           },
           { type: 'subscription_upcoming', dedupKey },
@@ -73,10 +86,14 @@ export class ProcessNotificationsHandler implements ICommandHandler<ProcessNotif
       }
     }
   }
-}
 
-function formatDaysBefore(daysBefore: number): string {
-  if (daysBefore === 0) return 'сегодня';
-  if (daysBefore === 1) return 'завтра';
-  return `через ${daysBefore} дн.`;
+  private formatDaysBefore(daysBefore: number, lang: string): string {
+    if (daysBefore === 0) return this.i18n.translate('notifications.when.today', { lang });
+    if (daysBefore === 1) return this.i18n.translate('notifications.when.tomorrow', { lang });
+    // TODO(i18n): plural
+    return this.i18n.translate('notifications.when.inDays', {
+      lang,
+      args: { count: daysBefore },
+    });
+  }
 }

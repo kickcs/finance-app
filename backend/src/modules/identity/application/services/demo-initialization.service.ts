@@ -7,8 +7,13 @@
  * Note: EXPENSE_CATEGORIES and INCOME_CATEGORIES here use plain string literals
  * ('gifts', 'gifts_income'). The frontend uses CATEGORY_IDS constants that resolve
  * to the same values. This is intentional — the backend has no need for that import.
+ *
+ * Note: Russian description strings have been moved to src/i18n/ru/demo.json.
+ * The frontend demoDataGenerator.ts still uses hardcoded Russian strings and now
+ * diverges from this backend implementation.
  */
 import { Injectable, Inject, Logger } from '@nestjs/common';
+import { I18nService } from 'nestjs-i18n';
 import {
   IAccountRepository,
   ACCOUNT_REPOSITORY,
@@ -60,28 +65,6 @@ const CATEGORY_AMOUNTS: Record<string, { min: number; max: number }> = {
   other_income: { min: 50000, max: 500000 },
 };
 
-// Description templates for each category
-const CATEGORY_DESCRIPTIONS: Record<string, string[]> = {
-  groceries: ['Makro', 'Korzinka', 'Havas', 'Овощи на базаре', 'Продукты на неделю'],
-  transport: ['Yandex Go', 'Метро', 'Заправка', 'MyTaxi', 'Автобус'],
-  health: ['Аптека', 'Анализы', 'Врач', 'Стоматолог', 'Витамины'],
-  housing: ['Коммунальные', 'Интернет', 'Уборка', 'Ремонт', 'Мебель'],
-  cafe: ['Обед', 'Кофе', 'Evos', 'Oqtepa', 'Ресторан'],
-  entertainment: ['Кино', 'Netflix', 'Концерт', 'Игры', 'Подписка'],
-  gifts: ['День рождения', 'Подарок другу', 'Цветы', 'Сувенир'],
-  education: ['Курсы', 'Книги', 'Udemy', 'Репетитор'],
-  family: ['Детский сад', 'Школа', 'Одежда детям', 'Игрушки'],
-  sport: ['Тренажерка', 'Бассейн', 'Спортивная форма', 'Протеин'],
-  travel: ['Билеты', 'Отель', 'Экскурсия', 'Сувениры из поездки'],
-  other_expense: ['Разное', 'Мелкие расходы', 'Прочее'],
-  salary: ['Зарплата', 'Аванс'],
-  freelance: ['Проект', 'Заказ', 'Консультация'],
-  investments: ['Дивиденды', 'Проценты по вкладу'],
-  gifts_income: ['Подарок', 'От родителей'],
-  cashback: ['Кэшбек Uzcard', 'Кэшбек Payme'],
-  other_income: ['Возврат', 'Продажа', 'Прочее'],
-};
-
 // Expense categories with weights (probability)
 const EXPENSE_CATEGORIES: Array<{ id: string; weight: number }> = [
   { id: 'groceries', weight: 25 },
@@ -117,6 +100,32 @@ interface DemoTransactionData {
   date: Date;
 }
 
+type ContactKey = 'ahmed' | 'anna' | 'kolya' | 'dima';
+
+interface DebtSeed {
+  key: string;
+  amount: number;
+  currency: string;
+  type: 'given' | 'taken';
+  personKey: ContactKey;
+}
+
+const PEOPLE_DATA: Array<{ key: ContactKey; color: string }> = [
+  { key: 'ahmed', color: '#3b82f6' },
+  { key: 'anna', color: '#f43f5e' },
+  { key: 'kolya', color: '#10b981' },
+  { key: 'dima', color: '#f59e0b' },
+];
+
+const DEBTS_SEED: DebtSeed[] = [
+  { key: 'repair', amount: 500000, currency: 'UZS', type: 'given', personKey: 'ahmed' },
+  { key: 'trip', amount: 200, currency: 'USD', type: 'given', personKey: 'ahmed' },
+  { key: 'wedding', amount: 1500000, currency: 'UZS', type: 'given', personKey: 'anna' },
+  { key: 'tillPayday', amount: 300000, currency: 'UZS', type: 'given', personKey: 'kolya' },
+  { key: 'furniture', amount: 2000000, currency: 'UZS', type: 'taken', personKey: 'anna' },
+  { key: 'laptop', amount: 100, currency: 'USD', type: 'taken', personKey: 'dima' },
+];
+
 @Injectable()
 export class DemoInitializationService {
   private readonly logger = new Logger(DemoInitializationService.name);
@@ -133,6 +142,7 @@ export class DemoInitializationService {
     @Inject(PERSON_REPOSITORY)
     private readonly personRepository: IPersonRepository,
     private readonly eventPublisher: DomainEventPublisher,
+    private readonly i18n: I18nService,
   ) {}
 
   /**
@@ -140,10 +150,14 @@ export class DemoInitializationService {
    */
   async initializeDemoData(profile: Profile): Promise<string> {
     const userId = profile.id;
+    // Defensive default: the column is NOT NULL DEFAULT 'ru', but guard against
+    // legacy rows / ORM edge cases returning a nullish language.
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    const lang = profile.language ?? 'ru';
 
     try {
       // 1. Create accounts
-      const accounts = await this.createAccounts(userId);
+      const accounts = await this.createAccounts(userId, lang);
       const mainId = accounts[0].id;
       const savingsId = accounts[1].id;
 
@@ -156,13 +170,13 @@ export class DemoInitializationService {
       await this.profileRepository.save(profile);
 
       // 3. Create transactions
-      await this.createTransactions(userId, [mainId, savingsId]);
+      await this.createTransactions(userId, [mainId, savingsId], lang);
 
       // 4. Create debts
-      await this.createDebts(userId, mainId);
+      await this.createDebts(userId, mainId, lang);
 
       // 5. Create people (contacts)
-      await this.createPeople(userId);
+      await this.createPeople(userId, lang);
 
       this.logger.log(`Demo data initialized for user ${userId}`);
       return mainId;
@@ -172,7 +186,23 @@ export class DemoInitializationService {
     }
   }
 
-  private async createAccounts(userId: string): Promise<Account[]> {
+  // nestjs-i18n's translate<> generic resolves to a wrapped IfAnyOrNever type
+  // that does not narrow to a plain string/string[] for dynamic (string) keys,
+  // so we assert the known demo.json value shapes here.
+  private t(key: string, lang: string): string {
+    return this.i18n.translate(key, { lang });
+  }
+
+  private tArr(key: string, lang: string): string[] {
+    const value = this.i18n.translate(key, { lang });
+    if (!Array.isArray(value)) {
+      this.logger.warn(`Demo i18n key "${key}" is not an array (got ${typeof value})`);
+      return [String(value)];
+    }
+    return value as string[];
+  }
+
+  private async createAccounts(userId: string, lang: string): Promise<Account[]> {
     const mainBalance = this.roundToThousand(this.randomBetween(3000000, 8000000));
     const savingsBalance = this.roundToThousand(this.randomBetween(8000000, 15000000));
 
@@ -185,14 +215,14 @@ export class DemoInitializationService {
       typeFields?: AccountTypeFields;
     }> = [
       {
-        name: 'Основной',
+        name: this.t('demo.accounts.main', lang),
         icon: 'credit_card',
         color: '#3b82f6',
         type: 'basic',
         balances: [{ currency: 'UZS', balance: mainBalance }],
       },
       {
-        name: 'Накопительный',
+        name: this.t('demo.accounts.savings', lang),
         icon: 'savings',
         color: '#a855f7',
         type: 'savings',
@@ -222,8 +252,12 @@ export class DemoInitializationService {
     return savedAccounts;
   }
 
-  private async createTransactions(userId: string, accountIds: string[]): Promise<void> {
-    const transactionsData = this.generateTransactionsData();
+  private async createTransactions(
+    userId: string,
+    accountIds: string[],
+    lang: string,
+  ): Promise<void> {
+    const transactionsData = this.generateTransactionsData(lang);
     const [mainId, savingsId] = accountIds;
 
     const transactions: Transaction[] = transactionsData.map((txData) => {
@@ -259,33 +293,16 @@ export class DemoInitializationService {
     // Skip event publishing for bulk transactions to improve performance
   }
 
-  private async createDebts(userId: string, accountId: string): Promise<void> {
-    const debtsData: Array<{
-      name: string;
-      amount: number;
-      currency: string;
-      type: 'given' | 'taken';
-      personName: string;
-    }> = [
-      // Given (user lent money)
-      { name: 'На ремонт', amount: 500000, currency: 'UZS', type: 'given', personName: 'Ахмед' },
-      { name: 'На поездку', amount: 200, currency: 'USD', type: 'given', personName: 'Ахмед' },
-      { name: 'На свадьбу', amount: 1500000, currency: 'UZS', type: 'given', personName: 'Анна' },
-      { name: 'До зарплаты', amount: 300000, currency: 'UZS', type: 'given', personName: 'Коля' },
-      // Taken (user borrowed money)
-      { name: 'На мебель', amount: 2000000, currency: 'UZS', type: 'taken', personName: 'Анна' },
-      { name: 'За ноутбук', amount: 100, currency: 'USD', type: 'taken', personName: 'Дима' },
-    ];
-
-    const debts = debtsData.map((data) =>
+  private async createDebts(userId: string, accountId: string, lang: string): Promise<void> {
+    const debts = DEBTS_SEED.map((seed) =>
       Debt.create({
         id: crypto.randomUUID(),
         userId,
-        name: data.name,
-        totalAmount: data.amount,
-        currency: data.currency,
-        debtType: data.type,
-        personName: data.personName,
+        name: this.t(`demo.debts.${seed.key}`, lang),
+        totalAmount: seed.amount,
+        currency: seed.currency,
+        debtType: seed.type,
+        personName: this.t(`demo.contacts.${seed.personKey}`, lang),
         accountId,
       }),
     );
@@ -294,22 +311,20 @@ export class DemoInitializationService {
     await this.eventPublisher.publishEventsFromMultiple(debts);
   }
 
-  private async createPeople(userId: string): Promise<void> {
-    const peopleData = [
-      { name: 'Ахмед', color: '#3b82f6' },
-      { name: 'Анна', color: '#f43f5e' },
-      { name: 'Коля', color: '#10b981' },
-      { name: 'Дима', color: '#f59e0b' },
-    ];
-
-    const people = peopleData.map((data) =>
-      Person.create(crypto.randomUUID(), userId, data.name, data.color),
+  private async createPeople(userId: string, lang: string): Promise<void> {
+    const people = PEOPLE_DATA.map((data) =>
+      Person.create(
+        crypto.randomUUID(),
+        userId,
+        this.t(`demo.contacts.${data.key}`, lang),
+        data.color,
+      ),
     );
 
     await Promise.all(people.map((p) => this.personRepository.save(p)));
   }
 
-  private generateTransactionsData(): DemoTransactionData[] {
+  private generateTransactionsData(lang: string): DemoTransactionData[] {
     const transactions: DemoTransactionData[] = [];
     const now = new Date();
 
@@ -329,7 +344,7 @@ export class DemoInitializationService {
           const category = this.pickWeighted(EXPENSE_CATEGORIES);
           const amounts = CATEGORY_AMOUNTS[category.id];
           const amount = this.roundToThousand(this.randomBetween(amounts.min, amounts.max));
-          const descriptions = CATEGORY_DESCRIPTIONS[category.id];
+          const descriptions = this.tArr(`demo.descriptions.${category.id}`, lang);
 
           transactions.push({
             accountIndex: 0, // All expenses from main account
@@ -344,7 +359,7 @@ export class DemoInitializationService {
           const category = this.pickWeighted(INCOME_CATEGORIES);
           const amounts = CATEGORY_AMOUNTS[category.id];
           const amount = this.roundToThousand(this.randomBetween(amounts.min, amounts.max));
-          const descriptions = CATEGORY_DESCRIPTIONS[category.id];
+          const descriptions = this.tArr(`demo.descriptions.${category.id}`, lang);
 
           transactions.push({
             accountIndex: 0, // All income to main account
@@ -361,6 +376,7 @@ export class DemoInitializationService {
 
     // Add salary on 1st and 15th of current month
     const salaryAmount = this.roundToThousand(this.randomBetween(8000000, 12000000));
+    const salaryDescriptions = this.tArr('demo.descriptions.salary', lang);
 
     // Salary on 1st
     const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -371,7 +387,7 @@ export class DemoInitializationService {
         amount: salaryAmount,
         currency: 'UZS',
         type: 'income',
-        description: 'Зарплата',
+        description: salaryDescriptions[0],
         date: firstOfMonth,
       });
     }
@@ -385,7 +401,7 @@ export class DemoInitializationService {
         amount: salaryAmount,
         currency: 'UZS',
         type: 'income',
-        description: 'Аванс',
+        description: salaryDescriptions[1],
         date: fifteenthOfMonth,
       });
     }
@@ -403,7 +419,7 @@ export class DemoInitializationService {
         amount: salaryAmount,
         currency: 'UZS',
         type: 'income',
-        description: 'Зарплата',
+        description: salaryDescriptions[0],
         date: prevMonth1st,
       });
     }
@@ -415,7 +431,7 @@ export class DemoInitializationService {
         amount: salaryAmount,
         currency: 'UZS',
         type: 'income',
-        description: 'Аванс',
+        description: salaryDescriptions[1],
         date: prevMonth15th,
       });
     }
@@ -446,17 +462,5 @@ export class DemoInitializationService {
 
   private pickRandom<T>(items: T[]): T {
     return items[Math.floor(Math.random() * items.length)];
-  }
-
-  private getNextMonthDate(dayOfMonth: number): Date {
-    const now = new Date();
-    const nextDate = new Date(now.getFullYear(), now.getMonth(), dayOfMonth);
-
-    // If the day has passed this month, move to next month
-    if (nextDate <= now) {
-      nextDate.setMonth(nextDate.getMonth() + 1);
-    }
-
-    return nextDate;
   }
 }

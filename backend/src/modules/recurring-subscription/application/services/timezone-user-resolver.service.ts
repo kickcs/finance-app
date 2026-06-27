@@ -5,6 +5,7 @@ export interface UserWithTimezone {
   userId: string;
   timezone: string;
   notificationHour: number;
+  language: string;
 }
 
 @Injectable()
@@ -24,9 +25,9 @@ export class TimezoneUserResolverService {
     // this gives every user exactly one notification per day, regardless of
     // their tz offset granularity.
     const rows = await this.dataSource.query<
-      Array<{ id: string; timezone: string; notification_hour: number }>
+      Array<{ id: string; timezone: string; notification_hour: number; language: string }>
     >(
-      `SELECT id, timezone, notification_hour
+      `SELECT id, timezone, notification_hour, language
        FROM profiles
        WHERE timezone IS NOT NULL
          AND EXTRACT(HOUR FROM NOW() AT TIME ZONE timezone)::int = notification_hour
@@ -37,6 +38,7 @@ export class TimezoneUserResolverService {
       userId: row.id,
       timezone: row.timezone,
       notificationHour: row.notification_hour,
+      language: row.language,
     }));
   }
 }

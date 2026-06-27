@@ -14,7 +14,7 @@ async function handleNativeInstall() {
 </script>
 
 <template>
-  <UModal v-model="modelValue" title="Установите Ouro Finance">
+  <UModal v-model="modelValue" :title="$t('features.installPwa.modalTitle')">
     <!-- Already installed -->
     <div
       v-if="isStandalone"
@@ -25,40 +25,40 @@ async function handleNativeInstall() {
         <UIcon name="check_circle" size="lg" class="text-success" />
       </div>
       <p class="font-semibold text-text-primary-light dark:text-text-primary-dark">
-        Приложение установлено
+        {{ $t('features.installPwa.alreadyInstalledTitle') }}
       </p>
       <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark text-center">
-        Вы уже используете Ouro Finance как приложение
+        {{ $t('features.installPwa.alreadyInstalledDescription') }}
       </p>
     </div>
 
     <!-- iOS instructions -->
     <div v-else-if="platform === 'ios'" class="space-y-3">
       <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark mb-4">
-        Добавьте Ouro Finance на главный экран для быстрого доступа:
+        {{ $t('features.installPwa.iosInstructions') }}
       </p>
 
       <InstallStep :step="1">
-        Нажмите
+        {{ $t('features.installPwa.stepTap') }}
         <UIcon name="share" size="xs" class="inline-block text-primary mx-0.5 align-text-bottom" />
-        <span class="font-medium">«Поделиться»</span>
+        <span class="font-medium">{{ $t('features.installPwa.iosShareButton') }}</span>
       </InstallStep>
 
       <InstallStep :step="2">
-        Выберите
-        <span class="font-medium">«На экран Домой»</span>
+        {{ $t('features.installPwa.stepSelect') }}
+        <span class="font-medium">{{ $t('features.installPwa.iosAddToHomeButton') }}</span>
       </InstallStep>
 
       <InstallStep :step="3">
-        Нажмите
-        <span class="font-medium">«Добавить»</span>
+        {{ $t('features.installPwa.stepTap') }}
+        <span class="font-medium">{{ $t('features.installPwa.iosConfirmButton') }}</span>
       </InstallStep>
     </div>
 
     <!-- Android with native prompt -->
     <div v-else-if="platform === 'android' && canUseNativePrompt" class="space-y-4">
       <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
-        Установите Ouro Finance как приложение для быстрого доступа с главного экрана.
+        {{ $t('features.installPwa.androidNativeDescription') }}
       </p>
       <UButton
         data-testid="android-install-btn"
@@ -66,32 +66,32 @@ async function handleNativeInstall() {
         full-width
         @click="handleNativeInstall"
       >
-        Установить
+        {{ $t('features.installPwa.installButton') }}
       </UButton>
     </div>
 
     <!-- Android without native prompt -->
     <div v-else-if="platform === 'android'" class="space-y-3">
       <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark mb-4">
-        Добавьте Ouro Finance на главный экран:
+        {{ $t('features.installPwa.androidManualInstructions') }}
       </p>
 
       <InstallStep :step="1">
-        Откройте меню
+        {{ $t('features.installPwa.stepOpenMenu') }}
         <span class="font-medium">⋮</span>
-        в правом верхнем углу
+        {{ $t('features.installPwa.androidMenuHint') }}
       </InstallStep>
 
       <InstallStep :step="2">
-        Нажмите
-        <span class="font-medium">«Установить приложение»</span>
+        {{ $t('features.installPwa.stepTap') }}
+        <span class="font-medium">{{ $t('features.installPwa.androidInstallMenuItem') }}</span>
       </InstallStep>
     </div>
 
     <!-- Desktop -->
     <div v-else class="space-y-4">
       <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
-        Установите Ouro Finance как приложение:
+        {{ $t('features.installPwa.desktopDescription') }}
       </p>
 
       <div v-if="canUseNativePrompt">
@@ -101,16 +101,16 @@ async function handleNativeInstall() {
           full-width
           @click="handleNativeInstall"
         >
-          Установить
+          {{ $t('features.installPwa.installButton') }}
         </UButton>
       </div>
 
       <div v-else class="space-y-3">
-        <InstallStep :step="1">Откройте меню браузера</InstallStep>
+        <InstallStep :step="1">{{ $t('features.installPwa.desktopOpenBrowserMenu') }}</InstallStep>
 
         <InstallStep :step="2">
-          Нажмите
-          <span class="font-medium">«Установить»</span>
+          {{ $t('features.installPwa.stepTap') }}
+          <span class="font-medium">{{ $t('features.installPwa.desktopInstallMenuItem') }}</span>
         </InstallStep>
       </div>
     </div>

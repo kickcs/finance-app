@@ -1,0 +1,22 @@
+{
+  "bannerTitle": "Install the app",
+  "bannerSubtitle": "Quick access from your home screen",
+  "modalTitle": "Install Ouro Finance",
+  "alreadyInstalledTitle": "App installed",
+  "alreadyInstalledDescription": "You are already using Ouro Finance as an app",
+  "iosInstructions": "Add Ouro Finance to your home screen for quick access:",
+  "stepTap": "Tap",
+  "iosShareButton": "\"Share\"",
+  "stepSelect": "Select",
+  "iosAddToHomeButton": "\"Add to Home Screen\"",
+  "iosConfirmButton": "\"Add\"",
+  "androidNativeDescription": "Install Ouro Finance as an app for quick access from your home screen.",
+  "installButton": "Install",
+  "androidManualInstructions": "Add Ouro Finance to your home screen:",
+  "stepOpenMenu": "Open the menu",
+  "androidMenuHint": "in the top right corner",
+  "androidInstallMenuItem": "\"Install app\"",
+  "desktopDescription": "Install Ouro Finance as an app:",
+  "desktopOpenBrowserMenu": "Open the browser menu",
+  "desktopInstallMenuItem": "\"Install\""
+}

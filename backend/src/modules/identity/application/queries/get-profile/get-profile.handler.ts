@@ -31,6 +31,7 @@ export class GetProfileHandler implements IQueryHandler<GetProfileQuery> {
       email: profile.emailValue,
       name: profile.name,
       currency: profile.currency,
+      language: profile.language,
       hasCompletedOnboarding: profile.hasCompletedOnboarding,
       defaultAccountId: profile.defaultAccountId,
       isDemo: profile.isDemo,

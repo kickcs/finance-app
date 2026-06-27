@@ -1,0 +1,22 @@
+{
+  "nameLabel": "Название счёта",
+  "namePlaceholder": "Например: Основная карта",
+  "typeLabel": "Тип счёта",
+  "creditCardBalanceLabel": "Текущая задолженность",
+  "creditCardBalanceHint": "Введите 0, если задолженности нет",
+  "iconLabel": "Иконка",
+  "colorLabel": "Цвет",
+  "submitButton": "Создать счёт",
+  "defaultBalancesLabel": "Валюты и балансы",
+  "addCurrencyButton": "Добавить валюту",
+  "cancelButton": "Отмена",
+  "nameErrorOnlySpaces": "Название не может состоять только из пробелов",
+  "nameErrorTooShort": "Название должно содержать минимум 2 символа",
+  "nameErrorTooLong": "Название не должно превышать 50 символов",
+  "validationError": "Введите название счёта и добавьте хотя бы одну валюту",
+  "successToastTitle": "Счёт создан",
+  "successToastDescription": "Счёт \"{name}\" успешно создан",
+  "errorValue": "Не удалось создать счёт",
+  "errorToastTitle": "Ошибка",
+  "errorToastDescription": "Не удалось создать счёт"
+}

@@ -58,7 +58,7 @@ export class AuthController {
   @Post('register')
   async register(@Body() dto: RegisterDto, @Res({ passthrough: true }) response: Response) {
     const result: AuthResponse = await this.commandBus.execute(
-      new RegisterCommand(dto.email, dto.password, dto.name),
+      new RegisterCommand(dto.email, dto.password, dto.name, dto.language),
     );
 
     // Set refresh token in httpOnly cookie

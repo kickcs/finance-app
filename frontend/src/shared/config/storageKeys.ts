@@ -52,4 +52,7 @@ export const STORAGE_KEYS = {
 
   /** Dashboard compact mode: dense layout for power users */
   DASHBOARD_COMPACT_MODE: 'dashboard_compact_mode',
+
+  /** UI language / locale: 'ru' | 'en' */
+  LOCALE: 'locale',
 } as const;

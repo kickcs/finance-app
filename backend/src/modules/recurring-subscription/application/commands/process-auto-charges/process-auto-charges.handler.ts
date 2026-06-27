@@ -1,6 +1,7 @@
 import { CommandHandler, ICommandHandler, CommandBus } from '@nestjs/cqrs';
 import { Inject, Logger } from '@nestjs/common';
 import { DataSource, EntityManager } from 'typeorm';
+import { I18nService } from 'nestjs-i18n';
 import { ProcessAutoChargesCommand } from './process-auto-charges.command';
 import {
   IPushNotificationService,
@@ -54,15 +55,16 @@ export class ProcessAutoChargesHandler implements ICommandHandler<ProcessAutoCha
     private readonly subscriptionRepository: IRecurringSubscriptionRepository,
     @Inject(PUSH_NOTIFICATION_SERVICE)
     private readonly pushNotificationService: IPushNotificationService,
+    private readonly i18n: I18nService,
   ) {}
 
   async execute(_command: ProcessAutoChargesCommand): Promise<void> {
     const users = await this.timezoneUserResolver.getUsersDueForNotification();
     if (users.length === 0) return;
 
-    for (const { userId, timezone } of users) {
+    for (const { userId, timezone, language } of users) {
       try {
-        await this.processUserAutoCharges(userId, timezone);
+        await this.processUserAutoCharges(userId, timezone, language);
       } catch (error) {
         this.logger.error(
           `Failed to process auto-charges for user ${userId}: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -71,7 +73,11 @@ export class ProcessAutoChargesHandler implements ICommandHandler<ProcessAutoCha
     }
   }
 
-  private async processUserAutoCharges(userId: string, timezone: string): Promise<void> {
+  private async processUserAutoCharges(
+    userId: string,
+    timezone: string,
+    language: string,
+  ): Promise<void> {
     const subscriptions = await this.subscriptionRepository.findActiveByUserId(userId);
     if (subscriptions.length === 0) return;
 
@@ -92,10 +98,12 @@ export class ProcessAutoChargesHandler implements ICommandHandler<ProcessAutoCha
           name: subscription.name,
           amount: subscription.amount,
           currency: subscription.currency,
-          reason: 'не указан счёт для автосписания',
+          reason: this.i18n.translate('notifications.failReason.noAccount', {
+            lang: language,
+          }),
           dedupKey: buildDedupKey('subscription_failed', subscription.id, today),
         };
-        await this.notifyFailure(failed);
+        await this.notifyFailure(failed, language);
         continue;
       }
 
@@ -183,20 +191,35 @@ export class ProcessAutoChargesHandler implements ICommandHandler<ProcessAutoCha
           amount: subscription.amount,
           currency: subscription.currency,
           reason: isCurrencyMismatch
-            ? 'валюта подписки не совпадает с валютой счёта'
-            : 'проверьте счёт',
+            ? this.i18n.translate('notifications.failReason.currencyMismatch', {
+                lang: language,
+              })
+            : this.i18n.translate('notifications.failReason.checkAccount', {
+                lang: language,
+              }),
           dedupKey: buildDedupKey('subscription_failed', subscription.id, today),
         };
       }
 
       if (succeeded) {
-        const bodyParts = [`Списано ${succeeded.amount} ${succeeded.currency}`];
-        if (succeeded.accountName) bodyParts.push(`· ${succeeded.accountName}`);
+        const body = succeeded.accountName
+          ? this.i18n.translate('notifications.subscriptionCharged.bodyWithAccount', {
+              lang: language,
+              args: {
+                amount: succeeded.amount,
+                currency: succeeded.currency,
+                accountName: succeeded.accountName,
+              },
+            })
+          : this.i18n.translate('notifications.subscriptionCharged.body', {
+              lang: language,
+              args: { amount: succeeded.amount, currency: succeeded.currency },
+            });
         await this.pushNotificationService.sendToUser(
           succeeded.userId,
           {
             title: succeeded.name,
-            body: bodyParts.join(' '),
+            body,
             url: `/subscriptions/${succeeded.subscriptionId}`,
           },
           { type: 'subscription_charged', dedupKey: succeeded.dedupKey },
@@ -207,17 +230,24 @@ export class ProcessAutoChargesHandler implements ICommandHandler<ProcessAutoCha
       }
 
       if (failed) {
-        await this.notifyFailure(failed);
+        await this.notifyFailure(failed, language);
       }
     }
   }
 
-  private async notifyFailure(failed: FailedCharge): Promise<void> {
+  private async notifyFailure(failed: FailedCharge, language: string): Promise<void> {
     await this.pushNotificationService.sendToUser(
       failed.userId,
       {
         title: failed.name,
-        body: `Не удалось списать ${failed.amount} ${failed.currency}. ${capitalize(failed.reason)}.`,
+        body: this.i18n.translate('notifications.subscriptionFailed.body', {
+          lang: language,
+          args: {
+            amount: failed.amount,
+            currency: failed.currency,
+            reason: capitalize(failed.reason),
+          },
+        }),
         url: `/subscriptions/${failed.subscriptionId}`,
       },
       { type: 'subscription_failed', dedupKey: failed.dedupKey },

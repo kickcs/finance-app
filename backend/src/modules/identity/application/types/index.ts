@@ -5,6 +5,7 @@ export interface ProfileResponse {
   email: string | null;
   name: string | null;
   currency: string;
+  language: string;
   hasCompletedOnboarding: boolean;
   defaultAccountId: string | null;
   isDemo: boolean;

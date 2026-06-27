@@ -42,6 +42,8 @@ export class RegisterHandler implements ICommandHandler<RegisterCommand> {
       email,
       command.name || null,
       passwordHash,
+      'RUB',
+      command.language,
     );
 
     // Generate tokens

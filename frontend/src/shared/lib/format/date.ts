@@ -3,6 +3,12 @@
  */
 
 import { getCachedDateFormat } from './intlCache';
+import { i18n } from '@/shared/i18n';
+
+/** Maps the active app locale ('ru' | 'en') to a BCP-47 Intl locale tag. */
+function activeIntlLocale(): string {
+  return i18n.global.locale.value === 'en' ? 'en-US' : 'ru-RU';
+}
 
 /**
  * Format date
@@ -15,7 +21,7 @@ export function formatDate(
   },
 ): string {
   const date = timestamp instanceof Date ? timestamp : new Date(timestamp);
-  const { format = 'short', locale = 'ru-RU' } = options ?? {};
+  const { format = 'short', locale = activeIntlLocale() } = options ?? {};
 
   switch (format) {
     case 'full':
@@ -54,13 +60,17 @@ export function formatRelativeDate(date: Date | number): string {
   const now = new Date();
   const diff = now.getTime() - d.getTime();
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const t = i18n.global.t;
 
-  if (days === 0) {
-    return 'Сегодня';
+  // Future or later-today dates (e.g. an imported occurred_at a few hours ahead,
+  // or minor clock skew) yield negative days — treat them as "today" rather than
+  // rendering a nonsensical "-1 days ago".
+  if (days <= 0) {
+    return t('shared.date.today');
   } else if (days === 1) {
-    return 'Вчера';
+    return t('shared.date.yesterday');
   } else if (days < 7) {
-    return `${days} дн. назад`;
+    return t('shared.date.daysAgo', { n: days });
   } else {
     return formatDate(d, { format: 'short' });
   }
@@ -74,14 +84,16 @@ export function formatDateGroup(timestamp: number | string | Date): string {
   const now = new Date();
   const isThisYear = date.getFullYear() === now.getFullYear();
 
+  const locale = activeIntlLocale();
+
   if (isThisYear) {
-    return getCachedDateFormat('ru-RU', {
+    return getCachedDateFormat(locale, {
       day: 'numeric',
       month: 'long',
     }).format(date);
   }
 
-  return getCachedDateFormat('ru-RU', {
+  return getCachedDateFormat(locale, {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
@@ -91,7 +103,7 @@ export function formatDateGroup(timestamp: number | string | Date): string {
 /**
  * Format date for display in locale format (e.g. "19 февраля 2026")
  */
-export function formatLocalDate(dateStr: string | number, locale = 'ru-RU'): string {
+export function formatLocalDate(dateStr: string | number, locale = activeIntlLocale()): string {
   return getCachedDateFormat(locale, {
     day: 'numeric',
     month: 'long',

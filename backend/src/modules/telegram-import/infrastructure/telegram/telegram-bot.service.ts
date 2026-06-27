@@ -1,6 +1,7 @@
 import { Injectable, Logger, type OnApplicationBootstrap, type OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { CommandBus } from '@nestjs/cqrs';
+import { I18nService } from 'nestjs-i18n';
 import { Bot } from 'grammy';
 import type { Update } from 'grammy/types';
 import { ReplyAggregator, type IngestCounts } from './reply-aggregator';
@@ -8,15 +9,6 @@ import { LinkTelegramAccountCommand } from '../../application/commands/link-tele
 import { IngestBankMessageCommand } from '../../application/commands/ingest-bank-message/ingest-bank-message.command';
 import type { LinkResult } from '../../application/commands/link-telegram-account/link-telegram-account.handler';
 import type { IngestResult } from '../../application/commands/ingest-bank-message/ingest-bank-message.handler';
-
-function summaryText(c: IngestCounts): string {
-  const parts: string[] = [];
-  if (c.imported) parts.push(`✅ Импортировано: ${c.imported}`);
-  if (c.duplicates) parts.push(`⏭ Пропущено дублей: ${c.duplicates}`);
-  if (c.unparsed) parts.push(`⚠️ Не распознано: ${c.unparsed}`);
-  if (c.imported) parts.push('\nПодтверди транзакции в приложении — раздел «На подтверждение».');
-  return parts.join('\n') || 'Ничего не обработано.';
-}
 
 @Injectable()
 export class TelegramBotService implements OnModuleInit, OnApplicationBootstrap {
@@ -32,10 +24,47 @@ export class TelegramBotService implements OnModuleInit, OnApplicationBootstrap 
   constructor(
     private readonly configService: ConfigService,
     private readonly commandBus: CommandBus,
+    private readonly i18n: I18nService,
   ) {
     const token = this.configService.get<string>('TELEGRAM_IMPORT_BOT_TOKEN');
     this._enabled = Boolean(token);
     if (token) this.bot = new Bot(token);
+  }
+
+  /**
+   * Resolves display language for a Telegram user.
+   * Uses ctx.from.language_code (Telegram client locale) with 'ru' fallback.
+   * 'en'/'en-*' → 'en', anything else → 'ru'.
+   */
+  resolveTelegramLang(telegramUserId: string, languageCode: string | undefined): string {
+    return languageCode?.toLowerCase().startsWith('en') ? 'en' : 'ru';
+  }
+
+  private summaryText(c: IngestCounts, lang: string): string {
+    const parts: string[] = [];
+    if (c.imported)
+      parts.push(
+        this.i18n.translate('telegram.summary.imported', {
+          lang,
+          args: { count: c.imported },
+        }),
+      );
+    if (c.duplicates)
+      parts.push(
+        this.i18n.translate('telegram.summary.duplicates', {
+          lang,
+          args: { count: c.duplicates },
+        }),
+      );
+    if (c.unparsed)
+      parts.push(
+        this.i18n.translate('telegram.summary.unparsed', {
+          lang,
+          args: { count: c.unparsed },
+        }),
+      );
+    if (c.imported) parts.push(this.i18n.translate('telegram.summary.confirmHint', { lang }));
+    return parts.join('\n') || this.i18n.translate('telegram.summary.nothing', { lang });
   }
 
   async onModuleInit(): Promise<void> {
@@ -81,41 +110,38 @@ export class TelegramBotService implements OnModuleInit, OnApplicationBootstrap 
     const pm = bot.chatType('private');
 
     pm.command('start', async (ctx) => {
+      const lang = this.resolveTelegramLang(String(ctx.from.id), ctx.from.language_code);
       const token = ctx.match.trim();
       if (!token) {
-        await ctx.reply(
-          'Привет! Я импортирую банковские уведомления в твоё финансовое приложение.\n\n' +
-            'Привяжи аккаунт: открой приложение → Профиль → Telegram-импорт → «Подключить».',
-        );
+        await ctx.reply(this.i18n.translate('telegram.start.noToken', { lang }));
         return;
       }
       const result = await this.commandBus.execute<LinkTelegramAccountCommand, LinkResult>(
         new LinkTelegramAccountCommand(token, String(ctx.from.id), ctx.from.username ?? null),
       );
       const replies: Record<LinkResult, string> = {
-        linked:
-          '✅ Аккаунт привязан! Теперь форвардни мне уведомление от банка — я превращу его в транзакцию.',
-        invalid_token: '⚠️ Ссылка устарела или уже использована. Сгенерируй новую в приложении.',
-        already_linked_other:
-          '⚠️ Этот Telegram уже привязан к другому аккаунту. Сначала отвяжи его там.',
+        linked: this.i18n.translate('telegram.start.linked', { lang }),
+        invalid_token: this.i18n.translate('telegram.start.invalidToken', { lang }),
+        already_linked_other: this.i18n.translate('telegram.start.alreadyLinkedOther', {
+          lang,
+        }),
       };
       await ctx.reply(replies[result]);
     });
 
     pm.on('message:text', async (ctx) => {
+      const lang = this.resolveTelegramLang(String(ctx.from.id), ctx.from.language_code);
       const result = await this.commandBus.execute<IngestBankMessageCommand, IngestResult>(
         new IngestBankMessageCommand(String(ctx.from.id), ctx.message.text),
       );
       if (result === 'not_linked') {
-        await ctx.reply(
-          'Сначала привяжи аккаунт: приложение → Профиль → Telegram-импорт → «Подключить».',
-        );
+        await ctx.reply(this.i18n.translate('telegram.notLinked', { lang }));
         return;
       }
       const key =
         result === 'imported' ? 'imported' : result === 'duplicate' ? 'duplicates' : 'unparsed';
       this.aggregator.add(ctx.chat.id, key, async (counts) => {
-        await ctx.reply(summaryText(counts));
+        await ctx.reply(this.summaryText(counts, lang));
       });
     });
   }

@@ -91,6 +91,7 @@ describe('Profile Entity', () => {
         name: 'Jane',
         password: null,
         currency: 'EUR',
+        language: 'ru',
         hasCompletedOnboarding: true,
         defaultAccountId: 'acc-1',
         isDemo: false,
@@ -209,6 +210,41 @@ describe('Profile Entity', () => {
       profile.setRefreshToken('some-token');
       profile.setRefreshToken(null);
       expect(profile.refreshToken).toBeNull();
+    });
+  });
+
+  describe('language', () => {
+    it('defaults to "ru" for a registered profile when not provided', () => {
+      const profile = Profile.createRegistered(
+        'user-1',
+        Email.create('u@test.com'),
+        'John',
+        'hashed',
+      );
+      expect(profile.language).toBe('ru');
+    });
+
+    it('uses the provided language on registration', () => {
+      const profile = Profile.createRegistered(
+        'user-1',
+        Email.create('u@test.com'),
+        'John',
+        'hashed',
+        'USD',
+        'en',
+      );
+      expect(profile.language).toBe('en');
+    });
+
+    it('updates language via updateProfile', () => {
+      const profile = Profile.createRegistered(
+        'user-1',
+        Email.create('u@test.com'),
+        'John',
+        'hashed',
+      );
+      profile.updateProfile({ language: 'en' });
+      expect(profile.language).toBe('en');
     });
   });
 

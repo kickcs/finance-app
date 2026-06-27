@@ -1,5 +1,6 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
+import { I18nService } from 'nestjs-i18n';
 import { InitializeDefaultCategoriesCommand } from './initialize-default-categories.command';
 import { Category } from '../../../domain/aggregates/category';
 import {
@@ -10,12 +11,19 @@ import {
   EXPENSE_CATEGORIES,
   INCOME_CATEGORIES,
 } from '../../../domain/constants/default-categories';
+import {
+  IProfileRepository,
+  PROFILE_REPOSITORY,
+} from '../../../../identity/domain/repositories/profile.repository.interface';
 
 @CommandHandler(InitializeDefaultCategoriesCommand)
 export class InitializeDefaultCategoriesHandler implements ICommandHandler<InitializeDefaultCategoriesCommand> {
   constructor(
     @Inject(CATEGORY_REPOSITORY)
     private readonly categoryRepository: ICategoryRepository,
+    @Inject(PROFILE_REPOSITORY)
+    private readonly profileRepository: IProfileRepository,
+    private readonly i18n: I18nService,
   ) {}
 
   async execute(command: InitializeDefaultCategoriesCommand) {
@@ -37,13 +45,17 @@ export class InitializeDefaultCategoriesHandler implements ICommandHandler<Initi
       }));
     }
 
-    // Create all default categories
+    // Resolve language: explicit on command > profile language > fallback 'ru'
+    const language =
+      command.language ?? (await this.profileRepository.findById(command.userId))?.language ?? 'ru';
+
+    // Create all default categories with names translated to user's language
     const defaultCategories = [...EXPENSE_CATEGORIES, ...INCOME_CATEGORIES];
     const categoriesToCreate = defaultCategories.map((cat, index) =>
       Category.create(
         crypto.randomUUID(),
         command.userId,
-        cat.name,
+        this.i18n.translate(`categories.${cat.id}`, { lang: language }),
         cat.icon,
         cat.color,
         cat.type,

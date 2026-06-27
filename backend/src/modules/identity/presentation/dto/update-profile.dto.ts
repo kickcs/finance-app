@@ -6,6 +6,7 @@ import {
   IsArray,
   IsObject,
   IsInt,
+  IsIn,
   Min,
   Max,
   ValidateNested,
@@ -35,6 +36,10 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsString()
   currency?: string;
+
+  @IsOptional()
+  @IsIn(['ru', 'en'])
+  language?: string;
 
   @IsOptional()
   @IsBoolean()

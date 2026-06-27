@@ -1,0 +1,22 @@
+{
+  "bannerTitle": "Установите приложение",
+  "bannerSubtitle": "Быстрый доступ с главного экрана",
+  "modalTitle": "Установите Ouro Finance",
+  "alreadyInstalledTitle": "Приложение установлено",
+  "alreadyInstalledDescription": "Вы уже используете Ouro Finance как приложение",
+  "iosInstructions": "Добавьте Ouro Finance на главный экран для быстрого доступа:",
+  "stepTap": "Нажмите",
+  "iosShareButton": "«Поделиться»",
+  "stepSelect": "Выберите",
+  "iosAddToHomeButton": "«На экран Домой»",
+  "iosConfirmButton": "«Добавить»",
+  "androidNativeDescription": "Установите Ouro Finance как приложение для быстрого доступа с главного экрана.",
+  "installButton": "Установить",
+  "androidManualInstructions": "Добавьте Ouro Finance на главный экран:",
+  "stepOpenMenu": "Откройте меню",
+  "androidMenuHint": "в правом верхнем углу",
+  "androidInstallMenuItem": "«Установить приложение»",
+  "desktopDescription": "Установите Ouro Finance как приложение:",
+  "desktopOpenBrowserMenu": "Откройте меню браузера",
+  "desktopInstallMenuItem": "«Установить»"
+}

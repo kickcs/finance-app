@@ -17,6 +17,7 @@ export class ProfileMapper {
       name: ormEntity.name,
       password: ormEntity.passwordHash ? Password.fromHash(ormEntity.passwordHash) : null,
       currency: ormEntity.currency,
+      language: ormEntity.language,
       hasCompletedOnboarding: ormEntity.hasCompletedOnboarding,
       defaultAccountId: ormEntity.defaultAccountId,
       isDemo: ormEntity.isDemo,
@@ -43,6 +44,7 @@ export class ProfileMapper {
     ormEntity.name = domainEntity.name;
     ormEntity.passwordHash = domainEntity.password?.hashedValue ?? null;
     ormEntity.currency = domainEntity.currency;
+    ormEntity.language = domainEntity.language;
     ormEntity.hasCompletedOnboarding = domainEntity.hasCompletedOnboarding;
     ormEntity.defaultAccountId = domainEntity.defaultAccountId;
     ormEntity.isDemo = domainEntity.isDemo;

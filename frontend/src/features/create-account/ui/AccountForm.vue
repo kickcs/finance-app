@@ -43,8 +43,8 @@ function updateField<K extends keyof AccountFormData>(field: K, value: AccountFo
     <UInput
       data-testid="account-name-input"
       :model-value="formData.name"
-      label="Название счёта"
-      placeholder="Например: Основная карта"
+      :label="$t('features.createAccount.nameLabel')"
+      :placeholder="$t('features.createAccount.namePlaceholder')"
       :error="nameError ?? undefined"
       @update:model-value="updateField('name', $event as string)"
     />
@@ -52,7 +52,7 @@ function updateField<K extends keyof AccountFormData>(field: K, value: AccountFo
     <!-- Account Type -->
     <div class="space-y-2">
       <label class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">
-        Тип счёта
+        {{ $t('features.createAccount.typeLabel') }}
       </label>
       <div class="grid grid-cols-2 gap-2" data-testid="account-type-selector">
         <button
@@ -83,8 +83,16 @@ function updateField<K extends keyof AccountFormData>(field: K, value: AccountFo
     <!-- Currency Balances -->
     <CurrencyBalanceList
       :balances="formData.balances"
-      :label="formData.type === 'credit_card' ? 'Текущая задолженность' : undefined"
-      :hint="formData.type === 'credit_card' ? 'Введите 0, если задолженности нет' : undefined"
+      :label="
+        formData.type === 'credit_card'
+          ? $t('features.createAccount.creditCardBalanceLabel')
+          : undefined
+      "
+      :hint="
+        formData.type === 'credit_card'
+          ? $t('features.createAccount.creditCardBalanceHint')
+          : undefined
+      "
       @add="$emit('addCurrency', $event)"
       @remove="$emit('removeCurrency', $event)"
       @update-balance="(index, balance) => $emit('updateBalance', index, balance)"
@@ -96,7 +104,7 @@ function updateField<K extends keyof AccountFormData>(field: K, value: AccountFo
       :model-value="formData.icon"
       :icons="ACCOUNT_ICONS"
       :color="formData.color"
-      label="Иконка"
+      :label="$t('features.createAccount.iconLabel')"
       @update:model-value="updateField('icon', $event)"
     />
 
@@ -104,7 +112,7 @@ function updateField<K extends keyof AccountFormData>(field: K, value: AccountFo
     <UColorPicker
       :model-value="formData.color"
       :colors="ENTITY_COLORS"
-      label="Цвет"
+      :label="$t('features.createAccount.colorLabel')"
       @update:model-value="updateField('color', $event)"
     />
 
@@ -123,7 +131,7 @@ function updateField<K extends keyof AccountFormData>(field: K, value: AccountFo
       :loading="isSubmitting"
       :disabled="!formData.name.trim() || formData.balances.length === 0"
     >
-      Создать счёт
+      {{ $t('features.createAccount.submitButton') }}
     </UButton>
   </form>
 </template>

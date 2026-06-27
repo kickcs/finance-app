@@ -1,0 +1,40 @@
+{
+  "accounts": {
+    "main": "Main",
+    "savings": "Savings"
+  },
+  "contacts": {
+    "ahmed": "Ahmed",
+    "anna": "Anna",
+    "kolya": "Kolya",
+    "dima": "Dima"
+  },
+  "debts": {
+    "repair": "For repairs",
+    "trip": "For a trip",
+    "wedding": "For a wedding",
+    "tillPayday": "Until payday",
+    "furniture": "For furniture",
+    "laptop": "For a laptop"
+  },
+  "descriptions": {
+    "groceries": ["Makro", "Korzinka", "Havas", "Veggies at the bazaar", "Weekly groceries"],
+    "transport": ["Yandex Go", "Metro", "Fuel", "MyTaxi", "Bus"],
+    "health": ["Pharmacy", "Lab tests", "Doctor", "Dentist", "Vitamins"],
+    "housing": ["Utilities", "Internet", "Cleaning", "Repairs", "Furniture"],
+    "cafe": ["Lunch", "Coffee", "Evos", "Oqtepa", "Restaurant"],
+    "entertainment": ["Cinema", "Netflix", "Concert", "Games", "Subscription"],
+    "gifts": ["Birthday", "Gift for a friend", "Flowers", "Souvenir"],
+    "education": ["Courses", "Books", "Udemy", "Tutor"],
+    "family": ["Kindergarten", "School", "Kids' clothes", "Toys"],
+    "sport": ["Gym", "Pool", "Sportswear", "Protein"],
+    "travel": ["Tickets", "Hotel", "Excursion", "Travel souvenirs"],
+    "other_expense": ["Miscellaneous", "Small expenses", "Other"],
+    "salary": ["Salary", "Advance"],
+    "freelance": ["Project", "Order", "Consultation"],
+    "investments": ["Dividends", "Deposit interest"],
+    "gifts_income": ["Gift", "From parents"],
+    "cashback": ["Cashback Uzcard", "Cashback Payme"],
+    "other_income": ["Refund", "Sale", "Other"]
+  }
+}

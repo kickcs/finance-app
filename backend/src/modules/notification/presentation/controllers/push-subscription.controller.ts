@@ -11,6 +11,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
+import { I18nService, I18nContext } from 'nestjs-i18n';
 import { CurrentUser } from '../../../../common';
 import { RegisterPushSubscriptionDto, UpdateNotificationPreferencesDto } from '../dto';
 import {
@@ -32,6 +33,7 @@ export class PushSubscriptionController {
     private readonly queryBus: QueryBus,
     @Inject(PUSH_NOTIFICATION_SERVICE)
     private readonly pushNotificationService: IPushNotificationService,
+    private readonly i18n: I18nService,
   ) {}
 
   @Post()
@@ -58,9 +60,11 @@ export class PushSubscriptionController {
 
   @Post('test')
   async sendTest(@CurrentUser('sub') userId: string): Promise<void> {
+    // Use request-scoped language from Accept-Language header; falls back to 'ru'
+    const lang = I18nContext.current()?.lang ?? 'ru';
     await this.pushNotificationService.sendToUser(userId, {
-      title: 'Тестовое уведомление',
-      body: 'Push-уведомления работают!',
+      title: this.i18n.translate('notifications.test.title', { lang }),
+      body: this.i18n.translate('notifications.test.body', { lang }),
       tag: 'test',
     });
   }

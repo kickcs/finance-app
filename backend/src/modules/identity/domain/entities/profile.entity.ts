@@ -27,6 +27,7 @@ export interface ProfileProps {
   name: string | null;
   password: Password | null;
   currency: string;
+  language: string;
   hasCompletedOnboarding: boolean;
   defaultAccountId: string | null;
   isDemo: boolean;
@@ -50,6 +51,7 @@ export class Profile extends AggregateRoot<string> {
   private _name: string | null;
   private _password: Password | null;
   private _currency: string;
+  private _language: string;
   private _hasCompletedOnboarding: boolean;
   private _defaultAccountId: string | null;
   private _isDemo: boolean;
@@ -69,6 +71,7 @@ export class Profile extends AggregateRoot<string> {
     this._name = props.name;
     this._password = props.password;
     this._currency = props.currency;
+    this._language = props.language;
     this._hasCompletedOnboarding = props.hasCompletedOnboarding;
     this._defaultAccountId = props.defaultAccountId;
     this._isDemo = props.isDemo;
@@ -92,6 +95,7 @@ export class Profile extends AggregateRoot<string> {
     name: string | null,
     hashedPassword: string,
     currency: string = 'RUB',
+    language: string = 'ru',
   ): Profile {
     const profile = new Profile({
       id,
@@ -99,6 +103,7 @@ export class Profile extends AggregateRoot<string> {
       name,
       password: Password.fromHash(hashedPassword),
       currency,
+      language,
       hasCompletedOnboarding: false,
       defaultAccountId: null,
       isDemo: false,
@@ -130,6 +135,7 @@ export class Profile extends AggregateRoot<string> {
       name: 'Demo User',
       password: null,
       currency: 'UZS', // UZS is the default currency for demo accounts
+      language: 'ru',
       hasCompletedOnboarding: false,
       defaultAccountId: null,
       isDemo: true,
@@ -175,6 +181,10 @@ export class Profile extends AggregateRoot<string> {
 
   get currency(): string {
     return this._currency;
+  }
+
+  get language(): string {
+    return this._language;
   }
 
   get hasCompletedOnboarding(): boolean {
@@ -236,6 +246,7 @@ export class Profile extends AggregateRoot<string> {
   updateProfile(data: {
     name?: string;
     currency?: string;
+    language?: string;
     hasCompletedOnboarding?: boolean;
     defaultAccountId?: string | null;
     dashboardSettings?: DashboardSettings | null;
@@ -255,6 +266,11 @@ export class Profile extends AggregateRoot<string> {
     if (data.currency !== undefined) {
       this._currency = data.currency;
       changes.currency = data.currency;
+    }
+
+    if (data.language !== undefined) {
+      this._language = data.language;
+      changes.language = data.language;
     }
 
     if (data.hasCompletedOnboarding !== undefined) {

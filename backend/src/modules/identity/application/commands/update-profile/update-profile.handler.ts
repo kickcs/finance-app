@@ -38,6 +38,7 @@ export class UpdateProfileHandler implements ICommandHandler<UpdateProfileComman
       email: profile.emailValue,
       name: profile.name,
       currency: profile.currency,
+      language: profile.language,
       hasCompletedOnboarding: profile.hasCompletedOnboarding,
       defaultAccountId: profile.defaultAccountId,
       isDemo: profile.isDemo,
