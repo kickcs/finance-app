@@ -35,7 +35,7 @@ function addCurrency(code: string) {
   <div class="space-y-4">
     <div>
       <label class="block text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
-        {{ label ?? 'Валюты и балансы' }}
+        {{ label ?? $t('features.createAccount.defaultBalancesLabel') }}
       </label>
       <p v-if="hint" class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark mt-0.5">
         {{ hint }}
@@ -115,7 +115,7 @@ function addCurrency(code: string) {
           @click="showCurrencyPicker = true"
         >
           <UIcon name="add" size="sm" class="mr-1" />
-          Добавить валюту
+          {{ $t('features.createAccount.addCurrencyButton') }}
         </UButton>
       </div>
 
@@ -142,7 +142,7 @@ function addCurrency(code: string) {
           class="px-3 py-2 text-sm text-text-tertiary-light dark:text-text-tertiary-dark"
           @click="showCurrencyPicker = false"
         >
-          Отмена
+          {{ $t('features.createAccount.cancelButton') }}
         </button>
       </div>
     </div>

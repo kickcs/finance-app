@@ -1,0 +1,22 @@
+{
+  "nameLabel": "Account name",
+  "namePlaceholder": "E.g.: Main card",
+  "typeLabel": "Account type",
+  "creditCardBalanceLabel": "Outstanding balance",
+  "creditCardBalanceHint": "Enter 0 if no balance is owed",
+  "iconLabel": "Icon",
+  "colorLabel": "Color",
+  "submitButton": "Create account",
+  "defaultBalancesLabel": "Currencies & balances",
+  "addCurrencyButton": "Add currency",
+  "cancelButton": "Cancel",
+  "nameErrorOnlySpaces": "Name cannot consist of spaces only",
+  "nameErrorTooShort": "Name must be at least 2 characters",
+  "nameErrorTooLong": "Name must not exceed 50 characters",
+  "validationError": "Enter an account name and add at least one currency",
+  "successToastTitle": "Account created",
+  "successToastDescription": "Account \"{name}\" has been created",
+  "errorValue": "Failed to create account",
+  "errorToastTitle": "Error",
+  "errorToastDescription": "Failed to create account"
+}

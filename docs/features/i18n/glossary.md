@@ -26,3 +26,4 @@ Append new terms here; do not change an existing term without re-checking depend
 | Удалить | Delete |  |
 | Отмена | Cancel |  |
 | Подтвердить | Confirm |  |
+| Задолженность (по кредитной карте) | Outstanding balance | Credit card specific: amount currently owed on the card. Distinct from Долг (Debt) which covers person-to-person lending. Use 'Outstanding balance' not 'Current debt' in credit card contexts. |

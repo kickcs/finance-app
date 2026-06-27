@@ -1,4 +1,5 @@
 import { ref, computed, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { ACCOUNT_ICONS } from '@/entities/account';
 import { ENTITY_COLORS } from '@/shared/config/colors';
 import type { AccountType } from '@/entities/account';
@@ -56,6 +57,7 @@ function getDefaultFormData(): AccountFormData {
 }
 
 export function useCreateAccount() {
+  const { t } = useI18n();
   const { toast } = useToast();
   const formData = ref<AccountFormData>(getDefaultFormData());
 
@@ -91,13 +93,13 @@ export function useCreateAccount() {
     const name = formData.value.name;
     if (name.length === 0) return null;
     if (name.trim().length === 0) {
-      return 'Название не может состоять только из пробелов';
+      return t('features.createAccount.nameErrorOnlySpaces');
     }
     if (name.trim().length < 2) {
-      return 'Название должно содержать минимум 2 символа';
+      return t('features.createAccount.nameErrorTooShort');
     }
     if (name.trim().length > 50) {
-      return 'Название не должно превышать 50 символов';
+      return t('features.createAccount.nameErrorTooLong');
     }
     return null;
   });
@@ -107,7 +109,7 @@ export function useCreateAccount() {
 
   async function createAccount(userId: string) {
     if (!isValid.value) {
-      error.value = 'Введите название счёта и добавьте хотя бы одну валюту';
+      error.value = t('features.createAccount.validationError');
       return null;
     }
 
@@ -152,18 +154,20 @@ export function useCreateAccount() {
       await invalidateAccountRelated(queryClient, userId);
 
       toast({
-        title: 'Счёт создан',
-        description: `Счёт "${formData.value.name}" успешно создан`,
+        title: t('features.createAccount.successToastTitle'),
+        description: t('features.createAccount.successToastDescription', {
+          name: formData.value.name,
+        }),
         variant: 'success',
         duration: 2500,
       });
 
       return account.id;
     } catch (e) {
-      error.value = 'Не удалось создать счёт';
+      error.value = t('features.createAccount.errorValue');
       toast({
-        title: 'Ошибка',
-        description: 'Не удалось создать счёт',
+        title: t('features.createAccount.errorToastTitle'),
+        description: t('features.createAccount.errorToastDescription'),
         variant: 'error',
         duration: 4000,
       });
