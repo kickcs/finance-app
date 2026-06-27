@@ -1,5 +1,5 @@
 import { createI18n } from 'vue-i18n';
-import { detectLocale } from './detectLocale';
+import { initialLocale } from './detectLocale';
 
 export type AppLocale = 'ru' | 'en';
 
@@ -53,7 +53,7 @@ function assignDeep(target: LocaleJson, segments: string[], value: LocaleJson): 
 // vue-i18n's own inference here.
 export const i18n = createI18n({
   legacy: false,
-  locale: detectLocale(),
+  locale: initialLocale(),
   fallbackLocale: 'ru',
   messages: buildMessages(),
 });

@@ -32,4 +32,24 @@ describe('useLocale', () => {
     const { availableLocales } = useLocale();
     expect(availableLocales).toEqual(['ru', 'en']);
   });
+
+  it('adoptFromProfile adopts a supported locale', async () => {
+    const { locale, setLocale, adoptFromProfile } = useLocale();
+    setLocale('ru');
+    await nextTick();
+    adoptFromProfile('en');
+    await nextTick();
+    expect(locale.value).toBe('en');
+  });
+
+  it('adoptFromProfile ignores unsupported / unexpected locale values', async () => {
+    const { locale, setLocale, adoptFromProfile } = useLocale();
+    setLocale('ru');
+    await nextTick();
+    adoptFromProfile('uz' as unknown as 'ru' | 'en');
+    adoptFromProfile(undefined);
+    adoptFromProfile(null);
+    await nextTick();
+    expect(locale.value).toBe('ru');
+  });
 });

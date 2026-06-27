@@ -62,7 +62,10 @@ export function formatRelativeDate(date: Date | number): string {
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
   const t = i18n.global.t;
 
-  if (days === 0) {
+  // Future or later-today dates (e.g. an imported occurred_at a few hours ahead,
+  // or minor clock skew) yield negative days — treat them as "today" rather than
+  // rendering a nonsensical "-1 days ago".
+  if (days <= 0) {
     return t('shared.date.today');
   } else if (days === 1) {
     return t('shared.date.yesterday');
