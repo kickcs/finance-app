@@ -66,9 +66,9 @@ initPremium({ isPremium, subscription });
 const { profile } = useProfile(userId);
 
 // Profile wins on conflict: once the authenticated profile loads, adopt its
-// language into the local locale state (the API mapping lands in a later task).
+// language into the local locale state.
 watch(
-  () => (profile.value as { language?: string } | null | undefined)?.language,
+  () => profile.value?.language,
   (lang) => adoptFromProfile(lang as 'ru' | 'en' | undefined),
   { immediate: true },
 );

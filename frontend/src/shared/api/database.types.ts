@@ -25,6 +25,7 @@ export type Database = {
           name: string | null;
           email: string | null;
           currency: string;
+          language: string;
           has_completed_onboarding: boolean;
           default_account_id: string | null;
           created_at: string;
@@ -41,6 +42,7 @@ export type Database = {
           name?: string | null;
           email?: string | null;
           currency?: string;
+          language?: string;
           has_completed_onboarding?: boolean;
           default_account_id?: string | null;
           created_at?: string;
@@ -57,6 +59,7 @@ export type Database = {
           name?: string | null;
           email?: string | null;
           currency?: string;
+          language?: string;
           has_completed_onboarding?: boolean;
           default_account_id?: string | null;
           created_at?: string;

@@ -7,6 +7,7 @@ interface ProfileResponse {
   name: string | null;
   email: string | null;
   currency: string;
+  language: string;
   hasCompletedOnboarding: boolean;
   defaultAccountId: string | null;
   createdAt: string;
@@ -29,6 +30,7 @@ function transformProfile(profile: ProfileResponse): Profile {
     name: profile.name,
     email: profile.email,
     currency: profile.currency,
+    language: profile.language,
     has_completed_onboarding: profile.hasCompletedOnboarding,
     default_account_id: profile.defaultAccountId,
     created_at: profile.createdAt,
@@ -71,6 +73,7 @@ export const profileApi = {
     const data = await http.patch<ProfileResponse>('/profiles/me', {
       name: updates.name,
       currency: updates.currency,
+      language: updates.language,
       hasCompletedOnboarding: updates.has_completed_onboarding,
       defaultAccountId: updates.default_account_id,
       dashboardSettings: updates.dashboard_settings
