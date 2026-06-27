@@ -4,6 +4,7 @@ import { queryKeys } from '../queryKeys';
 import { profileApi } from '../services/profileApi';
 import type { Profile, DashboardSettings } from '../database.types';
 import { STORAGE_KEYS } from '@/shared/config/storageKeys';
+import type { AppLocale } from '@/shared/i18n';
 
 export function useProfile(userId: MaybeRefOrGetter<string | null>) {
   const queryClient = useQueryClient();
@@ -70,7 +71,7 @@ export function useProfile(userId: MaybeRefOrGetter<string | null>) {
     return result;
   }
 
-  async function setLanguage(language: 'ru' | 'en') {
+  async function setLanguage(language: AppLocale) {
     return updateProfile({ language });
   }
 

@@ -5,6 +5,7 @@ import { useEventListener } from '@vueuse/core';
 import { useTheme } from '@/features/toggle-theme';
 import { initPrimaryColor } from '@/features/select-primary-color';
 import { useLocale } from '@/shared/i18n/useLocale';
+import type { AppLocale } from '@/shared/i18n';
 import { initializeAuth, useAuth } from '@/shared/api/composables/useAuth';
 import { useProfile } from '@/shared/api/composables/useProfile';
 import { transitionName } from '@/app/router';
@@ -69,7 +70,7 @@ const { profile } = useProfile(userId);
 // language into the local locale state.
 watch(
   () => profile.value?.language,
-  (lang) => adoptFromProfile(lang as 'ru' | 'en' | undefined),
+  (lang) => adoptFromProfile(lang as AppLocale | undefined),
   { immediate: true },
 );
 
