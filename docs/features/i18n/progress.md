@@ -11,7 +11,7 @@
 | features/close-debt | pending | 38 | 0 | 0 | 0 | — |
 | features/configure-financial-period | pending | 13 | 0 | 0 | 0 | — |
 | features/configure-quick-action | pending | 38 | 0 | 0 | 0 | — |
-| features/create-account | done | 20 | 20 | 21 | 0 | 2026-06-27 |
+| features/create-account | done | 20 | 21 | 21 | 0 | 2026-06-27 |
 | features/create-subscription | pending | 44 | 0 | 0 | 0 | — |
 | features/demo-mode | pending | 48 | 0 | 0 | 0 | — |
 | features/edit-account | pending | 32 | 0 | 0 | 0 | — |

@@ -20,6 +20,11 @@ which registers the real vue-i18n plugin, and `src/test/setup.ts` forces the
 in tests and existing literal-string assertions keep passing. No per-slice test
 setup is needed — but the tech-gate runs `vitest run src/<slice>` to confirm.
 
+> The `i18n` instance is a module-global singleton. If a future spec calls the
+> real `setI18nLocale('en')` to exercise the English render path, reset it in an
+> `afterEach` (`setI18nLocale('ru')`) — otherwise the locale leaks into later
+> spec files.
+
 ## Suggested rollout order
 
 Process highest-visibility slices first, then sweep the rest:
