@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, provide, defineAsyncComponent } from 'vue';
+import { ref, computed, watch, onMounted, provide, defineAsyncComponent } from 'vue';
 import { RouterView, useRouter } from 'vue-router';
 import { useEventListener } from '@vueuse/core';
 import { useTheme } from '@/features/toggle-theme';
 import { initPrimaryColor } from '@/features/select-primary-color';
+import { useLocale } from '@/shared/i18n/useLocale';
 import { initializeAuth, useAuth } from '@/shared/api/composables/useAuth';
 import { useProfile } from '@/shared/api/composables/useProfile';
 import { transitionName } from '@/app/router';
@@ -30,6 +31,10 @@ initTheme();
 
 // Initialize primary color synchronously (before mount, like theme)
 initPrimaryColor();
+
+// Apply persisted/detected locale to the i18n instance before first render
+const { initLocale, adoptFromProfile } = useLocale();
+initLocale();
 
 // Initialize PWA updates watcher
 usePwaUpdate();
@@ -59,6 +64,14 @@ initPremium({ isPremium, subscription });
 
 // Get user profile for demo mode
 const { profile } = useProfile(userId);
+
+// Profile wins on conflict: once the authenticated profile loads, adopt its
+// language into the local locale state (the API mapping lands in a later task).
+watch(
+  () => (profile.value as { language?: string } | null | undefined)?.language,
+  (lang) => adoptFromProfile(lang as 'ru' | 'en' | undefined),
+  { immediate: true },
+);
 
 // Demo mode
 const { isDemo, formattedRemaining } = useDemoMode(profile);
