@@ -1,19 +1,30 @@
 <script setup lang="ts">
-import { ref, watch, useTemplateRef } from 'vue';
+import { ref, computed, watch, useTemplateRef } from 'vue';
 import { useIntervalFn, useEventListener } from '@vueuse/core';
 import { UButton, UIcon, USpinner } from '@/shared/ui';
+import { cn } from '@/shared/lib/utils';
+import { pluralize } from '@/shared/lib/format/pluralize';
+import { formatCurrency } from '@/shared/lib/format/currency';
+import { isAcceptableImage, ensureJpegDecodable } from '../../model/imageFile';
+import { MAX_RECEIPT_PHOTOS } from '../../model/usePhotoStep';
 
 const props = defineProps<{
-  previewUrl: string | null;
+  previewUrls: string[];
   isOcrLoading: boolean;
   isOcrSuccess: boolean;
-  ocrError: string | null;
+  ocrError: { message: string; details: string } | null;
+  /** Свежий черновик прошлого чека — предложение продолжить */
+  draft?: { itemCount: number; totalAmount: number; currency: string } | null;
 }>();
 
 const emit = defineEmits<{
-  selectFile: [file: File];
+  addFile: [file: File];
+  removeFile: [index: number];
   resetPhoto: [];
-  retryOcr: [];
+  scan: [];
+  manual: [];
+  continueDraft: [];
+  discardDraft: [];
 }>();
 
 const cameraInputRef = useTemplateRef<HTMLInputElement>('cameraInputRef');
@@ -47,6 +58,29 @@ watch(
       pauseMessages();
     }
   },
+);
+
+// Активный кадр в превью — по умолчанию последний добавленный
+const activeIdx = ref(0);
+watch(
+  () => props.previewUrls.length,
+  (len, prevLen) => {
+    if (len === 0) return;
+    if (len > (prevLen ?? 0)) activeIdx.value = len - 1;
+    else activeIdx.value = Math.min(activeIdx.value, len - 1);
+  },
+);
+
+const activePreviewUrl = computed(() => props.previewUrls[activeIdx.value] ?? null);
+const photosCount = computed(() => props.previewUrls.length);
+const canAddMore = computed(
+  () => photosCount.value < MAX_RECEIPT_PHOTOS && !props.isOcrLoading && !props.isOcrSuccess,
+);
+
+const scanLabel = computed(() =>
+  photosCount.value > 1
+    ? `Распознать ${photosCount.value} ${pluralize(photosCount.value, 'кадр', 'кадра', 'кадров')}`
+    : 'Распознать',
 );
 
 function openCamera() {
@@ -92,8 +126,19 @@ function toJpeg(file: File): Promise<File> {
   });
 }
 
+/** Конвертирует один кадр (HEIC→JPEG декод + ресайз/перекодирование). */
+async function convertFrame(rawFile: File): Promise<File> {
+  const decodable = await ensureJpegDecodable(rawFile);
+  return toJpeg(decodable);
+}
+
+/** Обработка одиночного кадра (paste из буфера). */
 async function processFile(rawFile: File) {
-  if (!rawFile.type.startsWith('image/')) {
+  if (photosCount.value >= MAX_RECEIPT_PHOTOS) {
+    fileError.value = `Максимум ${MAX_RECEIPT_PHOTOS} кадра одного чека`;
+    return;
+  }
+  if (!isAcceptableImage(rawFile)) {
     fileError.value = 'Неверный формат файла. Поддерживаются JPG, PNG, HEIC.';
     return;
   }
@@ -101,12 +146,9 @@ async function processFile(rawFile: File) {
     fileError.value = 'Файл слишком большой. Максимальный размер — 10 МБ.';
     return;
   }
-
   fileError.value = null;
-
   try {
-    const file = await toJpeg(rawFile);
-    emit('selectFile', file);
+    emit('addFile', await convertFrame(rawFile));
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     fileError.value = `Ошибка обработки (${rawFile.type}, ${Math.round(rawFile.size / 1024)}KB): ${msg}`;
@@ -115,15 +157,55 @@ async function processFile(rawFile: File) {
 
 async function handleFileChange(e: Event) {
   const input = e.target as HTMLInputElement;
-  const rawFile = input.files?.[0];
+  const rawFiles = Array.from(input.files ?? []);
   input.value = '';
-  if (!rawFile) return;
-  await processFile(rawFile);
+  if (rawFiles.length === 0) return;
+
+  fileError.value = null;
+
+  // Cap-guard считаем один раз по числу свободных слотов: photosCount
+  // обновляется родителем асинхронно, поэтому проверять его в цикле per-file
+  // ненадёжно. Лишние кадры сверх лимита отсекаем сразу.
+  const freeSlots = MAX_RECEIPT_PHOTOS - photosCount.value;
+  if (freeSlots <= 0) {
+    fileError.value = `Максимум ${MAX_RECEIPT_PHOTOS} кадра одного чека`;
+    return;
+  }
+  if (rawFiles.length > freeSlots) {
+    fileError.value = `Максимум ${MAX_RECEIPT_PHOTOS} кадра одного чека`;
+  }
+
+  // Синхронная валидация формата/размера — отбрасываем негодные до тяжёлой работы.
+  const valid = rawFiles.slice(0, freeSlots).filter((f) => {
+    if (!isAcceptableImage(f)) {
+      fileError.value = 'Неверный формат файла. Поддерживаются JPG, PNG, HEIC.';
+      return false;
+    }
+    if (f.size > MAX_SIZE) {
+      fileError.value = 'Файл слишком большой. Максимальный размер — 10 МБ.';
+      return false;
+    }
+    return true;
+  });
+  if (valid.length === 0) return;
+
+  // Конвертация независимых кадров — параллельно (до 3 кадров), а не по очереди.
+  // Порядок кадров сохраняем: emit по индексу после settled.
+  const results = await Promise.allSettled(valid.map(convertFrame));
+  results.forEach((res, i) => {
+    if (res.status === 'fulfilled') {
+      emit('addFile', res.value);
+    } else {
+      const raw = valid[i];
+      const msg = res.reason instanceof Error ? res.reason.message : String(res.reason);
+      fileError.value = `Ошибка обработки (${raw.type}, ${Math.round(raw.size / 1024)}KB): ${msg}`;
+    }
+  });
 }
 
-// Ctrl+V paste support
+// Ctrl+V paste support — добавляет кадр
 useEventListener(document, 'paste', (e: ClipboardEvent) => {
-  if (props.previewUrl || props.isOcrLoading) return;
+  if (props.isOcrLoading || props.isOcrSuccess) return;
   const file = Array.from(e.clipboardData?.files ?? []).find((f) => f.type.startsWith('image/'));
   if (file) {
     e.preventDefault();
@@ -146,13 +228,53 @@ useEventListener(document, 'paste', (e: ClipboardEvent) => {
     <input
       ref="galleryInputRef"
       type="file"
-      accept="image/*"
+      accept="image/*,.heic,.heif"
+      multiple
       class="hidden"
       @change="handleFileChange"
     />
 
     <!-- === IDLE STATE === -->
-    <template v-if="!previewUrl">
+    <template v-if="photosCount === 0">
+      <!-- Черновик прошлого чека -->
+      <Transition name="fade">
+        <div
+          v-if="draft"
+          class="flex-shrink-0 flex items-center gap-3 px-4 py-3 mb-2 rounded-2xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark"
+        >
+          <div class="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+            <UIcon name="history" size="sm" class="text-primary" />
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark">
+              Продолжить прошлый чек?
+            </p>
+            <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark tabular-nums">
+              {{ draft.itemCount }}
+              {{ pluralize(draft.itemCount, 'позиция', 'позиции', 'позиций') }} ·
+              {{ formatCurrency(draft.totalAmount, draft.currency) }}
+            </p>
+          </div>
+          <div class="flex items-center gap-1 shrink-0">
+            <button
+              type="button"
+              class="px-3 py-2 rounded-xl bg-primary text-white text-xs font-semibold active:scale-95 transition-transform"
+              @click="emit('continueDraft')"
+            >
+              Продолжить
+            </button>
+            <button
+              type="button"
+              aria-label="Удалить черновик"
+              class="w-8 h-8 rounded-xl flex items-center justify-center text-text-tertiary-light dark:text-text-tertiary-dark hover:text-danger active:scale-90 transition-all"
+              @click="emit('discardDraft')"
+            >
+              <UIcon name="close" size="xs" />
+            </button>
+          </div>
+        </div>
+      </Transition>
+
       <div class="flex-1 flex flex-col items-center justify-center gap-5 min-h-0">
         <!-- Receipt illustration area (Viewfinder) -->
         <div
@@ -195,7 +317,7 @@ useEventListener(document, 'paste', (e: ClipboardEvent) => {
               Наведите камеру на чек
             </p>
             <p class="text-caption text-text-tertiary-light dark:text-text-tertiary-dark">
-              Текст должен быть чётким и читаемым
+              Длинный чек можно снять по частям — до {{ MAX_RECEIPT_PHOTOS }} кадров
             </p>
           </div>
         </div>
@@ -260,7 +382,7 @@ useEventListener(document, 'paste', (e: ClipboardEvent) => {
       </Transition>
 
       <!-- Action buttons (Camera UI) -->
-      <div class="flex-shrink-0 flex items-center justify-between px-8 mt-5 pb-4">
+      <div class="flex-shrink-0 flex items-center justify-between px-8 mt-5">
         <button
           type="button"
           aria-label="Выбрать из галереи"
@@ -286,16 +408,26 @@ useEventListener(document, 'paste', (e: ClipboardEvent) => {
         <!-- Placeholder for symmetry -->
         <div class="w-12 h-12" aria-hidden="true" />
       </div>
+
+      <!-- Ручной режим -->
+      <button
+        type="button"
+        class="flex-shrink-0 mx-auto mt-4 mb-1 flex items-center gap-1.5 px-4 py-2 text-body-sm font-medium text-text-secondary-light dark:text-text-secondary-dark hover:text-primary active:opacity-70 transition-colors"
+        @click="emit('manual')"
+      >
+        <UIcon name="edit" size="xs" />
+        Ввести вручную — без чека
+      </button>
     </template>
 
     <!-- === PREVIEW STATE === -->
     <template v-else>
       <div class="flex-1 relative min-h-0">
         <img
-          :src="previewUrl"
+          :src="activePreviewUrl ?? undefined"
           alt="Фото чека"
           class="w-full h-full object-contain rounded-2xl"
-          style="max-height: calc(100dvh - 260px)"
+          style="max-height: calc(100dvh - 320px)"
         />
 
         <!-- OCR loading overlay with scanline -->
@@ -340,16 +472,28 @@ useEventListener(document, 'paste', (e: ClipboardEvent) => {
               <UIcon name="error_outline" size="xl" class="text-danger" />
             </div>
             <div class="text-center">
-              <p class="text-body font-semibold text-white mb-1">Не удалось распознать</p>
+              <p class="text-body font-semibold text-white mb-1">{{ ocrError.message }}</p>
               <p class="text-body-sm text-white/60 mb-2">
-                Убедитесь, что чек хорошо освещён и полностью виден
+                Попробуйте ярче свет или переснимите ближе — текст должен быть читаемым
               </p>
-              <p class="text-caption text-white/40 break-all px-2">
-                {{ ocrError }}
-              </p>
+              <details v-if="ocrError.details" class="group">
+                <summary
+                  class="text-caption text-white/40 cursor-pointer select-none list-none inline-flex items-center gap-1"
+                >
+                  Подробности
+                  <UIcon
+                    name="expand_more"
+                    size="xs"
+                    class="transition-transform group-open:rotate-180"
+                  />
+                </summary>
+                <p class="text-caption text-white/40 break-all px-2 mt-1">
+                  {{ ocrError.details }}
+                </p>
+              </details>
             </div>
             <div class="flex flex-col gap-2 w-full max-w-[250px]">
-              <UButton variant="primary" size="md" full-width @click="emit('retryOcr')">
+              <UButton variant="primary" size="md" full-width @click="emit('scan')">
                 <UIcon name="refresh" size="sm" class="mr-2" />
                 Попробовать снова
               </UButton>
@@ -381,11 +525,11 @@ useEventListener(document, 'paste', (e: ClipboardEvent) => {
           </div>
         </Transition>
 
-        <!-- Retake button -->
+        <!-- Reset button -->
         <button
           v-if="!isOcrLoading"
           type="button"
-          aria-label="Переснять фото"
+          aria-label="Начать заново"
           class="absolute top-3 right-3 w-9 h-9 rounded-full bg-background-dark/50 backdrop-blur-sm flex items-center justify-center text-white active:scale-90 transition-transform"
           @click="emit('resetPhoto')"
         >
@@ -393,17 +537,85 @@ useEventListener(document, 'paste', (e: ClipboardEvent) => {
         </button>
       </div>
 
+      <!-- Лента кадров -->
+      <div class="flex-shrink-0 flex items-center gap-2 mt-3 overflow-x-auto no-scrollbar">
+        <div v-for="(url, index) in previewUrls" :key="url" class="relative flex-shrink-0">
+          <button
+            type="button"
+            :aria-label="`Кадр ${index + 1}`"
+            :class="
+              cn(
+                'block w-16 h-16 rounded-xl overflow-hidden border-2 transition-all active:scale-95',
+                index === activeIdx
+                  ? 'border-primary shadow-sm'
+                  : 'border-border-light dark:border-border-dark opacity-70',
+              )
+            "
+            @click="activeIdx = index"
+          >
+            <img :src="url" alt="" class="w-full h-full object-cover" />
+          </button>
+          <button
+            v-if="canAddMore || previewUrls.length > 1"
+            type="button"
+            :aria-label="`Удалить кадр ${index + 1}`"
+            class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-background-dark/70 backdrop-blur-sm flex items-center justify-center text-white active:scale-90 transition-transform"
+            @click="emit('removeFile', index)"
+          >
+            <UIcon name="close" size="xs" />
+          </button>
+        </div>
+
+        <!-- Добавить кадр: камера и галерея -->
+        <template v-if="canAddMore">
+          <button
+            type="button"
+            aria-label="Снять ещё кадр"
+            class="flex-shrink-0 w-16 h-16 rounded-xl border border-dashed border-border-light dark:border-border-dark flex flex-col items-center justify-center gap-0.5 text-text-tertiary-light dark:text-text-tertiary-dark hover:border-primary/40 hover:text-primary active:scale-95 transition-all"
+            @click="openCamera"
+          >
+            <UIcon name="photo_camera" size="sm" />
+            <span class="text-caption-sm font-medium">Ещё</span>
+          </button>
+          <button
+            type="button"
+            aria-label="Добавить кадр из галереи"
+            class="flex-shrink-0 w-16 h-16 rounded-xl border border-dashed border-border-light dark:border-border-dark flex items-center justify-center text-text-tertiary-light dark:text-text-tertiary-dark hover:border-primary/40 hover:text-primary active:scale-95 transition-all"
+            @click="openGallery"
+          >
+            <UIcon name="photo_library" size="sm" />
+          </button>
+        </template>
+      </div>
+
+      <!-- File validation error -->
+      <Transition name="fade">
+        <div
+          v-if="fileError"
+          class="mt-3 flex items-center gap-2 px-4 py-3 rounded-xl bg-danger-light"
+          role="alert"
+        >
+          <UIcon name="warning" size="sm" class="text-danger flex-shrink-0" />
+          <p class="text-body-sm text-danger">{{ fileError }}</p>
+        </div>
+      </Transition>
+
       <!-- Action row below preview -->
       <div class="flex-shrink-0 mt-3">
         <UButton v-if="isOcrLoading" variant="primary" size="lg" full-width disabled loading>
           Распознаём...
         </UButton>
 
-        <template v-if="!isOcrLoading && !ocrError && !isOcrSuccess">
-          <UButton variant="ghost" size="md" full-width @click="emit('resetPhoto')">
-            Переснять
-          </UButton>
-        </template>
+        <UButton
+          v-else-if="!ocrError && !isOcrSuccess"
+          variant="primary"
+          size="lg"
+          full-width
+          @click="emit('scan')"
+        >
+          <UIcon name="document_scanner" size="sm" class="mr-2" />
+          {{ scanLabel }}
+        </UButton>
       </div>
     </template>
   </div>
@@ -457,5 +669,12 @@ useEventListener(document, 'paste', (e: ClipboardEvent) => {
 .slide-up-leave-to {
   opacity: 0;
   transform: translateY(-10px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scan-line,
+  .scan-line-idle {
+    animation: none;
+  }
 }
 </style>

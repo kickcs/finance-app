@@ -14,6 +14,8 @@ const props = defineProps<{
   formData: ScanReceiptFormData;
   accounts: AccountWithBalances[];
   categories: Category[];
+  /** «Платил не я»: категория не нужна — создаётся долг, а не транзакция */
+  hideCategory?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -62,7 +64,7 @@ function onDateSelect(value: DateValue | undefined) {
       </div>
 
       <!-- Category -->
-      <div class="px-4 py-3">
+      <div v-if="!hideCategory" class="px-4 py-3">
         <CategoryChips
           :categories="categories"
           :selected-id="formData.categoryId"

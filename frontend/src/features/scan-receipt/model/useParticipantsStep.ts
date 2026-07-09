@@ -22,6 +22,70 @@ export function useParticipantsStep(items: Ref<ReceiptItem[]>) {
     trigger('selection');
   }
 
+  /**
+   * Назначает плательщика участнику. paidById=null — платит сам.
+   * Плательщиком может быть только участник, который платит сам за себя
+   * (без цепочек A→B→C); зависимые нового зависимого отвязываются.
+   */
+  function setPaidBy(id: string, paidById: string | null) {
+    const participant = participants.value.find((p) => p.id === id);
+    if (!participant || paidById === id) return;
+    if (paidById) {
+      const payer = participants.value.find((p) => p.id === paidById);
+      if (!payer || payer.paidById) return;
+      // Участник становится зависимым — те, за кого платил он, снова платят сами
+      participants.value.forEach((p) => {
+        if (p.paidById === id) p.paidById = null;
+      });
+    }
+    participant.paidById = paidById;
+    trigger('selection');
+  }
+
+  /** Все позиции — всем участникам поровну («просто делим счёт») */
+  function assignAllToEveryone() {
+    const allIds = participants.value.map((p) => p.id);
+    if (allIds.length === 0) return;
+    items.value.forEach((item) => {
+      item.assignedParticipantIds = [...allIds];
+    });
+    trigger('success');
+  }
+
+  /** Неназначенные позиции — участнику «Я» */
+  function assignRestToMe() {
+    const me = participants.value.find((p) => p.isMe);
+    if (!me) return;
+    items.value.forEach((item) => {
+      if (item.assignedParticipantIds.length === 0) {
+        item.assignedParticipantIds.push(me.id);
+      }
+    });
+    trigger('success');
+  }
+
+  /** Восстановление состава «как в прошлый раз»: имена → участники, платежи по позиции */
+  function restoreParty(members: { name: string; isMe: boolean; paidByName: string | null }[]) {
+    if (participants.value.length > 0 || members.length === 0) return;
+    for (const member of members) {
+      addParticipant(member.name, member.isMe, null);
+    }
+    // Плательщика ищем по ПОЗИЦИИ в members, а не по имени: участники создаются
+    // строго в порядке members, поэтому participants.value[i] ↔ members[i].
+    // Резолв по имени ломался бы при одинаковых именах (двое «Иван» → связь
+    // паплайилась на первого, второй молча терял плательщика).
+    members.forEach((member, i) => {
+      if (!member.paidByName) return;
+      const payerIndex = members.findIndex((m) => m.name === member.paidByName);
+      if (payerIndex === -1 || payerIndex === i) return;
+      const dependent = participants.value[i];
+      const payer = participants.value[payerIndex];
+      if (dependent && payer) {
+        dependent.paidById = payer.id;
+      }
+    });
+  }
+
   function removeParticipant(id: string) {
     participants.value = participants.value.filter((p) => p.id !== id);
     // Clear paidById references to the removed participant
@@ -58,15 +122,6 @@ export function useParticipantsStep(items: Ref<ReceiptItem[]>) {
     trigger('selection');
   }
 
-  function assignAllTo(participantId: string) {
-    for (const item of items.value) {
-      if (!item.assignedParticipantIds.includes(participantId)) {
-        item.assignedParticipantIds.push(participantId);
-      }
-    }
-    trigger('selection');
-  }
-
   const hasMe = computed(() => participants.value.some((p) => p.isMe));
 
   const unassignedCount = computed(
@@ -79,7 +134,10 @@ export function useParticipantsStep(items: Ref<ReceiptItem[]>) {
     unassignedCount,
     addParticipant,
     removeParticipant,
+    setPaidBy,
     toggleItemParticipant,
-    assignAllTo,
+    assignAllToEveryone,
+    assignRestToMe,
+    restoreParty,
   };
 }

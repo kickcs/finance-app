@@ -27,6 +27,10 @@ const props = withDefaults(
   },
 );
 
+const emit = defineEmits<{
+  shareLink: [];
+}>();
+
 const router = useRouter();
 
 function formatChargeBadge(charge: ReceiptCharge): string {
@@ -60,17 +64,17 @@ function formatChargeBadge(charge: ReceiptCharge): string {
             <UIcon name="check_circle" size="xl" class="text-success" />
           </div>
           <p
-            class="text-xs font-semibold text-text-tertiary-light dark:text-text-tertiary-dark uppercase tracking-widest mb-1 success-hero"
+            class="font-mono text-xs font-semibold text-text-tertiary-light dark:text-text-tertiary-dark uppercase tracking-widest mb-1 success-hero"
           >
             {{ storeName || 'Чек оплачен' }}
           </p>
           <h2
-            class="text-4xl font-black text-text-primary-light dark:text-text-primary-dark tabular-nums tracking-tight mb-2 success-hero"
+            class="text-4xl font-mono font-bold text-text-primary-light dark:text-text-primary-dark tabular-nums tracking-tight mb-2 success-hero"
           >
             {{ formatCurrency(totalAmount, currency) }}
           </h2>
           <p
-            class="text-caption text-text-tertiary-light dark:text-text-tertiary-dark font-medium success-hero"
+            class="font-mono text-caption text-text-tertiary-light dark:text-text-tertiary-dark font-medium success-hero"
           >
             {{ displayDate }}
           </p>
@@ -87,7 +91,7 @@ function formatChargeBadge(charge: ReceiptCharge): string {
         <!-- Who owes what list -->
         <div class="flex-1 px-6 py-6 overflow-y-auto no-scrollbar success-list">
           <h3
-            class="text-caption font-bold text-text-tertiary-light dark:text-text-tertiary-dark uppercase tracking-widest mb-4"
+            class="font-mono text-caption font-bold text-text-tertiary-light dark:text-text-tertiary-dark uppercase tracking-widest mb-4"
           >
             Кто сколько должен
           </h3>
@@ -108,7 +112,7 @@ function formatChargeBadge(charge: ReceiptCharge): string {
                   class="flex-1 border-b-2 border-dotted border-border-light dark:border-border-dark opacity-50 relative top-[-4px] mx-1"
                 ></div>
                 <span
-                  class="text-sm font-bold text-text-primary-light dark:text-text-primary-dark tabular-nums ml-2"
+                  class="text-sm font-mono font-bold text-text-primary-light dark:text-text-primary-dark tabular-nums ml-2"
                 >
                   {{ formatCurrency(p.total, currency) }}
                 </span>
@@ -149,6 +153,14 @@ function formatChargeBadge(charge: ReceiptCharge): string {
 
       <!-- Action buttons area -->
       <div class="w-full max-w-[340px] flex-shrink-0 pt-6 px-2">
+        <!-- Поделиться ссылкой (получателю не нужно приложение) -->
+        <div class="success-actions mb-3">
+          <UButton variant="secondary" size="lg" full-width @click="emit('shareLink')">
+            <UIcon name="link" size="sm" class="mr-2" />
+            Поделиться ссылкой
+          </UButton>
+        </div>
+
         <!-- Share actions -->
         <div class="grid grid-cols-3 gap-3 mb-6 success-actions">
           <button

@@ -1,6 +1,6 @@
 import './observability/tracing/tracing';
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, RequestMethod } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
 import express from 'express';
@@ -35,8 +35,11 @@ async function bootstrap() {
     credentials: true,
   });
 
-  // Global prefix for API
-  app.setGlobalPrefix('api');
+  // Global prefix for API — excludes the public /r/:token OG share-redirect page,
+  // which must live outside /api so Telegram/social link previews resolve it directly.
+  app.setGlobalPrefix('api', {
+    exclude: [{ path: 'r/:token', method: RequestMethod.GET }],
+  });
 
   // Global validation pipe
   app.useGlobalPipes(

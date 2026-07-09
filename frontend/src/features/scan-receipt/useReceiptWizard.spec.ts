@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { defineComponent, h } from 'vue';
+import { defineComponent, h, ref } from 'vue';
 import { flushPromises } from '@vue/test-utils';
 import { http, HttpResponse } from 'msw';
 import { renderWithProviders } from '@/test/test-utils';
@@ -20,6 +20,7 @@ vi.mock('@/shared/lib/haptics', () => ({
 import { usePhotoStep } from './model/usePhotoStep';
 import { useItemsStep } from './model/useItemsStep';
 import { useParticipantsStep } from './model/useParticipantsStep';
+import { useLastParty } from './model/useLastParty';
 import { useReceiptWizard } from './model/useReceiptWizard';
 import { calcLineTotal, calcLineTotalWithCharges, calcSplitAmounts } from './model/calcLineTotal';
 import type { ReceiptItem, ReceiptCharge } from './model/types';
@@ -255,7 +256,7 @@ describe('useItemsStep', () => {
 
   it('addCharge appends a percent-type charge', () => {
     const { addCharge, charges } = mountComposable(() => useItemsStep());
-    addCharge('НДС', 12);
+    addCharge({ label: 'НДС', type: 'percent', percent: 12 });
     expect(charges.value).toHaveLength(1);
     const charge = charges.value[0];
     expect(charge.label).toBe('НДС');
@@ -267,7 +268,7 @@ describe('useItemsStep', () => {
 
   it('removeCharge removes charge by id', () => {
     const { addCharge, removeCharge, charges } = mountComposable(() => useItemsStep());
-    addCharge('НДС', 12);
+    addCharge({ label: 'НДС', type: 'percent', percent: 12 });
     const chargeId = charges.value[0].id;
     removeCharge(chargeId);
     expect(charges.value).toHaveLength(0);
@@ -275,7 +276,7 @@ describe('useItemsStep', () => {
 
   it('toggleCharge toggles enabled state', () => {
     const { addCharge, toggleCharge, charges } = mountComposable(() => useItemsStep());
-    addCharge('НДС', 12);
+    addCharge({ label: 'НДС', type: 'percent', percent: 12 });
     const chargeId = charges.value[0].id;
     expect(charges.value[0].enabled).toBe(true);
     toggleCharge(chargeId);
@@ -290,7 +291,7 @@ describe('useItemsStep', () => {
     );
     const id = addItem();
     updateItem(id, { qty: 1, unitPrice: 10000 });
-    addCharge('Обслуживание', 10);
+    addCharge({ label: 'Обслуживание', type: 'percent', percent: 10 });
     expect(subtotal.value).toBe(10000);
     expect(chargesAmount.value).toBe(1000);
   });
@@ -380,7 +381,7 @@ describe('useParticipantsStep', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('usePhotoStep — OCR flow', () => {
-  it('selectFile sets selectedFile and triggers OCR scan', async () => {
+  it('addFile + scanReceipt запускают OCR', async () => {
     const ocrSuccess = makeOcrResponse();
 
     server.use(http.post('*/api/receipts/scan', () => HttpResponse.json(ocrSuccess)));
@@ -388,12 +389,13 @@ describe('usePhotoStep — OCR flow', () => {
     const onOcrSuccess = vi.fn();
     const goNext = vi.fn();
 
-    const { selectFile, isOcrLoading, isOcrSuccess } = mountComposable(() =>
+    const { addFile, scanReceipt, isOcrLoading, isOcrSuccess } = mountComposable(() =>
       usePhotoStep(onOcrSuccess, goNext),
     );
 
     const file = new File(['fake-image-data'], 'receipt.jpg', { type: 'image/jpeg' });
-    selectFile(file);
+    addFile(file);
+    scanReceipt();
 
     expect(isOcrLoading.value).toBe(true);
 
@@ -419,10 +421,11 @@ describe('usePhotoStep — OCR flow', () => {
     const onOcrSuccess = vi.fn();
     const goNext = vi.fn();
 
-    const { selectFile } = mountComposable(() => usePhotoStep(onOcrSuccess, goNext));
+    const { addFile, scanReceipt } = mountComposable(() => usePhotoStep(onOcrSuccess, goNext));
 
     const file = new File(['data'], 'receipt.jpg', { type: 'image/jpeg' });
-    selectFile(file);
+    addFile(file);
+    scanReceipt();
 
     await flushPromises();
 
@@ -443,12 +446,13 @@ describe('usePhotoStep — OCR flow', () => {
     const onOcrSuccess = vi.fn();
     const goNext = vi.fn();
 
-    const { selectFile, isOcrSuccess, ocrError } = mountComposable(() =>
+    const { addFile, scanReceipt, isOcrSuccess, ocrError } = mountComposable(() =>
       usePhotoStep(onOcrSuccess, goNext),
     );
 
     const file = new File(['data'], 'receipt.jpg', { type: 'image/jpeg' });
-    selectFile(file);
+    addFile(file);
+    scanReceipt();
 
     await flushPromises();
 
@@ -464,11 +468,12 @@ describe('usePhotoStep — OCR flow', () => {
     const onOcrSuccess = vi.fn();
     const goNext = vi.fn();
 
-    const { selectFile, resetPhoto, isOcrLoading, isOcrSuccess, ocrError, previewUrl } =
+    const { addFile, scanReceipt, resetPhoto, isOcrLoading, isOcrSuccess, ocrError, previewUrls } =
       mountComposable(() => usePhotoStep(onOcrSuccess, goNext));
 
     const file = new File(['data'], 'receipt.jpg', { type: 'image/jpeg' });
-    selectFile(file);
+    addFile(file);
+    scanReceipt();
     await flushPromises();
 
     resetPhoto();
@@ -476,7 +481,7 @@ describe('usePhotoStep — OCR flow', () => {
     expect(isOcrLoading.value).toBe(false);
     expect(isOcrSuccess.value).toBe(false);
     expect(ocrError.value).toBeNull();
-    expect(previewUrl.value).toBeNull();
+    expect(previewUrls.value).toEqual([]);
   });
 
   it('populates storeName from OCR', async () => {
@@ -489,9 +494,11 @@ describe('usePhotoStep — OCR flow', () => {
     const capturedResult = vi.fn();
     const goNext = vi.fn();
 
-    const { selectFile } = mountComposable(() => usePhotoStep(capturedResult, goNext));
+    const { addFile, scanReceipt } = mountComposable(() => usePhotoStep(capturedResult, goNext));
 
-    selectFile(new File(['data'], 'r.jpg', { type: 'image/jpeg' }));
+    addFile(new File(['data'], 'r.jpg', { type: 'image/jpeg' }));
+
+    scanReceipt();
     await flushPromises();
 
     expect(capturedResult.mock.calls[0][0].storeName).toBe('Makro');
@@ -551,7 +558,8 @@ describe('useReceiptWizard', () => {
     const wizard = mountComposable(() => useReceiptWizard(() => USER_ID));
 
     const file = new File(['data'], 'receipt.jpg', { type: 'image/jpeg' });
-    wizard.selectFile(file);
+    wizard.addFile(file);
+    wizard.scanReceipt();
 
     await flushPromises();
 
@@ -571,7 +579,9 @@ describe('useReceiptWizard', () => {
 
     const wizard = mountComposable(() => useReceiptWizard(() => USER_ID));
 
-    wizard.selectFile(new File(['data'], 'r.jpg', { type: 'image/jpeg' }));
+    wizard.addFile(new File(['data'], 'r.jpg', { type: 'image/jpeg' }));
+
+    wizard.scanReceipt();
     await flushPromises();
 
     expect(wizard.charges.value).toHaveLength(1);
@@ -598,7 +608,8 @@ describe('useReceiptWizard', () => {
     );
 
     const wizard = mountComposable(() => useReceiptWizard(() => USER_ID));
-    wizard.selectFile(new File(['data'], 'r.jpg', { type: 'image/jpeg' }));
+    wizard.addFile(new File(['data'], 'r.jpg', { type: 'image/jpeg' }));
+    wizard.scanReceipt();
     await flushPromises();
 
     expect(wizard.charges.value).toHaveLength(1);
@@ -619,7 +630,8 @@ describe('useReceiptWizard', () => {
     );
 
     const wizard = mountComposable(() => useReceiptWizard(() => USER_ID));
-    wizard.selectFile(new File(['data'], 'r.jpg', { type: 'image/jpeg' }));
+    wizard.addFile(new File(['data'], 'r.jpg', { type: 'image/jpeg' }));
+    wizard.scanReceipt();
     await flushPromises();
 
     expect(wizard.charges.value).toHaveLength(1);
@@ -636,7 +648,8 @@ describe('useReceiptWizard', () => {
     );
 
     const wizard = mountComposable(() => useReceiptWizard(() => USER_ID));
-    wizard.selectFile(new File(['data'], 'r.jpg', { type: 'image/jpeg' }));
+    wizard.addFile(new File(['data'], 'r.jpg', { type: 'image/jpeg' }));
+    wizard.scanReceipt();
     await flushPromises();
 
     expect(wizard.charges.value).toHaveLength(0);
@@ -650,7 +663,8 @@ describe('useReceiptWizard', () => {
     );
 
     const wizard = mountComposable(() => useReceiptWizard(() => USER_ID));
-    wizard.selectFile(new File(['data'], 'r.jpg', { type: 'image/jpeg' }));
+    wizard.addFile(new File(['data'], 'r.jpg', { type: 'image/jpeg' }));
+    wizard.scanReceipt();
     await flushPromises();
 
     expect(wizard.formData.value.description).toContain('mystore');
@@ -676,7 +690,8 @@ describe('useSubmitStep via useReceiptWizard — handleSubmit', () => {
     );
 
     const wizard = mountComposable(() => useReceiptWizard(() => USER_ID));
-    wizard.selectFile(new File(['data'], 'r.jpg', { type: 'image/jpeg' }));
+    wizard.addFile(new File(['data'], 'r.jpg', { type: 'image/jpeg' }));
+    wizard.scanReceipt();
     await flushPromises();
 
     wizard.formData.value.accountId = 'acc-1';
@@ -718,7 +733,8 @@ describe('useSubmitStep via useReceiptWizard — handleSubmit', () => {
     );
 
     const wizard = mountComposable(() => useReceiptWizard(() => USER_ID));
-    wizard.selectFile(new File(['data'], 'r.jpg', { type: 'image/jpeg' }));
+    wizard.addFile(new File(['data'], 'r.jpg', { type: 'image/jpeg' }));
+    wizard.scanReceipt();
     await flushPromises();
 
     wizard.formData.value.accountId = 'acc-1';
@@ -780,7 +796,8 @@ describe('useSubmitStep via useReceiptWizard — handleSubmit', () => {
     );
 
     const wizard = mountComposable(() => useReceiptWizard(() => USER_ID));
-    wizard.selectFile(new File(['data'], 'r.jpg', { type: 'image/jpeg' }));
+    wizard.addFile(new File(['data'], 'r.jpg', { type: 'image/jpeg' }));
+    wizard.scanReceipt();
     await flushPromises();
 
     // Add a non-me participant and assign all items
@@ -814,7 +831,8 @@ describe('useSubmitStep via useReceiptWizard — handleSubmit', () => {
     );
 
     const wizard = mountComposable(() => useReceiptWizard(() => USER_ID));
-    wizard.selectFile(new File(['data'], 'r.jpg', { type: 'image/jpeg' }));
+    wizard.addFile(new File(['data'], 'r.jpg', { type: 'image/jpeg' }));
+    wizard.scanReceipt();
     await flushPromises();
 
     wizard.formData.value.accountId = 'acc-1';
@@ -826,5 +844,433 @@ describe('useSubmitStep via useReceiptWizard — handleSubmit', () => {
     expect(wizard.submitError.value).toBeTruthy();
     expect(wizard.isSuccess.value).toBe(false);
     expect(hapticsMock.trigger).toHaveBeenCalledWith('error');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// useReceiptWizard — ручной режим и мульти-фото
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('useReceiptWizard — ручной режим и мульти-фото', () => {
+  function makeJpeg(name: string): File {
+    return new File(['x'], name, { type: 'image/jpeg' });
+  }
+
+  it('startManualMode создаёт пустую позицию и открывает шаг 2', () => {
+    const wizard = mountComposable(() => useReceiptWizard(() => USER_ID));
+
+    wizard.startManualMode('USD');
+
+    expect(wizard.manualMode.value).toBe(true);
+    expect(wizard.currentStep.value).toBe(2);
+    expect(wizard.items.value).toHaveLength(1);
+    expect(wizard.currency.value).toBe('USD');
+    expect(wizard.formData.value.currency).toBe('USD');
+    expect(wizard.ocrTotalAmount.value).toBeNull();
+  });
+
+  it('addFile принимает максимум 3 кадра', () => {
+    const wizard = mountComposable(() => useReceiptWizard(() => USER_ID));
+
+    expect(wizard.addFile(makeJpeg('1.jpg'))).toBe(true);
+    expect(wizard.addFile(makeJpeg('2.jpg'))).toBe(true);
+    expect(wizard.addFile(makeJpeg('3.jpg'))).toBe(true);
+    expect(wizard.addFile(makeJpeg('4.jpg'))).toBe(false);
+
+    expect(wizard.previewUrls.value).toHaveLength(3);
+  });
+
+  it('removeFile удаляет кадр по индексу', () => {
+    const wizard = mountComposable(() => useReceiptWizard(() => USER_ID));
+    wizard.addFile(makeJpeg('1.jpg'));
+    wizard.addFile(makeJpeg('2.jpg'));
+
+    wizard.removeFile(0);
+
+    expect(wizard.previewUrls.value).toHaveLength(1);
+    expect(wizard.selectedFiles.value.map((f) => f.name)).toEqual(['2.jpg']);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// useSubmitStep — «Платил не я»
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('useSubmitStep via useReceiptWizard — «Платил не я»', () => {
+  async function setupWizardWithPayer() {
+    const transactionCalls: unknown[] = [];
+    const debtCalls: Record<string, unknown>[] = [];
+    server.use(
+      http.post('*/api/receipts/scan', () => HttpResponse.json(makeOcrResponse())),
+      http.post('*/api/transactions', async ({ request }) => {
+        transactionCalls.push(await request.json());
+        return HttpResponse.json({ id: 'tx-1' });
+      }),
+      http.post('*/api/debts', async ({ request }) => {
+        debtCalls.push((await request.json()) as Record<string, unknown>);
+        return HttpResponse.json({ id: 'debt-1' });
+      }),
+    );
+
+    const wizard = mountComposable(() => useReceiptWizard(() => USER_ID));
+    wizard.addFile(new File(['data'], 'r.jpg', { type: 'image/jpeg' }));
+    wizard.scanReceipt();
+    await flushPromises();
+
+    wizard.addParticipant('Я', true);
+    wizard.addParticipant('Аня');
+    return { wizard, transactionCalls, debtCalls };
+  }
+
+  it('создаёт один долг «я должен» вместо транзакции, категория не нужна', async () => {
+    const { wizard, transactionCalls, debtCalls } = await setupWizardWithPayer();
+    wizard.assignAllToEveryone();
+    const anya = wizard.participants.value.find((p) => p.name === 'Аня')!;
+    wizard.payerId.value = anya.id;
+    wizard.formData.value.accountId = 'acc-1';
+    // categoryId намеренно пуст
+
+    expect(wizard.isFormValid.value).toBe(true);
+
+    await wizard.handleSubmit();
+    await flushPromises();
+
+    expect(wizard.isSuccess.value).toBe(true);
+    expect(transactionCalls).toHaveLength(0);
+    expect(debtCalls).toHaveLength(1);
+    // 18000 поровну на двоих → моя доля 9000 (тело запроса — camelCase бэкенда)
+    expect(debtCalls[0]).toMatchObject({
+      debtType: 'taken',
+      personName: 'Аня',
+      totalAmount: 9000,
+      remainingAmount: 9000,
+    });
+  });
+
+  it('невалиден, когда моя доля пуста', async () => {
+    const { wizard } = await setupWizardWithPayer();
+    const anya = wizard.participants.value.find((p) => p.name === 'Аня')!;
+    wizard.payerId.value = anya.id;
+    wizard.formData.value.accountId = 'acc-1';
+    // позиции никому не назначены → моя доля 0
+
+    expect(wizard.myShareTotal.value).toBe(0);
+    expect(wizard.isFormValid.value).toBe(false);
+  });
+
+  it('удаление участника-плательщика сбрасывает payerId', async () => {
+    const { wizard } = await setupWizardWithPayer();
+    const anya = wizard.participants.value.find((p) => p.name === 'Аня')!;
+    wizard.payerId.value = anya.id;
+
+    wizard.removeParticipant(anya.id);
+
+    expect(wizard.payerId.value).toBeNull();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// useItemsStep — сверка суммы с итогом чека (OCR)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('useItemsStep — сверка суммы с чеком', () => {
+  it('totalMismatch появляется при расхождении >1% и скрывается dismissMismatch', () => {
+    const step = mountComposable(() => useItemsStep());
+    step.items.value = [makeReceiptItem({ qty: 1, unitPrice: 90000 })];
+    step.setOcrTotalAmount(100000);
+
+    expect(step.totalMismatch.value).toEqual({ diff: 10000 });
+
+    step.dismissMismatch();
+    expect(step.totalMismatch.value).toBeNull();
+  });
+
+  it('нет mismatch без ocrTotalAmount и при расхождении в пределах 1%', () => {
+    const step = mountComposable(() => useItemsStep());
+    step.items.value = [makeReceiptItem({ qty: 1, unitPrice: 99500 })];
+
+    expect(step.totalMismatch.value).toBeNull();
+
+    step.setOcrTotalAmount(100000); // расхождение 0.5%
+    expect(step.totalMismatch.value).toBeNull();
+  });
+
+  it('setOcrTotalAmount сбрасывает dismissed-флаг (новый скан — новая сверка)', () => {
+    const step = mountComposable(() => useItemsStep());
+    step.items.value = [makeReceiptItem({ qty: 1, unitPrice: 90000 })];
+    step.setOcrTotalAmount(100000);
+    step.dismissMismatch();
+    expect(step.totalMismatch.value).toBeNull();
+
+    step.setOcrTotalAmount(100000);
+    expect(step.totalMismatch.value).toEqual({ diff: 10000 });
+  });
+
+  it('addDiffAsItem добавляет «Прочее» на разницу и сверка сходится', () => {
+    const step = mountComposable(() => useItemsStep());
+    step.items.value = [makeReceiptItem({ qty: 1, unitPrice: 90000 })];
+    step.setOcrTotalAmount(100000);
+
+    step.addDiffAsItem();
+
+    const added = step.items.value[1];
+    expect(added.name).toBe('Прочее');
+    expect(added.qty).toBe(1);
+    expect(added.unitPrice).toBe(10000);
+    expect(step.totalMismatch.value).toBeNull();
+  });
+
+  it('addDiffAsItem корректирует цену на процентные сборы', () => {
+    const step = mountComposable(() => useItemsStep());
+    step.items.value = [makeReceiptItem({ qty: 1, unitPrice: 100000 })];
+    step.addCharge({ label: 'Обслуживание', type: 'percent', percent: 10 });
+    step.setOcrTotalAmount(121000); // total сейчас 110000, разница 11000
+
+    step.addDiffAsItem();
+
+    // 11000 / 1.1 = 10000 — с учётом 10% сбора итог сойдётся точно
+    expect(step.items.value[1].unitPrice).toBe(10000);
+    expect(step.totalAmount.value).toBe(121000);
+    expect(step.totalMismatch.value).toBeNull();
+  });
+
+  it('addDiffAsItem не делает ничего при отрицательной разнице', () => {
+    const step = mountComposable(() => useItemsStep());
+    step.items.value = [makeReceiptItem({ qty: 1, unitPrice: 120000 })];
+    step.setOcrTotalAmount(100000);
+
+    step.addDiffAsItem();
+    expect(step.items.value).toHaveLength(1);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// useItemsStep — explodeItem, deleteItem/restoreItem, addCharge
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('useItemsStep — explodeItem', () => {
+  it('раскладывает qty=3 на 3 строки по 1 шт с ценой за единицу', () => {
+    const step = mountComposable(() => useItemsStep());
+    step.items.value = [
+      makeReceiptItem({ id: 'a', name: 'Шашлык', qty: 3, unitPrice: 18000, ocrTotalPrice: 54000 }),
+    ];
+
+    step.explodeItem('a');
+
+    expect(step.items.value).toHaveLength(3);
+    expect(step.items.value.map((i) => i.name)).toEqual([
+      'Шашлык (1/3)',
+      'Шашлык (2/3)',
+      'Шашлык (3/3)',
+    ]);
+    expect(step.items.value.every((i) => i.qty === 1 && i.unitPrice === 18000)).toBe(true);
+    expect(step.items.value.map((i) => i.ocrTotalPrice)).toEqual([18000, 18000, 18000]);
+  });
+
+  it('отдаёт остаток ocrTotalPrice последней строке', () => {
+    const step = mountComposable(() => useItemsStep());
+    step.items.value = [makeReceiptItem({ id: 'a', qty: 3, unitPrice: 33, ocrTotalPrice: 100 })];
+
+    step.explodeItem('a');
+
+    expect(step.items.value.map((i) => i.ocrTotalPrice)).toEqual([33, 33, 34]);
+  });
+
+  it('не раскладывает дробное qty, qty=1 и qty>10', () => {
+    const step = mountComposable(() => useItemsStep());
+    step.items.value = [
+      makeReceiptItem({ id: 'a', qty: 1.5 }),
+      makeReceiptItem({ id: 'b', qty: 1 }),
+      makeReceiptItem({ id: 'c', qty: 11 }),
+    ];
+
+    step.explodeItem('a');
+    step.explodeItem('b');
+    step.explodeItem('c');
+
+    expect(step.items.value).toHaveLength(3);
+  });
+});
+
+describe('useItemsStep — deleteItem/restoreItem (undo)', () => {
+  it('deleteItem возвращает снапшот, restoreItem ставит позицию на прежний индекс', () => {
+    const step = mountComposable(() => useItemsStep());
+    step.items.value = [
+      makeReceiptItem({ id: 'a', name: 'Первый' }),
+      makeReceiptItem({ id: 'b', name: 'Второй', assignedParticipantIds: ['p1'] }),
+      makeReceiptItem({ id: 'c', name: 'Третий' }),
+    ];
+
+    const snapshot = step.deleteItem('b');
+
+    expect(step.items.value.map((i) => i.id)).toEqual(['a', 'c']);
+    expect(snapshot).not.toBeNull();
+    expect(snapshot!.index).toBe(1);
+
+    step.restoreItem(snapshot!.item, snapshot!.index);
+
+    expect(step.items.value.map((i) => i.id)).toEqual(['a', 'b', 'c']);
+    expect(step.items.value[1].assignedParticipantIds).toEqual(['p1']);
+  });
+
+  it('deleteItem неизвестного id возвращает null', () => {
+    const step = mountComposable(() => useItemsStep());
+    step.items.value = [makeReceiptItem({ id: 'a' })];
+    expect(step.deleteItem('nope')).toBeNull();
+    expect(step.items.value).toHaveLength(1);
+  });
+});
+
+describe('useParticipantsStep — setPaidBy', () => {
+  function setup() {
+    const items = ref<ReceiptItem[]>([]);
+    const step = mountComposable(() => useParticipantsStep(items));
+    step.addParticipant('Я', true);
+    step.addParticipant('Аня');
+    step.addParticipant('Тимур');
+    return { items, step };
+  }
+
+  it('назначает и сбрасывает плательщика', () => {
+    const { step } = setup();
+    const [me, anya] = step.participants.value;
+
+    step.setPaidBy(anya.id, me.id);
+    expect(anya.paidById).toBe(me.id);
+
+    step.setPaidBy(anya.id, null);
+    expect(anya.paidById).toBeNull();
+  });
+
+  it('запрещает самоссылку и зависимого в роли плательщика', () => {
+    const { step } = setup();
+    const [me, anya, timur] = step.participants.value;
+
+    step.setPaidBy(anya.id, anya.id);
+    expect(anya.paidById).toBeNull();
+
+    step.setPaidBy(anya.id, me.id); // Аня — зависимая
+    step.setPaidBy(timur.id, anya.id); // зависимый не может платить
+    expect(timur.paidById).toBeNull();
+  });
+
+  it('участник, ставший зависимым, отпускает своих зависимых', () => {
+    const { step } = setup();
+    const [me, anya, timur] = step.participants.value;
+
+    step.setPaidBy(timur.id, anya.id); // Аня платит за Тимура
+    step.setPaidBy(anya.id, me.id); // теперь за Аню платит Я
+
+    expect(anya.paidById).toBe(me.id);
+    expect(timur.paidById).toBeNull();
+  });
+});
+
+describe('useParticipantsStep — быстрые действия', () => {
+  it('assignAllToEveryone назначает все позиции всем участникам', () => {
+    const items = ref<ReceiptItem[]>([
+      makeReceiptItem({ id: 'a' }),
+      makeReceiptItem({ id: 'b', assignedParticipantIds: ['stale'] }),
+    ]);
+    const step = mountComposable(() => useParticipantsStep(items));
+    step.addParticipant('Я', true);
+    step.addParticipant('Аня');
+    const ids = step.participants.value.map((p) => p.id);
+
+    step.assignAllToEveryone();
+
+    expect(items.value[0].assignedParticipantIds).toEqual(ids);
+    expect(items.value[1].assignedParticipantIds).toEqual(ids);
+  });
+
+  it('assignRestToMe добирает только неназначенные позиции', () => {
+    const items = ref<ReceiptItem[]>([
+      makeReceiptItem({ id: 'a' }),
+      makeReceiptItem({ id: 'b', assignedParticipantIds: ['someone'] }),
+    ]);
+    const step = mountComposable(() => useParticipantsStep(items));
+    step.addParticipant('Аня');
+    step.addParticipant('Я', true);
+    const me = step.participants.value.find((p) => p.isMe)!;
+
+    step.assignRestToMe();
+
+    expect(items.value[0].assignedParticipantIds).toEqual([me.id]);
+    expect(items.value[1].assignedParticipantIds).toEqual(['someone']);
+  });
+
+  it('assignRestToMe без «Я» ничего не делает', () => {
+    const items = ref<ReceiptItem[]>([makeReceiptItem({ id: 'a' })]);
+    const step = mountComposable(() => useParticipantsStep(items));
+    step.addParticipant('Аня');
+
+    step.assignRestToMe();
+
+    expect(items.value[0].assignedParticipantIds).toEqual([]);
+  });
+});
+
+describe('useLastParty + restoreParty — «Как в прошлый раз»', () => {
+  beforeEach(() => {
+    localStorage.removeItem('scan-receipt:last-party');
+  });
+
+  it('saveParty сохраняет имена, isMe и плательщиков по именам', () => {
+    const items = ref<ReceiptItem[]>([]);
+    const step = mountComposable(() => useParticipantsStep(items));
+    step.addParticipant('Я', true);
+    step.addParticipant('Аня');
+    const [me, anya] = step.participants.value;
+    step.setPaidBy(anya.id, me.id);
+
+    const { lastParty, saveParty } = mountComposable(() => useLastParty());
+    saveParty(step.participants.value);
+
+    expect(lastParty.value?.members).toEqual([
+      { name: 'Я', isMe: true, paidByName: null },
+      { name: 'Аня', isMe: false, paidByName: 'Я' },
+    ]);
+    expect(lastParty.value?.savedAt).toBeGreaterThan(0);
+  });
+
+  it('restoreParty пересоздаёт участников и связывает платежи по именам', () => {
+    const items = ref<ReceiptItem[]>([]);
+    const step = mountComposable(() => useParticipantsStep(items));
+
+    step.restoreParty([
+      { name: 'Я', isMe: true, paidByName: null },
+      { name: 'Аня', isMe: false, paidByName: 'Я' },
+      { name: 'Тимур', isMe: false, paidByName: null },
+    ]);
+
+    expect(step.participants.value).toHaveLength(3);
+    const me = step.participants.value.find((p) => p.isMe)!;
+    const anya = step.participants.value.find((p) => p.name === 'Аня')!;
+    expect(anya.paidById).toBe(me.id);
+  });
+
+  it('restoreParty не трогает уже добавленных участников', () => {
+    const items = ref<ReceiptItem[]>([]);
+    const step = mountComposable(() => useParticipantsStep(items));
+    step.addParticipant('Кто-то');
+
+    step.restoreParty([{ name: 'Я', isMe: true, paidByName: null }]);
+
+    expect(step.participants.value).toHaveLength(1);
+    expect(step.participants.value[0].name).toBe('Кто-то');
+  });
+});
+
+describe('useItemsStep — addCharge с типом amount', () => {
+  it('добавляет фиксированный сбор и учитывает его в totalAmount', () => {
+    const step = mountComposable(() => useItemsStep());
+    step.items.value = [makeReceiptItem({ qty: 1, unitPrice: 100000 })];
+
+    step.addCharge({ label: 'Чаевые', type: 'amount', amount: 5000 });
+
+    const charge = step.charges.value[0];
+    expect(charge.type).toBe('amount');
+    expect(charge.enabled).toBe(true);
+    expect(step.totalAmount.value).toBe(105000);
   });
 });

@@ -21,11 +21,11 @@ const emit = defineEmits<{
     type="button"
     :aria-label="`${participant.name}${isActive ? ', фильтр активен' : ''}`"
     :aria-pressed="isActive"
-    class="flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-full border transition-all duration-150 active:scale-95"
+    class="flex-shrink-0 flex items-center gap-2 pl-2 pr-3.5 py-1.5 rounded-full border transition-all duration-150 active:scale-95"
     :class="
       cn(
         isActive
-          ? 'border-transparent text-white shadow-sm'
+          ? 'border-transparent text-white shadow-md'
           : 'border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark text-text-primary-light dark:text-text-primary-dark',
       )
     "
@@ -34,7 +34,7 @@ const emit = defineEmits<{
   >
     <!-- Avatar circle with first letter -->
     <div
-      class="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
+      class="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
       :style="{ backgroundColor: isActive ? 'rgba(255,255,255,0.25)' : participant.color + '33' }"
       aria-hidden="true"
     >
@@ -46,13 +46,13 @@ const emit = defineEmits<{
       />
       <span
         v-else
-        class="text-caption-sm font-bold leading-none"
+        class="text-caption font-bold leading-none"
         :style="{ color: isActive ? '#fff' : participant.color }"
       >
         {{ getInitial(participant.name) }}
       </span>
     </div>
-    <span class="text-sm font-medium whitespace-nowrap">
+    <span class="text-sm font-semibold whitespace-nowrap">
       {{ participant.name }}
     </span>
     <span

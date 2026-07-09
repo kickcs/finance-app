@@ -15,7 +15,10 @@ import { HealthModule } from './health';
 import { ObservabilityModule } from './observability';
 
 // ORM Entities from DDD modules
-import { ProfileOrmEntity } from './modules/identity/infrastructure/persistence/typeorm';
+import {
+  ProfileOrmEntity,
+  PaymentMethodOrmEntity,
+} from './modules/identity/infrastructure/persistence/typeorm';
 import {
   AccountOrmEntity,
   AccountBalanceOrmEntity,
@@ -31,6 +34,7 @@ import {
 import { ExchangeRateOrmEntity } from './modules/exchange/infrastructure/persistence/typeorm';
 import { UserSubscriptionOrmEntity } from './modules/subscription/infrastructure/persistence/typeorm';
 import { PersonOrmEntity } from './modules/person/infrastructure/persistence/typeorm';
+import { SharedReceiptOrmEntity } from './modules/receipt/infrastructure/persistence/typeorm';
 import {
   PushSubscriptionOrmEntity,
   NotificationLogOrmEntity,
@@ -88,6 +92,7 @@ import { TelegramImportModule } from './modules/telegram-import/telegram-import.
         entities: [
           // DDD ORM Entities
           ProfileOrmEntity,
+          PaymentMethodOrmEntity,
           AccountOrmEntity,
           AccountBalanceOrmEntity,
           TransactionOrmEntity,
@@ -99,6 +104,7 @@ import { TelegramImportModule } from './modules/telegram-import/telegram-import.
           ExchangeRateOrmEntity,
           UserSubscriptionOrmEntity,
           PersonOrmEntity,
+          SharedReceiptOrmEntity,
           PushSubscriptionOrmEntity,
           NotificationLogOrmEntity,
           NotificationPreferencesOrmEntity,

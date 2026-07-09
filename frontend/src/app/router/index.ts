@@ -232,6 +232,12 @@ export const router = createRouter({
       path: '/onboarding/currency',
       redirect: '/onboarding/first-account',
     },
+    // Публичная страница чека — доступна без авторизации (ссылки /r/<token>)
+    {
+      path: '/shared/:token',
+      name: ROUTE_NAMES.SHARED_RECEIPT,
+      component: () => import('@/pages/shared-receipt/SharedReceiptPage.vue'),
+    },
     // Catch-all redirect
     {
       path: '/:pathMatch(.*)*',
