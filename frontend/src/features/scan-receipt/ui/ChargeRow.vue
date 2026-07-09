@@ -64,14 +64,14 @@ function handleKeydown(event: KeyboardEvent) {
     <!-- Label + percent / amount editor -->
     <div class="flex items-baseline gap-1 flex-1 min-w-0">
       <span
-        class="text-caption font-medium text-text-secondary-light dark:text-text-secondary-dark truncate"
+        class="text-caption font-mono font-medium text-text-secondary-light dark:text-text-secondary-dark truncate"
       >
         {{ charge.label }}
       </span>
       <button
         v-if="!isEditing && charge.type === 'percent'"
         type="button"
-        class="text-caption font-semibold text-primary tabular-nums hover:underline"
+        class="text-caption font-mono font-semibold text-primary tabular-nums hover:underline"
         @click="isEditing = true"
       >
         {{ charge.percent }}%
@@ -96,7 +96,7 @@ function handleKeydown(event: KeyboardEvent) {
     <button
       v-if="!isEditing && charge.type === 'amount'"
       type="button"
-      class="text-caption font-medium text-primary tabular-nums hover:underline flex-shrink-0"
+      class="text-caption font-mono font-medium text-primary tabular-nums hover:underline flex-shrink-0"
       @click="isEditing = true"
     >
       +{{ formatCurrency(charge.amount, currency) }}
@@ -114,7 +114,7 @@ function handleKeydown(event: KeyboardEvent) {
       @blur="handleBlur"
       @keydown="handleKeydown"
     />
-    <span v-else class="text-caption font-medium text-primary tabular-nums flex-shrink-0">
+    <span v-else class="text-caption font-mono font-medium text-primary tabular-nums flex-shrink-0">
       +{{ formatCurrency(amount, currency) }}
     </span>
 

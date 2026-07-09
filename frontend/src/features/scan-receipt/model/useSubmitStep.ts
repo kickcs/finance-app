@@ -37,10 +37,16 @@ export function useSubmitStep(
   const submitError = ref<string | null>(null);
   const isSuccess = ref(false);
 
+  // Кто платил по чеку: null — «Я» (обычный путь с транзакцией).
+  // Другой участник — транзакция не создаётся, создаётся мой долг ему.
+  const payerId = ref<string | null>(null);
+
   // Retry bookkeeping: keeps a failed submit from duplicating the transaction
   // or already-created debts on the next attempt.
   const createdTransactionId = ref<string | null>(null);
   const createdDebtParticipantIds = new Set<string>();
+  // Идемпотентность долга «я должен» при ретраях («Платил не я»)
+  const createdTakenDebt = ref(false);
   // Idempotency for the linked-import confirm across retries.
   const importConfirmed = ref(false);
 
@@ -91,14 +97,57 @@ export function useSubmitStep(
     return summaries;
   });
 
+  /** Плательщик-«не я»: существует и не isMe, иначе null (платил я) */
+  const payer = computed<Participant | null>(() => {
+    if (!payerId.value) return null;
+    const found = participants.value.find((p) => p.id === payerId.value);
+    return found && !found.isMe ? found : null;
+  });
+
+  /** Моя доля (включая тех, за кого плачу я) — сумма долга при «Платил не я» */
+  const myShareTotal = computed(() => {
+    const mine = participantSummaries.value.find((s) => s.isMe);
+    return mine?.total ?? 0;
+  });
+
   async function handleSubmit() {
     const uid_ = userId();
-    if (!uid_ || !formData.value.accountId || !formData.value.categoryId) return;
+    if (!uid_ || !isFormValid.value) return;
     // Double-tap guard + no resubmission after success
     if (isSubmitting.value || isSuccess.value) return;
 
     isSubmitting.value = true;
     submitError.value = null;
+
+    // «Платил не я»: вместо расхода — один долг «я должен» плательщику
+    if (payer.value) {
+      try {
+        if (!createdTakenDebt.value) {
+          await debtsApi.create({
+            user_id: uid_,
+            name: `Чек: ${storeName.value || 'Без названия'}`,
+            total_amount: myShareTotal.value,
+            remaining_amount: myShareTotal.value,
+            debt_type: 'taken',
+            person_name: payer.value.name,
+            account_id: formData.value.accountId!,
+            currency: formData.value.currency,
+          });
+          createdTakenDebt.value = true;
+        }
+
+        queryClient.invalidateQueries({ queryKey: debtQueryKeys.list(uid_) });
+        isSuccess.value = true;
+        trigger('success');
+      } catch (error: unknown) {
+        console.error('Receipt submit failed:', error);
+        submitError.value = error instanceof Error ? error.message : 'Произошла ошибка';
+        trigger('error');
+      } finally {
+        isSubmitting.value = false;
+      }
+      return;
+    }
 
     try {
       // Create the main expense transaction (skipped on retry if it already
@@ -106,7 +155,8 @@ export function useSubmitStep(
       if (!createdTransactionId.value) {
         const transaction = await transactionsApi.create({
           user_id: uid_,
-          account_id: formData.value.accountId,
+          // isFormValid гарантирует accountId
+          account_id: formData.value.accountId!,
           category_id: formData.value.categoryId,
           amount: totalAmount.value,
           currency: formData.value.currency,
@@ -183,12 +233,18 @@ export function useSubmitStep(
     }
   }
 
-  const isFormValid = computed(
-    () => !!formData.value.accountId && !!formData.value.categoryId && totalAmount.value > 0,
-  );
+  const isFormValid = computed(() => {
+    if (!formData.value.accountId) return false;
+    // «Платил не я»: категория не нужна, но моя доля должна быть больше нуля
+    if (payer.value) return myShareTotal.value > 0;
+    return !!formData.value.categoryId && totalAmount.value > 0;
+  });
 
   return {
     formData,
+    payerId,
+    payer,
+    myShareTotal,
     participantSummaries,
     isSubmitting,
     submitError,

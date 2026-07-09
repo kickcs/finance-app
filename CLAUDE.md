@@ -48,7 +48,7 @@ GitHub Actions (`deploy.yml`): build-backend (lint + test + Docker build/push) +
 ### Backend (NestJS + DDD + CQRS)
 
 - **Tech**: NestJS 11, TypeORM, PostgreSQL, JWT + Passport, @nestjs/cqrs
-- **Bounded Contexts** (`backend/src/modules/`): `identity` (auth, profiles), `accounting` (accounts, transactions, categories, quick-actions), `debt`, `planning` (goals, reminders, budgets), `exchange` (currency conversion), `subscription` (premium plans, LemonSqueezy payments), `person` (shared contacts), `receipt` (OCR via OpenAI)
+- **Bounded Contexts** (`backend/src/modules/`): `identity` (auth, profiles), `accounting` (accounts, transactions, categories, quick-actions), `debt`, `planning` (goals, reminders, budgets), `exchange` (currency conversion), `subscription` (premium plans, LemonSqueezy payments), `person` (shared contacts), `receipt` (OCR via OpenAI — до 3 кадров одним запросом; публичный шаринг чеков: `POST /api/receipts/share`, `GET /api/receipts/shared/:token` + `og.png` (@Public), страница `GET /r/:token` вне префикса `/api` с OG-тегами и редиректом на SPA `/shared/:token`; OG-картинки — `@resvg/resvg-js` с бандленными шрифтами `backend/assets/fonts`; реквизиты «куда переводить» — `payment_methods` в identity: `GET/POST/DELETE /api/payment-methods`, лимит 10)
 
 **Module Structure**: `domain/` → `application/` (commands + queries) → `infrastructure/` (TypeORM, mappers) → `presentation/` (controllers, DTOs)
 
@@ -168,11 +168,12 @@ All accept `userId: MaybeRefOrGetter<string|null>`, auto-disable when falsy, inc
 - `useBudget` — budget CRUD
 - `useDailyStats` — daily income/expense statistics
 - `usePeople` — shared contacts/persons
+- `usePaymentMethods` — сохранённые реквизиты для шаринга чеков (label/value, лимит 10)
 - `useQuickActions` — quick action shortcuts for transactions
 
 ### Frontend Entities
 
-`account`, `account-balance` (multi-currency balances), `budget`, `category`, `currency`, `debt`, `goal`, `person`, `quick-action`, `reminder`, `subscription`, `transaction`
+`account`, `account-balance` (multi-currency balances), `budget`, `category`, `currency`, `debt`, `goal`, `payment-method`, `person`, `quick-action`, `reminder`, `subscription`, `transaction`
 
 **Key constants**: `EXPENSE_CATEGORIES` (12), `INCOME_CATEGORIES` (6), `DEBT_CATEGORIES` (4), `TRANSFER_CATEGORY`, `COMMISSION_CATEGORY`, `ADJUSTMENT_CATEGORY` in `entities/category/model/constants.ts`. `CURRENCIES` (USD, EUR, RUB, UZS, GBP, CNY). `VISIBLE_ACCOUNT_TYPES` (basic, savings, credit_card). `ENTITY_COLORS` in `shared/config/colors.ts`.
 
@@ -184,7 +185,7 @@ All accept `userId: MaybeRefOrGetter<string|null>`, auto-disable when falsy, inc
 
 ### Frontend Features (`features/`)
 
-`add-transaction` (HeroAmount, TransactionForm, panels), `adjust-balance`, `analytics-filters` (FilterChips, DateRangePicker, ModeToggle), `changelog`, `close-debt`, `configure-quick-action`, `create-account`, `create-debt`, `create-reminder`, `demo-mode`, `edit-account`, `edit-profile`, `edit-reminder`, `edit-transaction`, `import-data`, `install-pwa`, `manage-categories`, `manage-subscription` (SubscriptionSection), `partial-payment`, `scan-receipt` (OCR via OpenAI), `search-transactions` (SearchInput), `select-currency` (CurrencyItem), `set-budget`, `split-expense`, `toggle-theme` (ThemeToggle), `upgrade-to-premium` (PremiumBadge, PremiumUpgradeModal, useUpgrade)
+`add-transaction` (HeroAmount, TransactionForm, panels), `adjust-balance`, `analytics-filters` (FilterChips, DateRangePicker, ModeToggle), `changelog`, `close-debt`, `configure-quick-action`, `create-account`, `create-debt`, `create-reminder`, `demo-mode`, `edit-account`, `edit-profile`, `edit-reminder`, `edit-transaction`, `import-data`, `install-pwa`, `manage-categories`, `manage-subscription` (SubscriptionSection), `partial-payment`, `scan-receipt` (OCR via OpenAI), `search-transactions` (SearchInput), `select-currency` (CurrencyItem), `set-budget`, `split-expense`, `toggle-theme` (ThemeToggle), `upgrade-to-premium` (PremiumBadge, PremiumUpgradeModal, useUpgrade), `view-shared-receipt` (публичная страница чека `/shared/:token` — роут без auth-guard)
 
 ### Page Layout Pattern
 
@@ -199,6 +200,7 @@ JWT_SECRET, JWT_EXPIRES_IN, PORT
 LEMONSQUEEZY_API_KEY, LEMONSQUEEZY_WEBHOOK_SECRET, LEMONSQUEEZY_STORE_ID
 LEMONSQUEEZY_PREMIUM_MONTHLY_VARIANT_ID, LEMONSQUEEZY_PREMIUM_YEARLY_VARIANT_ID
 OPENAI_API_KEY  # Receipt OCR
+PUBLIC_APP_URL  # База публичных ссылок на чеки /r/<token> (в prod по умолчанию = CORS_ORIGIN)
 
 # Frontend (.env)
 VITE_API_URL=http://localhost:3000

@@ -1,4 +1,4 @@
-import { ref, onUnmounted } from 'vue';
+import { ref, onUnmounted, type Ref } from 'vue';
 import { useTimeoutFn } from '@vueuse/core';
 import { receiptApi, type ScanReceiptResponse } from '../api/receiptApi';
 import { useHaptics } from '@/shared/lib/haptics';
@@ -7,9 +7,18 @@ import { useHaptics } from '@/shared/lib/haptics';
 const SERVICE_KEYWORDS =
   /обслуживание|service|чаевые|tip|ндс|vat|tax|скидка|discount|delivery|доставка/i;
 
+/** Максимум кадров одного чека (длинный чек по частям) */
+export const MAX_RECEIPT_PHOTOS = 3;
+
+export interface OcrError {
+  message: string;
+  details: string;
+}
+
 export interface OcrResult {
   items: ScanReceiptResponse['items'];
   currency: string;
+  totalAmount: number;
   storeName: string | null;
   serviceChargePercent: number | null;
   serviceChargeAmount: number | null;
@@ -23,35 +32,44 @@ export function usePhotoStep(onOcrSuccess: (result: OcrResult) => void, goNext: 
   const { start: scheduleAdvance, stop: cancelAdvance } = useTimeoutFn(goNext, 600, {
     immediate: false,
   });
-  const selectedFile = ref<File | null>(null);
-  const previewUrl = ref<string | null>(null);
+  // Cast: UnwrapRef ломает тип File при глубоком анврапе
+  const selectedFiles = ref([]) as Ref<File[]>;
+  const previewUrls = ref<string[]>([]);
   const isOcrLoading = ref(false);
   const isOcrSuccess = ref(false);
-  const ocrError = ref<string | null>(null);
+  const ocrError = ref<OcrError | null>(null);
 
-  function selectFile(file: File) {
-    selectedFile.value = file;
-    previewUrl.value = URL.createObjectURL(file);
+  /** Добавляет кадр; false — достигнут лимит MAX_RECEIPT_PHOTOS */
+  function addFile(file: File): boolean {
+    if (selectedFiles.value.length >= MAX_RECEIPT_PHOTOS) return false;
+    selectedFiles.value.push(file);
+    previewUrls.value.push(URL.createObjectURL(file));
     ocrError.value = null;
-    scanReceipt();
+    return true;
+  }
+
+  function removeFile(index: number) {
+    const [url] = previewUrls.value.splice(index, 1);
+    if (url) URL.revokeObjectURL(url);
+    selectedFiles.value.splice(index, 1);
   }
 
   function resetPhoto() {
-    if (previewUrl.value) URL.revokeObjectURL(previewUrl.value);
-    selectedFile.value = null;
-    previewUrl.value = null;
+    previewUrls.value.forEach((url) => URL.revokeObjectURL(url));
+    selectedFiles.value = [];
+    previewUrls.value = [];
     isOcrLoading.value = false;
     isOcrSuccess.value = false;
     ocrError.value = null;
   }
 
   async function scanReceipt() {
-    if (!selectedFile.value) return;
+    if (selectedFiles.value.length === 0) return;
     isOcrLoading.value = true;
     ocrError.value = null;
 
     try {
-      const result: ScanReceiptResponse = await receiptApi.scan(selectedFile.value);
+      const result: ScanReceiptResponse = await receiptApi.scan(selectedFiles.value);
 
       // Filter out service charge / tax / discount line items that GPT may still return
       const productItems = result.items.filter((item) => !SERVICE_KEYWORDS.test(item.name));
@@ -59,6 +77,7 @@ export function usePhotoStep(onOcrSuccess: (result: OcrResult) => void, goNext: 
       onOcrSuccess({
         items: productItems,
         currency: result.currency,
+        totalAmount: result.totalAmount,
         storeName: result.storeName,
         serviceChargePercent: result.serviceChargePercent,
         serviceChargeAmount: result.serviceChargeAmount,
@@ -72,10 +91,13 @@ export function usePhotoStep(onOcrSuccess: (result: OcrResult) => void, goNext: 
       scheduleAdvance();
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : String(error);
-      const fileInfo = selectedFile.value
-        ? `[${selectedFile.value.type || 'unknown'}, ${Math.round(selectedFile.value.size / 1024)}KB]`
-        : '';
-      ocrError.value = `${msg} ${fileInfo}`.trim();
+      const fileInfo = selectedFiles.value
+        .map((f) => `[${f.type || 'unknown'}, ${Math.round(f.size / 1024)}KB]`)
+        .join(' ');
+      ocrError.value = {
+        message: 'Не получилось прочитать чек',
+        details: `${msg} ${fileInfo}`.trim(),
+      };
       trigger('error');
     } finally {
       isOcrLoading.value = false;
@@ -84,18 +106,18 @@ export function usePhotoStep(onOcrSuccess: (result: OcrResult) => void, goNext: 
 
   onUnmounted(() => {
     cancelAdvance();
-    if (previewUrl.value) {
-      URL.revokeObjectURL(previewUrl.value);
-      previewUrl.value = null;
-    }
+    previewUrls.value.forEach((url) => URL.revokeObjectURL(url));
+    previewUrls.value = [];
   });
 
   return {
-    previewUrl,
+    selectedFiles,
+    previewUrls,
     isOcrLoading,
     isOcrSuccess,
     ocrError,
-    selectFile,
+    addFile,
+    removeFile,
     resetPhoto,
     scanReceipt,
   };

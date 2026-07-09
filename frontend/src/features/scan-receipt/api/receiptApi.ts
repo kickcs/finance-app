@@ -1,4 +1,4 @@
-import { API_URL, getAccessToken, refreshTokensWithReason } from '@/shared/api/http';
+import { API_URL, getAccessToken, refreshTokensWithReason, http } from '@/shared/api/http';
 
 export interface ReceiptItemResponse {
   name: string;
@@ -18,10 +18,37 @@ export interface ScanReceiptResponse {
   hashtags: string[];
 }
 
+export interface SharedReceiptPayload {
+  storeName: string | null;
+  date: number;
+  currency: string;
+  totalAmount: number;
+  subtotal: number;
+  charges: { label: string; display: string }[];
+  participants: {
+    name: string;
+    color: string;
+    isMe: boolean;
+    total: number;
+    paidByName: string | null;
+    items: { name: string; share: number; sharedWith: number; lineTotal: number }[];
+  }[];
+  paymentMethods: { label: string; value: string }[];
+  ownerName: string | null;
+}
+
 export const receiptApi = {
-  async scan(imageFile: File): Promise<ScanReceiptResponse> {
+  /** Публичная ссылка на чек: бэкенд сохраняет снапшот и возвращает URL вида /r/<token> */
+  async share(payload: SharedReceiptPayload): Promise<{ token: string; url: string }> {
+    return http.post<{ token: string; url: string }>('/receipts/share', payload);
+  },
+
+  /** До 3 кадров одного чека — бэкенд склеивает сегменты в один список позиций */
+  async scan(imageFiles: File[]): Promise<ScanReceiptResponse> {
     const formData = new FormData();
-    formData.append('image', imageFile);
+    for (const file of imageFiles) {
+      formData.append('image', file);
+    }
 
     const doFetch = (token: string | null) =>
       fetch(`${API_URL}/receipts/scan`, {

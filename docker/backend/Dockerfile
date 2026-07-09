@@ -42,18 +42,27 @@ RUN bun install --frozen-lockfile --production
 # ================================
 # Stage 4: Production runtime
 # ================================
-FROM node:22-alpine AS runner
+# ВАЖНО: debian (glibc), не alpine — нативные модули (@resvg/resvg-js)
+# ставятся на glibc-стадии prod-deps и должны совпадать по libc с рантаймом
+FROM node:22-bookworm-slim AS runner
 
 WORKDIR /app
 
+# wget нужен для HEALTHCHECK ниже
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends wget && \
+    rm -rf /var/lib/apt/lists/*
+
 # Create non-root user for security
-RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 nestjs
+RUN groupadd --system --gid 1001 nodejs && \
+    useradd --system --uid 1001 --gid nodejs nestjs
 
 # Copy built application and prod-only dependencies
 COPY --from=builder /app/dist ./dist
 COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
+# Бандленные шрифты для OG-картинок (кириллица)
+COPY --from=builder /app/assets ./assets
 
 # Set ownership
 RUN chown -R nestjs:nodejs /app

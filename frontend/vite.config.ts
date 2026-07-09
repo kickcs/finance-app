@@ -19,6 +19,9 @@ export default defineConfig({
       workbox: {
         importScripts: ['/push-sw.js'],
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
+        // HEIC-конвертер (~3 МБ wasm-чанк) грузится лениво только при встрече
+        // HEIC-файла — в precache каждого пользователя ему не место
+        globIgnores: ['**/heic-to-*.js'],
         navigateFallback: '/index.html',
         navigateFallbackAllowlist: [/^(?!\/?api\/).*/],
         runtimeCaching: [

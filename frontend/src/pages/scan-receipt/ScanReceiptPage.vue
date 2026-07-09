@@ -4,6 +4,7 @@ import { useRouter, useRoute } from 'vue-router';
 import { AppHeader } from '@/widgets/header';
 import { ROUTE_NAMES } from '@/shared/config/routeNames';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
+import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 import {
   useReceiptWizard,
   StepProgressIndicator,
@@ -45,10 +46,22 @@ const wizard = useReceiptWizard(
 
 const { accounts } = useAccounts(userId);
 const { expenseCategories } = useCategories(userId);
+const { currency: userCurrency } = useUserCurrency();
 
 const transitionName = computed(() =>
   wizard.direction.value === 'back' ? 'step-back' : 'step-forward',
 );
+
+// Баннер «Продолжить прошлый чек?» на первом шаге
+const draftBanner = computed(() => {
+  const draft = wizard.freshDraft.value;
+  if (!draft) return null;
+  return {
+    itemCount: draft.items.length,
+    totalAmount: draft.totalAmount ?? 0,
+    currency: draft.currency,
+  };
+});
 
 function handleBack() {
   if (wizard.currentStep.value === 1) {
@@ -94,13 +107,18 @@ function handleBack() {
         <Step1PhotoCapture
           v-if="wizard.currentStep.value === 1"
           key="step-1"
-          :preview-url="wizard.previewUrl.value"
+          :preview-urls="wizard.previewUrls.value"
           :is-ocr-loading="wizard.isOcrLoading.value"
           :is-ocr-success="wizard.isOcrSuccess.value"
           :ocr-error="wizard.ocrError.value"
-          @select-file="wizard.selectFile"
+          :draft="draftBanner"
+          @add-file="wizard.addFile"
+          @remove-file="wizard.removeFile"
           @reset-photo="wizard.resetPhoto"
-          @retry-ocr="wizard.scanReceipt"
+          @scan="wizard.scanReceipt"
+          @manual="wizard.startManualMode(userCurrency)"
+          @continue-draft="wizard.restoreDraft"
+          @discard-draft="wizard.discardDraft"
         />
         <Step2EditItems
           v-else-if="wizard.currentStep.value === 2"
@@ -111,15 +129,21 @@ function handleBack() {
           :charges="wizard.charges.value"
           :charges-amount="wizard.chargesAmount.value"
           :total-amount="wizard.totalAmount.value"
+          :ocr-total-amount="wizard.ocrTotalAmount.value"
+          :total-mismatch="wizard.totalMismatch.value"
+          :manual-mode="wizard.manualMode.value"
           @update-item="wizard.updateItem"
           @delete-item="wizard.deleteItem"
           @add-item="wizard.addItem"
           @split-item="wizard.splitItem"
+          @explode-item="wizard.explodeItem"
           @add-charge="wizard.addCharge"
           @remove-charge="wizard.removeCharge"
           @toggle-charge="wizard.toggleCharge"
           @update-charge-percent="wizard.updateChargePercent"
           @update-charge-amount="wizard.updateChargeAmount"
+          @dismiss-mismatch="wizard.dismissMismatch"
+          @add-diff-as-item="wizard.addDiffAsItem"
           @next="wizard.goNext"
           @back="wizard.goBack"
         />
@@ -133,10 +157,14 @@ function handleBack() {
           :unassigned-count="wizard.unassignedCount.value"
           :charges="wizard.charges.value"
           :subtotal="wizard.subtotal.value"
-          @add-participant="wizard.addParticipant"
+          :last-party="wizard.lastParty.value"
+          @add-participant="(name, isMe) => wizard.addParticipant(name, isMe)"
           @remove-participant="wizard.removeParticipant"
+          @set-paid-by="wizard.setPaidBy"
           @toggle-item-participant="wizard.toggleItemParticipant"
-          @assign-all="wizard.assignAllTo"
+          @assign-all-to-everyone="wizard.assignAllToEveryone"
+          @assign-rest-to-me="wizard.assignRestToMe"
+          @restore-last-party="wizard.restoreLastParty"
           @next="wizard.goNext"
           @back="wizard.goBack"
         />
@@ -144,6 +172,10 @@ function handleBack() {
           v-else-if="wizard.currentStep.value === 4"
           key="step-4"
           :participant-summaries="wizard.participantSummaries.value"
+          :participants="wizard.participants.value"
+          :payer-id="wizard.payerId.value"
+          :payer-locked="!!importedId"
+          :my-share-total="wizard.myShareTotal.value"
           :currency="wizard.currency.value"
           :form-data="wizard.formData.value"
           :accounts="accounts ?? []"
@@ -161,6 +193,7 @@ function handleBack() {
           :done-route="importedId ? ROUTE_NAMES.IMPORT_INBOX : ROUTE_NAMES.DASHBOARD"
           :done-label="importedId ? 'К инбоксу' : 'На главную'"
           @update:form-data="(val) => (wizard.formData.value = val)"
+          @update:payer-id="(val) => (wizard.payerId.value = val)"
           @submit="wizard.handleSubmit"
           @back="wizard.goBack"
         />
@@ -180,41 +213,41 @@ function handleBack() {
   opacity: 0;
 }
 
-/* Forward: new step slides in from the right */
+/* Протяжка бумаги: вперёд — лента подаётся снизу вверх */
 .step-forward-enter-active,
 .step-forward-leave-active {
   transition:
-    transform 280ms cubic-bezier(0.4, 0, 0.2, 1),
-    opacity 280ms cubic-bezier(0.4, 0, 0.2, 1);
+    transform 260ms cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 260ms cubic-bezier(0.4, 0, 0.2, 1);
   position: absolute;
   inset: 0;
   width: 100%;
 }
 .step-forward-enter-from {
-  transform: translateX(100%);
+  transform: translateY(48px);
   opacity: 0;
 }
 .step-forward-leave-to {
-  transform: translateX(-30%);
+  transform: translateY(-32px);
   opacity: 0;
 }
 
-/* Backward: new step slides in from the left */
+/* Назад — лента отматывается вниз */
 .step-back-enter-active,
 .step-back-leave-active {
   transition:
-    transform 280ms cubic-bezier(0.4, 0, 0.2, 1),
-    opacity 280ms cubic-bezier(0.4, 0, 0.2, 1);
+    transform 260ms cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 260ms cubic-bezier(0.4, 0, 0.2, 1);
   position: absolute;
   inset: 0;
   width: 100%;
 }
 .step-back-enter-from {
-  transform: translateX(-100%);
+  transform: translateY(-48px);
   opacity: 0;
 }
 .step-back-leave-to {
-  transform: translateX(30%);
+  transform: translateY(32px);
   opacity: 0;
 }
 

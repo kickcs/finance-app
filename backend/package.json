@@ -43,6 +43,7 @@
     "@opentelemetry/sdk-node": "^0.212.0",
     "@opentelemetry/sdk-trace-base": "^2.5.1",
     "@opentelemetry/semantic-conventions": "^1.39.0",
+    "@resvg/resvg-js": "^2.6.2",
     "@willsoto/nestjs-prometheus": "^6.0.2",
     "bcrypt": "^6.0.0",
     "class-transformer": "^0.5.1",

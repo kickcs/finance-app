@@ -7,7 +7,10 @@ import { DATABASE_POOL_CONFIG } from './database.config';
 dotenv.config();
 
 // ORM Entities from DDD modules
-import { ProfileOrmEntity } from '../modules/identity/infrastructure/persistence/typeorm';
+import {
+  ProfileOrmEntity,
+  PaymentMethodOrmEntity,
+} from '../modules/identity/infrastructure/persistence/typeorm';
 import {
   AccountOrmEntity,
   AccountBalanceOrmEntity,
@@ -23,6 +26,7 @@ import {
 import { ExchangeRateOrmEntity } from '../modules/exchange/infrastructure/persistence/typeorm';
 import { UserSubscriptionOrmEntity } from '../modules/subscription/infrastructure/persistence/typeorm';
 import { PersonOrmEntity } from '../modules/person/infrastructure/persistence/typeorm';
+import { SharedReceiptOrmEntity } from '../modules/receipt/infrastructure/persistence/typeorm';
 import {
   PushSubscriptionOrmEntity,
   NotificationLogOrmEntity,
@@ -49,6 +53,7 @@ export const dataSourceOptions: DataSourceOptions = {
   entities: [
     // DDD ORM Entities
     ProfileOrmEntity,
+    PaymentMethodOrmEntity,
     AccountOrmEntity,
     AccountBalanceOrmEntity,
     TransactionOrmEntity,
@@ -60,6 +65,7 @@ export const dataSourceOptions: DataSourceOptions = {
     ExchangeRateOrmEntity,
     UserSubscriptionOrmEntity,
     PersonOrmEntity,
+    SharedReceiptOrmEntity,
     PushSubscriptionOrmEntity,
     NotificationLogOrmEntity,
     NotificationPreferencesOrmEntity,

@@ -16,15 +16,20 @@ import {
   TokenService,
   DemoInitializationService,
   DemoCleanupService,
+  PaymentMethodService,
 } from './application/services';
 
 // Infrastructure
-import { ProfileOrmEntity } from './infrastructure/persistence/typeorm';
+import { ProfileOrmEntity, PaymentMethodOrmEntity } from './infrastructure/persistence/typeorm';
 import { ProfileRepository } from './infrastructure/persistence/repositories';
 import { JwtStrategy } from './infrastructure/strategies';
 
 // Presentation
-import { AuthController, ProfilesController } from './presentation/controllers';
+import {
+  AuthController,
+  ProfilesController,
+  PaymentMethodController,
+} from './presentation/controllers';
 
 // External modules
 import { AccountingModule } from '../accounting';
@@ -45,6 +50,7 @@ import { DebtOrmEntity } from '../debt/infrastructure/persistence/typeorm';
     ScheduleModule.forRoot(),
     TypeOrmModule.forFeature([
       ProfileOrmEntity,
+      PaymentMethodOrmEntity,
       // For cleanup service
       AccountOrmEntity,
       TransactionOrmEntity,
@@ -65,12 +71,13 @@ import { DebtOrmEntity } from '../debt/infrastructure/persistence/typeorm';
     forwardRef(() => PlanningModule),
     forwardRef(() => PersonModule),
   ],
-  controllers: [AuthController, ProfilesController],
+  controllers: [AuthController, ProfilesController, PaymentMethodController],
   providers: [
     // Services
     TokenService,
     DemoInitializationService,
     DemoCleanupService,
+    PaymentMethodService,
 
     // Strategies
     JwtStrategy,

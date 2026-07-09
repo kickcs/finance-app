@@ -19,6 +19,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   tapRow: [];
+  tapAll: [];
 }>();
 
 const hasAssignments = computed(() => props.item.assignedParticipantIds.length > 0);
@@ -63,15 +64,8 @@ const isHighlighted = computed(() => {
 <template>
   <button
     type="button"
-    class="w-full text-left rounded-xl border transition-all duration-200 overflow-hidden active:scale-[0.98] outline-none"
-    :class="
-      cn(
-        hasAssignments
-          ? 'border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark'
-          : 'border-warning/40 bg-warning/[0.04]',
-        isHighlighted && 'border-primary/40 shadow-sm ring-1 ring-primary/20 bg-primary/[0.02]',
-      )
-    "
+    class="w-full text-left transition-colors duration-200 outline-none border-b border-dashed border-border-light dark:border-border-dark last:border-b-0 active:bg-surface-light dark:active:bg-surface-dark"
+    :class="cn(!hasAssignments && 'bg-warning/[0.06]', isHighlighted && 'bg-primary/[0.06]')"
     @click="emit('tapRow')"
   >
     <!-- Main row: item info -->
@@ -96,7 +90,9 @@ const isHighlighted = computed(() => {
         <p class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark truncate">
           {{ item.name }}
         </p>
-        <p class="text-xs text-text-secondary-light dark:text-text-secondary-dark tabular-nums">
+        <p
+          class="text-xs font-mono text-text-secondary-light dark:text-text-secondary-dark tabular-nums"
+        >
           {{ formatCurrency(displayTotal, currency) }}
           <span v-if="item.qty !== 1" class="text-text-tertiary-light dark:text-text-tertiary-dark">
             · {{ item.qty }} шт.
@@ -109,6 +105,26 @@ const isHighlighted = computed(() => {
           </span>
         </p>
       </div>
+
+      <!-- Мини-действие «на всех» -->
+      <span
+        v-if="participants.length > 1"
+        role="button"
+        tabindex="0"
+        :aria-label="isAssignedToAll ? 'Снять со всех' : 'Назначить всем'"
+        :class="
+          cn(
+            'px-2 py-1 rounded-full text-caption-sm font-semibold transition-all active:scale-90 flex-shrink-0 select-none',
+            isAssignedToAll
+              ? 'bg-primary/15 text-primary'
+              : 'bg-surface-light dark:bg-surface-dark text-text-tertiary-light dark:text-text-tertiary-dark border border-border-light dark:border-border-dark',
+          )
+        "
+        @click.stop="emit('tapAll')"
+        @keydown.enter.stop.prevent="emit('tapAll')"
+      >
+        все
+      </span>
 
       <!-- Assigned avatars stack -->
       <div

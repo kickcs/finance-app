@@ -1,8 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 import OpenAI from 'openai';
+import type { ChatCompletionContentPart } from 'openai/resources/chat/completions';
 import type { ScanReceiptResponseDto } from '../../presentation/dto/scan-receipt-response.dto';
 
 export type ScanResult = ScanReceiptResponseDto;
+
+export interface ReceiptImageInput {
+  buffer: Buffer;
+  mimetype: string;
+}
 
 @Injectable()
 export class ReceiptOcrService {
@@ -15,11 +21,28 @@ export class ReceiptOcrService {
     });
   }
 
-  async scanReceipt(imageBuffer: Buffer, mimeType: string): Promise<ScanResult> {
-    const base64Image = imageBuffer.toString('base64');
-    const dataUrl = `data:${mimeType};base64,${base64Image}`;
+  async scanReceipt(files: ReceiptImageInput[]): Promise<ScanResult> {
+    const imageParts: ChatCompletionContentPart[] = files.map((file) => {
+      const base64Image = file.buffer.toString('base64');
+      const dataUrl = `data:${file.mimetype};base64,${base64Image}`;
+      return {
+        type: 'image_url',
+        image_url: {
+          url: dataUrl,
+          detail: 'high',
+        },
+      };
+    });
 
-    const systemPrompt = `You are a receipt OCR assistant. Extract structured data from receipt images.
+    const multiImageNote =
+      files.length > 1
+        ? `
+
+MULTIPLE IMAGES:
+The images provided are overlapping segments of ONE long receipt, photographed in parts from top to bottom. Merge them into a single unified list of items — do not duplicate lines that appear in more than one segment (the segments overlap at the seams). Read the store name, date, totals, and charges from whichever segment shows them (usually the first segment for the header, the last for the final total).`
+        : '';
+
+    const systemPrompt = `You are a receipt OCR assistant. Extract structured data from receipt images.${multiImageNote}
 
 CRITICAL — NUMBER READING:
 - Receipts use spaces as thousand separators: "134 000" = 134000, "50 000" = 50000, "18 000" = 18000
@@ -79,16 +102,13 @@ Rules:
         {
           role: 'user',
           content: [
-            {
-              type: 'image_url',
-              image_url: {
-                url: dataUrl,
-                detail: 'high',
-              },
-            },
+            ...imageParts,
             {
               type: 'text',
-              text: 'Extract all receipt data from this image and return it as JSON.',
+              text:
+                files.length > 1
+                  ? 'Extract all receipt data from these images (segments of one receipt) and return it as JSON.'
+                  : 'Extract all receipt data from this image and return it as JSON.',
             },
           ],
         },
