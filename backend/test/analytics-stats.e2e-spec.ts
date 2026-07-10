@@ -6,6 +6,7 @@ import {
   seedExtraAccount,
   type AnalyticsTestContext,
 } from './helpers/analytics-test-db';
+import { UNRETURNED_DEBT_CATEGORY_ID } from '../src/modules/accounting/domain/constants/default-categories';
 
 const RANGE_START = new Date('2026-04-01T00:00:00Z');
 const RANGE_END = new Date('2026-04-30T23:59:59Z');
@@ -264,5 +265,87 @@ describe('TransactionRepository.getAnalyticsStats — debt-offset for regular ex
 
     expect(stats.totalExpense).toBe(100000);
     expect(stats.expenseByCurrency.UZS).toBe(100000);
+  });
+
+  it('split returns do not shrink the unreturned-debts bucket', async () => {
+    // Split scenario: groceries 100k, friend owes 35k and returns it in-period.
+    // The return offsets the groceries category — and must NOT also be
+    // subtracted from the unreturned-debts bucket (double-count).
+    const sourceTxId = await seedExpense({
+      ctx,
+      amount: 100000,
+      categoryId: 'groceries',
+      date: IN_RANGE,
+    });
+    const splitDebt = await seedDebt({
+      ctx,
+      totalAmount: 35000,
+      remainingAmount: 0,
+      debtType: 'given',
+      sourceTransactionId: sourceTxId,
+      isClosed: true,
+    });
+    await seedDebtReturn({ ctx, amount: 35000, date: IN_RANGE, debtId: splitDebt });
+
+    // Pure loan in the same period: debt_given 50k, nothing returned yet
+    const loanTxId = await seedExpense({
+      ctx,
+      amount: 50000,
+      categoryId: 'debt_given',
+      date: IN_RANGE,
+      isDebtRelated: true,
+    });
+    await seedDebt({
+      ctx,
+      totalAmount: 50000,
+      remainingAmount: 50000,
+      debtType: 'given',
+      sourceTransactionId: loanTxId,
+    });
+
+    const stats = await ctx.repository.getAnalyticsStats(ctx.userId, {
+      startDate: RANGE_START,
+      endDate: RANGE_END,
+    });
+
+    const groceries = stats.categoryBreakdown.find((c) => c.categoryId === 'groceries');
+    expect(groceries?.amount).toBe(65000); // 100k − 35k split return
+
+    const bucket = stats.categoryBreakdown.find(
+      (c) => c.categoryId === UNRETURNED_DEBT_CATEGORY_ID,
+    );
+    expect(bucket?.amount).toBe(50000); // untouched by the split return
+
+    expect(stats.totalExpense).toBe(115000); // 65k + 50k
+  });
+
+  it('subtracts pure-loan returns (and only them) from the unreturned-debts bucket', async () => {
+    // Loan 50k given in-period, 20k of it returned in-period
+    const loanTxId = await seedExpense({
+      ctx,
+      amount: 50000,
+      categoryId: 'debt_given',
+      date: IN_RANGE,
+      isDebtRelated: true,
+    });
+    const loanDebt = await seedDebt({
+      ctx,
+      totalAmount: 50000,
+      remainingAmount: 30000,
+      debtType: 'given',
+      sourceTransactionId: loanTxId,
+    });
+    await seedDebtReturn({ ctx, amount: 20000, date: IN_RANGE, debtId: loanDebt });
+
+    const stats = await ctx.repository.getAnalyticsStats(ctx.userId, {
+      startDate: RANGE_START,
+      endDate: RANGE_END,
+    });
+
+    const bucket = stats.categoryBreakdown.find(
+      (c) => c.categoryId === UNRETURNED_DEBT_CATEGORY_ID,
+    );
+    expect(bucket?.amount).toBe(30000); // 50k given − 20k loan return
+    expect(stats.totalExpense).toBe(30000);
   });
 });
