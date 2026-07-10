@@ -492,7 +492,6 @@ export class TransactionRepository implements ITransactionRepository {
     const regularIncomeByCurrency: Record<string, number> = {};
     const debtGivenByCurrency: Record<string, number> = {};
     const debtTakenByCurrency: Record<string, number> = {};
-    const debtReturnsToMeByCurrency: Record<string, number> = {};
     const debtReturnsFromMeByCurrency: Record<string, number> = {};
 
     for (const row of rows) {
@@ -507,11 +506,9 @@ export class TransactionRepository implements ITransactionRepository {
           debtTakenByCurrency[row.currency] = (debtTakenByCurrency[row.currency] || 0) + amount;
           continue;
         case DEBT_CATEGORY_IDS.RETURN_TO_ME:
-          // Only counted when original debt affected balance (is_debt_related = true)
-          if (isDebt) {
-            debtReturnsToMeByCurrency[row.currency] =
-              (debtReturnsToMeByCurrency[row.currency] || 0) + amount;
-          }
+          // Handled entirely via categoryOffsetsQuery, which attributes each return
+          // to its source transaction: split returns offset the source spending
+          // category, pure-loan returns reduce the unreturned-debts bucket.
           continue;
         case DEBT_CATEGORY_IDS.RETURN_FROM_ME:
           // Only counted when original debt affected balance (is_debt_related = true)
@@ -629,7 +626,18 @@ export class TransactionRepository implements ITransactionRepository {
     // return is denominated in source_tx.currency; allowing it to spill into
     // other currency buckets would either cross-convert at 1:1 (wrong) or break
     // the identity sum(amountByCurrency) === amount that downstream code relies on.
+    //
+    // Returns of pure loans (source is a debt_given transaction) never offset a
+    // spending category — they reduce the unreturned-debts bucket below instead.
+    // Splitting by source keeps each return counted exactly once.
+    const loanReturnsByCurrency: Record<string, number> = {};
     for (const offset of categoryOffsetsResult) {
+      if (offset.categoryId === DEBT_CATEGORY_IDS.GIVEN) {
+        loanReturnsByCurrency[offset.currency] =
+          (loanReturnsByCurrency[offset.currency] ?? 0) + Number(offset.offsetAmount);
+        continue;
+      }
+
       const key = `${offset.categoryId}-expense`;
       const category = categoryMap.get(key);
       if (!category) continue;
@@ -653,6 +661,10 @@ export class TransactionRepository implements ITransactionRepository {
     // Add synthetic "Невозвращённые долги" category for outstanding given-debt balance per currency.
     // This guarantees the algebraic identity: totalExpense === sum(categoryBreakdown.amount).
     //
+    // Only returns of pure loans are subtracted here. Split returns already offset
+    // their source spending category above — subtracting them again would shrink
+    // the bucket below the real outstanding-loan figure (double-count).
+    //
     // Skip when the user filtered by accountIds: a debt and its return often live on
     // different accounts (give from Cash, repaid into Bank), so a per-account view
     // sees only one half and would inflate the bucket with already-repaid debt.
@@ -662,11 +674,11 @@ export class TransactionRepository implements ITransactionRepository {
       const unreturnedDebtByCurrency: Record<string, number> = {};
       const debtCurrencies = new Set<string>([
         ...Object.keys(debtGivenByCurrency),
-        ...Object.keys(debtReturnsToMeByCurrency),
+        ...Object.keys(loanReturnsByCurrency),
       ]);
       for (const currency of debtCurrencies) {
         const outstanding =
-          (debtGivenByCurrency[currency] ?? 0) - (debtReturnsToMeByCurrency[currency] ?? 0);
+          (debtGivenByCurrency[currency] ?? 0) - (loanReturnsByCurrency[currency] ?? 0);
         if (outstanding > 0) {
           unreturnedDebtByCurrency[currency] = outstanding;
         }
