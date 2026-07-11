@@ -187,8 +187,6 @@ provideDashboardContext({
   subscriptionsLoading: data.subscriptionsLoading,
   balanceLoading: data.balanceLoading,
   showSettingsDot,
-  showSettingsHint,
-  settingsHintConfig,
   scrollContainerRef,
   onRefresh: handleRefresh,
   nav,
@@ -203,8 +201,6 @@ provideDashboardContext({
     showFinancialPeriodModal.value = true;
   },
   openDashboardSettings: handleSettingsClick,
-  dismissSettingsHint,
-  handleSettingsHintAction,
   handleQuickActionClick: quickActions.handleClick,
   handleQuickActionLongPress: quickActions.handleLongPress,
   dismissQuickActionsHint: quickActions.dismissHint,
@@ -222,9 +218,13 @@ provideDashboardContext({
         :is-hidden="isHidden"
         :is-scrolled-past-balance="isScrolledPastBalance"
         :show-settings-dot="showSettingsDot"
+        :show-settings-hint="showSettingsHint"
+        :settings-hint-config="settingsHintConfig"
         @profile-click="nav.toProfile"
         @settings-click="handleSettingsClick"
         @balance-click="nav.toAccounts"
+        @hint-dismiss="dismissSettingsHint"
+        @hint-action="handleSettingsHintAction"
       />
     </template>
 

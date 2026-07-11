@@ -16,7 +16,9 @@ export function useBudget(userId: MaybeRefOrGetter<string | null>) {
     staleTime: 5 * 60 * 1000,
   });
 
-  const budget = computed(() => data.value ?? null);
+  // `||` on purpose: with no budget the backend replies 204 and the HTTP
+  // client yields '' — an empty string must normalize to null too.
+  const budget = computed(() => data.value || null);
 
   // Set default budget mutation
   const setDefaultMutation = useMutation({

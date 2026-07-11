@@ -60,7 +60,7 @@ const metricSub = 'text-[0.6rem] font-medium text-text-tertiary-light dark:text-
           @click="$emit('balance-click')"
         >
           <span
-            class="text-xl sm:text-2xl font-extrabold tracking-tight text-text-primary-light dark:text-text-primary-dark group-hover/btn:text-primary transition-colors duration-300 truncate leading-tight"
+            class="text-2xl sm:text-3xl font-extrabold tracking-tight text-text-primary-light dark:text-text-primary-dark group-hover/btn:text-primary transition-colors duration-300 truncate leading-tight"
           >
             {{ formatMasked(totalBalance, currency, hidden ?? false) }}
           </span>
@@ -92,7 +92,7 @@ const metricSub = 'text-[0.6rem] font-medium text-text-tertiary-light dark:text-
           <!-- Average daily expense -->
           <div class="flex flex-col items-end">
             <p :class="metricLabel">Средний расход</p>
-            <span class="text-sm font-bold text-warning leading-tight">
+            <span class="text-sm font-semibold text-warning/90 leading-tight">
               {{ formatMasked(avgDailyExpense!, currency, hidden ?? false) }}/дн
             </span>
           </div>
@@ -101,8 +101,8 @@ const metricSub = 'text-[0.6rem] font-medium text-text-tertiary-light dark:text-
           <div v-if="safeDailyLimit != null" class="flex flex-col items-end">
             <p :class="metricLabel">Безопасный остаток</p>
             <span
-              class="text-sm font-bold leading-tight"
-              :class="safeDailyLimit >= 0 ? 'text-success' : 'text-danger'"
+              class="text-sm font-semibold leading-tight"
+              :class="safeDailyLimit >= 0 ? 'text-success/90' : 'text-danger/90'"
             >
               {{ formatMasked(safeDailyLimit, currency, hidden ?? false) }}/дн
             </span>

@@ -52,7 +52,13 @@ defineEmits<{
       <slot name="badge" />
     </div>
     <div class="flex items-center gap-1">
-      <UButton v-if="showAdd" variant="ghost" size="xs" @click="$emit('add-click')">
+      <UButton
+        v-if="showAdd"
+        variant="ghost"
+        size="xs"
+        :aria-label="`Добавить: ${title}`"
+        @click="$emit('add-click')"
+      >
         <UIcon name="add" size="xs" />
       </UButton>
       <UButton v-if="showViewAll" variant="ghost" size="xs" @click="$emit('view-all')">

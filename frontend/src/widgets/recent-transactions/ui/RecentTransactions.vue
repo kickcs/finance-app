@@ -67,6 +67,7 @@ function getToAccountName(toAccountId: string | null): string {
         :transaction="tx"
         :account-name="getAccountName(tx.account_id)"
         :to-account-name="getToAccountName(tx.to_account_id)"
+        :hidden="hidden"
         @click="$emit('transaction-click', tx)"
       />
     </div>

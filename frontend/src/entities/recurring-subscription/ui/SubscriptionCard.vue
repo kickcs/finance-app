@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { UIcon, BrandIcon, hasBrandIcon } from '@/shared/ui';
-import { formatCurrency } from '@/shared/lib/format/currency';
+import { formatMasked } from '@/shared/lib/format/currency';
 import { formatDate } from '@/shared/lib/format/date';
 import { useHaptics } from '@/shared/lib/haptics';
 import { pluralize } from '@/shared/lib/format/pluralize';
@@ -12,8 +12,9 @@ const props = withDefaults(
   defineProps<{
     subscription: RecurringSubscription;
     compact?: boolean;
+    hidden?: boolean;
   }>(),
-  { compact: false },
+  { compact: false, hidden: false },
 );
 
 const emit = defineEmits<{
@@ -52,7 +53,7 @@ const frequencyLabel = computed(() =>
   <button
     class="w-full text-left rounded-xl transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-none"
     :class="[compact ? 'p-2.5' : 'p-3', isPaused && 'opacity-60']"
-    :aria-label="`${subscription.name}, ${formatCurrency(subscription.amount, subscription.currency)}`"
+    :aria-label="`${subscription.name}, ${formatMasked(subscription.amount, subscription.currency, hidden)}`"
     @click="handleClick"
   >
     <div class="flex items-center gap-2.5">
@@ -103,7 +104,7 @@ const frequencyLabel = computed(() =>
               >
                 &#9889;
               </span>
-              {{ formatCurrency(subscription.amount, subscription.currency) }}
+              {{ formatMasked(subscription.amount, subscription.currency, hidden) }}
             </p>
             <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
               {{ frequencyLabel }}

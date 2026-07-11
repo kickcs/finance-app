@@ -28,6 +28,10 @@ const resolvedSlots = computed(() =>
   })),
 );
 
+// A wall of identical empty "+" tiles reads as a broken grid — with nothing
+// configured we collapse the section into a single setup CTA instead.
+const hasConfiguredActions = computed(() => quickActionSlots.value.some(Boolean));
+
 const { onTouchStart, onClick, stopLongPress } = useQuickActionLongPress({
   onLongPress: handleQuickActionLongPress,
   onClick: handleQuickActionClick,
@@ -43,6 +47,16 @@ const { onTouchStart, onClick, stopLongPress } = useQuickActionLongPress({
         class="shrink-0 w-[calc((100%-30px)/4)] md:w-auto aspect-square rounded-2xl"
       />
     </div>
+
+    <button
+      v-else-if="!hasConfiguredActions"
+      type="button"
+      class="w-full flex items-center justify-center gap-2 px-4 py-3.5 rounded-2xl border border-dashed border-border-light dark:border-border-dark text-text-tertiary-light dark:text-text-tertiary-dark hover:text-primary hover:border-primary/40 transition-all duration-200"
+      @click="onClick(null)"
+    >
+      <UIcon name="bolt" size="sm" />
+      <span class="text-body-sm font-medium">Настроить быстрые действия</span>
+    </button>
 
     <div
       v-else
@@ -114,7 +128,7 @@ const { onTouchStart, onClick, stopLongPress } = useQuickActionLongPress({
     </div>
 
     <div
-      v-if="!quickActionsLoading && !quickActionsHintDismissed"
+      v-if="!quickActionsLoading && !quickActionsHintDismissed && hasConfiguredActions"
       class="mt-3 flex items-start gap-2 px-1"
     >
       <p class="text-caption-xs leading-snug text-text-tertiary-light dark:text-text-tertiary-dark">

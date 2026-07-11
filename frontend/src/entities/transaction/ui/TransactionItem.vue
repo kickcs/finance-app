@@ -16,6 +16,7 @@ const props = defineProps<{
   toAccountName?: string;
   viewingAccountId?: string;
   balanceAfter?: number;
+  hidden?: boolean;
 }>();
 defineEmits<{
   click: [];
@@ -62,7 +63,10 @@ const displayAmount = computed(() => {
   return props.transaction.amount;
 });
 
+const MASKED_AMOUNT = '••••';
+
 const formattedAmount = computed(() => {
+  if (props.hidden) return MASKED_AMOUNT;
   const compact = COMPACT_FORMAT;
   if (isInformational.value) {
     const curr = props.transaction.currency || props.currency || DEFAULT_CURRENCY;
@@ -187,21 +191,29 @@ const formattedDate = computed(() =>
         class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
       >
         →
-        {{ formatCurrency(transaction.to_amount || 0, transaction.to_currency, COMPACT_FORMAT) }}
+        {{
+          hidden
+            ? '••••'
+            : formatCurrency(transaction.to_amount || 0, transaction.to_currency, COMPACT_FORMAT)
+        }}
       </p>
       <!-- Original amount indicator when there are debt returns -->
       <p
         v-if="!isInformational && transaction.has_debt_returns && transaction.type === 'expense'"
         class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark line-through"
       >
-        -{{ formatCurrency(transaction.amount, displayCurrency, COMPACT_FORMAT) }}
+        {{
+          hidden
+            ? '••••'
+            : `-${formatCurrency(transaction.amount, displayCurrency, COMPACT_FORMAT)}`
+        }}
       </p>
       <!-- Balance after transaction -->
       <p
         v-if="balanceAfter !== undefined"
         class="text-caption-sm text-text-tertiary-light dark:text-text-tertiary-dark"
       >
-        = {{ formatCurrency(balanceAfter, displayCurrency, COMPACT_FORMAT) }}
+        = {{ hidden ? '••••' : formatCurrency(balanceAfter, displayCurrency, COMPACT_FORMAT) }}
       </p>
     </div>
   </button>

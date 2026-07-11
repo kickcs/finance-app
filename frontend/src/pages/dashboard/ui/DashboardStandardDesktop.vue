@@ -50,7 +50,7 @@ const { staggerClass } = useStaggerAnimation();
       </section>
     </div>
 
-    <div class="col-span-4 self-start sticky top-0">
+    <div class="col-span-4 self-start sticky top-6">
       <section :class="staggerClass('delay-200')">
         <DashboardSidePanel />
       </section>
