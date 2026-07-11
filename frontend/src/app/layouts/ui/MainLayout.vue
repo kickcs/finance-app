@@ -91,8 +91,18 @@ function handleAddTransaction() {
 
       <!-- Bottom Navigation (Mobile Only) -->
       <template v-if="!hideBottomNav">
+        <LiquidGlassBottomNav
+          v-if="navbarStyle === 'liquid-glass'"
+          class="md:hidden"
+          :show-add-dot="showAddDot"
+          @add-click="handleAddTransaction"
+          @add-dot-dismiss="dismissDot('add-button')"
+        />
+
+        <!-- classic is also the fallback: an unknown persisted value must never
+             leave the app without navigation -->
         <div
-          v-if="navbarStyle === 'classic'"
+          v-else
           class="md:hidden shrink-0 border-t border-border-light dark:border-border-dark relative z-40 bg-background-light dark:bg-background-dark"
         >
           <BottomNav
@@ -101,14 +111,6 @@ function handleAddTransaction() {
             @add-dot-dismiss="dismissDot('add-button')"
           />
         </div>
-
-        <LiquidGlassBottomNav
-          v-else-if="navbarStyle === 'liquid-glass'"
-          class="md:hidden"
-          :show-add-dot="showAddDot"
-          @add-click="handleAddTransaction"
-          @add-dot-dismiss="dismissDot('add-button')"
-        />
       </template>
     </div>
   </div>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import type { WidgetId } from '@/shared/api/database.types';
 import { PullToRefresh } from '@/shared/ui';
 import { useDashboardContext } from '../model/dashboardContext';
@@ -27,6 +28,10 @@ const {
 function isVisible(id: WidgetId): boolean {
   return !hiddenWidgets.value.has(id);
 }
+
+// slots always contains empty placeholders, so check for actual actions —
+// an all-empty compact grid carries no information.
+const hasConfiguredQuickActions = computed(() => quickActionSlots.value.some(Boolean));
 </script>
 
 <template>
@@ -43,7 +48,7 @@ function isVisible(id: WidgetId): boolean {
           v-if="
             widgetId === 'quick_actions' &&
             isVisible('quick_actions') &&
-            (quickActionsLoading || quickActionSlots.length > 0)
+            (quickActionsLoading || hasConfiguredQuickActions)
           "
         />
 

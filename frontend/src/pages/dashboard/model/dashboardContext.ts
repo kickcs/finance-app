@@ -7,7 +7,6 @@ import type { Debt } from '@/entities/debt';
 import type { RecurringSubscription } from '@/entities/recurring-subscription';
 import type { WidgetId } from '@/shared/api/database.types';
 import type { QuickAction } from '@/features/configure-quick-action';
-import type { HintConfig } from '@/features/feature-hints';
 import type { useDashboardNavigation } from './useDashboardNavigation';
 
 export interface DashboardCategoryMeta {
@@ -66,10 +65,9 @@ export interface DashboardContext {
   subscriptionsLoading: Ref<boolean>;
   balanceLoading: ComputedRef<boolean>;
 
-  // Settings hint (for standard layout footer)
+  // Settings discovery dot (the hint popover itself lives on the header icon,
+  // wired through DashboardMobileHeader props)
   showSettingsDot: ComputedRef<boolean>;
-  showSettingsHint: Ref<boolean>;
-  settingsHintConfig: HintConfig | null;
 
   // Refresh
   scrollContainerRef: Ref<HTMLElement | null | undefined>;
@@ -84,8 +82,6 @@ export interface DashboardContext {
   openBudgetSheet: () => void;
   openFinancialPeriodModal: () => void;
   openDashboardSettings: () => void;
-  dismissSettingsHint: () => void;
-  handleSettingsHintAction: () => void;
   handleQuickActionClick: (action: QuickAction | null) => void;
   handleQuickActionLongPress: (action: QuickAction | null) => void;
   dismissQuickActionsHint: () => void;

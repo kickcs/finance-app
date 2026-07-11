@@ -80,8 +80,9 @@ function handleNavClick(item: (typeof DESKTOP_NAV_ITEMS)[number]) {
       <ThemeToggle />
     </div>
 
-    <!-- Balance Card -->
-    <div class="mb-8 px-2">
+    <!-- Balance Card. Hidden on the dashboard: the page already leads with a
+         full-size balance card, showing the same number twice adds nothing. -->
+    <div v-if="activeItem !== 'home'" class="mb-8 px-2">
       <div
         class="p-4 rounded-2xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark shadow-sm hover:shadow-md transition-shadow duration-300"
       >

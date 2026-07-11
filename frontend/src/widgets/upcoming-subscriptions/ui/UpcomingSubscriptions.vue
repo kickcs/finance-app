@@ -5,11 +5,12 @@ import {
   SubscriptionCardSkeleton,
   useUpcomingSubscriptions,
 } from '@/entities/recurring-subscription';
-import { SectionHeader } from '@/shared/ui';
+import { EmptyState, SectionHeader } from '@/shared/ui';
 import { UPCOMING_SUBSCRIPTION_DAYS } from '@/shared/config/dashboard';
 
 const props = defineProps<{
   userId: string;
+  hidden?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -51,16 +52,19 @@ const preview = computed(() => upcoming.value.slice(0, PREVIEW_LIMIT));
           :key="sub.id"
           :subscription="sub"
           compact
+          :hidden="hidden"
           @click="emit('subscription-click', sub.id)"
         />
       </template>
 
-      <p
+      <EmptyState
         v-else
-        class="text-sm text-text-tertiary-light dark:text-text-tertiary-dark py-3 text-center"
-      >
-        Нет активных подписок
-      </p>
+        variant="inline"
+        icon="subscriptions"
+        title="Нет активных подписок"
+        description="Отслеживайте регулярные списания"
+        :action="{ label: 'Добавить подписку', onClick: () => emit('add-click') }"
+      />
     </div>
   </div>
 </template>

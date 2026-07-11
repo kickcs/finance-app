@@ -6,7 +6,6 @@ import { BalanceCard } from '@/widgets/balance-card';
 import { PushNotificationBanner } from '@/widgets/push-notification-banner';
 import { AccountStack } from '@/widgets/account-stack';
 import { BudgetSection } from '@/widgets/budget-section';
-import { FeatureHintPopover } from '@/features/feature-hints';
 import DashboardQuickActions from './DashboardQuickActions.vue';
 import DashboardActivityColumn from './DashboardActivityColumn.vue';
 import DashboardTopExpenses from './DashboardTopExpenses.vue';
@@ -35,8 +34,6 @@ const {
   budgetLoading,
   balanceLoading,
   showSettingsDot,
-  showSettingsHint,
-  settingsHintConfig,
   scrollContainerRef,
   onRefresh,
   nav,
@@ -44,8 +41,6 @@ const {
   openBudgetSheet,
   openFinancialPeriodModal,
   openDashboardSettings,
-  dismissSettingsHint,
-  handleSettingsHintAction,
 } = useDashboardContext();
 
 const { staggerClass } = useStaggerAnimation();
@@ -140,27 +135,18 @@ const firstActivityWidgetId = computed(() =>
       </template>
 
       <section class="flex justify-center mt-2 pb-4">
-        <FeatureHintPopover
-          v-if="settingsHintConfig"
-          :config="settingsHintConfig"
-          :open="showSettingsHint"
-          side="top"
-          @dismiss="dismissSettingsHint"
-          @action="handleSettingsHintAction"
-        >
-          <div class="relative">
-            <button
-              type="button"
-              data-testid="dashboard-settings-btn"
-              class="flex items-center gap-2 text-body-sm font-medium text-text-tertiary-light dark:text-text-tertiary-dark hover:text-text-secondary-light dark:hover:text-text-secondary-dark transition-colors px-4 py-2 rounded-xl hover:bg-surface-light dark:hover:bg-surface-dark"
-              @click="openDashboardSettings"
-            >
-              <UIcon name="tune" size="sm" />
-              Настроить вид дашборда
-            </button>
-            <DiscoveryDot :show="showSettingsDot" />
-          </div>
-        </FeatureHintPopover>
+        <div class="relative">
+          <button
+            type="button"
+            data-testid="dashboard-settings-btn"
+            class="flex items-center gap-2 text-body-sm font-medium text-text-tertiary-light dark:text-text-tertiary-dark hover:text-text-secondary-light dark:hover:text-text-secondary-dark transition-colors px-4 py-2 rounded-xl hover:bg-surface-light dark:hover:bg-surface-dark"
+            @click="openDashboardSettings"
+          >
+            <UIcon name="tune" size="sm" />
+            Настроить вид дашборда
+          </button>
+          <DiscoveryDot :show="showSettingsDot" />
+        </div>
       </section>
     </div>
   </PullToRefresh>

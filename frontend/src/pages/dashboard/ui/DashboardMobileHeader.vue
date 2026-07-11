@@ -3,6 +3,7 @@ import { AppHeader } from '@/widgets/header';
 import { ThemeToggle } from '@/features/toggle-theme';
 import { UIcon, DiscoveryDot } from '@/shared/ui';
 import { formatMasked } from '@/shared/lib/format/currency';
+import { FeatureHintPopover, type HintConfig } from '@/features/feature-hints';
 import DashboardCompactToggle from './DashboardCompactToggle.vue';
 
 defineProps<{
@@ -13,12 +14,16 @@ defineProps<{
   isHidden: boolean;
   isScrolledPastBalance: boolean;
   showSettingsDot?: boolean;
+  showSettingsHint?: boolean;
+  settingsHintConfig?: HintConfig | null;
 }>();
 
 const emit = defineEmits<{
   'profile-click': [];
   'settings-click': [];
   'balance-click': [];
+  'hint-dismiss': [];
+  'hint-action': [];
 }>();
 </script>
 
@@ -96,7 +101,27 @@ const emit = defineEmits<{
       </template>
       <template #actions>
         <DashboardCompactToggle variant="icon" />
-        <div class="relative">
+        <FeatureHintPopover
+          v-if="settingsHintConfig"
+          :config="settingsHintConfig"
+          :open="showSettingsHint ?? false"
+          side="bottom"
+          @dismiss="emit('hint-dismiss')"
+          @action="emit('hint-action')"
+        >
+          <div class="relative">
+            <button
+              type="button"
+              aria-label="Настройки дашборда"
+              class="w-9 h-9 rounded-xl flex items-center justify-center text-text-secondary-light dark:text-text-secondary-dark hover:bg-surface-light dark:hover:bg-surface-dark transition-colors"
+              @click="emit('settings-click')"
+            >
+              <UIcon name="tune" size="sm" />
+            </button>
+            <DiscoveryDot :show="showSettingsDot" />
+          </div>
+        </FeatureHintPopover>
+        <div v-else class="relative">
           <button
             type="button"
             aria-label="Настройки дашборда"

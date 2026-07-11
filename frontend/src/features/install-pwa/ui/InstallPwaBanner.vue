@@ -45,6 +45,7 @@ function handleDismiss(e: Event) {
         <!-- Dismiss -->
         <button
           data-testid="dismiss-btn"
+          aria-label="Скрыть баннер установки"
           class="p-1.5 rounded-lg text-text-tertiary-light dark:text-text-tertiary-dark hover:bg-surface-light dark:hover:bg-surface-dark transition-colors shrink-0"
           @click="handleDismiss"
         >

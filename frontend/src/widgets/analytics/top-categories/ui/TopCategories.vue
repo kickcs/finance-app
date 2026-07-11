@@ -1,17 +1,14 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { UCard, EmptyState, IconBadge } from '@/shared/ui';
-import { formatCurrency } from '@/shared/lib/format/currency';
+import { formatMasked } from '@/shared/lib/format/currency';
 import type { CategoryStat } from '@/features/analytics-filters';
 
 const props = defineProps<{
   categories: CategoryStat[];
   currency: string;
   limit?: number;
-}>();
-
-defineEmits<{
-  'category-click': [category: CategoryStat];
+  hidden?: boolean;
 }>();
 
 // Get top N categories
@@ -61,7 +58,7 @@ function getBarWidth(amount: number): string {
           <!-- Amount and percent -->
           <div class="text-right">
             <p class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark">
-              {{ formatCurrency(category.amount, currency) }}
+              {{ formatMasked(category.amount, currency, hidden ?? false) }}
             </p>
             <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
               {{ category.percent.toFixed(1) }}%

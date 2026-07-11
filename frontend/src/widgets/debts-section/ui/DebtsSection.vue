@@ -204,6 +204,7 @@ const overdueCount = computed(() => countOverdueDebts(props.debts));
       title="Вы без долгов!"
       description="Отличная финансовая дисциплина"
       icon-bg-class="bg-success-light"
+      :action="{ label: 'Добавить долг', onClick: handleAddClick }"
     />
   </div>
 </template>

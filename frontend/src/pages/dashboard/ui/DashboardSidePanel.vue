@@ -77,7 +77,7 @@ const UpcomingSubscriptions = defineAsyncComponent({
           :loading="accountsLoading"
           :hidden="isHidden"
           :hidden-count="hiddenAccountCount"
-          class="hover:shadow-md transition-shadow duration-300 rounded-3xl"
+          class="hover:shadow-md transition-shadow duration-300 rounded-xl"
           @account-click="nav.toAccount"
           @add-click="nav.toNewAccount"
           @view-all="nav.toAccounts"
@@ -102,7 +102,7 @@ const UpcomingSubscriptions = defineAsyncComponent({
             :currency="currency"
             :loading="debtsLoading"
             :hidden="isHidden"
-            class="hover:-translate-y-0.5 hover:shadow-md transition-[transform,box-shadow] duration-300 rounded-3xl"
+            class="hover:-translate-y-0.5 hover:shadow-md transition-[transform,box-shadow] duration-300 rounded-xl"
             @debt-click="nav.toDebt"
             @person-click="nav.toDebts"
             @add-click="nav.toNewDebt"
@@ -118,6 +118,7 @@ const UpcomingSubscriptions = defineAsyncComponent({
         <Suspense>
           <UpcomingSubscriptions
             :user-id="userId ?? ''"
+            :hidden="isHidden"
             class="hover:-translate-y-0.5 hover:shadow-md transition-[transform,box-shadow] duration-300 rounded-2xl"
             @subscription-click="nav.toSubscription"
             @add-click="nav.toNewSubscription"

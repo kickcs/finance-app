@@ -51,7 +51,7 @@ function goToAnalytics() {
     <!-- Hint: suggest changing the period start day -->
     <button
       v-if="!isCustomPeriod && !loading"
-      class="flex items-center gap-1 mt-1 text-[0.65rem] text-text-tertiary-light dark:text-text-tertiary-dark hover:text-primary transition-colors"
+      class="flex items-center gap-1 mt-1 py-1 text-xs text-text-tertiary-light dark:text-text-tertiary-dark hover:text-primary transition-colors"
       @click="emit('configure-period')"
     >
       <UIcon name="calendar_month" size="xs" class="opacity-60" />

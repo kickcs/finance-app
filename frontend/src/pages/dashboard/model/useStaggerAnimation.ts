@@ -1,7 +1,9 @@
 import { ref, onMounted } from 'vue';
+import { usePreferredReducedMotion } from '@vueuse/core';
 
 export function useStaggerAnimation() {
   const isMounted = ref(false);
+  const reducedMotion = usePreferredReducedMotion();
 
   onMounted(() => {
     requestAnimationFrame(() => {
@@ -10,6 +12,7 @@ export function useStaggerAnimation() {
   });
 
   function staggerClass(delay: string) {
+    if (reducedMotion.value === 'reduce') return [];
     return [
       'transform transition-[transform,opacity] duration-700 ease-out',
       delay,

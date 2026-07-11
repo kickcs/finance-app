@@ -4,6 +4,7 @@ import { useLocalStorage } from '@vueuse/core';
 import { STORAGE_KEYS } from '@/shared/config/storageKeys';
 import { UIcon, USpinner, useToast } from '@/shared/ui';
 import { usePushSubscription } from '@/entities/push-subscription';
+import { usePwaInstall } from '@/features/install-pwa';
 
 const props = defineProps<{
   transactionCount: number;
@@ -23,6 +24,10 @@ const {
 
 const isDismissed = useLocalStorage(STORAGE_KEYS.PUSH_BANNER_DISMISSED, false);
 
+// Only one promo banner at a time: while the PWA install banner is visible,
+// this one waits its turn.
+const { showBanner: pwaBannerVisible } = usePwaInstall();
+
 onMounted(() => {
   if (isDismissed.value) return;
   checkExistingSubscription();
@@ -33,6 +38,7 @@ const showBanner = computed(
     isSupported.value &&
     !isDismissed.value &&
     !isSubscribed.value &&
+    !pwaBannerVisible.value &&
     permission.value !== 'denied' &&
     props.transactionCount > PUSH_BANNER_MIN_TRANSACTIONS,
 );
@@ -87,6 +93,7 @@ function handleDismiss() {
 
     <button
       data-testid="push-banner-dismiss"
+      aria-label="Скрыть баннер уведомлений"
       class="p-1 rounded-md text-text-tertiary-light dark:text-text-tertiary-dark hover:text-text-secondary-light dark:hover:text-text-secondary-dark transition-colors shrink-0"
       @click="handleDismiss"
     >
