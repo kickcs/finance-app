@@ -112,6 +112,7 @@ export interface SeedDebtInput {
   totalAmount: number;
   remainingAmount: number;
   debtType: 'given' | 'taken';
+  transactionId?: string | null;
   sourceTransactionId?: string | null;
   closeTransactionId?: string | null;
   isClosed?: boolean;
@@ -131,7 +132,7 @@ export async function seedDebt(input: SeedDebtInput): Promise<string> {
     debtType: input.debtType,
     personName: input.personName ?? 'Friend',
     accountId: input.accountId ?? input.ctx.accountId,
-    transactionId: null,
+    transactionId: input.transactionId ?? null,
     closeTransactionId: input.closeTransactionId ?? null,
     sourceTransactionId: input.sourceTransactionId ?? null,
     isClosed: input.isClosed ?? false,
