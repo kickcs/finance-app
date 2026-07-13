@@ -348,4 +348,126 @@ describe('TransactionRepository.getAnalyticsStats — debt-offset for regular ex
     expect(bucket?.amount).toBe(30000); // 50k given − 20k loan return
     expect(stats.totalExpense).toBe(30000);
   });
+
+  it('subtracts pure-loan returns dated AFTER the period from the bucket of the giving period', async () => {
+    // Loan 50k given in April, 20k returned in May. The bucket shows the
+    // actual outstanding balance of loans GIVEN in April — the May return
+    // still shrinks it (custom financial months make this a common case:
+    // debt given on the 6th, returned right after the period flips).
+    const loanTxId = await seedExpense({
+      ctx,
+      amount: 50000,
+      categoryId: 'debt_given',
+      date: IN_RANGE,
+      isDebtRelated: true,
+    });
+    const loanDebt = await seedDebt({
+      ctx,
+      totalAmount: 50000,
+      remainingAmount: 30000,
+      debtType: 'given',
+      sourceTransactionId: loanTxId,
+    });
+    await seedDebtReturn({
+      ctx,
+      amount: 20000,
+      date: new Date('2026-05-15T12:00:00Z'),
+      debtId: loanDebt,
+    });
+
+    const stats = await ctx.repository.getAnalyticsStats(ctx.userId, {
+      startDate: RANGE_START,
+      endDate: RANGE_END,
+    });
+
+    const bucket = stats.categoryBreakdown.find(
+      (c) => c.categoryId === UNRETURNED_DEBT_CATEGORY_ID,
+    );
+    expect(bucket?.amount).toBe(30000); // 50k given in April − 20k returned in May
+    expect(stats.totalExpense).toBe(30000);
+  });
+
+  it('does not shrink the bucket with in-period returns of loans given BEFORE the period', async () => {
+    // Loan A: 50k given in April, nothing returned — bucket must show 50k.
+    // Loan B: given in March, 20k returned in April. That return belongs to
+    // March's bucket, not April's — it must not eat into loan A.
+    const loanATxId = await seedExpense({
+      ctx,
+      amount: 50000,
+      categoryId: 'debt_given',
+      date: IN_RANGE,
+      isDebtRelated: true,
+    });
+    await seedDebt({
+      ctx,
+      totalAmount: 50000,
+      remainingAmount: 50000,
+      debtType: 'given',
+      sourceTransactionId: loanATxId,
+    });
+
+    const loanBTxId = await seedExpense({
+      ctx,
+      amount: 100000,
+      categoryId: 'debt_given',
+      date: new Date('2026-03-10T12:00:00Z'),
+      isDebtRelated: true,
+    });
+    const loanBDebt = await seedDebt({
+      ctx,
+      totalAmount: 100000,
+      remainingAmount: 80000,
+      debtType: 'given',
+      sourceTransactionId: loanBTxId,
+    });
+    await seedDebtReturn({ ctx, amount: 20000, date: IN_RANGE, debtId: loanBDebt });
+
+    const stats = await ctx.repository.getAnalyticsStats(ctx.userId, {
+      startDate: RANGE_START,
+      endDate: RANGE_END,
+    });
+
+    const bucket = stats.categoryBreakdown.find(
+      (c) => c.categoryId === UNRETURNED_DEBT_CATEGORY_ID,
+    );
+    expect(bucket?.amount).toBe(50000); // loan A only — loan B was given in March
+    expect(stats.totalExpense).toBe(50000);
+  });
+
+  it('resolves the loan-given transaction via transaction_id (non-split production shape)', async () => {
+    // Plain "give a loan" flow links the debt via transaction_id, NOT
+    // source_transaction_id (that one is the split-expense shape). This locks
+    // in the COALESCE(source_transaction_id, transaction_id) fallback branch.
+    const loanTxId = await seedExpense({
+      ctx,
+      amount: 50000,
+      categoryId: 'debt_given',
+      date: IN_RANGE,
+      isDebtRelated: true,
+    });
+    const loanDebt = await seedDebt({
+      ctx,
+      totalAmount: 50000,
+      remainingAmount: 30000,
+      debtType: 'given',
+      transactionId: loanTxId,
+    });
+    await seedDebtReturn({
+      ctx,
+      amount: 20000,
+      date: new Date('2026-05-15T12:00:00Z'),
+      debtId: loanDebt,
+    });
+
+    const stats = await ctx.repository.getAnalyticsStats(ctx.userId, {
+      startDate: RANGE_START,
+      endDate: RANGE_END,
+    });
+
+    const bucket = stats.categoryBreakdown.find(
+      (c) => c.categoryId === UNRETURNED_DEBT_CATEGORY_ID,
+    );
+    expect(bucket?.amount).toBe(30000); // 50k given − 20k returned in May
+    expect(stats.totalExpense).toBe(30000);
+  });
 });

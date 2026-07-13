@@ -554,20 +554,45 @@ export class TransactionRepository implements ITransactionRepository {
       .addGroupBy('t.currency');
 
     // When someone returns money to me, subtract from the original expense category.
+    // Pure-loan returns (source is debt_given) are excluded here — they feed the
+    // unreturned-debts bucket via loanReturnsQuery below, on different date rules.
     const categoryOffsetsQuery = this.createDebtReturnBaseQuery(
       userId,
       startDate,
       endDate,
       accountIds,
     )
+      .andWhere('source_tx.category_id != :loanGivenId', {
+        loanGivenId: DEBT_CATEGORY_IDS.GIVEN,
+      })
       .select('source_tx.category_id', 'categoryId')
       .addSelect('source_tx.currency', 'currency')
       .addSelect('SUM(return_tx.amount)', 'offsetAmount')
       .groupBy('source_tx.category_id')
       .addGroupBy('source_tx.currency');
 
-    // Two queries are read-only and independent — run them in parallel
-    const [categoryBreakdownResult, categoryOffsetsResult] = await Promise.all([
+    // Returns of pure loans, windowed by the date the loan was GIVEN, not the
+    // date of the return. The unreturned-debts bucket shows the actual
+    // outstanding balance of loans handed out in this period — a repayment
+    // arriving after the period flips must still shrink it, and a repayment of
+    // an older loan must not eat into this period's bucket.
+    //
+    // The bucket is skipped entirely when scoped to specific accounts (a loan
+    // and its repayment often live on different accounts, so a per-account view
+    // can't compute the outstanding balance) — don't pay for the join then.
+    const isAccountFiltered = !!accountIds && accountIds.length > 0;
+    const loanReturnsQuery = isAccountFiltered
+      ? null
+      : this.createDebtReturnBaseQuery(userId, startDate, endDate, accountIds, 'source')
+          .andWhere('source_tx.category_id = :loanGivenId', {
+            loanGivenId: DEBT_CATEGORY_IDS.GIVEN,
+          })
+          .select('source_tx.currency', 'currency')
+          .addSelect('SUM(return_tx.amount)', 'returnedAmount')
+          .groupBy('source_tx.currency');
+
+    // Three queries are read-only and independent — run them in parallel
+    const [categoryBreakdownResult, categoryOffsetsResult, loanReturnsResult] = await Promise.all([
       categoryBreakdownQuery.getRawMany<{
         categoryId: string;
         categoryName: string | null;
@@ -582,6 +607,10 @@ export class TransactionRepository implements ITransactionRepository {
         currency: string;
         offsetAmount: string;
       }>(),
+      loanReturnsQuery?.getRawMany<{
+        currency: string;
+        returnedAmount: string;
+      }>() ?? [],
     ]);
 
     // Process category breakdown - aggregate by categoryId and type
@@ -628,16 +657,14 @@ export class TransactionRepository implements ITransactionRepository {
     // the identity sum(amountByCurrency) === amount that downstream code relies on.
     //
     // Returns of pure loans (source is a debt_given transaction) never offset a
-    // spending category — they reduce the unreturned-debts bucket below instead.
-    // Splitting by source keeps each return counted exactly once.
+    // spending category — they reduce the unreturned-debts bucket below instead
+    // (excluded from categoryOffsetsQuery, sourced from loanReturnsQuery).
     const loanReturnsByCurrency: Record<string, number> = {};
+    for (const row of loanReturnsResult) {
+      loanReturnsByCurrency[row.currency] =
+        (loanReturnsByCurrency[row.currency] ?? 0) + Number(row.returnedAmount);
+    }
     for (const offset of categoryOffsetsResult) {
-      if (offset.categoryId === DEBT_CATEGORY_IDS.GIVEN) {
-        loanReturnsByCurrency[offset.currency] =
-          (loanReturnsByCurrency[offset.currency] ?? 0) + Number(offset.offsetAmount);
-        continue;
-      }
-
       const key = `${offset.categoryId}-expense`;
       const category = categoryMap.get(key);
       if (!category) continue;
@@ -669,7 +696,6 @@ export class TransactionRepository implements ITransactionRepository {
     // different accounts (give from Cash, repaid into Bank), so a per-account view
     // sees only one half and would inflate the bucket with already-repaid debt.
     // Better hide it than display a false outstanding figure.
-    const isAccountFiltered = !!accountIds && accountIds.length > 0;
     if (!isAccountFiltered) {
       const unreturnedDebtByCurrency: Record<string, number> = {};
       const debtCurrencies = new Set<string>([
@@ -939,13 +965,20 @@ export class TransactionRepository implements ITransactionRepository {
    * Shared foundation for debt-return offset queries — extracted to keep
    * the three-table join + RETURN_TO_ME scoping in one place so callers
    * don't drift apart on the JOIN condition.
+   *
+   * dateWindowOn picks which side the period filter applies to:
+   * - 'return' — returns that HAPPENED in the period (split offsets);
+   * - 'source' — returns of debts GIVEN in the period, whenever repaid
+   *   (unreturned-debts bucket shows the actual outstanding balance).
    */
   private createDebtReturnBaseQuery(
     userId: string,
     startDate: Date,
     endDate: Date,
     accountIds?: string[],
+    dateWindowOn: 'return' | 'source' = 'return',
   ) {
+    const dateAlias = dateWindowOn === 'source' ? 'source_tx' : 'return_tx';
     let query = this.ormRepository
       .createQueryBuilder('return_tx')
       .innerJoin(
@@ -959,8 +992,8 @@ export class TransactionRepository implements ITransactionRepository {
         'source_tx.id = COALESCE(d.source_transaction_id, d.transaction_id)',
       )
       .where('return_tx.user_id = :userId', { userId })
-      .andWhere('return_tx.date >= :startDate', { startDate })
-      .andWhere('return_tx.date <= :endDate', { endDate })
+      .andWhere(`${dateAlias}.date >= :startDate`, { startDate })
+      .andWhere(`${dateAlias}.date <= :endDate`, { endDate })
       .andWhere('(return_tx.is_informational = false OR return_tx.is_informational IS NULL)')
       .andWhere('return_tx.category_id = :returnToMeId', {
         returnToMeId: DEBT_CATEGORY_IDS.RETURN_TO_ME,
