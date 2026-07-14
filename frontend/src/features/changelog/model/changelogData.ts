@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.57';
+export const CURRENT_VERSION = '1.0.58';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,17 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.58',
+    date: '2026-07-14',
+    title: 'Удобнее выбирать категорию',
+    items: [
+      {
+        type: 'improvement',
+        text: 'Выбор категории стал удобнее: самые используемые категории теперь на виду, а полный список с поиском открывается в отдельном окне',
+      },
+    ],
+  },
   {
     version: '1.0.57',
     date: '2026-07-09',

@@ -4,12 +4,14 @@ import { useRouter } from 'vue-router';
 import { ROUTE_NAMES } from '@/shared/config/routeNames';
 import { UIcon, InitialAvatar } from '@/shared/ui';
 import type { Category } from '@/entities/category';
+import type { Transaction } from '@/shared/api/database.types';
 import type { SplitExpenseData, SplitMethod } from '@/features/split-expense';
 
 const props = defineProps<{
   formData: TransactionFormData;
   accounts: AccountWithBalances[];
   categories: Category[];
+  transactions?: Transaction[];
   splitData?: SplitExpenseData;
   splitValidationError?: string | null;
   autofocusAmount?: boolean;
@@ -33,7 +35,7 @@ import type { AccountWithBalances } from '@/entities/account';
 import type { TransactionFormData } from '../model/useTransactionForm';
 import { usePanelState } from '../model/usePanelState';
 import HeroAmount from './HeroAmount.vue';
-import { CategoryChips } from '@/entities/category';
+import { CategoryPicker } from '@/entities/category';
 import { AccountSelector } from '@/entities/account';
 
 const {
@@ -94,12 +96,11 @@ const dashedBtnBase =
       @select="handleAccountChange"
     />
 
-    <CategoryChips
+    <CategoryPicker
       :categories="categories"
       :selected-id="formData.categoryId"
-      :rows="4"
+      :transactions="transactions"
       label="Категория"
-      searchable
       @select="updateField('categoryId', $event)"
     />
 

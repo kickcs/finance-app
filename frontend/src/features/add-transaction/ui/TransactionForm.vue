@@ -329,6 +329,7 @@ const { isMounted } = useMountedAnimation();
               :form-data="formData"
               :accounts="accounts"
               :categories="expenseCategories"
+              :transactions="transactions"
               :split-data="splitData"
               :split-validation-error="splitValidationError"
               :autofocus-amount="autofocusAmount && realPanelIndices.has(idx)"
@@ -353,6 +354,7 @@ const { isMounted } = useMountedAnimation();
             :form-data="formData"
             :accounts="accounts"
             :categories="expenseCategories"
+            :transactions="transactions"
             :split-data="splitData"
             :split-validation-error="splitValidationError"
             :autofocus-amount="autofocusAmount && realPanelIndices.has(idx)"
@@ -376,6 +378,7 @@ const { isMounted } = useMountedAnimation();
             :form-data="formData"
             :accounts="accounts"
             :categories="incomeCategories"
+            :transactions="transactions"
             @update:form-data="$emit('update:formData', $event)"
           />
           <TransferPanel

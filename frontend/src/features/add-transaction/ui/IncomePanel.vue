@@ -1,16 +1,18 @@
 <script setup lang="ts">
 import type { Category } from '@/entities/category';
 import type { AccountWithBalances } from '@/entities/account';
+import type { Transaction } from '@/shared/api/database.types';
 import type { TransactionFormData } from '../model/useTransactionForm';
 import { usePanelState } from '../model/usePanelState';
 import HeroAmount from './HeroAmount.vue';
-import { CategoryChips } from '@/entities/category';
+import { CategoryPicker } from '@/entities/category';
 import { AccountSelector } from '@/entities/account';
 
 const props = defineProps<{
   formData: TransactionFormData;
   accounts: AccountWithBalances[];
   categories: Category[];
+  transactions?: Transaction[];
 }>();
 
 const emit = defineEmits<{
@@ -47,11 +49,11 @@ const {
       @select="handleAccountChange"
     />
 
-    <CategoryChips
+    <CategoryPicker
       :categories="categories"
       :selected-id="formData.categoryId"
+      :transactions="transactions"
       label="Категория"
-      searchable
       @select="updateField('categoryId', $event)"
     />
   </div>
