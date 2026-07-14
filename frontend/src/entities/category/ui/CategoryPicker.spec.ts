@@ -26,17 +26,18 @@ function chipButtons(wrapper: ReturnType<typeof mountPicker>) {
 }
 
 describe('CategoryPicker', () => {
-  it('при >9 категориях показывает 8 чипов и кнопку «Все категории»', () => {
+  it('при >9 категориях показывает 8 чипов и чип «Ещё N» со скрытым количеством', () => {
     const wrapper = mountPicker();
     expect(chipButtons(wrapper)).toHaveLength(8);
-    expect(wrapper.text()).toContain('Все категории');
-    expect(wrapper.text()).toContain('12');
+    // 12 категорий, 8 инлайн → скрыто 4
+    expect(wrapper.text()).toContain('Ещё 4');
+    expect(wrapper.find('button[aria-label="Все категории"]').exists()).toBe(true);
   });
 
-  it('при ≤9 категориях показывает все чипы без кнопки «Все категории»', () => {
+  it('при ≤9 категориях показывает все чипы без чипа «Ещё N»', () => {
     const wrapper = mountPicker({ categories: fewCategories });
     expect(chipButtons(wrapper)).toHaveLength(6);
-    expect(wrapper.text()).not.toContain('Все категории');
+    expect(wrapper.text()).not.toContain('Ещё');
   });
 
   it('эмитит select по клику на чип', async () => {

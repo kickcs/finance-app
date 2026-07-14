@@ -37,6 +37,8 @@ const inlineCategories = computed(() => {
   return [selected, ...base];
 });
 
+const hiddenCount = computed(() => props.categories.length - inlineCategories.value.length);
+
 function selectCategory(categoryId: string) {
   trigger('selection');
   emit('select', categoryId);
@@ -90,11 +92,12 @@ function getChipStyle(category: Category) {
       <button
         v-if="showAllButton"
         type="button"
+        aria-label="Все категории"
         class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm border border-dashed border-border-light dark:border-border-dark text-text-tertiary-light dark:text-text-tertiary-dark hover:text-text-secondary-light dark:hover:text-text-secondary-dark active:scale-95 transition-colors duration-200 whitespace-nowrap"
         @click="sheetOpen = true"
       >
         <UIcon name="apps" size="sm" />
-        Все категории · {{ categories.length }}
+        Ещё {{ hiddenCount }}
       </button>
     </div>
 
