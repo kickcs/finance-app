@@ -204,7 +204,9 @@ const showSplitHint = ref(false);
 const splitHintConfig = getHintConfig('split-expense');
 
 // Smart defaults (not applicable to debt flow — debt has its own form state)
-const { transactions } = useRecentTransactions(userId, 20);
+// Окно 50: питает и smart defaults (сам берёт до 20 нужного типа), и частотный
+// топ категорий в CategoryPicker — на 20 смешанных транзакциях топ был слишком шумным
+const { transactions } = useRecentTransactions(userId, 50);
 const { defaults } = useSmartDefaults(
   transactions,
   () => (props.formData.type === 'debt' ? 'expense' : props.formData.type),
