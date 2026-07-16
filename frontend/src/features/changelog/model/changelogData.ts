@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.58';
+export const CURRENT_VERSION = '1.0.59';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,21 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.59',
+    date: '2026-07-16',
+    title: 'Удобнее подтверждать импорт из Telegram',
+    items: [
+      {
+        type: 'feature',
+        text: 'В списке операций на подтверждение можно выбрать порядок: сначала новые или сначала старые — подтверждение идёт в выбранном порядке',
+      },
+      {
+        type: 'improvement',
+        text: 'Экран подтверждения импорта стал компактнее и помещается на один экран',
+      },
+    ],
+  },
   {
     version: '1.0.58',
     date: '2026-07-14',

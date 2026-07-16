@@ -17,6 +17,7 @@ import { navigateBack } from '@/app/router';
 import { ROUTE_NAMES } from '@/app/router/routeNames';
 import { formatRelativeDate } from '@/shared/lib/format/date';
 import { useImportedTransactions, type ImportedTransaction } from '@/entities/imported-transaction';
+import { useInboxSortOrder } from '../model/useInboxSortOrder';
 
 const router = useRouter();
 const route = useRoute();
@@ -115,8 +116,16 @@ const relativeDate = computed(() =>
 );
 
 // --- Navigation between pending imports --------------------------------------
+// The next import follows the user's chosen review order (same as the inbox list).
+const { sortItems } = useInboxSortOrder();
+
 function goNextOrBack() {
-  const next = items.value.find((i) => i.id !== item.value?.id);
+  const ordered = sortItems(items.value);
+  const currentIndex = ordered.findIndex((i) => i.id === item.value?.id);
+  const remaining = ordered.filter((i) => i.id !== item.value?.id);
+  // Continue from the current position in the chosen order; wrap to the top
+  // when the current item was the last one (or is already gone from the list).
+  const next = remaining[Math.max(currentIndex, 0)] ?? remaining[0];
   if (next) {
     router.replace({ name: ROUTE_NAMES.IMPORT_CONFIRM, params: { id: next.id } });
   } else {
@@ -279,7 +288,7 @@ function toScanReceipt() {
 
     <!-- Content -->
     <main
-      class="flex-1 overflow-y-auto px-4 md:px-8 pt-2 md:pt-4 pb-[max(4rem,calc(env(safe-area-inset-bottom)+1.5rem))]"
+      class="flex-1 overflow-y-auto px-4 md:px-8 pt-2 md:pt-4 pb-[max(1.5rem,calc(env(safe-area-inset-bottom)+0.75rem))]"
     >
       <!-- Not found -->
       <NotFoundState
@@ -292,30 +301,17 @@ function toScanReceipt() {
 
       <div
         v-else-if="item"
-        class="md:max-w-xl md:mx-auto md:bg-card-light md:dark:bg-card-dark md:rounded-3xl md:shadow-sm md:border md:border-border-light md:dark:border-border-dark md:p-8 md:mt-2 space-y-5"
+        class="md:max-w-xl md:mx-auto md:bg-card-light md:dark:bg-card-dark md:rounded-3xl md:shadow-sm md:border md:border-border-light md:dark:border-border-dark md:p-6 md:mt-2 space-y-3"
       >
-        <!-- Provenance / context card -->
+        <!-- Provenance / context card (single compact row) -->
         <section
           class="rounded-2xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark overflow-hidden animate-fadeInUp"
         >
-          <!-- Source banner -->
-          <div class="flex items-center gap-2 px-4 py-2.5 bg-primary-light">
-            <UIcon name="telegram" size="xs" class="text-primary" />
-            <span class="text-caption font-semibold uppercase tracking-wide text-primary">
-              Из Telegram
-            </span>
-          </div>
-
-          <!-- Card + meta -->
-          <div class="flex items-center gap-3 px-4 py-3.5">
+          <div class="flex items-center gap-3 px-3.5 py-2.5">
             <div
-              class="w-11 h-11 rounded-xl bg-surface-light dark:bg-surface-dark flex items-center justify-center shrink-0"
+              class="w-9 h-9 rounded-xl bg-primary-light flex items-center justify-center shrink-0"
             >
-              <UIcon
-                name="credit_card"
-                size="sm"
-                class="text-text-secondary-light dark:text-text-secondary-dark"
-              />
+              <UIcon name="telegram" size="sm" class="text-primary" />
             </div>
             <div class="flex-1 min-w-0">
               <p
@@ -326,9 +322,13 @@ function toScanReceipt() {
               <div
                 class="mt-0.5 flex items-center gap-1.5 text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
               >
-                <span class="truncate">{{ item.card_mask }}</span>
+                <span class="shrink-0 text-primary font-medium">Из Telegram</span>
                 <span aria-hidden="true">·</span>
-                <span class="shrink-0">{{ relativeDate }}</span>
+                <span class="truncate">{{ item.card_mask }}</span>
+                <template v-if="relativeDate">
+                  <span aria-hidden="true">·</span>
+                  <span class="shrink-0">{{ relativeDate }}</span>
+                </template>
               </div>
             </div>
           </div>
@@ -336,7 +336,7 @@ function toScanReceipt() {
           <!-- Balance-change explainer -->
           <div
             v-if="isBalanceChange"
-            class="mx-4 mb-3.5 flex items-start gap-2 rounded-xl bg-info-light px-3 py-2.5"
+            class="mx-3.5 mb-2.5 flex items-start gap-2 rounded-xl bg-info-light px-3 py-2"
           >
             <UIcon name="info" size="xs" class="text-info mt-0.5 shrink-0" />
             <p class="text-xs text-info leading-snug">
@@ -374,20 +374,20 @@ function toScanReceipt() {
         />
 
         <!-- Secondary actions -->
-        <div class="space-y-2 pt-1">
-          <UButton variant="outline" size="lg" full-width @click="toScanReceipt">
-            <UIcon name="document_scanner" size="sm" class="mr-2" />
-            Сканировать чек
+        <div class="grid grid-cols-2 gap-2">
+          <UButton variant="outline" size="md" full-width @click="toScanReceipt">
+            <UIcon name="document_scanner" size="sm" class="mr-1.5" />
+            Скан чека
           </UButton>
 
           <UButton
             variant="ghost"
-            size="lg"
+            size="md"
             full-width
             class="text-danger"
             @click="showDismissConfirm = true"
           >
-            Отклонить импорт
+            Отклонить
           </UButton>
         </div>
       </div>
