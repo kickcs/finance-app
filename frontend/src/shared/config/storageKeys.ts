@@ -55,4 +55,7 @@ export const STORAGE_KEYS = {
 
   /** UI language / locale: 'ru' | 'en' */
   LOCALE: 'locale',
+
+  /** Import inbox review order: 'newest' | 'oldest' first */
+  IMPORT_INBOX_SORT_ORDER: 'import_inbox_sort_order',
 } as const;
