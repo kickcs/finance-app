@@ -21,6 +21,32 @@ const BALANCE_CHANGE = `ℹ️ Счет по карте изменен
 💳 HUMO-CARD *1951
 🕘 15:39 12.06.2026`;
 
+const HEADERLESS_EXPENSE = `➖ 36.000,00 UZS
+📍 YandexGO Taxi UB OPL
+💳 HUMOCARD *1951
+🕓 17:55 10.07.2026
+💰 370.229,76 UZS`;
+
+const HEADERLESS_INCOME = `➕ 103.500,00 UZS
+📍 HAMKOR HUMO P2P>Andi
+💳 HUMOCARD *1951
+🕓 23:35 11.06.2026
+💰 887.801,08 UZS`;
+
+const NEUTRAL_HEADER_EXPENSE = `💸 Операция
+➖ 50.000,00 UZS
+📍 CLICK P2P FREE HUMO2
+💳 HUMOCARD *1951
+🕓 22:40 16.07.2026
+💰 2.723.732,36 UZS`;
+
+const NEUTRAL_HEADER_INCOME = `💸 Операция
+➕ 50.000,00 UZS
+📍 CLICK P2P FREE HUMO2
+💳 HUMOCARD *1951
+🕓 22:40 16.07.2026
+💰 2.723.732,36 UZS`;
+
 describe('HumoMessageParser', () => {
   const parser = new HumoMessageParser();
 
@@ -94,6 +120,53 @@ describe('HumoMessageParser', () => {
 
   it('canParse возвращает false, если маркер не на первой строке', () => {
     expect(parser.canParse('какой-то текст\n💸 Оплата\n➖ 1.700,00 UZS')).toBe(false);
+  });
+
+  it('парсит headerless-оплату (первая строка сразу ➖ сумма) как expense', () => {
+    expect(parser.canParse(HEADERLESS_EXPENSE)).toBe(true);
+    const r = parser.parse(HEADERLESS_EXPENSE)!;
+    expect(r.type).toBe('expense');
+    expect(r.amount).toBe(36000);
+    expect(r.currency).toBe('UZS');
+    expect(r.merchant).toBe('YandexGO Taxi UB OPL');
+    expect(r.cardMask).toBe('*1951');
+    expect(r.balanceAfter).toBe(370229.76);
+    expect(r.occurredAt.toISOString()).toBe('2026-07-10T12:55:00.000Z'); // 17:55 +05:00
+  });
+
+  it('парсит headerless-пополнение (первая строка сразу ➕ сумма) как income', () => {
+    expect(parser.canParse(HEADERLESS_INCOME)).toBe(true);
+    const r = parser.parse(HEADERLESS_INCOME)!;
+    expect(r.type).toBe('income');
+    expect(r.amount).toBe(103500);
+    expect(r.balanceAfter).toBe(887801.08);
+  });
+
+  it('canParse остаётся false для текста без маркера и без строки суммы первой строкой', () => {
+    expect(parser.canParse('какой-то текст\n➖ 1.700,00 UZS')).toBe(false);
+  });
+
+  it('фолбэк по знаку не срабатывает без карты и даты (произвольный текст с суммой)', () => {
+    expect(parser.canParse('➖ 1.700,00 UZS\nскинул другу')).toBe(false);
+    expect(parser.parse('➖ 1.700,00 UZS\nскинул другу')).toBeNull();
+  });
+
+  it('парсит нейтральный заголовок «Операция» как expense по знаку ➖', () => {
+    expect(parser.canParse(NEUTRAL_HEADER_EXPENSE)).toBe(true);
+    const r = parser.parse(NEUTRAL_HEADER_EXPENSE)!;
+    expect(r.type).toBe('expense');
+    expect(r.amount).toBe(50000);
+    expect(r.currency).toBe('UZS');
+    expect(r.merchant).toBe('CLICK P2P FREE HUMO2');
+    expect(r.cardMask).toBe('*1951');
+    expect(r.balanceAfter).toBe(2723732.36);
+    expect(r.occurredAt.toISOString()).toBe('2026-07-16T17:40:00.000Z'); // 22:40 +05:00
+  });
+
+  it('парсит нейтральный заголовок «Операция» как income по знаку ➕', () => {
+    const r = parser.parse(NEUTRAL_HEADER_INCOME)!;
+    expect(r.type).toBe('income');
+    expect(r.amount).toBe(50000);
   });
 });
 

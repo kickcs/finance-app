@@ -21,22 +21,47 @@ const AMOUNT_RE = /([\d.]+,\d{2})\s*([A-Z]{3})/;
 const CARD_RE = /💳[^*]*(\*\d+)/;
 const DATETIME_RE = /(\d{2}):(\d{2})\s+(\d{2})\.(\d{2})\.(\d{4})/;
 
+/**
+ * Тип по знаку строки суммы «➖/➕ …». Фолбэк для сообщений, где заголовка нет вовсе
+ * или он нейтральный («Операция») и о направлении операции ничего не говорит.
+ *
+ * Сумма ищется среди первых двух строк: перед ней может стоять только заголовок.
+ * Обязательны карта и дата — без них это произвольный текст, где сумма попалась
+ * случайно, а не уведомление банка.
+ */
+function typeFromAmountSign(text: string, lines: string[]): ParsedMessageType | null {
+  if (!CARD_RE.test(text) || !DATETIME_RE.test(text)) return null;
+  const amountLine = lines.slice(0, 2).find((l) => AMOUNT_RE.test(l));
+  if (!amountLine) return null;
+  if (amountLine.startsWith('➖')) return 'expense';
+  if (amountLine.startsWith('➕')) return 'income';
+  return null;
+}
+
+function toLines(text: string): string[] {
+  return text
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0);
+}
+
 export class HumoMessageParser implements BankMessageParser {
   canParse(text: string): boolean {
-    const firstLine = text.trim().split('\n')[0] ?? '';
-    return TYPE_MARKERS.some(({ marker }) => firstLine.includes(marker));
+    const lines = toLines(text);
+    if (lines.length === 0) return false;
+    return (
+      TYPE_MARKERS.some(({ marker }) => lines[0].includes(marker)) ||
+      typeFromAmountSign(text, lines) !== null
+    );
   }
 
   parse(text: string): ParsedBankMessage | null {
-    const lines = text
-      .split('\n')
-      .map((l) => l.trim())
-      .filter((l) => l.length > 0);
+    const lines = toLines(text);
     if (lines.length === 0) return null;
 
     const typeEntry = TYPE_MARKERS.find(({ marker }) => lines[0].includes(marker));
-    if (!typeEntry) return null;
-    const type = typeEntry.type;
+    const type = typeEntry?.type ?? typeFromAmountSign(text, lines);
+    if (!type) return null;
 
     const cardMatch = text.match(CARD_RE);
     const dtMatch = text.match(DATETIME_RE);
