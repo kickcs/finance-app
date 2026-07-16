@@ -18,6 +18,7 @@ import { ROUTE_NAMES } from '@/app/router/routeNames';
 import { formatRelativeDate } from '@/shared/lib/format/date';
 import { useImportedTransactions, type ImportedTransaction } from '@/entities/imported-transaction';
 import { useInboxSortOrder } from '../model/useInboxSortOrder';
+import { decideCategoryPrefill } from '../model/categoryPrefill';
 
 const router = useRouter();
 const route = useRoute();
@@ -103,6 +104,33 @@ watch(
     updateField('description', current.merchant ?? '');
     if (current.suggested_account_id) {
       updateField('accountId', current.suggested_account_id);
+    }
+  },
+  { immediate: true },
+);
+
+// Категория из истории мерчанта: отдельный watch, т.к. категории грузятся
+// асинхронно и могут прийти позже item. Решение принимается один раз на item
+// (categoryPrefilledId); 'wait' оставляет попытку до загрузки категорий.
+let categoryPrefilledId: string | null = null;
+watch(
+  [item, expenseCategories, incomeCategories],
+  ([current]) => {
+    if (!current || current.id === categoryPrefilledId) return;
+    // Основной prefill-watch должен успеть сбросить форму для этого item —
+    // иначе решение принималось бы по данным предыдущего импорта.
+    if (prefilledId !== current.id) return;
+    const pool =
+      formData.value.type === 'income' ? incomeCategories.value : expenseCategories.value;
+    const decision = decideCategoryPrefill({
+      suggestedCategoryId: current.suggested_category_id,
+      currentCategoryId: formData.value.categoryId,
+      pool,
+    });
+    if (decision === 'wait') return;
+    categoryPrefilledId = current.id;
+    if (decision === 'apply' && current.suggested_category_id) {
+      updateField('categoryId', current.suggested_category_id);
     }
   },
   { immediate: true },

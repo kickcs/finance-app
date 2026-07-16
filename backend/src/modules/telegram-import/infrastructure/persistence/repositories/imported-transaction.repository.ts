@@ -8,6 +8,12 @@ import {
   InboxItem,
 } from '../../../domain/repositories/imported-transaction.repository.interface';
 import { ImportedTransaction } from '../../../domain/models';
+import {
+  buildCategorySuggestionMap,
+  CATEGORY_SUGGESTION_MIN_COUNT,
+  suggestionKey,
+  MerchantCategoryRow,
+} from '../../../domain/category-suggestion';
 
 function toDomain(orm: ImportedTransactionOrmEntity): ImportedTransaction {
   return {
@@ -62,11 +68,63 @@ export class ImportedTransactionRepository implements IImportedTransactionReposi
       .orderBy('it.occurredAt', 'DESC')
       .getRawAndEntities();
 
+    const merchants = [
+      ...new Set(
+        rows.entities.map((e) => e.merchant).filter((m): m is string => m !== null && m !== ''),
+      ),
+    ];
+    const categorySuggestions = await this.findCategorySuggestions(userId, merchants);
+
     return rows.entities.map((orm, i) => ({
       ...toDomain(orm),
       suggestedAccountId: (rows.raw[i] as { suggested_account_id: string | null })
         .suggested_account_id,
+      // здесь проверяется тип ИМПОРТА (не транзакции, как в SQL-фильтре ниже):
+      // balance_change не маппится на тип транзакции до ввода суммы → без подсказки
+      suggestedCategoryId:
+        orm.merchant && (orm.type === 'expense' || orm.type === 'income')
+          ? (categorySuggestions.get(suggestionKey(orm.merchant, orm.type)) ?? null)
+          : null,
     }));
+  }
+
+  /**
+   * Персональная история «мерчант → категория» по подтверждённым импортам.
+   * Живые transactions (не снапшот) — правки категории задним числом учитываются.
+   * Один запрос на все мерчанты инбокса; порог CATEGORY_SUGGESTION_MIN_COUNT в HAVING.
+   */
+  private async findCategorySuggestions(
+    userId: string,
+    merchants: string[],
+  ): Promise<Map<string, string>> {
+    if (merchants.length === 0) return new Map();
+    const raw = await this.repo
+      .createQueryBuilder('it')
+      .select('it.merchant', 'merchant')
+      .addSelect('t.type', 'type')
+      .addSelect('t.category_id', 'categoryId')
+      .addSelect('COUNT(*)', 'cnt')
+      .innerJoin('transactions', 't', 't.id = it.transaction_id')
+      .where('it.userId = :userId', { userId })
+      .andWhere("it.status = 'confirmed'")
+      .andWhere('it.merchant IN (:...merchants)', { merchants })
+      .andWhere("t.type IN ('expense', 'income')")
+      .groupBy('it.merchant')
+      .addGroupBy('t.type')
+      .addGroupBy('t.category_id')
+      .having('COUNT(*) >= :minCount', { minCount: CATEGORY_SUGGESTION_MIN_COUNT })
+      .getRawMany<{ merchant: string; type: string; categoryId: string; cnt: string }>();
+
+    return buildCategorySuggestionMap(
+      raw.map(
+        (r): MerchantCategoryRow => ({
+          merchant: r.merchant,
+          type: r.type as MerchantCategoryRow['type'],
+          categoryId: r.categoryId,
+          cnt: Number(r.cnt),
+        }),
+      ),
+    );
   }
 
   async countPending(userId: string): Promise<number> {

@@ -20,6 +20,7 @@ const INBOX_RESPONSE = {
       status: 'pending',
       transactionId: null,
       suggestedAccountId: 'acc-1',
+      suggestedCategoryId: 'cat-1',
       createdAt: '2026-06-12T17:12:00.000Z',
     },
   ],
@@ -57,6 +58,7 @@ describe('useImportedTransactions', () => {
       id: 'imp-1',
       card_mask: '*1951',
       suggested_account_id: 'acc-1',
+      suggested_category_id: 'cat-1',
       occurred_at: '2026-06-12T17:11:00.000Z',
     });
   });

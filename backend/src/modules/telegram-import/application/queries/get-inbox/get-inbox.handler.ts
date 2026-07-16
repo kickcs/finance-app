@@ -20,6 +20,7 @@ function toResponse(item: InboxItem) {
     status: item.status,
     transactionId: item.transactionId,
     suggestedAccountId: item.suggestedAccountId,
+    suggestedCategoryId: item.suggestedCategoryId,
     createdAt: item.createdAt.toISOString(),
   };
 }

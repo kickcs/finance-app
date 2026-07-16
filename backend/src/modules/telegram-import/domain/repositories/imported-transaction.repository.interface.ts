@@ -4,6 +4,8 @@ export const IMPORTED_TRANSACTION_REPOSITORY = Symbol('IMPORTED_TRANSACTION_REPO
 
 export interface InboxItem extends ImportedTransaction {
   suggestedAccountId: string | null;
+  /** Категория, которую пользователь выбирал для этого мерчанта ≥3 раз (самая частая) */
+  suggestedCategoryId: string | null;
 }
 
 export interface ImportedTransactionCreate {
