@@ -13,6 +13,7 @@ interface ImportedTransactionResponse {
   status: ImportedTransaction['status'];
   transactionId: string | null;
   suggestedAccountId: string | null;
+  suggestedCategoryId: string | null;
   createdAt: string;
 }
 
@@ -29,6 +30,8 @@ function transformImported(item: ImportedTransactionResponse): ImportedTransacti
     status: item.status,
     transaction_id: item.transactionId,
     suggested_account_id: item.suggestedAccountId,
+    // ?? null — защита от бэкенда без этого поля (деплой фронта раньше бэка)
+    suggested_category_id: item.suggestedCategoryId ?? null,
     created_at: item.createdAt,
   };
 }

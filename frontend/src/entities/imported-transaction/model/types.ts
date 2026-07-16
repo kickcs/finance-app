@@ -13,6 +13,7 @@ export interface ImportedTransaction {
   status: ImportedTransactionStatus;
   transaction_id: string | null;
   suggested_account_id: string | null;
+  suggested_category_id: string | null;
   created_at: string;
 }
 
