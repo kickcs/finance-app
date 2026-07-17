@@ -2,6 +2,7 @@ import { computed, toValue, type MaybeRefOrGetter } from 'vue';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query';
 import { importedTransactionsApi } from './importedTransactionsApi';
 import { importedTransactionQueryKeys } from './queryKeys';
+import type { ImportedTransaction } from '../model/types';
 
 export function useImportedTransactions(userId: MaybeRefOrGetter<string | null>) {
   const queryClient = useQueryClient();
@@ -22,8 +23,17 @@ export function useImportedTransactions(userId: MaybeRefOrGetter<string | null>)
   const items = computed(() => inboxQuery.data.value?.items ?? []);
   const pendingCount = computed(() => inboxQuery.data.value?.count ?? 0);
 
-  const invalidate = () =>
-    queryClient.invalidateQueries({ queryKey: importedTransactionQueryKeys.all });
+  // Точечное удаление из кэша вместо инвалидации: полный рефетч инбокса
+  // перерисовывал страницу подтверждения («моргание» между импортами).
+  const removeFromInbox = (id: string) => {
+    queryClient.setQueryData<{ items: ImportedTransaction[]; count: number }>(
+      queryKey.value,
+      (old) =>
+        old
+          ? { items: old.items.filter((i) => i.id !== id), count: Math.max(0, old.count - 1) }
+          : old,
+    );
+  };
 
   const confirmMutation = useMutation({
     mutationFn: ({
@@ -33,12 +43,20 @@ export function useImportedTransactions(userId: MaybeRefOrGetter<string | null>)
       id: string;
       payload: { transactionId: string; accountId: string; toAccountId?: string };
     }) => importedTransactionsApi.confirm(id, payload),
-    onSettled: invalidate,
+    onSuccess: (res, { id }) => {
+      removeFromInbox(id);
+      // Сервер мог авто-подтвердить встречную ногу перевода — убираем и её.
+      if (res.counterpartId) removeFromInbox(res.counterpartId);
+      // confirm мог обновить маппинг карта→счёт — точечно освежаем только его.
+      queryClient.invalidateQueries({
+        queryKey: importedTransactionQueryKeys.cards(toValue(userId) ?? ''),
+      });
+    },
   });
 
   const dismissMutation = useMutation({
     mutationFn: (id: string) => importedTransactionsApi.dismiss(id),
-    onSettled: invalidate,
+    onSuccess: (_res, id) => removeFromInbox(id),
   });
 
   return {

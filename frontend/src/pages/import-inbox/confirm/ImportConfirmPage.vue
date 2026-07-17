@@ -11,14 +11,22 @@ import {
 import { useSplitExpense } from '@/features/split-expense';
 import { useAccounts } from '@/entities/account';
 import { useCategories } from '@/entities/category';
+import { useDebts, getDebtDisplayName } from '@/entities/debt';
+import { usePartialPayment } from '@/features/partial-payment';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
-import { navigateBack } from '@/app/router';
+import { useProfile } from '@/shared/api/composables/useProfile';
+import { navigateBackTo } from '@/app/router';
 import { ROUTE_NAMES } from '@/app/router/routeNames';
 import { formatRelativeDate } from '@/shared/lib/format/date';
+import { useTelegramBackButton } from '@/shared/lib/telegram/useTelegramBackButton';
 import { useImportedTransactions, type ImportedTransaction } from '@/entities/imported-transaction';
+import type { Debt } from '@/shared/api/database.types';
 import { useInboxSortOrder } from '../model/useInboxSortOrder';
 import { decideCategoryPrefill } from '../model/categoryPrefill';
+import { eligibleDebtsForImport, findExactRepaymentMatch } from '../model/debtRepayment';
+import DebtRepaymentSheet from './DebtRepaymentSheet.vue';
+import AccountBalancesStrip from './AccountBalancesStrip.vue';
 
 const router = useRouter();
 const route = useRoute();
@@ -28,6 +36,10 @@ const { toast } = useToast();
 const { accounts } = useAccounts(userId);
 const { expenseCategories, incomeCategories } = useCategories(userId);
 const { currency: userCurrency } = useUserCurrency();
+const { profile } = useProfile(userId);
+const hiddenAccountIds = computed<Set<string>>(
+  () => new Set(profile.value?.dashboard_settings?.hidden_account_ids ?? []),
+);
 
 const { items, isLoading, confirmImported, dismissImported } = useImportedTransactions(userId);
 
@@ -66,6 +78,79 @@ const {
   reset: resetSplit,
 } = useSplitExpense(() => formData.value.amount);
 
+// --- Погашение существующего долга -------------------------------------------
+const { debts } = useDebts(userId);
+const { makePartialPayment, isPaying } = usePartialPayment();
+const showRepaymentSheet = ref(false);
+const repaymentSuggestionDismissed = ref(false);
+// Retry-bookkeeping отдельно от createdTransactionId (обычного сабмита):
+// платёж прошёл, confirm упал → повтор не должен создать второй платёж.
+const repaymentTransactionId = ref<string | null>(null);
+
+const eligibleDebts = computed(() =>
+  item.value ? eligibleDebtsForImport(debts.value, item.value) : [],
+);
+const repaymentMatch = computed(() =>
+  item.value && !repaymentSuggestionDismissed.value
+    ? findExactRepaymentMatch(debts.value, item.value)
+    : null,
+);
+const repaymentMatchText = computed(() => {
+  const match = repaymentMatch.value;
+  if (!match) return '';
+  return match.debt_type === 'given'
+    ? `Похоже, это возврат долга от ${getDebtDisplayName(match)}`
+    : `Похоже, это возврат вашего долга: ${getDebtDisplayName(match)}`;
+});
+
+async function repayDebt(debt: Debt) {
+  if (isPaying.value || isSubmitting.value) return;
+  const current = item.value;
+  if (!current || !userId.value) return;
+  showRepaymentSheet.value = false;
+  validationError.value = null;
+
+  if (!formData.value.accountId) {
+    validationError.value = 'Выберите счёт для транзакции';
+    return;
+  }
+
+  const next = computeNext();
+  const amount = Math.abs(current.amount ?? 0);
+
+  let transactionId = repaymentTransactionId.value;
+  if (!transactionId) {
+    let created: string | null = null;
+    const ok = await makePartialPayment(debt, amount, formData.value.accountId, userId.value, {
+      transactionDate: current.occurred_at ?? undefined,
+      onTransactionCreated: (id) => {
+        created = id;
+      },
+    });
+    // Ошибка уже показана тостом внутри usePartialPayment.
+    if (!ok || !created) return;
+    transactionId = created;
+    repaymentTransactionId.value = created;
+  }
+
+  try {
+    await confirmImported(current.id, {
+      transactionId,
+      accountId: formData.value.accountId,
+    });
+  } catch {
+    toast({
+      title: 'Платёж проведён',
+      description: 'Но не удалось отметить импорт подтверждённым. Проверьте инбокс.',
+      variant: 'warning',
+    });
+    return;
+  }
+
+  repaymentTransactionId.value = null;
+  goTo(next);
+}
+
 // --- Prefill the transaction form from the imported operation ---------------
 // Keyed on the item id so a background inbox refetch (same op) never wipes
 // in-progress edits — only a genuine switch to another import re-prefills.
@@ -82,6 +167,8 @@ watch(
     // Fresh import → fresh retry bookkeeping.
     createdTransactionId.value = null;
     splitDebtsCreated.value = false;
+    repaymentSuggestionDismissed.value = false;
+    repaymentTransactionId.value = null;
 
     const absAmount = Math.abs(current.amount ?? 0);
 
@@ -147,19 +234,28 @@ const relativeDate = computed(() =>
 // The next import follows the user's chosen review order (same as the inbox list).
 const { sortItems } = useInboxSortOrder();
 
-function goNextOrBack() {
+function computeNext(): ImportedTransaction | null {
   const ordered = sortItems(items.value);
   const currentIndex = ordered.findIndex((i) => i.id === item.value?.id);
   const remaining = ordered.filter((i) => i.id !== item.value?.id);
-  // Continue from the current position in the chosen order; wrap to the top
-  // when the current item was the last one (or is already gone from the list).
-  const next = remaining[Math.max(currentIndex, 0)] ?? remaining[0];
+  // Продолжаем с текущей позиции в выбранном порядке; wrap на начало,
+  // когда текущий был последним.
+  return remaining[Math.max(currentIndex, 0)] ?? remaining[0] ?? null;
+}
+
+function goTo(next: ImportedTransaction | null) {
   if (next) {
     router.replace({ name: ROUTE_NAMES.IMPORT_CONFIRM, params: { id: next.id } });
   } else {
     router.replace({ name: ROUTE_NAMES.IMPORT_INBOX });
   }
 }
+
+function goToInbox() {
+  navigateBackTo({ name: ROUTE_NAMES.IMPORT_INBOX });
+}
+
+useTelegramBackButton(goToInbox);
 
 // --- Submit ------------------------------------------------------------------
 async function handleSubmit() {
@@ -184,6 +280,10 @@ async function handleSubmit() {
     validationError.value = splitValidationError.value || 'Проверьте данные разделения расхода';
     return;
   }
+
+  // "Следующий" фиксируется до мутации: после confirmImported текущий
+  // элемент уже удалён из кэша точечно, и computeNext() потерял бы позицию.
+  const next = computeNext();
 
   // Retry-safe: if a previous attempt already created the transaction (confirm
   // then failed), reuse that id instead of creating a second transaction.
@@ -241,7 +341,7 @@ async function handleSubmit() {
   createdTransactionId.value = null;
   splitDebtsCreated.value = false;
   resetSplit();
-  goNextOrBack();
+  goTo(next);
 }
 
 // DebtPanel creates the debt (and its own transaction) itself and does not
@@ -250,8 +350,9 @@ async function handleSubmit() {
 // inbox so it stops asking for review.
 async function onDebtSubmitted() {
   const current = item.value;
+  const next = computeNext();
   if (!current) {
-    goNextOrBack();
+    goTo(next);
     return;
   }
   try {
@@ -264,7 +365,7 @@ async function onDebtSubmitted() {
     description: 'Импорт обработан.',
     variant: 'success',
   });
-  goNextOrBack();
+  goTo(next);
 }
 
 // --- Dismiss -----------------------------------------------------------------
@@ -274,8 +375,9 @@ async function handleDismiss() {
   const current = item.value;
   showDismissConfirm.value = false;
   if (!current) return;
+  const next = computeNext();
   await dismissImported(current.id);
-  goNextOrBack();
+  goTo(next);
 }
 
 // --- Scan receipt ------------------------------------------------------------
@@ -296,7 +398,7 @@ function toScanReceipt() {
   <div class="h-full flex flex-col min-w-0 relative">
     <!-- Mobile Header -->
     <div class="md:hidden shrink-0">
-      <AppHeader title="Подтверждение" show-back blur @back="navigateBack" />
+      <AppHeader title="Подтверждение" show-back blur @back="goToInbox" />
     </div>
 
     <!-- Desktop Header -->
@@ -308,7 +410,7 @@ function toScanReceipt() {
         type="button"
         aria-label="Закрыть"
         class="w-10 h-10 rounded-full flex items-center justify-center bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:bg-surface-hover-light dark:hover:bg-surface-hover-dark transition-colors cursor-pointer text-text-secondary-light dark:text-text-secondary-dark"
-        @click="navigateBack"
+        @click="goToInbox"
       >
         <UIcon name="close" size="sm" />
       </button>
@@ -331,6 +433,12 @@ function toScanReceipt() {
         v-else-if="item"
         class="md:max-w-xl md:mx-auto md:bg-card-light md:dark:bg-card-dark md:rounded-3xl md:shadow-sm md:border md:border-border-light md:dark:border-border-dark md:p-6 md:mt-2 space-y-3"
       >
+        <AccountBalancesStrip
+          :accounts="accounts"
+          :hidden-account-ids="hiddenAccountIds"
+          :item="item"
+        />
+
         <!-- Provenance / context card (single compact row) -->
         <section
           class="rounded-2xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark overflow-hidden animate-fadeInUp"
@@ -377,6 +485,34 @@ function toScanReceipt() {
           </div>
         </section>
 
+        <!-- Автоподсказка: сумма точно совпадает с остатком одного долга -->
+        <section
+          v-if="repaymentMatch"
+          class="rounded-2xl border border-primary/30 bg-primary-light flex items-center gap-3 px-3.5 py-2.5 animate-fadeInUp"
+        >
+          <UIcon name="handshake" size="sm" class="text-primary shrink-0" />
+          <p
+            class="flex-1 text-sm text-text-primary-light dark:text-text-primary-dark leading-snug"
+          >
+            {{ repaymentMatchText }}
+          </p>
+          <UButton
+            size="sm"
+            :disabled="isPaying || isSubmitting"
+            @click="repayDebt(repaymentMatch)"
+          >
+            Применить
+          </UButton>
+          <button
+            type="button"
+            aria-label="Скрыть подсказку"
+            class="w-7 h-7 rounded-lg flex items-center justify-center text-text-tertiary-light dark:text-text-tertiary-dark hover:bg-surface-light dark:hover:bg-surface-dark transition-colors shrink-0"
+            @click="repaymentSuggestionDismissed = true"
+          >
+            <UIcon name="close" size="xs" />
+          </button>
+        </section>
+
         <!-- Transaction form (mirrors AddTransactionPage) -->
         <TransactionForm
           v-model:form-data="formData"
@@ -402,21 +538,35 @@ function toScanReceipt() {
         />
 
         <!-- Secondary actions -->
-        <div class="grid grid-cols-2 gap-2">
-          <UButton variant="outline" size="md" full-width @click="toScanReceipt">
-            <UIcon name="document_scanner" size="sm" class="mr-1.5" />
-            Скан чека
-          </UButton>
-
+        <div class="space-y-2">
           <UButton
-            variant="ghost"
+            v-if="eligibleDebts.length > 0 && formData.type !== 'debt'"
+            variant="outline"
             size="md"
             full-width
-            class="text-danger"
-            @click="showDismissConfirm = true"
+            :disabled="isPaying || isSubmitting"
+            @click="showRepaymentSheet = true"
           >
-            Отклонить
+            <UIcon name="handshake" size="sm" class="mr-1.5" />
+            Погашение долга
           </UButton>
+
+          <div class="grid grid-cols-2 gap-2">
+            <UButton variant="outline" size="md" full-width @click="toScanReceipt">
+              <UIcon name="document_scanner" size="sm" class="mr-1.5" />
+              Скан чека
+            </UButton>
+
+            <UButton
+              variant="ghost"
+              size="md"
+              full-width
+              class="text-danger"
+              @click="showDismissConfirm = true"
+            >
+              Отклонить
+            </UButton>
+          </div>
         </div>
       </div>
     </main>
@@ -428,6 +578,12 @@ function toScanReceipt() {
       warning-text="Операция будет убрана из инбокса и не попадёт в историю."
       confirm-label="Отклонить"
       @confirm="handleDismiss"
+    />
+
+    <DebtRepaymentSheet
+      v-model:open="showRepaymentSheet"
+      :debts="eligibleDebts"
+      @select="repayDebt"
     />
   </div>
 </template>

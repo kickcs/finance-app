@@ -21,6 +21,10 @@ interface PartialPaymentOptions {
   skipToast?: boolean;
   forgiveRemainder?: boolean;
   excessCategoryId?: string;
+  /** ISO-дата создаваемых транзакций (по умолчанию — сейчас). Для импорта — occurred_at. */
+  transactionDate?: string;
+  /** Отдаёт id основной payment-транзакции (нужен confirm'у импорта). */
+  onTransactionCreated?: (transactionId: string) => void;
 }
 
 export function usePartialPayment() {
@@ -71,6 +75,8 @@ export function usePartialPayment() {
     }
 
     try {
+      const txDate = options?.transactionDate ?? new Date().toISOString();
+
       // In single-payment mode, re-fetch debt to prevent stale cache double-close.
       // Skipped in bulk mode (skipInvalidation=true) where caller manages freshness.
       let effectiveDebt = debt;
@@ -134,12 +140,13 @@ export function usePartialPayment() {
           currency: debtCurrency,
           type: transactionType,
           description,
-          date: new Date().toISOString(),
+          date: txDate,
           is_debt_related: hadBalanceEffect,
           debt_id: effectiveDebt.id,
         });
 
         closeTransactionId = transaction.id;
+        options?.onTransactionCreated?.(transaction.id);
       }
 
       // 2. Create excess income transaction (overpayment bonus)
@@ -153,7 +160,7 @@ export function usePartialPayment() {
           currency: debtCurrency,
           type: excessType,
           description: `Переплата по долгу: ${getDebtDisplayName(effectiveDebt)}`,
-          date: new Date().toISOString(),
+          date: txDate,
           is_debt_related: false,
         });
       }
@@ -173,7 +180,7 @@ export function usePartialPayment() {
           currency: debtCurrency,
           type: forgivenType,
           description: `Прощение долга: ${getDebtDisplayName(effectiveDebt)}`,
-          date: new Date().toISOString(),
+          date: txDate,
           is_debt_related: false,
           is_informational: true,
           debt_id: effectiveDebt.id,
