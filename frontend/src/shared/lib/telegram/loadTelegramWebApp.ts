@@ -8,6 +8,13 @@ export interface TelegramWebApp {
   /** Сырая строка initData для серверной валидации; пустая вне Telegram */
   initData: string;
   colorScheme: 'light' | 'dark';
+  BackButton: {
+    isVisible: boolean;
+    show(): void;
+    hide(): void;
+    onClick(cb: () => void): void;
+    offClick(cb: () => void): void;
+  };
   ready(): void;
   expand(): void;
   openLink(url: string): void;

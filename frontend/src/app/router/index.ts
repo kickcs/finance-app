@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router';
+import type { RouteLocationRaw } from 'vue-router';
 import { ref } from 'vue';
 import { waitForAuth } from '@/shared/api/composables/useAuth';
 import type { User } from '@/shared/api/composables/useAuth';
@@ -367,6 +368,12 @@ router.beforeEach((to, from) => {
     return;
   }
 
+  if (forcedTransition) {
+    transitionName.value = forcedTransition;
+    forcedTransition = null;
+    return;
+  }
+
   // Browser back/forward navigation (swipe gesture) - disable Vue animation
   // to avoid conflict with native browser animation
   // Check both flag and timestamp (within 100ms) to catch async timing issues
@@ -395,6 +402,15 @@ router.beforeEach((to, from) => {
 export function navigateBack() {
   transitionName.value = 'slide-back';
   router.back();
+}
+
+// Явный переход «назад» на конкретный роут (replace) — для экранов, куда
+// могли попасть без истории (TMA открывает инбокс через replace).
+let forcedTransition: typeof transitionName.value | null = null;
+
+export function navigateBackTo(to: RouteLocationRaw) {
+  forcedTransition = 'slide-back';
+  router.replace(to);
 }
 
 // Prefetch pages after router is ready

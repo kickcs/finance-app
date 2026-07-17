@@ -13,9 +13,10 @@ import { useAccounts } from '@/entities/account';
 import { useCategories } from '@/entities/category';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
-import { navigateBack } from '@/app/router';
+import { navigateBackTo } from '@/app/router';
 import { ROUTE_NAMES } from '@/app/router/routeNames';
 import { formatRelativeDate } from '@/shared/lib/format/date';
+import { useTelegramBackButton } from '@/shared/lib/telegram/useTelegramBackButton';
 import { useImportedTransactions, type ImportedTransaction } from '@/entities/imported-transaction';
 import { useInboxSortOrder } from '../model/useInboxSortOrder';
 import { decideCategoryPrefill } from '../model/categoryPrefill';
@@ -164,6 +165,12 @@ function goTo(next: ImportedTransaction | null) {
   }
 }
 
+function goToInbox() {
+  navigateBackTo({ name: ROUTE_NAMES.IMPORT_INBOX });
+}
+
+useTelegramBackButton(goToInbox);
+
 // --- Submit ------------------------------------------------------------------
 async function handleSubmit() {
   // Double-tap guard: a second tap before the first settles would duplicate.
@@ -305,7 +312,7 @@ function toScanReceipt() {
   <div class="h-full flex flex-col min-w-0 relative">
     <!-- Mobile Header -->
     <div class="md:hidden shrink-0">
-      <AppHeader title="Подтверждение" show-back blur @back="navigateBack" />
+      <AppHeader title="Подтверждение" show-back blur @back="goToInbox" />
     </div>
 
     <!-- Desktop Header -->
@@ -317,7 +324,7 @@ function toScanReceipt() {
         type="button"
         aria-label="Закрыть"
         class="w-10 h-10 rounded-full flex items-center justify-center bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:bg-surface-hover-light dark:hover:bg-surface-hover-dark transition-colors cursor-pointer text-text-secondary-light dark:text-text-secondary-dark"
-        @click="navigateBack"
+        @click="goToInbox"
       >
         <UIcon name="close" size="sm" />
       </button>
