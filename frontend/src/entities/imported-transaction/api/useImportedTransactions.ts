@@ -43,8 +43,10 @@ export function useImportedTransactions(userId: MaybeRefOrGetter<string | null>)
       id: string;
       payload: { transactionId: string; accountId: string; toAccountId?: string };
     }) => importedTransactionsApi.confirm(id, payload),
-    onSuccess: (_res, { id }) => {
+    onSuccess: (res, { id }) => {
       removeFromInbox(id);
+      // Сервер мог авто-подтвердить встречную ногу перевода — убираем и её.
+      if (res.counterpartId) removeFromInbox(res.counterpartId);
       // confirm мог обновить маппинг карта→счёт — точечно освежаем только его.
       queryClient.invalidateQueries({
         queryKey: importedTransactionQueryKeys.cards(toValue(userId) ?? ''),

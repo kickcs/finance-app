@@ -115,4 +115,33 @@ describe('useImportedTransactions', () => {
     await flushPromises();
     expect(result.items.value).toHaveLength(0);
   });
+
+  it('confirm с counterpartId удаляет из кэша обе ноги перевода', async () => {
+    const second = {
+      ...INBOX_RESPONSE.items[0],
+      id: 'imp-2',
+      type: 'income',
+    };
+    server.use(
+      http.get('*/api/telegram-import/inbox', () =>
+        HttpResponse.json({ items: [INBOX_RESPONSE.items[0], second], count: 2 }),
+      ),
+      http.post('*/api/telegram-import/inbox/imp-1/confirm', () =>
+        HttpResponse.json({ success: true, counterpartId: 'imp-2' }),
+      ),
+    );
+    const result = mountComposable();
+    await flushPromises();
+    expect(result.items.value).toHaveLength(2);
+
+    await result.confirmImported('imp-1', {
+      transactionId: 'tx-9',
+      accountId: 'acc-1',
+      toAccountId: 'acc-2',
+    });
+    await flushPromises();
+
+    expect(result.items.value).toHaveLength(0);
+    expect(result.pendingCount.value).toBe(0);
+  });
 });
