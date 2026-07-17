@@ -15,6 +15,7 @@ import { useDebts, getDebtDisplayName } from '@/entities/debt';
 import { usePartialPayment } from '@/features/partial-payment';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
+import { useProfile } from '@/shared/api/composables/useProfile';
 import { navigateBackTo } from '@/app/router';
 import { ROUTE_NAMES } from '@/app/router/routeNames';
 import { formatRelativeDate } from '@/shared/lib/format/date';
@@ -25,6 +26,7 @@ import { useInboxSortOrder } from '../model/useInboxSortOrder';
 import { decideCategoryPrefill } from '../model/categoryPrefill';
 import { eligibleDebtsForImport, findExactRepaymentMatch } from '../model/debtRepayment';
 import DebtRepaymentSheet from './DebtRepaymentSheet.vue';
+import AccountBalancesStrip from './AccountBalancesStrip.vue';
 
 const router = useRouter();
 const route = useRoute();
@@ -34,6 +36,10 @@ const { toast } = useToast();
 const { accounts } = useAccounts(userId);
 const { expenseCategories, incomeCategories } = useCategories(userId);
 const { currency: userCurrency } = useUserCurrency();
+const { profile } = useProfile(userId);
+const hiddenAccountIds = computed<Set<string>>(
+  () => new Set(profile.value?.dashboard_settings?.hidden_account_ids ?? []),
+);
 
 const { items, isLoading, confirmImported, dismissImported } = useImportedTransactions(userId);
 
@@ -427,6 +433,12 @@ function toScanReceipt() {
         v-else-if="item"
         class="md:max-w-xl md:mx-auto md:bg-card-light md:dark:bg-card-dark md:rounded-3xl md:shadow-sm md:border md:border-border-light md:dark:border-border-dark md:p-6 md:mt-2 space-y-3"
       >
+        <AccountBalancesStrip
+          :accounts="accounts"
+          :hidden-account-ids="hiddenAccountIds"
+          :item="item"
+        />
+
         <!-- Provenance / context card (single compact row) -->
         <section
           class="rounded-2xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark overflow-hidden animate-fadeInUp"
