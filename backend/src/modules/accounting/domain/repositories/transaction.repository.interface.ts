@@ -121,6 +121,7 @@ export interface ITransactionRepository {
     year: number,
     month: number,
     startDay?: number,
+    timezone?: string,
   ): Promise<MonthlyStats>;
 
   getAnalyticsStats(userId: string, options: AnalyticsOptions): Promise<AnalyticsStats>;

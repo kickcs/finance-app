@@ -12,7 +12,7 @@ import {
 } from '../../../../exchange/application/services/exchange-rate-cache.service';
 import { convertExpensesToCurrency, calcBudgetPercentage } from '../convert-expenses';
 import { Budget } from '../../../domain/aggregates/budget';
-import { getCurrentFinancialMonth } from '../../../../../shared/utils/financial-period';
+import { getCurrentFinancialMonthInTz } from '../../../../../shared/utils/financial-period';
 
 @QueryHandler(GetBudgetHistoryQuery)
 export class GetBudgetHistoryHandler implements IQueryHandler<GetBudgetHistoryQuery> {
@@ -34,7 +34,7 @@ export class GetBudgetHistoryHandler implements IQueryHandler<GetBudgetHistoryQu
     );
 
     const months: Array<{ year: number; month: number }> = [];
-    const current = getCurrentFinancialMonth(query.startDay);
+    const current = getCurrentFinancialMonthInTz(query.startDay, query.timezone);
     let { year: y, month: m } = current;
 
     for (let i = 0; i < query.months; i++) {
@@ -57,7 +57,13 @@ export class GetBudgetHistoryHandler implements IQueryHandler<GetBudgetHistoryQu
     // Fetch all monthly stats in parallel
     const statsResults = await Promise.all(
       monthsWithBudgets.map((m) =>
-        this.transactionRepository.getMonthlyStats(query.userId, m.year, m.month, query.startDay),
+        this.transactionRepository.getMonthlyStats(
+          query.userId,
+          m.year,
+          m.month,
+          query.startDay,
+          query.timezone,
+        ),
       ),
     );
 
