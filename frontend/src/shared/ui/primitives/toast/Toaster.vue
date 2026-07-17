@@ -9,8 +9,10 @@ import ToastTitle from './ToastTitle.vue';
 import ToastAction from './ToastAction.vue';
 import ToastViewport from './ToastViewport.vue';
 import TransactionSuccessToast from './TransactionSuccessToast.vue';
+import { useToastPosition } from './useToastPosition';
 
 const { toasts, dismiss, toast: showToast } = useToast();
+const position = useToastPosition();
 
 const variantIcons: Record<string, string> = {
   default: 'info',
@@ -88,13 +90,21 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <ToastViewport>
+  <ToastViewport :position="position">
     <template v-for="toast in toasts" :key="toast.id">
       <!-- Transaction success: glass card on design tokens -->
       <div
         v-if="toast.variant === 'transaction-success' && toast.transactionData"
         class="transaction-toast pointer-events-auto relative mt-1.5 w-full max-w-[min(90vw,360px)] overflow-hidden rounded-2xl border border-border-light/40 bg-card-light/85 p-3.5 shadow-lg shadow-black/5 backdrop-blur-md dark:border-border-dark/50 dark:bg-card-dark/85 dark:shadow-black/20"
-        :class="toast.open ? 'transaction-toast-enter' : 'transaction-toast-leave'"
+        :class="
+          toast.open
+            ? position === 'top'
+              ? 'transaction-toast-enter-top'
+              : 'transaction-toast-enter'
+            : position === 'top'
+              ? 'transaction-toast-leave-top'
+              : 'transaction-toast-leave'
+        "
       >
         <!-- Soft success wash behind the badge -->
         <div
@@ -127,6 +137,7 @@ onUnmounted(() => {
         :variant="toStandardVariant(toast.variant)"
         :open="toast.open"
         :duration="toast.duration"
+        :position="position"
         class="relative overflow-hidden group"
         @update:open="(open: boolean) => !open && dismiss(toast.id)"
       >
@@ -212,9 +223,33 @@ onUnmounted(() => {
   }
 }
 
+.transaction-toast-enter-top {
+  animation: tx-toast-in-top 0.35s cubic-bezier(0.21, 1.02, 0.73, 1);
+}
+
+.transaction-toast-leave-top {
+  animation: tx-toast-out-top 0.2s ease-in forwards;
+}
+
+@keyframes tx-toast-in-top {
+  from {
+    opacity: 0;
+    transform: translateY(-100%) scale(0.92);
+  }
+}
+
+@keyframes tx-toast-out-top {
+  to {
+    opacity: 0;
+    transform: translateY(-20%) scale(0.95);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .transaction-toast-enter,
-  .transaction-toast-leave {
+  .transaction-toast-leave,
+  .transaction-toast-enter-top,
+  .transaction-toast-leave-top {
     animation-duration: 0.01ms;
   }
 }

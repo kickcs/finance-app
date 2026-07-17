@@ -182,17 +182,19 @@ export const router = createRouter({
           path: 'scan-receipt',
           name: ROUTE_NAMES.SCAN_RECEIPT,
           component: () => import('@/pages/scan-receipt/ScanReceiptPage.vue'),
-          meta: { requiresAuth: true },
+          meta: { requiresAuth: true, toastPosition: 'top' },
         },
         {
           path: 'import-inbox',
           name: ROUTE_NAMES.IMPORT_INBOX,
           component: () => import('@/pages/import-inbox/ImportInboxPage.vue'),
+          meta: { toastPosition: 'top' },
         },
         {
           path: 'import-inbox/:id',
           name: ROUTE_NAMES.IMPORT_CONFIRM,
           component: () => import('@/pages/import-inbox/confirm/ImportConfirmPage.vue'),
+          meta: { toastPosition: 'top' },
         },
         {
           path: 'dashboard/settings',
