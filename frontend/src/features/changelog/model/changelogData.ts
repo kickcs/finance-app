@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.60';
+export const CURRENT_VERSION = '1.0.61';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,25 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.61',
+    date: '2026-07-17',
+    title: 'Улучшения Telegram-импорта',
+    items: [
+      {
+        type: 'improvement',
+        text: 'Импорт из Telegram стал удобнее: уведомления не перекрывают кнопку, переход к следующей операции без мигания, работает кнопка «назад»',
+      },
+      {
+        type: 'feature',
+        text: 'Входящий или исходящий перевод теперь можно отметить как возврат долга — долг закроется автоматически',
+      },
+      {
+        type: 'feature',
+        text: 'На экране подтверждения импорта видны балансы счетов и сверка с балансом из банковского уведомления',
+      },
+    ],
+  },
   {
     version: '1.0.60',
     date: '2026-07-17',
