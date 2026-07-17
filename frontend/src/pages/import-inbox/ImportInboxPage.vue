@@ -4,16 +4,24 @@ import { useRouter } from 'vue-router';
 import { ROUTE_NAMES } from '@/app/router/routeNames';
 import { navigateBack } from '@/app/router';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
+import { useProfile } from '@/shared/api/composables/useProfile';
 import { AppHeader } from '@/widgets/header';
 import { EmptyState, SkeletonListItem, UIcon } from '@/shared/ui';
 import { useImportedTransactions } from '@/entities/imported-transaction';
+import { useAccounts } from '@/entities/account';
 import { useInboxSortOrder } from './model/useInboxSortOrder';
 import ImportInboxItem from './ui/ImportInboxItem.vue';
+import AccountBalancesStrip from './ui/AccountBalancesStrip.vue';
 
 const router = useRouter();
 const { userId } = useCurrentUser();
 
 const { items, isLoading } = useImportedTransactions(userId);
+const { accounts } = useAccounts(userId);
+const { profile } = useProfile(userId);
+const hiddenAccountIds = computed<Set<string>>(
+  () => new Set(profile.value?.dashboard_settings?.hidden_account_ids ?? []),
+);
 const { sortOrder, toggle: toggleSortOrder, sortItems } = useInboxSortOrder();
 
 const sortedItems = computed(() => sortItems(items.value));
@@ -45,6 +53,13 @@ function openConfirm(id: string) {
     </AppHeader>
 
     <main class="flex-1 px-5 pt-4">
+      <!-- Балансы нескрытых счетов — для сверки при разборе импортов -->
+      <AccountBalancesStrip
+        :accounts="accounts"
+        :hidden-account-ids="hiddenAccountIds"
+        class="mb-3"
+      />
+
       <!-- Loading -->
       <div
         v-if="isLoading"

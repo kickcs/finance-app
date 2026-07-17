@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.61';
+export const CURRENT_VERSION = '1.0.62';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,17 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.62',
+    date: '2026-07-17',
+    title: 'Балансы счетов в списке импортов',
+    items: [
+      {
+        type: 'improvement',
+        text: 'Балансы счетов теперь показываются в списке импортов из Telegram — удобнее сверять операции ещё до открытия подтверждения',
+      },
+    ],
+  },
   {
     version: '1.0.61',
     date: '2026-07-17',
