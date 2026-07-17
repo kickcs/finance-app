@@ -540,7 +540,7 @@ function toScanReceipt() {
         <!-- Secondary actions -->
         <div class="space-y-2">
           <UButton
-            v-if="eligibleDebts.length > 0"
+            v-if="eligibleDebts.length > 0 && formData.type !== 'debt'"
             variant="outline"
             size="md"
             full-width
