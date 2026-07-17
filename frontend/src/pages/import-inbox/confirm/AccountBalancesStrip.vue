@@ -22,12 +22,18 @@ const visibleAccounts = computed(() =>
   ),
 );
 
-// Баланс счёта в валюте импорта; если её нет — первый доступный.
-function displayBalance(account: AccountWithBalances) {
-  return (
-    account.balances.find((b) => b.currency === props.item.currency) ?? account.balances[0] ?? null
-  );
-}
+// Мемоизация балансов: счёта в валюте импорта; если её нет — первый доступный.
+const displayBalances = computed(
+  () =>
+    new Map(
+      visibleAccounts.value.map((account) => [
+        account.id,
+        account.balances.find((b) => b.currency === props.item.currency) ??
+          account.balances[0] ??
+          null,
+      ]),
+    ),
+);
 
 const highlightedId = computed(() => props.item.suggested_account_id);
 
@@ -35,7 +41,7 @@ const highlightedId = computed(() => props.item.suggested_account_id);
 // есть баланс в валюте импорта.
 const balanceCheck = computed(() => {
   const account = visibleAccounts.value.find((a) => a.id === highlightedId.value);
-  const balance = account?.balances.find((b) => b.currency === props.item.currency);
+  const balance = displayBalances.value.get(account?.id ?? '');
   if (!balance) return null;
   return checkBalanceAfter(balance.balance, props.item);
 });
@@ -43,7 +49,7 @@ const balanceCheck = computed(() => {
 
 <template>
   <section v-if="visibleAccounts.length > 0" class="space-y-1.5 animate-fadeInUp">
-    <div class="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 md:mx-0 md:px-0">
+    <div class="flex gap-2 overflow-x-auto no-scrollbar pb-1 -mx-4 px-4 md:mx-0 md:px-0">
       <div
         v-for="account in visibleAccounts"
         :key="account.id"
@@ -61,8 +67,11 @@ const balanceCheck = computed(() => {
         </p>
         <p class="text-xs font-semibold text-text-primary-light dark:text-text-primary-dark">
           {{
-            displayBalance(account)
-              ? formatCurrency(displayBalance(account)!.balance, displayBalance(account)!.currency)
+            displayBalances.get(account.id)
+              ? formatCurrency(
+                  displayBalances.get(account.id)!.balance,
+                  displayBalances.get(account.id)!.currency,
+                )
               : '—'
           }}
         </p>
