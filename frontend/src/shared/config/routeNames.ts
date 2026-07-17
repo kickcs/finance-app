@@ -30,4 +30,5 @@ export const ROUTE_NAMES = {
   LOGIN: 'login',
   AUTH_CALLBACK: 'auth-callback',
   FIRST_ACCOUNT: 'first-account',
+  TMA_ENTRY: 'tma-entry',
 } as const;

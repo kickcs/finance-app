@@ -1,5 +1,10 @@
 import { http } from '@/shared/api/http';
-import type { ImportedTransaction, TelegramCard, TelegramLinkStatus } from '../model/types';
+import type {
+  ImportedTransaction,
+  TelegramCard,
+  TelegramLinkStatus,
+  TmaAuthResponse,
+} from '../model/types';
 
 interface ImportedTransactionResponse {
   id: string;
@@ -87,5 +92,17 @@ export const importedTransactionsApi = {
 
   async deleteCardMapping(cardMask: string): Promise<{ success: boolean }> {
     return http.delete(`/telegram-import/cards/${encodeURIComponent(cardMask)}`);
+  },
+
+  async tmaAuth(initData: string): Promise<TmaAuthResponse> {
+    return http.post<TmaAuthResponse>(
+      '/telegram-import/tma-auth',
+      { initData },
+      { skipAuth: true },
+    );
+  },
+
+  async tmaLink(initData: string): Promise<{ success: boolean }> {
+    return http.post<{ success: boolean }>('/telegram-import/tma-link', { initData });
   },
 };

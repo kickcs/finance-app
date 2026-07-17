@@ -12,5 +12,10 @@
     "invalidToken": "⚠️ The link has expired or was already used. Generate a new one in the app.",
     "alreadyLinkedOther": "⚠️ This Telegram is already linked to another account. Unlink it there first."
   },
-  "notLinked": "First link your account: app → Profile → Telegram import → \"Connect\"."
+  "notLinked": "First link your account: app → Profile → Telegram import → \"Connect\".",
+  "buttons": {
+    "confirm": "✅ Confirm transactions",
+    "linkAccount": "🔗 Link account",
+    "openInbox": "📥 Open inbox"
+  }
 }

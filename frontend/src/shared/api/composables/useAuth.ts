@@ -191,6 +191,12 @@ export function useAuth() {
     return payload?.isAnonymous ?? false;
   });
 
+  /** Программная установка сессии (используется TMA-входом): токен + user как после login */
+  function applySession(accessToken: string, sessionUser: User) {
+    setTokens(accessToken);
+    user.value = sessionUser;
+  }
+
   async function signUp(email: string, password: string) {
     try {
       isLoading.value = true;
@@ -206,8 +212,7 @@ export function useAuth() {
       );
 
       // Only accessToken in response, refreshToken is in httpOnly cookie
-      setTokens(data.accessToken);
-      user.value = data.user;
+      applySession(data.accessToken, data.user);
 
       return { user: data.user };
     } catch (err) {
@@ -233,8 +238,7 @@ export function useAuth() {
       );
 
       // Only accessToken in response, refreshToken is in httpOnly cookie
-      setTokens(data.accessToken);
-      user.value = data.user;
+      applySession(data.accessToken, data.user);
 
       return { user: data.user };
     } catch (err) {
@@ -290,8 +294,7 @@ export function useAuth() {
       const data = await http.post<AuthResponse>('/auth/login/anonymous', {}, { skipAuth: true });
 
       // Only accessToken in response, refreshToken is in httpOnly cookie
-      setTokens(data.accessToken);
-      user.value = data.user;
+      applySession(data.accessToken, data.user);
 
       return { user: data.user };
     } catch (err) {
@@ -326,6 +329,7 @@ export function useAuth() {
     signInAnonymously,
     signOut,
     refreshUser,
+    applySession,
     initialize: initializeAuth,
   };
 }

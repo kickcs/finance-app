@@ -238,6 +238,12 @@ export const router = createRouter({
       name: ROUTE_NAMES.SHARED_RECEIPT,
       component: () => import('@/pages/shared-receipt/SharedReceiptPage.vue'),
     },
+    // Вход из Telegram Mini App — публичный, авторизуется сам по initData
+    {
+      path: '/tma',
+      name: ROUTE_NAMES.TMA_ENTRY,
+      component: () => import('@/pages/tma/TmaEntryPage.vue'),
+    },
     // Catch-all redirect
     {
       path: '/:pathMatch(.*)*',

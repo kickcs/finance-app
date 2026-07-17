@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.59';
+export const CURRENT_VERSION = '1.0.60';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,21 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.60',
+    date: '2026-07-17',
+    title: 'Подтверждение импорта прямо в Telegram',
+    items: [
+      {
+        type: 'feature',
+        text: 'Теперь операции из банковских уведомлений можно подтверждать, не выходя из Telegram: бот присылает кнопку, открывающую мини-приложение с инбоксом',
+      },
+      {
+        type: 'feature',
+        text: 'Привязка аккаунта — простым входом внутри мини-приложения',
+      },
+    ],
+  },
   {
     version: '1.0.59',
     date: '2026-07-16',
