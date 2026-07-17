@@ -11,6 +11,8 @@ import {
 import { useSplitExpense } from '@/features/split-expense';
 import { useAccounts } from '@/entities/account';
 import { useCategories } from '@/entities/category';
+import { useDebts, getDebtDisplayName } from '@/entities/debt';
+import { usePartialPayment } from '@/features/partial-payment';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { navigateBackTo } from '@/app/router';
@@ -18,8 +20,11 @@ import { ROUTE_NAMES } from '@/app/router/routeNames';
 import { formatRelativeDate } from '@/shared/lib/format/date';
 import { useTelegramBackButton } from '@/shared/lib/telegram/useTelegramBackButton';
 import { useImportedTransactions, type ImportedTransaction } from '@/entities/imported-transaction';
+import type { Debt } from '@/shared/api/database.types';
 import { useInboxSortOrder } from '../model/useInboxSortOrder';
 import { decideCategoryPrefill } from '../model/categoryPrefill';
+import { eligibleDebtsForImport, findExactRepaymentMatch } from '../model/debtRepayment';
+import DebtRepaymentSheet from './DebtRepaymentSheet.vue';
 
 const router = useRouter();
 const route = useRoute();
@@ -67,6 +72,79 @@ const {
   reset: resetSplit,
 } = useSplitExpense(() => formData.value.amount);
 
+// --- Погашение существующего долга -------------------------------------------
+const { debts } = useDebts(userId);
+const { makePartialPayment, isPaying } = usePartialPayment();
+const showRepaymentSheet = ref(false);
+const repaymentSuggestionDismissed = ref(false);
+// Retry-bookkeeping отдельно от createdTransactionId (обычного сабмита):
+// платёж прошёл, confirm упал → повтор не должен создать второй платёж.
+const repaymentTransactionId = ref<string | null>(null);
+
+const eligibleDebts = computed(() =>
+  item.value ? eligibleDebtsForImport(debts.value, item.value) : [],
+);
+const repaymentMatch = computed(() =>
+  item.value && !repaymentSuggestionDismissed.value
+    ? findExactRepaymentMatch(debts.value, item.value)
+    : null,
+);
+const repaymentMatchText = computed(() => {
+  const match = repaymentMatch.value;
+  if (!match) return '';
+  return match.debt_type === 'given'
+    ? `Похоже, это возврат долга от ${getDebtDisplayName(match)}`
+    : `Похоже, это возврат вашего долга: ${getDebtDisplayName(match)}`;
+});
+
+async function repayDebt(debt: Debt) {
+  if (isPaying.value || isSubmitting.value) return;
+  const current = item.value;
+  if (!current || !userId.value) return;
+  showRepaymentSheet.value = false;
+  validationError.value = null;
+
+  if (!formData.value.accountId) {
+    validationError.value = 'Выберите счёт для транзакции';
+    return;
+  }
+
+  const next = computeNext();
+  const amount = Math.abs(current.amount ?? 0);
+
+  let transactionId = repaymentTransactionId.value;
+  if (!transactionId) {
+    let created: string | null = null;
+    const ok = await makePartialPayment(debt, amount, formData.value.accountId, userId.value, {
+      transactionDate: current.occurred_at ?? undefined,
+      onTransactionCreated: (id) => {
+        created = id;
+      },
+    });
+    // Ошибка уже показана тостом внутри usePartialPayment.
+    if (!ok || !created) return;
+    transactionId = created;
+    repaymentTransactionId.value = created;
+  }
+
+  try {
+    await confirmImported(current.id, {
+      transactionId,
+      accountId: formData.value.accountId,
+    });
+  } catch {
+    toast({
+      title: 'Платёж проведён',
+      description: 'Но не удалось отметить импорт подтверждённым. Проверьте инбокс.',
+      variant: 'warning',
+    });
+    return;
+  }
+
+  repaymentTransactionId.value = null;
+  goTo(next);
+}
+
 // --- Prefill the transaction form from the imported operation ---------------
 // Keyed on the item id so a background inbox refetch (same op) never wipes
 // in-progress edits — only a genuine switch to another import re-prefills.
@@ -83,6 +161,8 @@ watch(
     // Fresh import → fresh retry bookkeeping.
     createdTransactionId.value = null;
     splitDebtsCreated.value = false;
+    repaymentSuggestionDismissed.value = false;
+    repaymentTransactionId.value = null;
 
     const absAmount = Math.abs(current.amount ?? 0);
 
@@ -393,6 +473,34 @@ function toScanReceipt() {
           </div>
         </section>
 
+        <!-- Автоподсказка: сумма точно совпадает с остатком одного долга -->
+        <section
+          v-if="repaymentMatch"
+          class="rounded-2xl border border-primary/30 bg-primary-light flex items-center gap-3 px-3.5 py-2.5 animate-fadeInUp"
+        >
+          <UIcon name="handshake" size="sm" class="text-primary shrink-0" />
+          <p
+            class="flex-1 text-sm text-text-primary-light dark:text-text-primary-dark leading-snug"
+          >
+            {{ repaymentMatchText }}
+          </p>
+          <UButton
+            size="sm"
+            :disabled="isPaying || isSubmitting"
+            @click="repayDebt(repaymentMatch)"
+          >
+            Применить
+          </UButton>
+          <button
+            type="button"
+            aria-label="Скрыть подсказку"
+            class="w-7 h-7 rounded-lg flex items-center justify-center text-text-tertiary-light dark:text-text-tertiary-dark hover:bg-surface-light dark:hover:bg-surface-dark transition-colors shrink-0"
+            @click="repaymentSuggestionDismissed = true"
+          >
+            <UIcon name="close" size="xs" />
+          </button>
+        </section>
+
         <!-- Transaction form (mirrors AddTransactionPage) -->
         <TransactionForm
           v-model:form-data="formData"
@@ -418,21 +526,35 @@ function toScanReceipt() {
         />
 
         <!-- Secondary actions -->
-        <div class="grid grid-cols-2 gap-2">
-          <UButton variant="outline" size="md" full-width @click="toScanReceipt">
-            <UIcon name="document_scanner" size="sm" class="mr-1.5" />
-            Скан чека
-          </UButton>
-
+        <div class="space-y-2">
           <UButton
-            variant="ghost"
+            v-if="eligibleDebts.length > 0"
+            variant="outline"
             size="md"
             full-width
-            class="text-danger"
-            @click="showDismissConfirm = true"
+            :disabled="isPaying || isSubmitting"
+            @click="showRepaymentSheet = true"
           >
-            Отклонить
+            <UIcon name="handshake" size="sm" class="mr-1.5" />
+            Погашение долга
           </UButton>
+
+          <div class="grid grid-cols-2 gap-2">
+            <UButton variant="outline" size="md" full-width @click="toScanReceipt">
+              <UIcon name="document_scanner" size="sm" class="mr-1.5" />
+              Скан чека
+            </UButton>
+
+            <UButton
+              variant="ghost"
+              size="md"
+              full-width
+              class="text-danger"
+              @click="showDismissConfirm = true"
+            >
+              Отклонить
+            </UButton>
+          </div>
         </div>
       </div>
     </main>
@@ -444,6 +566,12 @@ function toScanReceipt() {
       warning-text="Операция будет убрана из инбокса и не попадёт в историю."
       confirm-label="Отклонить"
       @confirm="handleDismiss"
+    />
+
+    <DebtRepaymentSheet
+      v-model:open="showRepaymentSheet"
+      :debts="eligibleDebts"
+      @select="repayDebt"
     />
   </div>
 </template>
