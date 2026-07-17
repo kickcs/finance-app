@@ -147,13 +147,16 @@ const relativeDate = computed(() =>
 // The next import follows the user's chosen review order (same as the inbox list).
 const { sortItems } = useInboxSortOrder();
 
-function goNextOrBack() {
+function computeNext(): ImportedTransaction | null {
   const ordered = sortItems(items.value);
   const currentIndex = ordered.findIndex((i) => i.id === item.value?.id);
   const remaining = ordered.filter((i) => i.id !== item.value?.id);
-  // Continue from the current position in the chosen order; wrap to the top
-  // when the current item was the last one (or is already gone from the list).
-  const next = remaining[Math.max(currentIndex, 0)] ?? remaining[0];
+  // Продолжаем с текущей позиции в выбранном порядке; wrap на начало,
+  // когда текущий был последним.
+  return remaining[Math.max(currentIndex, 0)] ?? remaining[0] ?? null;
+}
+
+function goTo(next: ImportedTransaction | null) {
   if (next) {
     router.replace({ name: ROUTE_NAMES.IMPORT_CONFIRM, params: { id: next.id } });
   } else {
@@ -184,6 +187,10 @@ async function handleSubmit() {
     validationError.value = splitValidationError.value || 'Проверьте данные разделения расхода';
     return;
   }
+
+  // "Следующий" фиксируется до мутации: после confirmImported текущий
+  // элемент уже удалён из кэша точечно, и computeNext() потерял бы позицию.
+  const next = computeNext();
 
   // Retry-safe: if a previous attempt already created the transaction (confirm
   // then failed), reuse that id instead of creating a second transaction.
@@ -241,7 +248,7 @@ async function handleSubmit() {
   createdTransactionId.value = null;
   splitDebtsCreated.value = false;
   resetSplit();
-  goNextOrBack();
+  goTo(next);
 }
 
 // DebtPanel creates the debt (and its own transaction) itself and does not
@@ -250,8 +257,9 @@ async function handleSubmit() {
 // inbox so it stops asking for review.
 async function onDebtSubmitted() {
   const current = item.value;
+  const next = computeNext();
   if (!current) {
-    goNextOrBack();
+    goTo(next);
     return;
   }
   try {
@@ -264,7 +272,7 @@ async function onDebtSubmitted() {
     description: 'Импорт обработан.',
     variant: 'success',
   });
-  goNextOrBack();
+  goTo(next);
 }
 
 // --- Dismiss -----------------------------------------------------------------
@@ -274,8 +282,9 @@ async function handleDismiss() {
   const current = item.value;
   showDismissConfirm.value = false;
   if (!current) return;
+  const next = computeNext();
   await dismissImported(current.id);
-  goNextOrBack();
+  goTo(next);
 }
 
 // --- Scan receipt ------------------------------------------------------------

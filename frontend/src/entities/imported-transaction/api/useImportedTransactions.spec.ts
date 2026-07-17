@@ -63,7 +63,7 @@ describe('useImportedTransactions', () => {
     });
   });
 
-  it('confirm отправляет payload и инвалидирует инбокс', async () => {
+  it('confirm отправляет payload', async () => {
     let confirmBody: unknown = null;
     server.use(
       http.get('*/api/telegram-import/inbox', () => HttpResponse.json(INBOX_RESPONSE)),
@@ -76,5 +76,43 @@ describe('useImportedTransactions', () => {
     await flushPromises();
     await result.confirmImported('imp-1', { transactionId: 'tx-9', accountId: 'acc-1' });
     expect(confirmBody).toEqual({ transactionId: 'tx-9', accountId: 'acc-1' });
+  });
+
+  it('confirm удаляет элемент из кэша инбокса без полного рефетча', async () => {
+    let inboxCalls = 0;
+    server.use(
+      http.get('*/api/telegram-import/inbox', () => {
+        inboxCalls += 1;
+        return HttpResponse.json(INBOX_RESPONSE);
+      }),
+      http.post('*/api/telegram-import/inbox/imp-1/confirm', () =>
+        HttpResponse.json({ success: true, counterpartId: null }),
+      ),
+    );
+    const result = mountComposable();
+    await flushPromises();
+    expect(result.items.value).toHaveLength(1);
+
+    await result.confirmImported('imp-1', { transactionId: 'tx-9', accountId: 'acc-1' });
+    await flushPromises();
+
+    // Элемент убран из кэша синхронно, повторного GET инбокса не было
+    expect(result.items.value).toHaveLength(0);
+    expect(result.pendingCount.value).toBe(0);
+    expect(inboxCalls).toBe(1);
+  });
+
+  it('dismiss удаляет элемент из кэша инбокса', async () => {
+    server.use(
+      http.get('*/api/telegram-import/inbox', () => HttpResponse.json(INBOX_RESPONSE)),
+      http.post('*/api/telegram-import/inbox/imp-1/dismiss', () =>
+        HttpResponse.json({ success: true }),
+      ),
+    );
+    const result = mountComposable();
+    await flushPromises();
+    await result.dismissImported('imp-1');
+    await flushPromises();
+    expect(result.items.value).toHaveLength(0);
   });
 });
