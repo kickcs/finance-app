@@ -14,6 +14,10 @@ export * from './set-card-mapping/set-card-mapping.command';
 export * from './set-card-mapping/set-card-mapping.handler';
 export * from './delete-card-mapping/delete-card-mapping.command';
 export * from './delete-card-mapping/delete-card-mapping.handler';
+export * from './tma-auth/tma-auth.command';
+export * from './tma-auth/tma-auth.handler';
+export * from './link-telegram-via-tma/link-telegram-via-tma.command';
+export * from './link-telegram-via-tma/link-telegram-via-tma.handler';
 
 import { CreateLinkTokenHandler } from './create-link-token/create-link-token.handler';
 import { LinkTelegramAccountHandler } from './link-telegram-account/link-telegram-account.handler';
@@ -23,6 +27,8 @@ import { ConfirmImportedHandler } from './confirm-imported/confirm-imported.hand
 import { DismissImportedHandler } from './dismiss-imported/dismiss-imported.handler';
 import { SetCardMappingHandler } from './set-card-mapping/set-card-mapping.handler';
 import { DeleteCardMappingHandler } from './delete-card-mapping/delete-card-mapping.handler';
+import { TmaAuthHandler } from './tma-auth/tma-auth.handler';
+import { LinkTelegramViaTmaHandler } from './link-telegram-via-tma/link-telegram-via-tma.handler';
 
 export const CommandHandlers = [
   CreateLinkTokenHandler,
@@ -33,4 +39,6 @@ export const CommandHandlers = [
   DismissImportedHandler,
   SetCardMappingHandler,
   DeleteCardMappingHandler,
+  TmaAuthHandler,
+  LinkTelegramViaTmaHandler,
 ];

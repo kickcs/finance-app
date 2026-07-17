@@ -94,6 +94,6 @@ import { DebtOrmEntity } from '../debt/infrastructure/persistence/typeorm';
     // Query Handlers
     ...QueryHandlers,
   ],
-  exports: [JwtModule, PassportModule, PROFILE_REPOSITORY],
+  exports: [JwtModule, PassportModule, PROFILE_REPOSITORY, TokenService],
 })
 export class IdentityModule {}

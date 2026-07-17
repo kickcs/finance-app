@@ -28,23 +28,7 @@ import {
   type AuthResponse,
   type AuthTokens,
 } from '../../application/services/token.service';
-
-// Cookie configuration
-const REFRESH_TOKEN_COOKIE = 'refresh_token';
-const COOKIE_SECURE = process.env.COOKIE_SECURE === 'true';
-const COOKIE_OPTIONS = {
-  httpOnly: true,
-  secure: COOKIE_SECURE,
-  sameSite: 'lax' as const,
-  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-  path: '/api/auth',
-};
-
-// Demo accounts get shorter cookie lifetime
-const DEMO_COOKIE_OPTIONS = {
-  ...COOKIE_OPTIONS,
-  maxAge: 60 * 60 * 1000, // 1 hour
-};
+import { REFRESH_TOKEN_COOKIE, COOKIE_OPTIONS, DEMO_COOKIE_OPTIONS } from '../cookie.constants';
 
 @Controller('auth')
 export class AuthController {

@@ -1,3 +1,5 @@
+import type { User } from '@/shared/api/composables/useAuth';
+
 export type ImportedTransactionType = 'expense' | 'income' | 'balance_change';
 export type ImportedTransactionStatus = 'pending' | 'confirmed' | 'dismissed';
 
@@ -27,3 +29,5 @@ export interface TelegramCard {
   account_id: string | null;
   last_seen_at: string | null;
 }
+
+export type TmaAuthResponse = { linked: false } | { linked: true; accessToken: string; user: User };

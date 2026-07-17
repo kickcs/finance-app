@@ -2,7 +2,7 @@ import { Injectable, Logger, type OnApplicationBootstrap, type OnModuleInit } fr
 import { ConfigService } from '@nestjs/config';
 import { CommandBus } from '@nestjs/cqrs';
 import { I18nService } from 'nestjs-i18n';
-import { Bot } from 'grammy';
+import { Bot, InlineKeyboard } from 'grammy';
 import type { Update } from 'grammy/types';
 import { ReplyAggregator, type IngestCounts } from './reply-aggregator';
 import { LinkTelegramAccountCommand } from '../../application/commands/link-telegram-account/link-telegram-account.command';
@@ -38,6 +38,23 @@ export class TelegramBotService implements OnModuleInit, OnApplicationBootstrap 
    */
   resolveTelegramLang(telegramUserId: string, languageCode: string | undefined): string {
     return languageCode?.toLowerCase().startsWith('en') ? 'en' : 'ru';
+  }
+
+  /** URL Mini App: PUBLIC_APP_URL + /tma; без PUBLIC_APP_URL кнопки не ставятся */
+  private get tmaUrl(): string | null {
+    const base = this.configService.get<string>('PUBLIC_APP_URL');
+    return base ? `${base.replace(/\/+$/, '')}/tma` : null;
+  }
+
+  private tmaKeyboard(
+    labelKey: string,
+    lang: string,
+  ): { reply_markup: InlineKeyboard } | undefined {
+    const url = this.tmaUrl;
+    if (!url) return undefined;
+    return {
+      reply_markup: new InlineKeyboard().webApp(this.i18n.translate(labelKey, { lang }), url),
+    };
   }
 
   private summaryText(c: IngestCounts, lang: string): string {
@@ -96,6 +113,17 @@ export class TelegramBotService implements OnModuleInit, OnApplicationBootstrap 
         this.logger.error(`Не удалось установить Telegram webhook: ${url}`, err);
       }
     }
+
+    if (this.bot && this.tmaUrl) {
+      try {
+        await this.bot.api.setChatMenuButton({
+          menu_button: { type: 'web_app', text: 'Инбокс', web_app: { url: this.tmaUrl } },
+        });
+        this.logger.log(`Telegram menu button установлен: ${this.tmaUrl}`);
+      } catch (err) {
+        this.logger.error('Не удалось установить Telegram menu button', err);
+      }
+    }
   }
 
   async handleUpdate(update: Update): Promise<void> {
@@ -113,7 +141,10 @@ export class TelegramBotService implements OnModuleInit, OnApplicationBootstrap 
       const lang = this.resolveTelegramLang(String(ctx.from.id), ctx.from.language_code);
       const token = ctx.match.trim();
       if (!token) {
-        await ctx.reply(this.i18n.translate('telegram.start.noToken', { lang }));
+        await ctx.reply(
+          this.i18n.translate('telegram.start.noToken', { lang }),
+          this.tmaKeyboard('telegram.buttons.openInbox', lang),
+        );
         return;
       }
       const result = await this.commandBus.execute<LinkTelegramAccountCommand, LinkResult>(
@@ -135,13 +166,19 @@ export class TelegramBotService implements OnModuleInit, OnApplicationBootstrap 
         new IngestBankMessageCommand(String(ctx.from.id), ctx.message.text),
       );
       if (result === 'not_linked') {
-        await ctx.reply(this.i18n.translate('telegram.notLinked', { lang }));
+        await ctx.reply(
+          this.i18n.translate('telegram.notLinked', { lang }),
+          this.tmaKeyboard('telegram.buttons.linkAccount', lang),
+        );
         return;
       }
       const key =
         result === 'imported' ? 'imported' : result === 'duplicate' ? 'duplicates' : 'unparsed';
       this.aggregator.add(ctx.chat.id, key, async (counts) => {
-        await ctx.reply(this.summaryText(counts, lang));
+        const keyboard = counts.imported
+          ? this.tmaKeyboard('telegram.buttons.confirm', lang)
+          : undefined;
+        await ctx.reply(this.summaryText(counts, lang), keyboard);
       });
     });
   }

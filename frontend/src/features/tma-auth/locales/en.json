@@ -1,0 +1,29 @@
+{
+  "loading": "Connecting to Telegram…",
+  "notTelegram": {
+    "title": "Open via Telegram",
+    "description": "This page only works inside Telegram. Open the bot and tap the menu button.",
+    "openSite": "Open the website"
+  },
+  "confirmLink": {
+    "title": "Link Telegram",
+    "description": "Link this Telegram to the {email} account? Forwarded bank notifications will land in it.",
+    "confirm": "Link",
+    "logout": "Sign in to another account"
+  },
+  "login": {
+    "title": "Sign in",
+    "description": "Sign in to link Telegram and confirm transactions here.",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Sign in and link",
+    "noAccount": "No account? Register on the website",
+    "error": "Could not sign in. Check your email and password."
+  },
+  "errors": {
+    "generic": "Something went wrong. Please try again.",
+    "staleInitData": "The Telegram session has expired. Close and reopen the mini app.",
+    "alreadyLinkedOther": "This Telegram is already linked to another account. Unlink it there first.",
+    "retry": "Retry"
+  }
+}
