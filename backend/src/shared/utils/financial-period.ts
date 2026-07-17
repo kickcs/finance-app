@@ -1,4 +1,5 @@
 // backend/src/shared/utils/financial-period.ts
+import { todayInTz } from './date';
 
 /**
  * Resolve startDay for a specific month.
@@ -53,4 +54,21 @@ export function getFinancialMonth(date: Date, startDay: number): { year: number;
  */
 export function getCurrentFinancialMonth(startDay: number): { year: number; month: number } {
   return getFinancialMonth(new Date(), startDay);
+}
+
+/**
+ * Current financial month resolved against TODAY in the given IANA timezone,
+ * instead of the server's local (UTC) clock. Near the user's local midnight —
+ * and especially on the start-day boundary — the UTC server can be on a
+ * different calendar day, which would place them in the wrong financial month.
+ */
+export function getCurrentFinancialMonthInTz(
+  startDay: number,
+  timezone: string,
+): { year: number; month: number } {
+  const today = todayInTz(timezone); // YYYY-MM-DD in the user's zone
+  const [y, m, d] = today.split('-').map(Number);
+  // getFinancialMonth reads local components — build a Date whose LOCAL wall date
+  // equals the user's local calendar day (time-of-day is irrelevant here).
+  return getFinancialMonth(new Date(y, m - 1, d), startDay);
 }

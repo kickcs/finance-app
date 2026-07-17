@@ -27,6 +27,20 @@ import {
   UNRETURNED_DEBT_CATEGORY_ID,
 } from '../../../domain/constants/default-categories';
 import { getFinancialMonthBounds } from '../../../../../shared/utils/financial-period';
+import { startOfDayInTz } from '../../../../../shared/utils/date';
+
+/**
+ * Calendar `YYYY-MM-DD` of a timezone-naive Date built by getFinancialMonthBounds
+ * (via the local-time `new Date(y, m, d)` constructor). Reads local components so
+ * the intent — "the wall date this bound represents" — is explicit regardless of
+ * the server's timezone.
+ */
+function localYMD(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
 
 // created_at is stored with microseconds in Postgres, but cursors round-trip
 // through JS Dates (ms precision). Both the ORDER BY and the cursor condition
@@ -420,19 +434,24 @@ export class TransactionRepository implements ITransactionRepository {
     year: number,
     month: number,
     startDay: number = 1,
+    timezone: string = 'UTC',
   ): Promise<MonthlyStats> {
     // Thin wrapper over getAnalyticsStats so monthly budget and analytics page
     // share one formula (split-expense returns offset categories, etc).
     const { start, end } = getFinancialMonthBounds(year, month, startDay);
-    // getFinancialMonthBounds returns end as the FIRST day of the next financial
-    // month (exclusive: t.date < end). getAnalyticsStats uses t.date <= endDate
-    // (inclusive). t.date is `timestamp with time zone`, so we step back ONE
-    // MILLISECOND, not one day — otherwise every non-midnight transaction on the
-    // last day of the period is excluded.
-    const endInclusive = new Date(end.getTime() - 1);
+    // getFinancialMonthBounds returns timezone-naive calendar dates. Re-anchor each
+    // to the START of that calendar day in the user's timezone so period boundaries
+    // match the user's local day, not the server's UTC day.
+    const startInstant = startOfDayInTz(localYMD(start), timezone);
+    const endExclusive = startOfDayInTz(localYMD(end), timezone);
+    // end is the FIRST day of the next financial month (exclusive: t.date < end).
+    // getAnalyticsStats uses t.date <= endDate (inclusive). t.date is `timestamp
+    // with time zone`, so step back ONE MILLISECOND, not one day — otherwise every
+    // non-midnight transaction on the last day of the period is excluded.
+    const endInclusive = new Date(endExclusive.getTime() - 1);
 
     const stats = await this.getAnalyticsStats(userId, {
-      startDate: start,
+      startDate: startInstant,
       endDate: endInclusive,
     });
 
@@ -556,11 +575,18 @@ export class TransactionRepository implements ITransactionRepository {
     // When someone returns money to me, subtract from the original expense category.
     // Pure-loan returns (source is debt_given) are excluded here — they feed the
     // unreturned-debts bucket via loanReturnsQuery below, on different date rules.
+    //
+    // Windowed on the SPEND date (source_tx.date), not the return date: a refund
+    // must reduce the spending category in the period the expense actually
+    // happened. Windowing on the return date leaked cross-period returns into the
+    // current period — e.g. a July repayment of a May café split wrongly shrank
+    // July's café total.
     const categoryOffsetsQuery = this.createDebtReturnBaseQuery(
       userId,
       startDate,
       endDate,
       accountIds,
+      'source',
     )
       .andWhere('source_tx.category_id != :loanGivenId', {
         loanGivenId: DEBT_CATEGORY_IDS.GIVEN,

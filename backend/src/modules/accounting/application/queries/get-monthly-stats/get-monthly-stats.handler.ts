@@ -19,6 +19,7 @@ export class GetMonthlyStatsHandler implements IQueryHandler<GetMonthlyStatsQuer
       query.year,
       query.month,
       query.startDay,
+      query.timezone,
     );
   }
 }

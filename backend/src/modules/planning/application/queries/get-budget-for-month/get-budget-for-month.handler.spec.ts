@@ -136,7 +136,13 @@ describe('GetBudgetForMonthHandler', () => {
 
     await handler.execute(new GetBudgetForMonthQuery('user-1', 2026, 3, 15));
 
-    expect(mockTransactionRepository.getMonthlyStats).toHaveBeenCalledWith('user-1', 2026, 3, 15);
+    expect(mockTransactionRepository.getMonthlyStats).toHaveBeenCalledWith(
+      'user-1',
+      2026,
+      3,
+      15,
+      'UTC',
+    );
   });
 
   it('should handle overspending (negative remaining)', async () => {

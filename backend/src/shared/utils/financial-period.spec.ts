@@ -4,6 +4,7 @@ import {
   getFinancialMonthBounds,
   getFinancialMonth,
   getCurrentFinancialMonth,
+  getCurrentFinancialMonthInTz,
 } from './financial-period';
 
 describe('financial-period', () => {
@@ -93,6 +94,24 @@ describe('financial-period', () => {
       expect(result.year).toBeGreaterThan(2000);
       expect(result.month).toBeGreaterThanOrEqual(1);
       expect(result.month).toBeLessThanOrEqual(12);
+    });
+  });
+
+  describe('getCurrentFinancialMonthInTz', () => {
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('uses the user timezone day, not the server UTC day, near local midnight', () => {
+      // Instant: 2026-07-11 20:30 UTC. In Tashkent (UTC+5) it is already
+      // 2026-07-12 01:30 — past the startDay=12 boundary, so the financial month
+      // is July. On a UTC server the day is still 2026-07-11 (< 12) → would resolve
+      // to June. This asserts the TZ-aware path picks July.
+      jest.useFakeTimers().setSystemTime(new Date('2026-07-11T20:30:00.000Z'));
+
+      expect(getCurrentFinancialMonthInTz(12, 'Asia/Tashkent')).toEqual({ year: 2026, month: 7 });
+      // Same instant, UTC → June (demonstrates the bug the TZ variant fixes).
+      expect(getCurrentFinancialMonthInTz(12, 'UTC')).toEqual({ year: 2026, month: 6 });
     });
   });
 });

@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.62';
+export const CURRENT_VERSION = '1.0.63';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,21 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.63',
+    date: '2026-07-17',
+    title: 'Точный подсчёт расходов по категориям',
+    items: [
+      {
+        type: 'fix',
+        text: 'Аналитика больше не занижает траты по категориям: возвраты долгов теперь учитываются в том периоде, когда была сама покупка, а не когда пришёл возврат',
+      },
+      {
+        type: 'fix',
+        text: 'Границы месяца в аналитике и бюджете теперь считаются по вашему часовому поясу — операции у полуночи больше не попадают в соседний период',
+      },
+    ],
+  },
   {
     version: '1.0.62',
     date: '2026-07-17',

@@ -20,7 +20,7 @@ import {
   RemoveMonthlyBudgetOverrideCommand,
 } from '../../application/commands';
 import { GetBudgetForMonthQuery, GetBudgetHistoryQuery } from '../../application/queries';
-import { getCurrentFinancialMonth } from '../../../../shared/utils/financial-period';
+import { getCurrentFinancialMonthInTz } from '../../../../shared/utils/financial-period';
 import {
   IProfileRepository,
   PROFILE_REPOSITORY,
@@ -40,14 +40,19 @@ export class BudgetsController {
     return {
       currency: profile?.currency ?? 'USD',
       startDay: profile?.financialMonthStartDay ?? 1,
+      timezone: profile?.timezone ?? 'UTC',
     };
   }
 
   @Get('current')
   async getCurrent(@CurrentUser('sub') userId: string): Promise<unknown> {
-    const { startDay } = await this.getProfileFields(userId);
-    const { year, month } = getCurrentFinancialMonth(startDay);
-    return this.queryBus.execute(new GetBudgetForMonthQuery(userId, year, month, startDay));
+    const { startDay, timezone } = await this.getProfileFields(userId);
+    // Resolve "current month" and the spend window against the user's timezone so
+    // the budget page and the analytics page agree on period boundaries.
+    const { year, month } = getCurrentFinancialMonthInTz(startDay, timezone);
+    return this.queryBus.execute(
+      new GetBudgetForMonthQuery(userId, year, month, startDay, timezone),
+    );
   }
 
   @Get('history')
@@ -56,9 +61,9 @@ export class BudgetsController {
     @Query('months') months?: string,
   ): Promise<unknown> {
     const parsedMonths = months ? parseInt(months, 10) : 6;
-    const { startDay } = await this.getProfileFields(userId);
+    const { startDay, timezone } = await this.getProfileFields(userId);
     return this.queryBus.execute(
-      new GetBudgetHistoryQuery(userId, isNaN(parsedMonths) ? 6 : parsedMonths, startDay),
+      new GetBudgetHistoryQuery(userId, isNaN(parsedMonths) ? 6 : parsedMonths, startDay, timezone),
     );
   }
 

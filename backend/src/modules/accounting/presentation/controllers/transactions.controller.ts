@@ -47,6 +47,7 @@ import {
   GetHashtagsQuery,
   GetDailyStatsQuery,
 } from '../../application/queries';
+import { startOfDayInTz, endOfDayInTz } from '../../../../shared/utils/date';
 
 @Controller('transactions')
 export class TransactionsController {
@@ -90,8 +91,9 @@ export class TransactionsController {
   ): Promise<unknown> {
     const profile = await this.profileRepository.findById(userId);
     const startDay = profile?.financialMonthStartDay ?? 1;
+    const tz = profile?.timezone ?? 'UTC';
     return this.queryBus.execute(
-      new GetMonthlyStatsQuery(userId, query.year, query.month, startDay),
+      new GetMonthlyStatsQuery(userId, query.year, query.month, startDay, tz),
     );
   }
 
@@ -100,9 +102,13 @@ export class TransactionsController {
     @CurrentUser('sub') userId: string,
     @Query() query: DailyStatsQueryDto,
   ): Promise<unknown> {
-    const startDate = new Date(query.startDate);
-    const endDate = new Date(query.endDate);
-    endDate.setHours(23, 59, 59, 999);
+    const profile = await this.profileRepository.findById(userId);
+    const tz = profile?.timezone ?? 'UTC';
+
+    // Interpret the YYYY-MM-DD range in the user's timezone, not the server's UTC,
+    // so day boundaries line up with the user's local calendar day.
+    const startDate = startOfDayInTz(query.startDate, tz);
+    const endDate = endOfDayInTz(query.endDate, tz);
 
     return this.queryBus.execute(
       new GetDailyStatsQuery(userId, startDate, endDate, query.accountIds, query.groupBy),
@@ -114,10 +120,13 @@ export class TransactionsController {
     @CurrentUser('sub') userId: string,
     @Query() query: AnalyticsQueryDto,
   ): Promise<unknown> {
-    // Parse dates - endDate should be end of day to include all transactions on that day
-    const startDate = new Date(query.startDate);
-    const endDate = new Date(query.endDate);
-    endDate.setHours(23, 59, 59, 999);
+    const profile = await this.profileRepository.findById(userId);
+    const tz = profile?.timezone ?? 'UTC';
+
+    // Boundaries in the user's timezone: startOfDay/endOfDay map the local calendar
+    // day to the correct UTC instants (e.g. 00:00 UTC+5 → 19:00 UTC the day before).
+    const startDate = startOfDayInTz(query.startDate, tz);
+    const endDate = endOfDayInTz(query.endDate, tz);
 
     return this.queryBus.execute(
       new GetAnalyticsStatsQuery(userId, startDate, endDate, query.accountIds),
