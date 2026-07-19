@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.59';
+export const CURRENT_VERSION = '1.0.60';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,29 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.60',
+    date: '2026-07-19',
+    title: 'Погашение долгов при импорте из Telegram стало удобнее',
+    items: [
+      {
+        type: 'feature',
+        text: 'При погашении долга из импорта долги теперь суммируются по человеку: если у него несколько долгов, платёж закроет их по очереди одной операцией',
+      },
+      {
+        type: 'improvement',
+        text: 'Действия «Это возврат долга?» и «Прикрепить чек» переехали наверх экрана подтверждения — их стало проще найти',
+      },
+      {
+        type: 'improvement',
+        text: 'На экране подтверждения импорта убрана вкладка «Долг» — для долгов используйте погашение или основное приложение',
+      },
+      {
+        type: 'fix',
+        text: 'Исправлено пропадание половины интерфейса при добавлении участника в разделении расхода внутри Telegram',
+      },
+    ],
+  },
   {
     version: '1.0.59',
     date: '2026-07-17',

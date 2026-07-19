@@ -17,6 +17,14 @@ interface CloseAllOptions {
   paymentAmount?: number;
   forgiveRemainder?: boolean;
   excessCategoryId?: string;
+  /** ISO-дата создаваемых транзакций (по умолчанию — сейчас). Для импорта — occurred_at. */
+  transactionDate?: string;
+  /** Вызывается один раз с id первой созданной транзакции (нужен confirm'у импорта). */
+  onTransactionCreated?: (transactionId: string) => void;
+  /** Не показывать тост «Все долги закрыты» при успехе (ошибочный тост остаётся). */
+  skipSuccessToast?: boolean;
+  /** Заголовок тоста ошибки (по умолчанию «Не удалось закрыть все долги»). */
+  errorToastTitle?: string;
 }
 
 export function useCloseAllDebts() {
@@ -95,6 +103,7 @@ export function useCloseAllDebts() {
       }
 
       // Execute payments sequentially (same account — parallel would cause balance race conditions)
+      let firstCreatedTransactionId: string | null = null;
       for (const plan of paymentPlan) {
         const success = await makePartialPayment(
           plan.debt,
@@ -106,6 +115,10 @@ export function useCloseAllDebts() {
             skipToast: true,
             forgiveRemainder: plan.forgive,
             excessCategoryId: plan.excessCategoryId,
+            transactionDate: options?.transactionDate,
+            onTransactionCreated: (id) => {
+              if (!firstCreatedTransactionId) firstCreatedTransactionId = id;
+            },
           },
         );
 
@@ -116,13 +129,22 @@ export function useCloseAllDebts() {
         progress.value++;
       }
 
+      if (firstCreatedTransactionId) {
+        options?.onTransactionCreated?.(firstCreatedTransactionId);
+      }
+
       await invalidateDebtRelated(queryClient, userId);
-      toast({ title: 'Все долги закрыты', variant: 'success' });
+      if (!options?.skipSuccessToast) {
+        toast({ title: 'Все долги закрыты', variant: 'success' });
+      }
       return true;
     } catch (e) {
       console.error('Failed to close all debts:', e);
       error.value = `Ошибка при закрытии долга ${progress.value + 1} из ${total.value}`;
-      toast({ title: 'Не удалось закрыть все долги', variant: 'error' });
+      toast({
+        title: options?.errorToastTitle ?? 'Не удалось закрыть все долги',
+        variant: 'error',
+      });
       // Some payments may have succeeded — restore the snapshot, then refetch
       // the actual partial result from the server.
       if (snapshot) restoreDebtCaches(queryClient, snapshot);

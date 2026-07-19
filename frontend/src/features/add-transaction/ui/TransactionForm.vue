@@ -11,7 +11,6 @@ import type { SplitExpenseData, SplitMethod } from '@/features/split-expense';
 import type { TransactionFormData } from '../model/useTransactionForm';
 import {
   useScrollableTabs,
-  CYCLIC_PANEL_ORDER,
   TRANSACTION_TYPE_ORDER,
   type TransactionType,
 } from '../model/useScrollableTabs';
@@ -44,6 +43,8 @@ const props = defineProps<{
   autofocusAmount?: boolean;
   /** Hide the in-form receipt-scan shortcut (import-confirm uses its own scan button with context). */
   hideScanReceipt?: boolean;
+  /** Hide the "Долг" tab (import-confirm has its own debt-repayment flow instead). Static for the page's lifetime. */
+  hideDebtTab?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -59,12 +60,19 @@ const emit = defineEmits<{
   setSplitEnabled: [enabled: boolean];
 }>();
 
-const tabItems = [
+const ALL_TAB_ITEMS = [
   { id: 'expense', label: 'Расход' },
   { id: 'income', label: 'Доход' },
   { id: 'transfer', label: 'Перевод' },
   { id: 'debt', label: 'Долг' },
 ];
+
+// Static for the page's lifetime (hideDebtTab is not expected to change after mount).
+const typeOrder: readonly TransactionType[] = props.hideDebtTab
+  ? TRANSACTION_TYPE_ORDER.filter((t) => t !== 'debt')
+  : TRANSACTION_TYPE_ORDER;
+
+const tabItems = ALL_TAB_ITEMS.filter((tab) => typeOrder.includes(tab.id as TransactionType));
 
 const type = computed(() => props.formData.type);
 
@@ -79,8 +87,14 @@ function applyTypeChange(newType: string) {
   });
 }
 
-const { scrollContainer, handleTabClick, handleScrollEnd, handleScroll, onCyclicWrap } =
-  useScrollableTabs(type, applyTypeChange);
+const {
+  scrollContainer,
+  handleTabClick,
+  handleScrollEnd,
+  handleScroll,
+  onCyclicWrap,
+  cyclicPanelOrder,
+} = useScrollableTabs(type, applyTypeChange, typeOrder);
 
 // --- Smooth Height Auto-adjust ---
 const containerHeight = ref<string>('auto');
@@ -144,7 +158,7 @@ onCyclicWrap(() => updateContainerHeight(true));
 // ---
 
 // Only real panels (not clones) get autofocus — clones are at index 0 and last
-const realPanelIndices = new Set(TRANSACTION_TYPE_ORDER.map((_, i) => i + 1));
+const realPanelIndices = new Set(typeOrder.map((_, i) => i + 1));
 
 const submitLabel = computed(() => {
   if (props.formData.type === 'transfer') return 'Перевести';
@@ -315,7 +329,7 @@ const { isMounted } = useMountedAnimation();
         @scroll="onScroll"
       >
         <div
-          v-for="(panelType, idx) in CYCLIC_PANEL_ORDER"
+          v-for="(panelType, idx) in cyclicPanelOrder"
           :key="`${panelType}-${idx}`"
           class="min-w-full snap-start px-4 md:px-0"
         >

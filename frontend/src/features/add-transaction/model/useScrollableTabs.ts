@@ -6,15 +6,14 @@ export const TRANSACTION_TYPE_ORDER = ['expense', 'income', 'transfer', 'debt'] 
 export type TransactionType = (typeof TRANSACTION_TYPE_ORDER)[number];
 
 // Generated from TRANSACTION_TYPE_ORDER: [last_clone, ...real, first_clone]
-export const CYCLIC_PANEL_ORDER: TransactionType[] = [
-  TRANSACTION_TYPE_ORDER[TRANSACTION_TYPE_ORDER.length - 1],
-  ...TRANSACTION_TYPE_ORDER,
-  TRANSACTION_TYPE_ORDER[0],
-];
+export const CYCLIC_PANEL_ORDER: TransactionType[] = buildCyclicPanelOrder(TRANSACTION_TYPE_ORDER);
+
+/** [last_clone, ...real, first_clone] for an arbitrary type order (used by useScrollableTabs). */
+export function buildCyclicPanelOrder(typeOrder: readonly TransactionType[]): TransactionType[] {
+  return [typeOrder[typeOrder.length - 1], ...typeOrder, typeOrder[0]];
+}
 
 const REAL_START = 1;
-const REAL_END = CYCLIC_PANEL_ORDER.length - 2;
-const PANEL_COUNT = CYCLIC_PANEL_ORDER.length;
 // Must be > one Vue reactivity tick but short enough to not block user swipe detection
 const WATCHER_GUARD_MS = 100;
 // Subpixel rounding (HiDPI, zoom) can leave scrollLeft within a couple of pixels of the target.
@@ -25,7 +24,12 @@ const POLL_MAX_FRAMES = 120;
 export function useScrollableTabs(
   type: Ref<TransactionType>,
   onTypeChange: (type: TransactionType) => void,
+  typeOrder: readonly TransactionType[] = TRANSACTION_TYPE_ORDER,
 ) {
+  const cyclicPanelOrder = buildCyclicPanelOrder(typeOrder);
+  const REAL_END = cyclicPanelOrder.length - 2;
+  const PANEL_COUNT = cyclicPanelOrder.length;
+
   const { trigger } = useHaptics();
   const scrollContainer = ref<HTMLElement | null>(null);
   let isScrollingProgrammatically = false;
@@ -47,7 +51,7 @@ export function useScrollableTabs(
   }
 
   function getRealIndex(t: TransactionType): number {
-    return REAL_START + TRANSACTION_TYPE_ORDER.indexOf(t);
+    return REAL_START + typeOrder.indexOf(t);
   }
 
   function scrollToIndex(index: number, smooth = true) {
@@ -104,7 +108,7 @@ export function useScrollableTabs(
     if (index <= 0) {
       isWrapping = true;
       jumpToIndex(REAL_END);
-      onTypeChange(CYCLIC_PANEL_ORDER[REAL_END]);
+      onTypeChange(cyclicPanelOrder[REAL_END]);
       isWrapping = false;
       nextTick(() => onWrapCallback?.());
       return true;
@@ -114,7 +118,7 @@ export function useScrollableTabs(
     if (index >= PANEL_COUNT - 1) {
       isWrapping = true;
       jumpToIndex(REAL_START);
-      onTypeChange(CYCLIC_PANEL_ORDER[REAL_START]);
+      onTypeChange(cyclicPanelOrder[REAL_START]);
       isWrapping = false;
       nextTick(() => onWrapCallback?.());
       return true;
@@ -138,7 +142,7 @@ export function useScrollableTabs(
 
     const index = getCurrentIndex();
     const clampedIndex = Math.max(REAL_START, Math.min(index, REAL_END));
-    const newType = CYCLIC_PANEL_ORDER[clampedIndex];
+    const newType = cyclicPanelOrder[clampedIndex];
 
     if (newType !== type.value) {
       trigger('selection');
@@ -151,7 +155,7 @@ export function useScrollableTabs(
   }
 
   function handleTabClick(clickedType: TransactionType) {
-    const rawIndex = TRANSACTION_TYPE_ORDER.indexOf(clickedType);
+    const rawIndex = typeOrder.indexOf(clickedType);
     if (rawIndex === -1) return;
     const index = REAL_START + rawIndex;
     onTypeChange(clickedType);
@@ -245,5 +249,6 @@ export function useScrollableTabs(
     handleScrollEnd,
     handleScroll,
     onCyclicWrap,
+    cyclicPanelOrder,
   };
 }

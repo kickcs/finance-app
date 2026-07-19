@@ -1,6 +1,20 @@
 import { onBeforeUnmount, type Ref } from 'vue';
 
 /**
+ * Computes the drawer's bottom offset from visualViewport geometry.
+ * `offsetTop` accounts for hosts (e.g. Telegram iOS) that already pan the
+ * viewport up themselves — only the uncovered part of the keyboard is offset.
+ */
+export function computeKeyboardGeometry(
+  innerHeight: number,
+  viewportHeight: number,
+  offsetTop: number,
+): { keyboardVisible: boolean; offset: number } {
+  const raw = innerHeight - viewportHeight;
+  return { keyboardVisible: raw > 0, offset: Math.max(0, raw - offsetTop) };
+}
+
+/**
  * Manages iOS virtual keyboard adjustment for vaul-vue bottom drawers.
  * Uses direct DOM manipulation (not reactive state) to avoid Vue re-renders
  * that cause input focus loss when the keyboard appears.
@@ -24,11 +38,20 @@ export function useDrawerKeyboard(
     const onResize = () => {
       const footerEl = footerRef.value;
       const scrollEl = scrollContainerRef.value;
-      const offset = Math.max(0, window.innerHeight - vv.height);
-      const keyboardVisible = offset > 0;
+      const { keyboardVisible, offset } = computeKeyboardGeometry(
+        window.innerHeight,
+        vv.height,
+        vv.offsetTop,
+      );
       drawerEl.style.bottom = keyboardVisible ? `${offset}px` : '';
-      drawerEl.style.top = keyboardVisible ? 'env(safe-area-inset-top, 0px)' : '';
-      drawerEl.style.maxHeight = keyboardVisible ? `${window.innerHeight - offset}px` : '';
+      // top учитывает пан вьюпорта (Telegram iOS): видимая область начинается
+      // с vv.offsetTop, иначе top+bottom over-constrained и шторка уезжает вверх.
+      drawerEl.style.top = keyboardVisible
+        ? `calc(env(safe-area-inset-top, 0px) + ${vv.offsetTop}px)`
+        : '';
+      // vv.height — реально видимая высота (не innerHeight - offset, который
+      // при пане завышен на offsetTop).
+      drawerEl.style.maxHeight = keyboardVisible ? `${vv.height}px` : '';
       if (footerEl) footerEl.style.paddingBottom = keyboardVisible ? '0.75rem' : '';
       if (scrollEl) scrollEl.style.paddingBottom = keyboardVisible ? '1rem' : '';
       if (keyboardVisible && !wasKeyboardVisible) {
