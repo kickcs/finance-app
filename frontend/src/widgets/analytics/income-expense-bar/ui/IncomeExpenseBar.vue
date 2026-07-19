@@ -54,7 +54,7 @@ const animatedBalance = computed(() => animatedIncome.value - animatedExpense.va
 </script>
 
 <template>
-  <UCard class="p-5 space-y-4">
+  <UCard class="p-4 space-y-3">
     <!-- Loading -->
     <template v-if="loading">
       <div v-for="i in 2" :key="i" class="space-y-2">
