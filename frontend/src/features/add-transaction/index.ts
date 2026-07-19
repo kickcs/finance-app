@@ -4,3 +4,7 @@ export { useSubmitTransaction } from './model/useSubmitTransaction';
 export { useDebtForm } from './model/useDebtForm';
 export type { TransactionFormData } from './model/useTransactionForm';
 export type { DebtFormData } from './model/useDebtForm';
+export { default as HeroAmount } from './ui/HeroAmount.vue';
+export { default as TransferPanel } from './ui/TransferPanel.vue';
+export { usePanelState } from './model/usePanelState';
+export { useHashtagSuggestions } from './model/useHashtagSuggestions';

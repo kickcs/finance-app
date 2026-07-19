@@ -15,8 +15,6 @@ const props = defineProps<{
   splitData?: SplitExpenseData;
   splitValidationError?: string | null;
   autofocusAmount?: boolean;
-  /** Hide the icon-only receipt-scan shortcut (import-confirm provides its own context-aware scan). */
-  hideScanReceipt?: boolean;
 }>();
 const emit = defineEmits<{
   'update:formData': [value: TransactionFormData];
@@ -187,7 +185,6 @@ const dashedBtnBase =
 
       <!-- Scan receipt button (icon only) -->
       <button
-        v-if="!hideScanReceipt"
         type="button"
         aria-label="Сканировать чек"
         :class="[
