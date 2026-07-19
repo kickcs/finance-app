@@ -90,7 +90,7 @@ const centerInfo = computed(() => {
 </script>
 
 <template>
-  <UCard padding="lg">
+  <UCard padding="md">
     <!-- Chart -->
     <div class="flex justify-center">
       <div class="relative">

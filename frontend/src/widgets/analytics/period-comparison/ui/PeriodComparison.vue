@@ -73,7 +73,7 @@ function deltaIcon(row: ComparisonRow): string {
 </script>
 
 <template>
-  <UCard class="p-5">
+  <UCard class="p-4">
     <h3 class="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark mb-4">
       Сравнение с прошлым периодом
     </h3>

@@ -415,7 +415,7 @@ onMounted(() => {
     <!-- Content with swipe + slide transition -->
     <main
       ref="swipeContent"
-      class="pt-4 pb-28 md:pb-8"
+      class="pt-3 pb-28 md:pb-8"
       @touchstart="onSwipeTouchStart"
       @touchend="onSwipeTouchEnd"
     >
@@ -437,7 +437,7 @@ onMounted(() => {
       </Transition>
 
       <Transition :name="transitionName" mode="out-in">
-        <div :key="transitionKey" class="space-y-4">
+        <div :key="transitionKey" class="space-y-3">
           <!-- Empty state -->
           <UCard v-if="hasNoData" variant="bordered" class="py-8">
             <EmptyState
@@ -449,7 +449,7 @@ onMounted(() => {
 
           <template v-else>
             <!-- === OVERVIEW SECTION === -->
-            <div class="flex flex-col lg:grid lg:grid-cols-2 lg:gap-4 space-y-4 lg:space-y-0">
+            <div class="flex flex-col lg:grid lg:grid-cols-2 lg:gap-4 space-y-3 lg:space-y-0">
               <div class="lg:col-span-2">
                 <IncomeExpenseBar
                   :income="convertedIncome"
@@ -487,7 +487,7 @@ onMounted(() => {
             </div>
 
             <!-- === CATEGORIES SECTION === -->
-            <div class="border-t border-border-light/50 dark:border-border-dark/50 pt-4 space-y-4">
+            <div class="border-t border-border-light/50 dark:border-border-dark/50 pt-3 space-y-3">
               <UTabs
                 :model-value="categoryType"
                 :items="categoryTypeItems"
@@ -520,9 +520,9 @@ onMounted(() => {
             <!-- === TRENDS SECTION === -->
             <template v-if="showTrendsChart">
               <div
-                class="border-t border-border-light/50 dark:border-border-dark/50 pt-4 space-y-4"
+                class="border-t border-border-light/50 dark:border-border-dark/50 pt-3 space-y-3"
               >
-                <div class="flex flex-col lg:flex-row lg:gap-4 space-y-4 lg:space-y-0">
+                <div class="flex flex-col lg:flex-row lg:gap-4 space-y-3 lg:space-y-0">
                   <div class="lg:flex-1">
                     <DailyExpenseChart
                       :entries="chartEntries"

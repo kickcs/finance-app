@@ -39,10 +39,10 @@ const ch = H - P.t - P.b;
 const hasEntries = computed(() => props.entries.length > 0);
 const hasBudget = computed(() => props.budgetAmount > 0);
 
-// Y-axis ceiling with headroom
+// Y-axis ceiling with headroom (accounts for projected total so the forecast line fits)
 const ceil = computed(() => {
   if (!hasEntries.value) return 1;
-  const peak = Math.max(...props.entries.map((e) => e.actual), 0);
+  const peak = Math.max(...props.entries.map((e) => e.actual), projection.value ?? 0, 0);
   if (hasBudget.value) return Math.max(props.budgetAmount, peak) * 1.12 || 1;
   return peak * 1.2 || 1;
 });
@@ -87,6 +87,14 @@ const lastEntry = computed(() =>
   hasEntries.value ? props.entries[props.entries.length - 1] : null,
 );
 
+// --- Projection: total spend at the current pace by the end of the period.
+// Only meaningful mid-period (for past periods lastEntry.day reaches totalDays).
+const projection = computed(() => {
+  const last = lastEntry.value;
+  if (!last || last.day <= 0 || last.day >= props.totalDays || last.actual <= 0) return null;
+  return (last.actual / last.day) * props.totalDays;
+});
+
 // --- Zone coloring ---
 const ratio = computed(() => {
   if (!lastEntry.value || !hasBudget.value) return 0;
@@ -107,6 +115,36 @@ const color = computed(() => {
     warning: 'var(--color-warning)',
     danger: 'var(--color-danger)',
   }[zone.value];
+});
+
+// Projection turns red when the pace leads past the budget
+const projColor = computed(() =>
+  hasBudget.value && projection.value !== null && projection.value > props.budgetAmount
+    ? 'var(--color-danger)'
+    : color.value,
+);
+
+const projPath = computed(() => {
+  const last = lastEntry.value;
+  if (projection.value === null || !last) return '';
+  return `M${sx(last.day)},${sy(last.actual)} L${sx(props.totalDays)},${sy(projection.value)}`;
+});
+
+// Endpoint label; dodges the "Бюджет" caption and the top edge
+const projLabel = computed(() => {
+  if (projection.value === null) return null;
+  const pointY = sy(projection.value);
+  let y = pointY - 8;
+  const budgetLabelY = hasBudget.value ? sy(props.budgetAmount) - 5 : null;
+  if (y < P.t + 10 || (budgetLabelY !== null && Math.abs(y - budgetLabelY) < 12)) {
+    y = pointY + 14;
+  }
+  return {
+    x: sx(props.totalDays) - 7,
+    y,
+    pointY,
+    text: `≈ ${formatCurrency(projection.value, props.currency, COMPACT_FORMAT)}`,
+  };
 });
 
 // --- Deviation summary ---
@@ -197,9 +235,9 @@ const yTicks = computed(() => {
 </script>
 
 <template>
-  <UCard class="p-5">
+  <UCard class="p-4">
     <!-- Header -->
-    <div class="flex items-center justify-between mb-3">
+    <div class="flex items-center justify-between mb-2">
       <h3 class="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark">
         Темп расходов
       </h3>
@@ -209,7 +247,7 @@ const yTicks = computed(() => {
     </div>
 
     <!-- Legend -->
-    <div v-if="!loading && hasEntries" class="flex items-center gap-4 mb-3">
+    <div v-if="!loading && hasEntries" class="flex items-center gap-4 mb-2">
       <div v-if="hasBudget" class="flex items-center gap-1.5">
         <svg width="20" height="2" class="shrink-0">
           <line
@@ -238,6 +276,21 @@ const yTicks = computed(() => {
           />
         </svg>
         <span class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">Факт</span>
+      </div>
+      <div v-if="projection !== null" class="flex items-center gap-1.5">
+        <svg width="20" height="2" class="shrink-0">
+          <line
+            x1="0"
+            y1="1"
+            x2="20"
+            y2="1"
+            :stroke="projColor"
+            stroke-dasharray="2 4"
+            stroke-width="1.8"
+            stroke-linecap="round"
+          />
+        </svg>
+        <span class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">Прогноз</span>
       </div>
     </div>
 
@@ -350,6 +403,36 @@ const yTicks = computed(() => {
             stroke-linejoin="round"
           />
 
+          <!-- Projection line: current pace extended to the end of the period -->
+          <template v-if="projPath && projLabel">
+            <path
+              :d="projPath"
+              fill="none"
+              :stroke="projColor"
+              stroke-width="1.8"
+              stroke-dasharray="2 4"
+              stroke-linecap="round"
+              opacity="0.85"
+            />
+            <circle
+              :cx="sx(totalDays)"
+              :cy="projLabel.pointY"
+              r="3"
+              :fill="projColor"
+              class="stroke-card-light dark:stroke-card-dark"
+              stroke-width="1.5"
+            />
+            <text
+              :x="projLabel.x"
+              :y="projLabel.y"
+              text-anchor="end"
+              :fill="projColor"
+              style="font-size: 10px; font-weight: 600"
+            >
+              {{ projLabel.text }}
+            </text>
+          </template>
+
           <!-- Today vertical marker -->
           <line
             v-if="todayX !== null"
@@ -437,24 +520,39 @@ const yTicks = computed(() => {
       </div>
 
       <!-- Status summary -->
-      <div v-if="hasBudget" class="mt-2 flex items-center gap-2">
-        <span class="w-2 h-2 rounded-full shrink-0" :style="{ backgroundColor: color }" />
-        <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
-          <template v-if="deviation < 1">Точно по плану</template>
-          <template v-else-if="ratio > 1">
-            На
-            <span class="font-medium text-danger">
-              {{ formatCurrency(deviation, currency, COMPACT_FORMAT) }}
-            </span>
-            больше идеала
-          </template>
-          <template v-else>
-            На
-            <span class="font-medium text-success">
-              {{ formatCurrency(deviation, currency, COMPACT_FORMAT) }}
-            </span>
-            меньше идеала
-          </template>
+      <div
+        v-if="hasBudget || projection !== null"
+        class="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1"
+      >
+        <template v-if="hasBudget">
+          <span class="w-2 h-2 rounded-full shrink-0" :style="{ backgroundColor: color }" />
+          <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
+            <template v-if="deviation < 1">Точно по плану</template>
+            <template v-else-if="ratio > 1">
+              На
+              <span class="font-medium text-danger">
+                {{ formatCurrency(deviation, currency, COMPACT_FORMAT) }}
+              </span>
+              больше идеала
+            </template>
+            <template v-else>
+              На
+              <span class="font-medium text-success">
+                {{ formatCurrency(deviation, currency, COMPACT_FORMAT) }}
+              </span>
+              меньше идеала
+            </template>
+          </span>
+        </template>
+        <span
+          v-if="projection !== null"
+          class="text-sm text-text-secondary-light dark:text-text-secondary-dark whitespace-nowrap"
+        >
+          <template v-if="hasBudget">·&nbsp;</template>
+          К концу периода:
+          <span class="font-medium" :style="{ color: projColor }">
+            ≈ {{ formatCurrency(projection, currency, COMPACT_FORMAT) }}
+          </span>
         </span>
       </div>
     </template>
