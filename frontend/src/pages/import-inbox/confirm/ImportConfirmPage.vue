@@ -1,7 +1,14 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import { UButton, UIcon, NotFoundState, ConfirmDeleteModal, useToast } from '@/shared/ui';
+import {
+  UButton,
+  UIcon,
+  IconBadge,
+  NotFoundState,
+  ConfirmDeleteModal,
+  useToast,
+} from '@/shared/ui';
 import { AppHeader } from '@/widgets/header';
 import {
   TransactionForm,
@@ -11,8 +18,8 @@ import {
 import { useSplitExpense } from '@/features/split-expense';
 import { useAccounts } from '@/entities/account';
 import { useCategories } from '@/entities/category';
-import { useDebts, getDebtDisplayName } from '@/entities/debt';
-import { usePartialPayment } from '@/features/partial-payment';
+import { useDebts } from '@/entities/debt';
+import { useCloseAllDebts } from '@/features/close-debt';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { navigateBackTo } from '@/app/router';
@@ -20,10 +27,14 @@ import { ROUTE_NAMES } from '@/app/router/routeNames';
 import { formatRelativeDate } from '@/shared/lib/format/date';
 import { useTelegramBackButton } from '@/shared/lib/telegram/useTelegramBackButton';
 import { useImportedTransactions, type ImportedTransaction } from '@/entities/imported-transaction';
-import type { Debt } from '@/shared/api/database.types';
 import { useInboxSortOrder } from '../model/useInboxSortOrder';
 import { decideCategoryPrefill } from '../model/categoryPrefill';
-import { eligibleDebtsForImport, findExactRepaymentMatch } from '../model/debtRepayment';
+import {
+  eligibleRepaymentGroupsForImport,
+  findExactRepaymentMatch,
+  debtsCountLabel,
+  type RepaymentGroup,
+} from '../model/debtRepayment';
 import DebtRepaymentSheet from './DebtRepaymentSheet.vue';
 
 const router = useRouter();
@@ -74,31 +85,34 @@ const {
 
 // --- Погашение существующего долга -------------------------------------------
 const { debts } = useDebts(userId);
-const { makePartialPayment, isPaying } = usePartialPayment();
+const { closeAllDebts, isClosing } = useCloseAllDebts();
 const showRepaymentSheet = ref(false);
 const repaymentSuggestionDismissed = ref(false);
 // Retry-bookkeeping отдельно от createdTransactionId (обычного сабмита):
 // платёж прошёл, confirm упал → повтор не должен создать второй платёж.
 const repaymentTransactionId = ref<string | null>(null);
 
-const eligibleDebts = computed(() =>
-  item.value ? eligibleDebtsForImport(debts.value, item.value) : [],
+const eligibleGroups = computed(() =>
+  item.value ? eligibleRepaymentGroupsForImport(debts.value, item.value) : [],
 );
-const repaymentMatch = computed(() =>
+const repaymentMatch = computed<RepaymentGroup | null>(() =>
   item.value && !repaymentSuggestionDismissed.value
-    ? findExactRepaymentMatch(debts.value, item.value)
+    ? findExactRepaymentMatch(eligibleGroups.value, item.value)
     : null,
 );
 const repaymentMatchText = computed(() => {
   const match = repaymentMatch.value;
   if (!match) return '';
-  return match.debt_type === 'given'
-    ? `Похоже, это возврат долга от ${getDebtDisplayName(match)}`
-    : `Похоже, это возврат вашего долга: ${getDebtDisplayName(match)}`;
+  const base =
+    match.debtType === 'given'
+      ? `Похоже, это возврат долга от ${match.personName}`
+      : `Похоже, это возврат вашего долга: ${match.personName}`;
+  if (match.debts.length <= 1) return base;
+  return `${base} (${debtsCountLabel(match.debts.length)})`;
 });
 
-async function repayDebt(debt: Debt) {
-  if (isPaying.value || isSubmitting.value) return;
+async function repayGroup(group: RepaymentGroup) {
+  if (isClosing.value || isSubmitting.value) return;
   const current = item.value;
   if (!current || !userId.value) return;
   showRepaymentSheet.value = false;
@@ -115,13 +129,16 @@ async function repayDebt(debt: Debt) {
   let transactionId = repaymentTransactionId.value;
   if (!transactionId) {
     let created: string | null = null;
-    const ok = await makePartialPayment(debt, amount, formData.value.accountId, userId.value, {
+    const ok = await closeAllDebts(group.debts, formData.value.accountId, userId.value, {
+      paymentAmount: amount,
       transactionDate: current.occurred_at ?? undefined,
       onTransactionCreated: (id) => {
         created = id;
       },
+      skipSuccessToast: true,
+      errorToastTitle: 'Не удалось провести платёж',
     });
-    // Ошибка уже показана тостом внутри usePartialPayment.
+    // Ошибка уже показана тостом внутри closeAllDebts.
     if (!ok || !created) return;
     transactionId = created;
     repaymentTransactionId.value = created;
@@ -141,6 +158,7 @@ async function repayDebt(debt: Debt) {
     return;
   }
 
+  toast({ title: 'Платёж проведён', variant: 'success' });
   repaymentTransactionId.value = null;
   goTo(next);
 }
@@ -261,9 +279,6 @@ async function handleSubmit() {
 
   validationError.value = null;
 
-  // Debt has its own submit flow inside DebtPanel (see onDebtSubmitted).
-  if (formData.value.type === 'debt') return;
-
   if (!formData.value.accountId) {
     validationError.value = 'Выберите счёт для транзакции';
     return;
@@ -335,30 +350,6 @@ async function handleSubmit() {
   createdTransactionId.value = null;
   splitDebtsCreated.value = false;
   resetSplit();
-  goTo(next);
-}
-
-// DebtPanel creates the debt (and its own transaction) itself and does not
-// hand back a transactionId, so we cannot mark the import "confirmed" with a
-// linked transaction. The import is nonetheless handled — dismiss it from the
-// inbox so it stops asking for review.
-async function onDebtSubmitted() {
-  const current = item.value;
-  const next = computeNext();
-  if (!current) {
-    goTo(next);
-    return;
-  }
-  try {
-    await dismissImported(current.id);
-  } catch {
-    /* non-fatal: the debt is already created, inbox will refetch later */
-  }
-  toast({
-    title: 'Долг создан',
-    description: 'Импорт обработан.',
-    variant: 'success',
-  });
   goTo(next);
 }
 
@@ -486,8 +477,8 @@ function toScanReceipt() {
           </p>
           <UButton
             size="sm"
-            :disabled="isPaying || isSubmitting"
-            @click="repayDebt(repaymentMatch)"
+            :disabled="isClosing || isSubmitting"
+            @click="repayGroup(repaymentMatch)"
           >
             Применить
           </UButton>
@@ -501,6 +492,55 @@ function toScanReceipt() {
           </button>
         </section>
 
+        <!-- Quick actions -->
+        <section
+          class="rounded-2xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark overflow-hidden animate-fadeInUp divide-y divide-border-light dark:divide-border-dark"
+        >
+          <button
+            v-if="eligibleGroups.length > 0 && !repaymentMatch"
+            type="button"
+            class="w-full flex items-center gap-3 px-3.5 py-3 text-left active:bg-surface-light dark:active:bg-surface-dark transition-colors"
+            :disabled="isClosing || isSubmitting"
+            @click="showRepaymentSheet = true"
+          >
+            <IconBadge icon="handshake" color="#4f46e5" />
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
+                Это возврат долга?
+              </p>
+              <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
+                Зачесть сумму в счёт долга
+              </p>
+            </div>
+            <UIcon
+              name="chevron_right"
+              size="sm"
+              class="text-text-tertiary-light dark:text-text-tertiary-dark shrink-0"
+            />
+          </button>
+
+          <button
+            type="button"
+            class="w-full flex items-center gap-3 px-3.5 py-3 text-left active:bg-surface-light dark:active:bg-surface-dark transition-colors"
+            @click="toScanReceipt"
+          >
+            <IconBadge icon="document_scanner" color="#4f46e5" />
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
+                Прикрепить чек
+              </p>
+              <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
+                Детали заполнятся из чека автоматически
+              </p>
+            </div>
+            <UIcon
+              name="chevron_right"
+              size="sm"
+              class="text-text-tertiary-light dark:text-text-tertiary-dark shrink-0"
+            />
+          </button>
+        </section>
+
         <!-- Transaction form (mirrors AddTransactionPage) -->
         <TransactionForm
           v-model:form-data="formData"
@@ -509,13 +549,13 @@ function toScanReceipt() {
           :income-categories="incomeCategories"
           :user-currency="userCurrency"
           :hide-scan-receipt="true"
+          :hide-debt-tab="true"
           :is-submitting="isSubmitting"
           :is-valid="isValid"
           :error="validationError"
           :split-data="splitData"
           :split-validation-error="splitValidationError"
           @submit="handleSubmit"
-          @debt-submitted="onDebtSubmitted"
           @add-participant="addParticipant"
           @remove-participant="removeParticipant"
           @update-participant-amount="updateParticipantAmount"
@@ -525,37 +565,16 @@ function toScanReceipt() {
           @set-split-enabled="setSplitEnabled"
         />
 
-        <!-- Secondary actions -->
-        <div class="space-y-2">
-          <UButton
-            v-if="eligibleDebts.length > 0 && formData.type !== 'debt'"
-            variant="outline"
-            size="md"
-            full-width
-            :disabled="isPaying || isSubmitting"
-            @click="showRepaymentSheet = true"
-          >
-            <UIcon name="handshake" size="sm" class="mr-1.5" />
-            Погашение долга
-          </UButton>
-
-          <div class="grid grid-cols-2 gap-2">
-            <UButton variant="outline" size="md" full-width @click="toScanReceipt">
-              <UIcon name="document_scanner" size="sm" class="mr-1.5" />
-              Скан чека
-            </UButton>
-
-            <UButton
-              variant="ghost"
-              size="md"
-              full-width
-              class="text-danger"
-              @click="showDismissConfirm = true"
-            >
-              Отклонить
-            </UButton>
-          </div>
-        </div>
+        <!-- Reject -->
+        <UButton
+          variant="ghost"
+          size="md"
+          full-width
+          class="text-danger"
+          @click="showDismissConfirm = true"
+        >
+          Отклонить
+        </UButton>
       </div>
     </main>
 
@@ -570,8 +589,10 @@ function toScanReceipt() {
 
     <DebtRepaymentSheet
       v-model:open="showRepaymentSheet"
-      :debts="eligibleDebts"
-      @select="repayDebt"
+      :groups="eligibleGroups"
+      :amount="Math.abs(item?.amount ?? 0)"
+      :currency="item?.currency ?? userCurrency ?? 'USD'"
+      @select="repayGroup"
     />
   </div>
 </template>
