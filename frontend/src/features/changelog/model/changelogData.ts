@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.60';
+export const CURRENT_VERSION = '1.0.61';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,17 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.61',
+    date: '2026-07-19',
+    title: 'Экран подтверждения импорта стал компактнее',
+    items: [
+      {
+        type: 'improvement',
+        text: 'Экран подтверждения импорта из Telegram стал компактнее — всё помещается на один экран, поля редактируются по тапу',
+      },
+    ],
+  },
   {
     version: '1.0.60',
     date: '2026-07-19',

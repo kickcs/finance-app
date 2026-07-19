@@ -1,34 +1,34 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, defineAsyncComponent, ref, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import {
-  UButton,
-  UIcon,
-  IconBadge,
-  NotFoundState,
-  ConfirmDeleteModal,
-  useToast,
-} from '@/shared/ui';
+import { UButton, UIcon, NotFoundState, ConfirmDeleteModal, useToast } from '@/shared/ui';
 import { AppHeader } from '@/widgets/header';
 import {
-  TransactionForm,
   useTransactionForm,
   useSubmitTransaction,
+  HeroAmount,
+  TransferPanel,
+  usePanelState,
 } from '@/features/add-transaction';
 import { useSplitExpense } from '@/features/split-expense';
-import { useAccounts } from '@/entities/account';
-import { useCategories } from '@/entities/category';
+import { useAccounts, AccountPickerSheet } from '@/entities/account';
+import { useCategories, CategoryPickerSheet } from '@/entities/category';
 import { useDebts } from '@/entities/debt';
 import { useCloseAllDebts } from '@/features/close-debt';
+import { useHashtags } from '@/entities/transaction';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { navigateBackTo } from '@/app/router';
 import { ROUTE_NAMES } from '@/app/router/routeNames';
-import { formatRelativeDate } from '@/shared/lib/format/date';
+import { formatDate, formatRelativeDate } from '@/shared/lib/format/date';
+import { Popover, PopoverTrigger, PopoverContent } from '@/shared/ui/primitives/popover';
+import { Calendar } from '@/shared/ui/primitives/calendar';
+import { CalendarDate, type DateValue } from '@internationalized/date';
 import { useTelegramBackButton } from '@/shared/lib/telegram/useTelegramBackButton';
 import { useImportedTransactions, type ImportedTransaction } from '@/entities/imported-transaction';
 import { useInboxSortOrder } from '../model/useInboxSortOrder';
 import { decideCategoryPrefill } from '../model/categoryPrefill';
+import { reviewRows } from '../model/reviewRows';
 import {
   eligibleRepaymentGroupsForImport,
   findExactRepaymentMatch,
@@ -36,6 +36,13 @@ import {
   type RepaymentGroup,
 } from '../model/debtRepayment';
 import DebtRepaymentSheet from './DebtRepaymentSheet.vue';
+import ReviewFieldRow from './ReviewFieldRow.vue';
+import TypeSheet from './TypeSheet.vue';
+import CommentSheet from './CommentSheet.vue';
+
+const SplitExpenseDrawer = defineAsyncComponent(
+  () => import('@/features/split-expense/ui/SplitExpenseDrawer.vue'),
+);
 
 const router = useRouter();
 const route = useRoute();
@@ -163,6 +170,99 @@ async function repayGroup(group: RepaymentGroup) {
   goTo(next);
 }
 
+// --- Чеклист-ревью: UI-стейт шторок и производные значения -------------------
+const typeSheetOpen = ref(false);
+const accountSheetOpen = ref(false);
+const categorySheetOpen = ref(false);
+const commentSheetOpen = ref(false);
+const splitDrawerOpen = ref(false);
+const calendarOpen = ref(false);
+
+const rows = computed(() => reviewRows(formData.value.type));
+
+// Состояние счёта/валюты/баланса для HeroAmount — тот же usePanelState, что в панелях.
+const {
+  selectedAccount,
+  availableCurrencies,
+  isMultiCurrency,
+  currencySymbol,
+  currentBalance,
+  hasSufficientFunds,
+  handleAccountChange,
+} = usePanelState(
+  {
+    get formData() {
+      return formData.value;
+    },
+    get accounts() {
+      return accounts.value;
+    },
+  },
+  (_event, value) => {
+    formData.value = value;
+  },
+);
+
+const { hashtags } = useHashtags(userId);
+
+const categoriesPool = computed(() =>
+  formData.value.type === 'income' ? incomeCategories.value : expenseCategories.value,
+);
+const selectedCategory = computed(
+  () => categoriesPool.value.find((c) => c.id === formData.value.categoryId) ?? null,
+);
+
+const displayDate = computed(() => formatDate(formData.value.date, { format: 'short' }));
+const calendarValue = computed(() => {
+  const d = new Date(formData.value.date);
+  return new CalendarDate(d.getFullYear(), d.getMonth() + 1, d.getDate());
+});
+
+function onCalendarSelect(value: DateValue | undefined) {
+  if (!value) return;
+  const date = new Date(value.year, value.month - 1, value.day);
+  updateField('date', date.getTime());
+  calendarOpen.value = false;
+}
+
+// CategoryPickerSheet по контракту не закрывает себя сам — закрытие на родителе
+// (см. CategoryPicker.selectCategory).
+function selectCategory(categoryId: string) {
+  updateField('categoryId', categoryId);
+  categorySheetOpen.value = false;
+}
+
+const reviewType = computed<'expense' | 'income' | 'transfer'>(() =>
+  formData.value.type === 'income' || formData.value.type === 'transfer'
+    ? formData.value.type
+    : 'expense',
+);
+
+const typeLabel = computed(() => {
+  if (reviewType.value === 'income') return 'Доход';
+  if (reviewType.value === 'transfer') return 'Перевод';
+  return 'Расход';
+});
+
+// Смена типа: сброс категории/целевого счёта — как applyTypeChange в TransactionForm;
+// настроенное разделение применимо только к расходу, сбрасываем явно.
+function applyType(newType: 'expense' | 'income' | 'transfer') {
+  if (newType === formData.value.type) return;
+  if (formData.value.type === 'expense' && splitData.value.enabled) {
+    setSplitEnabled(false);
+  }
+  setType(newType);
+}
+
+const hasSplit = computed(
+  () => !!splitData.value.enabled && splitData.value.participants.length > 0,
+);
+const splitChipLabel = computed(() =>
+  hasSplit.value
+    ? `Разделено на ${splitData.value.participants.length + (splitData.value.isIncluded ? 1 : 0)}`
+    : 'Разделить',
+);
+
 // --- Prefill the transaction form from the imported operation ---------------
 // Keyed on the item id so a background inbox refetch (same op) never wipes
 // in-progress edits — only a genuine switch to another import re-prefills.
@@ -240,6 +340,9 @@ const isBalanceChange = computed(() => item.value?.type === 'balance_change');
 const needsManualAmount = computed(() => isBalanceChange.value && item.value?.amount === null);
 const relativeDate = computed(() =>
   item.value?.occurred_at ? formatRelativeDate(new Date(item.value.occurred_at)) : '',
+);
+const provenanceTitle = computed(
+  () => item.value?.merchant || (isBalanceChange.value ? 'Изменение баланса' : 'Операция по карте'),
 );
 
 // --- Navigation between pending imports --------------------------------------
@@ -402,9 +505,7 @@ function toScanReceipt() {
     </div>
 
     <!-- Content -->
-    <main
-      class="flex-1 overflow-y-auto px-4 md:px-8 pt-2 md:pt-4 pb-[max(1.5rem,calc(env(safe-area-inset-bottom)+0.75rem))]"
-    >
+    <main class="flex-1 overflow-y-auto px-4 md:px-8 pt-2 md:pt-4 pb-4">
       <!-- Not found -->
       <NotFoundState
         v-if="!isLoading && !item"
@@ -418,40 +519,62 @@ function toScanReceipt() {
         v-else-if="item"
         class="md:max-w-xl md:mx-auto md:bg-card-light md:dark:bg-card-dark md:rounded-3xl md:shadow-sm md:border md:border-border-light md:dark:border-border-dark md:p-6 md:mt-2 space-y-3"
       >
-        <!-- Provenance / context card (single compact row) -->
+        <!-- Хиро-зона: происхождение + сумма + тип -->
         <section
-          class="rounded-2xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark overflow-hidden animate-fadeInUp"
+          class="rounded-2xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3.5 pt-2.5 pb-3 animate-fadeInUp"
         >
-          <div class="flex items-center gap-3 px-3.5 py-2.5">
-            <div
-              class="w-9 h-9 rounded-xl bg-primary-light flex items-center justify-center shrink-0"
+          <div
+            class="flex items-center justify-center gap-1.5 text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
+          >
+            <span
+              class="truncate font-medium text-text-secondary-light dark:text-text-secondary-dark"
             >
-              <UIcon name="telegram" size="sm" class="text-primary" />
-            </div>
-            <div class="flex-1 min-w-0">
-              <p
-                class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark truncate"
-              >
-                {{ item.merchant || (isBalanceChange ? 'Изменение баланса' : 'Операция по карте') }}
-              </p>
-              <div
-                class="mt-0.5 flex items-center gap-1.5 text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
-              >
-                <span class="shrink-0 text-primary font-medium">Из Telegram</span>
-                <span aria-hidden="true">·</span>
-                <span class="truncate">{{ item.card_mask }}</span>
-                <template v-if="relativeDate">
-                  <span aria-hidden="true">·</span>
-                  <span class="shrink-0">{{ relativeDate }}</span>
-                </template>
-              </div>
-            </div>
+              {{ provenanceTitle }}
+            </span>
+            <span aria-hidden="true">·</span>
+            <span class="shrink-0">{{ item.card_mask }}</span>
+            <template v-if="relativeDate">
+              <span aria-hidden="true">·</span>
+              <span class="shrink-0">{{ relativeDate }}</span>
+            </template>
+            <span aria-hidden="true">·</span>
+            <span class="shrink-0 text-primary font-medium">Telegram</span>
+          </div>
+
+          <HeroAmount
+            v-if="!rows.transferPanel"
+            class="mt-1"
+            :amount="formData.amount"
+            :currency="formData.currency"
+            :currency-symbol="currencySymbol"
+            :available-currencies="availableCurrencies"
+            :is-multi-currency="isMultiCurrency"
+            :show-insufficient-funds="!hasSufficientFunds"
+            :current-balance="selectedAccount ? currentBalance : undefined"
+            :autofocus="needsManualAmount"
+            @update:amount="updateField('amount', $event)"
+            @update:currency="updateField('currency', $event)"
+          />
+
+          <div class="flex justify-center" :class="rows.transferPanel ? 'mt-2' : ''">
+            <button
+              type="button"
+              class="flex items-center gap-1 px-2.5 py-1 rounded-lg text-sm font-medium bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark hover:bg-primary-light transition-colors"
+              @click="typeSheetOpen = true"
+            >
+              {{ typeLabel }}
+              <UIcon
+                name="expand_more"
+                size="xs"
+                class="text-text-tertiary-light dark:text-text-tertiary-dark"
+              />
+            </button>
           </div>
 
           <!-- Balance-change explainer -->
           <div
             v-if="isBalanceChange"
-            class="mx-3.5 mb-2.5 flex items-start gap-2 rounded-xl bg-info-light px-3 py-2"
+            class="mt-2.5 flex items-start gap-2 rounded-xl bg-info-light px-3 py-2"
           >
             <UIcon name="info" size="xs" class="text-info mt-0.5 shrink-0" />
             <p class="text-xs text-info leading-snug">
@@ -464,7 +587,7 @@ function toScanReceipt() {
           </div>
         </section>
 
-        <!-- Автоподсказка: сумма точно совпадает с остатком одного долга -->
+        <!-- Автоподсказка: сумма точно совпадает с остатком долгов одного человека -->
         <section
           v-if="repaymentMatch"
           class="rounded-2xl border border-primary/30 bg-primary-light flex items-center gap-3 px-3.5 py-2.5 animate-fadeInUp"
@@ -492,91 +615,145 @@ function toScanReceipt() {
           </button>
         </section>
 
-        <!-- Quick actions -->
+        <!-- TransferPanel вместо чеклиста счёта/категории (только для перевода) -->
+        <section v-if="rows.transferPanel" class="animate-fadeInUp">
+          <TransferPanel
+            :form-data="formData"
+            :accounts="accounts"
+            :user-currency="userCurrency"
+            @update:form-data="formData = $event"
+          />
+        </section>
+
+        <!-- Чеклист полей -->
         <section
           class="rounded-2xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark overflow-hidden animate-fadeInUp divide-y divide-border-light dark:divide-border-dark"
         >
+          <ReviewFieldRow
+            v-if="rows.account"
+            icon="account_balance_wallet"
+            label="Счёт"
+            :value="selectedAccount?.name ?? null"
+            @click="accountSheetOpen = true"
+          />
+
+          <ReviewFieldRow
+            v-if="rows.category"
+            icon="sell"
+            label="Категория"
+            :value="selectedCategory?.name ?? null"
+            @click="categorySheetOpen = true"
+          />
+
+          <Popover v-model:open="calendarOpen">
+            <PopoverTrigger as-child>
+              <ReviewFieldRow icon="calendar_today" label="Дата" :value="displayDate" />
+            </PopoverTrigger>
+            <PopoverContent
+              align="end"
+              side="bottom"
+              :side-offset="8"
+              :collision-padding="16"
+              class="w-auto p-0"
+            >
+              <Calendar
+                :model-value="calendarValue"
+                locale="ru-RU"
+                @update:model-value="onCalendarSelect"
+              />
+            </PopoverContent>
+          </Popover>
+
+          <ReviewFieldRow
+            icon="edit_note"
+            label="Комментарий"
+            :value="formData.description || null"
+            placeholder="Добавить"
+            @click="commentSheetOpen = true"
+          />
+        </section>
+
+        <!-- Ряд компакт-действий -->
+        <div class="flex flex-wrap gap-1.5 animate-fadeInUp">
           <button
             v-if="eligibleGroups.length > 0 && !repaymentMatch"
             type="button"
-            class="w-full flex items-center gap-3 px-3.5 py-3 text-left active:bg-surface-light dark:active:bg-surface-dark transition-colors"
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm border border-border-light dark:border-border-dark text-text-secondary-light dark:text-text-secondary-dark active:scale-95 transition-all whitespace-nowrap"
             :disabled="isClosing || isSubmitting"
             @click="showRepaymentSheet = true"
           >
-            <IconBadge icon="handshake" color="#4f46e5" />
-            <div class="flex-1 min-w-0">
-              <p class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
-                Это возврат долга?
-              </p>
-              <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
-                Зачесть сумму в счёт долга
-              </p>
-            </div>
-            <UIcon
-              name="chevron_right"
-              size="sm"
-              class="text-text-tertiary-light dark:text-text-tertiary-dark shrink-0"
-            />
+            <UIcon name="handshake" size="sm" />
+            Возврат долга
           </button>
 
           <button
             type="button"
-            class="w-full flex items-center gap-3 px-3.5 py-3 text-left active:bg-surface-light dark:active:bg-surface-dark transition-colors"
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm border border-border-light dark:border-border-dark text-text-secondary-light dark:text-text-secondary-dark active:scale-95 transition-all whitespace-nowrap"
             @click="toScanReceipt"
           >
-            <IconBadge icon="document_scanner" color="#4f46e5" />
-            <div class="flex-1 min-w-0">
-              <p class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
-                Прикрепить чек
-              </p>
-              <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
-                Детали заполнятся из чека автоматически
-              </p>
-            </div>
-            <UIcon
-              name="chevron_right"
-              size="sm"
-              class="text-text-tertiary-light dark:text-text-tertiary-dark shrink-0"
-            />
+            <UIcon name="document_scanner" size="sm" />
+            Чек
           </button>
-        </section>
 
-        <!-- Transaction form (mirrors AddTransactionPage) -->
-        <TransactionForm
-          v-model:form-data="formData"
-          :accounts="accounts"
-          :expense-categories="expenseCategories"
-          :income-categories="incomeCategories"
-          :user-currency="userCurrency"
-          :hide-scan-receipt="true"
-          :hide-debt-tab="true"
-          :is-submitting="isSubmitting"
-          :is-valid="isValid"
-          :error="validationError"
-          :split-data="splitData"
-          :split-validation-error="splitValidationError"
-          @submit="handleSubmit"
-          @add-participant="addParticipant"
-          @remove-participant="removeParticipant"
-          @update-participant-amount="updateParticipantAmount"
-          @set-split-method="setSplitMethod"
-          @set-my-share="setMyShare"
-          @set-is-included="setIsIncluded"
-          @set-split-enabled="setSplitEnabled"
-        />
-
-        <!-- Reject -->
-        <UButton
-          variant="ghost"
-          size="md"
-          full-width
-          class="text-danger"
-          @click="showDismissConfirm = true"
-        >
-          Отклонить
-        </UButton>
+          <button
+            v-if="rows.split"
+            type="button"
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm border active:scale-95 transition-all whitespace-nowrap"
+            :class="
+              hasSplit
+                ? 'border-primary/30 bg-primary-light text-primary font-medium'
+                : 'border-border-light dark:border-border-dark text-text-secondary-light dark:text-text-secondary-dark'
+            "
+            @click="splitDrawerOpen = true"
+          >
+            <UIcon name="group" size="sm" />
+            {{ splitChipLabel }}
+            <span
+              v-if="hasSplit"
+              role="button"
+              aria-label="Сбросить разделение"
+              class="-mr-1 p-0.5 rounded hover:bg-surface-light dark:hover:bg-surface-dark"
+              @click.stop="setSplitEnabled(false)"
+            >
+              <UIcon name="close" size="xs" />
+            </span>
+          </button>
+        </div>
       </div>
     </main>
+
+    <!-- Sticky-бар: ошибка + Отклонить/Подтвердить -->
+    <div
+      v-if="item"
+      class="shrink-0 border-t border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]"
+    >
+      <div class="md:max-w-xl md:mx-auto">
+        <p v-if="validationError" data-testid="validation-error" class="mb-2 text-xs text-danger">
+          {{ validationError }}
+        </p>
+        <div class="flex gap-2">
+          <UButton
+            variant="ghost"
+            size="lg"
+            class="text-danger shrink-0"
+            @click="showDismissConfirm = true"
+          >
+            Отклонить
+          </UButton>
+          <UButton
+            variant="primary"
+            size="lg"
+            class="flex-1"
+            data-testid="submit-btn"
+            :loading="isSubmitting"
+            :disabled="!isValid || isClosing"
+            @click="handleSubmit"
+          >
+            Подтвердить
+          </UButton>
+        </div>
+      </div>
+    </div>
 
     <!-- Dismiss confirmation -->
     <ConfirmDeleteModal
@@ -593,6 +770,53 @@ function toScanReceipt() {
       :amount="Math.abs(item?.amount ?? 0)"
       :currency="item?.currency ?? userCurrency ?? 'USD'"
       @select="repayGroup"
+    />
+
+    <TypeSheet
+      v-model:open="typeSheetOpen"
+      :model-value="reviewType"
+      @update:model-value="applyType"
+    />
+
+    <AccountPickerSheet
+      v-model:open="accountSheetOpen"
+      :accounts="accounts"
+      :selected-id="formData.accountId"
+      @select="handleAccountChange"
+    />
+
+    <CategoryPickerSheet
+      v-model:open="categorySheetOpen"
+      :categories="categoriesPool"
+      :selected-id="formData.categoryId"
+      @select="selectCategory"
+    />
+
+    <CommentSheet
+      v-model:open="commentSheetOpen"
+      :model-value="formData.description"
+      :hashtags="hashtags"
+      @update:model-value="(v: string) => updateField('description', v)"
+    />
+
+    <SplitExpenseDrawer
+      v-if="splitData"
+      :open="splitDrawerOpen"
+      :total-amount="formData.amount"
+      :currency="formData.currency"
+      :split-data="splitData"
+      :validation-error="splitValidationError"
+      @update:open="splitDrawerOpen = $event"
+      @add-participant="
+        (name: string, fromContacts: boolean, color?: string) =>
+          addParticipant(name, fromContacts, color)
+      "
+      @remove-participant="removeParticipant"
+      @update-participant-amount="(id, amount) => updateParticipantAmount(id, amount)"
+      @set-method="setSplitMethod"
+      @set-my-share="setMyShare"
+      @set-is-included="setIsIncluded"
+      @set-enabled="setSplitEnabled"
     />
   </div>
 </template>

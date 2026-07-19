@@ -41,10 +41,6 @@ const props = defineProps<{
   splitData?: SplitExpenseData;
   splitValidationError?: string | null;
   autofocusAmount?: boolean;
-  /** Hide the in-form receipt-scan shortcut (import-confirm uses its own scan button with context). */
-  hideScanReceipt?: boolean;
-  /** Hide the "Долг" tab (import-confirm has its own debt-repayment flow instead). Static for the page's lifetime. */
-  hideDebtTab?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -67,13 +63,6 @@ const ALL_TAB_ITEMS = [
   { id: 'debt', label: 'Долг' },
 ];
 
-// Static for the page's lifetime (hideDebtTab is not expected to change after mount).
-const typeOrder: readonly TransactionType[] = props.hideDebtTab
-  ? TRANSACTION_TYPE_ORDER.filter((t) => t !== 'debt')
-  : TRANSACTION_TYPE_ORDER;
-
-const tabItems = ALL_TAB_ITEMS.filter((tab) => typeOrder.includes(tab.id as TransactionType));
-
 const type = computed(() => props.formData.type);
 
 function applyTypeChange(newType: string) {
@@ -94,7 +83,7 @@ const {
   handleScroll,
   onCyclicWrap,
   cyclicPanelOrder,
-} = useScrollableTabs(type, applyTypeChange, typeOrder);
+} = useScrollableTabs(type, applyTypeChange, TRANSACTION_TYPE_ORDER);
 
 // --- Smooth Height Auto-adjust ---
 const containerHeight = ref<string>('auto');
@@ -158,7 +147,7 @@ onCyclicWrap(() => updateContainerHeight(true));
 // ---
 
 // Only real panels (not clones) get autofocus — clones are at index 0 and last
-const realPanelIndices = new Set(typeOrder.map((_, i) => i + 1));
+const realPanelIndices = new Set(TRANSACTION_TYPE_ORDER.map((_, i) => i + 1));
 
 const submitLabel = computed(() => {
   if (props.formData.type === 'transfer') return 'Перевести';
@@ -308,7 +297,7 @@ const { isMounted } = useMountedAnimation();
     >
       <UTabs
         :model-value="formData.type"
-        :items="tabItems"
+        :items="ALL_TAB_ITEMS"
         @update:model-value="(v: string) => handleTabClick(v as TransactionType)"
       />
     </div>
@@ -349,7 +338,6 @@ const { isMounted } = useMountedAnimation();
               :split-data="splitData"
               :split-validation-error="splitValidationError"
               :autofocus-amount="autofocusAmount && realPanelIndices.has(idx)"
-              :hide-scan-receipt="hideScanReceipt"
               @update:form-data="$emit('update:formData', $event)"
               @add-participant="
                 (name: string, fromContacts: boolean, color?: string) =>
@@ -374,7 +362,6 @@ const { isMounted } = useMountedAnimation();
             :split-data="splitData"
             :split-validation-error="splitValidationError"
             :autofocus-amount="autofocusAmount && realPanelIndices.has(idx)"
-            :hide-scan-receipt="hideScanReceipt"
             @update:form-data="$emit('update:formData', $event)"
             @add-participant="
               (name: string, fromContacts: boolean, color?: string) =>

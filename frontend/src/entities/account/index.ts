@@ -11,3 +11,4 @@ export * from './model/account-types';
 // API
 export * from './api';
 export { default as AccountSelector } from './ui/AccountSelector.vue';
+export { default as AccountPickerSheet } from './ui/AccountPickerSheet.vue';
