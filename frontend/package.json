@@ -19,7 +19,7 @@
     "@tanstack/query-persist-client-core": "^5.91.19",
     "@tanstack/vue-query": "^5.92.5",
     "@tanstack/vue-virtual": "^3.13.18",
-    "@vueuse/core": "^14.1.0",
+    "@vueuse/core": "^14.3.0",
     "@vueuse/motion": "^3.0.3",
     "@wxperia/liquid-glass-vue": "^1.0.9",
     "class-variance-authority": "^0.7.1",
