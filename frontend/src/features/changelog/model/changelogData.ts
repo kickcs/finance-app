@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.62';
+export const CURRENT_VERSION = '1.0.63';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,17 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.63',
+    date: '2026-07-24',
+    title: 'Долг и комиссия при подтверждении импорта',
+    items: [
+      {
+        type: 'feature',
+        text: 'При подтверждении импорта из Telegram операцию снова можно записать как долг на человека — с учётом комиссии за перевод',
+      },
+    ],
+  },
   {
     version: '1.0.62',
     date: '2026-07-24',
