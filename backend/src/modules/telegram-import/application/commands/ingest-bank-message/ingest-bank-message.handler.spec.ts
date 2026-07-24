@@ -19,6 +19,13 @@ const BALANCE_CHANGE = `ℹ️ Счет по карте изменен
 💳 HUMO-CARD *1951
 🕘 15:39 12.06.2026`;
 
+const REVERSAL = `❌ Отмена операций карты
+➕ 82.762,90 UZS
+📍 oplata
+💳 HUMOCARD *1951
+🕓 13:54 22.07.2026
+💰 523.419,46 UZS`;
+
 describe('IngestBankMessageHandler', () => {
   let handler: IngestBankMessageHandler;
   const linkRepo = {
@@ -35,6 +42,8 @@ describe('IngestBankMessageHandler', () => {
     markConfirmed: jest.fn(),
     markDismissed: jest.fn(),
     findLatestBalance: jest.fn(),
+    findLatestPendingExpenseByCard: jest.fn(),
+    decreaseAmount: jest.fn(),
     findTransferCounterpart: jest.fn(),
   };
 
@@ -112,5 +121,50 @@ describe('IngestBankMessageHandler', () => {
     expect(
       (importedRepo.insertIfNew.mock.calls as ImportedTransactionCreate[][])[0][0].amount,
     ).toBeNull();
+  });
+
+  it('reversal: уменьшает последний pending-расход по карте на сумму отмены', async () => {
+    linkRepo.findByTelegramUserId.mockResolvedValue({ userId: 'user-1' });
+    importedRepo.insertIfNew.mockResolvedValue({ id: 'rev-1' });
+    importedRepo.findLatestPendingExpenseByCard.mockResolvedValue({ id: 'exp-1' });
+
+    const result = await handler.execute(new IngestBankMessageCommand('42', REVERSAL));
+
+    expect(result).toBe('reversal_applied');
+    // reversal-запись сохраняется только для дедупа, вне инбокса (dismissed)
+    const arg = (importedRepo.insertIfNew.mock.calls as ImportedTransactionCreate[][])[0][0];
+    expect(arg).toMatchObject({ type: 'reversal', amount: 82762.9, status: 'dismissed' });
+    expect(importedRepo.findLatestPendingExpenseByCard).toHaveBeenCalledWith(
+      'user-1',
+      '*1951',
+      expect.any(Date),
+    );
+    expect(importedRepo.decreaseAmount).toHaveBeenCalledWith('exp-1', 82762.9);
+  });
+
+  it('reversal без найденного расхода: возвращает unparsed, дохода не создаёт', async () => {
+    linkRepo.findByTelegramUserId.mockResolvedValue({ userId: 'user-1' });
+    importedRepo.insertIfNew.mockResolvedValue({ id: 'rev-2' });
+    importedRepo.findLatestPendingExpenseByCard.mockResolvedValue(null);
+
+    const result = await handler.execute(new IngestBankMessageCommand('42', REVERSAL));
+
+    expect(result).toBe('unparsed');
+    expect(importedRepo.decreaseAmount).not.toHaveBeenCalled();
+    // тип сохранён как reversal (не income) — доход не появляется
+    expect((importedRepo.insertIfNew.mock.calls as ImportedTransactionCreate[][])[0][0].type).toBe(
+      'reversal',
+    );
+  });
+
+  it('reversal-дубль (повторный форвард): возвращает duplicate, расход не трогает', async () => {
+    linkRepo.findByTelegramUserId.mockResolvedValue({ userId: 'user-1' });
+    importedRepo.insertIfNew.mockResolvedValue(null);
+
+    const result = await handler.execute(new IngestBankMessageCommand('42', REVERSAL));
+
+    expect(result).toBe('duplicate');
+    expect(importedRepo.findLatestPendingExpenseByCard).not.toHaveBeenCalled();
+    expect(importedRepo.decreaseAmount).not.toHaveBeenCalled();
   });
 });

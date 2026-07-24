@@ -1,4 +1,4 @@
-export type ParsedMessageType = 'expense' | 'income' | 'balance_change';
+export type ParsedMessageType = 'expense' | 'income' | 'balance_change' | 'reversal';
 
 export interface ParsedBankMessage {
   type: ParsedMessageType;

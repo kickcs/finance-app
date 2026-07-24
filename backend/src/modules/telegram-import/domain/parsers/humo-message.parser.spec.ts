@@ -47,6 +47,13 @@ const NEUTRAL_HEADER_INCOME = `💸 Операция
 🕓 22:40 16.07.2026
 💰 2.723.732,36 UZS`;
 
+const REVERSAL = `❌ Отмена операций карты
+➕ 82.762,90 UZS
+📍 oplata
+💳 HUMOCARD *1951
+🕓 13:54 22.07.2026
+💰 523.419,46 UZS`;
+
 describe('HumoMessageParser', () => {
   const parser = new HumoMessageParser();
 
@@ -167,6 +174,18 @@ describe('HumoMessageParser', () => {
     const r = parser.parse(NEUTRAL_HEADER_INCOME)!;
     expect(r.type).toBe('income');
     expect(r.amount).toBe(50000);
+  });
+
+  it('парсит «Отмена операций карты» как reversal, а не income (маркер приоритетнее знака ➕)', () => {
+    expect(parser.canParse(REVERSAL)).toBe(true);
+    const r = parser.parse(REVERSAL)!;
+    expect(r.type).toBe('reversal');
+    expect(r.amount).toBe(82762.9);
+    expect(r.currency).toBe('UZS');
+    expect(r.merchant).toBe('oplata');
+    expect(r.cardMask).toBe('*1951');
+    expect(r.balanceAfter).toBe(523419.46);
+    expect(r.occurredAt.toISOString()).toBe('2026-07-22T08:54:00.000Z'); // 13:54 +05:00
   });
 });
 

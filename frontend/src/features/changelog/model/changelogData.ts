@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.61';
+export const CURRENT_VERSION = '1.0.62';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,17 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.62',
+    date: '2026-07-24',
+    title: 'Отмена операции по карте уменьшает расход в импорте',
+    items: [
+      {
+        type: 'improvement',
+        text: 'Если банк присылает «Отмену операции карты», импорт из Telegram теперь уменьшает на эту сумму последний расход по той же карте, а не создаёт лишний доход',
+      },
+    ],
+  },
   {
     version: '1.0.61',
     date: '2026-07-19',
