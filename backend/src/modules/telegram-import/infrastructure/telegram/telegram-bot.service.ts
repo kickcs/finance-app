@@ -172,8 +172,13 @@ export class TelegramBotService implements OnModuleInit, OnApplicationBootstrap 
         );
         return;
       }
+      // reversal_applied (расход уменьшен на сумму отмены) считаем как imported для сводки
       const key =
-        result === 'imported' ? 'imported' : result === 'duplicate' ? 'duplicates' : 'unparsed';
+        result === 'imported' || result === 'reversal_applied'
+          ? 'imported'
+          : result === 'duplicate'
+            ? 'duplicates'
+            : 'unparsed';
       this.aggregator.add(ctx.chat.id, key, async (counts) => {
         const keyboard = counts.imported
           ? this.tmaKeyboard('telegram.buttons.confirm', lang)

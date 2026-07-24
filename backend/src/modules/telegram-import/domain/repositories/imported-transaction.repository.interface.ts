@@ -19,6 +19,8 @@ export interface ImportedTransactionCreate {
   occurredAt: Date | null;
   balanceAfter: number | null;
   dedupHash: string;
+  /** По умолчанию 'pending'. 'dismissed' для reversal — запись только для дедупа, не в инбоксе */
+  status?: ImportedTransaction['status'];
 }
 
 export interface IImportedTransactionRepository {
@@ -31,6 +33,14 @@ export interface IImportedTransactionRepository {
   markDismissed(id: string): Promise<void>;
   /** Последний известный баланс карты до occurredAt (для дельты balance_change) */
   findLatestBalance(userId: string, cardMask: string, before: Date): Promise<number | null>;
+  /** Последний pending-расход по карте до occurredAt (для уменьшения при отмене операции) */
+  findLatestPendingExpenseByCard(
+    userId: string,
+    cardMask: string,
+    before: Date,
+  ): Promise<ImportedTransaction | null>;
+  /** Уменьшить сумму импортированной операции на delta (не ниже 0) */
+  decreaseAmount(id: string, delta: number): Promise<void>;
   /** Встречное pending-сообщение для перевода: противоположный тип, та же сумма, ±15 мин, карта замаплена на counterAccountId */
   findTransferCounterpart(params: {
     userId: string;

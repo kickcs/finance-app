@@ -14,7 +14,7 @@ export class ImportedTransactionOrmEntity {
   rawText: string;
 
   @Column({ type: 'varchar' })
-  type: 'expense' | 'income' | 'balance_change' | 'unparsed';
+  type: 'expense' | 'income' | 'balance_change' | 'reversal' | 'unparsed';
 
   @Column({ type: 'decimal', precision: 18, scale: 2, nullable: true })
   amount: string | null; // decimal приходит строкой

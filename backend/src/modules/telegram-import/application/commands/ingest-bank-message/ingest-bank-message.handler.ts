@@ -12,7 +12,12 @@ import {
 import { ParserRegistry } from '../../../domain/parsers/parser-registry';
 import { computeDedupHash, computeUnparsedDedupHash } from '../../../domain/parsers/dedup-hash';
 
-export type IngestResult = 'imported' | 'duplicate' | 'unparsed' | 'not_linked';
+export type IngestResult =
+  | 'imported'
+  | 'duplicate'
+  | 'unparsed'
+  | 'not_linked'
+  | 'reversal_applied';
 
 @CommandHandler(IngestBankMessageCommand)
 export class IngestBankMessageHandler implements ICommandHandler<IngestBankMessageCommand> {
@@ -44,6 +49,41 @@ export class IngestBankMessageHandler implements ICommandHandler<IngestBankMessa
         dedupHash: computeUnparsedDedupHash(command.text),
       });
       return inserted ? 'unparsed' : 'duplicate';
+    }
+
+    // Отмена/возврат операции: не создаём доход, а уменьшаем связанный расход.
+    // Reversal-запись сохраняется как dismissed — она нужна только для дедупа
+    // (повторный форвард той же отмены не уменьшит расход дважды) и не попадает в инбокс.
+    if (parsed.type === 'reversal') {
+      const inserted = await this.importedRepo.insertIfNew({
+        userId: link.userId,
+        rawText: command.text,
+        type: 'reversal',
+        amount: parsed.amount,
+        currency: parsed.currency,
+        merchant: parsed.merchant,
+        cardMask: parsed.cardMask,
+        occurredAt: parsed.occurredAt,
+        balanceAfter: parsed.balanceAfter,
+        dedupHash: computeDedupHash(parsed),
+        status: 'dismissed',
+      });
+      if (!inserted) return 'duplicate';
+
+      if (parsed.amount !== null) {
+        const target = await this.importedRepo.findLatestPendingExpenseByCard(
+          link.userId,
+          parsed.cardMask,
+          parsed.occurredAt,
+        );
+        if (target) {
+          await this.importedRepo.decreaseAmount(target.id, parsed.amount);
+          return 'reversal_applied';
+        }
+      }
+      // Исходный расход не найден (отмена пришла первой либо расход уже подтверждён/вне
+      // инбокса) — дохода не создаём, помечаем как нераспознанное для сводки бота.
+      return 'unparsed';
     }
 
     let amount = parsed.amount;

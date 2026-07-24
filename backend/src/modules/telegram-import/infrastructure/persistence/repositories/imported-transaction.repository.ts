@@ -37,6 +37,7 @@ export class ImportedTransactionRepository implements IImportedTransactionReposi
       const saved = await this.repo.save(
         this.repo.create({
           ...data,
+          status: data.status ?? 'pending',
           amount: data.amount === null ? null : data.amount.toFixed(2),
           balanceAfter: data.balanceAfter === null ? null : data.balanceAfter.toFixed(2),
         }),
@@ -151,6 +152,31 @@ export class ImportedTransactionRepository implements IImportedTransactionReposi
     return row?.balanceAfter !== null && row?.balanceAfter !== undefined
       ? Number(row.balanceAfter)
       : null;
+  }
+
+  async findLatestPendingExpenseByCard(
+    userId: string,
+    cardMask: string,
+    before: Date,
+  ): Promise<ImportedTransaction | null> {
+    const orm = await this.repo
+      .createQueryBuilder('it')
+      .where('it.userId = :userId', { userId })
+      .andWhere('it.cardMask = :cardMask', { cardMask })
+      .andWhere('it.type = :type', { type: 'expense' })
+      .andWhere('it.status = :status', { status: 'pending' })
+      .andWhere('it.amount IS NOT NULL')
+      .andWhere('it.occurredAt <= :before', { before })
+      .orderBy('it.occurredAt', 'DESC')
+      .getOne();
+    return orm ? toDomain(orm) : null;
+  }
+
+  async decreaseAmount(id: string, delta: number): Promise<void> {
+    const orm = await this.repo.findOne({ where: { id } });
+    if (!orm || orm.amount === null) return;
+    const next = Math.max(0, Math.round((Number(orm.amount) - delta) * 100) / 100);
+    await this.repo.update(id, { amount: next.toFixed(2) });
   }
 
   async findTransferCounterpart(params: {
