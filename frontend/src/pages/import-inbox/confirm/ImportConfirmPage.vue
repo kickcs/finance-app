@@ -16,6 +16,7 @@ import { useCategories, CategoryPickerSheet } from '@/entities/category';
 import { useDebts } from '@/entities/debt';
 import { useCloseAllDebts } from '@/features/close-debt';
 import { useHashtags } from '@/entities/transaction';
+import { usePeople } from '@/entities/person';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { navigateBackTo } from '@/app/router';
@@ -26,6 +27,8 @@ import { Calendar } from '@/shared/ui/primitives/calendar';
 import { CalendarDate, type DateValue } from '@internationalized/date';
 import { useTelegramBackButton } from '@/shared/lib/telegram/useTelegramBackButton';
 import { useImportedTransactions, type ImportedTransaction } from '@/entities/imported-transaction';
+import { queryClient } from '@/shared/api/queryClient';
+import { invalidateDebtRelated } from '@/shared/api/invalidation';
 import { useInboxSortOrder } from '../model/useInboxSortOrder';
 import { decideCategoryPrefill } from '../model/categoryPrefill';
 import { reviewRows } from '../model/reviewRows';
@@ -35,7 +38,17 @@ import {
   debtsCountLabel,
   type RepaymentGroup,
 } from '../model/debtRepayment';
+import {
+  emptyDebtAssign,
+  debtDirectionForType,
+  validateDebtAssign,
+  createDebtForImport,
+  createCommissionTransaction,
+  type DebtAssignState,
+} from '../model/debtAssign';
 import DebtRepaymentSheet from './DebtRepaymentSheet.vue';
+import DebtAssignSheet from './DebtAssignSheet.vue';
+import ActionChip from './ActionChip.vue';
 import ReviewFieldRow from './ReviewFieldRow.vue';
 import TypeSheet from './TypeSheet.vue';
 import CommentSheet from './CommentSheet.vue';
@@ -74,6 +87,9 @@ const validationError = ref<string | null>(null);
 // scan-receipt/useSubmitStep.ts.)
 const createdTransactionId = ref<string | null>(null);
 const splitDebtsCreated = ref(false);
+// Комиссия — отдельная транзакция после основной; если она не удалась, а долг
+// уже создан, повтор не должен списывать комиссию дважды.
+const commissionCreated = ref(false);
 
 const {
   splitData,
@@ -89,6 +105,22 @@ const {
   createDebtsForSplit,
   reset: resetSplit,
 } = useSplitExpense(() => formData.value.amount);
+
+// --- Пометка операции как долга на человека -----------------------------------
+const { people, createPerson } = usePeople(userId);
+const debtAssign = ref<DebtAssignState>(emptyDebtAssign());
+const debtSheetOpen = ref(false);
+
+function applyDebtAssign(next: DebtAssignState) {
+  debtAssign.value = next;
+  // Разделение расхода и пометка долгом взаимоисключающие — сумма целиком уходит в долг.
+  if (splitData.value.enabled) setSplitEnabled(false);
+}
+
+function resetDebtAssign() {
+  debtAssign.value = emptyDebtAssign();
+  commissionCreated.value = false;
+}
 
 // --- Погашение существующего долга -------------------------------------------
 const { debts } = useDebts(userId);
@@ -178,7 +210,7 @@ const commentSheetOpen = ref(false);
 const splitDrawerOpen = ref(false);
 const calendarOpen = ref(false);
 
-const rows = computed(() => reviewRows(formData.value.type));
+const rows = computed(() => reviewRows(formData.value.type, hasDebtAssign.value));
 
 // Состояние счёта/валюты/баланса для HeroAmount — тот же usePanelState, что в панелях.
 const {
@@ -238,6 +270,12 @@ const reviewType = computed<'expense' | 'income' | 'transfer'>(() =>
     : 'expense',
 );
 
+// Направление долга по типу операции; перевод долгом быть не может.
+const debtDirection = computed(() =>
+  reviewType.value === 'transfer' ? null : debtDirectionForType(reviewType.value),
+);
+const hasDebtAssign = computed(() => debtAssign.value.personName.trim().length > 0);
+
 const typeLabel = computed(() => {
   if (reviewType.value === 'income') return 'Доход';
   if (reviewType.value === 'transfer') return 'Перевод';
@@ -251,6 +289,10 @@ function applyType(newType: 'expense' | 'income' | 'transfer') {
   if (formData.value.type === 'expense' && splitData.value.enabled) {
     setSplitEnabled(false);
   }
+  // Перевод долгом быть не может — сбрасываем пометку, если она была выставлена.
+  if (newType === 'transfer' && hasDebtAssign.value) {
+    resetDebtAssign();
+  }
   setType(newType);
 }
 
@@ -262,6 +304,24 @@ const splitChipLabel = computed(() =>
     ? `Разделено на ${splitData.value.participants.length + (splitData.value.isIncluded ? 1 : 0)}`
     : 'Разделить',
 );
+
+const debtChipLabel = computed(() => {
+  if (!hasDebtAssign.value) return 'В долг';
+  const feeSuffix = debtAssign.value.fee > 0 ? ' · комиссия' : '';
+  return `Долг: ${debtAssign.value.personName}${feeSuffix}`;
+});
+
+// В долг-режиме категория скрыта и не выбирается (см. reviewRows) — isValid из
+// useTransactionForm требует categoryId для expense/income и заблокировал бы
+// кнопку. Для этого режима валидность проверяем отдельно: счёт + сумма > 0,
+// саму пометку долга проверяет validateDebtAssign перед сабмитом.
+const submitDisabled = computed(() => {
+  if (isClosing.value) return true;
+  if (hasDebtAssign.value) {
+    return !formData.value.accountId || formData.value.amount <= 0;
+  }
+  return !isValid.value;
+});
 
 // --- Prefill the transaction form from the imported operation ---------------
 // Keyed on the item id so a background inbox refetch (same op) never wipes
@@ -281,6 +341,7 @@ watch(
     splitDebtsCreated.value = false;
     repaymentSuggestionDismissed.value = false;
     repaymentTransactionId.value = null;
+    resetDebtAssign();
 
     const absAmount = Math.abs(current.amount ?? 0);
 
@@ -387,7 +448,25 @@ async function handleSubmit() {
     return;
   }
 
-  const isSplit = splitData.value.enabled && splitData.value.participants.length > 0;
+  const isDebt = hasDebtAssign.value && !!debtDirection.value;
+  // Комиссия имеет смысл только при выдаче долга; при переключении типа на доход
+  // пометка переживает смену направления, а fee не должна утечь в taken-ветку.
+  const debtFee = isDebt && debtDirection.value === 'given' ? debtAssign.value.fee : 0;
+  if (isDebt) {
+    const err = validateDebtAssign(
+      { ...debtAssign.value, fee: debtFee },
+      formData.value.amount,
+      debtDirection.value!,
+    );
+    if (err) {
+      validationError.value = err;
+      return;
+    }
+  }
+
+  // Разделение расхода несовместимо с пометкой долгом (см. applyDebtAssign) —
+  // !isDebt здесь не полагание на взаимоисключение, а страховка на случай рассинхрона.
+  const isSplit = !isDebt && splitData.value.enabled && splitData.value.participants.length > 0;
   if (isSplit && !splitIsValid.value) {
     validationError.value = splitValidationError.value || 'Проверьте данные разделения расхода';
     return;
@@ -401,9 +480,51 @@ async function handleSubmit() {
   // then failed), reuse that id instead of creating a second transaction.
   let transactionId = createdTransactionId.value;
   if (!transactionId) {
-    transactionId = await submitAndWait(userId.value, formData.value);
-    if (!transactionId) return; // error already shown by the mutation
-    createdTransactionId.value = transactionId;
+    if (isDebt) {
+      try {
+        const created = await createDebtForImport(userId.value, {
+          direction: debtDirection.value!,
+          personName: debtAssign.value.personName,
+          totalAmount: formData.value.amount,
+          fee: debtFee,
+          accountId: formData.value.accountId,
+          currency: formData.value.currency,
+          dateMs: formData.value.date,
+          description: formData.value.description,
+        });
+        transactionId = created.transactionId;
+        createdTransactionId.value = transactionId;
+      } catch {
+        validationError.value = 'Не удалось создать долг';
+        return;
+      }
+      invalidateDebtRelated(queryClient, userId.value).catch(console.error);
+    } else {
+      transactionId = await submitAndWait(userId.value, formData.value);
+      if (!transactionId) return; // error already shown by the mutation
+      createdTransactionId.value = transactionId;
+    }
+  }
+
+  // Комиссия — отдельная транзакция после того, как долг уже создан. Если она
+  // не проходит, долг всё равно остаётся валидным — просто предупреждаем и
+  // продолжаем обычный confirm-путь (не блокируем пользователя).
+  if (debtFee > 0 && !commissionCreated.value) {
+    try {
+      await createCommissionTransaction(userId.value, {
+        accountId: formData.value.accountId,
+        amount: debtFee,
+        currency: formData.value.currency,
+        dateMs: formData.value.date,
+      });
+      commissionCreated.value = true;
+    } catch {
+      toast({
+        title: 'Долг создан',
+        description: 'Не удалось записать комиссию — добавьте её вручную.',
+        variant: 'warning',
+      });
+    }
   }
 
   // Split debts: create only once. On a retry where the transaction already
@@ -453,6 +574,7 @@ async function handleSubmit() {
   createdTransactionId.value = null;
   splitDebtsCreated.value = false;
   resetSplit();
+  resetDebtAssign();
   goTo(next);
 }
 
@@ -675,49 +797,35 @@ function toScanReceipt() {
 
         <!-- Ряд компакт-действий -->
         <div class="flex flex-wrap gap-1.5 animate-fadeInUp">
-          <button
+          <ActionChip
             v-if="eligibleGroups.length > 0 && !repaymentMatch"
-            type="button"
-            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm border border-border-light dark:border-border-dark text-text-secondary-light dark:text-text-secondary-dark active:scale-95 transition-all whitespace-nowrap"
+            icon="handshake"
+            label="Возврат долга"
             :disabled="isClosing || isSubmitting"
             @click="showRepaymentSheet = true"
-          >
-            <UIcon name="handshake" size="sm" />
-            Возврат долга
-          </button>
+          />
 
-          <button
-            type="button"
-            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm border border-border-light dark:border-border-dark text-text-secondary-light dark:text-text-secondary-dark active:scale-95 transition-all whitespace-nowrap"
-            @click="toScanReceipt"
-          >
-            <UIcon name="document_scanner" size="sm" />
-            Чек
-          </button>
+          <ActionChip icon="document_scanner" label="Чек" @click="toScanReceipt" />
 
-          <button
+          <ActionChip
             v-if="rows.split"
-            type="button"
-            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm border active:scale-95 transition-all whitespace-nowrap"
-            :class="
-              hasSplit
-                ? 'border-primary/30 bg-primary-light text-primary font-medium'
-                : 'border-border-light dark:border-border-dark text-text-secondary-light dark:text-text-secondary-dark'
-            "
+            icon="group"
+            :label="splitChipLabel"
+            :active="hasSplit"
+            reset-label="Сбросить разделение"
             @click="splitDrawerOpen = true"
-          >
-            <UIcon name="group" size="sm" />
-            {{ splitChipLabel }}
-            <span
-              v-if="hasSplit"
-              role="button"
-              aria-label="Сбросить разделение"
-              class="-mr-1 p-0.5 rounded hover:bg-surface-light dark:hover:bg-surface-dark"
-              @click.stop="setSplitEnabled(false)"
-            >
-              <UIcon name="close" size="xs" />
-            </span>
-          </button>
+            @reset="setSplitEnabled(false)"
+          />
+
+          <ActionChip
+            v-if="debtDirection && !hasSplit"
+            icon="volunteer_activism"
+            :label="debtChipLabel"
+            :active="hasDebtAssign"
+            reset-label="Сбросить пометку долга"
+            @click="debtSheetOpen = true"
+            @reset="resetDebtAssign()"
+          />
         </div>
       </div>
     </main>
@@ -746,7 +854,7 @@ function toScanReceipt() {
             class="flex-1"
             data-testid="submit-btn"
             :loading="isSubmitting"
-            :disabled="!isValid || isClosing"
+            :disabled="submitDisabled"
             @click="handleSubmit"
           >
             Подтвердить
@@ -770,6 +878,17 @@ function toScanReceipt() {
       :amount="Math.abs(item?.amount ?? 0)"
       :currency="item?.currency ?? userCurrency ?? 'USD'"
       @select="repayGroup"
+    />
+
+    <DebtAssignSheet
+      v-model:open="debtSheetOpen"
+      :state="debtAssign"
+      :direction="debtDirection ?? 'given'"
+      :total-amount="formData.amount"
+      :currency="formData.currency"
+      :people="people"
+      @apply="applyDebtAssign"
+      @save-person="createPerson({ name: $event })"
     />
 
     <TypeSheet
