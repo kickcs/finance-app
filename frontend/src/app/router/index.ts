@@ -14,8 +14,35 @@ export const transitionName = ref<
   'slide-forward' | 'slide-back' | 'slide-tab-forward' | 'slide-tab-backward' | 'fade' | 'none'
 >('fade');
 
+/**
+ * Экономия трафика: на сохранении данных или медленной сети префетч отключаем.
+ * Тянуть полтора десятка чанков впрок там, где сама открытая страница грузится
+ * тяжело, — прямой вред.
+ */
+const shouldPrefetch = (): boolean => {
+  const connection = (
+    navigator as Navigator & {
+      connection?: { saveData?: boolean; effectiveType?: string };
+    }
+  ).connection;
+  if (!connection) return true;
+  if (connection.saveData) return false;
+  return !/(^|-)2g$/.test(connection.effectiveType ?? '');
+};
+
+/** Ждём `load`, чтобы префетч не отбирал канал у первой отрисовки. */
+const afterLoad = (run: () => void): void => {
+  if (document.readyState === 'complete') {
+    run();
+    return;
+  }
+  window.addEventListener('load', run, { once: true });
+};
+
 // Prefetch page components in two tiers: primary nav pages first, secondary pages later.
 const prefetchPages = () => {
+  if (!shouldPrefetch()) return;
+
   const prefetchPrimary = () => {
     import('@/pages/history/HistoryPage.vue');
     import('@/pages/analytics/AnalyticsPage.vue');
@@ -35,14 +62,24 @@ const prefetchPages = () => {
     import('@/pages/settings/import/ImportPage.vue');
   };
 
-  // Primary pages prefetch when browser is idle, secondary after a longer delay
-  if (typeof requestIdleCallback !== 'undefined') {
-    requestIdleCallback(prefetchPrimary);
-    requestIdleCallback(prefetchSecondary, { timeout: 8000 });
-  } else {
-    setTimeout(prefetchPrimary, 2000);
-    setTimeout(prefetchSecondary, 5000);
-  }
+  // Оба яруса ждут `load` и простоя главного потока. Раньше первый ярус
+  // вызывался через requestIdleCallback сразу после готовности роутера, а у
+  // второго `timeout` задавал лишь крайний срок, не задержку, — в итоге около
+  // полутора десятков чанков со своим CSS уезжали в сеть, пока первый экран
+  // ещё дорисовывался.
+  const idle = (run: () => void, delay: number) =>
+    afterLoad(() => {
+      window.setTimeout(() => {
+        if (typeof requestIdleCallback !== 'undefined') {
+          requestIdleCallback(run, { timeout: 4000 });
+        } else {
+          run();
+        }
+      }, delay);
+    });
+
+  idle(prefetchPrimary, 1500);
+  idle(prefetchSecondary, 5000);
 };
 
 // Track if current navigation is from browser back/forward (popstate)

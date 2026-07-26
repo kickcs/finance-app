@@ -12,7 +12,9 @@ coverage/
 .claude_settings.json
 .mcp.json
 .claude/
-scripts/
+# Только корневой каталог с агентской обвязкой: без слеша правило заодно
+# скрывало frontend/scripts, где лежат рабочие скрипты сборки
+/scripts/
 .worktrees/
 .superpowers/
 .agents/

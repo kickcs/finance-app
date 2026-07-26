@@ -1,10 +1,16 @@
 import { ref } from 'vue';
 import { subscriptionApi } from '@/entities/subscription';
+import { loadLemonSqueezy } from '@/shared/lib/lemonSqueezy';
 import { useToast } from '@/shared/ui';
 
 export function useUpgrade() {
   const { toast } = useToast();
   const isLoading = ref(false);
+
+  // Греем SDK с момента, как открылся апгрейд-экран: к клику по тарифу он обычно
+  // уже готов. Ждать его на самом клике нельзя — скрипт может не отдать ни load,
+  // ни error (блокировщик, зависшая сеть), и оплата бы просто не открылась.
+  void loadLemonSqueezy().catch(() => undefined);
 
   async function startCheckout(plan: 'premium_monthly' | 'premium_yearly'): Promise<boolean> {
     isLoading.value = true;
