@@ -41,7 +41,7 @@ const items = computed(() => [
 <template>
   <!-- Секция при первой отрисовке заведомо ниже сгиба, поэтому её рендер
        откладывается до прокрутки. Резерв высоты держит скроллбар стабильным. -->
-  <UCard padding="md" class="[content-visibility:auto] [contain-intrinsic-size:auto_260px]">
+  <UCard padding="md" class="[content-visibility:auto] [contain-intrinsic-size:auto_280px]">
     <UTabs
       :model-value="activeTab"
       :items="items"

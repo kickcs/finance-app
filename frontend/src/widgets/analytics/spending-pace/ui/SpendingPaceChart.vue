@@ -247,7 +247,9 @@ const yTicks = computed(() => {
 </script>
 
 <template>
-  <UCard padding="md" class="[content-visibility:auto] [contain-intrinsic-size:auto_220px]">
+  <!-- Резерв высоты подобран под фактические 254px: сильный промах заставлял бы
+       скроллбар прыгать при первом появлении карточки в вьюпорте. -->
+  <UCard padding="md" class="[content-visibility:auto] [contain-intrinsic-size:auto_260px]">
     <!-- Header -->
     <div class="flex items-baseline justify-between gap-2 mb-2">
       <h3
