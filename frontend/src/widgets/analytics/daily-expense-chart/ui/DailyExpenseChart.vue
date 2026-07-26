@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import { UCard, Skeleton } from '@/shared/ui';
-import { formatCurrency, COMPACT_FORMAT } from '@/shared/lib/format/currency';
+import { computed, ref, useTemplateRef } from 'vue';
+import { useElementSize } from '@vueuse/core';
+import { Skeleton } from '@/shared/ui';
+import { formatCurrency, COMPACT_FORMAT, COMPACT_BARE_FORMAT } from '@/shared/lib/format/currency';
 import { formatDate } from '@/shared/lib/format/date';
 
 const props = withDefaults(
@@ -20,17 +21,6 @@ const selectedIndex = ref<number | null>(null);
 
 const skeletonHeights = [35, 65, 50, 80, 45, 70, 30];
 
-const title = computed(() => {
-  switch (props.groupBy) {
-    case 'week':
-      return 'Расходы по неделям';
-    case 'month':
-      return 'Расходы по месяцам';
-    default:
-      return 'Расходы по дням';
-  }
-});
-
 const maxExpense = computed(() => {
   const max = Math.max(...props.entries.map((e) => e.expense), 0);
   return max || 1;
@@ -38,23 +28,27 @@ const maxExpense = computed(() => {
 
 const hasData = computed(() => props.entries.some((e) => e.expense > 0));
 
-// Chart dimensions
 const BAR_GAP = 2;
-const BAR_MIN_WIDTH = 8;
 const CHART_HEIGHT = 140;
 const LABEL_HEIGHT = 20;
 const Y_AXIS_WIDTH = 36;
-const Y_AXIS_FORMAT = { compact: true, showSymbol: false } as const;
+/** Ширина до первого замера ResizeObserver — иначе первый кадр рисуется нулевыми столбцами. */
+const FALLBACK_WIDTH = 300;
+
+const chartHost = useTemplateRef<HTMLElement>('chartHost');
+const { width: hostWidth } = useElementSize(chartHost);
+
+/**
+ * Ширина берётся у контейнера, а не у константы. Прежний расчёт исходил из
+ * минимума в 280px и при 31 дне давал 357px против ~318px доступных, из-за чего
+ * график уезжал в горизонтальный скролл.
+ */
+const chartWidth = computed(() => (hostWidth.value > 0 ? hostWidth.value : FALLBACK_WIDTH));
 
 const barWidth = computed(() => {
   const count = props.entries.length || 1;
-  const totalWidth = Math.max(count * (BAR_MIN_WIDTH + BAR_GAP), 280);
-  return (totalWidth - BAR_GAP * count) / count;
-});
-
-const chartWidth = computed(() => {
-  const count = props.entries.length || 1;
-  return Y_AXIS_WIDTH + count * (barWidth.value + BAR_GAP);
+  const usable = chartWidth.value - Y_AXIS_WIDTH - BAR_GAP * count;
+  return Math.max(1, usable / count);
 });
 
 function barHeight(expense: number): number {
@@ -74,7 +68,7 @@ function formatLabel(dateStr: string): string {
   return `${date.getDate()}`;
 }
 
-// Show every Nth label to avoid crowding
+/** Показываем каждую N-ю подпись, чтобы они не сливались на узком экране. */
 const labelStep = computed(() => {
   const count = props.entries.length;
   if (count <= 7) return 1;
@@ -104,20 +98,15 @@ const yTicks = computed(() => {
     {
       value: mid,
       y: CHART_HEIGHT - (mid / max) * CHART_HEIGHT,
-      label: formatCurrency(mid, props.currency, Y_AXIS_FORMAT),
+      label: formatCurrency(mid, props.currency, COMPACT_BARE_FORMAT),
     },
-    { value: max, y: 4, label: formatCurrency(max, props.currency, Y_AXIS_FORMAT) },
+    { value: max, y: 4, label: formatCurrency(max, props.currency, COMPACT_BARE_FORMAT) },
   ];
 });
 </script>
 
 <template>
-  <UCard class="p-4">
-    <h3 class="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark mb-4">
-      {{ title }}
-    </h3>
-
-    <!-- Loading skeleton -->
+  <div>
     <div v-if="loading" class="flex items-end gap-1 h-[160px]">
       <Skeleton
         v-for="(h, i) in skeletonHeights"
@@ -127,36 +116,38 @@ const yTicks = computed(() => {
       />
     </div>
 
-    <!-- Empty state -->
     <div
       v-else-if="!hasData"
-      class="h-[160px] flex items-center justify-center text-sm text-text-tertiary-light dark:text-text-tertiary-dark"
+      class="h-[160px] flex items-center justify-center text-body-sm text-text-tertiary-light dark:text-text-tertiary-dark"
     >
       Нет расходов за период
     </div>
 
-    <!-- Chart -->
     <template v-else>
-      <!-- Tooltip -->
-      <div
-        v-if="selectedEntry"
-        class="mb-2 px-3 py-1.5 bg-surface-light dark:bg-surface-dark rounded-lg inline-flex items-center gap-2 text-sm"
-      >
-        <span class="text-text-secondary-light dark:text-text-secondary-dark">
-          {{ formatTooltipDate(selectedEntry.date) }}
-        </span>
-        <span class="font-semibold text-text-primary-light dark:text-text-primary-dark">
-          {{ formatCurrency(selectedEntry.expense, currency, COMPACT_FORMAT) }}
-        </span>
+      <!-- Место под подсказку зарезервировано всегда: иначе выбор столбца
+           сдвигал бы график вниз и давал скачок вёрстки. -->
+      <div class="h-7 mb-1">
+        <div
+          v-if="selectedEntry"
+          class="px-2.5 py-1 bg-surface-light dark:bg-surface-dark rounded-lg inline-flex items-center gap-2 text-body-sm"
+        >
+          <span class="text-text-secondary-light dark:text-text-secondary-dark">
+            {{ formatTooltipDate(selectedEntry.date) }}
+          </span>
+          <span
+            class="font-semibold tabular-nums text-text-primary-light dark:text-text-primary-dark"
+          >
+            {{ formatCurrency(selectedEntry.expense, currency, COMPACT_FORMAT) }}
+          </span>
+        </div>
       </div>
 
-      <div class="overflow-x-auto -mx-1 px-1">
+      <div ref="chartHost" class="w-full">
         <svg
           :width="chartWidth"
           :height="CHART_HEIGHT + LABEL_HEIGHT"
           :viewBox="`0 0 ${chartWidth} ${CHART_HEIGHT + LABEL_HEIGHT}`"
-          class="w-full"
-          :style="{ minWidth: `${Math.min(chartWidth, 280)}px` }"
+          class="w-full block"
         >
           <template v-for="tick in yTicks" :key="tick.value">
             <line
@@ -181,7 +172,6 @@ const yTicks = computed(() => {
           </template>
 
           <g v-for="(entry, i) in entries" :key="entry.date">
-            <!-- Bar -->
             <rect
               :x="barX(i)"
               :y="CHART_HEIGHT - barHeight(entry.expense)"
@@ -195,7 +185,6 @@ const yTicks = computed(() => {
               @click="handleBarClick(i)"
             />
 
-            <!-- X-axis labels -->
             <text
               v-if="i % labelStep === 0"
               :x="barX(i) + barWidth / 2"
@@ -210,5 +199,5 @@ const yTicks = computed(() => {
         </svg>
       </div>
     </template>
-  </UCard>
+  </div>
 </template>

@@ -31,3 +31,17 @@ export const FALLBACK_CATEGORY_COLOR = '#64748b';
 export function getRandomEntityColor(): string {
   return ENTITY_COLORS[Math.floor(Math.random() * ENTITY_COLORS.length)];
 }
+
+/**
+ * Стабильный цвет по имени.
+ *
+ * Нужен там, где сущность создаётся без явного выбора цвета: случайный выбор
+ * при повторном создании давал бы другому аватару того же человека другой цвет.
+ */
+export function colorForName(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = (hash * 31 + name.charCodeAt(i)) | 0;
+  }
+  return ENTITY_COLORS[Math.abs(hash) % ENTITY_COLORS.length];
+}

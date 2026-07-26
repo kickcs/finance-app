@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { UCard, UIcon, Skeleton } from '@/shared/ui';
+import { UIcon, Skeleton } from '@/shared/ui';
 import { formatCurrency, formatPercentage, COMPACT_FORMAT } from '@/shared/lib/format/currency';
 
 const props = defineProps<{
@@ -73,11 +73,7 @@ function deltaIcon(row: ComparisonRow): string {
 </script>
 
 <template>
-  <UCard class="p-4">
-    <h3 class="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark mb-4">
-      Сравнение с прошлым периодом
-    </h3>
-
+  <div>
     <!-- Loading -->
     <div v-if="loading" class="space-y-4">
       <div v-for="i in 3" :key="i" class="flex items-center justify-between">
@@ -98,27 +94,32 @@ function deltaIcon(row: ComparisonRow): string {
     </div>
 
     <!-- Comparison rows -->
-    <div v-else class="space-y-4">
-      <div v-for="row in rows" :key="row.label" class="flex items-center justify-between">
-        <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
+    <div v-else class="space-y-3">
+      <div v-for="row in rows" :key="row.label" class="flex items-center gap-2">
+        <span
+          class="flex-1 min-w-0 truncate text-body-sm text-text-secondary-light dark:text-text-secondary-dark"
+        >
           {{ row.label }}
         </span>
-        <div class="flex items-center gap-3">
-          <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
-            {{
-              row.isCurrency
-                ? formatCurrency(row.current, currency, COMPACT_FORMAT)
-                : formatPercentage(row.current, 0)
-            }}
+        <span
+          class="shrink-0 text-right text-body-sm font-medium tabular-nums text-text-primary-light dark:text-text-primary-dark"
+        >
+          {{
+            row.isCurrency
+              ? formatCurrency(row.current, currency, COMPACT_FORMAT)
+              : formatPercentage(row.current, 0)
+          }}
+        </span>
+        <div
+          class="flex items-center gap-0.5 w-[68px] shrink-0 justify-end"
+          :class="deltaColor(row)"
+        >
+          <UIcon :name="deltaIcon(row)" size="xs" />
+          <span class="text-body-sm font-semibold tabular-nums">
+            {{ formatPercentage(Math.abs(row.delta), 0) }}
           </span>
-          <div class="flex items-center gap-0.5 min-w-[72px] justify-end" :class="deltaColor(row)">
-            <UIcon :name="deltaIcon(row)" size="xs" />
-            <span class="text-sm font-semibold">
-              {{ formatPercentage(Math.abs(row.delta), 0) }}
-            </span>
-          </div>
         </div>
       </div>
     </div>
-  </UCard>
+  </div>
 </template>

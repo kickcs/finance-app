@@ -151,7 +151,7 @@ function handleInputWrapperPointerDown(event: PointerEvent) {
               v-for="(person, i) in filteredPeople"
               :key="person.id"
               type="button"
-              class="flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-surface-hover-light dark:hover:bg-surface-hover-dark transition-all active:bg-surface-light dark:active:bg-surface-dark"
+              class="flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-surface-hover-light dark:hover:bg-surface-hover-dark transition-colors active:bg-surface-light dark:active:bg-surface-dark"
               :style="{ animationDelay: `${i * 30}ms` }"
               style="animation: person-item-in 200ms ease-out both"
               @mousedown.prevent

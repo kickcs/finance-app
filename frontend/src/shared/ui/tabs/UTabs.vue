@@ -89,7 +89,7 @@ watch(
     >
       <!-- Sliding indicator -->
       <span
-        class="absolute top-1 bottom-1 rounded-md bg-card-light dark:bg-card-dark shadow-sm pointer-events-none transition-all duration-250 ease-out"
+        class="absolute top-1 bottom-1 rounded-md bg-card-light dark:bg-card-dark shadow-sm pointer-events-none transition-[left,width] duration-250 ease-out"
         :style="indicatorStyle"
       />
       <TabsTrigger

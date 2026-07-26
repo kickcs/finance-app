@@ -11,4 +11,5 @@ export { usePeriodNavigation } from './model/usePeriodNavigation';
 
 // UI Components
 export { default as FilterChips } from './ui/FilterChips.vue';
-export { default as SwipeablePeriodHeader } from './ui/SwipeablePeriodHeader.vue';
+export { default as PeriodBar } from './ui/PeriodBar.vue';
+export { default as AccountFilterSheet } from './ui/AccountFilterSheet.vue';

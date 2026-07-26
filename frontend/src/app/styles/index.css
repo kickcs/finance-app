@@ -254,30 +254,48 @@ h6 {
    ANIMATIONS - Subtle & Fast
    ============================================ */
 
-/* Shimmer effect for skeleton loaders - cleaner */
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
+/* Shimmer effect for skeleton loaders.
+
+   Блик едет через transform, а не через background-position: последнее не
+   компоузится, и каждый скелет заставлял главный поток перерисовывать себя в
+   каждом кадре. На экране со скелетами это давало и джанк, и вклад в CLS
+   (трейс помечал `shimmer` как non-composited animation). */
+@keyframes skeleton-shimmer {
+  from {
+    transform: translateX(-100%);
   }
-  100% {
-    background-position: 200% 0;
+  to {
+    transform: translateX(100%);
   }
 }
 
 .animate-shimmer {
-  background: linear-gradient(
-    90deg,
-    rgb(226 226 238) 0%,
-    rgb(240 240 248) 50%,
-    rgb(226 226 238) 100%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 1s ease-in-out infinite;
+  position: relative;
+  overflow: hidden;
+  background-color: rgb(226 226 238);
+}
+
+.animate-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgb(243 243 250) 50%, transparent 100%);
+  animation: skeleton-shimmer 1.2s ease-in-out infinite;
+  will-change: transform;
 }
 
 .dark .animate-shimmer {
-  background: linear-gradient(90deg, rgb(39 39 42) 0%, rgb(63 63 70) 50%, rgb(39 39 42) 100%);
-  background-size: 200% 100%;
+  background-color: rgb(39 39 42);
+}
+
+.dark .animate-shimmer::after {
+  background: linear-gradient(90deg, transparent 0%, rgb(63 63 70) 50%, transparent 100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-shimmer::after {
+    animation: none;
+  }
 }
 
 /* Shake animation for error states - minimal */

@@ -52,7 +52,7 @@ function handleChipClick(id: string) {
           :data-testid="`filter-chip-${item.id}`"
           :class="[
             'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap',
-            'transition-all duration-200 flex-shrink-0',
+            'transition-colors duration-200 flex-shrink-0',
             isSelected(item.id)
               ? 'bg-primary text-white shadow-sm'
               : [
