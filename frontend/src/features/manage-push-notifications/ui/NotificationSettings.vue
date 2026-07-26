@@ -15,22 +15,10 @@ const HOUR_OPTIONS = Array.from({ length: 17 }, (_, i) => i + 6);
 
 type PrefField = 'subscriptionUpcoming' | 'subscriptionCharged' | 'subscriptionFailed';
 
-const PREF_ROWS: Array<{ field: PrefField; title: string; description: string }> = [
-  {
-    field: 'subscriptionUpcoming',
-    title: 'Предстоящие списания',
-    description: 'Напомним за несколько дней до списания подписки',
-  },
-  {
-    field: 'subscriptionCharged',
-    title: 'Успешные авто-списания',
-    description: 'Уведомление о выполненном авто-списании',
-  },
-  {
-    field: 'subscriptionFailed',
-    title: 'Ошибки списания',
-    description: 'Если авто-списание не удалось',
-  },
+const PREF_ROWS: Array<{ field: PrefField; title: string }> = [
+  { field: 'subscriptionUpcoming', title: 'Предстоящие списания' },
+  { field: 'subscriptionCharged', title: 'Успешные авто-списания' },
+  { field: 'subscriptionFailed', title: 'Ошибки списания' },
 ];
 
 const {
@@ -116,111 +104,125 @@ async function handleTestPush() {
 </script>
 
 <template>
-  <UCard class="divide-y divide-border-light dark:divide-border-dark overflow-hidden">
-    <div class="flex items-center justify-between gap-3.5 px-4 py-3.5">
-      <div class="flex items-center gap-3.5 min-w-0">
+  <UCard
+    padding="none"
+    class="divide-y divide-border-light overflow-hidden dark:divide-border-dark"
+  >
+    <div class="flex items-center gap-3 px-3.5 py-2.5">
+      <span
+        class="grid h-6 w-6 shrink-0 place-items-center rounded-lg bg-surface-light dark:bg-surface-dark"
+      >
         <UIcon
           name="notifications"
-          size="sm"
-          class="text-text-secondary-light dark:text-text-secondary-dark shrink-0"
+          size="xs"
+          class="text-text-secondary-light dark:text-text-secondary-dark"
         />
-        <div class="min-w-0">
-          <p class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
-            Push-уведомления
-          </p>
-          <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
-            <template v-if="!isSupported">Не поддерживается</template>
-            <template v-else>Получайте напоминания о подписках</template>
-          </p>
-        </div>
-      </div>
-
-      <div class="flex items-center gap-2 shrink-0">
-        <button
-          v-if="isSubscribed"
-          class="text-xs font-medium text-primary hover:text-primary-hover transition-colors disabled:opacity-50"
-          :disabled="isSendingTest"
-          @click="handleTestPush"
-        >
-          {{ isSendingTest ? 'Отправка...' : 'Тест' }}
-        </button>
-        <USpinner v-if="isRegistering" size="sm" />
-        <UToggle
-          v-else
-          :model-value="isSubscribed"
-          :disabled="!isSupported"
-          @update:model-value="handleMasterToggle"
-        />
-      </div>
-    </div>
-
-    <div class="px-4 py-3.5 space-y-4" :class="{ 'opacity-50 pointer-events-none': !isSubscribed }">
-      <p class="text-xs font-semibold text-text-secondary-light dark:text-text-secondary-dark">
-        Типы уведомлений
-      </p>
-
-      <div v-if="isLoadingPrefs" class="flex justify-center py-2">
-        <USpinner size="sm" />
-      </div>
-
-      <template v-else>
-        <div
-          v-for="row in PREF_ROWS"
-          :key="row.field"
-          class="flex items-center justify-between gap-4"
-        >
-          <div class="min-w-0">
-            <p class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
-              {{ row.title }}
-            </p>
-            <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark mt-0.5">
-              {{ row.description }}
-            </p>
-          </div>
-          <UToggle
-            :model-value="preferences?.[row.field] ?? false"
-            :disabled="!isSubscribed"
-            @update:model-value="(v: boolean) => handlePrefToggle(row.field, v)"
-          />
-        </div>
-      </template>
-    </div>
-
-    <div
-      class="flex items-center justify-between gap-4 px-4 py-3.5"
-      :class="{ 'opacity-50 pointer-events-none': !isSubscribed }"
-    >
-      <div class="min-w-0">
-        <p class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
-          Время уведомлений
+      </span>
+      <div class="min-w-0 flex-1">
+        <p class="text-body-sm font-medium text-text-primary-light dark:text-text-primary-dark">
+          Push-уведомления
         </p>
-        <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark mt-0.5">
-          В какое время отправлять напоминания
+        <p
+          v-if="!isSupported"
+          class="text-caption text-text-tertiary-light dark:text-text-tertiary-dark"
+        >
+          Браузер не поддерживает
         </p>
       </div>
-      <select
-        :value="notificationHour"
-        :disabled="!isSubscribed"
-        class="text-sm font-medium bg-surface-light dark:bg-surface-dark text-text-primary-light dark:text-text-primary-dark border border-border-light dark:border-border-dark rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-        @change="handleHourChange"
+
+      <button
+        v-if="isSubscribed"
+        type="button"
+        class="shrink-0 text-caption font-medium text-primary transition-colors hover:text-primary-hover disabled:opacity-50"
+        :disabled="isSendingTest"
+        @click="handleTestPush"
       >
-        <option v-for="h in HOUR_OPTIONS" :key="h" :value="h">{{ formatHour(h) }}</option>
-      </select>
+        {{ isSendingTest ? 'Отправка...' : 'Тест' }}
+      </button>
+      <USpinner v-if="isRegistering" size="sm" class="shrink-0" />
+      <UToggle
+        v-else
+        :model-value="isSubscribed"
+        :disabled="!isSupported"
+        class="shrink-0"
+        @update:model-value="handleMasterToggle"
+      />
     </div>
+
+    <Transition name="reveal">
+      <div v-if="isSubscribed" class="space-y-2 px-3.5 py-2.5">
+        <div v-if="isLoadingPrefs" class="flex justify-center py-1">
+          <USpinner size="sm" />
+        </div>
+
+        <template v-else>
+          <div
+            v-for="row in PREF_ROWS"
+            :key="row.field"
+            class="flex items-center justify-between gap-3"
+          >
+            <span class="text-body-sm text-text-primary-light dark:text-text-primary-dark">
+              {{ row.title }}
+            </span>
+            <UToggle
+              :model-value="preferences?.[row.field] ?? false"
+              @update:model-value="(v: boolean) => handlePrefToggle(row.field, v)"
+            />
+          </div>
+        </template>
+
+        <div
+          class="flex items-center justify-between gap-3 border-t border-border-light pt-2 dark:border-border-dark"
+        >
+          <span class="text-body-sm text-text-primary-light dark:text-text-primary-dark">
+            Время напоминаний
+          </span>
+          <select
+            :value="notificationHour"
+            class="rounded-lg border border-border-light bg-surface-light px-2 py-1 text-body-sm font-medium text-text-primary-light focus:outline-none focus:ring-2 focus:ring-primary dark:border-border-dark dark:bg-surface-dark dark:text-text-primary-dark"
+            @change="handleHourChange"
+          >
+            <option v-for="h in HOUR_OPTIONS" :key="h" :value="h">{{ formatHour(h) }}</option>
+          </select>
+        </div>
+      </div>
+    </Transition>
 
     <div
       v-if="showIosHint"
-      class="flex items-start gap-3 px-4 py-3.5 bg-surface-light dark:bg-surface-dark"
+      class="flex items-start gap-2.5 bg-surface-light px-3.5 py-2.5 dark:bg-surface-dark"
     >
       <UIcon
         name="info"
-        size="sm"
-        class="text-text-secondary-light dark:text-text-secondary-dark shrink-0 mt-0.5"
+        size="xs"
+        class="mt-0.5 shrink-0 text-text-secondary-light dark:text-text-secondary-dark"
       />
-      <p class="text-xs text-text-secondary-light dark:text-text-secondary-dark">
+      <p class="text-caption text-text-secondary-light dark:text-text-secondary-dark">
         Чтобы получать уведомления на iOS, добавьте приложение на главный экран через меню
         «Поделиться».
       </p>
     </div>
   </UCard>
 </template>
+
+<style scoped>
+.reveal-enter-active,
+.reveal-leave-active {
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+}
+
+.reveal-enter-from,
+.reveal-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-enter-active,
+  .reveal-leave-active {
+    transition: none;
+  }
+}
+</style>

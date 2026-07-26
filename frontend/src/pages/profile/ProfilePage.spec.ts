@@ -239,22 +239,17 @@ describe('ProfilePage', () => {
       expect(item.exists()).toBe(true);
       expect(item.text()).toContain('Быстрые действия');
     });
-  });
 
-  // -----------------------------------------------------------------------
-  // Data Group
-  // -----------------------------------------------------------------------
-  describe('data group', () => {
-    it('displays "Данные" section header', async () => {
-      const wrapper = await renderPage();
-      expect(wrapper.text()).toContain('Данные');
-    });
-
-    it('shows import menu item', async () => {
+    it('shows import menu item inside the settings grid', async () => {
       const wrapper = await renderPage();
       const item = wrapper.find('[data-testid="menu-item-import"]');
       expect(item.exists()).toBe(true);
       expect(item.text()).toContain('Импорт данных');
+    });
+
+    it('shows the current value on tiles that have one', async () => {
+      const wrapper = await renderPage();
+      expect(wrapper.find('[data-testid="menu-item-financial-period"]').text()).toContain('1-е');
     });
   });
 

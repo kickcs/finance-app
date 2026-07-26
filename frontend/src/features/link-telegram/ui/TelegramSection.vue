@@ -65,122 +65,110 @@ async function handleUnlink() {
 </script>
 
 <template>
-  <section>
-    <h2
-      class="text-xs font-semibold text-text-secondary-light dark:text-text-secondary-dark px-2 mb-2"
-    >
-      Telegram-импорт
-    </h2>
-
-    <UCard class="overflow-hidden">
-      <!-- Loading -->
-      <div v-if="isLoading" class="flex items-center gap-3.5 px-4 py-4">
-        <div
-          class="h-11 w-11 shrink-0 rounded-full bg-surface-light dark:bg-surface-dark animate-shimmer"
-        />
-        <div class="flex-1 space-y-2">
-          <div class="h-3.5 w-2/3 rounded bg-surface-light dark:bg-surface-dark animate-shimmer" />
-          <div class="h-3 w-1/2 rounded bg-surface-light dark:bg-surface-dark animate-shimmer" />
-        </div>
+  <UCard padding="none" class="overflow-hidden">
+    <!-- Loading -->
+    <div v-if="isLoading" class="flex items-center gap-3 px-3.5 py-3">
+      <div
+        class="h-9 w-9 shrink-0 animate-shimmer rounded-full bg-surface-light dark:bg-surface-dark"
+      />
+      <div class="flex-1 space-y-1.5">
+        <div class="h-3 w-2/3 animate-shimmer rounded bg-surface-light dark:bg-surface-dark" />
+        <div class="h-2.5 w-1/2 animate-shimmer rounded bg-surface-light dark:bg-surface-dark" />
       </div>
+    </div>
 
-      <!-- Connected -->
-      <template v-else-if="status?.linked">
-        <div class="flex items-center gap-3.5 px-4 py-4">
-          <span
-            class="relative grid h-11 w-11 shrink-0 place-items-center rounded-full text-white"
-            :style="{ backgroundColor: TELEGRAM_BLUE }"
-          >
-            <UIcon name="telegram" size="md" />
-            <span
-              class="absolute -bottom-0.5 -right-0.5 grid h-4 w-4 place-items-center rounded-full bg-card-light dark:bg-card-dark"
-            >
-              <span class="h-2.5 w-2.5 rounded-full bg-success" />
-            </span>
-          </span>
-          <div class="min-w-0 flex-1">
-            <p class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark">
-              {{
-                status.telegram_username
-                  ? `Подключён как @${status.telegram_username}`
-                  : 'Подключён'
-              }}
-            </p>
-            <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
-              Пересылай боту уведомления банка — они станут транзакциями.
-            </p>
-          </div>
-          <button
-            type="button"
-            class="shrink-0 text-sm font-medium text-danger transition-colors hover:text-danger/80"
-            @click="showUnlinkConfirm = true"
-          >
-            Отвязать
-          </button>
-        </div>
-
-        <!-- Cards -->
-        <div class="border-t border-border-light dark:border-border-dark px-4 py-4">
-          <TelegramCardsList />
-        </div>
-      </template>
-
-      <!-- Waiting for link confirmation -->
-      <div v-else-if="waitingForLink" class="px-4 py-5">
-        <div class="flex items-start gap-3.5">
-          <span
-            class="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-warning/10 text-warning"
-          >
-            <UIcon name="timer" size="md" />
-          </span>
-          <div class="flex-1">
-            <p class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark">
-              Открой бота и нажми «Start»
-            </p>
-            <p class="mt-0.5 text-xs text-text-secondary-light dark:text-text-secondary-dark">
-              Затем вернись и проверь подключение.
-            </p>
-          </div>
-        </div>
-        <div class="mt-4 flex gap-2">
-          <UButton variant="primary" size="md" :loading="isChecking" @click="handleCheck">
-            Проверить подключение
-          </UButton>
-          <UButton variant="ghost" size="md" @click="waitingForLink = false">Отмена</UButton>
-        </div>
-      </div>
-
-      <!-- Not linked -->
-      <div v-else class="px-4 py-5">
-        <div class="flex items-start gap-3.5">
-          <span
-            class="grid h-11 w-11 shrink-0 place-items-center rounded-full text-white"
-            :style="{ backgroundColor: TELEGRAM_BLUE }"
-          >
-            <UIcon name="telegram" size="md" />
-          </span>
-          <div class="flex-1">
-            <p class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark">
-              Импорт из Telegram
-            </p>
-            <p class="mt-0.5 text-xs text-text-secondary-light dark:text-text-secondary-dark">
-              Пересылай уведомления банка нашему боту — они автоматически станут транзакциями.
-            </p>
-          </div>
-        </div>
-        <UButton
-          variant="primary"
-          size="md"
-          full-width
-          class="mt-4"
-          :loading="isConnecting"
-          @click="handleConnect"
+    <!-- Connected -->
+    <template v-else-if="status?.linked">
+      <div class="flex items-center gap-3 px-3.5 py-3">
+        <span
+          class="relative grid h-9 w-9 shrink-0 place-items-center rounded-full text-white"
+          :style="{ backgroundColor: TELEGRAM_BLUE }"
         >
-          <UIcon name="telegram" size="sm" class="mr-1.5" />
-          Подключить Telegram
-        </UButton>
+          <UIcon name="telegram" size="sm" />
+          <span
+            class="absolute -bottom-0.5 -right-0.5 grid h-3.5 w-3.5 place-items-center rounded-full bg-card-light dark:bg-card-dark"
+          >
+            <span class="h-2 w-2 rounded-full bg-success" />
+          </span>
+        </span>
+        <div class="min-w-0 flex-1">
+          <p
+            class="truncate text-body-sm font-semibold text-text-primary-light dark:text-text-primary-dark"
+          >
+            {{
+              status.telegram_username ? `Подключён как @${status.telegram_username}` : 'Подключён'
+            }}
+          </p>
+          <p class="truncate text-caption text-text-tertiary-light dark:text-text-tertiary-dark">
+            Пересылай боту уведомления банка
+          </p>
+        </div>
+        <button
+          type="button"
+          class="shrink-0 text-caption font-medium text-danger transition-colors hover:text-danger/80"
+          @click="showUnlinkConfirm = true"
+        >
+          Отвязать
+        </button>
       </div>
-    </UCard>
+
+      <!-- Cards -->
+      <div class="border-t border-border-light px-3.5 py-3 dark:border-border-dark">
+        <TelegramCardsList />
+      </div>
+    </template>
+
+    <!-- Waiting for link confirmation -->
+    <div v-else-if="waitingForLink" class="px-3.5 py-3">
+      <div class="flex items-center gap-3">
+        <span
+          class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-warning/10 text-warning"
+        >
+          <UIcon name="timer" size="sm" />
+        </span>
+        <div class="min-w-0 flex-1">
+          <p class="text-body-sm font-semibold text-text-primary-light dark:text-text-primary-dark">
+            Открой бота и нажми «Start»
+          </p>
+          <p class="text-caption text-text-secondary-light dark:text-text-secondary-dark">
+            Затем вернись и проверь подключение.
+          </p>
+        </div>
+      </div>
+      <div class="mt-2.5 flex gap-2">
+        <UButton variant="primary" size="sm" :loading="isChecking" @click="handleCheck">
+          Проверить подключение
+        </UButton>
+        <UButton variant="ghost" size="sm" @click="waitingForLink = false">Отмена</UButton>
+      </div>
+    </div>
+
+    <!-- Not linked -->
+    <div v-else class="flex items-center gap-3 px-3.5 py-3">
+      <span
+        class="grid h-9 w-9 shrink-0 place-items-center rounded-full text-white"
+        :style="{ backgroundColor: TELEGRAM_BLUE }"
+      >
+        <UIcon name="telegram" size="sm" />
+      </span>
+      <div class="min-w-0 flex-1">
+        <p class="text-body-sm font-semibold text-text-primary-light dark:text-text-primary-dark">
+          Импорт из Telegram
+        </p>
+        <p class="text-caption text-text-secondary-light dark:text-text-secondary-dark">
+          Уведомления банка станут транзакциями
+        </p>
+      </div>
+      <UButton
+        variant="primary"
+        size="sm"
+        class="shrink-0"
+        :loading="isConnecting"
+        @click="handleConnect"
+      >
+        Подключить
+      </UButton>
+    </div>
 
     <!-- Unlink confirmation -->
     <ConfirmDeleteModal
@@ -191,5 +179,5 @@ async function handleUnlink() {
       :is-deleting="isUnlinking"
       @confirm="handleUnlink"
     />
-  </section>
+  </UCard>
 </template>

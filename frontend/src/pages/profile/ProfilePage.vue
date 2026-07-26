@@ -25,6 +25,8 @@ import { NavbarStyleSelector } from '@/features/select-navbar-style';
 import { TelegramSection } from '@/features/link-telegram';
 import { getInitial } from '@/shared/lib/format/text';
 import { useLocale } from '@/shared/i18n/useLocale';
+import SettingsTile from './ui/SettingsTile.vue';
+import SectionHeading from './ui/SectionHeading.vue';
 
 const router = useRouter();
 const { signOut } = useAuth();
@@ -87,43 +89,48 @@ const { isLoading: isCheckingUpdate, execute: handleCheckUpdate } = useAsyncOper
 const showLogoutModal = ref(false);
 const showEditProfileModal = ref(false);
 
-const settingsGroup = [
+/** Плитки настроек: сначала значения, затем разделы. */
+const settingsTiles = computed(() => [
   {
     id: 'currency',
     icon: 'currency_exchange',
     label: 'Главная валюта',
-    value: () => currency.value?.code,
+    value: currency.value?.code,
   },
   {
     id: 'language',
     icon: 'language',
     label: 'Язык',
-    value: () => (locale.value === 'en' ? 'English' : 'Русский'),
+    value: locale.value === 'en' ? 'English' : 'Русский',
   },
   {
     id: 'financial-period',
     icon: 'calendar_month',
     label: 'Начало месяца',
-    value: () => financialPeriodLabel.value,
+    value: financialPeriodLabel.value,
   },
-  { id: 'color', icon: 'palette', label: 'Основной цвет' },
+  {
+    id: 'color',
+    icon: 'palette',
+    label: 'Основной цвет',
+    accentColor: currentPrimaryColor.value,
+  },
   { id: 'categories', icon: 'category', label: 'Категории' },
   { id: 'people', icon: 'group', label: 'Люди' },
   { id: 'quick-actions', icon: 'bolt', label: 'Быстрые действия' },
-];
+  { id: 'import', icon: 'download', label: 'Импорт данных' },
+]);
 
-const dataGroup = [{ id: 'import', icon: 'download', label: 'Импорт данных' }];
-
-const appGroup = [
-  { id: 'whats-new', icon: 'new_releases', label: 'Что нового', badge: hasUnseenChanges },
+const appTiles = computed(() => [
+  { id: 'whats-new', icon: 'new_releases', label: 'Что нового', badge: hasUnseenChanges.value },
   {
     id: 'update',
     icon: 'refresh',
-    label: 'Обновление',
-    value: () => (isCheckingUpdate.value ? 'Проверка...' : `v${CURRENT_VERSION}`),
+    label: isCheckingUpdate.value ? 'Проверка...' : 'Обновление',
+    spinning: isCheckingUpdate.value,
   },
   { id: 'about', icon: 'info', label: 'О приложении' },
-];
+]);
 
 function handleMenuClick(itemId: string) {
   switch (itemId) {
@@ -188,69 +195,79 @@ async function confirmLogout() {
       </AppHeader>
     </template>
 
-    <main class="pt-6 pb-28 md:pb-8 space-y-6">
-      <!-- User + Subscription -->
-      <UCard class="divide-y divide-border-light dark:divide-border-dark overflow-hidden">
-        <!-- User row -->
-        <section data-testid="user-card" class="flex items-center gap-3.5 px-4 py-3.5">
-          <div
-            class="w-12 h-12 rounded-full bg-primary/10 dark:bg-primary/15 flex items-center justify-center text-base font-bold text-primary shrink-0"
+    <main class="space-y-5 pt-4 pb-28 md:pb-8">
+      <!-- Профиль и подписка -->
+      <UCard
+        data-testid="user-card"
+        padding="none"
+        class="divide-y divide-border-light overflow-hidden dark:divide-border-dark"
+      >
+        <button
+          data-testid="edit-profile-btn"
+          type="button"
+          class="flex w-full items-center gap-3 px-3.5 py-3 text-left transition-colors hover:bg-surface-light active:bg-surface-light dark:hover:bg-surface-dark dark:active:bg-surface-dark"
+          @click="showEditProfileModal = true"
+        >
+          <span
+            class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary/10 text-body font-bold text-primary dark:bg-primary/15"
           >
             {{ getInitial(userName) }}
-          </div>
-          <div class="flex-1 min-w-0">
-            <p
+          </span>
+          <span class="min-w-0 flex-1">
+            <span
               data-testid="user-name"
-              class="text-base font-semibold text-text-primary-light dark:text-text-primary-dark truncate"
+              class="block truncate text-body font-semibold text-text-primary-light dark:text-text-primary-dark"
             >
               {{ userName }}
-            </p>
-            <p
+            </span>
+            <span
               data-testid="user-email"
-              class="text-sm text-text-secondary-light dark:text-text-secondary-dark truncate"
+              class="block truncate text-caption text-text-tertiary-light dark:text-text-tertiary-dark"
             >
               {{ userEmail }}
-            </p>
-          </div>
-          <button
-            data-testid="edit-profile-btn"
-            class="text-sm font-medium text-primary hover:text-primary-hover transition-colors shrink-0"
-            @click="showEditProfileModal = true"
-          >
-            Редактировать
-          </button>
-        </section>
+            </span>
+          </span>
+          <UIcon
+            name="chevron_right"
+            size="sm"
+            class="text-text-tertiary-light dark:text-text-tertiary-dark"
+          />
+        </button>
 
-        <!-- Subscription row -->
         <button
           data-testid="subscription-button"
-          class="w-full flex items-center gap-3.5 px-4 py-3.5 transition-colors hover:bg-surface-light dark:hover:bg-surface-dark active:bg-surface-light dark:active:bg-surface-dark text-left"
+          type="button"
+          class="flex w-full items-center gap-3 px-3.5 py-2.5 text-left transition-colors hover:bg-surface-light active:bg-surface-light dark:hover:bg-surface-dark dark:active:bg-surface-dark"
           @click="requirePremium('Premium подписка')"
         >
-          <UIcon
-            name="workspace_premium"
-            size="sm"
-            class="text-text-secondary-light dark:text-text-secondary-dark shrink-0"
-          />
-          <div class="flex-1 min-w-0">
-            <p
+          <span
+            class="grid h-6 w-6 shrink-0 place-items-center rounded-lg bg-surface-light dark:bg-surface-dark"
+          >
+            <UIcon
+              name="workspace_premium"
+              size="xs"
+              class="text-text-secondary-light dark:text-text-secondary-dark"
+            />
+          </span>
+          <span class="min-w-0 flex-1">
+            <span
               data-testid="subscription-plan-label"
-              class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark truncate"
+              class="block truncate text-body-sm font-medium text-text-primary-light dark:text-text-primary-dark"
             >
               {{ isPremium ? PLAN_LABELS[subscription.plan] || 'Premium' : 'Premium подписка' }}
-            </p>
-            <p
+            </span>
+            <span
               v-if="isPremium && subscription.current_period_end"
               data-testid="subscription-period-end"
-              class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark truncate"
+              class="block truncate text-caption text-text-tertiary-light dark:text-text-tertiary-dark"
             >
               {{ subscription.cancel_at_period_end ? 'Действует до' : 'Следующая оплата' }}:
               {{ formatDate(subscription.current_period_end) }}
-            </p>
-          </div>
+            </span>
+          </span>
           <span
             data-testid="subscription-status-label"
-            class="text-sm shrink-0"
+            class="shrink-0 text-caption"
             :class="
               isPremium ? 'text-success' : 'text-text-tertiary-light dark:text-text-tertiary-dark'
             "
@@ -265,163 +282,82 @@ async function confirmLogout() {
         </button>
       </UCard>
 
-      <!-- Settings -->
+      <!-- Настройки -->
       <section>
-        <h2
-          class="text-xs font-semibold text-text-secondary-light dark:text-text-secondary-dark px-2 mb-2"
-        >
-          Настройки
-        </h2>
-        <UCard class="divide-y divide-border-light dark:divide-border-dark overflow-hidden">
-          <button
-            v-for="item in settingsGroup"
-            :key="item.id"
-            :data-testid="`menu-item-${item.id}`"
-            class="w-full flex items-center gap-3.5 px-4 py-3.5 transition-colors hover:bg-surface-light dark:hover:bg-surface-dark active:bg-surface-light dark:active:bg-surface-dark"
-            @click="handleMenuClick(item.id)"
-          >
-            <UIcon
-              :name="item.icon"
-              size="sm"
-              class="text-text-secondary-light dark:text-text-secondary-dark shrink-0"
-            />
-            <span
-              class="flex-1 text-left text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
-            >
-              {{ item.label }}
-            </span>
-            <span
-              v-if="item.value"
-              class="text-sm text-text-tertiary-light dark:text-text-tertiary-dark mr-1"
-            >
-              {{ item.value() }}
-            </span>
-            <span
-              v-if="item.id === 'color'"
-              data-testid="color-dot"
-              class="w-5 h-5 rounded-full border border-border-light dark:border-border-dark mr-1 shrink-0"
-              :style="{ backgroundColor: currentPrimaryColor }"
-            />
-            <UIcon
-              name="chevron_right"
-              size="sm"
-              class="text-text-tertiary-light dark:text-text-tertiary-dark"
-            />
-          </button>
-        </UCard>
-      </section>
+        <SectionHeading title="Настройки" />
+        <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <SettingsTile
+            v-for="tile in settingsTiles"
+            :key="tile.id"
+            :data-testid="`menu-item-${tile.id}`"
+            :icon="tile.icon"
+            :label="tile.label"
+            :value="tile.value"
+            :accent-color="tile.accentColor"
+            @click="handleMenuClick(tile.id)"
+          />
+        </div>
 
-      <!-- Appearance -->
-      <section>
-        <h2
-          class="text-xs font-semibold text-text-secondary-light dark:text-text-secondary-dark px-2 mb-2"
+        <div
+          class="mt-2 rounded-xl border border-border-light bg-card-light px-3 py-2 dark:border-border-dark dark:bg-card-dark"
         >
-          Оформление
-        </h2>
-        <UCard class="px-4 py-3.5">
           <NavbarStyleSelector />
-        </UCard>
+        </div>
       </section>
 
-      <!-- Notifications -->
+      <!-- Уведомления -->
       <section>
-        <h2
-          class="text-xs font-semibold text-text-secondary-light dark:text-text-secondary-dark px-2 mb-2"
-        >
-          Уведомления
-        </h2>
+        <SectionHeading title="Уведомления" />
         <NotificationSettings />
       </section>
 
-      <!-- Telegram import -->
-      <TelegramSection />
-
-      <!-- Data -->
+      <!-- Telegram-импорт -->
       <section>
-        <h2
-          class="text-xs font-semibold text-text-secondary-light dark:text-text-secondary-dark px-2 mb-2"
-        >
-          Данные
-        </h2>
-        <UCard class="divide-y divide-border-light dark:divide-border-dark overflow-hidden">
-          <button
-            v-for="item in dataGroup"
-            :key="item.id"
-            :data-testid="`menu-item-${item.id}`"
-            class="w-full flex items-center gap-3.5 px-4 py-3.5 transition-colors hover:bg-surface-light dark:hover:bg-surface-dark active:bg-surface-light dark:active:bg-surface-dark"
-            @click="handleMenuClick(item.id)"
-          >
-            <UIcon
-              :name="item.icon"
-              size="sm"
-              class="text-text-secondary-light dark:text-text-secondary-dark shrink-0"
-            />
-            <span
-              class="flex-1 text-left text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
-            >
-              {{ item.label }}
-            </span>
-            <UIcon
-              name="chevron_right"
-              size="sm"
-              class="text-text-tertiary-light dark:text-text-tertiary-dark"
-            />
-          </button>
-        </UCard>
+        <SectionHeading title="Telegram-импорт" />
+        <TelegramSection />
       </section>
 
-      <!-- App -->
+      <!-- Приложение -->
       <section>
-        <h2
-          class="text-xs font-semibold text-text-secondary-light dark:text-text-secondary-dark px-2 mb-2"
-        >
-          Приложение
-        </h2>
-        <UCard class="divide-y divide-border-light dark:divide-border-dark overflow-hidden">
+        <SectionHeading title="Приложение" :meta="`v${CURRENT_VERSION}`" />
+        <div class="grid grid-cols-3 gap-2">
           <button
-            v-for="item in appGroup"
-            :key="item.id"
-            :data-testid="`menu-item-${item.id}`"
-            class="w-full flex items-center gap-3.5 px-4 py-3.5 transition-colors hover:bg-surface-light dark:hover:bg-surface-dark active:bg-surface-light dark:active:bg-surface-dark"
-            @click="handleMenuClick(item.id)"
+            v-for="tile in appTiles"
+            :key="tile.id"
+            :data-testid="`menu-item-${tile.id}`"
+            type="button"
+            class="flex flex-col items-center gap-1.5 rounded-xl border border-border-light bg-card-light px-2 py-2.5 transition-colors hover:border-primary/30 active:bg-surface-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary dark:border-border-dark dark:bg-card-dark dark:hover:border-primary/30 dark:active:bg-surface-dark"
+            @click="handleMenuClick(tile.id)"
           >
-            <div class="relative shrink-0">
+            <span
+              class="relative grid h-6 w-6 shrink-0 place-items-center rounded-lg bg-surface-light dark:bg-surface-dark"
+            >
               <UIcon
-                :name="item.icon"
-                size="sm"
+                :name="tile.icon"
+                size="xs"
                 class="text-text-secondary-light dark:text-text-secondary-dark"
-                :class="item.id === 'update' && isCheckingUpdate ? 'animate-spin' : ''"
+                :class="tile.spinning && 'animate-spin'"
               />
               <span
-                v-if="item.badge?.value"
+                v-if="tile.badge"
                 data-testid="unseen-badge"
-                class="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-danger"
+                class="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-danger ring-2 ring-card-light dark:ring-card-dark"
               />
-            </div>
-            <span
-              class="flex-1 text-left text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
-            >
-              {{ item.label }}
             </span>
             <span
-              v-if="item.value"
-              class="text-sm text-text-tertiary-light dark:text-text-tertiary-dark mr-1"
+              class="w-full truncate text-center text-caption font-medium text-text-primary-light dark:text-text-primary-dark"
             >
-              {{ item.value() }}
+              {{ tile.label }}
             </span>
-            <UIcon
-              name="chevron_right"
-              size="sm"
-              class="text-text-tertiary-light dark:text-text-tertiary-dark"
-            />
           </button>
-        </UCard>
+        </div>
       </section>
 
-      <!-- Logout -->
+      <!-- Выход -->
       <button
         data-testid="logout-btn"
-        class="w-full flex items-center justify-center gap-2 py-3 text-sm font-medium text-danger hover:text-danger/80 transition-colors"
+        type="button"
+        class="flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-body-sm font-medium text-danger transition-colors hover:bg-danger/5 active:bg-danger/10"
         @click="handleLogout"
       >
         <UIcon name="logout" size="sm" />
