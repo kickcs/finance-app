@@ -53,7 +53,7 @@ const emit = defineEmits<{ click: [] }>();
     <!-- Без символа валюты: она названа в сводке выше, а в каждой строке
          занимала бы ширину, которой не хватало числу. -->
     <span
-      class="w-[72px] shrink-0 text-right text-body-sm font-semibold text-text-primary-light dark:text-text-primary-dark tabular-nums"
+      class="w-[80px] shrink-0 text-right text-body-sm font-semibold text-text-primary-light dark:text-text-primary-dark tabular-nums"
     >
       {{ formatCurrency(segment.value, currency, COMPACT_BARE_FORMAT) }}
     </span>
