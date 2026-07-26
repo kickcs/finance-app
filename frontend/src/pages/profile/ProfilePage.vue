@@ -3,7 +3,7 @@ import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { ROUTE_NAMES } from '@/app/router/routeNames';
 import { AppHeader } from '@/widgets/header';
-import { PageContainer, UButton, UIcon, UCard, UModal, useToast } from '@/shared/ui';
+import { PageContainer, UButton, UIcon, UCard, UModal, IconBadge, useToast } from '@/shared/ui';
 import { getCurrencyByCode } from '@/entities/currency';
 import { useAuth, useProfile } from '@/shared/api';
 import { EditProfileModal } from '@/features/edit-profile';
@@ -240,15 +240,13 @@ async function confirmLogout() {
           class="flex w-full items-center gap-3 px-3.5 py-2.5 text-left transition-colors hover:bg-surface-light active:bg-surface-light dark:hover:bg-surface-dark dark:active:bg-surface-dark"
           @click="requirePremium('Premium подписка')"
         >
-          <span
-            class="grid h-6 w-6 shrink-0 place-items-center rounded-lg bg-surface-light dark:bg-surface-dark"
-          >
-            <UIcon
-              name="workspace_premium"
-              size="xs"
-              class="text-text-secondary-light dark:text-text-secondary-dark"
-            />
-          </span>
+          <IconBadge
+            icon="workspace_premium"
+            size="xs"
+            class="rounded-lg"
+            bg-class="bg-surface-light dark:bg-surface-dark"
+            icon-class="text-text-secondary-light dark:text-text-secondary-dark"
+          />
           <span class="min-w-0 flex-1">
             <span
               data-testid="subscription-plan-label"
@@ -321,35 +319,17 @@ async function confirmLogout() {
       <section>
         <SectionHeading title="Приложение" :meta="`v${CURRENT_VERSION}`" />
         <div class="grid grid-cols-3 gap-2">
-          <button
+          <SettingsTile
             v-for="tile in appTiles"
             :key="tile.id"
             :data-testid="`menu-item-${tile.id}`"
-            type="button"
-            class="flex flex-col items-center gap-1.5 rounded-xl border border-border-light bg-card-light px-2 py-2.5 transition-colors hover:border-primary/30 active:bg-surface-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary dark:border-border-dark dark:bg-card-dark dark:hover:border-primary/30 dark:active:bg-surface-dark"
+            stacked
+            :icon="tile.icon"
+            :label="tile.label"
+            :badge="tile.badge"
+            :spinning="tile.spinning"
             @click="handleMenuClick(tile.id)"
-          >
-            <span
-              class="relative grid h-6 w-6 shrink-0 place-items-center rounded-lg bg-surface-light dark:bg-surface-dark"
-            >
-              <UIcon
-                :name="tile.icon"
-                size="xs"
-                class="text-text-secondary-light dark:text-text-secondary-dark"
-                :class="tile.spinning && 'animate-spin'"
-              />
-              <span
-                v-if="tile.badge"
-                data-testid="unseen-badge"
-                class="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-danger ring-2 ring-card-light dark:ring-card-dark"
-              />
-            </span>
-            <span
-              class="w-full truncate text-center text-caption font-medium text-text-primary-light dark:text-text-primary-dark"
-            >
-              {{ tile.label }}
-            </span>
-          </button>
+          />
         </div>
       </section>
 
