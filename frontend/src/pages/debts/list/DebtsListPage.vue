@@ -2,10 +2,15 @@
 import { ref, onMounted } from 'vue';
 import { useIntersectionObserver } from '@vueuse/core';
 import { AppHeader } from '@/widgets/header';
-import { DebtCard, DebtDetailPanel, ClosedDebtCard, DEBT_DIRECTION_DISPLAY } from '@/entities/debt';
+import {
+  DebtCard,
+  DebtDetailPanel,
+  ClosedDebtCard,
+  DebtsSummaryCard,
+  PersonDebtRow,
+} from '@/entities/debt';
 import { CloseAllDebtsModal, DeleteDebtModal } from '@/features/close-debt';
 import { PartialPaymentModal } from '@/features/partial-payment';
-import { CollapsibleRoot, CollapsibleTrigger, CollapsibleContent } from 'reka-ui';
 import {
   UButton,
   UIcon,
@@ -19,9 +24,6 @@ import {
   SelectChips,
   PullToRefresh,
 } from '@/shared/ui';
-import { formatCurrency } from '@/shared/lib/format/currency';
-import { pluralize } from '@/shared/lib/format/pluralize';
-import { getInitial } from '@/shared/lib/format/text';
 import { useHaptics } from '@/shared/lib/haptics';
 import { useDebtsPageState } from './useDebtsPageState';
 
@@ -69,8 +71,9 @@ const {
   selectedDebtId,
   selectedDebt,
   selectedDebtCurrency,
-  groups,
+  people,
   allDebtsFromGroups,
+  filteredDebts,
   totalGivenDebts,
   totalTakenDebts,
   fetchNextPage,
@@ -89,9 +92,9 @@ const {
   isPaying,
   goBack,
   handleDebtClick,
+  handlePersonClick,
   handleAddDebt,
   clearFilter,
-  isGroupDefaultOpen,
   openCloseAllForPerson,
   handleCloseAll,
   handleDetailPayment,
@@ -103,7 +106,6 @@ const {
   handleDetailClose,
   handleRefresh,
   toCurrencyItems,
-  groupTotal,
 } = useDebtsPageState();
 
 useIntersectionObserver(
@@ -177,43 +179,12 @@ useIntersectionObserver(
 
             <!-- Active Debts Tab -->
             <template v-else-if="statusFilter === 'active'">
-              <!-- Summary Cards -->
-              <div v-if="allDebtsFromGroups.length > 0" class="grid grid-cols-2 gap-3">
-                <UCard
-                  data-testid="summary-given"
-                  class="p-4 relative overflow-hidden"
-                  variant="bordered"
-                >
-                  <div
-                    class="absolute -right-4 -top-4 w-16 h-16 bg-debt-given/10 rounded-full blur-xl pointer-events-none"
-                  />
-                  <p
-                    class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-1"
-                  >
-                    Вам должны
-                  </p>
-                  <p class="text-lg font-bold text-debt-given tracking-tight">
-                    {{ formatCurrency(totalGivenDebts, currency) }}
-                  </p>
-                </UCard>
-                <UCard
-                  data-testid="summary-taken"
-                  class="p-4 relative overflow-hidden"
-                  variant="bordered"
-                >
-                  <div
-                    class="absolute -right-4 -top-4 w-16 h-16 bg-debt-received/10 rounded-full blur-xl pointer-events-none"
-                  />
-                  <p
-                    class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-1"
-                  >
-                    Вы должны
-                  </p>
-                  <p class="text-lg font-bold text-debt-received tracking-tight">
-                    {{ formatCurrency(totalTakenDebts, currency) }}
-                  </p>
-                </UCard>
-              </div>
+              <DebtsSummaryCard
+                v-if="allDebtsFromGroups.length > 0"
+                :total-given="totalGivenDebts"
+                :total-taken="totalTakenDebts"
+                :currency="currency"
+              />
 
               <!-- Currency Filter Chips -->
               <SelectChips
@@ -244,137 +215,58 @@ useIntersectionObserver(
                 </div>
 
                 <SectionHeader
-                  :title="personFilter ? `Долги: ${personFilter}` : 'Активные долги'"
+                  :title="personFilter ? `Долги: ${personFilter}` : 'По людям'"
                   :show-add="false"
                   :show-view-all="false"
                 />
 
-                <!-- Groups by Person -->
-                <div v-if="groups.length > 0" class="space-y-2">
-                  <template
-                    v-for="group in groups"
-                    :key="`${group.person_name}_${group.debt_type}`"
-                  >
-                    <!-- Single debt — flat card -->
-                    <DebtCard
-                      v-if="group.debts.length === 1"
-                      :debt="group.debts[0]"
-                      :class="
-                        isDesktop &&
-                        selectedDebtId === group.debts[0].id &&
-                        'ring-2 ring-primary ring-offset-2 ring-offset-background-light dark:ring-offset-background-dark'
-                      "
-                      @click="(trigger('selection'), handleDebtClick(group.debts[0]))"
-                    />
-
-                    <!-- Multiple debts — collapsible -->
-                    <CollapsibleRoot
-                      v-else
-                      v-slot="{ open }"
-                      :default-open="isGroupDefaultOpen(group)"
-                    >
-                      <CollapsibleTrigger
-                        class="flex items-center gap-2.5 w-full p-3 rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark cursor-pointer hover:bg-surface-light dark:hover:bg-surface-dark transition-colors text-left"
-                        @click="trigger('selection')"
-                      >
-                        <UIcon
-                          name="chevron_right"
-                          size="xs"
-                          class="text-text-tertiary-light dark:text-text-tertiary-dark transition-transform duration-200 shrink-0"
-                          :class="open ? 'rotate-90' : ''"
-                        />
-                        <div
-                          class="w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold shrink-0"
-                          :class="
-                            group.debt_type === 'given'
-                              ? 'bg-debt-given-light text-debt-given'
-                              : 'bg-debt-received-light text-debt-received'
-                          "
-                        >
-                          {{ getInitial(group.person_name) }}
-                        </div>
-                        <div class="flex-1 min-w-0">
-                          <p
-                            class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark truncate"
-                          >
-                            {{ group.person_name }}
-                          </p>
-                          <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
-                            {{ group.debts.length }}
-                            {{ pluralize(group.debts.length, 'долг', 'долга', 'долгов') }} ·
-                            {{ DEBT_DIRECTION_DISPLAY[group.debt_type] }}
-                          </p>
-                        </div>
-                        <p
-                          class="text-sm font-bold shrink-0"
-                          :class="
-                            group.debt_type === 'given' ? 'text-debt-given' : 'text-debt-received'
-                          "
-                        >
-                          {{
-                            group.debts.some((d) => d.is_private)
-                              ? '••••'
-                              : formatCurrency(groupTotal(group), currency)
-                          }}
-                        </p>
-                      </CollapsibleTrigger>
-
-                      <CollapsibleContent class="CollapsibleContent">
-                        <div
-                          class="ml-5 pl-3 border-l-2 border-border-light dark:border-border-dark mt-1 space-y-1"
-                        >
-                          <DebtCard
-                            v-for="debt in group.debts"
-                            :key="debt.id"
-                            :debt="debt"
-                            compact
-                            :class="
-                              isDesktop &&
-                              selectedDebtId === debt.id &&
-                              'ring-2 ring-primary ring-offset-2 ring-offset-background-light dark:ring-offset-background-dark'
-                            "
-                            @click="(trigger('selection'), handleDebtClick(debt))"
-                          />
-                          <UButton
-                            variant="secondary"
-                            size="sm"
-                            full-width
-                            @click="
-                              (trigger('selection'), openCloseAllForPerson(group.person_name))
-                            "
-                          >
-                            <UIcon name="check_circle" size="xs" />
-                            Закрыть все долги
-                          </UButton>
-                        </div>
-                      </CollapsibleContent>
-                    </CollapsibleRoot>
-                  </template>
+                <!-- People: one row per person, netted -->
+                <div
+                  v-if="!personFilter && people.length > 0"
+                  class="rounded-2xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark overflow-hidden divide-y divide-border-light dark:divide-border-dark"
+                >
+                  <PersonDebtRow
+                    v-for="person in people"
+                    :key="person.personName"
+                    :person="person"
+                    :currency="currency"
+                    :selected="isDesktop && person.debts.some((d) => d.id === selectedDebtId)"
+                    @click="(trigger('selection'), handlePersonClick(person))"
+                  />
                 </div>
 
-                <!-- Close All (person filter) -->
-                <UButton
-                  v-if="personFilter && groups.length > 1 && allDebtsFromGroups.length > 1"
-                  variant="primary"
-                  full-width
-                  data-testid="close-all-btn"
-                  @click="(trigger('selection'), (showCloseAllModal = true))"
-                >
-                  <UIcon name="check_circle" size="sm" />
-                  Закрыть все долги
-                </UButton>
+                <!-- Filtered by person: their debts, flat -->
+                <div v-else-if="personFilter && filteredDebts.length > 0" class="space-y-2">
+                  <DebtCard
+                    v-for="debt in filteredDebts"
+                    :key="debt.id"
+                    :debt="debt"
+                    :class="
+                      isDesktop &&
+                      selectedDebtId === debt.id &&
+                      'ring-2 ring-primary ring-offset-2 ring-offset-background-light dark:ring-offset-background-dark'
+                    "
+                    @click="(trigger('selection'), handleDebtClick(debt))"
+                  />
+                  <UButton
+                    v-if="filteredDebts.length > 1"
+                    variant="secondary"
+                    full-width
+                    data-testid="close-all-btn"
+                    @click="(trigger('selection'), openCloseAllForPerson(personFilter))"
+                  >
+                    <UIcon name="check_circle" size="sm" />
+                    Закрыть все долги
+                  </UButton>
+                </div>
 
                 <!-- Empty State: filtered by currency -->
-                <UCard
-                  v-if="groups.length === 0 && currencyFilter"
-                  data-testid="empty-state-filtered"
-                  class="py-4"
-                >
+                <UCard v-else-if="currencyFilter" data-testid="empty-state-filtered" class="py-4">
                   <EmptyState v-bind="currencyFilterEmptyProps" />
                 </UCard>
 
                 <!-- Empty State: no debts at all -->
-                <UCard v-else-if="groups.length === 0" data-testid="empty-state" class="py-4">
+                <UCard v-else data-testid="empty-state" class="py-4">
                   <EmptyState
                     icon="celebration"
                     title="Вы без долгов!"
@@ -397,7 +289,7 @@ useIntersectionObserver(
               />
               <div v-if="allDebtsFromGroups.length > 0" class="space-y-3">
                 <SectionHeader title="Погашенные долги" :show-add="false" :show-view-all="false" />
-                <div class="space-y-2">
+                <div class="space-y-1.5">
                   <ClosedDebtCard
                     v-for="debt in allDebtsFromGroups"
                     :key="debt.id"
@@ -479,32 +371,3 @@ useIntersectionObserver(
     />
   </div>
 </template>
-
-<style scoped>
-.CollapsibleContent {
-  overflow: hidden;
-}
-.CollapsibleContent[data-state='open'] {
-  animation: slideDown 200ms ease-out;
-}
-.CollapsibleContent[data-state='closed'] {
-  animation: slideUp 200ms ease-out;
-}
-
-@keyframes slideDown {
-  from {
-    height: 0;
-  }
-  to {
-    height: var(--reka-collapsible-content-height);
-  }
-}
-@keyframes slideUp {
-  from {
-    height: var(--reka-collapsible-content-height);
-  }
-  to {
-    height: 0;
-  }
-}
-</style>

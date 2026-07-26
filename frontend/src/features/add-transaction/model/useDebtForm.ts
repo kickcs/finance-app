@@ -21,6 +21,8 @@ export interface DebtFormData {
   skip_transaction: boolean;
   is_private: boolean;
   due_date: string | null;
+  /** Комиссия за перевод — платится сверх суммы долга, только при выдаче. */
+  fee: number;
 }
 
 function makeInitialFormData(): DebtFormData {
@@ -35,6 +37,7 @@ function makeInitialFormData(): DebtFormData {
     skip_transaction: false,
     is_private: false,
     due_date: null,
+    fee: 0,
   };
 }
 
@@ -78,6 +81,9 @@ export function useDebtForm() {
               ? `${formData.value.debt_date}T12:00:00.000Z`
               : new Date().toISOString(),
             is_debt_related: true,
+            // Сервер сам создаст отдельный расход «Комиссия за перевод»
+            // и спишет его со счёта в той же БД-транзакции.
+            fee_amount: formData.value.fee > 0 ? formData.value.fee : undefined,
           });
           transactionId = transaction.id;
         }
@@ -97,6 +103,7 @@ export function useDebtForm() {
           description: formData.value.description || null,
           is_private: formData.value.is_private,
           next_payment_date: formData.value.due_date,
+          fee_amount: formData.value.fee,
         });
 
         if (transactionId) {
@@ -158,6 +165,14 @@ export function useDebtForm() {
 
   function updateField<K extends keyof DebtFormData>(field: K, value: DebtFormData[K]) {
     formData.value[field] = value;
+    // Комиссию платит тот, кто отправляет деньги, и только если транзакция
+    // вообще создаётся — иначе оставшееся значение уехало бы в payload.
+    if (
+      (field === 'debt_type' && value !== 'given') ||
+      (field === 'skip_transaction' && value === true)
+    ) {
+      formData.value.fee = 0;
+    }
   }
 
   function resetForm() {

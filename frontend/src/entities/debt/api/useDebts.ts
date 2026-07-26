@@ -67,6 +67,8 @@ export function useDebts(userId: MaybeRefOrGetter<string | null>) {
         forgiven_amount: newDebt.forgiven_amount ?? 0,
         is_private: newDebt.is_private ?? false,
         ...newDebt,
+        // После спреда: в DebtInsert поле необязательное, а в Debt — нет
+        fee_amount: newDebt.fee_amount ?? 0,
       };
 
       queryClient.setQueryData<Debt[]>(queryKey.value, (old) => [optimisticDebt, ...(old ?? [])]);

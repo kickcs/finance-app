@@ -29,6 +29,7 @@ export class DebtMapper {
       closedAt: ormEntity.closedAt,
       forgivenAmount: Number(ormEntity.forgivenAmount),
       isPrivate: ormEntity.isPrivate,
+      feeAmount: Number(ormEntity.feeAmount ?? 0),
     });
   }
 
@@ -54,6 +55,7 @@ export class DebtMapper {
     ormEntity.closedAt = debt.closedAt;
     ormEntity.forgivenAmount = debt.forgivenAmount;
     ormEntity.isPrivate = debt.isPrivate;
+    ormEntity.feeAmount = debt.feeAmount;
     return ormEntity;
   }
 }

@@ -24,6 +24,7 @@ interface DebtResponse {
   closedAt: string | null;
   forgivenAmount: number;
   isPrivate: boolean;
+  feeAmount: number;
 }
 
 interface DebtGroupBackendResponse {
@@ -65,6 +66,8 @@ function transformDebt(debt: DebtResponse): Debt {
     closed_at: debt.closedAt,
     forgiven_amount: debt.forgivenAmount,
     is_private: debt.isPrivate,
+    // Долги, созданные до появления комиссии, приезжают без поля
+    fee_amount: debt.feeAmount ?? 0,
   };
 }
 
@@ -139,6 +142,7 @@ export const debtsApi = {
       description: debt.description,
       createdAt: debt.created_at,
       isPrivate: debt.is_private ?? false,
+      feeAmount: debt.fee_amount ?? 0,
     });
     return transformDebt(data);
   },

@@ -75,6 +75,7 @@ export class DebtsController {
         dto.createdAt ? new Date(dto.createdAt) : undefined,
         dto.description,
         dto.isPrivate,
+        dto.feeAmount,
       ),
     );
   }

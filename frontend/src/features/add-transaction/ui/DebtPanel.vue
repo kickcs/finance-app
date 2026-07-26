@@ -2,7 +2,11 @@
 import { ref, computed, watch } from 'vue';
 import { UInput, UButton, UIcon, ToggleRow } from '@/shared/ui';
 import { DEFAULT_CURRENCY } from '@/entities/currency';
-import { getCurrencySymbol } from '@/shared/lib/format/currency';
+import {
+  getCurrencySymbol,
+  sanitizeCurrencyInput,
+  formatCurrency,
+} from '@/shared/lib/format/currency';
 import { PersonSelector, usePeople } from '@/entities/person';
 import { AccountSelector } from '@/entities/account';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
@@ -63,6 +67,39 @@ function handleAccountChange(accountId: string) {
 const isDebtDateOpen = ref(false);
 const isDueDateOpen = ref(false);
 
+// Комиссию платит отправитель, поэтому она есть только при выдаче долга.
+// Без транзакции списывать нечего — поле тоже прячем.
+const showFeeInput = computed(
+  () => formData.value.debt_type === 'given' && !formData.value.skip_transaction,
+);
+
+const rawFeeValue = ref('');
+const isFeeInputFocused = ref(false);
+const totalDebited = computed(() => formData.value.amount + formData.value.fee);
+
+function handleFeeInput(raw: string) {
+  const sanitized = sanitizeCurrencyInput(raw);
+  rawFeeValue.value = sanitized;
+  const num = parseFloat(sanitized);
+  updateField('fee', Number.isNaN(num) ? 0 : num);
+}
+
+function handleFeeBlur() {
+  isFeeInputFocused.value = false;
+  if (formData.value.fee === 0) rawFeeValue.value = '';
+}
+
+// Модель сама обнуляет комиссию при смене направления или отключении
+// транзакции — сырое значение инпута должно поехать следом. Пока поле в фокусе
+// не трогаем: иначе промежуточные «0» и «0.» стирались бы прямо во время ввода.
+watch(
+  () => formData.value.fee,
+  (fee) => {
+    if (isFeeInputFocused.value) return;
+    if (fee === 0 && rawFeeValue.value !== '') rawFeeValue.value = '';
+  },
+);
+
 async function handleSubmit() {
   if (!userId.value) return;
   const debtId = await createDebt(userId.value);
@@ -82,9 +119,11 @@ const skipToggleTitle = computed(() =>
   formData.value.debt_type === 'given' ? 'Не списывать с баланса' : 'Не добавлять на баланс',
 );
 const infoText = computed(() => {
-  const sum =
-    formData.value.amount > 0 ? `${formData.value.amount} ${formData.value.currency}` : '';
-  return formData.value.debt_type === 'given'
+  const isGiven = formData.value.debt_type === 'given';
+  // При выдаче со счёта уходит долг вместе с комиссией — показываем итог.
+  const amount = isGiven ? totalDebited.value : formData.value.amount;
+  const sum = formData.value.amount > 0 ? formatCurrency(amount, formData.value.currency) : '';
+  return isGiven
     ? `Сумма ${sum} будет списана с выбранного счёта`
     : `Сумма ${sum} будет добавлена на выбранный счёт`;
 });
@@ -128,6 +167,44 @@ const infoText = computed(() => {
       :label="accountLabel"
       @select="handleAccountChange"
     />
+
+    <div v-if="showFeeInput" class="space-y-1.5">
+      <label class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark">
+        Комиссия за перевод (необязательно)
+      </label>
+      <div
+        class="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark"
+      >
+        <UIcon
+          name="receipt_long"
+          size="sm"
+          class="text-text-tertiary-light dark:text-text-tertiary-dark shrink-0"
+        />
+        <input
+          type="text"
+          inputmode="decimal"
+          :value="rawFeeValue"
+          placeholder="0"
+          aria-label="Комиссия за перевод"
+          data-testid="debt-fee-input"
+          class="flex-1 min-w-0 bg-transparent text-sm text-right text-text-primary-light dark:text-text-primary-dark outline-none tabular-nums"
+          @input="handleFeeInput(($event.target as HTMLInputElement).value)"
+          @focus="isFeeInputFocused = true"
+          @blur="handleFeeBlur"
+        />
+        <span class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark shrink-0">
+          {{ formData.currency }}
+        </span>
+      </div>
+      <p
+        v-if="formData.fee > 0"
+        class="px-1 text-xs text-text-tertiary-light dark:text-text-tertiary-dark tabular-nums"
+      >
+        Со счёта спишется {{ formatCurrency(totalDebited, formData.currency) }} — долг
+        {{ formatCurrency(formData.amount, formData.currency) }} + комиссия
+        {{ formatCurrency(formData.fee, formData.currency) }}
+      </p>
+    </div>
 
     <div class="grid grid-cols-2 gap-2">
       <div class="space-y-1.5">

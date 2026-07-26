@@ -309,6 +309,8 @@ export type Database = {
           closed_at: string | null;
           forgiven_amount: number;
           is_private: boolean;
+          /** Комиссия за перевод, уплаченная при выдаче долга. Информационное поле. */
+          fee_amount: number;
         };
         Insert: {
           id?: string;
@@ -331,6 +333,7 @@ export type Database = {
           closed_at?: string | null;
           forgiven_amount?: number;
           is_private?: boolean;
+          fee_amount?: number;
         };
         Update: {
           id?: string;
