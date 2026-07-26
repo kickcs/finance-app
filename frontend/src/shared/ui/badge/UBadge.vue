@@ -20,7 +20,6 @@ const badgeVariants = cva('inline-flex items-center justify-center font-medium w
       'debt-given': 'bg-debt-given-light text-debt-given',
       'debt-received': 'bg-debt-received-light text-debt-received',
       goal: 'bg-goal-light text-goal-text dark:text-goal-text-dark',
-      reminder: 'bg-reminder-light text-reminder',
     },
     size: {
       xs: 'px-1.5 py-0.5 text-xs',

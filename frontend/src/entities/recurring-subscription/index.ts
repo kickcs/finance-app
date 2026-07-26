@@ -8,18 +8,12 @@ export type {
 } from './model/types';
 
 // Model / Constants
-export {
-  SERVICE_PRESETS,
-  FREQUENCY_LABELS,
-  SUBSCRIPTION_ICONS,
-  type ServicePreset,
-} from './model/constants';
+export { SERVICE_PRESETS, FREQUENCY_LABELS, type ServicePreset } from './model/constants';
 
 // Model / Utils
 export {
   daysUntilBilling,
   formatFrequencyShort,
-  isSubscriptionDueSoon,
   computeBillingDatesForMonth,
   getNextBillingDate,
 } from './model/utils';

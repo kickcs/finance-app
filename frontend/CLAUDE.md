@@ -1,89 +1,36 @@
-# CLAUDE.md
+# CLAUDE.md — frontend
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Vue 3 + TypeScript app on Feature-Sliced Design. Layers under `src/`: `app/` → `pages/` → `widgets/` → `features/` → `entities/` → `shared/`, with imports only ever pointing downward. Server state is TanStack Vue Query; styling is Tailwind v4 over Reka UI headless primitives.
 
-## Build & Development Commands
+`DESIGN_SYSTEM.md` documents tokens, typography and the component library — read component source for props.
 
-```bash
-bun run dev          # Start dev server (Vite)
-bun run build        # Type-check (vue-tsc) + build for production
-bun run preview      # Preview production build locally
-```
+## API layer pattern
 
-## Architecture Overview
+Each entity in `entities/<name>/api/`:
+- `*Api.ts` — HTTP functions; this is where backend camelCase is transformed into frontend snake_case
+- `use*.ts` — Vue Query composables with mutations and cache invalidation
+- `queryKeys.ts` — query key factory; `model/types.ts` — types
 
-This is a **Vue 3 personal finance app** using Feature-Sliced Design (FSD) architecture with NestJS REST API backend.
+Entity composables all take `userId: MaybeRefOrGetter<string|null>`, auto-disable when it is falsy, and apply optimistic updates.
 
-### Tech Stack
-- **Vue 3** (Composition API, `<script setup>`)
-- **TypeScript**
-- **TanStack Vue Query** - server state management with caching and invalidation
-- **NestJS Backend** - REST API with JWT authentication
-- **Tailwind CSS v4** - styling
-- **Reka UI** - headless UI components
-- **Vue Router** - routing with auth guards
+**Cache invalidation** (`shared/api/invalidation.ts`): after ANY debt mutation use `invalidateDebtRelated` — it is the broadest helper and covers debts, transactions and accounts. Narrower helpers leave stale balances on screen.
 
-### FSD Layer Structure
+**Cursor pagination**: transactions use a `{ date, createdAt }` cursor; debts use `{ personName, debtType, createdAt }` with group-level pagination, so a person's group is never split across pages. Cursor fields arrive camelCase from the backend.
 
-```
-src/
-├── app/              # App entry, router, global styles
-├── pages/            # Route pages (LoginPage, DashboardPage, etc.)
-├── widgets/          # Composite UI blocks (header, bottom-nav)
-├── features/         # User actions (create-account, add-transaction, toggle-theme)
-├── entities/         # Business entities with API layer
-│   ├── account/      # accounts + account_balances
-│   ├── transaction/
-│   ├── debt/
-│   ├── reminder/
-│   ├── goal/
-│   ├── category/
-│   └── currency/
-└── shared/           # Shared utilities, UI components, API client
-    ├── api/          # HTTP client, query keys, services
-    ├── ui/           # Button, Input, Card, Modal, Icon
-    └── lib/          # Hooks, formatters
-```
+## Authentication
 
-### API Layer Pattern
+`useAuth()` — access token in localStorage, refresh token in an httpOnly cookie set by the backend. `shared/api/http.ts` auto-refreshes on 401. Router guards read the `requiresAuth` / `requiresOnboarding` route meta. Anonymous demo mode has an expiry.
 
-Each entity follows this structure:
-- `*Api.ts` - HTTP API functions (e.g., `accountsApi.getAll()`)
-- `use*.ts` - Vue Query composables with mutations and invalidation (e.g., `useAccounts()`)
-- `queryKeys.ts` - Query key factory for caching
-- `model/types.ts` - TypeScript types
+## Conventions & gotchas
 
-Example usage:
-```typescript
-const { data: accounts, isLoading } = useAccounts().list(userId)
-const { mutate: createAccount } = useAccounts().create()
-```
-
-### Authentication Flow
-
-- `useAuth()` composable handles JWT-based authentication (email/password, anonymous)
-- Access token in localStorage, refresh token in httpOnly cookie (set by backend)
-- HTTP client (`http.ts`) auto-refreshes tokens on 401 responses
-- Router guards check `requiresAuth` and `requiresOnboarding` route meta
-- Demo mode with expiry for anonymous users
-- Profile fetched via `/auth/me` endpoint
-
-### Multi-Currency Support
-
-- Accounts can have multiple currency balances via `account_balances` table
-- Exchange rates API for currency conversion
-- `useExchangeRates()` composable for conversion
-- User's preferred currency stored in profile
-
-### Environment Variables
-
-```
-VITE_API_URL=<backend-url>  # e.g., http://localhost:3000
-```
-
-## Key Files
-
-- `src/app/router/index.ts` - All routes with auth guards
-- `src/shared/api/http.ts` - HTTP client with JWT token management
-- `src/shared/api/composables/useAuth.ts` - Authentication logic
-- `src/shared/api/database.types.ts` - TypeScript types for entities
+- **Page layout**: standard pages use `min-h-screen bg-background-light dark:bg-background-dark pb-28` (`pb-28` clears BottomNav). Fixed-scroll pages use `h-dvh flex flex-col overflow-hidden` with `flex-1 overflow-y-auto` on the scrolling section
+- **Design tokens only**: `bg-surface-light dark:bg-surface-dark`, never raw Tailwind colors. See `DESIGN_SYSTEM.md` § Anti-Patterns
+- **`cn()`** from `shared/lib/utils.ts` for every dynamic class string (clsx + tailwind-merge)
+- **VueUse first**: for localStorage, event listeners, media queries, resize observers and timers use `@vueuse/core` rather than hand-rolling. Check https://vueuse.org before writing a custom hook
+- **Icons**: `<UIcon name="material_symbol_name" />` — Material Symbol names are mapped to Lucide in `shared/ui/icon/iconMap.ts`; a new icon needs a new mapping there first
+- **PullToRefresh breaks flex chains** — wrap it in its own `flex-1 overflow-y-auto` div
+- **Virtual lists**: `VirtualGroupedTransactionList` needs an explicit `height` set with `calc()`; it will not size itself from a flex parent
+- **Split expense**: one transaction + N debts linked by `source_transaction_id`. When editing, save the transaction first (via the `onSave` prop), THEN the debts — the reverse order orphans the debts
+- **Global user state** is provided from `App.vue` via `provide/inject`
+- **`usePremiumFeature()`** is a singleton and must be `init()`-ed in `App.vue` before `requirePremium()` is used anywhere
+- **LemonSqueezy SDK** is loaded by a `<script>` tag in `index.html` (window type declared in `vite-env.d.ts`): use `window.LemonSqueezy?.Url.Open(url)` with a `window.open` fallback

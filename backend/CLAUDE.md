@@ -1,100 +1,38 @@
-# CLAUDE.md
+# CLAUDE.md — backend
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+NestJS backend built with Domain-Driven Design and CQRS. Bounded contexts live in `src/modules/` (read the directory for the current list); each one follows the same shape: `domain/` → `application/` (commands + queries) → `infrastructure/` (TypeORM entities, repositories, mappers) → `presentation/` (controllers, DTOs).
 
-## Build & Development Commands
+All REST routes are prefixed with `/api` (set in `main.ts`).
 
-```bash
-bun run build          # Compile TypeScript
-bun run start:dev      # Development with watch mode
-bun run start:debug    # Debug mode with watch
-bun run start:prod     # Production mode
-bun run lint           # ESLint with auto-fix
-bun run format         # Prettier formatting
-bun run test           # Run Jest tests
-bun run test:watch     # Tests in watch mode
-bun run test:e2e       # E2E tests
-bun install            # Install dependencies
-```
+## Key patterns
 
-## Architecture Overview
+**Repository pattern** — interfaces in `domain/repositories/`, implementations in `infrastructure/persistence/repositories/`. Inject by token, never by class:
 
-This is a **personal finance management backend** built with NestJS using **Domain-Driven Design (DDD)** architecture with **CQRS** pattern.
-
-### Tech Stack
-- NestJS 11, TypeORM 0.3.28, PostgreSQL
-- @nestjs/cqrs for Command/Query separation
-- JWT + Passport for authentication
-
-### Bounded Contexts (src/modules/)
-
-| Context | Entities | Purpose |
-|---------|----------|---------|
-| **identity** | Profile | Auth, user profiles, JWT tokens |
-| **accounting** | Account, Transaction, Category | Core financial operations |
-| **debt** | Debt | Debt tracking with payments |
-| **planning** | Goal, Reminder | Financial goals and reminders |
-| **exchange** | ExchangeRate | Currency conversion |
-| **subscription** | UserSubscription | Premium plans, LemonSqueezy payments |
-| **person** | Person | Shared contacts for debts |
-
-### Module Structure (each bounded context follows this pattern)
-
-```
-modules/<context>/
-├── domain/
-│   ├── aggregates/      # Aggregate roots with business logic
-│   ├── value-objects/   # Immutable value types
-│   ├── events/          # Domain events
-│   └── repositories/    # Repository interfaces (IXxxRepository)
-├── application/
-│   ├── commands/        # Write operations (CQRS)
-│   └── queries/         # Read operations (CQRS)
-├── infrastructure/
-│   └── persistence/
-│       ├── typeorm/     # ORM entities (*OrmEntity)
-│       ├── repositories/# Repository implementations
-│       └── mappers/     # Domain ↔ ORM conversion
-└── presentation/
-    ├── controllers/     # REST endpoints
-    └── dto/             # Request/Response DTOs
-```
-
-### Shared Kernel (src/shared/)
-
-Base classes for DDD building blocks:
-- `AggregateRoot<TId>` - Base for aggregates, extends NestJS AggregateRoot
-- `Entity<TId>` - Base entity with ID equality
-- `ValueObject<T>` - Immutable value objects
-- `DomainEvent` - Base domain event
-- `DomainEventPublisher` - Publishes events to NestJS EventBus
-
-### Key Patterns
-
-**Repository Pattern**: Interfaces in `domain/repositories/`, implementations in `infrastructure/persistence/repositories/`. Injected via tokens:
 ```typescript
 @Inject(ACCOUNT_REPOSITORY) private readonly accountRepository: IAccountRepository
 ```
 
-**CQRS**: Commands modify state, Queries read data. Both use CommandBus/QueryBus from @nestjs/cqrs.
+**CQRS** — commands modify state, queries read it. Both go through `CommandBus`/`QueryBus` from `@nestjs/cqrs`.
 
-**Domain Events**: Aggregates raise events via `addDomainEvent()`. Events are published after repository save via `DomainEventPublisher.publishEvents()`.
+**Domain events** — aggregates raise them via `addDomainEvent()`, but they are published only *after* the repository save, by `DomainEventPublisher.publishEvents()`. Raising an event does not publish it.
 
-### API Routes
+**Mappers** in `infrastructure/persistence/mappers/` convert domain ↔ ORM entities. Domain aggregates never reach controllers directly.
 
-All routes prefixed with `/api` (configured in main.ts):
-- `/api/auth/*` - Authentication
-- `/api/profiles/*` - User profiles
-- `/api/accounts/*` - Financial accounts
-- `/api/transactions/*` - Transactions
-- `/api/categories/*` - Categories
-- `/api/debts/*` - Debts
-- `/api/goals/*` - Goals
-- `/api/reminders/*` - Reminders
-- `/api/exchange-rates/*` - Exchange rates
-- `/api/subscription/*` - Subscription & premium
-- `/api/quick-actions/*` - Quick actions
+**Shared kernel** (`src/shared/`) — DDD base classes: `AggregateRoot<TId>`, `Entity<TId>`, `ValueObject<T>`, `DomainEvent`, `DomainEventPublisher`.
 
-### TypeScript Configuration
+## Adding a Command
 
-`isolatedModules: false` is required due to interface usage with @Inject decorators in CQRS handlers.
+1. `<name>.command.ts` → `<name>.handler.ts` with `@CommandHandler()`
+2. Export from `application/commands/index.ts` and register the handler in the module's `providers`
+3. Inject `CommandBus` in the controller and `execute()` it
+
+Skipping step 2 fails at runtime, not at compile time.
+
+## Gotchas
+
+- **New TypeORM entities must be registered in TWO places**: `src/config/data-source.ts` (for CLI migrations) AND the `entities` array of `TypeOrmModule.forRootAsync` in `src/app.module.ts` (for the NestJS runtime). Missing either produces "No metadata for X was found"
+- **`isolatedModules: false`** is required in tsconfig — CQRS handlers inject interfaces via `@Inject`, which breaks under `isolatedModules: true`
+- **QueryBuilder takes entity property names, not column names**: `d.userId`, `d.isClosed` — NOT `d.user_id`, `d.is_closed`. TypeORM maps columns from the decorators
+- **`synchronize: false`** — every schema change goes through a migration
+- **Env vars**: `.env.example` is the source of truth. `PUBLIC_APP_URL` is the base for public receipt links `/r/<token>` and defaults to `CORS_ORIGIN` in production
+- **Receipt OG images** use `@resvg/resvg-js` with fonts bundled in `assets/fonts` — they are not available from the system font stack in the container

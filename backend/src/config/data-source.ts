@@ -40,9 +40,6 @@ import {
   CardAccountMappingOrmEntity,
 } from '../modules/telegram-import/infrastructure/persistence/typeorm';
 
-// Legacy entity
-import { Settings } from '../database/entities';
-
 export const dataSourceOptions: DataSourceOptions = {
   type: 'postgres',
   host: process.env.DATABASE_HOST || 'localhost',
@@ -74,8 +71,6 @@ export const dataSourceOptions: DataSourceOptions = {
     TelegramLinkTokenOrmEntity,
     ImportedTransactionOrmEntity,
     CardAccountMappingOrmEntity,
-    // Legacy
-    Settings,
   ],
   migrations: [
     process.env.NODE_ENV === 'production'

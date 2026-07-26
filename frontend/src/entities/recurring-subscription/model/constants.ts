@@ -38,19 +38,3 @@ export const FREQUENCY_LABELS: Record<string, string> = {
   yearly: 'Ежегодно',
   custom: 'Другое',
 };
-
-export const SUBSCRIPTION_ICONS = [
-  'subscriptions',
-  'fitness_center',
-  'school',
-  'medical_services',
-  'music_note',
-  'tv',
-  'sports_esports',
-  'movie',
-  'cloud',
-  'laptop_mac',
-  'phone_android',
-  'wifi',
-  'electric_bolt',
-] as const;

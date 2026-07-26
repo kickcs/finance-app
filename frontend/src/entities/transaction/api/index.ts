@@ -11,7 +11,6 @@ export {
 export { useTransactions } from './useTransactions';
 export { useInfiniteTransactions } from './useInfiniteTransactions';
 export { useInfiniteAccountTransactions } from './useInfiniteAccountTransactions';
-export { useMonthlyStats } from './useMonthlyStats';
 export { useAnalyticsStats } from './useAnalyticsStats';
 export type { UseAnalyticsStatsOptions } from './useAnalyticsStats';
 export { useRecentTransactions } from './useRecentTransactions';
