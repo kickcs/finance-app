@@ -40,10 +40,6 @@
     <link rel="apple-touch-startup-image" href="/splash/apple-splash-1242x2208-light.png" media="(prefers-color-scheme: light) and (device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3)">
     <link rel="apple-touch-startup-image" href="/splash/apple-splash-1242x2208-dark.png" media="(prefers-color-scheme: dark) and (device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3)">
 
-    <!-- DNS Prefetch / Preconnect for external services -->
-    <link rel="dns-prefetch" href="https://app.ouro-finance.top">
-    <link rel="preconnect" href="https://app.ouro-finance.top" crossorigin>
-
     <!-- Inter font is now self-hosted via @fontsource-variable/inter -->
     <!-- Icons provided by lucide-vue-next (bundled SVGs, no external requests) -->
 
@@ -112,12 +108,13 @@
   <body>
     <div id="app"></div>
 
-    <!-- App loader — matches iOS PWA splash screen for seamless transition -->
+    <!-- App loader — matches iOS PWA splash screen for seamless transition.
+         Иконка инлайнится в data-URI на сборке (inlineLoaderIconPlugin): это
+         первый отрисованный контент, лишний round-trip за ним стоит дороже base64. -->
     <div class="app-loading" aria-hidden="true">
-      <img class="app-icon" src="/logo-192.png" alt="" width="88" height="88" />
+      <img class="app-icon" src="/logo-192.webp" alt="" width="88" height="88" />
     </div>
 
     <script type="module" src="/src/main.ts"></script>
-    <script src="https://app.lemonsqueezy.com/js/lemon.js" defer></script>
   </body>
 </html>

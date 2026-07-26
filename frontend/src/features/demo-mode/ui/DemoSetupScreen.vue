@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { ref, watch, computed, onUnmounted } from 'vue';
 import { useTimeoutFn } from '@vueuse/core';
-import { UProgressBar, UIcon } from '@/shared/ui';
+// Subpath-импорты, а не barrel: этот компонент лежит в публичном API demo-mode,
+// который App.vue тянет синхронно, — импорт из '@/shared/ui' затащил бы весь
+// UI-kit (~130 КБ) в бандл первой отрисовки
+import { UProgressBar } from '@/shared/ui/progress-bar';
+import { UIcon } from '@/shared/ui/icon';
 import { useAuth } from '@/shared/api/composables/useAuth';
 import { HttpError } from '@/shared/api/http';
 

@@ -19,4 +19,7 @@ interface Window {
   LemonSqueezy?: {
     Url: { Open(url: string): void };
   };
+  /** Создаёт `window.LemonSqueezy`. lemon.js вызывает это сам только по событию
+   *  `load` окна — при ленивом подключении инициализировать нужно вручную. */
+  createLemonSqueezy?: () => void;
 }

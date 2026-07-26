@@ -4,21 +4,50 @@ import tailwindcss from '@tailwindcss/vite';
 import { compression } from 'vite-plugin-compression2';
 import VueDevTools from 'vite-plugin-vue-devtools';
 import { VitePWA } from 'vite-plugin-pwa';
+import {
+  appShellManifestTransform,
+  appShellPrecachePlugin,
+} from './src/app/plugins/appShellPrecachePlugin';
 import { fontPreloadPlugin } from './src/app/plugins/fontPreloadPlugin';
+import { inlineLoaderIconPlugin } from './src/app/plugins/inlineLoaderIconPlugin';
 import { fileURLToPath, URL } from 'node:url';
 
 export default defineConfig({
   plugins: [
     vue(),
     fontPreloadPlugin(),
+    inlineLoaderIconPlugin(),
+    appShellPrecachePlugin(),
     tailwindcss(),
     VueDevTools(),
     VitePWA({
       registerType: 'prompt',
       devOptions: { enabled: true },
+      // Иконки манифеста (logo-512.png — 416 КБ) в precache не нужны: их берёт
+      // система при установке, а runtime-правило app-icons кэширует по факту
+      includeManifestIcons: false,
       workbox: {
         importScripts: ['/push-sw.js'],
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
+        // Глобы задают лишь пул кандидатов — окончательный отбор оболочки делает
+        // manifestTransforms по реальному графу импортов входного чанка
+        manifestTransforms: [appShellManifestTransform],
+        // Precache = только оболочка приложения (то, без чего не покажется первый
+        // экран). Раньше сюда попадал весь dist — 169 записей, включая чанки всех
+        // страниц и logo-512.png: воркер начинал качать это сразу после load и
+        // отнимал канал у самой загрузки. Остальное подтягивается runtime-кэшом.
+        globPatterns: [
+          'index.html',
+          'index-*.js',
+          // Все каталоги, куда chunkFileNames может положить чанк: отбор всё
+          // равно делает manifestTransform по графу импортов входного чанка, а
+          // узкий пул молча выбросил бы из оболочки чанк, уехавший, например,
+          // в entities/ — офлайн-старт бы сломался без единого предупреждения
+          '{chunks,pages,widgets,entities}/*.js',
+          'css/*.css',
+          'fonts/*.woff2',
+          'favicon.svg',
+          'logo-192.webp',
+        ],
         // HEIC-конвертер (~3 МБ wasm-чанк) грузится лениво только при встрече
         // HEIC-файла — в precache каждого пользователя ему не место
         globIgnores: ['**/heic-to-*.js'],
@@ -33,6 +62,30 @@ export default defineConfig({
               cacheName: 'api-cache',
               expiration: { maxEntries: 100, maxAgeSeconds: 300 },
               networkTimeoutSeconds: 5,
+            },
+          },
+          {
+            // Всё, что осталось за пределами оболочки: чанки страниц и общие
+            // чанки с их CSS. Имена хешированы и раздаются как immutable,
+            // поэтому CacheFirst безопасен — после первого захода страница
+            // открывается офлайн и без обращения к сети.
+            urlPattern: ({ url, sameOrigin }) =>
+              sameOrigin && /^\/(pages|widgets|entities|chunks|css)\//.test(url.pathname),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'route-chunks',
+              expiration: { maxEntries: 120, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              cacheableResponse: { statuses: [200] },
+            },
+          },
+          {
+            // Иконки и сплэши: нужны установленному PWA, но не первой отрисовке
+            urlPattern: ({ url, sameOrigin }) =>
+              sameOrigin && /^\/(splash\/|logo-)/.test(url.pathname),
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'app-icons',
+              expiration: { maxEntries: 40, maxAgeSeconds: 60 * 60 * 24 * 30 },
             },
           },
         ],
@@ -56,8 +109,9 @@ export default defineConfig({
         ],
       },
     }),
-    compression({ algorithm: 'gzip' }),
-    compression({ algorithm: 'brotliCompress' }),
+    // Только gzip: nginx раздаёт эти файлы через gzip_static, а brotli-модуля
+    // нет ни в nginx:alpine, ни на хостовом nginx — .br лежали бы мёртвым грузом
+    compression({ algorithms: ['gzip'] }),
   ],
   server: {
     host: 'localhost',
@@ -65,6 +119,11 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      // Файлы Inter для src/app/styles/fonts.css: подключаем только нужные
+      // сабсеты, минуя index.css пакета, который объявляет все семь
+      '@fontfiles': fileURLToPath(
+        new URL('./node_modules/@fontsource-variable/inter/files', import.meta.url),
+      ),
       '@': fileURLToPath(new URL('./src', import.meta.url)),
       '@/app': fileURLToPath(new URL('./src/app', import.meta.url)),
       '@/pages': fileURLToPath(new URL('./src/pages', import.meta.url)),
@@ -83,16 +142,19 @@ export default defineConfig({
     target: 'es2020',
     rolldownOptions: {
       output: {
-        // Manual chunk splitting for optimal caching
+        // Вручную группируем только то, что нужно каждой странице без исключения.
+        //
+        // reka-ui, @vueuse/core и @tanstack/vue-virtual раньше тоже были склеены
+        // в два больших чанка (~380 КБ) — из-за этого примитивы, нужные одной
+        // ленивой странице, ехали в бандле первой отрисовки. Без ручного правила
+        // сборщик сам выносит общие модули в разделяемые чанки и грузит их
+        // только вместе со страницей, которой они понадобились.
         manualChunks(id) {
           if (id.includes('node_modules/vue/') || id.includes('node_modules/vue-router/')) {
             return 'vue-core';
           }
-          if (id.includes('node_modules/@tanstack/vue-query/') || id.includes('node_modules/@tanstack/vue-virtual/')) {
-            return 'tanstack';
-          }
-          if (id.includes('node_modules/reka-ui/') || id.includes('node_modules/@vueuse/core/')) {
-            return 'ui-primitives';
+          if (id.includes('node_modules/@tanstack/vue-query/')) {
+            return 'vue-query';
           }
         },
         // Optimize chunk file naming for better caching
