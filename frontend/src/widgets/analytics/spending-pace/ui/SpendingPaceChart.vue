@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import { useTimeoutFn } from '@vueuse/core';
 import { UCard, Skeleton } from '@/shared/ui';
-import { formatCurrency, COMPACT_FORMAT } from '@/shared/lib/format/currency';
+import { formatCurrency, COMPACT_FORMAT, COMPACT_BARE_FORMAT } from '@/shared/lib/format/currency';
 import { formatDate } from '@/shared/lib/format/date';
 import { toLocalISODate } from '@/shared/lib/date';
 import type { SpendingPaceEntry } from '../types';
@@ -214,7 +214,13 @@ const showLastDayLabel = computed(() => {
   const n = props.totalDays;
   const step = labelStep.value;
   if (n <= 1) return false;
-  const lastStepped = Math.floor((n - 1) / step) * step;
+  // Последняя подпись по шагу рисуется при `d % step === 0 && d < n - 1`,
+  // поэтому и считать её надо строго левее n − 1: иначе на 31-дневном месяце
+  // «зазор» выходил равным одному дню и подпись последнего дня пропадала,
+  // хотя её сосед (30-е) тоже не рисуется — ось обрывалась на 25-м.
+  let lastStepped = Math.floor((n - 2) / step) * step;
+  if (lastStepped >= n - 1) lastStepped -= step;
+  if (lastStepped <= 0) return true;
   return n - lastStepped >= Math.max(2, Math.ceil(step / 2));
 });
 
@@ -235,13 +241,12 @@ function dateForDay(dayNum: number): string {
 }
 
 // Y-axis ticks: 0 and 50% of budget (100% handled by dedicated budget line)
-const Y_AXIS_FORMAT = { compact: true, showSymbol: false } as const;
 const yTicks = computed(() => {
   const max = ceil.value;
   const steps = hasBudget.value ? [0, props.budgetAmount * 0.5] : [0, max * 0.5, max];
   return steps.map((v) => ({
     y: sy(v),
-    label: formatCurrency(v, props.currency, Y_AXIS_FORMAT),
+    label: formatCurrency(v, props.currency, COMPACT_BARE_FORMAT),
   }));
 });
 </script>

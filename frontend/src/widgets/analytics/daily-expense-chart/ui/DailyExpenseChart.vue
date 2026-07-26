@@ -2,7 +2,7 @@
 import { computed, ref, useTemplateRef } from 'vue';
 import { useElementSize } from '@vueuse/core';
 import { Skeleton } from '@/shared/ui';
-import { formatCurrency, COMPACT_FORMAT } from '@/shared/lib/format/currency';
+import { formatCurrency, COMPACT_FORMAT, COMPACT_BARE_FORMAT } from '@/shared/lib/format/currency';
 import { formatDate } from '@/shared/lib/format/date';
 
 const props = withDefaults(
@@ -32,7 +32,6 @@ const BAR_GAP = 2;
 const CHART_HEIGHT = 140;
 const LABEL_HEIGHT = 20;
 const Y_AXIS_WIDTH = 36;
-const Y_AXIS_FORMAT = { compact: true, showSymbol: false } as const;
 /** Ширина до первого замера ResizeObserver — иначе первый кадр рисуется нулевыми столбцами. */
 const FALLBACK_WIDTH = 300;
 
@@ -99,9 +98,9 @@ const yTicks = computed(() => {
     {
       value: mid,
       y: CHART_HEIGHT - (mid / max) * CHART_HEIGHT,
-      label: formatCurrency(mid, props.currency, Y_AXIS_FORMAT),
+      label: formatCurrency(mid, props.currency, COMPACT_BARE_FORMAT),
     },
-    { value: max, y: 4, label: formatCurrency(max, props.currency, Y_AXIS_FORMAT) },
+    { value: max, y: 4, label: formatCurrency(max, props.currency, COMPACT_BARE_FORMAT) },
   ];
 });
 </script>

@@ -205,9 +205,17 @@ const summaryBudgetAmount = computed(() =>
   scale.value === 'month' && paceBudgetAmount.value > 0 ? paceBudgetAmount.value : undefined,
 );
 
-const summaryDaysRemaining = computed(() =>
-  isCurrentPeriod.value ? financialDaysRemaining.value : daysInPeriod.value,
-);
+/**
+ * Остаток дней считается по показанному периоду, а не по финансовому месяцу:
+ * прежде карточка с этим числом рисовалась только на масштабе «Месяц», теперь
+ * она общая, и на «Дне»/«Годе» месячный остаток давал бы «осталось 20 дн.»
+ * поверх однодневного периода.
+ */
+const summaryDaysRemaining = computed(() => {
+  if (!isCurrentPeriod.value) return daysInPeriod.value;
+  if (scale.value === 'month') return financialDaysRemaining.value;
+  return Math.max(0, daysInPeriod.value - paceTodayIndex.value - 1);
+});
 
 // --- Categories ---
 const categoryType = ref<'expense' | 'income'>('expense');

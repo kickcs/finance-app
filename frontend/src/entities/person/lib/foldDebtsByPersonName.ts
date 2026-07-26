@@ -43,5 +43,12 @@ export function foldDebtsByPersonName(
     byPerson.set(key, entry);
   }
 
+  // Как в `foldGroupsIntoPeople`: конвертация делением оставляет хвост в
+  // последних разрядах, и встречные долги, гасящие друг друга ровно, давали бы
+  // не 0, а 1e-11 — строка списка показывала бы «должен вам 0».
+  for (const entry of byPerson.values()) {
+    entry.net = Math.round(entry.net * 100) / 100;
+  }
+
   return byPerson;
 }

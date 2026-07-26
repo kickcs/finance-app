@@ -78,7 +78,7 @@ function handleSave() {
         :class="
           isDesktop
             ? 'top-0 right-0 bottom-0 w-[420px] rounded-l-2xl border-l border-border-light dark:border-border-dark'
-            : 'bottom-0 left-0 right-0 rounded-t-2xl border-t border-border-light dark:border-border-dark'
+            : 'bottom-0 left-0 right-0 max-h-[85dvh] rounded-t-2xl border-t border-border-light dark:border-border-dark'
         "
       >
         <div v-if="!isDesktop" class="flex justify-center pt-3 pb-1">

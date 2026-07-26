@@ -59,12 +59,17 @@ export function useCountUp<K extends string>(
       const nextTo = Object.fromEntries(keys.map((k, i) => [k, targets[i]])) as Record<K, number>;
       if (keys.every((k) => current.value[k] === nextTo[k])) return;
 
+      cancelAnimationFrame(rafId);
+
       if (reducedMotion.value === 'reduce') {
+        // Гасим и петлю: если настройка сменилась посреди анимации, уцелевший
+        // кадр дописал бы поверх присвоенного значения старую интерполяцию.
+        from = null;
+        to = null;
         current.value = nextTo;
         return;
       }
 
-      cancelAnimationFrame(rafId);
       from = { ...current.value };
       to = nextTo;
       startTime = performance.now();
