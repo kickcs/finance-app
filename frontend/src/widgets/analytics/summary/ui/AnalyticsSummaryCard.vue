@@ -231,9 +231,13 @@ const comparisonClass = computed(() =>
         :class="STATUS_STYLES[safeDaily < avgDailyExpense ? 'warning' : 'good'].text"
       >
         <UIcon :name="safeDaily < avgDailyExpense ? 'warning' : 'check_circle'" size="xs" />
+        <!-- В последний день периода делить остаток «на день» не на что, поэтому
+             суффикс убирается: иначе выходило «можно тратить X/день» под меткой
+             «последний день». -->
         <span class="min-w-0 truncate">
-          Можно тратить
-          {{ formatCurrency(Math.max(0, safeDaily), currency, COMPACT_FORMAT) }}/день
+          Можно потратить
+          {{ formatCurrency(Math.max(0, safeDaily), currency, COMPACT_FORMAT) }}
+          <template v-if="daysRemaining > 0">/день</template>
           <template v-if="balanceLabel">· {{ balanceLabel.toLowerCase() }}</template>
         </span>
       </div>
