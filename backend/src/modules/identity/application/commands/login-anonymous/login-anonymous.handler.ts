@@ -48,7 +48,7 @@ export class LoginAnonymousHandler implements ICommandHandler<LoginAnonymousComm
     // Publish domain events
     await this.eventPublisher.publishEvents(profile);
 
-    // Initialize demo data (accounts, transactions, debts, reminders)
+    // Initialize demo data (accounts, transactions, debts)
     // This is done atomically on the server to ensure consistency
     try {
       await this.demoInitializationService.initializeDemoData(profile);

@@ -48,9 +48,6 @@ import {
   CardAccountMappingOrmEntity,
 } from './modules/telegram-import/infrastructure/persistence/typeorm';
 
-// Legacy entity (to be migrated)
-import { Settings } from './database/entities';
-
 // DDD Modules
 import { IdentityModule } from './modules/identity';
 import { AccountingModule } from './modules/accounting';
@@ -113,8 +110,6 @@ import { TelegramImportModule } from './modules/telegram-import/telegram-import.
           TelegramLinkTokenOrmEntity,
           ImportedTransactionOrmEntity,
           CardAccountMappingOrmEntity,
-          // Legacy (to be migrated)
-          Settings,
         ],
         synchronize: false,
         logging: process.env.NODE_ENV === 'development',

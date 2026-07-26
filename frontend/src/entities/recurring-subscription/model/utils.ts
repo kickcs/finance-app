@@ -41,16 +41,6 @@ export function formatFrequencyShort(
 }
 
 /**
- * Returns true if the subscription is active and its billing date falls
- * within the next `withinDays` days (inclusive of today).
- */
-export function isSubscriptionDueSoon(sub: RecurringSubscription, withinDays: number = 3): boolean {
-  if (sub.status !== 'active') return false;
-  const days = daysUntilBilling(sub.billing_date);
-  return days >= 0 && days <= withinDays;
-}
-
-/**
  * Advance a date by one billing period.
  */
 export function getNextBillingDate(

@@ -17,8 +17,7 @@ interface Props {
     | 'warning'
     | 'debt-given'
     | 'debt-received'
-    | 'goal'
-    | 'reminder';
+    | 'goal';
 }
 
 withDefaults(defineProps<Props>(), {

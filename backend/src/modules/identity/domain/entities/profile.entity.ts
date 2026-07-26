@@ -13,7 +13,7 @@ export type WidgetId =
   | 'top_expenses'
   | 'transactions'
   | 'debts'
-  | 'reminders';
+  | 'subscriptions';
 
 export interface DashboardSettings {
   widgetOrder: WidgetId[];

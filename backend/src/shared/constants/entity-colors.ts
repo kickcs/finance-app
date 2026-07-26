@@ -1,5 +1,5 @@
 /**
- * Shared color palette for entities (accounts, reminders, people, etc.)
+ * Shared color palette for entities (accounts, people, etc.)
  * Keep in sync with frontend/src/shared/config/colors.ts
  */
 export const ENTITY_COLORS = [
