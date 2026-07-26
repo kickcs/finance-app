@@ -4,22 +4,20 @@ import { useRoute } from 'vue-router';
 import { useQueryClient } from '@tanstack/vue-query';
 import { AppHeader } from '@/widgets/header';
 import {
-  IncomeExpenseBar,
-  DailyStatsCards,
-  DonutChart,
-  DailyExpenseChart,
-  PeriodComparison,
+  AnalyticsSummaryCard,
+  CategoryBreakdown,
+  TrendsSection,
   SpendingPaceChart,
   type DonutSegment,
 } from '@/widgets/analytics';
-import { PageContainer, UTabs, UCard, EmptyState, Skeleton } from '@/shared/ui';
+import { PageContainer, UCard, EmptyState } from '@/shared/ui';
 import { useDailyStats, transactionQueryKeys } from '@/entities/transaction';
 import { useBudget } from '@/entities/budget';
 import { useAccounts } from '@/entities/account';
 import { toLocalISODate } from '@/shared/lib/date';
 import {
-  FilterChips,
-  SwipeablePeriodHeader,
+  PeriodBar,
+  AccountFilterSheet,
   useAnalyticsFilters,
   useConvertedAnalytics,
   usePeriodNavigation,
@@ -70,13 +68,7 @@ const accountChips = computed(() =>
 );
 
 const showAccountFilter = computed(() => accountChips.value.length > 1);
-
-// --- Scale tabs ---
-const scaleItems = [
-  { id: 'day', label: 'День' },
-  { id: 'month', label: 'Месяц' },
-  { id: 'year', label: 'Год' },
-];
+const isAccountSheetOpen = ref(false);
 
 // --- Main analytics data ---
 const startDateStr = computed(() => dateRange.value.startDate);
@@ -206,19 +198,19 @@ const paceEntries = computed(() => {
 });
 
 // --- Conditional widget visibility ---
-const showDailyStats = computed(() => scale.value === 'month');
 const showTrendsChart = computed(() => scale.value !== 'day');
+
+/** Бюджет относится к месяцу — на дне и годе полоса считалась бы не от того периода. */
+const summaryBudgetAmount = computed(() =>
+  scale.value === 'month' && paceBudgetAmount.value > 0 ? paceBudgetAmount.value : undefined,
+);
+
+const summaryDaysRemaining = computed(() =>
+  isCurrentPeriod.value ? financialDaysRemaining.value : daysInPeriod.value,
+);
 
 // --- Categories ---
 const categoryType = ref<'expense' | 'income'>('expense');
-const categoryTypeItems = [
-  { id: 'expense', label: 'Расходы' },
-  { id: 'income', label: 'Доходы' },
-];
-
-function handleCategoryTypeChange(value: string | number) {
-  categoryType.value = value as 'expense' | 'income';
-}
 
 const categoryStats = computed(() =>
   mapCategoryStats(categoryBreakdown.value, categoryType.value, convertAmount),
@@ -287,9 +279,9 @@ function handleToday() {
   goToday();
 }
 
-function handleScaleChange(value: string | number) {
+function handleScaleChange(value: PeriodScale) {
   transitionName.value = 'fade';
-  setScale(value as PeriodScale);
+  setScale(value);
 }
 
 // --- Full-page swipe ---
@@ -307,6 +299,9 @@ function onSwipeTouchStart(e: TouchEvent) {
 }
 
 function onSwipeTouchMove(e: TouchEvent) {
+  // Направление уже признано вертикальным — жест отдан скроллу, считать дельты незачем.
+  if (swipeIsHorizontal === false) return;
+
   const dx = e.touches[0].clientX - swipeStartX;
   const dy = e.touches[0].clientY - swipeStartY;
 
@@ -383,32 +378,27 @@ onMounted(() => {
       <AppHeader title="Аналитика" />
     </template>
 
-    <!-- Sticky filters -->
+    <!--
+      Сплошной фон вместо полупрозрачного с backdrop-blur: блюр пересчитывался
+      каждый кадр скролла поверх меняющегося контента, а читается панель так же.
+    -->
     <div
-      class="sticky top-0 z-20 -mx-5 lg:-mx-8 px-5 lg:px-8 py-2 space-y-3 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-border-light/50 dark:border-border-dark/50 shadow-sm"
+      class="sticky top-0 z-20 -mx-5 lg:-mx-8 px-5 lg:px-8 py-1.5 bg-background-light dark:bg-background-dark border-b border-border-light/50 dark:border-border-dark/50"
     >
-      <UTabs :model-value="scale" :items="scaleItems" @update:model-value="handleScaleChange" />
-
-      <SwipeablePeriodHeader
+      <PeriodBar
         :label="label"
         :sublabel="sublabel"
+        :scale="scale"
         :can-go-next="canGoNext"
         :can-go-prev="canGoPrev"
         :is-current-period="isCurrentPeriod"
-        :comparison-percent="comparisonPercent"
-        :comparison-loading="prevLoading"
+        :active-filter-count="filters.selectedAccountIds.length"
+        :show-filter="showAccountFilter"
         @prev="handlePrev"
         @next="handleNext"
         @today="handleToday"
-      />
-
-      <FilterChips
-        v-if="showAccountFilter"
-        :items="accountChips"
-        :selected-ids="filters.selectedAccountIds"
-        label="Счета"
-        @toggle="toggleAccount"
-        @clear="clearAccountFilters"
+        @update:scale="handleScaleChange"
+        @open-filter="isAccountSheetOpen = true"
       />
     </div>
 
@@ -429,136 +419,103 @@ onMounted(() => {
       >
         <div v-if="analyticsFetching && !analyticsLoading" class="flex justify-center py-1 mb-2">
           <div class="h-0.5 w-16 rounded-full bg-primary/40 overflow-hidden">
-            <div
-              class="h-full w-1/2 rounded-full bg-primary animate-[shimmer_1s_ease-in-out_infinite]"
-            />
+            <div class="period-loader h-full w-1/2 rounded-full bg-primary" />
           </div>
         </div>
       </Transition>
 
       <Transition :name="transitionName" mode="out-in">
         <div :key="transitionKey" class="space-y-3">
-          <!-- Empty state -->
           <UCard v-if="hasNoData" variant="bordered" class="py-8">
             <EmptyState
-              icon="bar_chart"
+              icon="trending_up"
               title="Нет транзакций"
               description="Нет данных за выбранный период"
             />
           </UCard>
 
           <template v-else>
-            <!-- === OVERVIEW SECTION === -->
-            <div class="flex flex-col lg:grid lg:grid-cols-2 lg:gap-4 space-y-3 lg:space-y-0">
-              <div class="lg:col-span-2">
-                <IncomeExpenseBar
-                  :income="convertedIncome"
-                  :expense="convertedExpense"
-                  :currency="currency"
-                  :loading="analyticsLoading"
-                />
-              </div>
+            <AnalyticsSummaryCard
+              :income="convertedIncome"
+              :expense="convertedExpense"
+              :available-balance="availableBalance"
+              :days-in-period="daysInPeriod"
+              :days-remaining="summaryDaysRemaining"
+              :currency="currency"
+              :budget-amount="summaryBudgetAmount"
+              :comparison-percent="comparisonPercent"
+              :is-past-period="!isCurrentPeriod"
+              :balance-label="
+                filters.selectedAccountIds.length > 0 ? 'По выбранным счетам' : undefined
+              "
+              :loading="analyticsLoading"
+            />
 
-              <SpendingPaceChart
-                v-if="showPace || paceLoading"
-                :entries="paceEntries"
-                :budget-amount="paceBudgetAmount"
-                :total-days="daysInPeriod"
-                :today-index="paceTodayIndex"
-                :currency="currency"
-                :period-label="label"
-                :loading="paceLoading"
-              />
+            <SpendingPaceChart
+              v-if="showPace || paceLoading"
+              :entries="paceEntries"
+              :budget-amount="paceBudgetAmount"
+              :total-days="daysInPeriod"
+              :today-index="paceTodayIndex"
+              :currency="currency"
+              :loading="paceLoading"
+            />
 
-              <div v-if="showDailyStats" class="lg:col-span-2">
-                <DailyStatsCards
-                  :total-expense="convertedExpense"
-                  :available-balance="availableBalance"
-                  :days-in-period="daysInPeriod"
-                  :days-remaining-in-month="isCurrentPeriod ? financialDaysRemaining : daysInPeriod"
-                  :currency="currency"
-                  :is-past-period="!isCurrentPeriod"
-                  :balance-label="
-                    filters.selectedAccountIds.length > 0 ? 'По выбранным счетам' : undefined
-                  "
-                  :loading="analyticsLoading"
-                />
-              </div>
-            </div>
+            <CategoryBreakdown
+              :segments="donutSegments"
+              :total="donutTotal"
+              :currency="currency"
+              :category-type="categoryType"
+              :loading="analyticsLoading"
+              @update:category-type="categoryType = $event"
+            />
 
-            <!-- === CATEGORIES SECTION === -->
-            <div class="border-t border-border-light/50 dark:border-border-dark/50 pt-3 space-y-3">
-              <UTabs
-                :model-value="categoryType"
-                :items="categoryTypeItems"
-                size="sm"
-                @update:model-value="handleCategoryTypeChange"
-              />
-
-              <template v-if="analyticsLoading">
-                <Skeleton class="h-48 w-48 mx-auto rounded-full" />
-              </template>
-
-              <template v-else>
-                <DonutChart
-                  v-if="donutSegments.length > 0"
-                  :segments="donutSegments"
-                  :total="donutTotal"
-                  :currency="currency"
-                />
-
-                <UCard v-else variant="bordered" class="py-4">
-                  <EmptyState
-                    icon="pie_chart"
-                    title="Нет данных"
-                    description="Нет транзакций для анализа за выбранный период"
-                  />
-                </UCard>
-              </template>
-            </div>
-
-            <!-- === TRENDS SECTION === -->
-            <template v-if="showTrendsChart">
-              <div
-                class="border-t border-border-light/50 dark:border-border-dark/50 pt-3 space-y-3"
-              >
-                <div class="flex flex-col lg:flex-row lg:gap-4 space-y-3 lg:space-y-0">
-                  <div class="lg:flex-1">
-                    <DailyExpenseChart
-                      :entries="chartEntries"
-                      :currency="currency"
-                      :loading="dailyLoading"
-                      :group-by="groupBy"
-                    />
-                  </div>
-
-                  <div class="lg:flex-1">
-                    <PeriodComparison
-                      :current-expense="convertedExpense"
-                      :previous-expense="prevExpense"
-                      :current-income="convertedIncome"
-                      :previous-income="prevIncome"
-                      :current-savings-rate="savingsRate"
-                      :previous-savings-rate="prevSavingsRate"
-                      :currency="currency"
-                      :loading="prevLoading"
-                      :no-data="noPrevData"
-                    />
-                  </div>
-                </div>
-              </div>
-            </template>
+            <TrendsSection
+              v-if="showTrendsChart"
+              :entries="chartEntries"
+              :group-by="groupBy"
+              :current-expense="convertedExpense"
+              :previous-expense="prevExpense"
+              :current-income="convertedIncome"
+              :previous-income="prevIncome"
+              :current-savings-rate="savingsRate"
+              :previous-savings-rate="prevSavingsRate"
+              :currency="currency"
+              :chart-loading="dailyLoading"
+              :comparison-loading="prevLoading"
+              :no-comparison-data="noPrevData"
+            />
           </template>
         </div>
       </Transition>
     </main>
+
+    <AccountFilterSheet
+      :open="isAccountSheetOpen"
+      :items="accountChips"
+      :selected-ids="filters.selectedAccountIds"
+      @update:open="isAccountSheetOpen = $event"
+      @toggle="toggleAccount"
+      @clear="clearAccountFilters"
+    />
   </PageContainer>
 </template>
 
 <style scoped>
+/*
+ * Свойства перечислены поимённо вместо `all`: анимируются только они, а `all`
+ * заставляет браузер следить за каждым анимируемым свойством поддерева.
+ * will-change живёт только на время перехода — постоянный хинт держал бы
+ * лишний слой композитора на всё время жизни страницы.
+ */
 .slide-left-enter-active,
-.slide-left-leave-active {
-  transition: all 150ms ease-out;
+.slide-left-leave-active,
+.slide-right-enter-active,
+.slide-right-leave-active {
+  transition:
+    opacity 150ms ease-out,
+    transform 150ms ease-out;
+  will-change: opacity, transform;
 }
 
 .slide-left-enter-from {
@@ -569,11 +526,6 @@ onMounted(() => {
 .slide-left-leave-to {
   opacity: 0;
   transform: translateX(-20px);
-}
-
-.slide-right-enter-active,
-.slide-right-leave-active {
-  transition: all 150ms ease-out;
 }
 
 .slide-right-enter-from {
@@ -589,6 +541,7 @@ onMounted(() => {
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 150ms ease-out;
+  will-change: opacity;
 }
 
 .fade-enter-from,
@@ -596,12 +549,39 @@ onMounted(() => {
   opacity: 0;
 }
 
-@keyframes shimmer {
-  0% {
+/*
+ * Своё имя вместо `shimmer`: Vue переименовывает @keyframes в scoped-стилях,
+ * поэтому класс `animate-[shimmer_…]` из шаблона попадал не в эти кадры, а в
+ * глобальные, и полоска ехала не так, как здесь описано.
+ */
+@keyframes period-loader-sweep {
+  from {
     transform: translateX(-100%);
   }
-  100% {
+  to {
     transform: translateX(300%);
+  }
+}
+
+.period-loader {
+  animation: period-loader-sweep 1s ease-in-out infinite;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .period-loader {
+    animation: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slide-left-enter-active,
+  .slide-left-leave-active,
+  .slide-right-enter-active,
+  .slide-right-leave-active,
+  .fade-enter-active,
+  .fade-leave-active {
+    transition-duration: 1ms;
   }
 }
 </style>

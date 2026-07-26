@@ -3,7 +3,7 @@ import { usePreferredReducedMotion } from '@vueuse/core';
 
 const DEFAULT_DURATION = 400;
 
-/** ease-out cubic — то же ощущение, что у прежней ручной петли в IncomeExpenseBar. */
+/** ease-out cubic. */
 function easeOutCubic(t: number): number {
   return 1 - Math.pow(1 - t, 3);
 }

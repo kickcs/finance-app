@@ -10,7 +10,11 @@ import {
   mockSecondPersonResponse,
   mockThirdPersonResponse,
 } from '@/test/mocks/handlers/people';
-import { useToast } from '@/shared/ui';
+import {
+  mockGivenDebtResponse,
+  mockTakenDebtResponse,
+  mockClosedDebtResponse,
+} from '@/test/mocks/handlers/debts';
 
 // Mock app router — vi.hoisted runs before vi.mock hoisting
 const { navigateBackMock } = vi.hoisted(() => ({
@@ -22,10 +26,17 @@ vi.mock('@/app/router', () => ({
   resetOnboardingVerified: vi.fn(),
 }));
 
+// Закрытие настоящей шторки роняет jsdom на чтении style отсоединённого узла —
+// см. комментарий в стабе.
+vi.mock('vaul-vue', async () => (await import('@/test/stubs/vaul')).vaulStub);
+
+// ---------------------------------------------------------------------------
+// Helpers
 // ---------------------------------------------------------------------------
 
 const routes = [
   { path: '/people', component: PeopleListPage, name: 'people-list' },
+  { path: '/debts', component: { template: '<div />' }, name: 'debts' },
   { path: '/', component: { template: '<div />' }, name: 'home' },
 ];
 
@@ -45,17 +56,13 @@ async function renderPage() {
   return currentWrapper;
 }
 
-/** Helper: find element inside teleported modal content via document.body */
+/** Find element inside teleported sheet content */
 function findInBody(selector: string): HTMLElement | null {
   return document.body.querySelector(selector);
 }
 
-/** Helper: set UInput value via its internal input element in the DOM */
-async function setModalInputValue(value: string) {
-  // UInput's internal <input> rendered inside the teleported modal
-  const input = document.body.querySelector('[role="dialog"] input') as HTMLInputElement | null;
-  if (!input) throw new Error('Modal input not found in document.body');
-  // Simulate native input event
+/** Set value on a UInput's internal <input>, in-page or teleported */
+async function setInputValue(input: HTMLInputElement, value: string) {
   const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
     HTMLInputElement.prototype,
     'value',
@@ -65,21 +72,47 @@ async function setModalInputValue(value: string) {
   await nextTick();
 }
 
-// ===========================================================================
+/** Type into the page's combined search/add field */
+async function typeQuery(wrapper: ReturnType<typeof renderWithProviders>, value: string) {
+  const input = wrapper.find('[data-testid="person-search-input"] input')
+    .element as HTMLInputElement;
+  await setInputValue(input, value);
+  await flushPromises();
+}
+
+/** Open the edit sheet by clicking a person row */
+async function openEditSheet(wrapper: ReturnType<typeof renderWithProviders>, index = 0) {
+  const rows = wrapper.findAll('[data-testid="person-item"] button');
+  await rows[index].trigger('click');
+  await flushPromises();
+  await nextTick();
+}
+
+function withPeople(...people: object[]) {
+  server.use(http.get('*/api/people', () => HttpResponse.json(people)));
+}
+
+function withDebts(...debts: object[]) {
+  server.use(http.get('*/api/debts', () => HttpResponse.json(debts)));
+}
+
+// ---------------------------------------------------------------------------
+
 describe('PeopleListPage', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    navigateBackMock.mockClear();
   });
 
   afterEach(async () => {
     currentWrapper?.unmount();
     currentWrapper = null;
+    // Шторка снимается через watcher presence в reka-ui: он читает style уже
+    // отмонтированного узла. Даём ему отработать до того, как чистим body,
+    // иначе jsdom роняет unhandled rejection на разрушенном CSSStyleDeclaration.
     await flushPromises();
+    document.body.innerHTML = '';
   });
 
-  // -----------------------------------------------------------------------
-  // Rendering
-  // -----------------------------------------------------------------------
   describe('rendering', () => {
     it('displays page title "Люди"', async () => {
       const wrapper = await renderPage();
@@ -87,83 +120,332 @@ describe('PeopleListPage', () => {
     });
 
     it('shows people list with names when people exist', async () => {
-      server.use(
-        http.get('*/api/people', () =>
-          HttpResponse.json([mockPersonResponse, mockSecondPersonResponse]),
-        ),
-      );
+      withPeople(mockPersonResponse, mockSecondPersonResponse);
       const wrapper = await renderPage();
 
       expect(wrapper.text()).toContain('Алексей');
       expect(wrapper.text()).toContain('Мария');
     });
 
-    it('shows count header with correct number', async () => {
-      server.use(
-        http.get('*/api/people', () =>
-          HttpResponse.json([mockPersonResponse, mockSecondPersonResponse]),
-        ),
-      );
-      const wrapper = await renderPage();
-
-      const countEl = wrapper.find('[data-testid="people-count"]');
-      expect(countEl.exists()).toBe(true);
-      expect(countEl.text()).toContain('Всего контактов: 2');
-    });
-
     it('renders correct number of person items', async () => {
-      server.use(
-        http.get('*/api/people', () =>
-          HttpResponse.json([
-            mockPersonResponse,
-            mockSecondPersonResponse,
-            mockThirdPersonResponse,
-          ]),
-        ),
-      );
+      withPeople(mockPersonResponse, mockSecondPersonResponse, mockThirdPersonResponse);
       const wrapper = await renderPage();
 
-      const personItems = wrapper.findAll('[data-testid="person-item"]');
-      expect(personItems.length).toBe(3);
-    });
-  });
-
-  // -----------------------------------------------------------------------
-  // Empty State
-  // -----------------------------------------------------------------------
-  describe('empty state', () => {
-    it('shows empty state when no people', async () => {
-      // Default handler returns empty array
-      const wrapper = await renderPage();
-
-      expect(wrapper.find('[data-testid="people-empty-state"]').exists()).toBe(true);
-      expect(wrapper.text()).toContain('Нет контактов');
+      expect(wrapper.findAll('[data-testid="person-item"]')).toHaveLength(3);
     });
 
-    it('empty state has action button to create contact', async () => {
+    it('shows contact count in the summary line', async () => {
+      withPeople(mockPersonResponse, mockSecondPersonResponse);
       const wrapper = await renderPage();
 
-      expect(wrapper.text()).toContain('Создать контакт');
+      expect(wrapper.find('[data-testid="people-count"]').text()).toContain('2 контакта');
     });
 
-    it('does not show count header when no people', async () => {
+    it('does not show summary line when there are no people', async () => {
       const wrapper = await renderPage();
-
       expect(wrapper.find('[data-testid="people-count"]').exists()).toBe(false);
     });
+
+    it('sorts people alphabetically (ru locale)', async () => {
+      // Приходят в порядке Алексей, Мария, Борис — ожидаем Алексей, Борис, Мария
+      withPeople(mockPersonResponse, mockSecondPersonResponse, mockThirdPersonResponse);
+      const wrapper = await renderPage();
+
+      const names = wrapper.findAll('[data-testid="person-item"]').map((n) => n.text());
+      expect(names[0]).toContain('Алексей');
+      expect(names[1]).toContain('Борис');
+      expect(names[2]).toContain('Мария');
+    });
   });
 
-  // -----------------------------------------------------------------------
-  // Loading State
-  // -----------------------------------------------------------------------
+  describe('debt net', () => {
+    it('shows what a person owes you', async () => {
+      withPeople(mockPersonResponse);
+      withDebts(mockGivenDebtResponse); // Алексей, given, remaining 30000
+      const wrapper = await renderPage();
+
+      expect(wrapper.find('[data-testid="person-item"]').text()).toContain('должен вам');
+    });
+
+    it('folds counter-debts of the same person into one net amount', async () => {
+      withPeople(mockPersonResponse);
+      withDebts(
+        { ...mockGivenDebtResponse, remainingAmount: 30000 },
+        { ...mockTakenDebtResponse, id: 'debt-x', personName: 'Алексей', remainingAmount: 50000 },
+      );
+      const wrapper = await renderPage();
+
+      // 30000 дал − 50000 взял = −20000 → «вы должны»
+      const row = wrapper.find('[data-testid="person-item"]');
+      expect(row.text()).toContain('вы должны');
+      expect(row.text()).not.toContain('должен вам');
+    });
+
+    it('ignores closed debts', async () => {
+      withPeople(mockPersonResponse);
+      withDebts({ ...mockClosedDebtResponse, personName: 'Алексей' });
+      const wrapper = await renderPage();
+
+      const row = wrapper.find('[data-testid="person-item"]');
+      expect(row.text()).not.toContain('должен вам');
+      expect(row.text()).not.toContain('вы должны');
+    });
+
+    it('shows no amount for a person without debts', async () => {
+      withPeople(mockSecondPersonResponse); // Мария — долгов нет
+      withDebts(mockGivenDebtResponse); // долг числится за Алексеем
+      const wrapper = await renderPage();
+
+      const row = wrapper.find('[data-testid="person-item"]');
+      expect(row.text()).not.toContain('должен вам');
+      expect(row.text()).not.toContain('вы должны');
+    });
+  });
+
+  describe('search', () => {
+    it('filters the list by query', async () => {
+      withPeople(mockPersonResponse, mockSecondPersonResponse);
+      const wrapper = await renderPage();
+
+      await typeQuery(wrapper, 'Мар');
+
+      const items = wrapper.findAll('[data-testid="person-item"]');
+      expect(items).toHaveLength(1);
+      expect(items[0].text()).toContain('Мария');
+    });
+
+    it('shows a no-matches hint when nothing is found', async () => {
+      withPeople(mockPersonResponse);
+      const wrapper = await renderPage();
+
+      await typeQuery(wrapper, 'Зинаида');
+
+      expect(wrapper.find('[data-testid="people-no-matches"]').exists()).toBe(true);
+    });
+  });
+
+  describe('add person', () => {
+    it('offers to create a contact when the typed name is new', async () => {
+      withPeople(mockPersonResponse);
+      const wrapper = await renderPage();
+
+      expect(wrapper.find('[data-testid="create-person-btn"]').exists()).toBe(false);
+
+      await typeQuery(wrapper, 'Дмитрий');
+
+      const createBtn = wrapper.find('[data-testid="create-person-btn"]');
+      expect(createBtn.exists()).toBe(true);
+      expect(createBtn.text()).toContain('Дмитрий');
+    });
+
+    it('does not offer to create when the name already exists', async () => {
+      withPeople(mockPersonResponse);
+      const wrapper = await renderPage();
+
+      await typeQuery(wrapper, 'Алексей');
+
+      expect(wrapper.find('[data-testid="create-person-btn"]').exists()).toBe(false);
+    });
+
+    it('matches an existing name case-insensitively', async () => {
+      withPeople(mockPersonResponse);
+      const wrapper = await renderPage();
+
+      await typeQuery(wrapper, 'алексей');
+
+      expect(wrapper.find('[data-testid="create-person-btn"]').exists()).toBe(false);
+    });
+
+    it('creates the person via API and clears the field', async () => {
+      let createdBody: Record<string, unknown> | null = null;
+      server.use(
+        http.post('*/api/people', async ({ request }) => {
+          createdBody = (await request.json()) as Record<string, unknown>;
+          return HttpResponse.json({
+            id: 'person-new',
+            userId: 'test-user-1',
+            name: createdBody.name,
+            color: createdBody.color,
+            createdAt: '2026-07-27T00:00:00.000Z',
+            updatedAt: '2026-07-27T00:00:00.000Z',
+          });
+        }),
+      );
+
+      const wrapper = await renderPage();
+      await typeQuery(wrapper, 'Дмитрий');
+      await wrapper.find('[data-testid="create-person-btn"]').trigger('click');
+      await flushPromises();
+
+      expect(createdBody).not.toBeNull();
+      expect(createdBody!.name).toBe('Дмитрий');
+      expect(wrapper.find('[data-testid="create-person-btn"]').exists()).toBe(false);
+    });
+
+    it('assigns a colour derived from the name, so it is stable', async () => {
+      const bodies: Record<string, unknown>[] = [];
+      server.use(
+        http.post('*/api/people', async ({ request }) => {
+          const body = (await request.json()) as Record<string, unknown>;
+          bodies.push(body);
+          return HttpResponse.json({
+            id: `person-${bodies.length}`,
+            userId: 'test-user-1',
+            name: body.name,
+            color: body.color,
+            createdAt: '2026-07-27T00:00:00.000Z',
+            updatedAt: '2026-07-27T00:00:00.000Z',
+          });
+        }),
+      );
+
+      const first = await renderPage();
+      await typeQuery(first, 'Дмитрий');
+      await first.find('[data-testid="create-person-btn"]').trigger('click');
+      await flushPromises();
+
+      currentWrapper?.unmount();
+      currentWrapper = null;
+
+      const second = await renderPage();
+      await typeQuery(second, 'Дмитрий');
+      await second.find('[data-testid="create-person-btn"]').trigger('click');
+      await flushPromises();
+
+      expect(bodies).toHaveLength(2);
+      expect(bodies[0].color).toBe(bodies[1].color);
+    });
+  });
+
+  describe('edit person', () => {
+    it('opens the edit sheet with the person name prefilled', async () => {
+      withPeople(mockPersonResponse);
+      const wrapper = await renderPage();
+
+      await openEditSheet(wrapper);
+
+      const sheet = findInBody('[data-testid="person-edit-sheet"]');
+      expect(sheet).not.toBeNull();
+      expect((sheet!.querySelector('input') as HTMLInputElement).value).toBe('Алексей');
+    });
+
+    it('updates the person via API', async () => {
+      withPeople(mockPersonResponse);
+      let patchBody: Record<string, unknown> | null = null;
+      server.use(
+        http.patch('*/api/people/:id', async ({ request, params }) => {
+          patchBody = (await request.json()) as Record<string, unknown>;
+          return HttpResponse.json({ ...mockPersonResponse, id: params.id, ...patchBody });
+        }),
+      );
+
+      const wrapper = await renderPage();
+      await openEditSheet(wrapper);
+
+      const sheet = findInBody('[data-testid="person-edit-sheet"]')!;
+      await setInputValue(sheet.querySelector('input') as HTMLInputElement, 'Алексей Петров');
+      (sheet.querySelector('[data-testid="save-person-btn"]') as HTMLElement).click();
+      await flushPromises();
+      await flushPromises();
+
+      expect(patchBody).not.toBeNull();
+      expect(patchBody!.name).toBe('Алексей Петров');
+    });
+
+    it('links to the debts page when the person has debts', async () => {
+      withPeople(mockPersonResponse);
+      withDebts(mockGivenDebtResponse);
+      const wrapper = await renderPage();
+
+      await openEditSheet(wrapper);
+
+      const link = findInBody('[data-testid="person-debts-link"]');
+      expect(link).not.toBeNull();
+      expect(link!.getAttribute('href')).toBe('/debts');
+    });
+
+    it('hides the debts link when the person has none', async () => {
+      withPeople(mockSecondPersonResponse);
+      const wrapper = await renderPage();
+
+      await openEditSheet(wrapper);
+
+      expect(findInBody('[data-testid="person-debts-link"]')).toBeNull();
+    });
+
+    it('disables save when the name is emptied', async () => {
+      withPeople(mockPersonResponse);
+      const wrapper = await renderPage();
+      await openEditSheet(wrapper);
+
+      const sheet = findInBody('[data-testid="person-edit-sheet"]')!;
+      await setInputValue(sheet.querySelector('input') as HTMLInputElement, '   ');
+
+      const saveBtn = sheet.querySelector('[data-testid="save-person-btn"]') as HTMLButtonElement;
+      expect(saveBtn.disabled).toBe(true);
+    });
+  });
+
+  describe('delete person', () => {
+    it('deletes after confirmation triggered from a swipe', async () => {
+      withPeople(mockPersonResponse);
+      let deletedId: string | null = null;
+      server.use(
+        http.delete('*/api/people/:id', ({ params }) => {
+          deletedId = params.id as string;
+          return new HttpResponse(null, { status: 204 });
+        }),
+      );
+      const wrapper = await renderPage();
+
+      wrapper.findComponent({ name: 'SwipeableItem' }).vm.$emit('action-left');
+      await nextTick();
+
+      const confirmModal = wrapper.findComponent({ name: 'ConfirmDeleteModal' });
+      expect(confirmModal.props('modelValue')).toBe(true);
+
+      confirmModal.vm.$emit('confirm');
+      await flushPromises();
+      await flushPromises();
+
+      expect(deletedId).toBe('person-1');
+    });
+
+    it('opens the confirmation from the edit sheet', async () => {
+      withPeople(mockPersonResponse);
+      const wrapper = await renderPage();
+      await openEditSheet(wrapper);
+
+      const sheet = findInBody('[data-testid="person-edit-sheet"]')!;
+      (sheet.querySelector('[data-testid="delete-person-btn"]') as HTMLElement).click();
+      await flushPromises();
+      await nextTick();
+
+      expect(wrapper.findComponent({ name: 'ConfirmDeleteModal' }).props('modelValue')).toBe(true);
+    });
+
+    it('cancels delete when cancel is clicked', async () => {
+      withPeople(mockPersonResponse);
+      const wrapper = await renderPage();
+
+      wrapper.findComponent({ name: 'SwipeableItem' }).vm.$emit('action-left');
+      await nextTick();
+
+      const confirmModal = wrapper.findComponent({ name: 'ConfirmDeleteModal' });
+      expect(confirmModal.props('modelValue')).toBe(true);
+
+      confirmModal.vm.$emit('cancel');
+      await nextTick();
+
+      expect(confirmModal.props('modelValue')).toBe(false);
+    });
+  });
+
   describe('loading state', () => {
     it('shows skeleton while people load', async () => {
-      let resolvePeople!: () => void;
       server.use(
         http.get('*/api/people', async () => {
-          await new Promise<void>((res) => {
-            resolvePeople = res;
-          });
+          await new Promise((resolve) => setTimeout(resolve, 60));
           return HttpResponse.json([]);
         }),
       );
@@ -176,362 +458,59 @@ describe('PeopleListPage', () => {
         router,
         provideAuth: { user: mockUser },
       });
-      await flushPromises();
+      await nextTick();
 
       expect(currentWrapper.find('[data-testid="people-loading"]').exists()).toBe(true);
-
-      // Release the blocked response and let component settle
-      resolvePeople();
-      await flushPromises();
-      await flushPromises();
     });
   });
 
-  // -----------------------------------------------------------------------
-  // Add Person
-  // -----------------------------------------------------------------------
-  describe('add person', () => {
-    it('opens add modal when FAB clicked', async () => {
+  describe('empty state', () => {
+    it('shows empty state when there are no people', async () => {
       const wrapper = await renderPage();
 
-      await wrapper.find('[data-testid="add-person-fab"]').trigger('click');
-      await nextTick();
-
-      // Modal is open — check via component props
-      const modal = wrapper.findComponent({ name: 'UModal' });
-      expect(modal.exists()).toBe(true);
-      expect(modal.props('modelValue')).toBe(true);
-      // Title is "Новый контакт" — rendered inside teleported dialog
-      expect(modal.props('title')).toBe('Новый контакт');
-    });
-
-    it('opens add modal from empty state action button', async () => {
-      const wrapper = await renderPage();
-
-      const actionBtn = wrapper.findAll('button').find((b) => b.text().includes('Создать контакт'));
-      expect(actionBtn).toBeDefined();
-      await actionBtn!.trigger('click');
-      await nextTick();
-
-      const modal = wrapper.findComponent({ name: 'UModal' });
-      expect(modal.props('modelValue')).toBe(true);
-      expect(modal.props('title')).toBe('Новый контакт');
-    });
-
-    it('creates person via API and shows success toast', async () => {
-      let capturedPayload: Record<string, unknown> | null = null;
-      server.use(
-        http.post('*/api/people', async ({ request }) => {
-          capturedPayload = (await request.json()) as Record<string, unknown>;
-          return HttpResponse.json({
-            id: 'person-new',
-            userId: 'test-user-1',
-            name: capturedPayload.name,
-            color: capturedPayload.color,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          });
-        }),
-      );
-
-      const wrapper = await renderPage();
-
-      // Open add modal
-      await wrapper.find('[data-testid="add-person-fab"]').trigger('click');
-      await nextTick();
-
-      // Fill in the name via native input inside the teleported modal
-      await setModalInputValue('Новый Контакт');
-
-      // Click save button inside teleported modal
-      const saveBtn = findInBody('[data-testid="save-person-btn"]');
-      expect(saveBtn).not.toBeNull();
-      saveBtn!.click();
-      await flushPromises();
-      await flushPromises();
-
-      // Verify API call
-      expect(capturedPayload).not.toBeNull();
-      expect(capturedPayload!.name).toBe('Новый Контакт');
+      expect(wrapper.find('[data-testid="people-empty-state"]').exists()).toBe(true);
+      expect(wrapper.text()).toContain('Нет контактов');
     });
   });
 
-  // -----------------------------------------------------------------------
-  // Edit Person
-  // -----------------------------------------------------------------------
-  describe('edit person', () => {
-    it('opens edit modal with correct title when person clicked', async () => {
-      server.use(http.get('*/api/people', () => HttpResponse.json([mockPersonResponse])));
-      const wrapper = await renderPage();
-
-      // Click person item button
-      const personBtn = wrapper.find('[data-testid="person-item"] button');
-      expect(personBtn.exists()).toBe(true);
-      await personBtn.trigger('click');
-      await nextTick();
-
-      // Modal should show edit title
-      const modal = wrapper.findComponent({ name: 'UModal' });
-      expect(modal.props('modelValue')).toBe(true);
-      expect(modal.props('title')).toBe('Редактировать');
-    });
-
-    it('updates person via API', async () => {
-      let capturedPayload: Record<string, unknown> | null = null;
-      server.use(
-        http.get('*/api/people', () => HttpResponse.json([mockPersonResponse])),
-        http.patch('*/api/people/:id', async ({ request }) => {
-          capturedPayload = (await request.json()) as Record<string, unknown>;
-          return HttpResponse.json({
-            ...mockPersonResponse,
-            ...capturedPayload,
-            updatedAt: new Date().toISOString(),
-          });
-        }),
-      );
-      const wrapper = await renderPage();
-
-      // Click person to open edit modal
-      await wrapper.find('[data-testid="person-item"] button').trigger('click');
-      await nextTick();
-
-      // Change the name via native input inside teleported modal
-      await setModalInputValue('Алексей Обновлённый');
-
-      // Click save button inside teleported modal
-      const saveBtn = findInBody('[data-testid="save-person-btn"]');
-      expect(saveBtn).not.toBeNull();
-      saveBtn!.click();
-      await flushPromises();
-      await flushPromises();
-
-      expect(capturedPayload).not.toBeNull();
-      expect(capturedPayload!.name).toBe('Алексей Обновлённый');
-    });
-  });
-
-  // -----------------------------------------------------------------------
-  // Delete Person
-  // -----------------------------------------------------------------------
-  describe('delete person', () => {
-    it('shows confirm delete modal and deletes on confirm', async () => {
-      let deletedId: string | null = null;
-      server.use(
-        http.get('*/api/people', () => HttpResponse.json([mockPersonResponse])),
-        http.delete('*/api/people/:id', ({ params }) => {
-          deletedId = params.id as string;
-          return new HttpResponse(null, { status: 204 });
-        }),
-      );
-      const wrapper = await renderPage();
-
-      // Trigger delete via SwipeableItem action-left emit
-      const swipeItem = wrapper.findComponent({ name: 'SwipeableItem' });
-      expect(swipeItem.exists()).toBe(true);
-      swipeItem.vm.$emit('action-left');
-      await nextTick();
-
-      // Confirm delete modal should be open
-      const confirmModal = wrapper.findComponent({ name: 'ConfirmDeleteModal' });
-      expect(confirmModal.exists()).toBe(true);
-      expect(confirmModal.props('modelValue')).toBe(true);
-
-      // Emit confirm
-      confirmModal.vm.$emit('confirm');
-      await flushPromises();
-      await flushPromises();
-
-      expect(deletedId).toBe('person-1');
-    });
-
-    it('cancels delete when cancel is clicked', async () => {
-      server.use(http.get('*/api/people', () => HttpResponse.json([mockPersonResponse])));
-      const wrapper = await renderPage();
-
-      // Trigger delete via SwipeableItem
-      const swipeItem = wrapper.findComponent({ name: 'SwipeableItem' });
-      swipeItem.vm.$emit('action-left');
-      await nextTick();
-
-      // Cancel via ConfirmDeleteModal
-      const confirmModal = wrapper.findComponent({ name: 'ConfirmDeleteModal' });
-      expect(confirmModal.props('modelValue')).toBe(true);
-
-      confirmModal.vm.$emit('cancel');
-      await nextTick();
-
-      // Modal should close (modelValue becomes false)
-      expect(confirmModal.props('modelValue')).toBe(false);
-    });
-  });
-
-  // -----------------------------------------------------------------------
-  // Form Validation
-  // -----------------------------------------------------------------------
-  describe('form validation', () => {
-    it('save button is disabled when name is empty', async () => {
-      const wrapper = await renderPage();
-
-      // Open add modal
-      await wrapper.find('[data-testid="add-person-fab"]').trigger('click');
-      await nextTick();
-
-      const saveBtn = findInBody('[data-testid="save-person-btn"]');
-      expect(saveBtn).not.toBeNull();
-      expect(saveBtn!.hasAttribute('disabled')).toBe(true);
-    });
-
-    it('save button is enabled when name is filled', async () => {
-      const wrapper = await renderPage();
-
-      // Open add modal
-      await wrapper.find('[data-testid="add-person-fab"]').trigger('click');
-      await nextTick();
-
-      // Fill name
-      await setModalInputValue('Тест');
-
-      const saveBtn = findInBody('[data-testid="save-person-btn"]');
-      expect(saveBtn).not.toBeNull();
-      expect(saveBtn!.hasAttribute('disabled')).toBe(false);
-    });
-  });
-
-  // -----------------------------------------------------------------------
-  // Sorting
-  // -----------------------------------------------------------------------
-  describe('sorting', () => {
-    it('people are sorted alphabetically (ru locale)', async () => {
-      server.use(
-        http.get('*/api/people', () =>
-          HttpResponse.json([
-            mockSecondPersonResponse,
-            mockThirdPersonResponse,
-            mockPersonResponse,
-          ]),
-        ),
-      );
-      const wrapper = await renderPage();
-
-      const personItems = wrapper.findAll('[data-testid="person-item"]');
-      expect(personItems.length).toBe(3);
-
-      // Expected order: Алексей, Борис, Мария (ru locale alphabetical)
-      const names = personItems.map((item) => item.text());
-      expect(names[0]).toContain('Алексей');
-      expect(names[1]).toContain('Борис');
-      expect(names[2]).toContain('Мария');
-    });
-  });
-
-  // -----------------------------------------------------------------------
-  // Back Navigation
-  // -----------------------------------------------------------------------
   describe('back navigation', () => {
-    it('calls navigateBack when back button is clicked', async () => {
+    it('calls navigateBack when the back button is clicked', async () => {
       const wrapper = await renderPage();
 
-      const header = wrapper.findComponent({ name: 'AppHeader' });
-      expect(header.exists()).toBe(true);
-      header.vm.$emit('back');
-      await flushPromises();
+      await wrapper.find('header button').trigger('click');
 
       expect(navigateBackMock).toHaveBeenCalled();
     });
   });
 
-  // -----------------------------------------------------------------------
-  // Error Handling
-  // -----------------------------------------------------------------------
   describe('error handling', () => {
-    it('shows error toast on failed create', async () => {
-      server.use(
-        http.post('*/api/people', () =>
-          HttpResponse.json({ message: 'Server error' }, { status: 500 }),
-        ),
-      );
+    it('keeps the typed name when create fails', async () => {
+      server.use(http.post('*/api/people', () => new HttpResponse(null, { status: 500 })));
 
       const wrapper = await renderPage();
-      const { toasts, dismissAll } = useToast();
-
-      // Open add modal
-      await wrapper.find('[data-testid="add-person-fab"]').trigger('click');
-      await nextTick();
-
-      // Fill name
-      await setModalInputValue('Ошибка');
-
-      // Click save
-      const saveBtn = findInBody('[data-testid="save-person-btn"]');
-      expect(saveBtn).not.toBeNull();
-      saveBtn!.click();
+      await typeQuery(wrapper, 'Дмитрий');
+      await wrapper.find('[data-testid="create-person-btn"]').trigger('click');
       await flushPromises();
       await flushPromises();
 
-      // Check toast was created with error message
-      const errorToast = toasts.value.find((t) => t.title === 'Не удалось сохранить');
-      expect(errorToast).toBeDefined();
-      expect(errorToast!.variant).toBe('error');
-      dismissAll();
+      // Имя не потеряно — пользователь может повторить, не набирая заново
+      expect(wrapper.find('[data-testid="create-person-btn"]').exists()).toBe(true);
     });
 
-    it('shows error toast on failed update', async () => {
-      server.use(
-        http.get('*/api/people', () => HttpResponse.json([mockPersonResponse])),
-        http.patch('*/api/people/:id', () =>
-          HttpResponse.json({ message: 'Server error' }, { status: 500 }),
-        ),
-      );
+    it('keeps the sheet open when update fails', async () => {
+      withPeople(mockPersonResponse);
+      server.use(http.patch('*/api/people/:id', () => new HttpResponse(null, { status: 500 })));
 
       const wrapper = await renderPage();
-      const { toasts, dismissAll } = useToast();
+      await openEditSheet(wrapper);
 
-      // Click person to open edit modal
-      await wrapper.find('[data-testid="person-item"] button').trigger('click');
-      await nextTick();
-
-      // Change the name
-      await setModalInputValue('Обновление');
-
-      // Click save
-      const saveBtn = findInBody('[data-testid="save-person-btn"]');
-      expect(saveBtn).not.toBeNull();
-      saveBtn!.click();
+      const sheet = findInBody('[data-testid="person-edit-sheet"]')!;
+      await setInputValue(sheet.querySelector('input') as HTMLInputElement, 'Новое имя');
+      (sheet.querySelector('[data-testid="save-person-btn"]') as HTMLElement).click();
       await flushPromises();
       await flushPromises();
 
-      const errorToast = toasts.value.find((t) => t.title === 'Не удалось сохранить');
-      expect(errorToast).toBeDefined();
-      expect(errorToast!.variant).toBe('error');
-      dismissAll();
-    });
-
-    it('shows error toast on failed delete', async () => {
-      server.use(
-        http.get('*/api/people', () => HttpResponse.json([mockPersonResponse])),
-        http.delete('*/api/people/:id', () =>
-          HttpResponse.json({ message: 'Server error' }, { status: 500 }),
-        ),
-      );
-
-      const wrapper = await renderPage();
-      const { toasts, dismissAll } = useToast();
-
-      // Trigger delete via SwipeableItem
-      const swipeItem = wrapper.findComponent({ name: 'SwipeableItem' });
-      swipeItem.vm.$emit('action-left');
-      await nextTick();
-
-      // Confirm delete
-      const confirmModal = wrapper.findComponent({ name: 'ConfirmDeleteModal' });
-      confirmModal.vm.$emit('confirm');
-      await flushPromises();
-      await flushPromises();
-
-      const errorToast = toasts.value.find((t) => t.title === 'Не удалось удалить');
-      expect(errorToast).toBeDefined();
-      expect(errorToast!.variant).toBe('error');
-      dismissAll();
+      expect(findInBody('[data-testid="person-edit-sheet"]')).not.toBeNull();
     });
   });
 });

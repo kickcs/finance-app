@@ -14,7 +14,6 @@ const props = withDefaults(
     totalDays: number;
     todayIndex: number;
     currency: string;
-    periodLabel: string;
     loading?: boolean;
   }>(),
   { loading: false },
@@ -31,8 +30,8 @@ const activeIdx = ref<number | null>(null);
 
 // --- Layout ---
 const W = 400;
-const H = 190;
-const P = { t: 8, r: 8, b: 32, l: 48 };
+const H = 155;
+const P = { t: 8, r: 8, b: 26, l: 48 };
 const cw = W - P.l - P.r;
 const ch = H - P.t - P.b;
 
@@ -206,6 +205,19 @@ const labelStep = computed(() => {
   return 7;
 });
 
+/**
+ * Последний день подписывается, только если он достаточно далеко от предыдущей
+ * подписи по шагу: при totalDays = 27 и шаге 5 «25 июл» и «27 июл» налезали
+ * друг на друга.
+ */
+const showLastDayLabel = computed(() => {
+  const n = props.totalDays;
+  const step = labelStep.value;
+  if (n <= 1) return false;
+  const lastStepped = Math.floor((n - 1) / step) * step;
+  return n - lastStepped >= Math.max(2, Math.ceil(step / 2));
+});
+
 // Format ISO date string as short label (e.g. "5 мая")
 function formatDayLabel(dateStr: string): string {
   const [y, m, d] = dateStr.split('-').map(Number);
@@ -235,62 +247,63 @@ const yTicks = computed(() => {
 </script>
 
 <template>
-  <UCard class="p-4">
+  <UCard padding="md" class="[content-visibility:auto] [contain-intrinsic-size:auto_220px]">
     <!-- Header -->
-    <div class="flex items-center justify-between mb-2">
-      <h3 class="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark">
+    <div class="flex items-baseline justify-between gap-2 mb-2">
+      <h3
+        class="text-body font-semibold text-text-primary-light dark:text-text-primary-dark truncate"
+      >
         Темп расходов
       </h3>
-      <span class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
-        {{ periodLabel }}
-      </span>
-    </div>
-
-    <!-- Legend -->
-    <div v-if="!loading && hasEntries" class="flex items-center gap-4 mb-2">
-      <div v-if="hasBudget" class="flex items-center gap-1.5">
-        <svg width="20" height="2" class="shrink-0">
-          <line
-            x1="0"
-            y1="1"
-            x2="20"
-            y2="1"
-            stroke-dasharray="4 3"
-            stroke-width="1.5"
-            class="stroke-text-tertiary-light dark:stroke-text-tertiary-dark"
-            opacity="0.5"
-          />
-        </svg>
-        <span class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">План</span>
-      </div>
-      <div class="flex items-center gap-1.5">
-        <svg width="20" height="2" class="shrink-0">
-          <line
-            x1="0"
-            y1="1"
-            x2="20"
-            y2="1"
-            :stroke="color"
-            stroke-width="2"
-            stroke-linecap="round"
-          />
-        </svg>
-        <span class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">Факт</span>
-      </div>
-      <div v-if="projection !== null" class="flex items-center gap-1.5">
-        <svg width="20" height="2" class="shrink-0">
-          <line
-            x1="0"
-            y1="1"
-            x2="20"
-            y2="1"
-            :stroke="projColor"
-            stroke-dasharray="2 4"
-            stroke-width="1.8"
-            stroke-linecap="round"
-          />
-        </svg>
-        <span class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">Прогноз</span>
+      <!-- Легенда переехала в шапку карточки вместо отдельной строки: период уже
+           назван в липкой панели, поэтому его подпись здесь была лишней. -->
+      <div
+        v-if="!loading && hasEntries"
+        class="shrink-0 flex items-center gap-2 text-caption-sm text-text-tertiary-light dark:text-text-tertiary-dark"
+      >
+        <span v-if="hasBudget" class="flex items-center gap-1">
+          <svg width="14" height="2" class="shrink-0" aria-hidden="true">
+            <line
+              x1="0"
+              y1="1"
+              x2="14"
+              y2="1"
+              stroke-dasharray="4 3"
+              stroke-width="1.5"
+              class="stroke-text-tertiary-light dark:stroke-text-tertiary-dark"
+            />
+          </svg>
+          План
+        </span>
+        <span class="flex items-center gap-1">
+          <svg width="14" height="2" class="shrink-0" aria-hidden="true">
+            <line
+              x1="0"
+              y1="1"
+              x2="14"
+              y2="1"
+              :stroke="color"
+              stroke-width="2"
+              stroke-linecap="round"
+            />
+          </svg>
+          Факт
+        </span>
+        <span v-if="projection !== null" class="flex items-center gap-1">
+          <svg width="14" height="2" class="shrink-0" aria-hidden="true">
+            <line
+              x1="0"
+              y1="1"
+              x2="14"
+              y2="1"
+              :stroke="projColor"
+              stroke-dasharray="2 4"
+              stroke-width="1.8"
+              stroke-linecap="round"
+            />
+          </svg>
+          Прогноз
+        </span>
       </div>
     </div>
 
@@ -314,9 +327,14 @@ const yTicks = computed(() => {
     <!-- Chart -->
     <template v-else>
       <!-- SVG -->
+      <!--
+        Высота SVG следует за шириной через viewBox, поэтому на широком экране
+        график вытягивался в полтысячи пикселей. Ограничиваем ширину — пропорции
+        сохраняются, а карточка перестаёт распирать страницу.
+      -->
       <svg
         :viewBox="`0 0 ${W} ${H}`"
-        class="w-full cursor-pointer"
+        class="w-full max-w-[520px] mx-auto block cursor-pointer"
         preserveAspectRatio="xMidYMid meet"
         @pointermove="handlePointerMove"
         @pointerleave="handlePointerLeave"
@@ -460,10 +478,14 @@ const yTicks = computed(() => {
           <!-- X-axis date labels -->
           <template v-for="d in totalDays" :key="d">
             <text
-              v-if="d === 1 || d === totalDays || (d % labelStep === 0 && d < totalDays - 1)"
+              v-if="
+                d === 1 ||
+                (d === totalDays && showLastDayLabel) ||
+                (d % labelStep === 0 && d < totalDays - 1)
+              "
               :x="sx(d)"
               :y="H - 6"
-              text-anchor="middle"
+              :text-anchor="d === totalDays ? 'end' : d === 1 ? 'start' : 'middle'"
               class="fill-text-tertiary-light dark:fill-text-tertiary-dark"
               style="font-size: 10px"
             >

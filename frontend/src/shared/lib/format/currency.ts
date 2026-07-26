@@ -51,6 +51,12 @@ export function formatCurrency(
 export const COMPACT_FORMAT = { compact: true } as const;
 
 /**
+ * Компактно и без символа валюты — для плотных списков и осей, где валюта уже
+ * названа рядом, а её повтор в каждой строке только съедает ширину.
+ */
+export const COMPACT_BARE_FORMAT = { compact: true, showSymbol: false } as const;
+
+/**
  * Get currency symbol
  */
 export function getCurrencySymbol(currencyCode: string): string {
