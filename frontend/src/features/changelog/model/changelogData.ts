@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.63';
+export const CURRENT_VERSION = '1.0.64';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,25 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.64',
+    date: '2026-07-26',
+    title: 'Комиссия за перевод и новый вид долгов',
+    items: [
+      {
+        type: 'feature',
+        text: 'При выдаче долга можно указать комиссию за перевод — она записывается отдельным расходом, а сумма долга остаётся прежней',
+      },
+      {
+        type: 'improvement',
+        text: 'Страница долгов перестроена вокруг людей: один человек — одна строка с общим итогом, без вложенных списков',
+      },
+      {
+        type: 'improvement',
+        text: 'На странице долга сверху главное — кто и сколько, а действия больше не надо искать внизу',
+      },
+    ],
+  },
   {
     version: '1.0.63',
     date: '2026-07-24',

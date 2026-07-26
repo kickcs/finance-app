@@ -152,6 +152,47 @@ describe('CreateDebtHandler', () => {
     expect(result.isPrivate).toBe(true);
   });
 
+  it('should persist the transfer fee on the debt', async () => {
+    mockRepository.save.mockImplementation((debt) => Promise.resolve(debt));
+    mockEventPublisher.publishEvents.mockResolvedValue(undefined);
+
+    const command = new CreateDebtCommand(
+      'user-1',
+      'Долг от Азиза',
+      1_000_000,
+      1_000_000,
+      'given',
+      'UZS',
+      'Азиз',
+      'acc-1',
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      5_000,
+    );
+
+    const result = await handler.execute(command);
+
+    // The fee never touches the debt amount — it is paid on top of it
+    expect(result.feeAmount).toBe(5_000);
+    expect(result.totalAmount).toBe(1_000_000);
+  });
+
+  it('should default the fee to zero when not provided', async () => {
+    mockRepository.save.mockImplementation((debt) => Promise.resolve(debt));
+    mockEventPublisher.publishEvents.mockResolvedValue(undefined);
+
+    const command = new CreateDebtCommand('user-1', 'No Fee', 100, 100, 'given', 'USD');
+
+    const result = await handler.execute(command);
+
+    expect(result.feeAmount).toBe(0);
+  });
+
   it('should default currency to USD when not provided', async () => {
     mockRepository.save.mockImplementation((debt) => Promise.resolve(debt));
     mockEventPublisher.publishEvents.mockResolvedValue(undefined);

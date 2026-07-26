@@ -7,6 +7,7 @@ import { TRANSACTION_REPOSITORY } from '../../../domain/repositories/transaction
 import { ACCOUNT_REPOSITORY } from '../../../domain/repositories/account.repository.interface';
 import { DomainEventPublisher } from '../../../../../shared';
 import { Account } from '../../../domain/aggregates/account';
+import { type Transaction } from '../../../domain/aggregates/transaction';
 
 describe('CreateTransactionHandler', () => {
   let handler: CreateTransactionHandler;
@@ -130,6 +131,68 @@ describe('CreateTransactionHandler', () => {
       expect(result.type).toBe('expense');
       expect(result.amount).toBe(50);
       expect(account.getTotalBalance('USD')).toBe(950);
+    });
+
+    it('should create a commission transaction when feeAmount is provided', async () => {
+      const account = createMockAccount('acc-1', 'user-1', [
+        { currency: 'UZS', balance: 2_000_000 },
+      ]);
+      mockAccountRepository.findByIdWithBalances.mockResolvedValue(account);
+
+      const command = new CreateTransactionCommand(
+        'user-1',
+        'acc-1',
+        'debt_given',
+        1_000_000,
+        'UZS',
+        'expense',
+        now,
+        'Дал в долг: Азиз',
+        true,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        5_000,
+      );
+
+      await handler.execute(command);
+
+      // Two transactions saved: the expense itself + commission
+      expect(mockTransactionRepository.save).toHaveBeenCalledTimes(2);
+      const savedCalls = mockTransactionRepository.save.mock.calls as [Transaction][];
+      const savedFee = savedCalls[1][0];
+      expect(savedFee.categoryId).toBe('commission');
+      expect(savedFee.amountValue).toBe(5_000);
+      expect(savedFee.typeValue).toBe('expense');
+      expect(savedFee.isDebtRelated).toBe(false);
+
+      // 2 000 000 − 1 000 000 expense − 5 000 fee
+      expect(account.getTotalBalance('UZS')).toBe(995_000);
+    });
+
+    it('should reject a fee on income transactions', async () => {
+      const account = createMockAccount('acc-1', 'user-1', [{ currency: 'UZS', balance: 1_000 }]);
+      mockAccountRepository.findByIdWithBalances.mockResolvedValue(account);
+
+      const command = new CreateTransactionCommand(
+        'user-1',
+        'acc-1',
+        'salary',
+        1_000,
+        'UZS',
+        'income',
+        now,
+        undefined,
+        false,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        500,
+      );
+
+      await expect(handler.execute(command)).rejects.toThrow(BadRequestException);
     });
   });
 

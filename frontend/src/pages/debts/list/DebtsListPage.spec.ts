@@ -139,7 +139,7 @@ describe('DebtsListPage', () => {
       expect(wrapper.text()).toContain('Мария');
     });
 
-    it('shows summary cards with totals', async () => {
+    it('shows the summary card with the net total and both sides', async () => {
       server.use(
         http.get('*/api/debts/paginated', () =>
           HttpResponse.json(
@@ -149,13 +149,28 @@ describe('DebtsListPage', () => {
       );
       const { wrapper } = await renderPage();
 
-      const givenCard = wrapper.find('[data-testid="summary-given"]');
-      const takenCard = wrapper.find('[data-testid="summary-taken"]');
+      const summary = wrapper.find('[data-testid="debts-summary"]');
 
-      expect(givenCard.exists()).toBe(true);
-      expect(takenCard.exists()).toBe(true);
-      expect(givenCard.text()).toContain('Вам должны');
-      expect(takenCard.text()).toContain('Вы должны');
+      expect(summary.exists()).toBe(true);
+      expect(wrapper.find('[data-testid="debts-summary-net"]').exists()).toBe(true);
+      expect(summary.text()).toContain('Вам должны');
+      expect(summary.text()).toContain('Вы должны');
+    });
+
+    it('shows one row per person', async () => {
+      server.use(
+        http.get('*/api/debts/paginated', () =>
+          HttpResponse.json(
+            buildPaginatedDebtsResponse([mockGivenDebtResponse, mockTakenDebtResponse]),
+          ),
+        ),
+      );
+      const { wrapper } = await renderPage();
+
+      const rows = wrapper.findAll('[data-testid="person-debt-row"]');
+
+      expect(rows).toHaveLength(2);
+      expect(rows.map((r) => r.text()).join(' ')).toContain('Алексей');
     });
   });
 
@@ -173,7 +188,7 @@ describe('DebtsListPage', () => {
 
       // Active debts should be visible, not closed empty state
       expect(wrapper.find('[data-testid="closed-empty-state"]').exists()).toBe(false);
-      expect(wrapper.text()).toContain('Активные долги');
+      expect(wrapper.text()).toContain('По людям');
     });
 
     it('switches to closed tab showing closed debts', async () => {

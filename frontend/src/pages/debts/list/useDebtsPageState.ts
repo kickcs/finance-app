@@ -4,14 +4,15 @@ import { ROUTE_NAMES } from '@/app/router/routeNames';
 import {
   useInfiniteDebts,
   getDebtDisplayName,
+  foldGroupsIntoPeople,
   debtsApi,
   debtQueryKeys,
   snapshotDebtCaches,
   restoreDebtCaches,
   applyDebtUpdate,
   type Debt,
-  type DebtGroupResponse,
   type DebtsFilters,
+  type PersonDebtSummary,
 } from '@/entities/debt';
 import { useAccounts } from '@/entities/account';
 import { useCloseAllDebts, useCloseDebt } from '@/features/close-debt';
@@ -117,17 +118,12 @@ export function useDebtsPageState() {
     );
   });
 
-  // --- Grouping ---
-  function isGroupDefaultOpen(group: DebtGroupResponse): boolean {
-    return personFilter.value === group.person_name;
-  }
+  // --- People ---
+  const people = computed(() => foldGroupsIntoPeople(filteredGroups.value, convert));
 
-  function groupTotal(group: DebtGroupResponse): number {
-    return group.debts.reduce(
-      (s, d) => s + convert(d.remaining_amount, d.currency || DEFAULT_CURRENCY),
-      0,
-    );
-  }
+  // Плоский список для режима «фильтр по человеку»: считается из filteredGroups,
+  // чтобы ?type=given из дашборда не тянул за собой встречные долги.
+  const filteredDebts = computed(() => filteredGroups.value.flatMap((g) => g.debts));
 
   // --- Selected debt (desktop detail panel) ---
   const selectedDebtId = ref<string | null>(null);
@@ -148,6 +144,20 @@ export function useDebtsPageState() {
     } else {
       router.push({ name: ROUTE_NAMES.DEBT_DETAIL, params: { id: debt.id } });
     }
+  }
+
+  /**
+   * Один долг открываем сразу — промежуточный экран со списком из одной строки
+   * не нужен. У кого долгов несколько, показываем их через серверный фильтр по
+   * имени: так в списке не появляется вложенных раскрывашек.
+   */
+  function handlePersonClick(person: PersonDebtSummary) {
+    if (person.debts.length === 1) {
+      handleDebtClick(person.debts[0]);
+      return;
+    }
+    personFilter.value = person.personName;
+    router.replace({ path: '/debts', query: { person: person.personName } });
   }
 
   function handleAddDebt() {
@@ -287,7 +297,9 @@ export function useDebtsPageState() {
 
     // Debt lists
     groups: filteredGroups,
+    people,
     allDebtsFromGroups,
+    filteredDebts,
     totalDebtsCount,
     totalGivenDebts,
     totalTakenDebts,
@@ -315,9 +327,9 @@ export function useDebtsPageState() {
     // Functions
     goBack,
     handleDebtClick,
+    handlePersonClick,
     handleAddDebt,
     clearFilter,
-    isGroupDefaultOpen,
     openCloseAllForPerson,
     handleCloseAll,
     handleDetailPayment,
@@ -331,6 +343,5 @@ export function useDebtsPageState() {
 
     // Helpers
     toCurrencyItems,
-    groupTotal,
   };
 }

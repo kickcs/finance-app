@@ -72,4 +72,7 @@ export class DebtOrmEntity {
 
   @Column({ name: 'is_private', type: 'boolean', default: false })
   isPrivate: boolean;
+
+  @Column({ name: 'fee_amount', type: 'decimal', precision: 18, scale: 2, default: 0 })
+  feeAmount: number;
 }

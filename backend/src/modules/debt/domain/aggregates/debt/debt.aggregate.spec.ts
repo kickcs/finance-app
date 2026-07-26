@@ -346,6 +346,7 @@ describe('Debt Aggregate', () => {
         closedAt: null,
         forgivenAmount: 0,
         isPrivate: true,
+        feeAmount: 2_500,
       });
 
       expect(debt.id).toBe('debt-1');

@@ -23,6 +23,12 @@ export interface DebtProps {
   closedAt: Date | null;
   forgivenAmount: number;
   isPrivate: boolean;
+  /**
+   * Комиссия за перевод, уплаченная при выдаче долга. Сама по себе она уже
+   * записана отдельной расходной транзакцией — здесь хранится только для
+   * показа полной стоимости долга и в расчётах остатка не участвует.
+   */
+  feeAmount: number;
 }
 
 export interface CreateDebtProps {
@@ -38,6 +44,7 @@ export interface CreateDebtProps {
   nextPaymentDate?: Date;
   createdAt?: Date;
   description?: string;
+  feeAmount?: number;
 }
 
 export class Debt extends AggregateRoot<string> {
@@ -59,6 +66,7 @@ export class Debt extends AggregateRoot<string> {
   private _closedAt: Date | null;
   private _forgivenAmount: number;
   private _isPrivate: boolean;
+  private _feeAmount: number;
 
   private constructor(props: DebtProps) {
     super(props.id);
@@ -80,6 +88,7 @@ export class Debt extends AggregateRoot<string> {
     this._closedAt = props.closedAt;
     this._forgivenAmount = props.forgivenAmount;
     this._isPrivate = props.isPrivate;
+    this._feeAmount = props.feeAmount;
   }
 
   static create(props: CreateDebtProps): Debt {
@@ -96,6 +105,7 @@ export class Debt extends AggregateRoot<string> {
       nextPaymentDate,
       createdAt,
       description,
+      feeAmount,
     } = props;
 
     const currencyVo = Currency.create(currency);
@@ -119,6 +129,7 @@ export class Debt extends AggregateRoot<string> {
       closedAt: null,
       forgivenAmount: 0,
       isPrivate: false,
+      feeAmount: feeAmount ?? 0,
     });
 
     debt.addDomainEvent(
@@ -202,6 +213,9 @@ export class Debt extends AggregateRoot<string> {
   get isPrivate(): boolean {
     return this._isPrivate;
   }
+  get feeAmount(): number {
+    return this._feeAmount;
+  }
 
   // Behaviors
   makePayment(amount: number): void {
@@ -255,6 +269,7 @@ export class Debt extends AggregateRoot<string> {
     description?: string | null;
     forgivenAmount?: number;
     isPrivate?: boolean;
+    feeAmount?: number;
   }): void {
     if (data.name !== undefined) this._name = data.name;
     if (data.totalAmount !== undefined)
@@ -281,6 +296,7 @@ export class Debt extends AggregateRoot<string> {
     if (data.description !== undefined) this._description = data.description;
     if (data.forgivenAmount !== undefined) this._forgivenAmount = data.forgivenAmount;
     if (data.isPrivate !== undefined) this._isPrivate = data.isPrivate;
+    if (data.feeAmount !== undefined) this._feeAmount = data.feeAmount;
   }
 
   setTransactionId(transactionId: string): void {

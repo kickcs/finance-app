@@ -51,6 +51,7 @@ const givenDebt: Debt = {
   closed_at: mockGivenDebtResponse.closedAt,
   forgiven_amount: mockGivenDebtResponse.forgivenAmount,
   is_private: mockGivenDebtResponse.isPrivate,
+  fee_amount: 0,
 };
 
 const takenDebt: Debt = {
@@ -74,6 +75,7 @@ const takenDebt: Debt = {
   closed_at: mockTakenDebtResponse.closedAt,
   forgiven_amount: mockTakenDebtResponse.forgivenAmount,
   is_private: mockTakenDebtResponse.isPrivate,
+  fee_amount: 0,
 };
 
 let currentWrapper: ReturnType<typeof renderWithProviders> | null = null;

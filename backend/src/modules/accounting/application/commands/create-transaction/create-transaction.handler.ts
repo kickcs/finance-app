@@ -3,6 +3,7 @@ import { Inject, BadRequestException, NotFoundException, ForbiddenException } fr
 import { DataSource, EntityManager } from 'typeorm';
 import { CreateTransactionCommand } from './create-transaction.command';
 import { Transaction } from '../../../domain/aggregates/transaction';
+import { Account } from '../../../domain/aggregates/account';
 import { TransferDomainService } from '../../../domain/services';
 import {
   ITransactionRepository,
@@ -69,6 +70,18 @@ export class CreateTransactionHandler implements ICommandHandler<CreateTransacti
       );
     }
 
+    // A fee only makes sense when money leaves the account: transfers and
+    // expenses (e.g. the bank charge on top of money lent out). Income never
+    // pays a fee here, and informational rows touch no balance at all.
+    if (feeAmount && feeAmount > 0) {
+      if (type === 'income') {
+        throw new BadRequestException('Fee is not supported for income transactions');
+      }
+      if (isInformational) {
+        throw new BadRequestException('Informational transactions cannot have a fee');
+      }
+    }
+
     // Get source account
     const account = await this.accountRepository.findByIdWithBalances(accountId);
     if (!account) {
@@ -126,23 +139,10 @@ export class CreateTransactionHandler implements ICommandHandler<CreateTransacti
       });
 
       // Create commission expense if fee specified
-      let feeTransaction: Transaction | null = null;
-
-      if (feeAmount && feeAmount > 0) {
-        feeTransaction = Transaction.createExpense(
-          crypto.randomUUID(),
-          userId,
-          accountId,
-          'commission',
-          feeAmount,
-          currency,
-          date,
-          'Комиссия за перевод',
-          false,
-          undefined,
-        );
-        account.debit(feeAmount, currency);
-      }
+      const feeTransaction =
+        feeAmount && feeAmount > 0
+          ? this.createFeeTransaction(userId, account, feeAmount, currency, date)
+          : null;
 
       // Save all within a database transaction. If an outer manager was
       // supplied we participate in that transaction, otherwise we open our own.
@@ -212,6 +212,13 @@ export class CreateTransactionHandler implements ICommandHandler<CreateTransacti
         }
       }
 
+      // Same commission rule as transfers: money paid to move money is its own
+      // expense, not part of the amount the user typed in.
+      const feeTransaction =
+        feeAmount && feeAmount > 0
+          ? this.createFeeTransaction(userId, account, feeAmount, currency, date)
+          : null;
+
       // Save within a database transaction. If an outer manager was supplied,
       // run the writes through it; otherwise open our own transaction.
       const persist = async (manager: EntityManager) => {
@@ -219,6 +226,9 @@ export class CreateTransactionHandler implements ICommandHandler<CreateTransacti
           await this.accountRepository.save(account, manager);
         }
         await this.transactionRepository.save(transaction, manager);
+        if (feeTransaction) {
+          await this.transactionRepository.save(feeTransaction, manager);
+        }
       };
 
       if (outerManager) {
@@ -232,8 +242,40 @@ export class CreateTransactionHandler implements ICommandHandler<CreateTransacti
         await this.eventPublisher.publishEvents(account);
       }
       await this.eventPublisher.publishEvents(transaction);
+      if (feeTransaction) {
+        await this.eventPublisher.publishEvents(feeTransaction);
+      }
     }
 
     return toTransactionResponse(transaction);
+  }
+
+  /**
+   * The fee is always a standalone `commission` expense on the same account,
+   * currency and date. Deliberately not debt-related and without a debtId:
+   * linked to a debt it would show up in that debt's payment timeline and
+   * count as money repaid.
+   */
+  private createFeeTransaction(
+    userId: string,
+    account: Account,
+    feeAmount: number,
+    currency: string,
+    date: Date,
+  ): Transaction {
+    const feeTransaction = Transaction.createExpense(
+      crypto.randomUUID(),
+      userId,
+      account.id,
+      'commission',
+      feeAmount,
+      currency,
+      date,
+      'Комиссия за перевод',
+      false,
+      undefined,
+    );
+    account.debit(feeAmount, currency);
+    return feeTransaction;
   }
 }

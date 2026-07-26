@@ -21,6 +21,7 @@ export interface MockDebtResponse {
   closedAt: string | null;
   forgivenAmount: number;
   isPrivate: boolean;
+  feeAmount: number;
 }
 
 export function buildMockDebtResponse(
@@ -48,6 +49,7 @@ export function buildMockDebtResponse(
     closedAt: null,
     forgivenAmount: 0,
     isPrivate: false,
+    feeAmount: 0,
     ...overrides,
   };
 }
@@ -75,6 +77,7 @@ export const mockGivenDebtResponse: MockDebtResponse = {
   closedAt: null,
   forgivenAmount: 0,
   isPrivate: false,
+  feeAmount: 0,
 };
 
 export const mockTakenDebtResponse: MockDebtResponse = {
@@ -98,6 +101,7 @@ export const mockTakenDebtResponse: MockDebtResponse = {
   closedAt: null,
   forgivenAmount: 0,
   isPrivate: false,
+  feeAmount: 0,
 };
 
 export const mockClosedDebtResponse: MockDebtResponse = {
@@ -121,6 +125,7 @@ export const mockClosedDebtResponse: MockDebtResponse = {
   closedAt: '2025-02-01T12:00:00.000Z',
   forgivenAmount: 0,
   isPrivate: false,
+  feeAmount: 0,
 };
 
 export const mockOverdueDebtResponse = {

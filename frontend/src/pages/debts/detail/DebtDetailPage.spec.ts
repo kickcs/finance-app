@@ -135,11 +135,17 @@ describe('DebtDetailPage', () => {
       expect(wrapper.text()).toContain('Осталось');
     });
 
-    it('shows "Уже выплачено" with paid amount', async () => {
+    it('shows "Погашено" with paid amount', async () => {
       const wrapper = await renderPage(mockGivenDebtResponse.id);
       // paid = 50000 - 30000 = 20000
-      expect(wrapper.text()).toContain('Уже выплачено');
-      expect(wrapper.text()).toContain('20');
+      const breakdown = wrapper.find('[data-testid="debt-breakdown"]');
+      expect(breakdown.text()).toContain('Погашено');
+      expect(breakdown.text()).toContain('20');
+    });
+
+    it('does not show a fee row when the debt has no transfer fee', async () => {
+      const wrapper = await renderPage(mockGivenDebtResponse.id);
+      expect(wrapper.find('[data-testid="debt-fee-row"]').exists()).toBe(false);
     });
 
     it('shows progress bar with 40%', async () => {
@@ -148,10 +154,11 @@ describe('DebtDetailPage', () => {
       expect(wrapper.text()).toContain('Погашено 40%');
     });
 
-    it('shows "Всего" total amount', async () => {
+    it('shows the total debt amount', async () => {
       const wrapper = await renderPage(mockGivenDebtResponse.id);
-      expect(wrapper.text()).toContain('Всего:');
-      expect(wrapper.text()).toContain('50');
+      const breakdown = wrapper.find('[data-testid="debt-breakdown"]');
+      expect(breakdown.text()).toContain('Сумма долга');
+      expect(breakdown.text()).toContain('50');
     });
 
     it('shows payment button', async () => {
@@ -161,8 +168,15 @@ describe('DebtDetailPage', () => {
       expect(btn.text()).toContain('Внести платёж');
     });
 
-    it('shows delete button', async () => {
+    it('shows delete button inside the "more" menu', async () => {
       const wrapper = await renderPage(mockGivenDebtResponse.id);
+
+      // Удаление и скрытие суммы живут в меню «···», а не на первом экране
+      expect(wrapper.find('[data-testid="delete-debt-btn"]').exists()).toBe(false);
+
+      await wrapper.find('[data-testid="debt-more-btn"]').trigger('click');
+      await flushPromises();
+
       expect(wrapper.find('[data-testid="delete-debt-btn"]').exists()).toBe(true);
     });
   });
@@ -190,9 +204,11 @@ describe('DebtDetailPage', () => {
       expect(wrapper.text()).toContain('Осталось');
     });
 
-    it('does NOT show "Уже выплачено" when remaining equals total', async () => {
+    it('hides the breakdown entirely when there is nothing to break down', async () => {
       const wrapper = await renderPage(mockTakenDebtResponse.id);
-      expect(wrapper.text()).not.toContain('Уже выплачено');
+      // Нетронутый долг без комиссии: сумма, остаток и число в шапке совпадают
+      expect(wrapper.find('[data-testid="debt-breakdown"]').exists()).toBe(false);
+      expect(wrapper.text()).not.toContain('Погашено');
     });
 
     it('shows due date', async () => {
@@ -230,8 +246,10 @@ describe('DebtDetailPage', () => {
 
     it('shows "Удалить долг" button at bottom', async () => {
       const wrapper = await renderPage(mockClosedDebtResponse.id);
-      // Closed debts don't show the inline delete button in header, but have a bottom delete button
-      expect(wrapper.find('[data-testid="delete-debt-btn"]').exists()).toBe(false);
+      // У закрытого долга нечего платить — удаление вынесено прямо на страницу,
+      // а не спрятано в меню «···»
+      expect(wrapper.find('[data-testid="debt-more-btn"]').exists()).toBe(false);
+      expect(wrapper.find('[data-testid="delete-debt-btn"]').exists()).toBe(true);
       expect(wrapper.text()).toContain('Удалить долг');
     });
 
@@ -256,9 +274,9 @@ describe('DebtDetailPage', () => {
       );
     });
 
-    it('shows "(просрочено)" text near due date', async () => {
+    it('shows the "Просрочено" badge in the hero', async () => {
       const wrapper = await renderPage(mockOverdueDebtResponse.id);
-      expect(wrapper.text()).toContain('(просрочено)');
+      expect(wrapper.find('[data-testid="debt-hero"]').text()).toContain('Просрочено');
     });
   });
 
@@ -272,7 +290,7 @@ describe('DebtDetailPage', () => {
         http.get('*/api/accounts', () => HttpResponse.json([mockAccountResponse])),
       );
       const wrapper = await renderPage(mockGivenDebtResponse.id);
-      expect(wrapper.text()).toContain('Исходная сумма');
+      expect(wrapper.text()).toContain('Сумма долга');
       // totalAmount = 50000
       expect(wrapper.text()).toContain('50');
     });
@@ -344,7 +362,7 @@ describe('DebtDetailPage', () => {
 
       // Should NOT show the "Счёт" row with account name
       // The detail card should still exist but without account info
-      expect(wrapper.text()).toContain('Исходная сумма');
+      expect(wrapper.text()).toContain('Сумма долга');
       // "Основной" account name should NOT appear since accountId is null
       expect(wrapper.text()).not.toContain('Основной');
     });
@@ -376,6 +394,9 @@ describe('DebtDetailPage', () => {
         http.get('*/api/accounts', () => HttpResponse.json([mockAccountResponse])),
       );
       const wrapper = await renderPage(mockGivenDebtResponse.id);
+
+      await wrapper.find('[data-testid="debt-more-btn"]').trigger('click');
+      await flushPromises();
 
       const deleteBtn = wrapper.find('[data-testid="delete-debt-btn"]');
       expect(deleteBtn.exists()).toBe(true);
@@ -409,7 +430,9 @@ describe('DebtDetailPage', () => {
       await flushPromises();
       await flushPromises();
 
-      // Open delete modal
+      // Open the "···" menu, then the delete modal from it
+      await currentWrapper.find('[data-testid="debt-more-btn"]').trigger('click');
+      await flushPromises();
       const deleteBtn = currentWrapper.find('[data-testid="delete-debt-btn"]');
       await deleteBtn.trigger('click');
       await flushPromises();
@@ -431,13 +454,12 @@ describe('DebtDetailPage', () => {
       );
       const wrapper = await renderPage(mockClosedDebtResponse.id);
 
-      // Closed debt has a bottom "Удалить долг" button, not the header one
-      expect(wrapper.find('[data-testid="delete-debt-btn"]').exists()).toBe(false);
+      // У закрытого долга удаление стоит прямо на странице, без меню «···»
+      const deleteBtn = wrapper.find('[data-testid="delete-debt-btn"]');
+      expect(deleteBtn.exists()).toBe(true);
+      expect(deleteBtn.text()).toContain('Удалить долг');
 
-      // Find the bottom delete button by text
-      const deleteBtn = wrapper.findAll('button').find((b) => b.text().includes('Удалить долг'));
-      expect(deleteBtn).toBeDefined();
-      await deleteBtn!.trigger('click');
+      await deleteBtn.trigger('click');
       await flushPromises();
 
       const modal = wrapper.findComponent({ name: 'DeleteDebtModal' });

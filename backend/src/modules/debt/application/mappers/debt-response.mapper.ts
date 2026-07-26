@@ -21,6 +21,7 @@ export interface DebtResponseDto {
   closedAt: string | null;
   forgivenAmount: number;
   isPrivate: boolean;
+  feeAmount: number;
 }
 
 export class DebtResponseMapper {
@@ -46,6 +47,7 @@ export class DebtResponseMapper {
       closedAt: debt.closedAt?.toISOString() ?? null,
       forgivenAmount: debt.forgivenAmount,
       isPrivate: debt.isPrivate,
+      feeAmount: debt.feeAmount,
     };
   }
 

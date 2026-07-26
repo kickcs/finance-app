@@ -75,4 +75,11 @@ export class CreateDebtDto {
   @IsOptional()
   @IsBoolean()
   isPrivate?: boolean;
+
+  /** Комиссия за перевод при выдаче долга — на сумму долга не влияет. */
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(1_000_000_000_000)
+  feeAmount?: number;
 }
