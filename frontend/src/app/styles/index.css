@@ -63,20 +63,25 @@
   --color-primary-pressed: #3730a3;
   --color-primary-light: rgba(79, 70, 229, 0.12);
 
-  /* Background Colors - Light */
-  --color-background-light: #fafafa;
+  /* Background Colors - Light
+     Porcelain ground tinted toward the indigo primary, so white cards read as
+     paper lifted off it. A pure-white card on #fafafa is a 2% step — invisible. */
+  --color-background-light: #f2f2f8;
   --color-card-light: #ffffff;
-  --color-surface-light: #f4f4f5;
+  --color-surface-light: #eaeaf3;
 
   /* Background Colors - Dark */
   --color-background-dark: #09090b;
   --color-card-dark: #18181b;
   --color-surface-dark: #27272a;
 
-  /* Text Colors - Light */
-  --color-text-primary-light: #09090b;
-  --color-text-secondary-light: #71717a;
-  --color-text-tertiary-light: #a1a1aa;
+  /* Text Colors - Light — hue-aligned with the ground. Contrast on white:
+     primary 19.4:1, secondary 5.6:1 (was 4.8), tertiary 3.9:1 (was 2.6).
+     Tertiary stays under the 4.5:1 body threshold on purpose — it is caption
+     and meta text, and matching 4.5:1 would collapse it into secondary. */
+  --color-text-primary-light: #0d0d14;
+  --color-text-secondary-light: #66667a;
+  --color-text-tertiary-light: #7f7f90;
 
   /* Text Colors - Dark */
   --color-text-primary-dark: #fafafa;
@@ -125,7 +130,7 @@
   --color-cat-other: #64748b;
 
   /* Border Colors - Minimal */
-  --color-border-light: #e4e4e7;
+  --color-border-light: #e3e3ee;
   --color-border-dark: #27272a;
 
   /* Typography - Clean & Readable */
@@ -166,12 +171,17 @@
   --radius-3xl: 1.5rem;
   --radius-full: 9999px;
 
-  /* Shadows - Subtle, minimal */
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
-  --shadow-soft: 0 2px 8px -2px rgba(0, 0, 0, 0.05);
+  /* Shadows — cast in the accent's own hue rather than neutral black, which
+     goes muddy over the tinted ground. Two layers: a tight contact shadow
+     plus a wide soft one, so elevation reads without a heavy edge. */
+  --shadow-xs: 0 1px 2px rgba(43, 40, 82, 0.05);
+  --shadow-sm:
+    0 1px 2px rgba(43, 40, 82, 0.05), 0 2px 6px -2px rgba(43, 40, 82, 0.07);
+  --shadow-md:
+    0 2px 4px -1px rgba(43, 40, 82, 0.05), 0 8px 18px -6px rgba(43, 40, 82, 0.12);
+  --shadow-lg:
+    0 4px 8px -2px rgba(43, 40, 82, 0.06), 0 18px 36px -12px rgba(43, 40, 82, 0.14);
+  --shadow-soft: 0 2px 10px -3px rgba(43, 40, 82, 0.09);
 
   /* Spacing - Generous whitespace */
   --spacing-1: 0.25rem;
@@ -257,9 +267,9 @@ h6 {
 .animate-shimmer {
   background: linear-gradient(
     90deg,
-    rgb(228 228 231) 0%,
-    rgb(244 244 245) 50%,
-    rgb(228 228 231) 100%
+    rgb(226 226 238) 0%,
+    rgb(240 240 248) 50%,
+    rgb(226 226 238) 100%
   );
   background-size: 200% 100%;
   animation: shimmer 1s ease-in-out infinite;
@@ -308,6 +318,10 @@ h6 {
   --morph-blob-blur: 45px;
   --morph-blob-opacity: 0.5;
   --morph-blob-opacity-dark: 0.6;
+  --morph-blob-tint: 20%;
+  --morph-blob-tint-edge: 7%;
+  --morph-blob-tint-dark: 25%;
+  --morph-blob-tint-edge-dark: 10%;
   --morph-border-inset: 2.5px;
   --morph-border-alpha: 30%;
   --morph-border-alpha-dark: 40%;
@@ -325,8 +339,8 @@ h6 {
   translate: -50% -50%;
   background: radial-gradient(
     circle,
-    color-mix(in srgb, var(--color-primary) 15%, transparent),
-    color-mix(in srgb, var(--color-primary) 5%, transparent)
+    color-mix(in srgb, var(--color-primary) var(--morph-blob-tint), transparent),
+    color-mix(in srgb, var(--color-primary) var(--morph-blob-tint-edge), transparent)
   );
   filter: blur(var(--morph-blob-blur));
   opacity: var(--morph-blob-opacity);
@@ -339,8 +353,8 @@ h6 {
 :where(.dark) .morph-border-card::before {
   background: radial-gradient(
     circle,
-    color-mix(in srgb, var(--color-primary) 25%, transparent),
-    color-mix(in srgb, var(--color-primary) 10%, transparent)
+    color-mix(in srgb, var(--color-primary) var(--morph-blob-tint-dark), transparent),
+    color-mix(in srgb, var(--color-primary) var(--morph-blob-tint-edge-dark), transparent)
   );
   opacity: var(--morph-blob-opacity-dark);
 }
@@ -421,8 +435,8 @@ h6 {
 */
 .qa-card-shell {
   box-shadow:
-    0 1px 3px -1px rgba(0, 0, 0, 0.08),
-    0 2px 6px -2px rgba(0, 0, 0, 0.05);
+    0 1px 3px -1px rgba(43, 40, 82, 0.1),
+    0 2px 6px -2px rgba(43, 40, 82, 0.07);
   transition:
     transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
     box-shadow 0.2s cubic-bezier(0.22, 1, 0.36, 1),
@@ -432,15 +446,15 @@ h6 {
 .qa-card-shell:hover {
   transform: translateY(-2px);
   box-shadow:
-    0 4px 12px -2px rgba(0, 0, 0, 0.1),
-    0 2px 6px -2px rgba(0, 0, 0, 0.06);
+    0 6px 16px -4px rgba(43, 40, 82, 0.16),
+    0 2px 6px -2px rgba(43, 40, 82, 0.08);
 }
 
 .qa-card-shell:active {
   transform: scale(0.96) translateY(0);
   box-shadow:
-    0 1px 2px -1px rgba(0, 0, 0, 0.06),
-    0 1px 3px -1px rgba(0, 0, 0, 0.03);
+    0 1px 2px -1px rgba(43, 40, 82, 0.08),
+    0 1px 3px -1px rgba(43, 40, 82, 0.04);
 }
 
 :where(.dark) .qa-card-shell {

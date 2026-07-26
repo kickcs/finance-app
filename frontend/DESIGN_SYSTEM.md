@@ -19,17 +19,21 @@
 
 | Token | Light | Dark | Usage |
 |-------|-------|------|-------|
-| `background-*` | `#FAFAFA` | `#09090B` | Фон страницы |
+| `background-*` | `#F2F2F8` | `#09090B` | Фон страницы |
 | `card-*` | `#FFFFFF` | `#18181B` | Карточки, модалки |
-| `surface-*` | `#F4F4F5` | `#27272A` | Вторичные поверхности, hover |
+| `surface-*` | `#EAEAF3` | `#27272A` | Вторичные поверхности, hover |
+
+Светлая палитра нейтралей уведена в сторону индиго (основного акцента), а фон
+намеренно темнее белой карточки примерно на 6% — на прежнем `#FAFAFA` карточка
+отличалась от подложки на 2% и визуально не читалась как карточка.
 
 ### Text (light / dark)
 
 | Token | Light | Dark | Usage |
 |-------|-------|------|-------|
-| `text-primary-*` | `#09090B` | `#FAFAFA` | Заголовки, основной текст |
-| `text-secondary-*` | `#71717A` | `#A1A1AA` | Вспомогательный текст |
-| `text-tertiary-*` | `#A1A1AA` | `#71717A` | Подписи, мета-информация |
+| `text-primary-*` | `#0D0D14` | `#FAFAFA` | Заголовки, основной текст |
+| `text-secondary-*` | `#66667A` | `#A1A1AA` | Вспомогательный текст |
+| `text-tertiary-*` | `#8B8B9C` | `#71717A` | Подписи, мета-информация |
 
 ### Semantic
 
@@ -59,7 +63,7 @@
 
 | Token | Light | Dark |
 |-------|-------|------|
-| `border-*` | `#E4E4E7` | `#27272A` |
+| `border-*` | `#E3E3EE` | `#27272A` |
 
 ---
 
@@ -134,13 +138,17 @@
 
 ## 5. Shadows
 
+Тени отбрасываются не чёрным, а тёмным индиго `rgba(43,40,82,·)` — на тонированной
+подложке нейтрально-чёрная тень выглядит грязной. Все уровни, кроме `xs`, двуслойные:
+плотная контактная тень плюс широкая мягкая.
+
 | Token | Value | Usage |
 |-------|-------|-------|
-| `shadow-xs` | `0 1px 2px rgba(0,0,0,0.04)` | Subtle lift |
-| `shadow-sm` | `0 1px 3px rgba(0,0,0,0.06)` | Cards, buttons |
-| `shadow-md` | `0 4px 6px -1px rgba(0,0,0,0.07)` | Dropdowns, popovers |
-| `shadow-lg` | `0 10px 15px -3px rgba(0,0,0,0.08)` | Modals, overlays |
-| `shadow-soft` | `0 2px 8px -2px rgba(0,0,0,0.05)` | Hover states |
+| `shadow-xs` | `0 1px 2px rgba(43,40,82,0.05)` | Subtle lift |
+| `shadow-sm` | `0 1px 2px rgba(43,40,82,0.05), 0 2px 6px -2px rgba(43,40,82,0.07)` | Cards, buttons |
+| `shadow-md` | `0 2px 4px -1px rgba(43,40,82,0.05), 0 8px 18px -6px rgba(43,40,82,0.12)` | Dropdowns, popovers |
+| `shadow-lg` | `0 4px 8px -2px rgba(43,40,82,0.06), 0 18px 36px -12px rgba(43,40,82,0.14)` | Modals, overlays |
+| `shadow-soft` | `0 2px 10px -3px rgba(43,40,82,0.09)` | Hover states |
 
 ---
 

@@ -1,9 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { Skeleton } from '@/shared/ui';
-import { formatMasked, COMPACT_FORMAT } from '@/shared/lib/format/currency';
+import { formatMasked } from '@/shared/lib/format/currency';
 import { useDashboardContext } from '../../model/dashboardContext';
 import { STATS_LABEL_CLASS } from './constants';
+
+/** A third of a compact card is too narrow for the currency, and the balance
+    card directly above already states it — so these cells only carry numbers. */
+const STAT_FORMAT = { compact: true, showSymbol: false } as const;
 
 const {
   currency,
@@ -37,7 +41,7 @@ const statsLoading = computed(() => analyticsLoading.value || ratesLoading.value
           v-else-if="metricsAvailable"
           class="text-sm font-bold text-warning mt-0.5 tabular-nums truncate"
         >
-          {{ formatMasked(avgDailyExpense!, currency, isHidden, COMPACT_FORMAT) }}
+          {{ formatMasked(avgDailyExpense!, currency, isHidden, STAT_FORMAT) }}
         </p>
         <p
           v-else
@@ -54,7 +58,7 @@ const statsLoading = computed(() => analyticsLoading.value || ratesLoading.value
           class="text-sm font-bold mt-0.5 tabular-nums truncate"
           :class="safeDailyLimit! >= 0 ? 'text-success' : 'text-danger'"
         >
-          {{ formatMasked(safeDailyLimit!, currency, isHidden, COMPACT_FORMAT) }}
+          {{ formatMasked(safeDailyLimit!, currency, isHidden, STAT_FORMAT) }}
         </p>
         <p
           v-else
