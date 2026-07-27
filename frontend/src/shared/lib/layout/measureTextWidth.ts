@@ -16,7 +16,14 @@ function getContext(): CanvasRenderingContext2D | null {
   if (contextResolved) return context;
   contextResolved = true;
   if (typeof document === 'undefined') return null;
-  context = document.createElement('canvas').getContext('2d');
+  try {
+    context = document.createElement('canvas').getContext('2d');
+  } catch {
+    // jsdom без пакета `canvas` не умеет 2d-контекст. Ширины станут нулевыми,
+    // раскладка выродится в один ряд — для тестов этого достаточно, а формула
+    // покрыта отдельно.
+    context = null;
+  }
   return context;
 }
 

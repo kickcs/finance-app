@@ -63,4 +63,22 @@ describe('CategoryPicker', () => {
     const ids = chipButtons(wrapper).map((b) => b.text());
     expect(ids[0]).toContain('Кат-c0');
   });
+
+  it('раскладывает чипы по рядам и задаёт каждому предел роста', () => {
+    const wrapper = mountPicker();
+    const rows = wrapper.findAll('[data-testid="category-row"]');
+    expect(rows.length).toBeGreaterThanOrEqual(1);
+
+    // Ни один чип не остался вне ряда: 8 категорий + чип «Ещё N»
+    const inRows = rows.reduce((sum, row) => sum + row.findAll('button').length, 0);
+    expect(inRows).toBe(chipButtons(wrapper).length + 1);
+
+    expect(chipButtons(wrapper)[0].attributes('style')).toContain('max-width');
+  });
+
+  it('чип «Ещё N» участвует в раскладке рядов', () => {
+    const wrapper = mountPicker();
+    const more = wrapper.find('button[aria-label="Все категории"]');
+    expect(more.element.closest('[data-testid="category-row"]')).not.toBeNull();
+  });
 });
