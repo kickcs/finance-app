@@ -128,7 +128,9 @@ const amountSign = computed<'minus' | 'plus' | null>(() => {
  */
 const showInsufficientFunds = computed(() => {
   if (amountSign.value !== 'minus') return false;
-  if (currentBalance.value === undefined) return false;
+  // `currentBalance` подставляет 0 для невыбранного счёта, а не `undefined`, —
+  // сравнивать с ним нечего: карточка в этом случае баланса и не показывает.
+  if (!props.formData.accountId) return false;
   return currentBalance.value < props.formData.amount + extraDebit.value;
 });
 
@@ -465,8 +467,7 @@ const expensePanelHandlers = {
           :accounts="accounts"
           :default-account-id="defaultAccountId"
           @submitted="emit('debt-submitted')"
-          @update:currency="updateField('currency', $event)"
-          @update:account-id="updateField('accountId', $event)"
+          @update:account-id="handleAccountChange"
           @balance-effect="debtEffect = $event"
         />
       </KeepAlive>

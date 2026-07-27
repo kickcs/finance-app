@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import { UInput, UButton, UIcon, ToggleRow } from '@/shared/ui';
-import { DEFAULT_CURRENCY, getCurrencyByCode } from '@/entities/currency';
+import { getCurrencyByCode } from '@/entities/currency';
 import { sanitizeCurrencyInput, formatCurrency } from '@/shared/lib/format/currency';
 import { PersonPicker, usePeople } from '@/entities/person';
 import { useDebts } from '@/entities/debt';
@@ -25,11 +25,12 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   submitted: [];
-  'update:currency': [value: string];
   /**
    * Счёт долга поднимается в общую форму, чтобы карточка суммы знала, из каких
-   * валют этого счёта выбирать. Без этого долг на мультивалютном счёте молча
-   * залипал на первой валюте.
+   * валют этого счёта выбирать. Валюту отдельным событием не шлём: наверху счёт
+   * и валюта пишутся одним `update:formData`, а два emit'а подряд в одном тике
+   * читали бы один и тот же несвежий `props.formData` — второй затирал бы счёт,
+   * записанный первым.
    */
   'update:accountId': [value: string];
   /**
@@ -78,10 +79,8 @@ watch(
 
     updateField('account_id', preferred.id);
     // Наверх сообщаем, только если счёт пришёл не оттуда — иначе это эхо.
-    if (preferred.id !== accountId) {
-      emit('update:accountId', preferred.id);
-      emit('update:currency', preferred.balances[0]?.currency || DEFAULT_CURRENCY);
-    }
+    // Валюту подберёт сама форма: она пишет счёт и валюту одним обновлением.
+    if (preferred.id !== accountId) emit('update:accountId', preferred.id);
   },
   { immediate: true },
 );

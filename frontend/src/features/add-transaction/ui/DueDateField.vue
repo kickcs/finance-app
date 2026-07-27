@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
-import { toLocalISODate } from '@/shared/lib/date';
+import { ref, computed, watch } from 'vue';
+import { useDocumentVisibility } from '@vueuse/core';
+import { toLocalISODate, getTodayISO } from '@/shared/lib/date';
 import DatePickerField from './DatePickerField.vue';
 
 /**
@@ -17,20 +18,30 @@ const emit = defineEmits<{ 'update:modelValue': [value: string | null] }>();
 const isCalendarOpen = ref(false);
 
 /**
- * Смещения считаем от «сегодня» при каждом обращении: форма живёт долго, и
- * посчитанный на монтировании набор к полуночи стал бы вчерашним.
+ * «Сегодня» держим в ref, а не читаем `new Date()` внутри `computed`: у набора
+ * пресетов не было бы ни одной реактивной зависимости, и посчитанный при
+ * создании компонента список так и остался бы вчерашним. PWA живёт неделями,
+ * поэтому дату обновляем при каждом возврате на вкладку.
  */
-function shiftedISO(shift: (date: Date) => void): string {
-  const date = new Date();
+const today = ref(getTodayISO());
+const visibility = useDocumentVisibility();
+watch(visibility, (state) => {
+  if (state === 'visible') today.value = getTodayISO();
+});
+
+function shiftedISO(base: string, shift: (date: Date) => void): string {
+  // Полдень, а не полночь: сдвиг на месяц через границу перехода на летнее
+  // время иначе мог бы отдать соседние сутки.
+  const date = new Date(`${base}T12:00:00`);
   shift(date);
   return toLocalISODate(date);
 }
 
 const presets = computed(() => [
   { label: 'Без срока', value: null },
-  { label: 'Неделя', value: shiftedISO((d) => d.setDate(d.getDate() + 7)) },
-  { label: '2 недели', value: shiftedISO((d) => d.setDate(d.getDate() + 14)) },
-  { label: 'Месяц', value: shiftedISO((d) => d.setMonth(d.getMonth() + 1)) },
+  { label: 'Неделя', value: shiftedISO(today.value, (d) => d.setDate(d.getDate() + 7)) },
+  { label: '2 недели', value: shiftedISO(today.value, (d) => d.setDate(d.getDate() + 14)) },
+  { label: 'Месяц', value: shiftedISO(today.value, (d) => d.setMonth(d.getMonth() + 1)) },
 ]);
 
 /** Дата, не попавшая ни в один пресет, живёт в чипе календаря. */

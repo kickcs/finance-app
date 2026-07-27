@@ -10,7 +10,7 @@ import {
 } from 'vaul-vue';
 import { UIcon, UButton, UProgressBar, InitialAvatar } from '@/shared/ui';
 import { formatCurrency, formatNumberWithSpaces } from '@/shared/lib/format/currency';
-import { PersonPicker, usePeople } from '@/entities/person';
+import { PersonPicker, personKey, usePeople } from '@/entities/person';
 import { useDebts } from '@/entities/debt';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useIsDesktop } from '@/shared/lib/composables/useIsDesktop';
@@ -113,8 +113,11 @@ function toggleParticipant(name: string) {
   const trimmed = name.trim();
   if (!trimmed) return;
 
+  // Сравниваем каноническим `personKey` — тем же, по которому чип считает себя
+  // выбранным. Своя нормализация разъехалась бы с ней на краевых пробелах:
+  // чип горел бы выбранным, а тап добавлял бы дубль вместо снятия.
   const existing = props.splitData.participants.find(
-    (p) => p.personName.toLowerCase() === trimmed.toLowerCase(),
+    (p) => personKey(p.personName) === personKey(trimmed),
   );
   if (existing) {
     emit('removeParticipant', existing.id);
