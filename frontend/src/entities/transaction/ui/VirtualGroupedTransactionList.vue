@@ -123,19 +123,22 @@ const flatItems = computed<FlatItem[]>(() => {
   return items;
 });
 
-const rowCount = computed(() =>
-  props.hasNextPage ? flatItems.value.length + 1 : flatItems.value.length,
-);
-
-const getItemSize = (index: number) => flatItems.value[index]?.size ?? LOADING_HEIGHT;
-
+// Опции пересобираются на любое изменение flatItems, а не только длины.
+// virtual-core кэширует измерения и сбрасывает кэш по идентичности getItemKey —
+// без этого высота, изменившаяся уже после первой отрисовки (например, остаток
+// по счёту появляется, когда догрузились счета), осталась бы старой, и строка
+// обрезалась бы по старому слоту до следующей пагинации.
 const virtualizer = useVirtualizer(
-  computed(() => ({
-    count: rowCount.value,
-    getScrollElement: () => parentRef.value,
-    estimateSize: getItemSize,
-    overscan: 5,
-  })),
+  computed(() => {
+    const items = flatItems.value;
+    return {
+      count: props.hasNextPage ? items.length + 1 : items.length,
+      getScrollElement: () => parentRef.value,
+      estimateSize: (index: number) => items[index]?.size ?? LOADING_HEIGHT,
+      getItemKey: (index: number) => items[index]?.key ?? `loading-${index}`,
+      overscan: 5,
+    };
+  }),
 );
 
 const virtualRows = computed(() => virtualizer.value.getVirtualItems());
