@@ -10,32 +10,21 @@ import {
 } from '@/shared/lib/format/currency';
 import { Popover, PopoverTrigger, PopoverContent } from '@/shared/ui/primitives/popover';
 
-const props = withDefaults(
-  defineProps<{
-    amount: number;
-    currency: string;
-    currencySymbol: string;
-    availableCurrencies: string[];
-    isMultiCurrency: boolean;
-    label?: string;
-    showInsufficientFunds?: boolean;
-    currentBalance?: number;
-    autofocus?: boolean;
-    /**
-     * `hero` — единственная сумма на экране: крупный кегль со ступенями по числу
-     * цифр. `compact` — сумма в ряду с другими полями (обе суммы перевода,
-     * подтверждение импорта), кегль фиксированный.
-     */
-    variant?: 'hero' | 'compact';
-    /**
-     * Знак перед суммой. Он же переключает строку под суммой с «Баланс» на
-     * прогноз остатка — единственное место, где на экране тратится
-     * семантический цвет.
-     */
-    sign?: 'minus' | 'plus' | null;
-  }>(),
-  { variant: 'compact', sign: null },
-);
+/**
+ * Сумма в ряду с другими полями: вторая сумма перевода, подтверждение импорта.
+ * Главную сумму экрана «Новой транзакции» держит `AmountSlab`.
+ */
+const props = defineProps<{
+  amount: number;
+  currency: string;
+  currencySymbol: string;
+  availableCurrencies: string[];
+  isMultiCurrency: boolean;
+  label?: string;
+  showInsufficientFunds?: boolean;
+  currentBalance?: number;
+  autofocus?: boolean;
+}>();
 
 const emit = defineEmits<{
   'update:amount': [value: number];
@@ -55,8 +44,7 @@ watch(
     // Числового сравнения достаточно, чтобы не переписывать набираемое: пока
     // печатают, `props.amount` — эхо нашего же emit, и значения совпадают.
     // Отдельного бэйла по фокусу быть не должно — иначе внешняя установка суммы
-    // (чип подсказки) не доезжает до поля: в Safari тап по кнопке не снимает
-    // фокус с input, и на экране остаётся старое число.
+    // не доезжает до поля: в Safari тап по кнопке не снимает фокус с input.
     const currentParsed = parseFloat(rawValue.value) || 0;
     if (currentParsed !== newAmount) {
       rawValue.value = newAmount ? String(newAmount) : '';
@@ -76,31 +64,10 @@ const displayAmount = computed(() => {
   return (formatNumberWithSpaces(intPart || '0') || '0') + decPart;
 });
 
-// Кегль ступенями по числу значащих цифр: в UZS суммы длинные (3 068 000 — семь
-// цифр), и на фиксированных 44px они упираются в края экрана.
-const amountSizeClass = computed(() => {
-  if (props.variant === 'compact') return 'text-4xl';
-  const digits = displayAmount.value.replace(/\D/g, '').length;
-  if (digits <= 6) return 'text-[2.75rem]';
-  if (digits <= 8) return 'text-4xl';
-  return 'text-3xl';
-});
-
-const signGlyph = computed(() => (props.sign === 'minus' ? '−' : props.sign === 'plus' ? '+' : ''));
-const signColorClass = computed(() => (props.sign === 'minus' ? 'text-danger' : 'text-success'));
-
-/** Остаток по счёту после операции — то, ради чего сумму и вводят. */
-const projectedBalance = computed(() => {
-  if (props.currentBalance === undefined || !props.sign) return null;
-  return props.sign === 'minus'
-    ? props.currentBalance - props.amount
-    : props.currentBalance + props.amount;
-});
-
 /**
  * Печатаем сумму с тем же символом валюты, что и в самой строке ввода:
  * `Intl` для UZS отдаёт код «UZS», и под «250 000 сўм» появлялось
- * «Останется 6 848 000 UZS» — две записи одной валюты в двух строках подряд.
+ * «Баланс 6 848 000 UZS» — две записи одной валюты в двух строках подряд.
  */
 function withSymbol(value: number) {
   return `${formatCurrency(value, props.currency, { showSymbol: false })} ${props.currencySymbol}`;
@@ -114,11 +81,6 @@ const balanceLine = computed(() => {
       tone: 'warning' as const,
       text: `Не хватает ${withSymbol(props.amount - props.currentBalance)}`,
     };
-  }
-
-  if (props.amount > 0 && projectedBalance.value !== null) {
-    const verb = props.sign === 'minus' ? 'Останется' : 'Станет';
-    return { tone: 'muted' as const, text: `${verb} ${withSymbol(projectedBalance.value)}` };
   }
 
   return { tone: 'muted' as const, text: `Баланс ${withSymbol(props.currentBalance)}` };
@@ -168,7 +130,7 @@ onMounted(() => {
       поэтому тапом попадаешь в поле откуда угодно, а кнопка валюты (единственная
       с pointer-events) остаётся кликабельной.
     -->
-    <div class="relative w-full cursor-text" :class="variant === 'hero' ? 'py-2' : 'py-1'">
+    <div class="relative w-full cursor-text py-1">
       <input
         :id="inputId"
         ref="hiddenInputRef"
@@ -181,23 +143,10 @@ onMounted(() => {
         @keydown.enter.prevent
       />
 
-      <div
-        class="relative flex items-baseline justify-center gap-1.5 pointer-events-none"
-        :class="variant === 'hero' && 'min-h-[3.25rem]'"
-      >
+      <div class="relative flex items-baseline justify-center gap-1.5 pointer-events-none">
         <span
-          v-if="signGlyph"
-          class="font-semibold leading-none tabular-nums"
-          :class="[signColorClass, variant === 'hero' ? 'text-2xl' : 'text-xl']"
-          aria-hidden="true"
-        >
-          {{ signGlyph }}
-        </span>
-
-        <span
-          class="amount-value font-semibold tabular-nums leading-none transition-[color,transform,font-size] duration-200"
+          class="amount-value text-4xl font-semibold tabular-nums leading-none transition-[color,transform] duration-200"
           :class="[
-            amountSizeClass,
             amount
               ? 'text-text-primary-light dark:text-text-primary-dark'
               : 'text-text-tertiary-light dark:text-text-tertiary-dark',
@@ -209,11 +158,8 @@ onMounted(() => {
 
         <!-- Blinking caret -->
         <span
-          class="amount-caret inline-block w-[2px] self-center rounded-full transition-opacity duration-150"
-          :class="[
-            variant === 'hero' ? 'h-9' : 'h-8',
-            isFocused ? 'bg-primary animate-caret-blink' : 'opacity-0',
-          ]"
+          class="amount-caret inline-block h-8 w-[2px] self-center rounded-full transition-opacity duration-150"
+          :class="isFocused ? 'bg-primary animate-caret-blink' : 'opacity-0'"
         />
 
         <!-- Валюта — часть той же типографической строки, а не отдельная пилюля у края -->
@@ -222,8 +168,7 @@ onMounted(() => {
             <button
               type="button"
               aria-label="Выбрать валюту"
-              class="pointer-events-auto inline-flex items-center gap-0.5 rounded-lg px-1.5 py-1 -my-1 leading-none text-text-tertiary-light dark:text-text-tertiary-dark hover:text-text-primary-light dark:hover:text-text-primary-dark hover:bg-surface-light dark:hover:bg-surface-dark transition-colors"
-              :class="variant === 'hero' ? 'text-lg' : 'text-base'"
+              class="pointer-events-auto inline-flex items-center gap-0.5 rounded-lg px-1.5 py-1 -my-1 text-base leading-none text-text-tertiary-light dark:text-text-tertiary-dark hover:text-text-primary-light dark:hover:text-text-primary-dark hover:bg-surface-light dark:hover:bg-surface-dark transition-colors"
             >
               {{ currencySymbol }}
               <UIcon name="expand_more" size="xs" />
@@ -253,8 +198,7 @@ onMounted(() => {
 
         <span
           v-else
-          class="leading-none text-text-tertiary-light dark:text-text-tertiary-dark"
-          :class="variant === 'hero' ? 'text-lg' : 'text-base'"
+          class="text-base leading-none text-text-tertiary-light dark:text-text-tertiary-dark"
         >
           {{ currencySymbol }}
         </span>
@@ -267,16 +211,9 @@ onMounted(() => {
       />
     </div>
 
-    <!-- Баланс / нехватка средств -->
     <!--
-      Живой регион только для предупреждения: прогноз остатка меняется на каждое
-      нажатие, и с `aria-live="polite"` скринридер зачитывал бы всю строку на
-      каждую цифру.
-    -->
-    <!--
-      Место под строку резервируем, только когда баланс вообще известен: на
-      «Долге» счёт в HeroAmount не передаётся, и пустые 20 px там просто не
-      давали панели уместиться в экран.
+      Живой регион только для предупреждения: баланс меняется на каждое нажатие,
+      и с `aria-live="polite"` скринридер зачитывал бы строку на каждую цифру.
     -->
     <div
       v-if="currentBalance !== undefined"

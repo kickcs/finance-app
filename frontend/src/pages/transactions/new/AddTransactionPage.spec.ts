@@ -1099,51 +1099,106 @@ describe('AddTransactionPage', () => {
     });
   });
   // =========================================================================
-  // Редизайн: окно рендера панелей и подсказка под кнопкой
+  // Редизайн «плита»: сегменты типа и подсказка под кнопкой
   // =========================================================================
 
-  describe('rendering window', () => {
-    it('на первой отрисовке заполнен только слот активной панели', async () => {
+  describe('сегменты типа на плите', () => {
+    it('рисует только панель активного типа', async () => {
       const wrapper = await renderPage();
 
-      const slots = wrapper.findAll('.snap-start');
-      expect(slots).toHaveLength(6);
-
-      const filled = slots.filter((slot) => slot.element.children.length > 0);
-      expect(filled).toHaveLength(1);
       expect(wrapper.find('[data-testid="expense-panel"]').exists()).toBe(true);
+      expect(wrapper.findComponent({ name: 'IncomePanel' }).exists()).toBe(false);
+      expect(wrapper.findComponent({ name: 'TransferPanel' }).exists()).toBe(false);
+      expect(wrapper.findComponent({ name: 'DebtPanel' }).exists()).toBe(false);
     });
 
-    it('поднимает остальные панели в простое — до того, как пользователь дотянется до свайпа', async () => {
-      vi.useFakeTimers();
-      try {
-        const wrapper = await renderPage();
-
-        expect(
-          wrapper.findAll('.snap-start').filter((s) => s.element.children.length > 0),
-        ).toHaveLength(1);
-
-        // Фолбэк-таймер: requestIdleCallback в jsdom нет
-        await vi.advanceTimersByTimeAsync(900);
-        await nextTick();
-
-        // Все шесть слотов: свайп и цикличный переход должны находить панель
-        // уже отрисованной, иначе под пальцем оказывается пустой экран
-        expect(
-          wrapper.findAll('.snap-start').filter((s) => s.element.children.length > 0),
-        ).toHaveLength(6);
-      } finally {
-        vi.useRealTimers();
-      }
-    });
-
-    it('помечает неактивные панели inert, чтобы таб не уводил в невидимую форму', async () => {
+    it('переключает тип тапом по сегменту', async () => {
       const wrapper = await renderPage();
 
-      const slots = wrapper.findAll('.snap-start');
-      const interactive = slots.filter((slot) => !slot.attributes('inert'));
-      expect(interactive).toHaveLength(1);
-      expect(interactive[0].find('[data-testid="expense-panel"]').exists()).toBe(true);
+      await wrapper.find('[data-testid="type-income"]').trigger('click');
+      await nextTick();
+
+      expect(getFormData(wrapper).type).toBe('income');
+      expect(wrapper.find('[data-testid="expense-panel"]').exists()).toBe(false);
+      expect(wrapper.findComponent({ name: 'IncomePanel' }).exists()).toBe(true);
+    });
+
+    it('помечает активный сегмент для скринридера', async () => {
+      const wrapper = await renderPage();
+
+      expect(wrapper.find('[data-testid="type-expense"]').attributes('aria-pressed')).toBe('true');
+      expect(wrapper.find('[data-testid="type-income"]').attributes('aria-pressed')).toBe('false');
+    });
+  });
+
+  // Три способа, которыми плита могла бы навредить остальной форме. Все три
+  // всплыли на ревью редизайна — тестов на них не было.
+  describe('плита не ломает соседние типы', () => {
+    async function switchType(
+      wrapper: ReturnType<typeof renderWithProviders>,
+      type: 'expense' | 'income' | 'transfer' | 'debt',
+    ) {
+      await wrapper.find(`[data-testid="type-${type}"]`).trigger('click');
+      await flushPromises();
+      await nextTick();
+    }
+
+    it('заход на «Долг» не перебивает счёт и валюту начатого расхода', async () => {
+      server.use(
+        http.get('*/api/accounts', () =>
+          HttpResponse.json([mockAccountResponse, mockSecondAccountResponse]),
+        ),
+      );
+      const wrapper = await renderPage();
+
+      // Уводим расход на второй счёт — не тот, что дефолтный в профиле
+      const secondAccountChip = wrapper
+        .findAll('button')
+        .find((b) => b.text().includes(mockSecondAccountResponse.name));
+      await secondAccountChip?.trigger('click');
+      await nextTick();
+
+      const before = getFormData(wrapper);
+
+      await switchType(wrapper, 'debt');
+      await switchType(wrapper, 'expense');
+
+      const after = getFormData(wrapper);
+      expect(after.accountId).toBe(before.accountId);
+      expect(after.currency).toBe(before.currency);
+    });
+
+    it('сохраняет заполненный долг при переключении типа и обратно', async () => {
+      const wrapper = await renderPage({ type: 'debt' });
+
+      const nameInput = wrapper
+        .findAll('input')
+        .find((i) => i.attributes('placeholder') === 'Имя человека');
+      expect(nameInput).toBeDefined();
+      await nameInput!.setValue('Азиз');
+      await nextTick();
+
+      await switchType(wrapper, 'expense');
+      await switchType(wrapper, 'debt');
+
+      const restored = wrapper
+        .findAll('input')
+        .find((i) => i.attributes('placeholder') === 'Имя человека');
+      expect((restored?.element as HTMLInputElement).value).toBe('Азиз');
+    });
+
+    it('оставляет выход с экрана, когда счетов нет', async () => {
+      // Кнопка «назад» живёт на плите, а плиты в этом состоянии нет — экран
+      // не должен превращаться в тупик: нижняя навигация тут скрыта.
+      server.use(http.get('*/api/accounts', () => HttpResponse.json([])));
+      const wrapper = await renderPage();
+
+      expect(wrapper.find('[data-testid="no-accounts-state"]').exists()).toBe(true);
+      const back = wrapper.findAll('button').find((b) => b.attributes('aria-label') === 'Назад');
+      expect(back).toBeDefined();
+
+      await back!.trigger('click');
+      expect(navigateBackMock).toHaveBeenCalled();
     });
   });
 

@@ -1,0 +1,83 @@
+# План: редизайн «Новой транзакции» — плита
+
+Spec: `docs/superpowers/specs/2026-07-27-add-transaction-slab-redesign-design.md`
+Ветка: `feat/add-transaction-slab-redesign`
+
+## Порядок
+
+Снизу вверх: сначала новый компонент, потом переключение формы на него, потом
+удаление осиротевшей механики. На каждом шаге приложение остаётся собираемым.
+
+## Шаги
+
+### 1. `ui/AmountSlab.vue` — новый компонент
+
+Плита: кнопка «назад», сегменты типа, ввод суммы, валюта, строка баланса.
+Ввод суммы переносится из `HeroAmount` (скрытый input под всей строкой,
+`sanitizeCurrencyInput`, пружина на первой цифре, каретка).
+Сегменты — свои, на `bg-white/12`, индикатор через `translateX`.
+
+**Готово когда**: компонент собирается, `bun run build` зелёный.
+
+### 2. `ui/TransactionForm.vue` — переключение на плиту
+
+- Плита сверху, `<component :is>` по типу вместо карусели.
+- Удалить: `useScrollableTabs`, `cyclicPanelOrder`, `activeIndex`, `isRendered`,
+  `armNeighbors`/`armNeighborsWhenIdle`, `updateContainerHeight`,
+  `scheduleHeightUpdate`, оба `ResizeObserver`, `containerHeight`, `UTabs`.
+- Сохранить: `applyTypeChange`, `submitHint`, `descriptionPlaceholder`,
+  хэштеги, smart defaults, хинт разделения, гард сабмита, липкую кнопку.
+- Состояние счёта/валюты/баланса поднимается в форму (`usePanelState`), чтобы
+  плита получила `currencySymbol`, `currentBalance`, `hasSufficientFunds`.
+
+**Готово когда**: форма рендерит все 4 типа, переключение работает.
+
+### 3. Панели теряют сумму
+
+`ExpensePanel`, `IncomePanel`, `TransferPanel` (первый `HeroAmount`),
+`DebtPanel` — убрать `HeroAmount` и проп `autofocusAmount`.
+`TransferPanel` сохраняет вторую сумму (`compact`).
+
+**Готово когда**: сумма на экране одна — на плите.
+
+### 4. `ui/HeroAmount.vue` — вырезать hero-ветку
+
+Убрать `variant`, `sign`, `label`, ступени кегля, `balanceLine`,
+`projectedBalance`, `withSymbol`. Остаётся compact-поле с валютой.
+Проверить `ImportConfirmPage.vue:666` и `TransferPanel.vue:603`.
+
+### 5. `AddTransactionPage.vue`
+
+Убрать `AppHeader` и десктопный заголовок с крестиком — «назад» на плите.
+Скелетон переписать под новую композицию (плита + карточка).
+
+### 6. Удалить осиротевшее
+
+`model/useScrollableTabs.ts`, `model/useScrollableTabs.spec.ts`.
+Проверить, что `UTabs` ещё используется где-то ещё (не удалять из shared).
+
+### 7. Тесты
+
+- Починить `AddTransactionPage.spec.ts` под новую разметку.
+- Новый `AmountSlab.spec.ts`.
+- `bun run build` + `bun run lint` + vitest зелёные.
+- `scripts/check-eager-bundle.mjs` не ругается.
+
+### 8. Доработки по обратной связи (2026-07-27)
+
+- Знак `−`/`+` перед суммой убран — на плите он ничего не добавлял.
+- Шапка приведена к геометрии `AppHeader`: те же отступы, кнопка и кегль
+  заголовка, чтобы экран не выбивался из остальных страниц.
+- Частые суммы переехали на плиту (`AmountSuggestions.vue` удалён).
+- `AccountSelector.label` стал необязательным; на расходе и доходе подписи нет.
+- Перевод: две карточки → одна строка со свапом посередине.
+- Долг: срок возврата, комментарий и два тумблера — под «Ещё» со счётчиком.
+- Перевод получил прогноз остатка и полоску доли (списание — это списание).
+
+## Проверка
+
+- Светлая и тёмная тема.
+- Все 4 типа: расход, доход, перевод, долг.
+- Мультивалютный счёт (поповер валюты).
+- Нехватка средств.
+- 393×852 с открытой клавиатурой — категории достижимы.

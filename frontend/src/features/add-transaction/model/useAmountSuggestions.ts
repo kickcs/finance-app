@@ -1,5 +1,6 @@
 import { computed, type MaybeRefOrGetter, toValue } from 'vue';
 import type { Transaction } from '@/shared/api/database.types';
+import type { TransactionType } from './useTransactionForm';
 
 /** Сколько чипов показываем. Больше трёх не помещается в одну строку на 393 px. */
 const MAX_SUGGESTIONS = 3;
@@ -28,7 +29,7 @@ interface AmountStat {
  */
 export function useAmountSuggestions(
   transactions: MaybeRefOrGetter<Transaction[] | undefined>,
-  type: MaybeRefOrGetter<'expense' | 'income' | 'transfer' | 'debt'>,
+  type: MaybeRefOrGetter<TransactionType>,
   currency: MaybeRefOrGetter<string>,
   categoryId?: MaybeRefOrGetter<string>,
 ) {
