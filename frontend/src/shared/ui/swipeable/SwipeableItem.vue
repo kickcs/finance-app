@@ -14,12 +14,18 @@ const props = withDefaults(
     disabled?: boolean;
     /** Enable full-swipe auto-fire at 200px */
     fullSwipe?: boolean;
+    /**
+     * Строка внутри сплошной карточки: без собственного скругления и на всю
+     * высоту слота — скругление и разделители рисует список-родитель.
+     */
+    flush?: boolean;
   }>(),
   {
     leftAction: () => ({ icon: 'delete', color: '#ef4444', label: 'Удалить' }),
     rightAction: () => ({ icon: 'edit', color: '#4F46E5', label: 'Изменить' }),
     disabled: false,
     fullSwipe: false,
+    flush: false,
   },
 );
 const emit = defineEmits<{
@@ -78,7 +84,8 @@ defineExpose({ resetSwipe });
 
 <template>
   <div
-    class="relative overflow-hidden rounded-xl"
+    class="relative overflow-hidden"
+    :class="flush ? 'h-full' : 'rounded-xl'"
     @touchstart.passive="onTouchStart"
     @touchmove="onTouchMove"
     @touchend.passive="onTouchEnd"
@@ -122,7 +129,7 @@ defineExpose({ resetSwipe });
     <!-- Main content -->
     <div
       class="relative bg-card-light dark:bg-card-dark transition-shadow duration-200"
-      :class="isDragging && 'shadow-lg'"
+      :class="[isDragging && 'shadow-lg', flush && 'h-full']"
       :style="{
         transform: `translateX(${translateX}px)`,
         transition: isDragging ? 'none' : 'transform 0.2s ease-out',

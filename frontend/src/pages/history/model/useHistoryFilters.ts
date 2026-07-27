@@ -23,7 +23,6 @@ export function useHistoryFilters(userId: MaybeRefOrGetter<string | null>) {
   const activeTypeFilter = ref<TypeFilter>('all');
   const selectedAccountId = ref<string | null>(null);
   const selectedCategoryId = ref<string | null>(null);
-  const isFiltersCollapsed = ref(false);
 
   const activeFiltersCount = computed(() => {
     let count = 0;
@@ -84,7 +83,6 @@ export function useHistoryFilters(userId: MaybeRefOrGetter<string | null>) {
     activeTypeFilter,
     selectedAccountId,
     selectedCategoryId,
-    isFiltersCollapsed,
     activeFiltersCount,
     serverFilters,
     usedCategories,
