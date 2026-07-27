@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { UIcon, Skeleton } from '@/shared/ui';
-import { formatCurrency, formatPercentage, COMPACT_FORMAT } from '@/shared/lib/format/currency';
+import {
+  formatCurrency,
+  formatPercentage,
+  formatPercentDelta,
+  COMPACT_FORMAT,
+} from '@/shared/lib/format/currency';
 
 const props = defineProps<{
   currentExpense: number;
@@ -116,7 +121,7 @@ function deltaIcon(row: ComparisonRow): string {
         >
           <UIcon :name="deltaIcon(row)" size="xs" />
           <span class="text-body-sm font-semibold tabular-nums">
-            {{ formatPercentage(Math.abs(row.delta), 0) }}
+            {{ formatPercentDelta(Math.abs(row.delta)) }}
           </span>
         </div>
       </div>
