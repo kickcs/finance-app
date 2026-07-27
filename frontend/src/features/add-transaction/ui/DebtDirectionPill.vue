@@ -20,42 +20,56 @@ function select(value: DebtDirection) {
 </script>
 
 <template>
-  <div class="flex justify-center">
-    <div
-      class="inline-flex items-center p-1 rounded-full bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark"
-      role="tablist"
-      aria-label="Направление долга"
+  <!-- Центрованная пилюля в ~160 px терялась: направление долга — первое
+       решение на вкладке, а выглядело мельче всего на экране. -->
+  <div
+    class="grid grid-cols-2 gap-1 rounded-xl border border-border-light bg-surface-light p-1 dark:border-border-dark dark:bg-surface-dark"
+    role="tablist"
+    aria-label="Направление долга"
+  >
+    <button
+      type="button"
+      role="tab"
+      :aria-selected="modelValue === 'given'"
+      class="direction-tab flex items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-semibold"
+      :class="
+        modelValue === 'given'
+          ? 'bg-card-light text-text-primary-light shadow-sm dark:bg-card-dark dark:text-text-primary-dark'
+          : 'text-text-secondary-light dark:text-text-secondary-dark'
+      "
+      @click="select('given')"
     >
-      <button
-        type="button"
-        role="tab"
-        :aria-selected="modelValue === 'given'"
-        class="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition-all"
-        :class="
-          modelValue === 'given'
-            ? 'bg-card-light dark:bg-card-dark text-text-primary-light dark:text-text-primary-dark shadow-sm'
-            : 'text-text-secondary-light dark:text-text-secondary-dark'
-        "
-        @click="select('given')"
-      >
-        <UIcon name="arrow_upward" size="xs" />
-        <span>Дал</span>
-      </button>
-      <button
-        type="button"
-        role="tab"
-        :aria-selected="modelValue === 'taken'"
-        class="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition-all"
-        :class="
-          modelValue === 'taken'
-            ? 'bg-card-light dark:bg-card-dark text-text-primary-light dark:text-text-primary-dark shadow-sm'
-            : 'text-text-secondary-light dark:text-text-secondary-dark'
-        "
-        @click="select('taken')"
-      >
-        <UIcon name="arrow_downward" size="xs" />
-        <span>Взял</span>
-      </button>
-    </div>
+      <UIcon name="arrow_upward" size="xs" />
+      <span>Дал</span>
+    </button>
+    <button
+      type="button"
+      role="tab"
+      :aria-selected="modelValue === 'taken'"
+      class="direction-tab flex items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-semibold"
+      :class="
+        modelValue === 'taken'
+          ? 'bg-card-light text-text-primary-light shadow-sm dark:bg-card-dark dark:text-text-primary-dark'
+          : 'text-text-secondary-light dark:text-text-secondary-dark'
+      "
+      @click="select('taken')"
+    >
+      <UIcon name="arrow_downward" size="xs" />
+      <span>Взял</span>
+    </button>
   </div>
 </template>
+
+<style scoped>
+.direction-tab {
+  transition:
+    background-color 200ms ease,
+    color 200ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .direction-tab {
+    transition: none;
+  }
+}
+</style>
