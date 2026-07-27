@@ -15,6 +15,10 @@ vi.mock('@/app/router', () => ({
   resetOnboardingVerified: vi.fn(),
 }));
 
+// Закрытие настоящей шторки роняет jsdom на чтении style отсоединённого узла —
+// см. комментарий в стабе.
+vi.mock('vaul-vue', async () => (await import('@/test/stubs/vaul')).vaulStub);
+
 // ---------------------------------------------------------------------------
 
 // Mock transaction data in camelCase (backend format, as MSW responses)
@@ -152,12 +156,11 @@ describe('HistoryPage', () => {
       expect(refreshBtn.exists()).toBe(true);
     });
 
-    it('shows filter toggle button', async () => {
+    it('shows search and filters buttons in the controls row', async () => {
       const { wrapper } = await renderPage();
 
-      // Filter toggle button is present (aria-label changes based on state)
-      const filterBtn = wrapper.find('button[aria-label="Скрыть фильтры"]');
-      expect(filterBtn.exists()).toBe(true);
+      expect(wrapper.find('[data-testid="open-search-btn"]').exists()).toBe(true);
+      expect(wrapper.find('[data-testid="open-filters-btn"]').exists()).toBe(true);
     });
   });
 
@@ -410,43 +413,60 @@ describe('HistoryPage', () => {
   // -----------------------------------------------------------------------
   // Filter Toggle
   // -----------------------------------------------------------------------
-  describe('filter toggle', () => {
-    it('filters are visible by default (not collapsed)', async () => {
+  describe('search toggle', () => {
+    it('type tabs are shown and search field hidden by default', async () => {
       const { wrapper } = await renderPage();
 
-      const filtersContainer = wrapper.find('#filters-container');
-      expect(filtersContainer.exists()).toBe(true);
-      // Not collapsed = visible (no "hidden" class)
-      expect(filtersContainer.classes()).not.toContain('hidden');
+      expect(wrapper.findComponent({ name: 'UTabs' }).exists()).toBe(true);
+      expect(wrapper.findComponent({ name: 'SearchInput' }).exists()).toBe(false);
     });
 
-    it('clicking filter button toggles filters visibility', async () => {
+    it('search button replaces type tabs with the search field', async () => {
       const { wrapper } = await renderPage();
 
-      // Filters start visible
-      const filtersContainer = wrapper.find('#filters-container');
-      expect(filtersContainer.classes()).not.toContain('hidden');
-
-      // Click filter toggle button to collapse
-      const filterBtn = wrapper.find('button[aria-label="Скрыть фильтры"]');
-      await filterBtn.trigger('click');
+      await wrapper.find('[data-testid="open-search-btn"]').trigger('click');
       await nextTick();
 
-      // Filters should be collapsed
-      expect(filtersContainer.classes()).toContain('hidden');
+      // Пока идёт поиск, тип-фильтр не применяется — вкладки не показываем
+      expect(wrapper.findComponent({ name: 'SearchInput' }).exists()).toBe(true);
+      expect(wrapper.findComponent({ name: 'UTabs' }).exists()).toBe(false);
     });
 
-    it('shows "Показать фильтры" label when collapsed', async () => {
+    it('"Отмена" closes search and restores type tabs', async () => {
       const { wrapper } = await renderPage();
 
-      // Collapse filters
-      const filterBtn = wrapper.find('button[aria-label="Скрыть фильтры"]');
-      await filterBtn.trigger('click');
+      await wrapper.find('[data-testid="open-search-btn"]').trigger('click');
       await nextTick();
 
-      // Now the button should say "Показать фильтры"
-      const showBtn = wrapper.find('button[aria-label="Показать фильтры"]');
-      expect(showBtn.exists()).toBe(true);
+      const cancelBtn = wrapper.findAll('button').find((b) => b.text() === 'Отмена');
+      expect(cancelBtn).toBeDefined();
+      await cancelBtn!.trigger('click');
+      await nextTick();
+
+      expect(wrapper.findComponent({ name: 'SearchInput' }).exists()).toBe(false);
+      expect(wrapper.findComponent({ name: 'UTabs' }).exists()).toBe(true);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Filters Sheet
+  // -----------------------------------------------------------------------
+  describe('filters sheet', () => {
+    it('sheet is closed by default', async () => {
+      const { wrapper } = await renderPage();
+
+      const sheet = wrapper.findComponent({ name: 'HistoryFiltersSheet' });
+      expect(sheet.exists()).toBe(true);
+      expect(sheet.props('open')).toBe(false);
+    });
+
+    it('filters button opens the sheet', async () => {
+      const { wrapper } = await renderPage();
+
+      await wrapper.find('[data-testid="open-filters-btn"]').trigger('click');
+      await nextTick();
+
+      expect(wrapper.findComponent({ name: 'HistoryFiltersSheet' }).props('open')).toBe(true);
     });
   });
 
@@ -480,22 +500,45 @@ describe('HistoryPage', () => {
   // -----------------------------------------------------------------------
   // Active Filters Indicator Dot
   // -----------------------------------------------------------------------
-  describe('active filters indicator dot', () => {
-    it('does not show dot when no filters are active and not collapsed', async () => {
+  describe('active filters', () => {
+    it('shows neither count badge nor chips when no filters are active', async () => {
       const { wrapper } = await renderPage();
 
-      expect(wrapper.find('[data-testid="active-filters-dot"]').exists()).toBe(false);
+      expect(wrapper.find('[data-testid="active-filters-count"]').exists()).toBe(false);
+      expect(wrapper.find('[data-testid="active-filter-chips"]').exists()).toBe(false);
     });
 
-    it('does not show dot when collapsed but no filters active', async () => {
+    it('selecting an account shows the count badge and a removable chip', async () => {
+      server.use(http.get('*/api/accounts', () => HttpResponse.json([mockAccountResponse])));
       const { wrapper } = await renderPage();
 
-      // Collapse filters
-      const filterBtn = wrapper.find('button[aria-label="Скрыть фильтры"]');
-      await filterBtn.trigger('click');
+      const sheet = wrapper.findComponent({ name: 'HistoryFiltersSheet' });
+      sheet.vm.$emit('update:selectedAccountId', mockAccountResponse.id);
       await nextTick();
+      await flushPromises();
 
-      expect(wrapper.find('[data-testid="active-filters-dot"]').exists()).toBe(false);
+      expect(wrapper.find('[data-testid="active-filters-count"]').text()).toBe('1');
+
+      const chips = wrapper.find('[data-testid="active-filter-chips"]');
+      expect(chips.exists()).toBe(true);
+      expect(chips.text()).toContain(mockAccountResponse.name);
+    });
+
+    it('clicking the chip removes the filter', async () => {
+      server.use(http.get('*/api/accounts', () => HttpResponse.json([mockAccountResponse])));
+      const { wrapper } = await renderPage();
+
+      const sheet = wrapper.findComponent({ name: 'HistoryFiltersSheet' });
+      sheet.vm.$emit('update:selectedAccountId', mockAccountResponse.id);
+      await nextTick();
+      await flushPromises();
+
+      await wrapper.find('[data-testid="active-filter-chips"] button').trigger('click');
+      await nextTick();
+      await flushPromises();
+
+      expect(wrapper.find('[data-testid="active-filter-chips"]').exists()).toBe(false);
+      expect(sheet.props('selectedAccountId')).toBeNull();
     });
   });
 
@@ -577,27 +620,32 @@ describe('HistoryPage', () => {
   // -----------------------------------------------------------------------
   // Filters Container Content
   // -----------------------------------------------------------------------
-  describe('filters container', () => {
-    it('renders SearchInput component in filters', async () => {
+  describe('filters sheet content', () => {
+    async function openFiltersSheet() {
       const { wrapper } = await renderPage();
-
-      const searchInput = wrapper.findComponent({ name: 'SearchInput' });
-      expect(searchInput.exists()).toBe(true);
-    });
+      await wrapper.find('[data-testid="open-filters-btn"]').trigger('click');
+      await nextTick();
+      await flushPromises();
+      return wrapper;
+    }
 
     it('renders AccountSelector when accounts exist', async () => {
       server.use(http.get('*/api/accounts', () => HttpResponse.json([mockAccountResponse])));
-      const { wrapper } = await renderPage();
+      const wrapper = await openFiltersSheet();
 
-      const accountSelector = wrapper.findComponent({ name: 'AccountSelector' });
-      expect(accountSelector.exists()).toBe(true);
+      expect(wrapper.findComponent({ name: 'AccountSelector' }).exists()).toBe(true);
     });
 
     it('renders CategoryChips when categories exist', async () => {
+      const wrapper = await openFiltersSheet();
+
+      expect(wrapper.findComponent({ name: 'CategoryChips' }).exists()).toBe(true);
+    });
+
+    it('does not mount sheet content while closed', async () => {
       const { wrapper } = await renderPage();
 
-      const categoryChips = wrapper.findComponent({ name: 'CategoryChips' });
-      expect(categoryChips.exists()).toBe(true);
+      expect(wrapper.findComponent({ name: 'CategoryChips' }).exists()).toBe(false);
     });
   });
 });

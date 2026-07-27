@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, nextTick, watch } from 'vue';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 import { useRouter } from 'vue-router';
@@ -21,8 +21,7 @@ import {
   DeleteTransactionModal,
   useTransactionEditFlow,
 } from '@/features/edit-transaction';
-import { useAccounts, AccountSelector } from '@/entities/account';
-import { CategoryChips } from '@/entities/category';
+import { useAccounts } from '@/entities/account';
 import { UTabs, UIcon, UButton, MasterDetailLayout } from '@/shared/ui';
 import { useIsDesktop } from '@/shared/lib/composables/useIsDesktop';
 import { useExchangeRates } from '@/shared/api';
@@ -32,6 +31,7 @@ import { ImportInboxBanner } from '@/widgets/ImportInboxBanner';
 import { useHistoryFilters, TYPE_FILTER_ITEMS } from './model/useHistoryFilters';
 import { useBalanceAfter } from './model/useBalanceAfter';
 import { computeDayTotal } from './lib/computeDayTotal';
+import HistoryFiltersSheet from './ui/HistoryFiltersSheet.vue';
 
 const router = useRouter();
 const isDesktop = useIsDesktop();
@@ -46,11 +46,11 @@ const {
   activeTypeFilter,
   selectedAccountId,
   selectedCategoryId,
-  isFiltersCollapsed,
   activeFiltersCount,
   serverFilters,
   usedCategories,
   handleTypeFilterChange,
+  clearAdditionalFilters,
   resetAll,
 } = useHistoryFilters(userId);
 
@@ -67,6 +67,36 @@ const {
   setQuery,
   clearSearch,
 } = useServerSearch(userId);
+
+// Строка управления морфится: поиск занимает её целиком. Пока идёт поиск, фильтр
+// по типу всё равно не применяется (поиск ходит на сервер без фильтров), поэтому
+// вкладки не показываем — иначе они выглядели бы рабочими, не будучи такими.
+const isSearchOpen = ref(false);
+const searchInputRef = ref<InstanceType<typeof SearchInput> | null>(null);
+const searchButtonRef = ref<InstanceType<typeof UButton> | null>(null);
+
+function openSearch() {
+  isSearchOpen.value = true;
+  nextTick(() => searchInputRef.value?.focus());
+}
+
+function closeSearch() {
+  isSearchOpen.value = false;
+  clearSearch();
+  // Кнопка поиска в шапке только что вернулась в разметку — возвращаем на неё
+  // фокус, иначе он падает на body и Tab начинается с начала страницы.
+  nextTick(() => (searchButtonRef.value?.$el as HTMLElement | undefined)?.focus());
+}
+
+// Filters sheet
+const isFiltersSheetOpen = ref(false);
+
+const selectedAccount = computed(() =>
+  accounts.value.find((a) => a.id === selectedAccountId.value),
+);
+const selectedCategory = computed(() =>
+  usedCategories.value.find((c) => c.id === selectedCategoryId.value),
+);
 
 // Main transactions query with infinite scroll
 const { transactions, isLoading, hasNextPage, isFetchingNextPage, isFetching, fetchNextPage } =
@@ -113,6 +143,12 @@ const isEmpty = computed(() => {
     activeFiltersCount.value > 0;
   return hasFilters && displayedTransactions.value.length === 0 && !currentIsLoading.value;
 });
+
+function resetEverything() {
+  clearSearch();
+  isSearchOpen.value = false;
+  resetAll();
+}
 
 // Balance after
 const isFilterActive = computed(
@@ -213,45 +249,52 @@ async function handleRefresh() {
     <!-- Header -->
     <AppHeader title="История">
       <template #actions>
-        <div class="flex items-center gap-1">
-          <!-- Toggle Filters Button -->
-          <div class="relative">
-            <UButton
-              variant="ghost"
-              size="sm"
-              class="!p-2"
-              :aria-label="isFiltersCollapsed ? 'Показать фильтры' : 'Скрыть фильтры'"
-              :aria-expanded="!isFiltersCollapsed"
-              aria-controls="filters-container"
-              @click="isFiltersCollapsed = !isFiltersCollapsed"
-            >
-              <UIcon
-                :name="isFiltersCollapsed ? 'tune' : 'filter_list'"
-                size="sm"
-                :class="!isFiltersCollapsed ? 'text-primary' : ''"
-              />
-            </UButton>
-            <!-- Active filters indicator dot -->
-            <span
-              v-if="isFiltersCollapsed && (searchTerm || selectedAccountId || selectedCategoryId)"
-              data-testid="active-filters-dot"
-              aria-hidden="true"
-              class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-primary ring-2 ring-background-light dark:ring-background-dark"
-            />
-          </div>
+        <!-- Поиск и фильтры живут в шапке: строке управления нужна вся ширина,
+             иначе пятая вкладка («Долги») не помещается на узком экране -->
+        <UButton
+          v-if="!isSearchOpen"
+          ref="searchButtonRef"
+          variant="ghost"
+          size="sm"
+          class="!p-2"
+          aria-label="Поиск транзакций"
+          data-testid="open-search-btn"
+          @click="openSearch"
+        >
+          <UIcon name="search" size="sm" />
+        </UButton>
 
-          <!-- Refresh Button -->
+        <div class="relative">
           <UButton
             variant="ghost"
             size="sm"
             class="!p-2"
-            :disabled="isRefreshing"
-            aria-label="Обновить"
-            @click="handleRefresh"
+            aria-label="Фильтры"
+            data-testid="open-filters-btn"
+            @click="isFiltersSheetOpen = true"
           >
-            <UIcon name="refresh" size="sm" :class="{ 'animate-spin': isRefreshing }" />
+            <UIcon name="tune" size="sm" :class="activeFiltersCount > 0 ? 'text-primary' : ''" />
           </UButton>
+          <span
+            v-if="activeFiltersCount > 0"
+            data-testid="active-filters-count"
+            aria-hidden="true"
+            class="absolute top-0 right-0 min-w-[16px] h-[16px] px-1 bg-primary text-white text-caption-xs font-semibold rounded-full flex items-center justify-center ring-2 ring-background-light dark:ring-background-dark"
+          >
+            {{ activeFiltersCount }}
+          </span>
         </div>
+
+        <UButton
+          variant="ghost"
+          size="sm"
+          class="!p-2"
+          :disabled="isRefreshing"
+          aria-label="Обновить"
+          @click="handleRefresh"
+        >
+          <UIcon name="refresh" size="sm" :class="{ 'animate-spin': isRefreshing }" />
+        </UButton>
       </template>
     </AppHeader>
 
@@ -268,15 +311,32 @@ async function handleRefresh() {
              makes flex-1/shrink-0 ineffective, causing the virtualizer's height:100%
              to resolve to auto — rendering ALL items and cascading fetchNextPage. -->
         <div class="h-full flex flex-col overflow-hidden">
-          <!-- Pending imports banner (Telegram) -->
-          <div class="pt-4 shrink-0">
+          <!-- Pending imports banner (Telegram).
+               empty:hidden — баннер рисуется только при неподтверждённых импортах,
+               иначе обёртка съедала бы отступ впустую на каждом заходе. -->
+          <div class="shrink-0 pt-3 empty:hidden">
             <ImportInboxBanner />
           </div>
 
-          <!-- Fixed Controls -->
-          <div class="pt-4 shrink-0 lg:pr-0">
-            <!-- Type Filter Tabs (Always Visible) -->
+          <!-- Строка управления -->
+          <div class="shrink-0 pt-3 flex items-center gap-2">
+            <template v-if="isSearchOpen">
+              <SearchInput
+                ref="searchInputRef"
+                size="sm"
+                :model-value="searchTerm"
+                placeholder="Поиск транзакций..."
+                @update:model-value="setQuery"
+                @clear="clearSearch"
+              />
+              <UButton variant="ghost" size="sm" class="shrink-0 !px-2" @click="closeSearch">
+                Отмена
+              </UButton>
+            </template>
+
             <UTabs
+              v-else
+              class="flex-1 min-w-0"
               :model-value="activeTypeFilter"
               :items="TYPE_FILTER_ITEMS"
               size="sm"
@@ -284,46 +344,63 @@ async function handleRefresh() {
             />
           </div>
 
-          <!-- Collapsible Filters -->
+          <!-- Активные фильтры: состояние видно, не открывая шторку -->
           <div
-            id="filters-container"
-            class="shrink-0"
-            :class="isFiltersCollapsed ? 'hidden' : 'block'"
-            :inert="isFiltersCollapsed || undefined"
+            v-if="activeFiltersCount > 0"
+            data-testid="active-filter-chips"
+            class="shrink-0 flex items-center gap-1.5 pt-2 overflow-x-auto no-scrollbar"
           >
-            <div class="space-y-4 pt-4 pb-2">
-              <!-- Search -->
-              <div>
-                <SearchInput
-                  :model-value="searchTerm"
-                  placeholder="Поиск транзакций..."
-                  @update:model-value="setQuery"
-                  @clear="clearSearch"
-                />
-              </div>
+            <button
+              v-if="selectedAccount"
+              type="button"
+              class="shrink-0 inline-flex items-center gap-1.5 pl-2 pr-1.5 py-1 rounded-lg bg-surface-light dark:bg-surface-dark text-xs text-text-primary-light dark:text-text-primary-dark"
+              :aria-label="`Убрать фильтр по счёту: ${selectedAccount.name}`"
+              @click="selectedAccountId = null"
+            >
+              <span
+                class="w-2 h-2 rounded-full shrink-0"
+                :style="{ backgroundColor: selectedAccount.color }"
+              />
+              {{ selectedAccount.name }}
+              <UIcon
+                name="close"
+                size="xs"
+                class="text-text-tertiary-light dark:text-text-tertiary-dark"
+              />
+            </button>
 
-              <!-- Quick Filters -->
-              <div class="space-y-3">
-                <AccountSelector
-                  v-if="accounts.length > 0"
-                  :accounts="accounts"
-                  :selected-id="selectedAccountId"
-                  label="Счета"
-                  @select="selectedAccountId = $event === selectedAccountId ? null : $event"
-                />
-                <CategoryChips
-                  v-if="usedCategories.length > 0"
-                  :categories="usedCategories"
-                  :selected-id="selectedCategoryId ?? ''"
-                  label="Категории"
-                  @select="selectedCategoryId = $event === selectedCategoryId ? null : $event"
-                />
-              </div>
-            </div>
+            <button
+              v-if="selectedCategory"
+              type="button"
+              class="shrink-0 inline-flex items-center gap-1.5 pl-2 pr-1.5 py-1 rounded-lg bg-surface-light dark:bg-surface-dark text-xs text-text-primary-light dark:text-text-primary-dark"
+              :aria-label="`Убрать фильтр по категории: ${selectedCategory.name}`"
+              @click="selectedCategoryId = null"
+            >
+              <UIcon
+                :name="selectedCategory.icon"
+                size="xs"
+                :style="{ color: selectedCategory.color }"
+              />
+              {{ selectedCategory.name }}
+              <UIcon
+                name="close"
+                size="xs"
+                class="text-text-tertiary-light dark:text-text-tertiary-dark"
+              />
+            </button>
+
+            <button
+              v-if="activeFiltersCount > 1"
+              type="button"
+              class="shrink-0 px-2 py-1 text-xs text-text-tertiary-light dark:text-text-tertiary-dark hover:text-text-secondary-light dark:hover:text-text-secondary-dark"
+              @click="clearAdditionalFilters"
+            >
+              Сбросить
+            </button>
           </div>
 
           <!-- Content Area: flex column so virtualizer height is set by flex, not by % of padded parent -->
-          <div class="flex-1 min-h-0 pt-4 flex flex-col">
+          <div class="flex-1 min-h-0 pt-2 flex flex-col">
             <!-- Loading State with Skeleton -->
             <div
               v-if="currentIsLoading && displayedTransactions.length === 0"
@@ -367,21 +444,23 @@ async function handleRefresh() {
             <div
               v-else
               data-testid="history-empty-state"
-              class="py-16 text-center flex flex-col items-center"
+              class="flex-1 min-h-0 py-10 text-center flex flex-col items-center justify-center"
             >
               <div
-                class="w-16 h-16 mb-4 rounded-full bg-surface-light dark:bg-surface-dark flex items-center justify-center"
+                class="w-12 h-12 mb-3 rounded-full bg-surface-light dark:bg-surface-dark flex items-center justify-center"
               >
                 <UIcon
                   name="receipt_long"
-                  size="lg"
+                  size="md"
                   class="text-text-tertiary-light dark:text-text-tertiary-dark"
                 />
               </div>
-              <p class="text-text-secondary-light dark:text-text-secondary-dark mb-2 font-medium">
+              <p
+                class="text-sm text-text-secondary-light dark:text-text-secondary-dark mb-1 font-medium"
+              >
                 {{ isEmpty ? 'Ничего не найдено' : 'Нет транзакций' }}
               </p>
-              <p class="text-sm text-text-tertiary-light dark:text-text-tertiary-dark mb-6">
+              <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark mb-4">
                 {{
                   isEmpty
                     ? 'Попробуйте изменить параметры поиска'
@@ -391,19 +470,16 @@ async function handleRefresh() {
               <UButton
                 v-if="isEmpty"
                 variant="secondary"
+                size="sm"
                 data-testid="reset-filters-btn"
-                @click="
-                  () => {
-                    clearSearch();
-                    resetAll();
-                  }
-                "
+                @click="resetEverything"
               >
                 Сбросить фильтры
               </UButton>
               <UButton
                 v-else
                 variant="primary"
+                size="sm"
                 data-testid="add-transaction-btn"
                 @click="handleAddTransaction"
               >
@@ -429,6 +505,19 @@ async function handleRefresh() {
         />
       </template>
     </MasterDetailLayout>
+
+    <!-- Filters Sheet -->
+    <HistoryFiltersSheet
+      v-model:open="isFiltersSheetOpen"
+      :accounts="accounts"
+      :categories="usedCategories"
+      :selected-account-id="selectedAccountId"
+      :selected-category-id="selectedCategoryId"
+      :active-count="activeFiltersCount"
+      @update:selected-account-id="selectedAccountId = $event"
+      @update:selected-category-id="selectedCategoryId = $event"
+      @reset="clearAdditionalFilters"
+    />
 
     <!-- Edit Transaction Modal -->
     <EditTransactionModal

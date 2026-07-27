@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.65';
+export const CURRENT_VERSION = '1.0.66';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,25 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.66',
+    date: '2026-07-27',
+    title: 'История: вдвое больше операций на экране',
+    items: [
+      {
+        type: 'improvement',
+        text: 'На странице «История» операций на экране стало примерно вдвое больше: поиск и фильтры свернулись в одну строку, а операции одного дня теперь идут сплошным списком без зазоров',
+      },
+      {
+        type: 'feature',
+        text: 'Дата и итог дня прилипают к верху при прокрутке — всегда видно, какой это день и сколько он стоил',
+      },
+      {
+        type: 'improvement',
+        text: 'Выбранные счёт и категория показываются чипами прямо под фильтрами, снимаются одним нажатием',
+      },
+    ],
+  },
   {
     version: '1.0.65',
     date: '2026-07-27',

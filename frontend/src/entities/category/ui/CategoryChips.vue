@@ -11,8 +11,10 @@ const props = withDefaults(
     label?: string;
     rows?: number;
     searchable?: boolean;
+    /** Выбор необязателен (фильтр, а не поле формы) — без подсказки «выберите» */
+    optional?: boolean;
   }>(),
-  { rows: 2 },
+  { rows: 2, optional: false },
 );
 
 const emit = defineEmits<{
@@ -162,7 +164,7 @@ function toggleInfrequent() {
           {{ label }}
         </span>
         <span
-          v-if="!selectedId"
+          v-if="!selectedId && !optional"
           class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
         >
           — выберите

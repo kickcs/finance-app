@@ -14,7 +14,7 @@ export interface InputProps {
   variant?: 'default' | 'search' | 'currency';
   icon?: string;
   suffix?: string;
-  size?: 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg';
   id?: string;
   min?: string;
   max?: string;
@@ -184,7 +184,7 @@ defineExpose({
             'bg-transparent border-none outline-none w-full',
             'text-text-primary-light dark:text-text-primary-dark',
             'placeholder:text-text-tertiary-light dark:placeholder:text-text-tertiary-dark',
-            size === 'lg' ? 'py-3.5' : 'py-3',
+            size === 'lg' ? 'py-3.5' : size === 'sm' ? 'py-2' : 'py-3',
             icon || variant === 'search' ? 'pl-2' : 'pl-3',
             suffix || variant === 'currency' ? 'pr-2' : 'pr-3',
             variant === 'currency' && 'text-2xl font-semibold min-w-0 flex-1',
