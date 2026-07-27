@@ -6,6 +6,14 @@ import { UIcon, InitialAvatar } from '@/shared/ui';
 import type { Category } from '@/entities/category';
 import type { Transaction } from '@/shared/api/database.types';
 import type { SplitExpenseData, SplitMethod } from '@/features/split-expense';
+import type { AccountWithBalances } from '@/entities/account';
+import type { TransactionFormData } from '../model/useTransactionForm';
+import { usePanelState } from '../model/usePanelState';
+import { useAmountSuggestions } from '../model/useAmountSuggestions';
+import HeroAmount from './HeroAmount.vue';
+import AmountSuggestions from './AmountSuggestions.vue';
+import { CategoryPicker } from '@/entities/category';
+import { AccountSelector } from '@/entities/account';
 
 const props = defineProps<{
   formData: TransactionFormData;
@@ -16,6 +24,7 @@ const props = defineProps<{
   splitValidationError?: string | null;
   autofocusAmount?: boolean;
 }>();
+
 const emit = defineEmits<{
   'update:formData': [value: TransactionFormData];
   addParticipant: [name: string, fromContacts: boolean, personColor?: string];
@@ -26,15 +35,10 @@ const emit = defineEmits<{
   setIsIncluded: [included: boolean];
   setSplitEnabled: [enabled: boolean];
 }>();
+
 const SplitExpenseDrawer = defineAsyncComponent(
   () => import('@/features/split-expense/ui/SplitExpenseDrawer.vue'),
 );
-import type { AccountWithBalances } from '@/entities/account';
-import type { TransactionFormData } from '../model/useTransactionForm';
-import { usePanelState } from '../model/usePanelState';
-import HeroAmount from './HeroAmount.vue';
-import { CategoryPicker } from '@/entities/category';
-import { AccountSelector } from '@/entities/account';
 
 const {
   availableCurrencies,
@@ -46,12 +50,19 @@ const {
   handleAccountChange,
 } = usePanelState(props, emit);
 
+const { suggestions } = useAmountSuggestions(
+  () => props.transactions,
+  () => 'expense',
+  () => props.formData.currency,
+  () => props.formData.categoryId,
+);
+
 const router = useRouter();
 const drawerOpen = ref(false);
 
-const hasSplit = computed(() => {
-  return props.splitData?.enabled && props.splitData.participants.length > 0;
-});
+const hasSplit = computed(
+  () => props.splitData?.enabled && props.splitData.participants.length > 0,
+);
 
 const splitSummary = computed(() => {
   if (!props.splitData || !hasSplit.value) return '';
@@ -68,13 +79,17 @@ function toScanReceipt() {
   router.push({ name: ROUTE_NAMES.SCAN_RECEIPT });
 }
 
-const dashedBtnBase =
-  'rounded-xl border border-dashed border-border-light dark:border-border-dark hover:border-primary hover:bg-primary/[0.03] dark:hover:bg-primary/[0.06] transition-all';
+const chipBase =
+  'meta-chip rounded-xl border transition-[color,background-color,border-color,transform] duration-200 active:scale-[0.99]';
+// Действие, а не поле: без карточной заливки, чтобы не спорить с мета-строкой
+const chipIdle = 'border-border-light dark:border-border-dark hover:border-primary/40';
 </script>
 
 <template>
-  <div class="space-y-2" data-testid="expense-panel">
+  <div class="space-y-3" data-testid="expense-panel">
     <HeroAmount
+      variant="hero"
+      sign="minus"
       :amount="formData.amount"
       :currency="formData.currency"
       :currency-symbol="currencySymbol"
@@ -85,6 +100,12 @@ const dashedBtnBase =
       :autofocus="autofocusAmount"
       @update:amount="updateField('amount', $event)"
       @update:currency="updateField('currency', $event)"
+    />
+
+    <AmountSuggestions
+      :amounts="suggestions"
+      :current-amount="formData.amount"
+      @select="updateField('amount', $event)"
     />
 
     <AccountSelector
@@ -102,95 +123,76 @@ const dashedBtnBase =
       @select="updateField('categoryId', $event)"
     />
 
-    <!-- Action buttons row -->
-    <div class="flex gap-2">
-      <!-- Configured split summary -->
+    <div class="flex items-stretch gap-2">
+      <!-- Разделение настроено -->
       <div
         v-if="splitData && hasSplit"
-        role="button"
-        tabindex="0"
-        class="flex-1 min-w-0 flex items-center gap-3 px-4 py-3 rounded-xl border border-primary/20 bg-primary/[0.04] dark:bg-primary/[0.08] transition-all hover:border-primary/30 active:scale-[0.99] cursor-pointer"
-        @click="drawerOpen = true"
-        @keydown.enter="drawerOpen = true"
+        :class="[chipBase, 'flex min-w-0 flex-1 items-center border-primary/30 bg-primary/[0.05]']"
       >
-        <div class="w-9 h-9 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
-          <UIcon name="group" size="sm" class="text-primary" />
-        </div>
-        <div class="flex-1 min-w-0 text-left">
-          <p class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
-            Разделено на {{ splitData!.participants.length + (splitData!.isIncluded ? 1 : 0) }}
-          </p>
-          <div class="flex items-center gap-1 mt-0.5">
-            <div class="flex -space-x-1.5">
-              <InitialAvatar
-                v-for="p in splitData!.participants.slice(0, 3)"
-                :key="p.id"
-                :name="p.personName"
-                :color="p.personColor || '#3b82f6'"
-                size="xs"
-                class="ring-1 ring-card-light dark:ring-card-dark"
-              />
-            </div>
+        <button
+          type="button"
+          class="flex min-w-0 flex-1 items-center gap-2.5 px-3 py-2 text-left"
+          @click="drawerOpen = true"
+        >
+          <div class="flex -space-x-1.5">
+            <InitialAvatar
+              v-for="p in splitData!.participants.slice(0, 3)"
+              :key="p.id"
+              :name="p.personName"
+              :color="p.personColor || '#3b82f6'"
+              size="xs"
+              class="ring-1 ring-card-light dark:ring-card-dark"
+            />
+          </div>
+          <span class="min-w-0 flex-1">
             <span
-              class="text-xs text-text-secondary-light dark:text-text-secondary-dark ml-1 truncate"
+              class="block truncate text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
             >
               {{ splitSummary }}
             </span>
-          </div>
-        </div>
-        <div class="flex items-center gap-1.5 shrink-0">
-          <UIcon name="edit" size="xs" class="text-primary" />
-          <button
-            type="button"
-            class="p-1 text-text-tertiary-light dark:text-text-tertiary-dark hover:text-danger transition-colors"
-            @click.stop="clearSplit"
-          >
-            <UIcon name="close" size="xs" />
-          </button>
-        </div>
+            <span class="block text-xs text-text-secondary-light dark:text-text-secondary-dark">
+              Разделено на {{ splitData!.participants.length + (splitData!.isIncluded ? 1 : 0) }}
+            </span>
+          </span>
+        </button>
+        <button
+          type="button"
+          aria-label="Убрать разделение"
+          class="flex h-11 w-11 shrink-0 items-center justify-center text-text-tertiary-light dark:text-text-tertiary-dark transition-colors hover:text-danger"
+          @click="clearSplit"
+        >
+          <UIcon name="close" size="xs" />
+        </button>
       </div>
 
-      <!-- Empty state: split button -->
+      <!-- Разделение не настроено -->
       <button
         v-else-if="splitData"
         type="button"
-        :class="[
-          dashedBtnBase,
-          'flex-1 min-w-0 flex items-center gap-3 px-4 py-3 active:scale-[0.99]',
-        ]"
+        :class="[chipBase, chipIdle, 'flex min-w-0 flex-1 items-center gap-2 px-3 py-2.5']"
         @click="drawerOpen = true"
       >
-        <div
-          class="w-9 h-9 rounded-full bg-surface-light dark:bg-surface-dark flex items-center justify-center shrink-0"
+        <UIcon
+          name="group"
+          size="sm"
+          class="shrink-0 text-text-tertiary-light dark:text-text-tertiary-dark"
+        />
+        <span
+          class="min-w-0 flex-1 truncate text-left text-sm text-text-secondary-light dark:text-text-secondary-dark"
         >
-          <UIcon
-            name="group"
-            size="sm"
-            class="text-text-tertiary-light dark:text-text-tertiary-dark"
-          />
-        </div>
-        <div class="flex-1 text-left min-w-0">
-          <p
-            class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark truncate"
-          >
-            Разделить расход
-          </p>
-        </div>
+          Разделить расход
+        </span>
         <UIcon
           name="chevron_right"
           size="sm"
-          class="text-text-tertiary-light dark:text-text-tertiary-dark shrink-0"
+          class="shrink-0 text-text-tertiary-light dark:text-text-tertiary-dark"
         />
       </button>
 
-      <!-- Scan receipt button (icon only) -->
       <button
         type="button"
         aria-label="Сканировать чек"
-        :class="[
-          dashedBtnBase,
-          'shrink-0 size-[60px] flex items-center justify-center active:scale-[0.95]',
-        ]"
+        :class="[chipBase, chipIdle, 'flex w-12 shrink-0 items-center justify-center']"
         @click="toScanReceipt"
       >
         <UIcon
@@ -201,7 +203,6 @@ const dashedBtnBase =
       </button>
     </div>
 
-    <!-- Split Expense Drawer -->
     <SplitExpenseDrawer
       v-if="splitData"
       :open="drawerOpen"
@@ -223,3 +224,11 @@ const dashedBtnBase =
     />
   </div>
 </template>
+
+<style scoped>
+@media (prefers-reduced-motion: reduce) {
+  .meta-chip {
+    transition: none;
+  }
+}
+</style>

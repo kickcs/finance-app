@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, onUnmounted, onMounted, nextTick, watch } from 'vue';
-import { useResizeObserver, useTimeoutFn } from '@vueuse/core';
+import { useTimeoutFn } from '@vueuse/core';
 import { useMountedAnimation } from '@/shared/lib/hooks/useMountedAnimation';
-import { formatDate } from '@/shared/lib/format/date';
-import { UInput, UButton, UTabs, UIcon } from '@/shared/ui';
+import { UButton, UTabs } from '@/shared/ui';
 import { CATEGORY_IDS } from '@/entities/category';
 import type { Category } from '@/entities/category';
 import type { AccountWithBalances } from '@/entities/account';
@@ -20,13 +19,11 @@ import { useHashtagSuggestions } from '../model/useHashtagSuggestions';
 import { FeatureHintPopover, useFeatureHints } from '@/features/feature-hints';
 import { useSmartDefaults } from '../model/useSmartDefaults';
 import { useHaptics } from '@/shared/lib/haptics';
-import { Popover, PopoverTrigger, PopoverContent } from '@/shared/ui/primitives/popover';
-import { Calendar } from '@/shared/ui/primitives/calendar';
-import { CalendarDate, type DateValue } from '@internationalized/date';
 import ExpensePanel from './ExpensePanel.vue';
 import IncomePanel from './IncomePanel.vue';
 import TransferPanel from './TransferPanel.vue';
 import DebtPanel from './DebtPanel.vue';
+import TransactionMetaRow from './TransactionMetaRow.vue';
 
 const props = defineProps<{
   formData: TransactionFormData;
@@ -63,12 +60,15 @@ const ALL_TAB_ITEMS = [
   { id: 'debt', label: 'Долг' },
 ];
 
+/** Индекс реальной панели «Расход» в цикличном порядке `[клон, ...реальные, клон]`. */
+const EXPENSE_INDEX = 1;
+
 const type = computed(() => props.formData.type);
 
 function applyTypeChange(newType: string) {
   emit('update:formData', {
     ...props.formData,
-    type: newType as 'income' | 'expense' | 'transfer' | 'debt',
+    type: newType as TransactionType,
     categoryId: newType === 'transfer' ? CATEGORY_IDS.TRANSFER : '',
     toAccountId: null,
     toAmount: null,
@@ -85,74 +85,168 @@ const {
   cyclicPanelOrder,
 } = useScrollableTabs(type, applyTypeChange, TRANSACTION_TYPE_ORDER);
 
-// --- Smooth Height Auto-adjust ---
+const activeIndex = computed(() => EXPENSE_INDEX + TRANSACTION_TYPE_ORDER.indexOf(type.value));
+
+/**
+ * Соседние панели нужны только тогда, когда карусель реально может на них
+ * уехать, — поэтому поднимаем их на первом касании скроллера или клике по табу,
+ * до того как палец сдвинулся. При открытии экрана рисуется одна панель вместо
+ * шести (4 типа + 2 клона): вместе с лишними поддеревьями уходят запросы людей
+ * и курсов валют, которые на «Расходе» не нужны вовсе.
+ */
+const neighborsArmed = ref(false);
+function armNeighbors() {
+  neighborsArmed.value = true;
+}
+
+function isRendered(index: number) {
+  const distance = Math.abs(index - activeIndex.value);
+  return distance === 0 || (neighborsArmed.value && distance === 1);
+}
+
+/**
+ * Автофокус на сумме — только при первом показе экрана. Панели монтируются на
+ * лету, и без этого флага каждое переключение вкладки заново поднимало бы
+ * клавиатуру, а браузер доскроливал фокусируемое поле, воюя с каруселью.
+ */
+const autofocusSpent = ref(false);
+function shouldAutofocus(index: number) {
+  return Boolean(props.autofocusAmount) && !autofocusSpent.value && index === activeIndex.value;
+}
+
+// --- Плавная высота контейнера ---
 const containerHeight = ref<string>('auto');
 let lastCalculatedIndex = -1;
+let rafHandle: number | null = null;
+let pendingForce = false;
 
-function updateContainerHeight(force = false) {
+function updateContainerHeight(force: boolean) {
   if (!scrollContainer.value) return;
 
-  // Use bounding rect width to prevent 0-width collapse issues
-  const rect = scrollContainer.value.getBoundingClientRect();
-  const panelWidth = rect.width;
+  // Ширину берём из bounding rect: offsetWidth округляется, и на дробном
+  // масштабе деление даёт не тот индекс панели.
+  const panelWidth = scrollContainer.value.getBoundingClientRect().width;
   if (panelWidth === 0) return;
 
   const currentIndex = Math.round(scrollContainer.value.scrollLeft / panelWidth);
-
   if (!force && currentIndex === lastCalculatedIndex) return;
   lastCalculatedIndex = currentIndex;
 
-  const panels = scrollContainer.value.children;
-
-  if (panels[currentIndex]) {
-    const activePanel = panels[currentIndex] as HTMLElement;
-    // Fix: check if height is greater than 0 before updating to prevent snapping to 0 when element remounts
-    if (activePanel.offsetHeight > 0) {
-      containerHeight.value = `${activePanel.offsetHeight}px`;
-    }
+  const activePanel = scrollContainer.value.children[currentIndex] as HTMLElement | undefined;
+  // Ноль приходит, когда панель перемонтируется, — схлопываться на него нельзя.
+  if (activePanel && activePanel.offsetHeight > 0) {
+    containerHeight.value = `${activePanel.offsetHeight}px`;
   }
 }
 
-// Observe scrollContainer for resize
-useResizeObserver(scrollContainer, () => updateContainerHeight(true));
-
-// Observe children panels individually — useResizeObserver doesn't support dynamic child lists
-let childObserver: ResizeObserver | null = null;
-
-watch(scrollContainer, (el) => {
-  childObserver?.disconnect();
-  if (!el) return;
-
-  childObserver = new ResizeObserver(() => updateContainerHeight(true));
-  Array.from(el.children).forEach((child) => {
-    childObserver?.observe(child);
+/**
+ * Замер высоты — чтение layout, за которым сразу идёт запись стиля. Батчим в
+ * один кадр: иначе инерционный скролл и ResizeObserver форсят reflow на каждое
+ * событие.
+ */
+function scheduleHeightUpdate(force = false) {
+  pendingForce = pendingForce || force;
+  if (rafHandle !== null) return;
+  rafHandle = requestAnimationFrame(() => {
+    rafHandle = null;
+    const shouldForce = pendingForce;
+    pendingForce = false;
+    updateContainerHeight(shouldForce);
   });
-  nextTick(() => updateContainerHeight(true));
-});
+}
+
+// Наблюдаем контейнер и ТОЛЬКО активную панель: раньше наблюдались все шесть, и
+// ресайз невидимой панели дёргал пересчёт видимой.
+let containerObserver: ResizeObserver | null = null;
+let panelObserver: ResizeObserver | null = null;
+
+watch(
+  scrollContainer,
+  (el) => {
+    containerObserver?.disconnect();
+    if (!el) return;
+    containerObserver ??= new ResizeObserver(() => scheduleHeightUpdate(true));
+    containerObserver.observe(el);
+  },
+  { immediate: true },
+);
+
+watch(
+  [scrollContainer, activeIndex],
+  ([el, index]) => {
+    panelObserver?.disconnect();
+    if (!el) return;
+    panelObserver ??= new ResizeObserver(() => scheduleHeightUpdate(true));
+    nextTick(() => {
+      const panel = el.children[index as number] as HTMLElement | undefined;
+      if (panel) panelObserver?.observe(panel);
+      scheduleHeightUpdate(true);
+    });
+  },
+  { immediate: true },
+);
 
 onUnmounted(() => {
-  childObserver?.disconnect();
+  containerObserver?.disconnect();
+  panelObserver?.disconnect();
+  if (rafHandle !== null) cancelAnimationFrame(rafHandle);
 });
 
-// Update height on scroll, type change, and cyclic wrap
 function onScroll() {
   handleScroll();
-  updateContainerHeight();
+  scheduleHeightUpdate();
 }
 function onScrollEnd() {
   handleScrollEnd();
-  updateContainerHeight();
+  scheduleHeightUpdate();
 }
-onCyclicWrap(() => updateContainerHeight(true));
-// ---
-
-// Only real panels (not clones) get autofocus — clones are at index 0 and last
-const realPanelIndices = new Set(TRANSACTION_TYPE_ORDER.map((_, i) => i + 1));
+onCyclicWrap(() => scheduleHeightUpdate(true));
 
 const submitLabel = computed(() => {
   if (props.formData.type === 'transfer') return 'Перевести';
   if (props.formData.type === 'income') return 'Добавить доход';
   return 'Добавить расход';
+});
+
+/**
+ * Заблокированная кнопка без объяснения — тупик: пользователь тапает и не
+ * понимает, чего не хватает. Называем недостающее прямо над ней.
+ */
+const submitHint = computed(() => {
+  if (props.isValid || props.isSubmitting) return null;
+
+  const missing: string[] = [];
+  if (!props.formData.accountId) missing.push('счёт');
+  if (props.formData.amount <= 0) missing.push('сумму');
+
+  if (props.formData.type === 'transfer') {
+    if (!props.formData.toAccountId) missing.push('счёт зачисления');
+    // Сумму зачисления просим отдельно, только когда есть из чего её считать:
+    // иначе выходило «Укажите сумму и сумму зачисления».
+    else if (props.formData.amount > 0 && !props.formData.toAmount) {
+      missing.push('сумму зачисления');
+    }
+  } else if (!props.formData.categoryId) {
+    missing.push('категорию');
+  }
+
+  // Перевод «сам в себя» в той же валюте невалиден, но ничего не «не хватает» —
+  // без отдельной ветки кнопка снова гасла бы молча.
+  if (
+    !missing.length &&
+    props.formData.type === 'transfer' &&
+    props.formData.toAccountId === props.formData.accountId &&
+    props.formData.currency === props.formData.toCurrency
+  ) {
+    return 'Выберите другой счёт или валюту зачисления';
+  }
+
+  if (!missing.length) return null;
+  // «счёт и сумму и категорию» — перечисление через «и» читается только на двух
+  // элементах; на трёх нужен обычный список.
+  const last = missing[missing.length - 1];
+  const head = missing.slice(0, -1);
+  return `Укажите ${head.length ? `${head.join(', ')} и ${last}` : last}`;
 });
 
 const descriptionPlaceholder = computed(() => {
@@ -164,7 +258,6 @@ const descriptionPlaceholder = computed(() => {
 // Hashtag suggestions
 const { userId } = useCurrentUser();
 const { hashtags } = useHashtags(userId);
-const descriptionFocused = ref(false);
 
 const { filtered: filteredHashtags, buildInsertedDescription } = useHashtagSuggestions(
   () => props.formData.description || '',
@@ -178,24 +271,8 @@ function insertHashtag(tag: string) {
   });
 }
 
-// Calendar date picker
-const calendarOpen = ref(false);
-
-const calendarValue = computed(() => {
-  const d = new Date(props.formData.date);
-  return new CalendarDate(d.getFullYear(), d.getMonth() + 1, d.getDate());
-});
-
-const displayDate = computed(() => formatDate(props.formData.date, { format: 'short' }));
-
-function onCalendarSelect(value: DateValue | undefined) {
-  if (!value) return;
-  const date = new Date(value.year, value.month - 1, value.day);
-  emit('update:formData', {
-    ...props.formData,
-    date: date.getTime(),
-  });
-  calendarOpen.value = false;
+function updateField<K extends keyof TransactionFormData>(field: K, value: TransactionFormData[K]) {
+  emit('update:formData', { ...props.formData, [field]: value });
 }
 
 // Haptic feedback
@@ -250,6 +327,11 @@ watch(
 );
 
 onMounted(() => {
+  // Панели уже смонтировались и забрали автофокус — дальше он не нужен.
+  nextTick(() => {
+    autofocusSpent.value = true;
+  });
+
   if (shouldShowHint('split-expense')) {
     showSplitHintDelayed();
   }
@@ -280,244 +362,193 @@ watch(
   },
 );
 
-// Staggered entrance animation control
+// Панель расхода рендерится в двух местах — внутри поповера-подсказки и без
+// него. Общие пропы и обработчики вынесены, чтобы не дублировать два десятка
+// строк привязок.
+const expensePanelProps = computed(() => ({
+  formData: props.formData,
+  accounts: props.accounts,
+  categories: props.expenseCategories,
+  transactions: transactions.value,
+  splitData: props.splitData,
+  splitValidationError: props.splitValidationError,
+}));
+
+const expensePanelHandlers = {
+  'update:formData': (value: TransactionFormData) => emit('update:formData', value),
+  addParticipant: (name: string, fromContacts: boolean, color?: string) =>
+    emit('addParticipant', name, fromContacts, color),
+  removeParticipant: (id: string) => emit('removeParticipant', id),
+  updateParticipantAmount: (id: string, amount: number) =>
+    emit('updateParticipantAmount', id, amount),
+  setSplitMethod: (method: SplitMethod) => emit('setSplitMethod', method),
+  setMyShare: (amount: number) => emit('setMyShare', amount),
+  setIsIncluded: (included: boolean) => emit('setIsIncluded', included),
+  setSplitEnabled: (enabled: boolean) => emit('setSplitEnabled', enabled),
+};
+
+// Единственная входная анимация: она же прячет кадр, в котором карусель ещё не
+// припарковалась на нужной панели.
 const { isMounted } = useMountedAnimation();
 </script>
 
 <template>
   <form
-    class="space-y-4 transition-opacity duration-200"
-    :class="isSubmitting && 'opacity-60 pointer-events-none'"
+    class="form-root space-y-4 transition-opacity duration-200"
+    :class="[
+      isSubmitting && 'opacity-60 pointer-events-none',
+      isMounted ? 'opacity-100' : 'opacity-0',
+    ]"
     @submit.prevent="$emit('submit')"
   >
     <!-- Type Tabs -->
-    <div
-      class="stagger-1 transform transition-all duration-500 ease-out"
-      :class="isMounted ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'"
-    >
-      <UTabs
-        :model-value="formData.type"
-        :items="ALL_TAB_ITEMS"
-        @update:model-value="(v: string) => handleTabClick(v as TransactionType)"
-      />
-    </div>
+    <UTabs
+      :model-value="formData.type"
+      :items="ALL_TAB_ITEMS"
+      @update:model-value="
+        (v: string) => {
+          armNeighbors();
+          handleTabClick(v as TransactionType);
+        }
+      "
+    />
 
     <!-- Swipeable panels with smooth height -->
-    <div
-      class="stagger-2 transform transition-all duration-500 ease-out delay-75 overflow-hidden"
-      :class="isMounted ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'"
-      :style="{
-        height: containerHeight,
-        transition: 'height 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-      }"
-    >
+    <div class="panels-viewport overflow-hidden" :style="{ height: containerHeight }">
       <div
         ref="scrollContainer"
         class="flex items-start overflow-x-auto overflow-y-hidden snap-x snap-mandatory no-scrollbar -mx-4 md:-mx-0 h-full scroll-smooth"
         @scrollend="onScrollEnd"
         @scroll="onScroll"
+        @pointerdown="armNeighbors"
+        @touchstart.passive="armNeighbors"
+        @wheel.passive="armNeighbors"
+        @keydown="armNeighbors"
       >
         <div
           v-for="(panelType, idx) in cyclicPanelOrder"
           :key="`${panelType}-${idx}`"
           class="min-w-full snap-start px-4 md:px-0"
+          :inert="idx !== activeIndex || undefined"
+          :aria-hidden="idx !== activeIndex || undefined"
         >
-          <FeatureHintPopover
-            v-if="panelType === 'expense' && splitHintConfig"
-            :config="splitHintConfig"
-            :open="showSplitHint"
-            side="top"
-            @dismiss="dismissSplitHint"
-            @action="handleSplitHintAction"
-          >
+          <template v-if="isRendered(idx)">
+            <FeatureHintPopover
+              v-if="panelType === 'expense' && idx === EXPENSE_INDEX && splitHintConfig"
+              :config="splitHintConfig"
+              :open="showSplitHint"
+              side="top"
+              @dismiss="dismissSplitHint"
+              @action="handleSplitHintAction"
+            >
+              <ExpensePanel
+                v-bind="expensePanelProps"
+                :autofocus-amount="shouldAutofocus(idx)"
+                v-on="expensePanelHandlers"
+              />
+            </FeatureHintPopover>
             <ExpensePanel
+              v-else-if="panelType === 'expense'"
+              v-bind="expensePanelProps"
+              :autofocus-amount="shouldAutofocus(idx)"
+              v-on="expensePanelHandlers"
+            />
+            <IncomePanel
+              v-else-if="panelType === 'income'"
               :form-data="formData"
               :accounts="accounts"
-              :categories="expenseCategories"
+              :categories="incomeCategories"
               :transactions="transactions"
-              :split-data="splitData"
-              :split-validation-error="splitValidationError"
-              :autofocus-amount="autofocusAmount && realPanelIndices.has(idx)"
+              :autofocus-amount="shouldAutofocus(idx)"
               @update:form-data="$emit('update:formData', $event)"
-              @add-participant="
-                (name: string, fromContacts: boolean, color?: string) =>
-                  $emit('addParticipant', name, fromContacts, color)
-              "
-              @remove-participant="$emit('removeParticipant', $event)"
-              @update-participant-amount="
-                (id, amount) => $emit('updateParticipantAmount', id, amount)
-              "
-              @set-split-method="$emit('setSplitMethod', $event)"
-              @set-my-share="$emit('setMyShare', $event)"
-              @set-is-included="$emit('setIsIncluded', $event)"
-              @set-split-enabled="$emit('setSplitEnabled', $event)"
             />
-          </FeatureHintPopover>
-          <ExpensePanel
-            v-else-if="panelType === 'expense'"
-            :form-data="formData"
-            :accounts="accounts"
-            :categories="expenseCategories"
-            :transactions="transactions"
-            :split-data="splitData"
-            :split-validation-error="splitValidationError"
-            :autofocus-amount="autofocusAmount && realPanelIndices.has(idx)"
-            @update:form-data="$emit('update:formData', $event)"
-            @add-participant="
-              (name: string, fromContacts: boolean, color?: string) =>
-                $emit('addParticipant', name, fromContacts, color)
-            "
-            @remove-participant="$emit('removeParticipant', $event)"
-            @update-participant-amount="
-              (id, amount) => $emit('updateParticipantAmount', id, amount)
-            "
-            @set-split-method="$emit('setSplitMethod', $event)"
-            @set-my-share="$emit('setMyShare', $event)"
-            @set-is-included="$emit('setIsIncluded', $event)"
-            @set-split-enabled="$emit('setSplitEnabled', $event)"
-          />
-          <IncomePanel
-            v-else-if="panelType === 'income'"
-            :form-data="formData"
-            :accounts="accounts"
-            :categories="incomeCategories"
-            :transactions="transactions"
-            @update:form-data="$emit('update:formData', $event)"
-          />
-          <TransferPanel
-            v-else-if="panelType === 'transfer'"
-            :form-data="formData"
-            :accounts="accounts"
-            :user-currency="userCurrency"
-            @update:form-data="$emit('update:formData', $event)"
-          />
-          <DebtPanel
-            v-else-if="panelType === 'debt'"
-            :accounts="accounts"
-            :default-account-id="defaultAccountId"
-            :autofocus-amount="autofocusAmount && realPanelIndices.has(idx)"
-            @submitted="$emit('debt-submitted')"
-          />
+            <TransferPanel
+              v-else-if="panelType === 'transfer'"
+              :form-data="formData"
+              :accounts="accounts"
+              :user-currency="userCurrency"
+              @update:form-data="$emit('update:formData', $event)"
+            />
+            <DebtPanel
+              v-else-if="panelType === 'debt'"
+              :accounts="accounts"
+              :default-account-id="defaultAccountId"
+              :autofocus-amount="shouldAutofocus(idx)"
+              @submitted="$emit('debt-submitted')"
+            />
+          </template>
         </div>
       </div>
     </div>
 
-    <!-- Bottom section -->
+    <!-- Комментарий и дата: два чипа вместо двух полей с подписями. Поле
+         раскрывается на месте, поэтому подсказки хэштегов больше не двигают
+         кнопку сабмита. -->
+    <TransactionMetaRow
+      v-if="formData.type !== 'debt'"
+      :description="formData.description"
+      :date="formData.date"
+      :placeholder="descriptionPlaceholder"
+      :hashtags="filteredHashtags"
+      @update:description="updateField('description', $event)"
+      @update:date="updateField('date', $event)"
+      @insert-hashtag="insertHashtag"
+    />
+
+    <!-- Кнопка прилипает к низу: на «Переводе» форма выше экрана, и раньше до
+         сабмита приходилось доскроллить. -->
     <div
       v-if="formData.type !== 'debt'"
-      class="space-y-3 stagger-3 transform transition-all duration-500 ease-out delay-150"
-      :class="isMounted ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'"
+      class="submit-bar sticky bottom-0 -mx-4 px-4 pt-3 md:-mx-0 md:px-0 [--bar-bg:var(--color-background-light)] dark:[--bar-bg:var(--color-background-dark)] md:[--bar-bg:var(--color-card-light)] dark:md:[--bar-bg:var(--color-card-dark)]"
     >
-      <!-- Description & Date row -->
-      <div class="grid grid-cols-2 gap-2">
-        <div @focusin="descriptionFocused = true" @focusout="descriptionFocused = false">
-          <UInput
-            :model-value="formData.description"
-            label="Комментарий"
-            :placeholder="descriptionPlaceholder"
-            @update:model-value="
-              $emit('update:formData', {
-                ...formData,
-                description: $event as string,
-              })
-            "
-            @keydown.enter.prevent
-          />
-        </div>
+      <p v-if="error" data-testid="validation-error" role="alert" class="pb-2 text-xs text-danger">
+        {{ error }}
+      </p>
+      <p
+        v-else-if="submitHint"
+        class="pb-2 text-center text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
+      >
+        {{ submitHint }}
+      </p>
 
-        <div class="flex flex-col gap-1.5 w-full">
-          <label
-            class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark ml-0.5"
-          >
-            Дата
-          </label>
-          <Popover v-model:open="calendarOpen">
-            <PopoverTrigger as-child>
-              <button
-                type="button"
-                class="flex items-center justify-between w-full px-3 py-3 rounded-lg text-sm bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark transition-all duration-150"
-              >
-                <span>{{ displayDate }}</span>
-                <UIcon
-                  name="calendar_today"
-                  size="sm"
-                  class="text-text-tertiary-light dark:text-text-tertiary-dark"
-                />
-              </button>
-            </PopoverTrigger>
-            <PopoverContent
-              align="end"
-              side="top"
-              :side-offset="8"
-              :collision-padding="16"
-              class="w-auto p-0"
-            >
-              <Calendar
-                :model-value="calendarValue"
-                locale="ru-RU"
-                @update:model-value="onCalendarSelect"
-              />
-            </PopoverContent>
-          </Popover>
-        </div>
-      </div>
-
-      <!-- Hashtag suggestions (full width, outside grid) with staggered chips -->
-      <Transition name="hashtags-container">
-        <div
-          v-if="descriptionFocused && filteredHashtags.length > 0"
-          class="flex gap-1.5 overflow-x-auto no-scrollbar py-1"
-        >
-          <button
-            v-for="(h, i) in filteredHashtags"
-            :key="h.tag"
-            type="button"
-            class="hashtag-chip shrink-0 px-3 py-1.5 rounded-full text-xs font-medium bg-surface-light dark:bg-surface-dark text-text-secondary-light dark:text-text-secondary-dark border border-border-light dark:border-border-dark hover:bg-primary-light hover:text-primary hover:border-primary/30 active:scale-95 transition-all duration-200"
-            :style="{ transitionDelay: `${i * 30}ms` }"
-            @mousedown.prevent="insertHashtag(h.tag)"
-          >
-            {{ h.tag }}
-          </button>
-        </div>
-      </Transition>
-
-      <!-- Error -->
-      <p v-if="error" data-testid="validation-error" class="text-xs text-danger">{{ error }}</p>
-
-      <!-- Submit (Sticky on mobile if needed, but safe padding) -->
-      <div class="pt-2 pb-safe">
-        <UButton
-          type="submit"
-          variant="primary"
-          size="lg"
-          full-width
-          data-testid="submit-btn"
-          :loading="isSubmitting"
-          :disabled="!isValid"
-        >
-          {{ submitLabel }}
-        </UButton>
-      </div>
+      <UButton
+        type="submit"
+        variant="primary"
+        size="lg"
+        full-width
+        data-testid="submit-btn"
+        :loading="isSubmitting"
+        :disabled="!isValid"
+      >
+        {{ submitLabel }}
+      </UButton>
     </div>
   </form>
 </template>
 
 <style scoped>
-.hashtags-container-enter-active,
-.hashtags-container-leave-active {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+.panels-viewport {
+  transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.hashtags-container-enter-from,
-.hashtags-container-leave-to {
-  opacity: 0;
-  transform: translateY(-8px);
+
+/*
+ * Цвет подложки приходит переменной `--bar-bg`: её ставят Tailwind-варианты
+ * `dark:` / `md:` прямо на элементе. Через `:global(html.dark)` не выйдет —
+ * тема здесь навешивается классом `.dark`, а не на конкретный узел.
+ * Верх полупрозрачный, чтобы содержимое уезжало под панель, а не обрывалось.
+ */
+.submit-bar {
+  background: linear-gradient(to bottom, transparent 0, var(--bar-bg) 0.75rem, var(--bar-bg));
+  padding-bottom: max(env(safe-area-inset-bottom), 0.75rem);
 }
-.hashtags-container-enter-from .hashtag-chip,
-.hashtags-container-leave-to .hashtag-chip {
-  opacity: 0;
-  transform: translateY(-4px) scale(0.95);
-}
-.pb-safe {
-  padding-bottom: env(safe-area-inset-bottom, 16px);
+
+@media (prefers-reduced-motion: reduce) {
+  .form-root,
+  .panels-viewport {
+    transition: none;
+  }
+  .form-root :deep(.scroll-smooth) {
+    scroll-behavior: auto;
+  }
 }
 </style>

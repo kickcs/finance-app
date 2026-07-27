@@ -11,11 +11,13 @@ import { mockTransactionResponse } from '@/test/mocks/handlers/transactions';
 import { buildMockDebtResponse } from '@/test/mocks/handlers/debts';
 
 // Mock app router — vi.hoisted runs before vi.mock hoisting
-const { navigateBackMock } = vi.hoisted(() => ({
+const { navigateBackMock, navigateBackToMock } = vi.hoisted(() => ({
   navigateBackMock: vi.fn(),
+  navigateBackToMock: vi.fn(),
 }));
 vi.mock('@/app/router', () => ({
   navigateBack: navigateBackMock,
+  navigateBackTo: navigateBackToMock,
   transitionName: { value: 'fade' },
   resetOnboardingVerified: vi.fn(),
 }));
@@ -61,11 +63,24 @@ function findSubmitBtn(wrapper: ReturnType<typeof renderWithProviders>) {
   return btn;
 }
 
-/** Helper: set amount via the expense amount input */
+/**
+ * Helper: set amount via the amount input of the *active* panel.
+ * Панели вне активной не рендерятся, а у перевода поле подписано иначе.
+ */
 async function setAmount(wrapper: ReturnType<typeof renderWithProviders>, value: number) {
-  const input = wrapper.find('[data-testid="expense-panel"] input[aria-label="Сумма"]');
-  if (!input.exists()) throw new Error('Amount input not found');
+  const input = wrapper
+    .findAll('input')
+    .find((i) => i.attributes('aria-label')?.startsWith('Сумма'));
+  if (!input) throw new Error('Amount input not found');
   await input.setValue(value);
+  await nextTick();
+}
+
+/** Helper: раскрыть поле комментария — оно спрятано за чипом в мета-строке. */
+async function openComment(wrapper: ReturnType<typeof renderWithProviders>) {
+  const chip = wrapper.findAll('button').find((b) => b.text().trim() === 'Комментарий');
+  if (!chip) throw new Error('Comment chip not found');
+  await chip.trigger('click');
   await nextTick();
 }
 
@@ -81,6 +96,10 @@ async function selectCategory(wrapper: ReturnType<typeof renderWithProviders>, n
 describe('AddTransactionPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Страница уходит назад через history, а на пустую историю — replace на
+    // дашборд. По умолчанию в jsdom истории нет, поэтому подкладываем её:
+    // тесты проверяют обычный сценарий «пришли с другого экрана».
+    window.history.replaceState({ back: '/' }, '');
   });
 
   afterEach(async () => {
@@ -137,7 +156,10 @@ describe('AddTransactionPage', () => {
 
     it('renders date picker', async () => {
       const wrapper = await renderPage();
-      expect(wrapper.text()).toContain('Дата');
+      // Подписи «Дата» больше нет — дата живёт чипом, на котором сразу видно значение
+      const dateChip = wrapper.find('[aria-label="Выбрать дату"]');
+      expect(dateChip.exists()).toBe(true);
+      expect(dateChip.text()).not.toBe('');
     });
 
     it('shows split expense button in expense mode', async () => {
@@ -347,13 +369,13 @@ describe('AddTransactionPage', () => {
       await setAmount(wrapper, 2000);
       await selectCategory(wrapper, 'Продукты');
 
+      await openComment(wrapper);
       const descInput = wrapper
         .findAll('input')
         .find((i) => i.attributes('placeholder')?.includes('#продукты'));
-      if (descInput) {
-        await descInput.setValue('#продукты #магазин');
-        await nextTick();
-      }
+      if (!descInput) throw new Error('Description input not found');
+      await descInput.setValue('#продукты #магазин');
+      await nextTick();
 
       await flushPromises();
       await wrapper.find('form').trigger('submit');
@@ -1074,6 +1096,67 @@ describe('AddTransactionPage', () => {
       resolveAccounts();
       await flushPromises();
       await flushPromises();
+    });
+  });
+  // =========================================================================
+  // Редизайн: окно рендера панелей и подсказка под кнопкой
+  // =========================================================================
+
+  describe('rendering window', () => {
+    it('рисует только активную панель — соседние слоты пусты до касания карусели', async () => {
+      const wrapper = await renderPage();
+
+      const slots = wrapper.findAll('.snap-start');
+      expect(slots).toHaveLength(6);
+
+      const filled = slots.filter((slot) => slot.element.children.length > 0);
+      expect(filled).toHaveLength(1);
+      expect(wrapper.find('[data-testid="expense-panel"]').exists()).toBe(true);
+    });
+
+    it('поднимает соседей, как только пользователь коснулся карусели', async () => {
+      const wrapper = await renderPage();
+
+      await wrapper.find('.snap-x').trigger('pointerdown');
+      await nextTick();
+
+      const filled = wrapper.findAll('.snap-start').filter((s) => s.element.children.length > 0);
+      expect(filled).toHaveLength(3);
+    });
+
+    it('помечает неактивные панели inert, чтобы таб не уводил в невидимую форму', async () => {
+      const wrapper = await renderPage();
+
+      const slots = wrapper.findAll('.snap-start');
+      const interactive = slots.filter((slot) => !slot.attributes('inert'));
+      expect(interactive).toHaveLength(1);
+      expect(interactive[0].find('[data-testid="expense-panel"]').exists()).toBe(true);
+    });
+  });
+
+  describe('submit hint', () => {
+    it('называет, чего не хватает, вместо молча заблокированной кнопки', async () => {
+      const wrapper = await renderPage();
+
+      expect(wrapper.text()).toContain('Укажите сумму и категорию');
+
+      await setAmount(wrapper, 5000);
+      expect(wrapper.text()).toContain('Укажите категорию');
+
+      await selectCategory(wrapper, 'Продукты');
+      expect(wrapper.text()).not.toContain('Укажите');
+      expect(findSubmitBtn(wrapper).attributes('disabled')).toBeUndefined();
+    });
+  });
+
+  describe('projected balance', () => {
+    it('показывает остаток после операции, а не текущий баланс', async () => {
+      const wrapper = await renderPage();
+
+      expect(wrapper.text()).toContain('Баланс');
+
+      await setAmount(wrapper, 1000);
+      expect(wrapper.text()).toContain('Останется');
     });
   });
 });
