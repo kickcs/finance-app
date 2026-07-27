@@ -273,7 +273,13 @@ onMounted(() => {
       нажатие, и с `aria-live="polite"` скринридер зачитывал бы всю строку на
       каждую цифру.
     -->
+    <!--
+      Место под строку резервируем, только когда баланс вообще известен: на
+      «Долге» счёт в HeroAmount не передаётся, и пустые 20 px там просто не
+      давали панели уместиться в экран.
+    -->
     <div
+      v-if="currentBalance !== undefined"
       class="h-5 text-center"
       role="status"
       :aria-live="balanceLine?.tone === 'warning' ? 'polite' : 'off'"
