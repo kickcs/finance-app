@@ -154,9 +154,11 @@ defineExpose({
           'focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/20',
           variant === 'search' && 'bg-surface-light dark:bg-surface-dark border-transparent',
           // Строка списка уже даёт рамку и фон — своя стала бы вторым контуром
-          // внутри первого.
+          // внутри первого. Тёмные варианты гасим отдельно: `bg-transparent`
+          // конфликтует только с `bg-card-light`, а `dark:bg-card-dark` для
+          // tailwind-merge — другой ключ, и он бы остался.
           variant === 'flush' &&
-            'bg-transparent border-transparent rounded-none focus-within:border-transparent focus-within:ring-0',
+            'bg-transparent dark:bg-transparent border-transparent dark:border-transparent rounded-none focus-within:border-transparent focus-within:ring-0',
           error && 'border-danger focus-within:border-danger focus-within:ring-danger/20',
           disabled && 'opacity-50 pointer-events-none',
           isShaking && 'animate-shake',

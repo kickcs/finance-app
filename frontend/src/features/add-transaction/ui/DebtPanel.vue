@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import { UInput, UButton, UIcon, ToggleRow } from '@/shared/ui';
-import { DEFAULT_CURRENCY } from '@/entities/currency';
+import { DEFAULT_CURRENCY, getCurrencyByCode } from '@/entities/currency';
 import { sanitizeCurrencyInput, formatCurrency } from '@/shared/lib/format/currency';
 import { PersonSelector, usePeople } from '@/entities/person';
 import { AccountPopover } from '@/entities/account';
@@ -154,6 +154,16 @@ const selectedAccount = computed(() =>
 );
 
 /**
+ * Печатаем сумму тем же символом, что и главная сумма выше: `Intl` для UZS
+ * отдаёт код «UZS», и под «98 000 сўм» появлялось «Спишется 98 000 UZS» — две
+ * записи одной валюты на одном экране.
+ */
+function withSymbol(value: number) {
+  const symbol = getCurrencyByCode(formData.value.currency)?.symbol ?? formData.value.currency;
+  return `${formatCurrency(value, formData.value.currency, { showSymbol: false })} ${symbol}`;
+}
+
+/**
  * Итог одной строкой. Блок с иконкой, заливкой и `p-4` занимал два яруса ради
  * факта, который читается фразой; на экране, который целиком не влезал, это
  * была самая дорогая строка из всех.
@@ -167,7 +177,7 @@ const summaryText = computed(() => {
   const amount = isGiven ? totalDebited.value : formData.value.amount;
   const verb = isGiven ? 'Спишется' : 'Добавится';
   const preposition = isGiven ? 'с' : 'на';
-  return `${verb} ${formatCurrency(amount, formData.value.currency)} ${preposition} «${selectedAccount.value?.name ?? ''}»`;
+  return `${verb} ${withSymbol(amount)} ${preposition} «${selectedAccount.value?.name ?? ''}»`;
 });
 </script>
 
@@ -307,9 +317,8 @@ const summaryText = computed(() => {
           v-if="formData.fee > 0"
           class="px-1 text-xs tabular-nums text-text-tertiary-light dark:text-text-tertiary-dark"
         >
-          Со счёта спишется {{ formatCurrency(totalDebited, formData.currency) }} — долг
-          {{ formatCurrency(formData.amount, formData.currency) }} + комиссия
-          {{ formatCurrency(formData.fee, formData.currency) }}
+          Со счёта спишется {{ withSymbol(totalDebited) }} — долг
+          {{ withSymbol(formData.amount) }} + комиссия {{ withSymbol(formData.fee) }}
         </p>
       </div>
 
