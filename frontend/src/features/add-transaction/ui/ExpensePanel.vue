@@ -10,7 +10,6 @@ import type { AccountWithBalances } from '@/entities/account';
 import type { TransactionFormData } from '../model/useTransactionForm';
 import { usePanelState } from '../model/usePanelState';
 import { CategoryPicker } from '@/entities/category';
-import { AccountSelector } from '@/entities/account';
 
 const props = defineProps<{
   formData: TransactionFormData;
@@ -36,8 +35,9 @@ const SplitExpenseDrawer = defineAsyncComponent(
   () => import('@/features/split-expense/ui/SplitExpenseDrawer.vue'),
 );
 
-// Сумма и её валюта живут на плите — панели остаются счёт, категория и разделение.
-const { updateField, handleAccountChange } = usePanelState(props, emit);
+// Сумма, валюта и счёт живут на карточке сверху — панели остаются категория
+// и разделение расхода.
+const { updateField } = usePanelState(props, emit);
 
 const router = useRouter();
 const drawerOpen = ref(false);
@@ -69,12 +69,6 @@ const chipIdle = 'border-border-light dark:border-border-dark hover:border-prima
 
 <template>
   <div class="space-y-3" data-testid="expense-panel">
-    <AccountSelector
-      :accounts="accounts"
-      :selected-id="formData.accountId"
-      @select="handleAccountChange"
-    />
-
     <CategoryPicker
       :categories="categories"
       :selected-id="formData.categoryId"

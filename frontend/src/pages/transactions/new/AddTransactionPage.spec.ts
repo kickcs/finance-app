@@ -76,6 +76,18 @@ async function setAmount(wrapper: ReturnType<typeof renderWithProviders>, value:
   await nextTick();
 }
 
+/**
+ * Helper: переключить тип операции. Триггеры `reka-ui` не реагируют на голый
+ * `click` в jsdom, поэтому в проекте принято эмитить на самом `UTabs`.
+ */
+async function switchTab(wrapper: ReturnType<typeof renderWithProviders>, type: string) {
+  const tabs = wrapper.findComponent({ name: 'UTabs' });
+  if (!tabs.exists()) throw new Error('UTabs not found');
+  tabs.vm.$emit('update:modelValue', type);
+  await nextTick();
+  await flushPromises();
+}
+
 /** Helper: раскрыть поле комментария — оно спрятано за чипом в мета-строке. */
 async function openComment(wrapper: ReturnType<typeof renderWithProviders>) {
   const chip = wrapper.findAll('button').find((b) => b.text().trim() === 'Комментарий');
@@ -909,7 +921,7 @@ describe('AddTransactionPage', () => {
   // Multiple accounts
   // -----------------------------------------------------------------------
   describe('multiple accounts', () => {
-    it('renders all accounts for selection', async () => {
+    it('называет выбранный счёт и даёт переключиться на любой другой', async () => {
       server.use(
         http.get('*/api/accounts', () =>
           HttpResponse.json([mockAccountResponse, mockSecondAccountResponse]),
@@ -917,8 +929,16 @@ describe('AddTransactionPage', () => {
       );
       const wrapper = await renderPage();
 
+      // Отдельного ряда чипов больше нет — счёт выбирается на карточке суммы,
+      // остальные счета лежат в её списке.
       expect(wrapper.text()).toContain('Основной');
-      expect(wrapper.text()).toContain('Накопления');
+      expect(wrapper.find('[data-testid="account-trigger"]').exists()).toBe(true);
+
+      const card = wrapper.findComponent({ name: 'AmountCard' });
+      expect(card.props('accounts').map((a: { name: string }) => a.name)).toEqual([
+        'Основной',
+        'Накопления',
+      ]);
     });
 
     it('selects account via click and updates currency', async () => {
@@ -1102,7 +1122,7 @@ describe('AddTransactionPage', () => {
   // Редизайн «плита»: сегменты типа и подсказка под кнопкой
   // =========================================================================
 
-  describe('сегменты типа на плите', () => {
+  describe('вкладки типа операции', () => {
     it('рисует только панель активного типа', async () => {
       const wrapper = await renderPage();
 
@@ -1112,35 +1132,35 @@ describe('AddTransactionPage', () => {
       expect(wrapper.findComponent({ name: 'DebtPanel' }).exists()).toBe(false);
     });
 
-    it('переключает тип тапом по сегменту', async () => {
+    it('переключает тип тапом по вкладке', async () => {
       const wrapper = await renderPage();
 
-      await wrapper.find('[data-testid="type-income"]').trigger('click');
-      await nextTick();
+      await switchTab(wrapper, 'income');
 
       expect(getFormData(wrapper).type).toBe('income');
       expect(wrapper.find('[data-testid="expense-panel"]').exists()).toBe(false);
       expect(wrapper.findComponent({ name: 'IncomePanel' }).exists()).toBe(true);
     });
 
-    it('помечает активный сегмент для скринридера', async () => {
+    it('помечает активную вкладку для скринридера', async () => {
       const wrapper = await renderPage();
 
-      expect(wrapper.find('[data-testid="type-expense"]').attributes('aria-pressed')).toBe('true');
-      expect(wrapper.find('[data-testid="type-income"]').attributes('aria-pressed')).toBe('false');
+      const tabs = wrapper.findAll('[role="tab"]');
+      const expense = tabs.find((t) => t.text() === 'Расход');
+      const income = tabs.find((t) => t.text() === 'Доход');
+      expect(expense?.attributes('aria-selected')).toBe('true');
+      expect(income?.attributes('aria-selected')).toBe('false');
     });
   });
 
-  // Три способа, которыми плита могла бы навредить остальной форме. Все три
-  // всплыли на ревью редизайна — тестов на них не было.
-  describe('плита не ломает соседние типы', () => {
+  // Три способа, которыми общая карточка суммы могла бы навредить остальной
+  // форме. Все три всплыли на ревью редизайна — тестов на них не было.
+  describe('карточка суммы не ломает соседние типы', () => {
     async function switchType(
       wrapper: ReturnType<typeof renderWithProviders>,
       type: 'expense' | 'income' | 'transfer' | 'debt',
     ) {
-      await wrapper.find(`[data-testid="type-${type}"]`).trigger('click');
-      await flushPromises();
-      await nextTick();
+      await switchTab(wrapper, type);
     }
 
     it('заход на «Долг» не перебивает счёт и валюту начатого расхода', async () => {
@@ -1151,14 +1171,15 @@ describe('AddTransactionPage', () => {
       );
       const wrapper = await renderPage();
 
-      // Уводим расход на второй счёт — не тот, что дефолтный в профиле
-      const secondAccountChip = wrapper
-        .findAll('button')
-        .find((b) => b.text().includes(mockSecondAccountResponse.name));
-      await secondAccountChip?.trigger('click');
+      // Уводим расход на второй счёт — не тот, что дефолтный в профиле.
+      // Счёт выбирается на карточке суммы, её список в поповере.
+      const card = wrapper.findComponent({ name: 'AmountCard' });
+      card.vm.$emit('update:accountId', mockSecondAccountResponse.id);
       await nextTick();
+      await flushPromises();
 
       const before = getFormData(wrapper);
+      expect(before.accountId).toBe(mockSecondAccountResponse.id);
 
       await switchType(wrapper, 'debt');
       await switchType(wrapper, 'expense');

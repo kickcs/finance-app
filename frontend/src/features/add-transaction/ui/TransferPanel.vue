@@ -365,7 +365,7 @@ function handleFeeTypeToggle() {
           <PopoverContent
             align="start"
             :side-offset="4"
-            class="w-[var(--reka-popover-trigger-width)] p-1"
+            class="w-max min-w-[var(--reka-popover-trigger-width)] max-w-[min(20rem,calc(100vw-2rem))] p-1"
           >
             <button
               v-for="account in accounts"
@@ -383,9 +383,9 @@ function handleFeeTypeToggle() {
                 class="w-3 h-3 rounded-full shrink-0"
                 :style="{ backgroundColor: account.color }"
               />
-              <span class="flex-1 text-left">{{ account.name }}</span>
+              <span class="min-w-0 flex-1 truncate text-left">{{ account.name }}</span>
               <span
-                class="text-xs tabular-nums text-text-tertiary-light dark:text-text-tertiary-dark"
+                class="shrink-0 whitespace-nowrap text-xs tabular-nums text-text-tertiary-light dark:text-text-tertiary-dark"
               >
                 {{
                   formatCurrency(
@@ -445,10 +445,12 @@ function handleFeeTypeToggle() {
               </span>
             </button>
           </PopoverTrigger>
+          <!-- Правый триггер: список раскрываем к правому краю, иначе на узком
+               экране он уезжает за границу. -->
           <PopoverContent
-            align="start"
+            align="end"
             :side-offset="4"
-            class="w-[var(--reka-popover-trigger-width)] p-1"
+            class="w-max min-w-[var(--reka-popover-trigger-width)] max-w-[min(20rem,calc(100vw-2rem))] p-1"
           >
             <button
               v-for="account in availableTargetAccounts"
@@ -466,10 +468,10 @@ function handleFeeTypeToggle() {
                 class="w-3 h-3 rounded-full shrink-0"
                 :style="{ backgroundColor: account.color }"
               />
-              <span class="flex-1 text-left">{{ account.name }}</span>
+              <span class="min-w-0 flex-1 truncate text-left">{{ account.name }}</span>
               <span
                 v-if="account.id === formData.accountId"
-                class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
+                class="shrink-0 whitespace-nowrap text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
               >
                 конвертация
               </span>
@@ -482,7 +484,7 @@ function handleFeeTypeToggle() {
       <Transition name="fee">
         <div
           v-if="showConversion"
-          class="mt-3 px-3 py-2.5 rounded-xl bg-surface-light/50 dark:bg-surface-dark/50 border border-border-light dark:border-border-dark"
+          class="mt-3 px-3 py-2.5 rounded-xl border border-border-light dark:border-border-dark"
         >
           <div class="flex items-center gap-2">
             <UIcon
@@ -516,7 +518,7 @@ function handleFeeTypeToggle() {
       <Transition name="fee">
         <div
           v-if="targetAccount"
-          class="mt-3 flex items-center gap-2 px-3 py-2.5 rounded-xl bg-surface-light/50 dark:bg-surface-dark/50 border border-border-light dark:border-border-dark"
+          class="mt-3 flex items-center gap-2 px-3 py-2.5 rounded-xl border border-border-light dark:border-border-dark"
         >
           <UIcon
             name="receipt_long"

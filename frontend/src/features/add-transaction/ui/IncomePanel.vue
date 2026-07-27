@@ -5,7 +5,6 @@ import type { Transaction } from '@/shared/api/database.types';
 import type { TransactionFormData } from '../model/useTransactionForm';
 import { usePanelState } from '../model/usePanelState';
 import { CategoryPicker } from '@/entities/category';
-import { AccountSelector } from '@/entities/account';
 
 const props = defineProps<{
   formData: TransactionFormData;
@@ -19,17 +18,11 @@ const emit = defineEmits<{
 }>();
 
 // Сумма, её валюта и частые суммы живут на плите — панели остаются счёт и категория.
-const { updateField, handleAccountChange } = usePanelState(props, emit);
+const { updateField } = usePanelState(props, emit);
 </script>
 
 <template>
   <div class="space-y-3">
-    <AccountSelector
-      :accounts="accounts"
-      :selected-id="formData.accountId"
-      @select="handleAccountChange"
-    />
-
     <CategoryPicker
       :categories="categories"
       :selected-id="formData.categoryId"

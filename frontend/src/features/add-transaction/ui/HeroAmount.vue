@@ -1,14 +1,10 @@
 <script setup lang="ts">
-import { ref, watch, onMounted, nextTick, computed, useId } from 'vue';
-import { useEventListener, useTimeoutFn } from '@vueuse/core';
+import { ref, computed, useId } from 'vue';
 import { UIcon } from '@/shared/ui';
 import { getCurrencyByCode } from '@/entities/currency';
-import {
-  formatNumberWithSpaces,
-  formatCurrency,
-  sanitizeCurrencyInput,
-} from '@/shared/lib/format/currency';
+import { formatCurrency } from '@/shared/lib/format/currency';
 import { Popover, PopoverTrigger, PopoverContent } from '@/shared/ui/primitives/popover';
+import { useAmountInput } from '../model/useAmountInput';
 
 /**
  * Сумма в ряду с другими полями: вторая сумма перевода, подтверждение импорта.
@@ -32,36 +28,19 @@ const emit = defineEmits<{
 }>();
 
 const inputId = useId();
-const hiddenInputRef = ref<HTMLInputElement | null>(null);
 const currencyOpen = ref(false);
-const amountBounce = ref(false);
-const isFocused = ref(false);
-const rawValue = ref(props.amount ? String(props.amount) : '');
 
-watch(
-  () => props.amount,
-  (newAmount) => {
-    // Числового сравнения достаточно, чтобы не переписывать набираемое: пока
-    // печатают, `props.amount` — эхо нашего же emit, и значения совпадают.
-    // Отдельного бэйла по фокусу быть не должно — иначе внешняя установка суммы
-    // не доезжает до поля: в Safari тап по кнопке не снимает фокус с input.
-    const currentParsed = parseFloat(rawValue.value) || 0;
-    if (currentParsed !== newAmount) {
-      rawValue.value = newAmount ? String(newAmount) : '';
-    }
-  },
-);
-
-useEventListener(hiddenInputRef, 'focus', () => (isFocused.value = true));
-useEventListener(hiddenInputRef, 'blur', () => (isFocused.value = false));
-
-const displayAmount = computed(() => {
-  if (!rawValue.value) return '0';
-  const dotIndex = rawValue.value.indexOf('.');
-  if (dotIndex === -1) return formatNumberWithSpaces(rawValue.value) || '0';
-  const intPart = rawValue.value.slice(0, dotIndex);
-  const decPart = rawValue.value.slice(dotIndex); // includes the dot
-  return (formatNumberWithSpaces(intPart || '0') || '0') + decPart;
+const {
+  inputRef: hiddenInputRef,
+  rawValue,
+  displayAmount,
+  isFocused,
+  isBouncing: amountBounce,
+  onInput,
+} = useAmountInput({
+  amount: () => props.amount,
+  autofocus: () => props.autofocus,
+  onChange: (value) => emit('update:amount', value),
 });
 
 /**
@@ -86,33 +65,10 @@ const balanceLine = computed(() => {
   return { tone: 'muted' as const, text: `Баланс ${withSymbol(props.currentBalance)}` };
 });
 
-const { start: startBounce } = useTimeoutFn(() => (amountBounce.value = false), 160, {
-  immediate: false,
-});
-
-function onInput(event: Event) {
-  const sanitized = sanitizeCurrencyInput((event.target as HTMLInputElement).value);
-  rawValue.value = sanitized;
-  const num = parseFloat(sanitized) || 0;
-  if (!props.amount && num > 0) {
-    amountBounce.value = true;
-    startBounce();
-  }
-  emit('update:amount', num);
-}
-
 function selectCurrency(cur: string) {
   emit('update:currency', cur);
   currencyOpen.value = false;
 }
-
-onMounted(() => {
-  if (props.autofocus) {
-    nextTick(() => {
-      hiddenInputRef.value?.focus();
-    });
-  }
-});
 </script>
 
 <template>

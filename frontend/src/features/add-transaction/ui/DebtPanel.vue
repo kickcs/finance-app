@@ -194,7 +194,7 @@ const infoText = computed(() => {
         Комиссия за перевод (необязательно)
       </label>
       <div
-        class="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark"
+        class="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-border-light dark:border-border-dark"
       >
         <UIcon
           name="receipt_long"

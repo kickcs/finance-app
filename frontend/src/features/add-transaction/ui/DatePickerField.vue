@@ -47,7 +47,7 @@ function handleChange(value: DateValue | undefined) {
       <PopoverTrigger as-child>
         <button
           type="button"
-          class="flex-1 flex items-center justify-between gap-2 px-4 py-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:border-primary/50 transition-all"
+          class="flex-1 flex items-center justify-between gap-2 px-4 py-3 rounded-xl border border-border-light dark:border-border-dark hover:border-primary/50 transition-all"
           :class="
             modelValue
               ? 'text-text-primary-light dark:text-text-primary-dark'

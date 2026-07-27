@@ -178,35 +178,32 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <!-- Плита едет до самых краёв, поэтому страница не даёт горизонтальных
-       отступов: их держат плита и карточка контента. -->
-  <main class="h-full overflow-y-auto">
-    <div
-      class="flex min-h-full flex-col md:mx-auto md:max-w-xl md:overflow-hidden md:rounded-3xl md:shadow-sm"
-    >
-      <!--
-        Кнопка «назад» живёт на плите, а плиту рисует только форма. Пока формы
-        нет, экран остался бы без единственного выхода: нижняя навигация на
-        этом маршруте скрыта, а в standalone-PWA нет и кнопки браузера. Поэтому
-        у обоих доформенных состояний своя шапка.
-      -->
-      <template v-if="accountsLoading && accounts.length === 0">
-        <AppHeader title="Новая транзакция" show-back @back="goBack" />
+  <div class="flex h-full min-w-0 flex-col">
+    <!-- Шапка одна на все состояния: она же единственный выход с экрана —
+         нижняя навигация на этом маршруте скрыта, а в standalone-PWA нет и
+         кнопки браузера. -->
+    <AppHeader title="Новая транзакция" show-back blur @back="goBack" />
+
+    <main class="flex-1 overflow-y-auto">
+      <div class="flex min-h-full flex-col md:mx-auto md:max-w-xl">
         <!-- Пока счета грузятся, форма без счёта выглядит сломанной: пустой
              селектор и заблокированная кнопка. Показываем каркас. -->
-        <div aria-busy="true">
-          <Skeleton class="h-40 w-full rounded-b-[2rem]" />
-          <div class="-mt-5 space-y-3 rounded-t-3xl bg-card-light px-4 pt-5 dark:bg-card-dark">
-            <Skeleton class="mx-auto h-8 w-56 rounded-full" />
-            <Skeleton class="h-16 w-full rounded-xl" />
-            <Skeleton class="h-24 w-full rounded-xl" />
-          </div>
+        <div
+          v-if="accountsLoading && accounts.length === 0"
+          class="space-y-3 px-4 pt-1"
+          aria-busy="true"
+        >
+          <Skeleton class="h-28 w-full rounded-2xl" />
+          <Skeleton class="h-9 w-full rounded-lg" />
+          <Skeleton class="h-16 w-full rounded-xl" />
+          <Skeleton class="h-24 w-full rounded-xl" />
         </div>
-      </template>
 
-      <template v-else-if="accounts.length === 0">
-        <AppHeader title="Новая транзакция" show-back @back="goBack" />
-        <div data-testid="no-accounts-state" class="px-4 py-8 text-center">
+        <div
+          v-else-if="accounts.length === 0"
+          data-testid="no-accounts-state"
+          class="px-4 py-8 text-center"
+        >
           <UIcon
             name="account_balance_wallet"
             size="lg"
@@ -223,34 +220,33 @@ async function handleSubmit() {
             Создать счёт
           </UButton>
         </div>
-      </template>
 
-      <TransactionForm
-        v-else
-        v-model:form-data="formData"
-        data-testid="transaction-form"
-        :accounts="accounts"
-        :expense-categories="expenseCategories"
-        :income-categories="incomeCategories"
-        :user-currency="userCurrency"
-        :default-account-id="defaultAccountId"
-        :is-submitting="isSubmitting"
-        :is-valid="isValid"
-        :error="validationError"
-        :split-data="splitData"
-        :split-validation-error="splitValidationError"
-        autofocus-amount
-        @submit="handleSubmit"
-        @back="goBack"
-        @debt-submitted="goBack"
-        @add-participant="addParticipant"
-        @remove-participant="removeParticipant"
-        @update-participant-amount="updateParticipantAmount"
-        @set-split-method="setSplitMethod"
-        @set-my-share="setMyShare"
-        @set-is-included="setIsIncluded"
-        @set-split-enabled="setSplitEnabled"
-      />
-    </div>
-  </main>
+        <TransactionForm
+          v-else
+          v-model:form-data="formData"
+          data-testid="transaction-form"
+          :accounts="accounts"
+          :expense-categories="expenseCategories"
+          :income-categories="incomeCategories"
+          :user-currency="userCurrency"
+          :default-account-id="defaultAccountId"
+          :is-submitting="isSubmitting"
+          :is-valid="isValid"
+          :error="validationError"
+          :split-data="splitData"
+          :split-validation-error="splitValidationError"
+          autofocus-amount
+          @submit="handleSubmit"
+          @debt-submitted="goBack"
+          @add-participant="addParticipant"
+          @remove-participant="removeParticipant"
+          @update-participant-amount="updateParticipantAmount"
+          @set-split-method="setSplitMethod"
+          @set-my-share="setMyShare"
+          @set-is-included="setIsIncluded"
+          @set-split-enabled="setSplitEnabled"
+        />
+      </div>
+    </main>
+  </div>
 </template>

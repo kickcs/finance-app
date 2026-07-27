@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useTimeoutFn } from '@vueuse/core';
-import { UButton } from '@/shared/ui';
+import { UButton, UTabs } from '@/shared/ui';
+import { formatNumberWithSpaces } from '@/shared/lib/format/currency';
 import { CATEGORY_IDS } from '@/entities/category';
 import type { Category } from '@/entities/category';
 import type { AccountWithBalances } from '@/entities/account';
@@ -15,7 +16,7 @@ import { useSmartDefaults } from '../model/useSmartDefaults';
 import { useAmountSuggestions } from '../model/useAmountSuggestions';
 import { usePanelState } from '../model/usePanelState';
 import { useHaptics } from '@/shared/lib/haptics';
-import AmountSlab from './AmountSlab.vue';
+import AmountCard from './AmountCard.vue';
 import ExpensePanel from './ExpensePanel.vue';
 import IncomePanel from './IncomePanel.vue';
 import TransferPanel from './TransferPanel.vue';
@@ -40,7 +41,6 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:formData': [value: TransactionFormData];
   submit: [];
-  back: [];
   'debt-submitted': [];
   addParticipant: [name: string, fromContacts: boolean, personColor?: string];
   removeParticipant: [id: string];
@@ -62,21 +62,30 @@ function applyTypeChange(newType: TransactionType) {
   });
 }
 
-// Плите нужны символ валюты и баланс выбранного счёта — то же состояние,
+// Карточке суммы нужны счёт, символ валюты и баланс — то же состояние,
 // которым живут панели.
 const {
+  selectedAccount,
   availableCurrencies,
   isMultiCurrency,
   currencySymbol,
   currentBalance,
   hasSufficientFunds,
   updateField,
+  handleAccountChange,
 } = usePanelState(props, (_e, value) => emit('update:formData', value));
 
+const TYPE_TABS = [
+  { id: 'expense', label: 'Расход' },
+  { id: 'income', label: 'Доход' },
+  { id: 'transfer', label: 'Перевод' },
+  { id: 'debt', label: 'Долг' },
+];
+
 /**
- * Направление движения денег по счёту на плите. Перевод тоже списывает —
- * поэтому на нём видно остаток и долю, а не просто текущий баланс. У долга
- * счёт выбирается внутри панели, там показывать нечего.
+ * Направление движения денег по счёту. Перевод тоже списывает — поэтому на нём
+ * виден прогноз остатка, а не просто текущий баланс. У долга счёт выбирается
+ * ниже в панели, там показывать нечего.
  */
 const amountSign = computed<'minus' | 'plus' | null>(() => {
   if (props.formData.type === 'income') return 'plus';
@@ -89,8 +98,17 @@ const showInsufficientFunds = computed(
   () => amountSign.value === 'minus' && !hasSufficientFunds.value,
 );
 
-/** На долге счёт выбирается внутри панели, поэтому баланса на плите ещё нет. */
-const slabBalance = computed(() =>
+/**
+ * Заголовок-переключатель счёта на карточке нужен только там, где счёт больше
+ * нигде не выбирается. У перевода его задаёт строка «Откуда → Куда», у долга —
+ * своё поле; там заголовок был бы третьим повторением одного и того же.
+ */
+const showAccountOnCard = computed(
+  () => props.formData.type === 'expense' || props.formData.type === 'income',
+);
+
+/** На долге счёт выбирается ниже в панели, поэтому прогноза на карточке нет. */
+const cardBalance = computed(() =>
   props.formData.type === 'debt' || !props.formData.accountId ? undefined : currentBalance.value,
 );
 
@@ -101,11 +119,30 @@ const submitLabel = computed(() => {
 });
 
 /**
+ * Категория выбрана, только если она есть в списке текущего типа. Голая
+ * проверка «строка непустая» пропускала id из query-параметра быстрой кнопки,
+ * из чужого типа или удалённой категории: чипы не подсвечены, а кнопка активна.
+ */
+const hasResolvedCategory = computed(
+  () =>
+    Boolean(props.formData.categoryId) &&
+    availableCategories.value.some((c) => c.id === props.formData.categoryId),
+);
+
+const needsCategory = computed(
+  () => props.formData.type === 'expense' || props.formData.type === 'income',
+);
+
+const canSubmit = computed(
+  () => Boolean(props.isValid) && (!needsCategory.value || hasResolvedCategory.value),
+);
+
+/**
  * Заблокированная кнопка без объяснения — тупик: пользователь тапает и не
  * понимает, чего не хватает. Называем недостающее прямо над ней.
  */
 const submitHint = computed(() => {
-  if (props.isValid || props.isSubmitting) return null;
+  if (canSubmit.value || props.isSubmitting) return null;
 
   const missing: string[] = [];
   if (!props.formData.accountId) missing.push('счёт');
@@ -118,7 +155,7 @@ const submitHint = computed(() => {
     else if (props.formData.amount > 0 && !props.formData.toAmount) {
       missing.push('сумму зачисления');
     }
-  } else if (!props.formData.categoryId) {
+  } else if (needsCategory.value && !hasResolvedCategory.value) {
     missing.push('категорию');
   }
 
@@ -202,6 +239,11 @@ const { start: showSplitHintDelayed, stop: stopSplitHint } = useTimeoutFn(
 // Apply smart defaults once per type when data becomes available
 const smartDefaultsAppliedForType = ref<string | null>(null);
 
+/** Категории, доступные текущему типу, — из них и только из них можно выбирать. */
+const availableCategories = computed(() =>
+  props.formData.type === 'income' ? props.incomeCategories : props.expenseCategories,
+);
+
 watch(
   defaults,
   (val) => {
@@ -209,9 +251,18 @@ watch(
     if (smartDefaultsAppliedForType.value === props.formData.type) return;
     if (!val.defaultCategoryId && !val.defaultAccountId) return;
 
-    if (!props.formData.categoryId && val.defaultCategoryId) {
+    // Подсказка приходит из недавних транзакций и может указывать на категорию,
+    // которой в списке текущего типа нет (перевод, удалённая, чужого типа).
+    // Тогда ни один чип не подсвечен, а форма считает себя заполненной — и
+    // расход уходит с категорией, которую пользователь не выбирал.
+    const suggestedCategory =
+      val.defaultCategoryId && availableCategories.value.some((c) => c.id === val.defaultCategoryId)
+        ? val.defaultCategoryId
+        : '';
+
+    if (!props.formData.categoryId && suggestedCategory) {
       const updates: Partial<TransactionFormData> = {
-        categoryId: val.defaultCategoryId,
+        categoryId: suggestedCategory,
       };
       if (!props.formData.accountId && val.defaultAccountId) {
         updates.accountId = val.defaultAccountId;
@@ -282,29 +333,51 @@ const expensePanelHandlers = {
     :class="isSubmitting && 'pointer-events-none opacity-60'"
     @submit.prevent="emit('submit')"
   >
-    <AmountSlab
-      :amount="formData.amount"
-      :currency="formData.currency"
-      :currency-symbol="currencySymbol"
-      :available-currencies="availableCurrencies"
-      :is-multi-currency="isMultiCurrency"
-      :type="formData.type"
-      :sign="amountSign"
-      :current-balance="slabBalance"
-      :show-insufficient-funds="showInsufficientFunds"
-      :suggestions="suggestions"
-      :autofocus="autofocusAmount"
-      @update:amount="updateField('amount', $event)"
-      @update:currency="updateField('currency', $event)"
-      @update:type="applyTypeChange"
-      @back="emit('back')"
-    />
+    <div class="flex flex-1 flex-col gap-3 px-4 pt-1">
+      <AmountCard
+        :amount="formData.amount"
+        :currency="formData.currency"
+        :currency-symbol="currencySymbol"
+        :available-currencies="availableCurrencies"
+        :is-multi-currency="isMultiCurrency"
+        :accounts="accounts"
+        :account-id="formData.accountId"
+        :account-name="showAccountOnCard ? selectedAccount?.name : undefined"
+        :account-color="selectedAccount?.color"
+        :sign="amountSign"
+        :current-balance="cardBalance"
+        :show-insufficient-funds="showInsufficientFunds"
+        :autofocus="autofocusAmount"
+        @update:amount="updateField('amount', $event)"
+        @update:currency="updateField('currency', $event)"
+        @update:account-id="handleAccountChange"
+      />
 
-    <!-- Карточка наезжает на плиту: перекрытие даёт глубину, ради которой
-         плита и появилась. -->
-    <div
-      class="content-card relative -mt-5 flex flex-1 flex-col gap-3 rounded-t-3xl bg-card-light px-4 pt-5 dark:bg-card-dark"
-    >
+      <UTabs
+        :model-value="formData.type"
+        :items="TYPE_TABS"
+        size="sm"
+        @update:model-value="(v: string) => applyTypeChange(v as TransactionType)"
+      />
+
+      <!-- Частые суммы: привычная трата записывается в два нажатия -->
+      <div v-if="suggestions.length" class="no-scrollbar flex gap-1.5 overflow-x-auto">
+        <button
+          v-for="value in suggestions"
+          :key="value"
+          type="button"
+          class="suggestion-chip shrink-0 rounded-full border px-3 py-1.5 text-sm font-medium tabular-nums"
+          :class="
+            value === formData.amount
+              ? 'border-primary/40 bg-primary/10 text-primary'
+              : 'border-border-light text-text-secondary-light hover:text-text-primary-light dark:border-border-dark dark:text-text-secondary-dark dark:hover:text-text-primary-dark'
+          "
+          @mousedown.prevent
+          @click="updateField('amount', value)"
+        >
+          {{ formatNumberWithSpaces(String(value)) }}
+        </button>
+      </div>
       <FeatureHintPopover
         v-if="formData.type === 'expense' && splitHintConfig"
         :config="splitHintConfig"
@@ -371,7 +444,7 @@ const expensePanelHandlers = {
            сабмита приходилось доскроллить. -->
       <div
         v-if="formData.type !== 'debt'"
-        class="submit-bar sticky bottom-0 mt-auto -mx-4 px-4 pt-3 [--bar-bg:var(--color-card-light)] dark:[--bar-bg:var(--color-card-dark)]"
+        class="submit-bar sticky bottom-0 mt-auto -mx-4 px-4 pt-3 [--bar-bg:var(--color-background-light)] dark:[--bar-bg:var(--color-background-dark)]"
       >
         <p
           v-if="error"
@@ -395,7 +468,7 @@ const expensePanelHandlers = {
           full-width
           data-testid="submit-btn"
           :loading="isSubmitting"
-          :disabled="!isValid"
+          :disabled="!canSubmit"
         >
           {{ submitLabel }}
         </UButton>
@@ -406,26 +479,31 @@ const expensePanelHandlers = {
 
 <style scoped>
 /*
- * Тень направлена вверх, в тон акценту: она и рисует стык карточки с плитой.
- * `color-mix` вместо сырого rgba — primary настраивается пользователем.
- */
-.content-card {
-  box-shadow: 0 -8px 24px -12px color-mix(in srgb, var(--color-primary) 35%, transparent);
-}
-
-/*
- * Подложка кнопки повторяет карточку. Цвет приходит переменной `--bar-bg`: её
- * ставит Tailwind-вариант `dark:` прямо на элементе — через `:global(html.dark)`
- * не выйдет, тема здесь навешивается классом на `html`, а не на конкретный узел.
- * Верх полупрозрачный, чтобы содержимое уезжало под панель, а не обрывалось.
+ * Подложка кнопки повторяет фон страницы. Цвет приходит переменной `--bar-bg`:
+ * её ставит Tailwind-вариант `dark:` прямо на элементе — через
+ * `:global(html.dark)` не выйдет, тема навешивается классом на `html`, а не на
+ * конкретный узел. Верх полупрозрачный, чтобы содержимое уезжало под панель,
+ * а не обрывалось.
  */
 .submit-bar {
   background: linear-gradient(to bottom, transparent 0, var(--bar-bg) 0.75rem, var(--bar-bg));
   padding-bottom: max(var(--safe-area-inset-bottom), 0.75rem);
 }
 
+.suggestion-chip {
+  transition:
+    color 200ms ease,
+    background-color 200ms ease,
+    border-color 200ms ease,
+    transform 200ms ease;
+}
+.suggestion-chip:active {
+  transform: scale(0.95);
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .form-root {
+  .form-root,
+  .suggestion-chip {
     transition: none;
   }
 }
