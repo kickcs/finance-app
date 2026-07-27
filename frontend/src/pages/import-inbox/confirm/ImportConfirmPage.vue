@@ -887,6 +887,7 @@ function toScanReceipt() {
       :total-amount="formData.amount"
       :currency="formData.currency"
       :people="people"
+      :debts="debts"
       @apply="applyDebtAssign"
       @save-person="createPerson({ name: $event })"
     />

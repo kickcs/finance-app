@@ -10,7 +10,8 @@ import {
 } from 'vaul-vue';
 import { UIcon, UButton, UProgressBar, InitialAvatar } from '@/shared/ui';
 import { formatCurrency, formatNumberWithSpaces } from '@/shared/lib/format/currency';
-import { PersonSelector, usePeople } from '@/entities/person';
+import { PersonPicker, usePeople } from '@/entities/person';
+import { useDebts } from '@/entities/debt';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useIsDesktop } from '@/shared/lib/composables/useIsDesktop';
 import { useDrawerKeyboard } from '@/shared/lib/composables';
@@ -39,8 +40,8 @@ const isDesktop = useIsDesktop();
 
 const { userId } = useCurrentUser();
 const { people, createPerson } = usePeople(userId);
-
-const newParticipantName = ref('');
+// Порядок людей задаёт частота долгов; запрос уже прогрет дашбордом.
+const { debts } = useDebts(userId);
 
 const drawerContentRef = ref<InstanceType<typeof DrawerContent> | null>(null);
 const footerRef = ref<HTMLDivElement | null>(null);
@@ -52,14 +53,7 @@ const { setupKeyboardListener, cleanupKeyboardListener } = useDrawerKeyboard(
   scrollContainerRef,
 );
 
-const availablePeople = computed(() => {
-  const addedNames = new Set(props.splitData.participants.map((p) => p.personName.toLowerCase()));
-  return people.value.filter((p) => !addedNames.has(p.name.toLowerCase()));
-});
-
-const quickContacts = computed(() => {
-  return availablePeople.value.slice(0, 8);
-});
+const participantNames = computed(() => props.splitData.participants.map((p) => p.personName));
 
 const totalToReturn = computed(() => {
   return props.splitData.participants.reduce((sum, p) => sum + p.amount, 0);
@@ -110,18 +104,25 @@ function findPerson(name: string) {
   return people.value.find((p) => p.name.toLowerCase() === name.toLowerCase());
 }
 
-function handleAddParticipant(name?: string) {
-  const participantName = (typeof name === 'string' ? name : newParticipantName.value).trim();
-  if (participantName) {
-    const matched = findPerson(participantName);
-    emit('addParticipant', participantName, !!matched, matched?.color);
-    newParticipantName.value = '';
-  }
-}
+/**
+ * Тап по чипу переключает участие. Раньше добавленный человек просто пропадал
+ * из списка доступных, и снять его можно было только крестиком в строке ниже —
+ * два разных места для одного действия.
+ */
+function toggleParticipant(name: string) {
+  const trimmed = name.trim();
+  if (!trimmed) return;
 
-function handleQuickAdd(person: { name: string; color: string }) {
-  const matched = findPerson(person.name);
-  emit('addParticipant', person.name, true, matched?.color || person.color);
+  const existing = props.splitData.participants.find(
+    (p) => p.personName.toLowerCase() === trimmed.toLowerCase(),
+  );
+  if (existing) {
+    emit('removeParticipant', existing.id);
+    return;
+  }
+
+  const matched = findPerson(trimmed);
+  emit('addParticipant', trimmed, !!matched, matched?.color);
 }
 
 function handleAmountTap(participantId: string) {
@@ -206,31 +207,18 @@ watch(
           class="flex-1 overflow-y-auto px-5 pb-5 space-y-4 overscroll-contain"
           data-vaul-no-drag
         >
-          <!-- Person search -->
-          <PersonSelector
-            v-model="newParticipantName"
-            :people="availablePeople"
-            :auto-save="false"
-            placeholder="Добавить участника..."
-            @select="handleAddParticipant"
-            @save-person="(name: string) => createPerson({ name })"
+          <!-- Люди — чипами по частоте: выбранные подсвечены, повторный тап
+               снимает. Отдельный инпут и отдельный ряд «быстрых контактов»
+               делали одно и то же в двух местах. -->
+          <PersonPicker
+            multiple
+            :people="people"
+            :debts="debts"
+            :selected="participantNames"
+            label="Кто участвует"
+            @select="toggleParticipant"
+            @create="(name: string) => createPerson({ name })"
           />
-
-          <!-- Quick contact chips -->
-          <Transition v-bind="sectionFade">
-            <div v-if="quickContacts.length > 0" class="flex gap-1.5 overflow-x-auto no-scrollbar">
-              <button
-                v-for="person in quickContacts"
-                :key="person.id"
-                type="button"
-                class="flex items-center gap-1 px-2.5 py-1 rounded-full border border-dashed border-border-light dark:border-border-dark hover:border-primary hover:bg-primary-light text-text-tertiary-light dark:text-text-tertiary-dark hover:text-primary transition-all duration-150 shrink-0 active:scale-95"
-                @click="handleQuickAdd(person)"
-              >
-                <UIcon name="add" size="xs" />
-                <span class="text-xs whitespace-nowrap">{{ person.name }}</span>
-              </button>
-            </div>
-          </Transition>
 
           <!-- Participants list -->
           <Transition v-bind="sectionFade">

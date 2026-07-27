@@ -12,7 +12,7 @@ import { UButton, UIcon } from '@/shared/ui';
 import { useIsDesktop } from '@/shared/lib/composables/useIsDesktop';
 import { useDrawerKeyboard } from '@/shared/lib/composables/useDrawerKeyboard';
 import { formatCurrency, sanitizeCurrencyInput } from '@/shared/lib/format/currency';
-import { PersonSelector, type Person } from '@/entities/person';
+import { PersonSelector, type Person, type DebtUsage } from '@/entities/person';
 import {
   debtNetAmount,
   validateDebtAssign,
@@ -27,6 +27,8 @@ const props = defineProps<{
   totalAmount: number;
   currency: string;
   people: Person[];
+  /** Долги — сигнал частоты для порядка имён в списке. */
+  debts?: DebtUsage[];
 }>();
 
 const emit = defineEmits<{
@@ -162,6 +164,7 @@ watch(
           <PersonSelector
             :model-value="draft.personName"
             :people="people"
+            :debts="debts"
             :placeholder="namePlaceholder"
             :auto-save="true"
             @update:model-value="updatePersonName"

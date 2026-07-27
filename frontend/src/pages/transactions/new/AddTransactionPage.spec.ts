@@ -1195,18 +1195,18 @@ describe('AddTransactionPage', () => {
     it('сохраняет заполненный долг при переключении типа и обратно', async () => {
       const wrapper = await renderPage({ type: 'debt' });
 
-      // Ищем по строке списка, а не по placeholder: подпись поля уехала внутрь
-      // него и теперь зависит от направления долга («Кому дали» / «У кого взяли»).
-      const personInput = () => wrapper.find('[data-testid="debt-row-person"] input');
+      // Спрашиваем сам пикер, а не разметку: набор чипов зависит от списка
+      // контактов, а проверяем мы кэш формы долга, а не его содержимое.
+      const picker = () => wrapper.findComponent({ name: 'PersonPicker' });
 
-      expect(personInput().exists()).toBe(true);
-      await personInput().setValue('Азиз');
+      expect(picker().exists()).toBe(true);
+      picker().vm.$emit('select', 'Азиз');
       await nextTick();
 
       await switchType(wrapper, 'expense');
       await switchType(wrapper, 'debt');
 
-      expect((personInput().element as HTMLInputElement).value).toBe('Азиз');
+      expect(picker().props('selected')).toBe('Азиз');
     });
 
     it('оставляет выход с экрана, когда счетов нет', async () => {

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { UIcon, UInput, InitialAvatar } from '@/shared/ui';
+import { rankPeopleByUsage, type DebtUsage } from '../lib/rankPeopleByUsage';
 import type { Person } from '../model/types';
 
 const props = withDefaults(
@@ -17,6 +18,8 @@ const props = withDefaults(
      * при генерации рантайм-пропов.
      */
     variant?: 'default' | 'search' | 'currency' | 'flush';
+    /** Долги — сигнал частоты. Без них порядок остаётся алфавитным. */
+    debts?: DebtUsage[];
   }>(),
   {
     placeholder: 'Имя человека',
@@ -35,9 +38,15 @@ const isFocused = ref(false);
 const inputRef = ref<InstanceType<typeof UInput> | null>(null);
 let blurTimeout: ReturnType<typeof setTimeout> | null = null;
 
-const sortedPeople = computed(() => {
-  return [...props.people].sort((a, b) => a.name.localeCompare(b.name, 'ru'));
-});
+/**
+ * Порядок — от часто используемых к редким, когда есть по чему судить: алфавит
+ * прятал постоянный контакт под последней буквой.
+ */
+const sortedPeople = computed(() =>
+  props.debts
+    ? rankPeopleByUsage(props.people, props.debts)
+    : [...props.people].sort((a, b) => a.name.localeCompare(b.name, 'ru')),
+);
 
 const filteredPeople = computed(() => {
   const query = props.modelValue.trim().toLowerCase();
