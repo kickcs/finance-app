@@ -1103,7 +1103,7 @@ describe('AddTransactionPage', () => {
   // =========================================================================
 
   describe('rendering window', () => {
-    it('рисует только активную панель — соседние слоты пусты до касания карусели', async () => {
+    it('на первой отрисовке заполнен только слот активной панели', async () => {
       const wrapper = await renderPage();
 
       const slots = wrapper.findAll('.snap-start');
@@ -1114,14 +1114,27 @@ describe('AddTransactionPage', () => {
       expect(wrapper.find('[data-testid="expense-panel"]').exists()).toBe(true);
     });
 
-    it('поднимает соседей, как только пользователь коснулся карусели', async () => {
-      const wrapper = await renderPage();
+    it('поднимает остальные панели в простое — до того, как пользователь дотянется до свайпа', async () => {
+      vi.useFakeTimers();
+      try {
+        const wrapper = await renderPage();
 
-      await wrapper.find('.snap-x').trigger('pointerdown');
-      await nextTick();
+        expect(
+          wrapper.findAll('.snap-start').filter((s) => s.element.children.length > 0),
+        ).toHaveLength(1);
 
-      const filled = wrapper.findAll('.snap-start').filter((s) => s.element.children.length > 0);
-      expect(filled).toHaveLength(3);
+        // Фолбэк-таймер: requestIdleCallback в jsdom нет
+        await vi.advanceTimersByTimeAsync(900);
+        await nextTick();
+
+        // Все шесть слотов: свайп и цикличный переход должны находить панель
+        // уже отрисованной, иначе под пальцем оказывается пустой экран
+        expect(
+          wrapper.findAll('.snap-start').filter((s) => s.element.children.length > 0),
+        ).toHaveLength(6);
+      } finally {
+        vi.useRealTimers();
+      }
     });
 
     it('помечает неактивные панели inert, чтобы таб не уводил в невидимую форму', async () => {
