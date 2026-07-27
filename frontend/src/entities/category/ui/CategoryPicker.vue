@@ -76,7 +76,7 @@ function getChipStyle(category: Category) {
         type="button"
         role="radio"
         :aria-checked="category.id === selectedId"
-        class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm border transition-colors duration-200 active:scale-95 whitespace-nowrap"
+        class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm border category-chip transition-[color,background-color,border-color,transform] duration-200 active:scale-95 whitespace-nowrap"
         :class="
           category.id !== selectedId
             ? 'border-border-light dark:border-border-dark text-text-secondary-light dark:text-text-secondary-dark hover:text-text-primary-light dark:hover:text-text-primary-dark'
@@ -93,7 +93,7 @@ function getChipStyle(category: Category) {
         v-if="showAllButton"
         type="button"
         aria-label="Все категории"
-        class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm border border-dashed border-border-light dark:border-border-dark text-text-tertiary-light dark:text-text-tertiary-dark hover:text-text-secondary-light dark:hover:text-text-secondary-dark active:scale-95 transition-colors duration-200 whitespace-nowrap"
+        class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm border border-dashed border-border-light dark:border-border-dark text-text-tertiary-light dark:text-text-tertiary-dark hover:text-text-secondary-light dark:hover:text-text-secondary-dark active:scale-95 category-chip transition-[color,background-color,border-color,transform] duration-200 whitespace-nowrap"
         @click="sheetOpen = true"
       >
         <UIcon name="apps" size="sm" />
@@ -109,3 +109,11 @@ function getChipStyle(category: Category) {
     />
   </div>
 </template>
+
+<style scoped>
+@media (prefers-reduced-motion: reduce) {
+  .category-chip {
+    transition: none;
+  }
+}
+</style>

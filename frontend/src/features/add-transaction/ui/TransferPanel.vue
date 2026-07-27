@@ -318,6 +318,7 @@ function handleFeeTypeToggle() {
 <template>
   <div class="space-y-4">
     <HeroAmount
+      variant="hero"
       :amount="formData.amount"
       :currency="formData.currency"
       :currency-symbol="currencySymbol"

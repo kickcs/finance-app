@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, watch } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { UButton, UIcon } from '@/shared/ui';
+import { Skeleton } from '@/shared/ui/primitives/skeleton';
 import { AppHeader } from '@/widgets/header';
 import {
   TransactionForm,
@@ -11,7 +12,7 @@ import {
 import { useAccounts } from '@/entities/account';
 import { useCategories } from '@/entities/category';
 import { useProfile } from '@/shared/api';
-import { navigateBack } from '@/app/router';
+import { navigateBack, navigateBackTo } from '@/app/router';
 import { ROUTE_NAMES } from '@/app/router/routeNames';
 import { useSplitExpense } from '@/features/split-expense';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
@@ -26,7 +27,6 @@ const { accounts, isLoading: accountsLoading } = useAccounts(userId);
 const { expenseCategories, incomeCategories } = useCategories(userId);
 const { defaultAccountId } = useProfile(userId);
 const { currency: userCurrency } = useUserCurrency();
-const isQuickAction = computed(() => !!route.query.categoryId);
 
 // Use the add transaction feature
 const { formData, isValid, setType, updateField } = useTransactionForm();
@@ -99,6 +99,21 @@ watch(
   { immediate: true },
 );
 
+/**
+ * На этом экране нижняя навигация скрыта (сфокусированный поток), поэтому
+ * тупик «зашёл по прямой ссылке — истории нет — кнопка «назад» ничего не
+ * делает» больше нечем спасти. Уходим на дашборд.
+ */
+function goBack() {
+  if (window.history.state?.back) {
+    navigateBack();
+  } else {
+    // `navigateBackTo` — тот же replace, но с анимацией «назад»; голый
+    // `router.replace` уехал бы вперёд.
+    navigateBackTo({ name: ROUTE_NAMES.DASHBOARD });
+  }
+}
+
 async function handleSplitSubmit(uid: string): Promise<boolean> {
   if (!formData.value.accountId) {
     validationError.value = 'Выберите счёт для транзакции';
@@ -158,7 +173,7 @@ async function handleSubmit() {
   }
 
   resetSplit();
-  navigateBack();
+  goBack();
 }
 </script>
 
@@ -166,7 +181,7 @@ async function handleSubmit() {
   <div class="h-full flex flex-col min-w-0 relative">
     <!-- Mobile Header -->
     <div class="md:hidden shrink-0">
-      <AppHeader title="Новая транзакция" show-back blur @back="navigateBack" />
+      <AppHeader title="Новая транзакция" show-back blur @back="goBack" />
     </div>
 
     <!-- Desktop Breadcrumbs Header (optional) -->
@@ -177,20 +192,32 @@ async function handleSubmit() {
       <button
         type="button"
         aria-label="Закрыть"
-        class="w-10 h-10 rounded-full flex items-center justify-center bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:bg-surface-hover-light dark:hover:bg-surface-hover-dark transition-colors cursor-pointer text-text-secondary-light dark:text-text-secondary-dark"
-        @click="navigateBack"
+        class="w-11 h-11 rounded-full flex items-center justify-center bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:bg-surface-hover-light dark:hover:bg-surface-hover-dark transition-colors cursor-pointer text-text-secondary-light dark:text-text-secondary-dark"
+        @click="goBack"
       >
         <UIcon name="close" size="sm" />
       </button>
     </div>
 
     <!-- Content -->
-    <main class="flex-1 overflow-y-auto px-4 md:px-8 pt-2 md:pt-4 pb-12">
+    <main class="flex-1 overflow-y-auto px-4 md:px-8 pt-2 md:pt-4">
       <div
         class="md:max-w-xl md:mx-auto md:bg-card-light md:dark:bg-card-dark md:rounded-3xl md:shadow-sm md:border md:border-border-light md:dark:border-border-dark md:p-8 md:mt-2"
       >
+        <!-- Пока счета грузятся, форма без счёта выглядит сломанной: пустой
+             селектор и заблокированная кнопка. Показываем каркас. -->
+        <div v-if="accountsLoading && accounts.length === 0" class="space-y-4" aria-busy="true">
+          <Skeleton class="h-11 w-full rounded-xl" />
+          <div class="flex flex-col items-center gap-2 py-4">
+            <Skeleton class="h-11 w-40 rounded-xl" />
+            <Skeleton class="h-4 w-32 rounded-md" />
+          </div>
+          <Skeleton class="h-16 w-full rounded-xl" />
+          <Skeleton class="h-24 w-full rounded-xl" />
+        </div>
+
         <div
-          v-if="!accountsLoading && accounts.length === 0"
+          v-else-if="accounts.length === 0"
           data-testid="no-accounts-state"
           class="text-center py-8"
         >
@@ -225,9 +252,9 @@ async function handleSubmit() {
           :error="validationError"
           :split-data="splitData"
           :split-validation-error="splitValidationError"
-          :autofocus-amount="isQuickAction"
+          autofocus-amount
           @submit="handleSubmit"
-          @debt-submitted="navigateBack"
+          @debt-submitted="goBack"
           @add-participant="addParticipant"
           @remove-participant="removeParticipant"
           @update-participant-amount="updateParticipantAmount"

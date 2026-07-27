@@ -130,8 +130,9 @@ const infoText = computed(() => {
 </script>
 
 <template>
-  <div class="space-y-3 pb-28 md:pb-8">
+  <div class="space-y-3 pb-4 md:pb-8">
     <HeroAmount
+      variant="hero"
       :amount="formData.amount"
       :currency="formData.currency"
       :currency-symbol="currencySymbol"

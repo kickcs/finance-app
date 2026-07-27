@@ -32,6 +32,7 @@ const FULLSCREEN_FLOWS: string[] = [
   ROUTE_NAMES.SCAN_RECEIPT,
   ROUTE_NAMES.IMPORT_CONFIRM,
   ROUTE_NAMES.IMPORT_INBOX,
+  ROUTE_NAMES.NEW_TRANSACTION,
 ];
 const hideBottomNav = computed(() => FULLSCREEN_FLOWS.includes(route.name as string));
 
