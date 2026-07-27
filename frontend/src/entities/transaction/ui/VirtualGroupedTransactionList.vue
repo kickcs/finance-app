@@ -4,7 +4,7 @@ import { useVirtualizer } from '@tanstack/vue-virtual';
 import { useScroll } from '@vueuse/core';
 import TransactionItem from './TransactionItem.vue';
 import DayGroupHeader from './DayGroupHeader.vue';
-import { SwipeableItem, EmptyState } from '@/shared/ui';
+import { SwipeableItem } from '@/shared/ui';
 import type { Transaction, TransactionGroup } from '../model/types';
 
 interface HeaderData {
@@ -65,7 +65,15 @@ const ROW_HEIGHT = 60;
 const ROW_HEIGHT_TALL = 76;
 const LOADING_HEIGHT = 44;
 
-/** Сколько строк колонка суммы рисует помимо самой суммы */
+/**
+ * Сколько строк колонка суммы рисует помимо самой суммы.
+ *
+ * Условия зеркалят `v-if` в колонке суммы `TransactionItem.vue` — меняете там,
+ * меняйте здесь, иначе слот окажется меньше содержимого и текст обрежется.
+ * Условие конвертации там дополнено `!viewingAccountId`; здесь его нет, потому
+ * что `getTransactionItemProps` этот проп не передаёт. Если список когда-нибудь
+ * начнёт его прокидывать — добавить и сюда.
+ */
 function amountExtraLines(tx: Transaction): number {
   let lines = 0;
   if (tx.type === 'transfer' && tx.to_currency && tx.to_currency !== tx.currency) lines++;
@@ -186,6 +194,16 @@ function getTransactionData(index: number): Transaction | null {
   return item?.type === 'transaction' ? (item.data as Transaction) : null;
 }
 
+/**
+ * Смена фильтра — это новый список, а не то же место в старом: страница зовёт
+ * это, чтобы прокрутка не оставалась на позиции, которой в новых данных нет.
+ */
+function scrollToTop() {
+  parentRef.value?.scrollTo({ top: 0 });
+}
+
+defineExpose({ scrollToTop });
+
 function getTransactionItemProps(index: number) {
   const tx = getTransactionData(index)!;
   return {
@@ -280,19 +298,13 @@ function getTransactionItemProps(index: number) {
           </div>
         </div>
       </div>
-
-      <!-- Empty state -->
-      <EmptyState
-        v-if="groups.length === 0 && !isFetchingNextPage"
-        icon="receipt_long"
-        title="Нет транзакций"
-        description="Добавьте первую транзакцию, чтобы начать отслеживать финансы"
-      />
     </div>
 
-    <!-- Липкая линейка дня -->
+    <!-- Липкая линейка дня. aria-hidden: настоящий заголовок остаётся в дереве
+         доступности, и без этого скринридер читал бы дату и итог дважды. -->
     <div
       v-if="stickyHeader"
+      aria-hidden="true"
       class="pointer-events-none absolute inset-x-0 top-0 z-20"
       :style="{ height: `${HEADER_HEIGHT}px`, transform: `translateY(${stickyHeader.offset}px)` }"
     >

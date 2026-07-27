@@ -91,12 +91,44 @@ function closeSearch() {
 // Filters sheet
 const isFiltersSheetOpen = ref(false);
 
-const selectedAccount = computed(() =>
-  accounts.value.find((a) => a.id === selectedAccountId.value),
-);
-const selectedCategory = computed(() =>
-  usedCategories.value.find((c) => c.id === selectedCategoryId.value),
-);
+/** Чип активного фильтра: `icon` — категория, без него — точка цвета счёта */
+interface ActiveFilterChip {
+  key: string;
+  label: string;
+  ariaLabel: string;
+  color: string;
+  icon?: string;
+  clear: () => void;
+}
+
+const activeFilterChips = computed<ActiveFilterChip[]>(() => {
+  const chips: ActiveFilterChip[] = [];
+
+  const account = accounts.value.find((a) => a.id === selectedAccountId.value);
+  if (account) {
+    chips.push({
+      key: 'account',
+      label: account.name,
+      ariaLabel: `Убрать фильтр по счёту: ${account.name}`,
+      color: account.color,
+      clear: () => (selectedAccountId.value = null),
+    });
+  }
+
+  const category = usedCategories.value.find((c) => c.id === selectedCategoryId.value);
+  if (category) {
+    chips.push({
+      key: 'category',
+      label: category.name,
+      ariaLabel: `Убрать фильтр по категории: ${category.name}`,
+      color: category.color,
+      icon: category.icon,
+      clear: () => (selectedCategoryId.value = null),
+    });
+  }
+
+  return chips;
+});
 
 // Main transactions query with infinite scroll
 const { transactions, isLoading, hasNextPage, isFetchingNextPage, isFetching, fetchNextPage } =
@@ -176,6 +208,15 @@ const {
   handleSwipeDelete,
   closeEditModal,
 } = useTransactionEditFlow(userId);
+
+// Смена фильтра или запроса даёт другой список — прокрутку возвращаем в начало,
+// иначе пользователь остаётся на позиции, которой в новых данных уже нет
+// (а липкий заголовок дня показывает день из старого набора).
+const listRef = ref<InstanceType<typeof VirtualGroupedTransactionList> | null>(null);
+
+watch([serverFilters, searchTerm], () => {
+  nextTick(() => listRef.value?.scrollToTop());
+});
 
 // Desktop: selected transaction for detail panel
 const selectedTransactionId = ref<string | null>(null);
@@ -348,22 +389,25 @@ async function handleRefresh() {
 
           <!-- Активные фильтры: состояние видно, не открывая шторку -->
           <div
-            v-if="activeFiltersCount > 0"
+            v-if="activeFilterChips.length > 0"
             data-testid="active-filter-chips"
             class="shrink-0 flex items-center gap-1.5 pt-2 overflow-x-auto no-scrollbar"
           >
             <button
-              v-if="selectedAccount"
+              v-for="chip in activeFilterChips"
+              :key="chip.key"
               type="button"
               class="shrink-0 inline-flex items-center gap-1.5 pl-2 pr-1.5 py-1 rounded-lg bg-surface-light dark:bg-surface-dark text-xs text-text-primary-light dark:text-text-primary-dark"
-              :aria-label="`Убрать фильтр по счёту: ${selectedAccount.name}`"
-              @click="selectedAccountId = null"
+              :aria-label="chip.ariaLabel"
+              @click="chip.clear()"
             >
+              <UIcon v-if="chip.icon" :name="chip.icon" size="xs" :style="{ color: chip.color }" />
               <span
+                v-else
                 class="w-2 h-2 rounded-full shrink-0"
-                :style="{ backgroundColor: selectedAccount.color }"
+                :style="{ backgroundColor: chip.color }"
               />
-              {{ selectedAccount.name }}
+              {{ chip.label }}
               <UIcon
                 name="close"
                 size="xs"
@@ -372,27 +416,7 @@ async function handleRefresh() {
             </button>
 
             <button
-              v-if="selectedCategory"
-              type="button"
-              class="shrink-0 inline-flex items-center gap-1.5 pl-2 pr-1.5 py-1 rounded-lg bg-surface-light dark:bg-surface-dark text-xs text-text-primary-light dark:text-text-primary-dark"
-              :aria-label="`Убрать фильтр по категории: ${selectedCategory.name}`"
-              @click="selectedCategoryId = null"
-            >
-              <UIcon
-                :name="selectedCategory.icon"
-                size="xs"
-                :style="{ color: selectedCategory.color }"
-              />
-              {{ selectedCategory.name }}
-              <UIcon
-                name="close"
-                size="xs"
-                class="text-text-tertiary-light dark:text-text-tertiary-dark"
-              />
-            </button>
-
-            <button
-              v-if="activeFiltersCount > 1"
+              v-if="activeFilterChips.length > 1"
               type="button"
               class="shrink-0 px-2 py-1 text-xs text-text-tertiary-light dark:text-text-tertiary-dark hover:text-text-secondary-light dark:hover:text-text-secondary-dark"
               @click="clearAdditionalFilters"
@@ -427,6 +451,7 @@ async function handleRefresh() {
               ]"
             >
               <VirtualGroupedTransactionList
+                ref="listRef"
                 :groups="groupedTransactions"
                 :currency="currency"
                 :has-next-page="currentHasNextPage"
