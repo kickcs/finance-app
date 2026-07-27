@@ -269,7 +269,9 @@ async function handleRefresh() {
             variant="ghost"
             size="sm"
             class="!p-2"
-            aria-label="Фильтры"
+            :aria-label="
+              activeFiltersCount > 0 ? `Фильтры, активно: ${activeFiltersCount}` : 'Фильтры'
+            "
             data-testid="open-filters-btn"
             @click="isFiltersSheetOpen = true"
           >
