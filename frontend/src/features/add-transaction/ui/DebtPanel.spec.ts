@@ -9,8 +9,11 @@ vi.mock('@/shared/lib/hooks/useCurrentUser', () => ({
 }));
 vi.mock('@/entities/person', () => ({
   PersonPicker: {
-    template: `<button data-testid="person-picker" @click="$emit('select', 'Азиз')" />`,
-    props: ['people', 'debts', 'selected', 'label', 'multiple'],
+    // Имя нужно, чтобы тест мог достать заглушку через `findComponent` и
+    // проверить пропы: у объявленного литералом компонента его нет.
+    name: 'PersonPicker',
+    template: `<div data-testid="person-picker" @click="$emit('select', 'Азиз')"><slot name="trailing" /></div>`,
+    props: ['people', 'debts', 'selected', 'label', 'multiple', 'trailingLabel'],
     emits: ['select', 'create'],
   },
   usePeople: () => ({ people: { value: [] }, createPerson: vi.fn() }),
@@ -51,6 +54,16 @@ describe('DebtPanel', () => {
 
   it('счёт больше не выбирается внутри панели — он живёт на карточке суммы', () => {
     expect(mountPanel().find('[data-testid="debt-row-account"]').exists()).toBe(false);
+  });
+
+  it('дата замыкает ряд чипов, а не занимает свою строку', () => {
+    const wrapper = mountPanel();
+    const picker = wrapper.findComponent({ name: 'PersonPicker' });
+
+    // Поле даты лежит в слоте пикера — значит, встаёт последней ячейкой ряда.
+    expect(picker.findComponent({ name: 'DatePickerField' }).exists()).toBe(true);
+    // Подпись для раскладки — сегодняшняя дата: модель стартует с `getTodayISO`.
+    expect(picker.props('trailingLabel')).toBeTruthy();
   });
 
   it('не показывает строку-итог: прогноз остатка есть на карточке суммы', () => {

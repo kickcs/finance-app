@@ -5,7 +5,7 @@ import { UIcon } from '@/shared/ui';
 import { cn } from '@/shared/lib/utils';
 import { Popover, PopoverTrigger, PopoverContent } from '@/shared/ui/primitives/popover';
 import { isoToCalendarDate, dateValueToISO } from '@/shared/lib/date';
-import { formatDate } from '@/shared/lib/format/date';
+import { formatCompactDate } from '@/shared/lib/format/date';
 
 const props = withDefaults(
   defineProps<{
@@ -15,10 +15,12 @@ const props = withDefaults(
     portalTo?: HTMLElement | null;
     /**
      * `field` — поле с рамкой во всю ширину; `flush` — внутри готовой строки
-     * списка, без своей рамки (она была бы второй); `chip` — компактная кнопка
-     * по ширине содержимого.
+     * списка, без своей рамки (она была бы второй); `chip` — чип той же
+     * геометрии, что чипы рядом с ним, чтобы вставать с ними в один ряд.
      */
     variant?: 'field' | 'flush' | 'chip';
+    /** Подпись для скринридера: в чипе видна только дата, без назначения поля. */
+    ariaLabel?: string;
   }>(),
   { variant: 'field' },
 );
@@ -35,15 +37,8 @@ const isOpen = defineModel<boolean>('open', { default: false });
 
 const calendarValue = computed(() => isoToCalendarDate(props.modelValue));
 
-function formatCompact(iso: string): string {
-  const [y, m, d] = iso.split('-').map(Number);
-  const date = new Date(y, m - 1, d);
-  const base = formatDate(date, { format: 'short' });
-  return date.getFullYear() === new Date().getFullYear() ? base : `${base} ${y}`;
-}
-
 const displayText = computed(() =>
-  props.modelValue ? formatCompact(props.modelValue) : (props.placeholder ?? 'Без срока'),
+  props.modelValue ? formatCompactDate(props.modelValue) : (props.placeholder ?? 'Без срока'),
 );
 
 function handleChange(value: DateValue | undefined) {
@@ -60,11 +55,15 @@ function handleChange(value: DateValue | undefined) {
       <PopoverTrigger as-child>
         <button
           type="button"
+          :aria-label="ariaLabel"
           :class="
             cn(
               'flex items-center gap-2 transition-all',
+              // Чип повторяет геометрию соседних чипов (рамка, `rounded-lg`,
+              // `px-3 py-1.5`) и обходится без шеврона: в ряду одинаковых чипов
+              // он читался бы как единственная «неровная» кнопка.
               variant === 'chip'
-                ? 'shrink-0 rounded-xl border border-border-light dark:border-border-dark px-3 py-2.5 hover:border-primary/40'
+                ? 'w-full justify-center rounded-lg border border-border-light px-3 py-1.5 hover:border-primary/40 dark:border-border-dark'
                 : 'flex-1 justify-between py-3',
               variant === 'field' &&
                 'px-4 rounded-xl border border-border-light dark:border-border-dark hover:border-primary/50',
@@ -75,15 +74,16 @@ function handleChange(value: DateValue | undefined) {
             )
           "
         >
-          <div class="flex items-center gap-2">
+          <div class="flex min-w-0 items-center gap-1.5">
             <UIcon
               name="calendar_month"
               size="sm"
-              class="text-text-secondary-light dark:text-text-secondary-dark"
+              class="shrink-0 text-text-secondary-light dark:text-text-secondary-dark"
             />
-            <span class="text-sm">{{ displayText }}</span>
+            <span class="truncate text-sm">{{ displayText }}</span>
           </div>
           <UIcon
+            v-if="variant !== 'chip'"
             name="expand_more"
             size="sm"
             class="text-text-secondary-light dark:text-text-secondary-dark transition-transform"

@@ -3,6 +3,7 @@ import { ref, computed, watch } from 'vue';
 import { UInput, UButton, UIcon, ToggleRow } from '@/shared/ui';
 import { getCurrencyByCode } from '@/entities/currency';
 import { sanitizeCurrencyInput, formatCurrency } from '@/shared/lib/format/currency';
+import { formatCompactDate } from '@/shared/lib/format/date';
 import { PersonPicker, usePeople } from '@/entities/person';
 import { useDebts } from '@/entities/debt';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
@@ -159,6 +160,15 @@ async function handleSubmit() {
 const personLabel = computed(() =>
   formData.value.debt_type === 'given' ? 'Кому дали в долг' : 'У кого взяли в долг',
 );
+
+/**
+ * Подпись замыкающего чипа считаем тем же форматтером, что рисует само поле:
+ * раскладка рядов меряет ширину по этой строке, и разойдись они — последний ряд
+ * сошёлся бы не по той ширине.
+ */
+const debtDateLabel = computed(() =>
+  formData.value.debt_date ? formatCompactDate(formData.value.debt_date) : 'Дата',
+);
 const skipToggleTitle = computed(() =>
   formData.value.debt_type === 'given' ? 'Не списывать с баланса' : 'Не добавлять на баланс',
 );
@@ -202,26 +212,31 @@ function withSymbol(value: number) {
       @update:model-value="updateField('debt_type', $event)"
     />
 
+    <!--
+      Дата замыкает тот же ряд чипов, что и люди: своей строкой она занимала
+      целый ярус ради одной кнопки, а в общей раскладке добирает последний ряд,
+      который всё равно не сходился по ширине.
+    -->
     <PersonPicker
       :people="people"
       :debts="debts"
       :selected="formData.person_name"
       :label="personLabel"
+      :trailing-label="debtDateLabel"
       @select="updateField('person_name', $event)"
       @create="(name: string) => createPerson({ name })"
-    />
-
-    <!-- Дата — один чип: рамочный список из трёх строк потерял две из них
-         (человек уехал в чипы, счёт — на карточку суммы), и одинокая строка в
-         рамке читалась бы как обрубок. -->
-    <div class="flex">
-      <DatePickerField
-        v-model:open="isDebtDateOpen"
-        variant="chip"
-        :model-value="formData.debt_date"
-        @update:model-value="updateField('debt_date', $event)"
-      />
-    </div>
+    >
+      <template #trailing>
+        <DatePickerField
+          v-model:open="isDebtDateOpen"
+          class="w-full"
+          variant="chip"
+          aria-label="Дата долга"
+          :model-value="formData.debt_date"
+          @update:model-value="updateField('debt_date', $event)"
+        />
+      </template>
+    </PersonPicker>
 
     <!--
       Срок, комиссия, комментарий и два переключателя заполняют единицы — на
