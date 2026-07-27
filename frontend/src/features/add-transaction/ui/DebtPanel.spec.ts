@@ -8,9 +8,14 @@ vi.mock('@/shared/lib/hooks/useCurrentUser', () => ({
   useCurrentUser: () => ({ userId: { value: 'u1' } }),
 }));
 vi.mock('@/entities/person', () => ({
-  PersonSelector: { template: '<div data-testid="person-selector" />' },
+  PersonPicker: {
+    template: `<button data-testid="person-picker" @click="$emit('select', 'Азиз')" />`,
+    props: ['people', 'debts', 'selected', 'label', 'multiple'],
+    emits: ['select', 'create'],
+  },
   usePeople: () => ({ people: { value: [] }, createPerson: vi.fn() }),
 }));
+vi.mock('@/entities/debt', () => ({ useDebts: () => ({ debts: { value: [] } }) }));
 
 const accounts = [
   {
@@ -24,15 +29,7 @@ const accounts = [
 function mountPanel(amount = 98_000) {
   return renderWithProviders(DebtPanel, {
     props: { amount, currency: 'UZS', accountId: 'a1', accounts },
-    global: {
-      stubs: {
-        // Триггер лежит в слоте поповера — без раскрытия слота строки счёта
-        // в разметке не будет.
-        AccountPopover: { template: '<div><slot name="trigger" /></div>' },
-        DatePickerField: true,
-        ToggleRow: true,
-      },
-    },
+    global: { stubs: { DatePickerField: true, DueDateField: true, ToggleRow: true } },
   });
 }
 
@@ -41,11 +38,57 @@ function switchToGiven(wrapper: ReturnType<typeof mountPanel>) {
   return wrapper.findAll('[role="tab"]')[0].trigger('click');
 }
 
+function openMore(wrapper: ReturnType<typeof mountPanel>) {
+  return wrapper.find('[data-testid="debt-more-toggle"]').trigger('click');
+}
+
 describe('DebtPanel', () => {
-  it('человек, счёт и дата лежат в одном списке', () => {
-    const list = mountPanel().find('[data-testid="debt-fields"]');
-    expect(list.exists()).toBe(true);
-    expect(list.findAll('[data-testid^="debt-row-"]')).toHaveLength(3);
+  it('человека выбирают чипами, а не текстовым полем', () => {
+    const wrapper = mountPanel();
+    expect(wrapper.find('[data-testid="person-picker"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="debt-fields"]').exists()).toBe(false);
+  });
+
+  it('счёт больше не выбирается внутри панели — он живёт на карточке суммы', () => {
+    expect(mountPanel().find('[data-testid="debt-row-account"]').exists()).toBe(false);
+  });
+
+  it('не показывает строку-итог: прогноз остатка есть на карточке суммы', () => {
+    expect(mountPanel().find('[data-testid="debt-summary"]').exists()).toBe(false);
+  });
+
+  it('кнопка сабмита лежит в липком подвале', () => {
+    expect(mountPanel().find('.submit-bar [data-testid="debt-submit"]').exists()).toBe(true);
+  });
+
+  it('подсказывает, чего не хватает, пока кнопка заблокирована', () => {
+    expect(mountPanel(0).find('[data-testid="debt-submit-hint"]').text()).toBe(
+      'Укажите имя и сумму',
+    );
+  });
+
+  it('подсказка исчезает, когда форма заполнена', async () => {
+    const wrapper = mountPanel();
+    await wrapper.find('[data-testid="person-picker"]').trigger('click');
+    expect(wrapper.find('[data-testid="debt-submit-hint"]').exists()).toBe(false);
+  });
+
+  it('сообщает наверх, что взятый долг пополняет счёт', () => {
+    expect(mountPanel().emitted('balance-effect')?.at(-1)).toEqual([
+      { sign: 'plus', extraDebit: 0 },
+    ]);
+  });
+
+  it('сообщает наверх, что выданный долг списывает со счёта', async () => {
+    const wrapper = mountPanel();
+    await switchToGiven(wrapper);
+    expect(wrapper.emitted('balance-effect')?.at(-1)).toEqual([{ sign: 'minus', extraDebit: 0 }]);
+  });
+
+  it('комиссии нет, когда долг взят: её платит отправитель', async () => {
+    const wrapper = mountPanel();
+    await openMore(wrapper);
+    expect(wrapper.find('[data-testid="debt-fee-input"]').exists()).toBe(false);
   });
 
   it('комиссия скрыта, пока «Ещё» свёрнуто', async () => {
@@ -57,30 +100,25 @@ describe('DebtPanel', () => {
   it('комиссия появляется в раскрытом «Ещё» при выдаче долга', async () => {
     const wrapper = mountPanel();
     await switchToGiven(wrapper);
-    await wrapper.find('[data-testid="debt-more-toggle"]').trigger('click');
+    await openMore(wrapper);
     expect(wrapper.find('[data-testid="debt-fee-input"]').exists()).toBe(true);
   });
 
-  it('комиссии нет, когда долг взят: её платит отправитель', async () => {
-    const wrapper = mountPanel();
-    await wrapper.find('[data-testid="debt-more-toggle"]').trigger('click');
-    expect(wrapper.find('[data-testid="debt-fee-input"]').exists()).toBe(false);
-  });
-
-  it('итог — одна строка, а не блок с заливкой', () => {
-    const summary = mountPanel().find('[data-testid="debt-summary"]');
-    expect(summary.exists()).toBe(true);
-    expect(summary.text()).toContain('Добавится');
-    expect(summary.text()).toContain('Основной');
-  });
-
-  it('итог меняет глагол при выдаче долга', async () => {
+  it('комиссия уходит наверх как дополнительное списание', async () => {
     const wrapper = mountPanel();
     await switchToGiven(wrapper);
-    expect(wrapper.find('[data-testid="debt-summary"]').text()).toContain('Спишется');
+    await openMore(wrapper);
+    await wrapper.find('[data-testid="debt-fee-input"]').setValue('5000');
+    expect(wrapper.emitted('balance-effect')?.at(-1)).toEqual([
+      { sign: 'minus', extraDebit: 5000 },
+    ]);
   });
 
-  it('без суммы итоговой строки нет', () => {
-    expect(mountPanel(0).find('[data-testid="debt-summary"]').exists()).toBe(false);
+  it('с выключенной транзакцией баланс не двигается', async () => {
+    const wrapper = mountPanel();
+    await openMore(wrapper);
+    const toggles = wrapper.findAllComponents({ name: 'ToggleRow' });
+    await toggles[toggles.length - 1].vm.$emit('update:modelValue', true);
+    expect(wrapper.emitted('balance-effect')?.at(-1)).toEqual([{ sign: null, extraDebit: 0 }]);
   });
 });

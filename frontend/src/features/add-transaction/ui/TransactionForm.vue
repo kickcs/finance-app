@@ -21,6 +21,7 @@ import ExpensePanel from './ExpensePanel.vue';
 import IncomePanel from './IncomePanel.vue';
 import TransferPanel from './TransferPanel.vue';
 import TransactionMetaRow from './TransactionMetaRow.vue';
+import SubmitBar from './SubmitBar.vue';
 
 const props = defineProps<{
   formData: TransactionFormData;
@@ -79,10 +80,27 @@ const {
   isMultiCurrency,
   currencySymbol,
   currentBalance,
-  hasSufficientFunds,
   updateField,
   handleAccountChange,
 } = usePanelState(props, (_e, value) => emit('update:formData', value));
+
+/**
+ * Как долг двинет баланс счёта. Направление и комиссия живут в собственной
+ * модели панели (`useDebtForm`), поэтому приходят наверх событием: карточке
+ * суммы нужен знак, чтобы показать прогноз остатка так же, как на расходе.
+ */
+const debtEffect = ref<{ sign: 'minus' | 'plus' | null; extraDebit: number }>({
+  sign: null,
+  extraDebit: 0,
+});
+
+const isDebt = computed(() => props.formData.type === 'debt');
+
+/**
+ * Эффект читаем, только пока открыта вкладка долга: панель кэшируется
+ * `KeepAlive`, и после ухода на «Расход» последнее значение осталось бы в силе.
+ */
+const extraDebit = computed(() => (isDebt.value ? debtEffect.value.extraDebit : 0));
 
 const TYPE_TABS = [
   { id: 'expense', label: 'Расход' },
@@ -93,33 +111,37 @@ const TYPE_TABS = [
 
 /**
  * Направление движения денег по счёту. Перевод тоже списывает — поэтому на нём
- * виден прогноз остатка, а не просто текущий баланс. У долга счёт выбирается
- * ниже в панели, там показывать нечего.
+ * виден прогноз остатка, а не просто текущий баланс. У долга знак задаёт
+ * направление: «дал» списывает, «взял» пополняет, а с выключенной транзакцией
+ * баланс не двигается вовсе.
  */
 const amountSign = computed<'minus' | 'plus' | null>(() => {
+  if (isDebt.value) return debtEffect.value.sign;
   if (props.formData.type === 'income') return 'plus';
-  if (props.formData.type === 'debt') return null;
   return 'minus';
 });
 
-/** Списание сверх остатка — предупреждаем и на расходе, и на переводе. */
-const showInsufficientFunds = computed(
-  () => amountSign.value === 'minus' && !hasSufficientFunds.value,
-);
+/**
+ * Списание сверх остатка — предупреждаем и на расходе, и на переводе, и на
+ * выдаче долга. Считаем здесь, а не берём `hasSufficientFunds`: тот сравнивает
+ * только с суммой и о комиссии, которая уходит с того же счёта, не знает.
+ */
+const showInsufficientFunds = computed(() => {
+  if (amountSign.value !== 'minus') return false;
+  // `currentBalance` подставляет 0 для невыбранного счёта, а не `undefined`, —
+  // сравнивать с ним нечего: карточка в этом случае баланса и не показывает.
+  if (!props.formData.accountId) return false;
+  return currentBalance.value < props.formData.amount + extraDebit.value;
+});
 
 /**
- * Заголовок-переключатель счёта на карточке нужен только там, где счёт больше
- * нигде не выбирается. У перевода его задаёт строка «Откуда → Куда», у долга —
- * своё поле; там заголовок был бы третьим повторением одного и того же.
+ * Заголовок-переключатель счёта на карточке нужен там, где счёт больше нигде не
+ * выбирается. У перевода его задаёт строка «Откуда → Куда» — там он был бы
+ * третьим повторением одного и того же; расход, доход и долг выбирают счёт здесь.
  */
-const showAccountOnCard = computed(
-  () => props.formData.type === 'expense' || props.formData.type === 'income',
-);
+const showAccountOnCard = computed(() => props.formData.type !== 'transfer');
 
-/** На долге счёт выбирается ниже в панели, поэтому прогноза на карточке нет. */
-const cardBalance = computed(() =>
-  props.formData.type === 'debt' || !props.formData.accountId ? undefined : currentBalance.value,
-);
+const cardBalance = computed(() => (props.formData.accountId ? currentBalance.value : undefined));
 
 const submitLabel = computed(() => {
   if (props.formData.type === 'transfer') return 'Перевести';
@@ -366,6 +388,7 @@ const expensePanelHandlers = {
         :sign="amountSign"
         :current-balance="cardBalance"
         :show-insufficient-funds="showInsufficientFunds"
+        :extra-debit="extraDebit"
         :autofocus="autofocusAmount"
         @update:amount="updateField('amount', $event)"
         @update:currency="updateField('currency', $event)"
@@ -444,8 +467,8 @@ const expensePanelHandlers = {
           :accounts="accounts"
           :default-account-id="defaultAccountId"
           @submitted="emit('debt-submitted')"
-          @update:currency="updateField('currency', $event)"
-          @update:account-id="updateField('accountId', $event)"
+          @update:account-id="handleAccountChange"
+          @balance-effect="debtEffect = $event"
         />
       </KeepAlive>
 
@@ -466,24 +489,23 @@ const expensePanelHandlers = {
 
       <!-- Кнопка прилипает к низу: на «Переводе» форма выше экрана, и раньше до
            сабмита приходилось доскроллить. -->
-      <div
-        v-if="formData.type !== 'debt'"
-        class="submit-bar sticky bottom-0 mt-auto -mx-4 px-4 pt-3 [--bar-bg:var(--color-background-light)] dark:[--bar-bg:var(--color-background-dark)]"
-      >
-        <p
-          v-if="error"
-          data-testid="validation-error"
-          role="alert"
-          class="pb-2 text-xs text-danger"
-        >
-          {{ error }}
-        </p>
-        <p
-          v-else-if="submitHint"
-          class="pb-2 text-center text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
-        >
-          {{ submitHint }}
-        </p>
+      <SubmitBar v-if="formData.type !== 'debt'">
+        <template #hint>
+          <p
+            v-if="error"
+            data-testid="validation-error"
+            role="alert"
+            class="pb-2 text-xs text-danger"
+          >
+            {{ error }}
+          </p>
+          <p
+            v-else-if="submitHint"
+            class="pb-2 text-center text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
+          >
+            {{ submitHint }}
+          </p>
+        </template>
 
         <UButton
           type="submit"
@@ -496,23 +518,14 @@ const expensePanelHandlers = {
         >
           {{ submitLabel }}
         </UButton>
-      </div>
+      </SubmitBar>
     </div>
   </form>
 </template>
 
 <style scoped>
-/*
- * Подложка кнопки повторяет фон страницы. Цвет приходит переменной `--bar-bg`:
- * её ставит Tailwind-вариант `dark:` прямо на элементе — через
- * `:global(html.dark)` не выйдет, тема навешивается классом на `html`, а не на
- * конкретный узел. Верх полупрозрачный, чтобы содержимое уезжало под панель,
- * а не обрывалось.
- */
-.submit-bar {
-  background: linear-gradient(to bottom, transparent 0, var(--bar-bg) 0.75rem, var(--bar-bg));
-  padding-bottom: max(var(--safe-area-inset-bottom), 0.75rem);
-}
+/* Липкий подвал с кнопкой переехал в `SubmitBar.vue`: он нужен и здесь, и
+   панели долга, которая владеет собственным сабмитом. */
 
 .suggestion-chip {
   transition:

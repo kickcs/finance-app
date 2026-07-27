@@ -1,16 +1,18 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import { UInput, UButton, UIcon, ToggleRow } from '@/shared/ui';
-import { DEFAULT_CURRENCY, getCurrencyByCode } from '@/entities/currency';
+import { getCurrencyByCode } from '@/entities/currency';
 import { sanitizeCurrencyInput, formatCurrency } from '@/shared/lib/format/currency';
-import { PersonSelector, usePeople } from '@/entities/person';
-import { AccountPopover } from '@/entities/account';
+import { PersonPicker, usePeople } from '@/entities/person';
+import { useDebts } from '@/entities/debt';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useHaptics } from '@/shared/lib/haptics';
 import type { AccountWithBalances } from '@/entities/account';
 import { useDebtForm } from '../model/useDebtForm';
 import DebtDirectionPill from './DebtDirectionPill.vue';
 import DatePickerField from './DatePickerField.vue';
+import DueDateField from './DueDateField.vue';
+import SubmitBar from './SubmitBar.vue';
 
 const props = defineProps<{
   /** Сумма, валюта и счёт живут в общей форме — панель только следует за ними. */
@@ -23,22 +25,32 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   submitted: [];
-  'update:currency': [value: string];
   /**
-   * Счёт долга поднимается в общую форму, чтобы плита знала, из каких валют
-   * этого счёта выбирать. Без этого долг на мультивалютном счёте молча
-   * залипал на первой валюте.
+   * Счёт долга поднимается в общую форму, чтобы карточка суммы знала, из каких
+   * валют этого счёта выбирать. Валюту отдельным событием не шлём: наверху счёт
+   * и валюта пишутся одним `update:formData`, а два emit'а подряд в одном тике
+   * читали бы один и тот же несвежий `props.formData` — второй затирал бы счёт,
+   * записанный первым.
    */
   'update:accountId': [value: string];
+  /**
+   * Как долг двинет баланс: направление плюс то, что уходит сверх суммы.
+   * Карточка суммы рисует по этому прогноз остатка — так же, как на расходе.
+   */
+  'balance-effect': [value: { sign: 'minus' | 'plus' | null; extraDebit: number }];
 }>();
 
 const { userId } = useCurrentUser();
 const { people, createPerson } = usePeople(userId);
+// Долги — сигнал частоты для порядка людей. Запрос уже прогрет дашбордом,
+// поэтому здесь это чтение кэша, а не поход в сеть.
+const { debts } = useDebts(userId);
 const { trigger } = useHaptics();
 const { formData, isValid, isSubmitting, error, createDebt, updateField } = useDebtForm();
 
-// Плита — единственный редактор суммы и валюты долга; своя модель подтягивается
-// за ней, а обратный ход идёт через `update:currency` при смене счёта.
+// Карточка суммы — единственный редактор суммы и валюты долга; своя модель
+// подтягивается за ней, а обратный ход идёт через `update:currency` при смене
+// счёта.
 watch(
   () => props.amount,
   (amount) => updateField('amount', amount),
@@ -67,27 +79,29 @@ watch(
 
     updateField('account_id', preferred.id);
     // Наверх сообщаем, только если счёт пришёл не оттуда — иначе это эхо.
-    if (preferred.id !== accountId) {
-      emit('update:accountId', preferred.id);
-      emit('update:currency', preferred.balances[0]?.currency || DEFAULT_CURRENCY);
-    }
+    // Валюту подберёт сама форма: она пишет счёт и валюту одним обновлением.
+    if (preferred.id !== accountId) emit('update:accountId', preferred.id);
   },
   { immediate: true },
 );
 
-function handleAccountChange(accountId: string) {
-  trigger('selection');
-  const account = props.accounts.find((a) => a.id === accountId);
-  const currencies = account?.balances.map((b) => b.currency) || [];
-  updateField('account_id', accountId);
-  emit('update:accountId', accountId);
-  if (!currencies.includes(props.currency)) {
-    emit('update:currency', currencies[0] || DEFAULT_CURRENCY);
-  }
-}
+/**
+ * Эффект считаем `computed`: он пересчитывается только на смену направления,
+ * комиссии и флага транзакции, поэтому наблюдатель не шлёт событие наверх на
+ * каждое нажатие цифры в сумме.
+ */
+const balanceEffect = computed(() => ({
+  sign: formData.value.skip_transaction
+    ? null
+    : formData.value.debt_type === 'given'
+      ? ('minus' as const)
+      : ('plus' as const),
+  extraDebit: formData.value.skip_transaction ? 0 : formData.value.fee,
+}));
+
+watch(balanceEffect, (effect) => emit('balance-effect', effect), { immediate: true });
 
 const isDebtDateOpen = ref(false);
-const isDueDateOpen = ref(false);
 const showMore = ref(false);
 
 /** Сколько необязательных полей заполнено — подпись «Ещё» иначе выглядит пустой. */
@@ -149,114 +163,64 @@ const skipToggleTitle = computed(() =>
   formData.value.debt_type === 'given' ? 'Не списывать с баланса' : 'Не добавлять на баланс',
 );
 
-const selectedAccount = computed(() =>
-  props.accounts.find((a) => a.id === formData.value.account_id),
-);
+/**
+ * Заблокированная кнопка без объяснения — тупик: пользователь тапает и не
+ * понимает, чего не хватает. Называем недостающее прямо над ней, как на
+ * остальных вкладках.
+ */
+const submitHint = computed(() => {
+  if (isValid.value || isSubmitting.value) return null;
+
+  const missing: string[] = [];
+  if (!formData.value.person_name.trim()) missing.push('имя');
+  if (formData.value.amount <= 0) missing.push('сумму');
+  if (!formData.value.account_id) missing.push('счёт');
+
+  if (!missing.length) return null;
+  // «имя и сумму и счёт» — перечисление через «и» читается только на двух
+  // элементах; на трёх нужен обычный список.
+  const last = missing[missing.length - 1];
+  const head = missing.slice(0, -1);
+  return `Укажите ${head.length ? `${head.join(', ')} и ${last}` : last}`;
+});
 
 /**
  * Печатаем сумму тем же символом, что и главная сумма выше: `Intl` для UZS
- * отдаёт код «UZS», и под «98 000 сўм» появлялось «Спишется 98 000 UZS» — две
- * записи одной валюты на одном экране.
+ * отдаёт код «UZS», и под «98 000 сўм» появлялось «98 000 UZS» — две записи
+ * одной валюты на одном экране.
  */
 function withSymbol(value: number) {
   const symbol = getCurrencyByCode(formData.value.currency)?.symbol ?? formData.value.currency;
   return `${formatCurrency(value, formData.value.currency, { showSymbol: false })} ${symbol}`;
 }
-
-/**
- * Итог одной строкой. Блок с иконкой, заливкой и `p-4` занимал два яруса ради
- * факта, который читается фразой; на экране, который целиком не влезал, это
- * была самая дорогая строка из всех.
- */
-const summaryText = computed(() => {
-  if (formData.value.skip_transaction || !formData.value.account_id) return null;
-  if (formData.value.amount <= 0) return null;
-
-  const isGiven = formData.value.debt_type === 'given';
-  // При выдаче со счёта уходит долг вместе с комиссией — показываем итог.
-  const amount = isGiven ? totalDebited.value : formData.value.amount;
-  const verb = isGiven ? 'Спишется' : 'Добавится';
-  const preposition = isGiven ? 'с' : 'на';
-  return `${verb} ${withSymbol(amount)} ${preposition} «${selectedAccount.value?.name ?? ''}»`;
-});
 </script>
 
 <template>
-  <div class="space-y-3 pb-4 md:pb-8">
+  <div class="flex flex-1 flex-col gap-3 pb-4 md:pb-8">
     <DebtDirectionPill
       :model-value="formData.debt_type"
       @update:model-value="updateField('debt_type', $event)"
     />
 
-    <!--
-      Три поля срослись в один список. Раньше у каждого была своя подпись
-      сверху, своя рамка и свой зазор — восемь ярусов там, где хватает четырёх;
-      подписи уехали внутрь строк иконкой и плейсхолдером.
-    -->
-    <div
-      data-testid="debt-fields"
-      class="divide-y divide-border-light overflow-hidden rounded-xl border border-border-light dark:divide-border-dark dark:border-border-dark"
-    >
-      <!-- `self-start`: список подсказок PersonSelector лежит в потоке, под
-           полем. С `items-center` иконка уезжала бы в середину выросшей строки —
-           к списку, а не к полю, — как только поле получает фокус. Отступ равен
-           половине высоты строки поля (py-3 + text-sm). -->
-      <div data-testid="debt-row-person" class="flex items-start gap-2 px-3">
-        <UIcon
-          name="group"
-          size="sm"
-          class="mt-3.5 shrink-0 text-text-tertiary-light dark:text-text-tertiary-dark"
-        />
-        <PersonSelector
-          class="min-w-0 flex-1"
-          variant="flush"
-          :model-value="formData.person_name"
-          :people="people"
-          :placeholder="personLabel"
-          @update:model-value="updateField('person_name', $event)"
-          @select="updateField('person_name', $event)"
-          @save-person="(name) => createPerson({ name })"
-        />
-      </div>
+    <PersonPicker
+      :people="people"
+      :debts="debts"
+      :selected="formData.person_name"
+      :label="personLabel"
+      @select="updateField('person_name', $event)"
+      @create="(name: string) => createPerson({ name })"
+    />
 
-      <AccountPopover
-        :accounts="accounts"
-        :selected-id="formData.account_id"
-        @select="handleAccountChange"
-      >
-        <template #trigger>
-          <button
-            data-testid="debt-row-account"
-            type="button"
-            aria-label="Выбрать счёт"
-            class="flex w-full items-center gap-2 px-3 py-3 text-left"
-          >
-            <span
-              class="h-2.5 w-2.5 shrink-0 rounded-full"
-              :style="{ backgroundColor: selectedAccount?.color }"
-            />
-            <span
-              class="min-w-0 flex-1 truncate text-sm text-text-primary-light dark:text-text-primary-dark"
-            >
-              {{ selectedAccount?.name ?? 'Выберите счёт' }}
-            </span>
-            <UIcon
-              name="expand_more"
-              size="sm"
-              class="shrink-0 text-text-tertiary-light dark:text-text-tertiary-dark"
-            />
-          </button>
-        </template>
-      </AccountPopover>
-
-      <div data-testid="debt-row-date">
-        <DatePickerField
-          v-model:open="isDebtDateOpen"
-          flush
-          :model-value="formData.debt_date"
-          @update:model-value="updateField('debt_date', $event)"
-        />
-      </div>
+    <!-- Дата — один чип: рамочный список из трёх строк потерял две из них
+         (человек уехал в чипы, счёт — на карточку суммы), и одинокая строка в
+         рамке читалась бы как обрубок. -->
+    <div class="flex">
+      <DatePickerField
+        v-model:open="isDebtDateOpen"
+        variant="chip"
+        :model-value="formData.debt_date"
+        @update:model-value="updateField('debt_date', $event)"
+      />
     </div>
 
     <!--
@@ -326,18 +290,10 @@ const summaryText = computed(() => {
         </p>
       </div>
 
-      <div class="space-y-1.5">
-        <label class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark">
-          Срок возврата
-        </label>
-        <DatePickerField
-          v-model:open="isDueDateOpen"
-          :model-value="formData.due_date"
-          placeholder="Без срока"
-          clearable
-          @update:model-value="updateField('due_date', $event)"
-        />
-      </div>
+      <DueDateField
+        :model-value="formData.due_date"
+        @update:model-value="updateField('due_date', $event)"
+      />
 
       <UInput
         :model-value="formData.description"
@@ -361,27 +317,33 @@ const summaryText = computed(() => {
       />
     </div>
 
-    <p
-      v-if="summaryText"
-      data-testid="debt-summary"
-      class="px-1 text-xs tabular-nums text-text-tertiary-light dark:text-text-tertiary-dark"
-    >
-      {{ summaryText }}
-    </p>
+    <!-- Кнопка прилипает к низу: без этого раскрытое «Ещё» плюс поднявшаяся
+         под комментарием клавиатура уносили её за экран. -->
+    <SubmitBar>
+      <template #hint>
+        <p v-if="error" role="alert" class="pb-2 text-xs text-danger">{{ error }}</p>
+        <p
+          v-else-if="submitHint"
+          data-testid="debt-submit-hint"
+          class="pb-2 text-center text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
+        >
+          {{ submitHint }}
+        </p>
+      </template>
 
-    <p v-if="error" class="text-xs text-danger">{{ error }}</p>
-
-    <UButton
-      type="button"
-      variant="primary"
-      size="lg"
-      full-width
-      :loading="isSubmitting"
-      :disabled="!isValid"
-      @click="handleSubmit"
-    >
-      Создать долг
-    </UButton>
+      <UButton
+        type="button"
+        variant="primary"
+        size="lg"
+        full-width
+        data-testid="debt-submit"
+        :loading="isSubmitting"
+        :disabled="!isValid"
+        @click="handleSubmit"
+      >
+        Создать долг
+      </UButton>
+    </SubmitBar>
   </div>
 </template>
 

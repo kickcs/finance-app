@@ -7,14 +7,21 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/shared/ui/primitives/
 import { isoToCalendarDate, dateValueToISO } from '@/shared/lib/date';
 import { formatDate } from '@/shared/lib/format/date';
 
-const props = defineProps<{
-  modelValue: string | null;
-  placeholder?: string;
-  clearable?: boolean;
-  portalTo?: HTMLElement | null;
-  /** Поле внутри готовой строки списка: без своей рамки — она была бы второй. */
-  flush?: boolean;
-}>();
+const props = withDefaults(
+  defineProps<{
+    modelValue: string | null;
+    placeholder?: string;
+    clearable?: boolean;
+    portalTo?: HTMLElement | null;
+    /**
+     * `field` — поле с рамкой во всю ширину; `flush` — внутри готовой строки
+     * списка, без своей рамки (она была бы второй); `chip` — компактная кнопка
+     * по ширине содержимого.
+     */
+    variant?: 'field' | 'flush' | 'chip';
+  }>(),
+  { variant: 'field' },
+);
 
 const emit = defineEmits<{
   'update:modelValue': [value: string | null];
@@ -55,10 +62,13 @@ function handleChange(value: DateValue | undefined) {
           type="button"
           :class="
             cn(
-              'flex-1 flex items-center justify-between gap-2 py-3 transition-all',
-              flush
-                ? 'px-3'
-                : 'px-4 rounded-xl border border-border-light dark:border-border-dark hover:border-primary/50',
+              'flex items-center gap-2 transition-all',
+              variant === 'chip'
+                ? 'shrink-0 rounded-xl border border-border-light dark:border-border-dark px-3 py-2.5 hover:border-primary/40'
+                : 'flex-1 justify-between py-3',
+              variant === 'field' &&
+                'px-4 rounded-xl border border-border-light dark:border-border-dark hover:border-primary/50',
+              variant === 'flush' && 'px-3',
               modelValue
                 ? 'text-text-primary-light dark:text-text-primary-dark'
                 : 'text-text-tertiary-light dark:text-text-tertiary-dark',
@@ -81,7 +91,20 @@ function handleChange(value: DateValue | undefined) {
           />
         </button>
       </PopoverTrigger>
-      <PopoverContent class="w-auto p-0" align="start" :to="portalTo">
+      <!--
+        Календарь открывается вверх и с отступом от края. На дефолтных
+        `side="bottom"` + `collisionPadding: 0` он свисал за экран на низком
+        вьюпорте и под поднявшейся клавиатурой — часть дат была недоступна.
+        Ровно эта конфигурация работает в `TransactionMetaRow`.
+      -->
+      <PopoverContent
+        class="w-auto p-0"
+        align="start"
+        side="top"
+        :side-offset="8"
+        :collision-padding="16"
+        :to="portalTo"
+      >
         <Calendar
           v-if="isOpen"
           :model-value="calendarValue"

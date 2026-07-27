@@ -21,7 +21,7 @@ import { measureTextWidth, resolveFont } from '@/shared/lib/layout/measureTextWi
 
 /** Паддинги + рамка + иконка + зазор, пока ни один чип не измерен. */
 const DEFAULT_CHROME = 48;
-/** Иконка `size="sm"`, когда её собственный замер недоступен. */
+/** Иконка `size="sm"` или аватар `size="xs"`, когда собственный замер недоступен. */
 const DEFAULT_ICON = 16;
 /**
  * Предел добора ширины на чип. Балансировка почти всегда оставляет ряду
@@ -88,7 +88,10 @@ export function useJustifiedRows<T>(
       parseFloat(style.borderRightWidth);
     if (!Number.isFinite(box) || box <= 0) return;
 
-    const icon = node.querySelector('svg');
+    // Ведущий элемент чипа не обязан быть иконкой: у чипа человека это аватар —
+    // обычный `div`. Явная пометка важнее тега, иначе такие чипы мерились бы
+    // уже реального на ширину аватара и ряд переполнял бы контейнер.
+    const icon = node.querySelector('[data-chip-lead]') ?? node.querySelector('svg');
     const iconWidth = icon ? icon.getBoundingClientRect().width || DEFAULT_ICON : 0;
     const columnGap = parseFloat(style.columnGap) || 0;
 

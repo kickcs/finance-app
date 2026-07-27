@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.68';
+export const CURRENT_VERSION = '1.0.69';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,29 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.69',
+    date: '2026-07-27',
+    title: 'Долги стало удобнее заводить',
+    items: [
+      {
+        type: 'improvement',
+        text: 'Человека в долге и в разделении расхода теперь выбирают нажатием на имя, а не набором в поле. Имена идут от тех, с кем вы имеете дело чаще всего',
+      },
+      {
+        type: 'improvement',
+        text: 'Счёт долга выбирается там же, где у расхода и дохода — над суммой, и сразу видно, сколько останется',
+      },
+      {
+        type: 'fix',
+        text: 'Кнопка «Создать долг» больше не уезжает за экран, когда заполняете комментарий',
+      },
+      {
+        type: 'fix',
+        text: 'Календарь срока возврата больше не открывается за краем экрана. Неделю, две и месяц можно выбрать одним нажатием',
+      },
+    ],
+  },
   {
     version: '1.0.68',
     date: '2026-07-27',

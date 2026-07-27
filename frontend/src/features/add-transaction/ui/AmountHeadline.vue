@@ -35,6 +35,11 @@ const props = defineProps<{
   sign: 'minus' | 'plus' | null;
   currentBalance?: number;
   showInsufficientFunds?: boolean;
+  /**
+   * Что уйдёт со счёта сверх суммы — комиссия за перевод при выдаче долга.
+   * Без неё прогноз остатка врал бы ровно на её величину.
+   */
+  extraDebit?: number;
   autofocus?: boolean;
 }>();
 
@@ -76,7 +81,7 @@ const amountSizeClass = computed(() => {
 const projectedBalance = computed(() => {
   if (props.currentBalance === undefined || !props.sign) return null;
   return props.sign === 'minus'
-    ? props.currentBalance - props.amount
+    ? props.currentBalance - props.amount - (props.extraDebit ?? 0)
     : props.currentBalance + props.amount;
 });
 
@@ -95,7 +100,7 @@ const balanceLine = computed(() => {
   if (props.showInsufficientFunds && props.amount > 0) {
     return {
       tone: 'warning' as const,
-      text: `Не хватает ${withSymbol(props.amount - props.currentBalance)}`,
+      text: `Не хватает ${withSymbol(props.amount + (props.extraDebit ?? 0) - props.currentBalance)}`,
     };
   }
 
