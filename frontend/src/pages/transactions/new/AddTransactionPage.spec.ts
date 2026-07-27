@@ -929,12 +929,12 @@ describe('AddTransactionPage', () => {
       );
       const wrapper = await renderPage();
 
-      // Отдельного ряда чипов больше нет — счёт выбирается на карточке суммы,
-      // остальные счета лежат в её списке.
+      // Отдельного ряда чипов больше нет — счёт выбирается в строке над суммой,
+      // остальные счета лежат в её поповере.
       expect(wrapper.text()).toContain('Основной');
       expect(wrapper.find('[data-testid="account-trigger"]').exists()).toBe(true);
 
-      const card = wrapper.findComponent({ name: 'AmountCard' });
+      const card = wrapper.findComponent({ name: 'AmountHeadline' });
       expect(card.props('accounts').map((a: { name: string }) => a.name)).toEqual([
         'Основной',
         'Накопления',
@@ -1172,8 +1172,8 @@ describe('AddTransactionPage', () => {
       const wrapper = await renderPage();
 
       // Уводим расход на второй счёт — не тот, что дефолтный в профиле.
-      // Счёт выбирается на карточке суммы, её список в поповере.
-      const card = wrapper.findComponent({ name: 'AmountCard' });
+      // Счёт выбирается в строке над суммой, её список в поповере.
+      const card = wrapper.findComponent({ name: 'AmountHeadline' });
       card.vm.$emit('update:accountId', mockSecondAccountResponse.id);
       await nextTick();
       await flushPromises();

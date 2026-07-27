@@ -16,7 +16,7 @@ import { useSmartDefaults } from '../model/useSmartDefaults';
 import { useAmountSuggestions } from '../model/useAmountSuggestions';
 import { usePanelState } from '../model/usePanelState';
 import { useHaptics } from '@/shared/lib/haptics';
-import AmountCard from './AmountCard.vue';
+import AmountHeadline from './AmountHeadline.vue';
 import ExpensePanel from './ExpensePanel.vue';
 import IncomePanel from './IncomePanel.vue';
 import TransferPanel from './TransferPanel.vue';
@@ -334,7 +334,7 @@ const expensePanelHandlers = {
     @submit.prevent="emit('submit')"
   >
     <div class="flex flex-1 flex-col gap-3 px-4 pt-1">
-      <AmountCard
+      <AmountHeadline
         :amount="formData.amount"
         :currency="formData.currency"
         :currency-symbol="currencySymbol"
@@ -352,6 +352,10 @@ const expensePanelHandlers = {
         @update:currency="updateField('currency', $event)"
         @update:account-id="handleAccountChange"
       />
+
+      <!-- Волосяная линия вместо карточки: сумма отделена от типа операции, но
+           своей поверхности не получает. -->
+      <div class="-mx-4 border-b border-border-light dark:border-border-dark" />
 
       <UTabs
         :model-value="formData.type"
