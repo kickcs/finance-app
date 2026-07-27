@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, onUnmounted, onMounted, nextTick, watch } from 'vue';
 import { useTimeoutFn } from '@vueuse/core';
-import { useMountedAnimation } from '@/shared/lib/hooks/useMountedAnimation';
 import { UButton, UTabs } from '@/shared/ui';
 import { CATEGORY_IDS } from '@/entities/category';
 import type { Category } from '@/entities/category';
@@ -88,20 +87,43 @@ const {
 const activeIndex = computed(() => EXPENSE_INDEX + TRANSACTION_TYPE_ORDER.indexOf(type.value));
 
 /**
- * Соседние панели нужны только тогда, когда карусель реально может на них
- * уехать, — поэтому поднимаем их на первом касании скроллера или клике по табу,
- * до того как палец сдвинулся. При открытии экрана рисуется одна панель вместо
- * шести (4 типа + 2 клона): вместе с лишними поддеревьями уходят запросы людей
- * и курсов валют, которые на «Расходе» не нужны вовсе.
+ * Первая отрисовка — только активная панель: из шести слотов (4 типа + 2 клона)
+ * пять не нужны, чтобы показать экран, а вместе с ними уходят запросы людей и
+ * курсов валют, не нужные на «Расходе». Ради этого кадра всё и затевалось.
+ *
+ * Дальше рисуем ВСЕ панели, и делаем это в ближайшем простое, а не по касанию.
+ * Узкое окно вокруг активной панели выглядит экономнее, но у карусели два
+ * места, где следующая панель нужна мгновенно: свайп (её видно, пока палец
+ * ещё едет) и цикличный переход, который прыгает с клона на реальную панель
+ * через всю ленту. В обоих случаях неотрисованный слот — это пустой экран под
+ * пальцем, а затем откат на исходную вкладку.
  */
 const neighborsArmed = ref(false);
 function armNeighbors() {
   neighborsArmed.value = true;
 }
 
+let armHandle: number | null = null;
+let armFallback: ReturnType<typeof setTimeout> | null = null;
+
+/**
+ * Ждём, пока отыграет переход роутера: пять панелей, смонтированных в середине
+ * анимации входа, роняли кадры именно там, где это заметнее всего.
+ */
+const ARM_DELAY_MS = 450;
+
+function armNeighborsWhenIdle() {
+  armFallback = setTimeout(() => {
+    if (typeof requestIdleCallback === 'function') {
+      armHandle = requestIdleCallback(armNeighbors, { timeout: 600 });
+    } else {
+      armNeighbors();
+    }
+  }, ARM_DELAY_MS);
+}
+
 function isRendered(index: number) {
-  const distance = Math.abs(index - activeIndex.value);
-  return distance === 0 || (neighborsArmed.value && distance === 1);
+  return index === activeIndex.value || neighborsArmed.value;
 }
 
 /**
@@ -332,6 +354,8 @@ onMounted(() => {
     autofocusSpent.value = true;
   });
 
+  armNeighborsWhenIdle();
+
   if (shouldShowHint('split-expense')) {
     showSplitHintDelayed();
   }
@@ -339,6 +363,8 @@ onMounted(() => {
 
 onUnmounted(() => {
   stopSplitHint();
+  if (armHandle !== null && typeof cancelIdleCallback === 'function') cancelIdleCallback(armHandle);
+  if (armFallback) clearTimeout(armFallback);
 });
 
 function dismissSplitHint() {
@@ -386,19 +412,20 @@ const expensePanelHandlers = {
   setIsIncluded: (included: boolean) => emit('setIsIncluded', included),
   setSplitEnabled: (enabled: boolean) => emit('setSplitEnabled', enabled),
 };
-
-// Единственная входная анимация: она же прячет кадр, в котором карусель ещё не
-// припарковалась на нужной панели.
-const { isMounted } = useMountedAnimation();
 </script>
 
 <template>
+  <!--
+    Входной анимации здесь нет намеренно. Она прятала кадр, в котором карусель
+    ещё не припаркована на нужной панели, — но парковка происходит синхронно в
+    `onMounted`, то есть до первой отрисовки, и прятать нечего. Замер: форма была
+    готова на 497 мс, а из-за задержки и затухания появлялась к 781 мс, и ровно
+    в это окно попадала самая тяжёлая задача старта. Движение входа даёт переход
+    роутера, второе поверх него читалось как рывок.
+  -->
   <form
     class="form-root space-y-4 transition-opacity duration-200"
-    :class="[
-      isSubmitting && 'opacity-60 pointer-events-none',
-      isMounted ? 'opacity-100' : 'opacity-0',
-    ]"
+    :class="isSubmitting && 'opacity-60 pointer-events-none'"
     @submit.prevent="$emit('submit')"
   >
     <!-- Type Tabs -->
@@ -423,7 +450,6 @@ const { isMounted } = useMountedAnimation();
         @pointerdown="armNeighbors"
         @touchstart.passive="armNeighbors"
         @wheel.passive="armNeighbors"
-        @keydown="armNeighbors"
       >
         <div
           v-for="(panelType, idx) in cyclicPanelOrder"
