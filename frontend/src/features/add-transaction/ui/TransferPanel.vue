@@ -20,14 +20,8 @@ const emit = defineEmits<{
   'update:formData': [value: TransactionFormData];
 }>();
 
-const {
-  selectedAccount,
-  availableCurrencies,
-  isMultiCurrency,
-  currencySymbol,
-  currentBalance,
-  hasSufficientFunds,
-} = usePanelState(props, emit);
+// Сумма списания и её валюта живут на плите — здесь остаются только счета.
+const { selectedAccount, currentBalance } = usePanelState(props, emit);
 
 const sourceOpen = ref(false);
 const targetOpen = ref(false);
@@ -217,36 +211,45 @@ function handleToCurrencyChange(currency: string) {
   });
 }
 
-function handleSourceCurrencyChange(newCurrency: string) {
-  const updates: Partial<TransactionFormData> = { currency: newCurrency };
+/**
+ * Сумму списания и её валюту теперь редактирует плита, поэтому пересчёт
+ * зачисления висит на самих значениях, а не на обработчиках поля.
+ */
+watch(
+  () => props.formData.amount,
+  (amount) => {
+    const toAmount = !showConversion.value ? amount : recalcToAmount(amount, exchangeRate.value);
+    if ((toAmount ?? null) !== props.formData.toAmount) {
+      emit('update:formData', { ...props.formData, toAmount: toAmount ?? null });
+    }
+  },
+);
 
-  if (
-    props.formData.toAccountId === props.formData.accountId &&
-    props.formData.toCurrency === newCurrency
-  ) {
+/**
+ * Перевод внутри одного счёта: если валюта списания догнала валюту зачисления,
+ * перевод стал «сам в себя» и невалиден. Уводим зачисление на другую валюту
+ * этого же счёта — иначе кнопка гаснет, а пользователь не менял ничего, кроме
+ * валюты списания.
+ */
+watch(
+  () => props.formData.currency,
+  (newCurrency) => {
+    if (
+      props.formData.toAccountId !== props.formData.accountId ||
+      props.formData.toCurrency !== newCurrency
+    ) {
+      return;
+    }
     const account = props.accounts.find((a) => a.id === props.formData.accountId);
     const otherCurrency = account?.balances.find((b) => b.currency !== newCurrency)?.currency;
-    if (otherCurrency) {
-      updates.toCurrency = otherCurrency;
-      updates.toAmount = applyApiRate(newCurrency, otherCurrency);
-    }
-  } else if (props.formData.toCurrency && props.formData.toCurrency !== newCurrency) {
-    updates.toAmount = applyApiRate(newCurrency, props.formData.toCurrency);
-  }
-
-  emit('update:formData', { ...props.formData, ...updates });
-}
-
-function handleAmountChange(newAmount: number) {
-  const toAmount = !showConversion.value
-    ? newAmount
-    : recalcToAmount(newAmount, exchangeRate.value);
-  emit('update:formData', {
-    ...props.formData,
-    amount: newAmount,
-    toAmount: toAmount ?? null,
-  });
-}
+    if (!otherCurrency) return;
+    emit('update:formData', {
+      ...props.formData,
+      toCurrency: otherCurrency,
+      toAmount: applyApiRate(newCurrency, otherCurrency),
+    });
+  },
+);
 
 function handleTargetAmountChange(newToAmount: number) {
   if (!props.formData.currency || !props.formData.toCurrency) return;
@@ -317,209 +320,171 @@ function handleFeeTypeToggle() {
 
 <template>
   <div class="space-y-4">
-    <HeroAmount
-      variant="hero"
-      :amount="formData.amount"
-      :currency="formData.currency"
-      :currency-symbol="currencySymbol"
-      :available-currencies="availableCurrencies"
-      :is-multi-currency="isMultiCurrency"
-      :show-insufficient-funds="!hasSufficientFunds"
-      :current-balance="currentBalance"
-      label="Сумма списания"
-      @update:amount="handleAmountChange"
-      @update:currency="handleSourceCurrencyChange"
-    />
-
     <!-- Transfer flow: source → swap → target -->
     <div class="relative">
-      <!-- Timeline connector -->
+      <!--
+        Перевод — это одна связь «откуда → куда», поэтому он и читается одной
+        строкой. Две карточки в столбик с пунктирным коннектором занимали
+        полпанели и заставляли глаз ходить вниз-вверх ради одной мысли.
+      -->
       <div
-        v-if="targetAccount"
-        class="absolute left-[1px] top-6 bottom-6 w-px border-l-2 border-dashed border-border-light dark:border-border-dark opacity-40 z-0"
-      />
-
-      <!-- Source account card -->
-      <Popover v-model:open="sourceOpen">
-        <PopoverTrigger as-child>
-          <button
-            type="button"
-            class="w-full flex items-center gap-3 p-3.5 rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark transition-colors hover:bg-surface-light/50 dark:hover:bg-surface-dark/50 overflow-hidden relative z-10"
-          >
-            <!-- Color accent bar -->
-            <span
-              class="absolute left-0 top-2 bottom-2 w-1 rounded-r-full"
-              :style="{
-                backgroundColor: selectedAccount?.color || 'var(--color-border-light)',
-              }"
-            />
-            <div class="flex-1 text-left pl-1.5">
-              <p
-                class="text-caption text-text-tertiary-light dark:text-text-tertiary-dark uppercase tracking-wider"
+        class="flex items-stretch gap-1 rounded-xl border border-border-light bg-card-light p-1 dark:border-border-dark dark:bg-card-dark"
+      >
+        <Popover v-model:open="sourceOpen">
+          <PopoverTrigger as-child>
+            <button
+              type="button"
+              class="flex min-w-0 flex-1 flex-col gap-0.5 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-surface-light dark:hover:bg-surface-dark"
+            >
+              <span
+                class="text-caption uppercase tracking-wider text-text-tertiary-light dark:text-text-tertiary-dark"
               >
                 Откуда
-              </p>
-              <p class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark">
-                {{ selectedAccount?.name || 'Выберите счёт' }}
-              </p>
-            </div>
-            <div v-if="selectedAccount" class="text-right">
-              <p
-                class="text-sm font-medium tabular-nums text-text-primary-light dark:text-text-primary-dark"
+              </span>
+              <span class="flex min-w-0 items-center gap-1.5">
+                <span
+                  class="h-2 w-2 shrink-0 rounded-full"
+                  :style="{
+                    backgroundColor: selectedAccount?.color || 'var(--color-border-light)',
+                  }"
+                />
+                <span
+                  class="truncate text-sm font-semibold text-text-primary-light dark:text-text-primary-dark"
+                >
+                  {{ selectedAccount?.name || 'Выберите счёт' }}
+                </span>
+              </span>
+              <span
+                v-if="selectedAccount"
+                class="truncate text-xs tabular-nums text-text-tertiary-light dark:text-text-tertiary-dark"
               >
                 {{ formatCurrency(currentBalance, formData.currency) }}
-              </p>
-            </div>
-            <UIcon
-              name="expand_more"
-              size="sm"
-              class="text-text-tertiary-light dark:text-text-tertiary-dark shrink-0"
-            />
-          </button>
-        </PopoverTrigger>
-        <PopoverContent
-          align="start"
-          :side-offset="4"
-          class="w-[var(--reka-popover-trigger-width)] p-1"
-        >
-          <button
-            v-for="account in accounts"
-            :key="account.id"
-            type="button"
-            :class="[
-              'flex items-center gap-2.5 w-full px-3 py-2.5 rounded-lg text-sm transition-colors',
-              account.id === formData.accountId
-                ? 'bg-primary/10 text-primary font-medium'
-                : 'text-text-primary-light dark:text-text-primary-dark hover:bg-surface-light dark:hover:bg-surface-dark',
-            ]"
-            @click="handleSourceSelect(account.id)"
+              </span>
+            </button>
+          </PopoverTrigger>
+          <PopoverContent
+            align="start"
+            :side-offset="4"
+            class="w-max min-w-[var(--reka-popover-trigger-width)] max-w-[min(20rem,calc(100vw-2rem))] p-1"
           >
-            <span
-              class="w-3 h-3 rounded-full shrink-0"
-              :style="{ backgroundColor: account.color }"
-            />
-            <span class="flex-1 text-left">{{ account.name }}</span>
-            <span
-              class="text-xs tabular-nums text-text-tertiary-light dark:text-text-tertiary-dark"
+            <button
+              v-for="account in accounts"
+              :key="account.id"
+              type="button"
+              :class="[
+                'flex items-center gap-2.5 w-full px-3 py-2.5 rounded-lg text-sm transition-colors',
+                account.id === formData.accountId
+                  ? 'bg-primary/10 text-primary font-medium'
+                  : 'text-text-primary-light dark:text-text-primary-dark hover:bg-surface-light dark:hover:bg-surface-dark',
+              ]"
+              @click="handleSourceSelect(account.id)"
             >
-              {{
-                formatCurrency(
-                  account.balances[0]?.balance ?? 0,
-                  account.balances[0]?.currency ?? '',
-                )
-              }}
-            </span>
-          </button>
-        </PopoverContent>
-      </Popover>
+              <span
+                class="w-3 h-3 rounded-full shrink-0"
+                :style="{ backgroundColor: account.color }"
+              />
+              <span class="min-w-0 flex-1 truncate text-left">{{ account.name }}</span>
+              <span
+                class="shrink-0 whitespace-nowrap text-xs tabular-nums text-text-tertiary-light dark:text-text-tertiary-dark"
+              >
+                {{
+                  formatCurrency(
+                    account.balances[0]?.balance ?? 0,
+                    account.balances[0]?.currency ?? '',
+                  )
+                }}
+              </span>
+            </button>
+          </PopoverContent>
+        </Popover>
 
-      <!-- Swap button — centered between cards -->
-      <div class="flex justify-center -my-2 relative z-20">
         <button
           type="button"
-          class="w-10 h-10 rounded-full flex items-center justify-center bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark shadow-sm hover:bg-primary/10 active:scale-90 active:rotate-180 transition-all duration-300 disabled:opacity-40"
+          aria-label="Поменять счета местами"
+          class="swap-btn flex h-9 w-9 shrink-0 items-center justify-center self-center rounded-full text-primary hover:bg-primary/10 active:rotate-180 disabled:opacity-40"
           :disabled="!formData.toAccountId"
           @click="handleSwap"
         >
-          <UIcon
-            :name="isIntraAccount ? 'currency_exchange' : 'swap_vert'"
-            size="md"
-            class="text-primary"
-          />
+          <UIcon :name="isIntraAccount ? 'currency_exchange' : 'swap_horiz'" size="sm" />
         </button>
-      </div>
 
-      <!-- Target account card -->
-      <Popover v-model:open="targetOpen">
-        <PopoverTrigger as-child>
-          <button
-            type="button"
-            :class="[
-              'w-full flex items-center gap-3 p-3.5 rounded-xl transition-colors overflow-hidden relative z-10',
-              targetAccount
-                ? 'bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark hover:bg-surface-light/50 dark:hover:bg-surface-dark/50'
-                : 'bg-transparent border-2 border-dashed border-border-light dark:border-border-dark hover:border-primary/40',
-            ]"
-          >
-            <!-- Color accent bar (only when account selected) -->
-            <span
-              v-if="targetAccount"
-              class="absolute left-0 top-2 bottom-2 w-1 rounded-r-full"
-              :style="{ backgroundColor: targetAccount.color }"
-            />
-            <div class="flex-1 text-left" :class="targetAccount ? 'pl-1.5' : ''">
-              <p
-                class="text-caption text-text-tertiary-light dark:text-text-tertiary-dark uppercase tracking-wider"
+        <Popover v-model:open="targetOpen">
+          <PopoverTrigger as-child>
+            <button
+              type="button"
+              class="flex min-w-0 flex-1 flex-col gap-0.5 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-surface-light dark:hover:bg-surface-dark"
+            >
+              <span
+                class="text-caption uppercase tracking-wider text-text-tertiary-light dark:text-text-tertiary-dark"
               >
                 {{ isIntraAccount ? 'В валюту' : 'Куда' }}
-              </p>
-              <p
-                :class="[
-                  'text-sm font-semibold',
-                  targetAccount
-                    ? 'text-text-primary-light dark:text-text-primary-dark'
-                    : 'text-text-tertiary-light dark:text-text-tertiary-dark',
-                ]"
-              >
-                {{ targetAccount?.name || 'Выберите счёт' }}
-              </p>
-            </div>
-            <div v-if="targetAccount && targetBalance !== undefined" class="text-right">
-              <p
-                class="text-sm font-medium tabular-nums text-text-primary-light dark:text-text-primary-dark"
+              </span>
+              <span class="flex min-w-0 items-center gap-1.5">
+                <span
+                  class="h-2 w-2 shrink-0 rounded-full"
+                  :style="{
+                    backgroundColor: targetAccount?.color || 'var(--color-border-light)',
+                  }"
+                />
+                <span
+                  class="truncate text-sm font-semibold"
+                  :class="
+                    targetAccount
+                      ? 'text-text-primary-light dark:text-text-primary-dark'
+                      : 'text-text-tertiary-light dark:text-text-tertiary-dark'
+                  "
+                >
+                  {{ targetAccount?.name || 'Выберите счёт' }}
+                </span>
+              </span>
+              <span
+                v-if="targetAccount && targetBalance !== undefined"
+                class="truncate text-xs tabular-nums text-text-tertiary-light dark:text-text-tertiary-dark"
               >
                 {{ formatCurrency(targetBalance, formData.toCurrency ?? '') }}
-              </p>
-            </div>
-            <UIcon
-              :name="targetAccount ? 'expand_more' : 'add'"
-              size="sm"
-              :class="
-                targetAccount
-                  ? 'text-text-tertiary-light dark:text-text-tertiary-dark'
-                  : 'text-primary'
-              "
-              class="shrink-0"
-            />
-          </button>
-        </PopoverTrigger>
-        <PopoverContent
-          align="start"
-          :side-offset="4"
-          class="w-[var(--reka-popover-trigger-width)] p-1"
-        >
-          <button
-            v-for="account in availableTargetAccounts"
-            :key="account.id"
-            type="button"
-            :class="[
-              'flex items-center gap-2.5 w-full px-3 py-2.5 rounded-lg text-sm transition-colors',
-              account.id === formData.toAccountId
-                ? 'bg-primary/10 text-primary font-medium'
-                : 'text-text-primary-light dark:text-text-primary-dark hover:bg-surface-light dark:hover:bg-surface-dark',
-            ]"
-            @click="handleTargetSelect(account.id)"
+              </span>
+            </button>
+          </PopoverTrigger>
+          <!-- Правый триггер: список раскрываем к правому краю, иначе на узком
+               экране он уезжает за границу. -->
+          <PopoverContent
+            align="end"
+            :side-offset="4"
+            class="w-max min-w-[var(--reka-popover-trigger-width)] max-w-[min(20rem,calc(100vw-2rem))] p-1"
           >
-            <span
-              class="w-3 h-3 rounded-full shrink-0"
-              :style="{ backgroundColor: account.color }"
-            />
-            <span class="flex-1 text-left">{{ account.name }}</span>
-            <span
-              v-if="account.id === formData.accountId"
-              class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
+            <button
+              v-for="account in availableTargetAccounts"
+              :key="account.id"
+              type="button"
+              :class="[
+                'flex items-center gap-2.5 w-full px-3 py-2.5 rounded-lg text-sm transition-colors',
+                account.id === formData.toAccountId
+                  ? 'bg-primary/10 text-primary font-medium'
+                  : 'text-text-primary-light dark:text-text-primary-dark hover:bg-surface-light dark:hover:bg-surface-dark',
+              ]"
+              @click="handleTargetSelect(account.id)"
             >
-              конвертация
-            </span>
-          </button>
-        </PopoverContent>
-      </Popover>
+              <span
+                class="w-3 h-3 rounded-full shrink-0"
+                :style="{ backgroundColor: account.color }"
+              />
+              <span class="min-w-0 flex-1 truncate text-left">{{ account.name }}</span>
+              <span
+                v-if="account.id === formData.accountId"
+                class="shrink-0 whitespace-nowrap text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
+              >
+                конвертация
+              </span>
+            </button>
+          </PopoverContent>
+        </Popover>
+      </div>
 
       <!-- Exchange rate input (only when currencies differ) -->
       <Transition name="fee">
         <div
           v-if="showConversion"
-          class="mt-3 px-3 py-2.5 rounded-xl bg-surface-light/50 dark:bg-surface-dark/50 border border-border-light dark:border-border-dark"
+          class="mt-3 px-3 py-2.5 rounded-xl border border-border-light dark:border-border-dark"
         >
           <div class="flex items-center gap-2">
             <UIcon
@@ -553,7 +518,7 @@ function handleFeeTypeToggle() {
       <Transition name="fee">
         <div
           v-if="targetAccount"
-          class="mt-3 flex items-center gap-2 px-3 py-2.5 rounded-xl bg-surface-light/50 dark:bg-surface-dark/50 border border-border-light dark:border-border-dark"
+          class="mt-3 flex items-center gap-2 px-3 py-2.5 rounded-xl border border-border-light dark:border-border-dark"
         >
           <UIcon
             name="receipt_long"
@@ -623,5 +588,19 @@ function handleFeeTypeToggle() {
 .fee-leave-to {
   opacity: 0;
   transform: translateY(-8px);
+}
+
+.swap-btn {
+  transition:
+    transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    background-color 0.2s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fee-enter-active,
+  .fee-leave-active,
+  .swap-btn {
+    transition: none;
+  }
 }
 </style>

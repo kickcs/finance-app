@@ -2,29 +2,34 @@
 import { ref, computed, watch } from 'vue';
 import { UInput, UButton, UIcon, ToggleRow } from '@/shared/ui';
 import { DEFAULT_CURRENCY } from '@/entities/currency';
-import {
-  getCurrencySymbol,
-  sanitizeCurrencyInput,
-  formatCurrency,
-} from '@/shared/lib/format/currency';
+import { sanitizeCurrencyInput, formatCurrency } from '@/shared/lib/format/currency';
 import { PersonSelector, usePeople } from '@/entities/person';
 import { AccountSelector } from '@/entities/account';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useHaptics } from '@/shared/lib/haptics';
 import type { AccountWithBalances } from '@/entities/account';
 import { useDebtForm } from '../model/useDebtForm';
-import HeroAmount from './HeroAmount.vue';
 import DebtDirectionPill from './DebtDirectionPill.vue';
 import DatePickerField from './DatePickerField.vue';
 
 const props = defineProps<{
+  /** Сумма, валюта и счёт живут в общей форме — панель только следует за ними. */
+  amount: number;
+  currency: string;
+  accountId: string | null;
   accounts: AccountWithBalances[];
   defaultAccountId?: string | null;
-  autofocusAmount?: boolean;
 }>();
 
 const emit = defineEmits<{
   submitted: [];
+  'update:currency': [value: string];
+  /**
+   * Счёт долга поднимается в общую форму, чтобы плита знала, из каких валют
+   * этого счёта выбирать. Без этого долг на мультивалютном счёте молча
+   * залипал на первой валюте.
+   */
+  'update:accountId': [value: string];
 }>();
 
 const { userId } = useCurrentUser();
@@ -32,22 +37,40 @@ const { people, createPerson } = usePeople(userId);
 const { trigger } = useHaptics();
 const { formData, isValid, isSubmitting, error, createDebt, updateField } = useDebtForm();
 
-const selectedAccount = computed(() =>
-  props.accounts.find((a) => a.id === formData.value.account_id),
-);
-const availableCurrencies = computed(() =>
-  selectedAccount.value ? selectedAccount.value.balances.map((b) => b.currency) : [],
-);
-const isMultiCurrency = computed(() => availableCurrencies.value.length > 1);
-const currencySymbol = computed(() => getCurrencySymbol(formData.value.currency));
-
+// Плита — единственный редактор суммы и валюты долга; своя модель подтягивается
+// за ней, а обратный ход идёт через `update:currency` при смене счёта.
 watch(
-  [() => props.accounts, () => props.defaultAccountId],
-  ([accs, defaultId]) => {
-    if (accs.length === 0 || formData.value.account_id) return;
-    const preferred = (defaultId && accs.find((a) => a.id === defaultId)) || accs[0];
+  () => props.amount,
+  (amount) => updateField('amount', amount),
+  { immediate: true },
+);
+watch(
+  () => props.currency,
+  (currency) => updateField('currency', currency),
+  { immediate: true },
+);
+
+/**
+ * Счёт берём тот, что уже выбран в форме, а не профильный дефолт: панель
+ * монтируется при заходе на вкладку, и подстановка «своего» счёта молча
+ * перебивала бы счёт и валюту начатой транзакции другого типа.
+ */
+watch(
+  [() => props.accounts, () => props.accountId],
+  ([accs, accountId]) => {
+    if (accs.length === 0) return;
+    const preferred =
+      (accountId && accs.find((a) => a.id === accountId)) ||
+      (props.defaultAccountId && accs.find((a) => a.id === props.defaultAccountId)) ||
+      accs[0];
+    if (formData.value.account_id === preferred.id) return;
+
     updateField('account_id', preferred.id);
-    updateField('currency', preferred.balances[0]?.currency || DEFAULT_CURRENCY);
+    // Наверх сообщаем, только если счёт пришёл не оттуда — иначе это эхо.
+    if (preferred.id !== accountId) {
+      emit('update:accountId', preferred.id);
+      emit('update:currency', preferred.balances[0]?.currency || DEFAULT_CURRENCY);
+    }
   },
   { immediate: true },
 );
@@ -56,16 +79,25 @@ function handleAccountChange(accountId: string) {
   trigger('selection');
   const account = props.accounts.find((a) => a.id === accountId);
   const currencies = account?.balances.map((b) => b.currency) || [];
-  const currentCurrency = formData.value.currency;
-  const newCurrency = currencies.includes(currentCurrency)
-    ? currentCurrency
-    : currencies[0] || DEFAULT_CURRENCY;
   updateField('account_id', accountId);
-  updateField('currency', newCurrency);
+  emit('update:accountId', accountId);
+  if (!currencies.includes(props.currency)) {
+    emit('update:currency', currencies[0] || DEFAULT_CURRENCY);
+  }
 }
 
 const isDebtDateOpen = ref(false);
 const isDueDateOpen = ref(false);
+const showMore = ref(false);
+
+/** Сколько необязательных полей заполнено — подпись «Ещё» иначе выглядит пустой. */
+const extrasCount = computed(
+  () =>
+    Number(Boolean(formData.value.due_date)) +
+    Number(Boolean(formData.value.description.trim())) +
+    Number(formData.value.is_private) +
+    Number(formData.value.skip_transaction),
+);
 
 // Комиссию платит отправитель, поэтому она есть только при выдаче долга.
 // Без транзакции списывать нечего — поле тоже прячем.
@@ -131,18 +163,6 @@ const infoText = computed(() => {
 
 <template>
   <div class="space-y-3 pb-4 md:pb-8">
-    <HeroAmount
-      variant="hero"
-      :amount="formData.amount"
-      :currency="formData.currency"
-      :currency-symbol="currencySymbol"
-      :available-currencies="availableCurrencies"
-      :is-multi-currency="isMultiCurrency"
-      :autofocus="autofocusAmount"
-      @update:amount="updateField('amount', $event)"
-      @update:currency="updateField('currency', $event)"
-    />
-
     <DebtDirectionPill
       :model-value="formData.debt_type"
       @update:model-value="updateField('debt_type', $event)"
@@ -174,7 +194,7 @@ const infoText = computed(() => {
         Комиссия за перевод (необязательно)
       </label>
       <div
-        class="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark"
+        class="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-border-light dark:border-border-dark"
       >
         <UIcon
           name="receipt_long"
@@ -207,17 +227,42 @@ const infoText = computed(() => {
       </p>
     </div>
 
-    <div class="grid grid-cols-2 gap-2">
-      <div class="space-y-1.5">
-        <label class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark">
-          Дата долга
-        </label>
-        <DatePickerField
-          v-model:open="isDebtDateOpen"
-          :model-value="formData.debt_date"
-          @update:model-value="updateField('debt_date', $event)"
-        />
-      </div>
+    <div class="space-y-1.5">
+      <label class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark">
+        Дата долга
+      </label>
+      <DatePickerField
+        v-model:open="isDebtDateOpen"
+        :model-value="formData.debt_date"
+        @update:model-value="updateField('debt_date', $event)"
+      />
+    </div>
+
+    <!--
+      Срок, комментарий и два переключателя заполняют единицы — на виду они
+      растягивали панель на два экрана. Счётчик в подписи показывает, что под
+      «Ещё» уже что-то задано, иначе настройка теряется из виду.
+    -->
+    <button
+      type="button"
+      data-testid="debt-more-toggle"
+      :aria-expanded="showMore"
+      class="flex w-full items-center justify-between rounded-xl px-1 py-2 text-sm text-text-secondary-light transition-colors hover:text-text-primary-light dark:text-text-secondary-dark dark:hover:text-text-primary-dark"
+      @click="showMore = !showMore"
+    >
+      <span>
+        Ещё
+        <span v-if="extrasCount" class="text-primary">· {{ extrasCount }}</span>
+      </span>
+      <UIcon
+        name="expand_more"
+        size="sm"
+        class="more-chevron transition-transform duration-200"
+        :class="showMore && 'rotate-180'"
+      />
+    </button>
+
+    <div v-if="showMore" class="space-y-3">
       <div class="space-y-1.5">
         <label class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark">
           Срок возврата
@@ -230,28 +275,28 @@ const infoText = computed(() => {
           @update:model-value="updateField('due_date', $event)"
         />
       </div>
+
+      <UInput
+        :model-value="formData.description"
+        label="Комментарий (необязательно)"
+        placeholder="Добавьте описание..."
+        @update:model-value="updateField('description', $event as string)"
+      />
+
+      <ToggleRow
+        :model-value="formData.is_private"
+        title="Скрыть сумму"
+        description="Сумма не будет видна в общем списке"
+        @update:model-value="updateField('is_private', $event)"
+      />
+
+      <ToggleRow
+        :model-value="formData.skip_transaction"
+        :title="skipToggleTitle"
+        description="Транзакция не будет создана"
+        @update:model-value="updateField('skip_transaction', $event)"
+      />
     </div>
-
-    <UInput
-      :model-value="formData.description"
-      label="Комментарий (необязательно)"
-      placeholder="Добавьте описание..."
-      @update:model-value="updateField('description', $event as string)"
-    />
-
-    <ToggleRow
-      :model-value="formData.is_private"
-      title="Скрыть сумму"
-      description="Сумма не будет видна в общем списке"
-      @update:model-value="updateField('is_private', $event)"
-    />
-
-    <ToggleRow
-      :model-value="formData.skip_transaction"
-      :title="skipToggleTitle"
-      description="Транзакция не будет создана"
-      @update:model-value="updateField('skip_transaction', $event)"
-    />
 
     <div
       v-if="!formData.skip_transaction && formData.account_id"
@@ -286,3 +331,11 @@ const infoText = computed(() => {
     </div>
   </div>
 </template>
+
+<style scoped>
+@media (prefers-reduced-motion: reduce) {
+  .more-chevron {
+    transition: none;
+  }
+}
+</style>

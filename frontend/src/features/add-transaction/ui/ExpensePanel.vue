@@ -9,11 +9,7 @@ import type { SplitExpenseData, SplitMethod } from '@/features/split-expense';
 import type { AccountWithBalances } from '@/entities/account';
 import type { TransactionFormData } from '../model/useTransactionForm';
 import { usePanelState } from '../model/usePanelState';
-import { useAmountSuggestions } from '../model/useAmountSuggestions';
-import HeroAmount from './HeroAmount.vue';
-import AmountSuggestions from './AmountSuggestions.vue';
 import { CategoryPicker } from '@/entities/category';
-import { AccountSelector } from '@/entities/account';
 
 const props = defineProps<{
   formData: TransactionFormData;
@@ -22,7 +18,6 @@ const props = defineProps<{
   transactions?: Transaction[];
   splitData?: SplitExpenseData;
   splitValidationError?: string | null;
-  autofocusAmount?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -40,22 +35,9 @@ const SplitExpenseDrawer = defineAsyncComponent(
   () => import('@/features/split-expense/ui/SplitExpenseDrawer.vue'),
 );
 
-const {
-  availableCurrencies,
-  isMultiCurrency,
-  currencySymbol,
-  currentBalance,
-  hasSufficientFunds,
-  updateField,
-  handleAccountChange,
-} = usePanelState(props, emit);
-
-const { suggestions } = useAmountSuggestions(
-  () => props.transactions,
-  () => 'expense',
-  () => props.formData.currency,
-  () => props.formData.categoryId,
-);
+// Сумма, валюта и счёт живут на карточке сверху — панели остаются категория
+// и разделение расхода.
+const { updateField } = usePanelState(props, emit);
 
 const router = useRouter();
 const drawerOpen = ref(false);
@@ -87,34 +69,6 @@ const chipIdle = 'border-border-light dark:border-border-dark hover:border-prima
 
 <template>
   <div class="space-y-3" data-testid="expense-panel">
-    <HeroAmount
-      variant="hero"
-      sign="minus"
-      :amount="formData.amount"
-      :currency="formData.currency"
-      :currency-symbol="currencySymbol"
-      :available-currencies="availableCurrencies"
-      :is-multi-currency="isMultiCurrency"
-      :show-insufficient-funds="!hasSufficientFunds"
-      :current-balance="currentBalance"
-      :autofocus="autofocusAmount"
-      @update:amount="updateField('amount', $event)"
-      @update:currency="updateField('currency', $event)"
-    />
-
-    <AmountSuggestions
-      :amounts="suggestions"
-      :current-amount="formData.amount"
-      @select="updateField('amount', $event)"
-    />
-
-    <AccountSelector
-      :accounts="accounts"
-      :selected-id="formData.accountId"
-      label="Счёт"
-      @select="handleAccountChange"
-    />
-
     <CategoryPicker
       :categories="categories"
       :selected-id="formData.categoryId"

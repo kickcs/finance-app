@@ -2,12 +2,17 @@ import { ref, computed } from 'vue';
 import { CATEGORY_IDS } from '@/entities/category';
 import { DEFAULT_CURRENCY } from '@/entities/currency';
 
+/** Порядок типов задаёт порядок сегментов на плите. */
+export const TRANSACTION_TYPES = ['expense', 'income', 'transfer', 'debt'] as const;
+
+export type TransactionType = (typeof TRANSACTION_TYPES)[number];
+
 export interface TransactionFormData {
   accountId: string | null;
   categoryId: string;
   amount: number;
   currency: string;
-  type: 'income' | 'expense' | 'transfer' | 'debt';
+  type: TransactionType;
   description: string;
   date: number;
   toAccountId: string | null;
@@ -65,7 +70,7 @@ export function useTransactionForm() {
     formData.value[field] = value;
   }
 
-  function setType(type: 'income' | 'expense' | 'transfer' | 'debt') {
+  function setType(type: TransactionType) {
     formData.value.type = type;
     formData.value.categoryId = type === 'transfer' ? CATEGORY_IDS.TRANSFER : '';
     if (type !== 'transfer') {

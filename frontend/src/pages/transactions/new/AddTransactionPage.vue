@@ -178,40 +178,23 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <div class="h-full flex flex-col min-w-0 relative">
-    <!-- Mobile Header -->
-    <div class="md:hidden shrink-0">
-      <AppHeader title="Новая транзакция" show-back blur @back="goBack" />
-    </div>
+  <div class="flex h-full min-w-0 flex-col">
+    <!-- Шапка одна на все состояния: она же единственный выход с экрана —
+         нижняя навигация на этом маршруте скрыта, а в standalone-PWA нет и
+         кнопки браузера. -->
+    <AppHeader title="Новая транзакция" show-back blur @back="goBack" />
 
-    <!-- Desktop Breadcrumbs Header (optional) -->
-    <div class="hidden md:flex items-center justify-between px-8 py-6 shrink-0">
-      <h1 class="text-2xl font-bold text-text-primary-light dark:text-text-primary-dark">
-        Новая транзакция
-      </h1>
-      <button
-        type="button"
-        aria-label="Закрыть"
-        class="w-11 h-11 rounded-full flex items-center justify-center bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:bg-surface-hover-light dark:hover:bg-surface-hover-dark transition-colors cursor-pointer text-text-secondary-light dark:text-text-secondary-dark"
-        @click="goBack"
-      >
-        <UIcon name="close" size="sm" />
-      </button>
-    </div>
-
-    <!-- Content -->
-    <main class="flex-1 overflow-y-auto px-4 md:px-8 pt-2 md:pt-4">
-      <div
-        class="md:max-w-xl md:mx-auto md:bg-card-light md:dark:bg-card-dark md:rounded-3xl md:shadow-sm md:border md:border-border-light md:dark:border-border-dark md:p-8 md:mt-2"
-      >
+    <main class="flex-1 overflow-y-auto">
+      <div class="flex min-h-full flex-col md:mx-auto md:max-w-xl">
         <!-- Пока счета грузятся, форма без счёта выглядит сломанной: пустой
              селектор и заблокированная кнопка. Показываем каркас. -->
-        <div v-if="accountsLoading && accounts.length === 0" class="space-y-4" aria-busy="true">
-          <Skeleton class="h-11 w-full rounded-xl" />
-          <div class="flex flex-col items-center gap-2 py-4">
-            <Skeleton class="h-11 w-40 rounded-xl" />
-            <Skeleton class="h-4 w-32 rounded-md" />
-          </div>
+        <div
+          v-if="accountsLoading && accounts.length === 0"
+          class="space-y-3 px-4 pt-1"
+          aria-busy="true"
+        >
+          <Skeleton class="h-28 w-full rounded-2xl" />
+          <Skeleton class="h-9 w-full rounded-lg" />
           <Skeleton class="h-16 w-full rounded-xl" />
           <Skeleton class="h-24 w-full rounded-xl" />
         </div>
@@ -219,14 +202,14 @@ async function handleSubmit() {
         <div
           v-else-if="accounts.length === 0"
           data-testid="no-accounts-state"
-          class="text-center py-8"
+          class="px-4 py-8 text-center"
         >
           <UIcon
             name="account_balance_wallet"
             size="lg"
-            class="text-text-tertiary-light dark:text-text-tertiary-dark mb-3"
+            class="mb-3 text-text-tertiary-light dark:text-text-tertiary-dark"
           />
-          <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark mb-3">
+          <p class="mb-3 text-sm text-text-secondary-light dark:text-text-secondary-dark">
             У вас пока нет счетов
           </p>
           <UButton

@@ -1,23 +1,22 @@
 <script setup lang="ts">
-import { computed, ref, onUnmounted, onMounted, nextTick, watch } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useTimeoutFn } from '@vueuse/core';
 import { UButton, UTabs } from '@/shared/ui';
+import { formatNumberWithSpaces } from '@/shared/lib/format/currency';
 import { CATEGORY_IDS } from '@/entities/category';
 import type { Category } from '@/entities/category';
 import type { AccountWithBalances } from '@/entities/account';
 import type { SplitExpenseData, SplitMethod } from '@/features/split-expense';
-import type { TransactionFormData } from '../model/useTransactionForm';
-import {
-  useScrollableTabs,
-  TRANSACTION_TYPE_ORDER,
-  type TransactionType,
-} from '../model/useScrollableTabs';
+import type { TransactionFormData, TransactionType } from '../model/useTransactionForm';
 import { useHashtags, useRecentTransactions } from '@/entities/transaction';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useHashtagSuggestions } from '../model/useHashtagSuggestions';
 import { FeatureHintPopover, useFeatureHints } from '@/features/feature-hints';
 import { useSmartDefaults } from '../model/useSmartDefaults';
+import { useAmountSuggestions } from '../model/useAmountSuggestions';
+import { usePanelState } from '../model/usePanelState';
 import { useHaptics } from '@/shared/lib/haptics';
+import AmountCard from './AmountCard.vue';
 import ExpensePanel from './ExpensePanel.vue';
 import IncomePanel from './IncomePanel.vue';
 import TransferPanel from './TransferPanel.vue';
@@ -52,22 +51,10 @@ const emit = defineEmits<{
   setSplitEnabled: [enabled: boolean];
 }>();
 
-const ALL_TAB_ITEMS = [
-  { id: 'expense', label: 'Расход' },
-  { id: 'income', label: 'Доход' },
-  { id: 'transfer', label: 'Перевод' },
-  { id: 'debt', label: 'Долг' },
-];
-
-/** Индекс реальной панели «Расход» в цикличном порядке `[клон, ...реальные, клон]`. */
-const EXPENSE_INDEX = 1;
-
-const type = computed(() => props.formData.type);
-
-function applyTypeChange(newType: string) {
+function applyTypeChange(newType: TransactionType) {
   emit('update:formData', {
     ...props.formData,
-    type: newType as TransactionType,
+    type: newType,
     categoryId: newType === 'transfer' ? CATEGORY_IDS.TRANSFER : '',
     toAccountId: null,
     toAmount: null,
@@ -75,154 +62,55 @@ function applyTypeChange(newType: string) {
   });
 }
 
+// Карточке суммы нужны счёт, символ валюты и баланс — то же состояние,
+// которым живут панели.
 const {
-  scrollContainer,
-  handleTabClick,
-  handleScrollEnd,
-  handleScroll,
-  onCyclicWrap,
-  cyclicPanelOrder,
-} = useScrollableTabs(type, applyTypeChange, TRANSACTION_TYPE_ORDER);
+  selectedAccount,
+  availableCurrencies,
+  isMultiCurrency,
+  currencySymbol,
+  currentBalance,
+  hasSufficientFunds,
+  updateField,
+  handleAccountChange,
+} = usePanelState(props, (_e, value) => emit('update:formData', value));
 
-const activeIndex = computed(() => EXPENSE_INDEX + TRANSACTION_TYPE_ORDER.indexOf(type.value));
-
-/**
- * Первая отрисовка — только активная панель: из шести слотов (4 типа + 2 клона)
- * пять не нужны, чтобы показать экран, а вместе с ними уходят запросы людей и
- * курсов валют, не нужные на «Расходе». Ради этого кадра всё и затевалось.
- *
- * Дальше рисуем ВСЕ панели, и делаем это в ближайшем простое, а не по касанию.
- * Узкое окно вокруг активной панели выглядит экономнее, но у карусели два
- * места, где следующая панель нужна мгновенно: свайп (её видно, пока палец
- * ещё едет) и цикличный переход, который прыгает с клона на реальную панель
- * через всю ленту. В обоих случаях неотрисованный слот — это пустой экран под
- * пальцем, а затем откат на исходную вкладку.
- */
-const neighborsArmed = ref(false);
-function armNeighbors() {
-  neighborsArmed.value = true;
-}
-
-let armHandle: number | null = null;
-let armFallback: ReturnType<typeof setTimeout> | null = null;
+const TYPE_TABS = [
+  { id: 'expense', label: 'Расход' },
+  { id: 'income', label: 'Доход' },
+  { id: 'transfer', label: 'Перевод' },
+  { id: 'debt', label: 'Долг' },
+];
 
 /**
- * Ждём, пока отыграет переход роутера: пять панелей, смонтированных в середине
- * анимации входа, роняли кадры именно там, где это заметнее всего.
+ * Направление движения денег по счёту. Перевод тоже списывает — поэтому на нём
+ * виден прогноз остатка, а не просто текущий баланс. У долга счёт выбирается
+ * ниже в панели, там показывать нечего.
  */
-const ARM_DELAY_MS = 450;
-
-function armNeighborsWhenIdle() {
-  armFallback = setTimeout(() => {
-    if (typeof requestIdleCallback === 'function') {
-      armHandle = requestIdleCallback(armNeighbors, { timeout: 600 });
-    } else {
-      armNeighbors();
-    }
-  }, ARM_DELAY_MS);
-}
-
-function isRendered(index: number) {
-  return index === activeIndex.value || neighborsArmed.value;
-}
-
-/**
- * Автофокус на сумме — только при первом показе экрана. Панели монтируются на
- * лету, и без этого флага каждое переключение вкладки заново поднимало бы
- * клавиатуру, а браузер доскроливал фокусируемое поле, воюя с каруселью.
- */
-const autofocusSpent = ref(false);
-function shouldAutofocus(index: number) {
-  return Boolean(props.autofocusAmount) && !autofocusSpent.value && index === activeIndex.value;
-}
-
-// --- Плавная высота контейнера ---
-const containerHeight = ref<string>('auto');
-let lastCalculatedIndex = -1;
-let rafHandle: number | null = null;
-let pendingForce = false;
-
-function updateContainerHeight(force: boolean) {
-  if (!scrollContainer.value) return;
-
-  // Ширину берём из bounding rect: offsetWidth округляется, и на дробном
-  // масштабе деление даёт не тот индекс панели.
-  const panelWidth = scrollContainer.value.getBoundingClientRect().width;
-  if (panelWidth === 0) return;
-
-  const currentIndex = Math.round(scrollContainer.value.scrollLeft / panelWidth);
-  if (!force && currentIndex === lastCalculatedIndex) return;
-  lastCalculatedIndex = currentIndex;
-
-  const activePanel = scrollContainer.value.children[currentIndex] as HTMLElement | undefined;
-  // Ноль приходит, когда панель перемонтируется, — схлопываться на него нельзя.
-  if (activePanel && activePanel.offsetHeight > 0) {
-    containerHeight.value = `${activePanel.offsetHeight}px`;
-  }
-}
-
-/**
- * Замер высоты — чтение layout, за которым сразу идёт запись стиля. Батчим в
- * один кадр: иначе инерционный скролл и ResizeObserver форсят reflow на каждое
- * событие.
- */
-function scheduleHeightUpdate(force = false) {
-  pendingForce = pendingForce || force;
-  if (rafHandle !== null) return;
-  rafHandle = requestAnimationFrame(() => {
-    rafHandle = null;
-    const shouldForce = pendingForce;
-    pendingForce = false;
-    updateContainerHeight(shouldForce);
-  });
-}
-
-// Наблюдаем контейнер и ТОЛЬКО активную панель: раньше наблюдались все шесть, и
-// ресайз невидимой панели дёргал пересчёт видимой.
-let containerObserver: ResizeObserver | null = null;
-let panelObserver: ResizeObserver | null = null;
-
-watch(
-  scrollContainer,
-  (el) => {
-    containerObserver?.disconnect();
-    if (!el) return;
-    containerObserver ??= new ResizeObserver(() => scheduleHeightUpdate(true));
-    containerObserver.observe(el);
-  },
-  { immediate: true },
-);
-
-watch(
-  [scrollContainer, activeIndex],
-  ([el, index]) => {
-    panelObserver?.disconnect();
-    if (!el) return;
-    panelObserver ??= new ResizeObserver(() => scheduleHeightUpdate(true));
-    nextTick(() => {
-      const panel = el.children[index as number] as HTMLElement | undefined;
-      if (panel) panelObserver?.observe(panel);
-      scheduleHeightUpdate(true);
-    });
-  },
-  { immediate: true },
-);
-
-onUnmounted(() => {
-  containerObserver?.disconnect();
-  panelObserver?.disconnect();
-  if (rafHandle !== null) cancelAnimationFrame(rafHandle);
+const amountSign = computed<'minus' | 'plus' | null>(() => {
+  if (props.formData.type === 'income') return 'plus';
+  if (props.formData.type === 'debt') return null;
+  return 'minus';
 });
 
-function onScroll() {
-  handleScroll();
-  scheduleHeightUpdate();
-}
-function onScrollEnd() {
-  handleScrollEnd();
-  scheduleHeightUpdate();
-}
-onCyclicWrap(() => scheduleHeightUpdate(true));
+/** Списание сверх остатка — предупреждаем и на расходе, и на переводе. */
+const showInsufficientFunds = computed(
+  () => amountSign.value === 'minus' && !hasSufficientFunds.value,
+);
+
+/**
+ * Заголовок-переключатель счёта на карточке нужен только там, где счёт больше
+ * нигде не выбирается. У перевода его задаёт строка «Откуда → Куда», у долга —
+ * своё поле; там заголовок был бы третьим повторением одного и того же.
+ */
+const showAccountOnCard = computed(
+  () => props.formData.type === 'expense' || props.formData.type === 'income',
+);
+
+/** На долге счёт выбирается ниже в панели, поэтому прогноза на карточке нет. */
+const cardBalance = computed(() =>
+  props.formData.type === 'debt' || !props.formData.accountId ? undefined : currentBalance.value,
+);
 
 const submitLabel = computed(() => {
   if (props.formData.type === 'transfer') return 'Перевести';
@@ -231,11 +119,30 @@ const submitLabel = computed(() => {
 });
 
 /**
+ * Категория выбрана, только если она есть в списке текущего типа. Голая
+ * проверка «строка непустая» пропускала id из query-параметра быстрой кнопки,
+ * из чужого типа или удалённой категории: чипы не подсвечены, а кнопка активна.
+ */
+const hasResolvedCategory = computed(
+  () =>
+    Boolean(props.formData.categoryId) &&
+    availableCategories.value.some((c) => c.id === props.formData.categoryId),
+);
+
+const needsCategory = computed(
+  () => props.formData.type === 'expense' || props.formData.type === 'income',
+);
+
+const canSubmit = computed(
+  () => Boolean(props.isValid) && (!needsCategory.value || hasResolvedCategory.value),
+);
+
+/**
  * Заблокированная кнопка без объяснения — тупик: пользователь тапает и не
  * понимает, чего не хватает. Называем недостающее прямо над ней.
  */
 const submitHint = computed(() => {
-  if (props.isValid || props.isSubmitting) return null;
+  if (canSubmit.value || props.isSubmitting) return null;
 
   const missing: string[] = [];
   if (!props.formData.accountId) missing.push('счёт');
@@ -248,7 +155,7 @@ const submitHint = computed(() => {
     else if (props.formData.amount > 0 && !props.formData.toAmount) {
       missing.push('сумму зачисления');
     }
-  } else if (!props.formData.categoryId) {
+  } else if (needsCategory.value && !hasResolvedCategory.value) {
     missing.push('категорию');
   }
 
@@ -293,10 +200,6 @@ function insertHashtag(tag: string) {
   });
 }
 
-function updateField<K extends keyof TransactionFormData>(field: K, value: TransactionFormData[K]) {
-  emit('update:formData', { ...props.formData, [field]: value });
-}
-
 // Haptic feedback
 const { trigger } = useHaptics();
 
@@ -315,6 +218,15 @@ const { defaults } = useSmartDefaults(
   () => props.formData.accountId,
 );
 
+// Частые суммы показывает плита — она же владеет вводом суммы.
+// Для перевода и долга композабл сам возвращает пустой список.
+const { suggestions } = useAmountSuggestions(
+  transactions,
+  () => props.formData.type,
+  () => props.formData.currency,
+  () => props.formData.categoryId,
+);
+
 const { start: showSplitHintDelayed, stop: stopSplitHint } = useTimeoutFn(
   () => {
     showSplitHint.value = true;
@@ -327,6 +239,11 @@ const { start: showSplitHintDelayed, stop: stopSplitHint } = useTimeoutFn(
 // Apply smart defaults once per type when data becomes available
 const smartDefaultsAppliedForType = ref<string | null>(null);
 
+/** Категории, доступные текущему типу, — из них и только из них можно выбирать. */
+const availableCategories = computed(() =>
+  props.formData.type === 'income' ? props.incomeCategories : props.expenseCategories,
+);
+
 watch(
   defaults,
   (val) => {
@@ -334,9 +251,18 @@ watch(
     if (smartDefaultsAppliedForType.value === props.formData.type) return;
     if (!val.defaultCategoryId && !val.defaultAccountId) return;
 
-    if (!props.formData.categoryId && val.defaultCategoryId) {
+    // Подсказка приходит из недавних транзакций и может указывать на категорию,
+    // которой в списке текущего типа нет (перевод, удалённая, чужого типа).
+    // Тогда ни один чип не подсвечен, а форма считает себя заполненной — и
+    // расход уходит с категорией, которую пользователь не выбирал.
+    const suggestedCategory =
+      val.defaultCategoryId && availableCategories.value.some((c) => c.id === val.defaultCategoryId)
+        ? val.defaultCategoryId
+        : '';
+
+    if (!props.formData.categoryId && suggestedCategory) {
       const updates: Partial<TransactionFormData> = {
-        categoryId: val.defaultCategoryId,
+        categoryId: suggestedCategory,
       };
       if (!props.formData.accountId && val.defaultAccountId) {
         updates.accountId = val.defaultAccountId;
@@ -349,23 +275,12 @@ watch(
 );
 
 onMounted(() => {
-  // Панели уже смонтировались и забрали автофокус — дальше он не нужен.
-  nextTick(() => {
-    autofocusSpent.value = true;
-  });
-
-  armNeighborsWhenIdle();
-
   if (shouldShowHint('split-expense')) {
     showSplitHintDelayed();
   }
 });
 
-onUnmounted(() => {
-  stopSplitHint();
-  if (armHandle !== null && typeof cancelIdleCallback === 'function') cancelIdleCallback(armHandle);
-  if (armFallback) clearTimeout(armFallback);
-});
+onUnmounted(() => stopSplitHint());
 
 function dismissSplitHint() {
   showSplitHint.value = false;
@@ -382,9 +297,7 @@ function handleSplitHintAction() {
 watch(
   () => props.error,
   (newError) => {
-    if (newError) {
-      trigger('error');
-    }
+    if (newError) trigger('error');
   },
 );
 
@@ -415,166 +328,183 @@ const expensePanelHandlers = {
 </script>
 
 <template>
-  <!--
-    Входной анимации здесь нет намеренно. Она прятала кадр, в котором карусель
-    ещё не припаркована на нужной панели, — но парковка происходит синхронно в
-    `onMounted`, то есть до первой отрисовки, и прятать нечего. Замер: форма была
-    готова на 497 мс, а из-за задержки и затухания появлялась к 781 мс, и ровно
-    в это окно попадала самая тяжёлая задача старта. Движение входа даёт переход
-    роутера, второе поверх него читалось как рывок.
-  -->
   <form
-    class="form-root space-y-4 transition-opacity duration-200"
-    :class="isSubmitting && 'opacity-60 pointer-events-none'"
-    @submit.prevent="$emit('submit')"
+    class="form-root flex flex-1 flex-col transition-opacity duration-200"
+    :class="isSubmitting && 'pointer-events-none opacity-60'"
+    @submit.prevent="emit('submit')"
   >
-    <!-- Type Tabs -->
-    <UTabs
-      :model-value="formData.type"
-      :items="ALL_TAB_ITEMS"
-      @update:model-value="
-        (v: string) => {
-          armNeighbors();
-          handleTabClick(v as TransactionType);
-        }
-      "
-    />
+    <div class="flex flex-1 flex-col gap-3 px-4 pt-1">
+      <AmountCard
+        :amount="formData.amount"
+        :currency="formData.currency"
+        :currency-symbol="currencySymbol"
+        :available-currencies="availableCurrencies"
+        :is-multi-currency="isMultiCurrency"
+        :accounts="accounts"
+        :account-id="formData.accountId"
+        :account-name="showAccountOnCard ? selectedAccount?.name : undefined"
+        :account-color="selectedAccount?.color"
+        :sign="amountSign"
+        :current-balance="cardBalance"
+        :show-insufficient-funds="showInsufficientFunds"
+        :autofocus="autofocusAmount"
+        @update:amount="updateField('amount', $event)"
+        @update:currency="updateField('currency', $event)"
+        @update:account-id="handleAccountChange"
+      />
 
-    <!-- Swipeable panels with smooth height -->
-    <div class="panels-viewport overflow-hidden" :style="{ height: containerHeight }">
-      <div
-        ref="scrollContainer"
-        class="flex items-start overflow-x-auto overflow-y-hidden snap-x snap-mandatory no-scrollbar -mx-4 md:-mx-0 h-full scroll-smooth"
-        @scrollend="onScrollEnd"
-        @scroll="onScroll"
-        @pointerdown="armNeighbors"
-        @touchstart.passive="armNeighbors"
-        @wheel.passive="armNeighbors"
-      >
-        <div
-          v-for="(panelType, idx) in cyclicPanelOrder"
-          :key="`${panelType}-${idx}`"
-          class="min-w-full snap-start px-4 md:px-0"
-          :inert="idx !== activeIndex || undefined"
-          :aria-hidden="idx !== activeIndex || undefined"
+      <UTabs
+        :model-value="formData.type"
+        :items="TYPE_TABS"
+        size="sm"
+        @update:model-value="(v: string) => applyTypeChange(v as TransactionType)"
+      />
+
+      <!-- Частые суммы: привычная трата записывается в два нажатия -->
+      <div v-if="suggestions.length" class="no-scrollbar flex gap-1.5 overflow-x-auto">
+        <button
+          v-for="value in suggestions"
+          :key="value"
+          type="button"
+          class="suggestion-chip shrink-0 rounded-full border px-3 py-1.5 text-sm font-medium tabular-nums"
+          :class="
+            value === formData.amount
+              ? 'border-primary/40 bg-primary/10 text-primary'
+              : 'border-border-light text-text-secondary-light hover:text-text-primary-light dark:border-border-dark dark:text-text-secondary-dark dark:hover:text-text-primary-dark'
+          "
+          @mousedown.prevent
+          @click="updateField('amount', value)"
         >
-          <template v-if="isRendered(idx)">
-            <FeatureHintPopover
-              v-if="panelType === 'expense' && idx === EXPENSE_INDEX && splitHintConfig"
-              :config="splitHintConfig"
-              :open="showSplitHint"
-              side="top"
-              @dismiss="dismissSplitHint"
-              @action="handleSplitHintAction"
-            >
-              <ExpensePanel
-                v-bind="expensePanelProps"
-                :autofocus-amount="shouldAutofocus(idx)"
-                v-on="expensePanelHandlers"
-              />
-            </FeatureHintPopover>
-            <ExpensePanel
-              v-else-if="panelType === 'expense'"
-              v-bind="expensePanelProps"
-              :autofocus-amount="shouldAutofocus(idx)"
-              v-on="expensePanelHandlers"
-            />
-            <IncomePanel
-              v-else-if="panelType === 'income'"
-              :form-data="formData"
-              :accounts="accounts"
-              :categories="incomeCategories"
-              :transactions="transactions"
-              :autofocus-amount="shouldAutofocus(idx)"
-              @update:form-data="$emit('update:formData', $event)"
-            />
-            <TransferPanel
-              v-else-if="panelType === 'transfer'"
-              :form-data="formData"
-              :accounts="accounts"
-              :user-currency="userCurrency"
-              @update:form-data="$emit('update:formData', $event)"
-            />
-            <DebtPanel
-              v-else-if="panelType === 'debt'"
-              :accounts="accounts"
-              :default-account-id="defaultAccountId"
-              :autofocus-amount="shouldAutofocus(idx)"
-              @submitted="$emit('debt-submitted')"
-            />
-          </template>
-        </div>
+          {{ formatNumberWithSpaces(String(value)) }}
+        </button>
       </div>
-    </div>
-
-    <!-- Комментарий и дата: два чипа вместо двух полей с подписями. Поле
-         раскрывается на месте, поэтому подсказки хэштегов больше не двигают
-         кнопку сабмита. -->
-    <TransactionMetaRow
-      v-if="formData.type !== 'debt'"
-      :description="formData.description"
-      :date="formData.date"
-      :placeholder="descriptionPlaceholder"
-      :hashtags="filteredHashtags"
-      @update:description="updateField('description', $event)"
-      @update:date="updateField('date', $event)"
-      @insert-hashtag="insertHashtag"
-    />
-
-    <!-- Кнопка прилипает к низу: на «Переводе» форма выше экрана, и раньше до
-         сабмита приходилось доскроллить. -->
-    <div
-      v-if="formData.type !== 'debt'"
-      class="submit-bar sticky bottom-0 -mx-4 px-4 pt-3 md:-mx-0 md:px-0 [--bar-bg:var(--color-background-light)] dark:[--bar-bg:var(--color-background-dark)] md:[--bar-bg:var(--color-card-light)] dark:md:[--bar-bg:var(--color-card-dark)]"
-    >
-      <p v-if="error" data-testid="validation-error" role="alert" class="pb-2 text-xs text-danger">
-        {{ error }}
-      </p>
-      <p
-        v-else-if="submitHint"
-        class="pb-2 text-center text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
+      <FeatureHintPopover
+        v-if="formData.type === 'expense' && splitHintConfig"
+        :config="splitHintConfig"
+        :open="showSplitHint"
+        side="top"
+        @dismiss="dismissSplitHint"
+        @action="handleSplitHintAction"
       >
-        {{ submitHint }}
-      </p>
+        <ExpensePanel v-bind="expensePanelProps" v-on="expensePanelHandlers" />
+      </FeatureHintPopover>
 
-      <UButton
-        type="submit"
-        variant="primary"
-        size="lg"
-        full-width
-        data-testid="submit-btn"
-        :loading="isSubmitting"
-        :disabled="!isValid"
+      <IncomePanel
+        v-else-if="formData.type === 'income'"
+        :form-data="formData"
+        :accounts="accounts"
+        :categories="incomeCategories"
+        :transactions="transactions"
+        @update:form-data="emit('update:formData', $event)"
+      />
+
+      <TransferPanel
+        v-else-if="formData.type === 'transfer'"
+        :form-data="formData"
+        :accounts="accounts"
+        :user-currency="userCurrency"
+        @update:form-data="emit('update:formData', $event)"
+      />
+
+      <!--
+        Долг кэшируется: его поля (человек, даты, комиссия, переключатели) живут
+        в собственной модели `useDebtForm`, а не в общей `formData`. Без
+        `KeepAlive` случайный тап по соседнему сегменту и возврат стирали бы всё
+        заполненное — до редизайна панели были смонтированы постоянно.
+      -->
+      <KeepAlive>
+        <DebtPanel
+          v-if="formData.type === 'debt'"
+          :amount="formData.amount"
+          :currency="formData.currency"
+          :account-id="formData.accountId"
+          :accounts="accounts"
+          :default-account-id="defaultAccountId"
+          @submitted="emit('debt-submitted')"
+          @update:currency="updateField('currency', $event)"
+          @update:account-id="updateField('accountId', $event)"
+        />
+      </KeepAlive>
+
+      <!-- Комментарий и дата: два чипа вместо двух полей с подписями. Поле
+           раскрывается на месте, поэтому подсказки хэштегов не двигают
+           кнопку сабмита. -->
+      <TransactionMetaRow
+        v-if="formData.type !== 'debt'"
+        :description="formData.description"
+        :date="formData.date"
+        :placeholder="descriptionPlaceholder"
+        :hashtags="filteredHashtags"
+        @update:description="updateField('description', $event)"
+        @update:date="updateField('date', $event)"
+        @insert-hashtag="insertHashtag"
+      />
+
+      <!-- Кнопка прилипает к низу: на «Переводе» форма выше экрана, и раньше до
+           сабмита приходилось доскроллить. -->
+      <div
+        v-if="formData.type !== 'debt'"
+        class="submit-bar sticky bottom-0 mt-auto -mx-4 px-4 pt-3 [--bar-bg:var(--color-background-light)] dark:[--bar-bg:var(--color-background-dark)]"
       >
-        {{ submitLabel }}
-      </UButton>
+        <p
+          v-if="error"
+          data-testid="validation-error"
+          role="alert"
+          class="pb-2 text-xs text-danger"
+        >
+          {{ error }}
+        </p>
+        <p
+          v-else-if="submitHint"
+          class="pb-2 text-center text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
+        >
+          {{ submitHint }}
+        </p>
+
+        <UButton
+          type="submit"
+          variant="primary"
+          size="lg"
+          full-width
+          data-testid="submit-btn"
+          :loading="isSubmitting"
+          :disabled="!canSubmit"
+        >
+          {{ submitLabel }}
+        </UButton>
+      </div>
     </div>
   </form>
 </template>
 
 <style scoped>
-.panels-viewport {
-  transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
 /*
- * Цвет подложки приходит переменной `--bar-bg`: её ставят Tailwind-варианты
- * `dark:` / `md:` прямо на элементе. Через `:global(html.dark)` не выйдет —
- * тема здесь навешивается классом `.dark`, а не на конкретный узел.
- * Верх полупрозрачный, чтобы содержимое уезжало под панель, а не обрывалось.
+ * Подложка кнопки повторяет фон страницы. Цвет приходит переменной `--bar-bg`:
+ * её ставит Tailwind-вариант `dark:` прямо на элементе — через
+ * `:global(html.dark)` не выйдет, тема навешивается классом на `html`, а не на
+ * конкретный узел. Верх полупрозрачный, чтобы содержимое уезжало под панель,
+ * а не обрывалось.
  */
 .submit-bar {
   background: linear-gradient(to bottom, transparent 0, var(--bar-bg) 0.75rem, var(--bar-bg));
-  padding-bottom: max(env(safe-area-inset-bottom), 0.75rem);
+  padding-bottom: max(var(--safe-area-inset-bottom), 0.75rem);
+}
+
+.suggestion-chip {
+  transition:
+    color 200ms ease,
+    background-color 200ms ease,
+    border-color 200ms ease,
+    transform 200ms ease;
+}
+.suggestion-chip:active {
+  transform: scale(0.95);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .form-root,
-  .panels-viewport {
+  .suggestion-chip {
     transition: none;
-  }
-  .form-root :deep(.scroll-smooth) {
-    scroll-behavior: auto;
   }
 }
 </style>

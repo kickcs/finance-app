@@ -6,7 +6,8 @@ import { useSlidingIndicator } from '@/shared/lib/hooks/useSlidingIndicator';
 const props = defineProps<{
   accounts: AccountWithBalances[];
   selectedId: string | null;
-  label: string;
+  /** Без подписи чипы читаются сами — она нужна там, где счетов два ряда подряд. */
+  label?: string;
 }>();
 
 const emit = defineEmits<{
@@ -33,7 +34,10 @@ watch(
 
 <template>
   <div class="space-y-2">
-    <label class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark">
+    <label
+      v-if="label"
+      class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark"
+    >
       {{ label }}
     </label>
     <div
