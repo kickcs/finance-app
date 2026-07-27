@@ -188,27 +188,12 @@ const chipIdle = 'border-border-light dark:border-border-dark hover:border-prima
 </template>
 
 <style scoped>
-/* Scoped-стили между компонентами не наследуются — правило повторяет то, что
-   есть в `TransactionForm` для остального хвоста формы. */
-.form-tail {
-  animation: tail-in 120ms ease-out both;
-}
-
-@keyframes tail-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
+/* `.form-tail` живёт в `app/styles/index.css`: одно и то же появление нужно и
+   этому ряду, и хвосту в `TransactionForm`. */
 
 @media (prefers-reduced-motion: reduce) {
   .meta-chip {
     transition: none;
-  }
-  .form-tail {
-    animation: none;
   }
 }
 </style>

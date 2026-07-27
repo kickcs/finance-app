@@ -197,11 +197,15 @@ const summaryText = computed(() => {
       data-testid="debt-fields"
       class="divide-y divide-border-light overflow-hidden rounded-xl border border-border-light dark:divide-border-dark dark:border-border-dark"
     >
-      <div data-testid="debt-row-person" class="flex items-center gap-2 px-3">
+      <!-- `self-start`: список подсказок PersonSelector лежит в потоке, под
+           полем. С `items-center` иконка уезжала бы в середину выросшей строки —
+           к списку, а не к полю, — как только поле получает фокус. Отступ равен
+           половине высоты строки поля (py-3 + text-sm). -->
+      <div data-testid="debt-row-person" class="flex items-start gap-2 px-3">
         <UIcon
           name="group"
           size="sm"
-          class="shrink-0 text-text-tertiary-light dark:text-text-tertiary-dark"
+          class="mt-3.5 shrink-0 text-text-tertiary-light dark:text-text-tertiary-dark"
         />
         <PersonSelector
           class="min-w-0 flex-1"

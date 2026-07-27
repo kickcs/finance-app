@@ -54,8 +54,9 @@ const emit = defineEmits<{
 
 /**
  * Панель долга тянет PersonSelector, ToggleRow и календарь, а вкладка «Долг»
- * почти всегда закрыта — парсить её в кадре старта слайда незачем. Ссылка
- * объявлена на уровне модуля: `KeepAlive` ниже требует стабильной.
+ * почти всегда закрыта — парсить её в кадре старта слайда незачем. Обёртка
+ * создаётся один раз на экземпляр формы: `KeepAlive` ниже кэширует по типу
+ * компонента, и пересоздание ссылки внутри жизни формы стёрло бы кэш.
  */
 const DebtPanel = defineAsyncComponent(() => import('./DebtPanel.vue'));
 
@@ -524,31 +525,13 @@ const expensePanelHandlers = {
   transform: scale(0.95);
 }
 
-/*
- * Хвост формы дорисовывается после слайда: `Calendar` и vaul в кадры перехода
- * не попадают, а появление не должно быть заметным — только opacity, без
- * сдвига, иначе вместо одного рывка получим другой.
- */
-.form-tail {
-  animation: tail-in 120ms ease-out both;
-}
-
-@keyframes tail-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
+/* `.form-tail` (появление хвоста формы после слайда) — глобальный класс в
+   `app/styles/index.css`: он нужен и здесь, и внутри `ExpensePanel`. */
 
 @media (prefers-reduced-motion: reduce) {
   .form-root,
   .suggestion-chip {
     transition: none;
-  }
-  .form-tail {
-    animation: none;
   }
 }
 </style>

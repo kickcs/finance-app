@@ -68,8 +68,15 @@ export function useAmountInput(options: {
     () => toValue(options.autofocus),
     (enabled) => {
       if (!enabled || hasFocused.value) return;
-      hasFocused.value = true;
-      nextTick(() => inputRef.value?.focus());
+      // Защёлку ставим по факту фокуса, а не до него: если к этому тику поля ещё
+      // нет, попытка должна остаться неиспользованной — иначе автофокус
+      // потерялся бы навсегда.
+      nextTick(() => {
+        const el = inputRef.value;
+        if (!el) return;
+        hasFocused.value = true;
+        el.focus();
+      });
     },
     { immediate: true },
   );

@@ -60,7 +60,11 @@ export function useJustifiedRows<T>(
   function measure() {
     const el = containerRef.value;
     if (!el) return;
-    containerWidth.value = el.clientWidth;
+    // Пиксель запаса: `clientWidth` округляет, и на дробной ширине контейнера
+    // (343.5 → 344) ряд, посчитанный как «влез ровно», вылезал бы за край —
+    // чипы `shrink-0`, сжаться им нечем. `clientWidth`, а не
+    // `getBoundingClientRect`: тот учитывает `scale(0.98)` слайд-перехода.
+    containerWidth.value = Math.max(0, el.clientWidth - 1);
     const resolved = resolveFont(el);
     if (resolved) font.value = resolved;
   }

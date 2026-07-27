@@ -104,12 +104,16 @@ function getChipStyle(category: Category, maxWidth: number) {
       :aria-label="label || 'Категория'"
       class="flex flex-col gap-1.5"
     >
+      <!-- `flex-wrap` — только для вырожденного случая: пока ширина контейнера не
+           измерена (узел смонтирован скрытым — `ResizeObserver` о таком не
+           сообщает), формула отдаёт один ряд со всем содержимым, и без переноса он
+           вылез бы за экран. В измеренной раскладке ряд всегда влезает. -->
       <div
         v-for="(row, rowIndex) in rows"
         :key="rowIndex"
         role="presentation"
         data-testid="category-row"
-        class="flex gap-1.5"
+        class="flex flex-wrap gap-1.5"
       >
         <template
           v-for="cell in row"

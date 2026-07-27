@@ -26,13 +26,19 @@ export const isPageTransitioning = ref(false);
 
 let transitionGuard: ReturnType<typeof setTimeout> | null = null;
 
+/**
+ * Страховка от залипания: если `after-enter` не придёт — прерванный переход,
+ * отключённая анимация, — флаг должен сняться сам. Иначе нижняя навигация не
+ * вернётся, а автофокус суммы не сработает вообще никогда.
+ */
+function armPageTransitionGuard() {
+  if (transitionGuard) clearTimeout(transitionGuard);
+  transitionGuard = setTimeout(finishPageTransition, 600);
+}
+
 function beginPageTransition() {
   isPageTransitioning.value = true;
-  if (transitionGuard) clearTimeout(transitionGuard);
-  // Страховка от залипания: если `after-enter` не придёт — прерванный переход,
-  // отключённая анимация, — флаг должен сняться сам. Иначе нижняя навигация не
-  // вернётся, а автофокус суммы не сработает вообще никогда.
-  transitionGuard = setTimeout(finishPageTransition, 600);
+  armPageTransitionGuard();
 }
 
 export function finishPageTransition() {
@@ -469,6 +475,16 @@ router.beforeEach((to, from) => {
 
   // Programmatic navigation - slide forward by default
   transitionName.value = 'slide-forward';
+});
+
+/**
+ * Отсчёт страховки перезапускаем на подтверждении навигации, а не в `beforeEach`:
+ * чанк страницы грузится между ними, и на медленной сети (где префетч как раз
+ * отключён) 600 мс истекали до того, как страница вообще смонтируется — флаг
+ * оказывался снят, и клавиатура снова открывалась посреди слайда.
+ */
+router.afterEach(() => {
+  if (isPageTransitioning.value) armPageTransitionGuard();
 });
 
 // Export function for components to trigger slide-back animation
