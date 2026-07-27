@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.67';
+export const CURRENT_VERSION = '1.0.68';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,33 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.68',
+    date: '2026-07-27',
+    title: 'Новая транзакция: аккуратнее и быстрее',
+    items: [
+      {
+        type: 'improvement',
+        text: 'Кнопки категорий заполняют всю ширину экрана — пустых мест по краям больше нет',
+      },
+      {
+        type: 'improvement',
+        text: 'Сумма живёт без лишней рамки и заливки, а счёт выбирается строкой над ней',
+      },
+      {
+        type: 'improvement',
+        text: 'У кнопки сканирования чека появилась подпись — раньше по одной иконке было непонятно, что она делает',
+      },
+      {
+        type: 'improvement',
+        text: 'Вкладка «Долг» стала вдвое короче: имя, счёт и дата собраны в один список, комиссия и редкие настройки — под «Ещё»',
+      },
+      {
+        type: 'fix',
+        text: 'Открытие экрана новой транзакции больше не дёргается: клавиатура появляется после перехода, а сам переход стал короче',
+      },
+    ],
+  },
   {
     version: '1.0.67',
     date: '2026-07-27',
