@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, defineAsyncComponent, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useTimeoutFn } from '@vueuse/core';
 import { UButton, UTabs } from '@/shared/ui';
 import { formatNumberWithSpaces } from '@/shared/lib/format/currency';
@@ -20,7 +20,6 @@ import AmountHeadline from './AmountHeadline.vue';
 import ExpensePanel from './ExpensePanel.vue';
 import IncomePanel from './IncomePanel.vue';
 import TransferPanel from './TransferPanel.vue';
-import DebtPanel from './DebtPanel.vue';
 import TransactionMetaRow from './TransactionMetaRow.vue';
 
 const props = defineProps<{
@@ -36,6 +35,8 @@ const props = defineProps<{
   splitData?: SplitExpenseData;
   splitValidationError?: string | null;
   autofocusAmount?: boolean;
+  /** Переход на страницу закончился — можно дорисовывать тяжёлый хвост формы. */
+  ready?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -50,6 +51,13 @@ const emit = defineEmits<{
   setIsIncluded: [included: boolean];
   setSplitEnabled: [enabled: boolean];
 }>();
+
+/**
+ * Панель долга тянет PersonSelector, ToggleRow и календарь, а вкладка «Долг»
+ * почти всегда закрыта — парсить её в кадре старта слайда незачем. Ссылка
+ * объявлена на уровне модуля: `KeepAlive` ниже требует стабильной.
+ */
+const DebtPanel = defineAsyncComponent(() => import('./DebtPanel.vue'));
 
 function applyTypeChange(newType: TransactionType) {
   emit('update:formData', {
@@ -278,6 +286,15 @@ onMounted(() => {
   if (shouldShowHint('split-expense')) {
     showSplitHintDelayed();
   }
+
+  // Чанк долга подтягиваем на простое: синхронный импорт стоил бы кадра при
+  // входе на страницу, а без префетча первый тап по вкладке ждал бы сеть.
+  const prefetchDebtPanel = () => void import('./DebtPanel.vue');
+  if (typeof requestIdleCallback !== 'undefined') {
+    requestIdleCallback(prefetchDebtPanel, { timeout: 2000 });
+  } else {
+    setTimeout(prefetchDebtPanel, 1000);
+  }
 });
 
 onUnmounted(() => stopSplitHint());
@@ -311,6 +328,7 @@ const expensePanelProps = computed(() => ({
   transactions: transactions.value,
   splitData: props.splitData,
   splitValidationError: props.splitValidationError,
+  ready: props.ready !== false,
 }));
 
 const expensePanelHandlers = {
@@ -434,7 +452,8 @@ const expensePanelHandlers = {
            раскрывается на месте, поэтому подсказки хэштегов не двигают
            кнопку сабмита. -->
       <TransactionMetaRow
-        v-if="formData.type !== 'debt'"
+        v-if="formData.type !== 'debt' && ready !== false"
+        class="form-tail"
         :description="formData.description"
         :date="formData.date"
         :placeholder="descriptionPlaceholder"
@@ -505,10 +524,31 @@ const expensePanelHandlers = {
   transform: scale(0.95);
 }
 
+/*
+ * Хвост формы дорисовывается после слайда: `Calendar` и vaul в кадры перехода
+ * не попадают, а появление не должно быть заметным — только opacity, без
+ * сдвига, иначе вместо одного рывка получим другой.
+ */
+.form-tail {
+  animation: tail-in 120ms ease-out both;
+}
+
+@keyframes tail-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .form-root,
   .suggestion-chip {
     transition: none;
+  }
+  .form-tail {
+    animation: none;
   }
 }
 </style>

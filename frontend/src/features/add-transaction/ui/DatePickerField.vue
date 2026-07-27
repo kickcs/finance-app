@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, defineAsyncComponent } from 'vue';
 import { type DateValue } from '@internationalized/date';
 import { UIcon } from '@/shared/ui';
+import { cn } from '@/shared/lib/utils';
 import { Popover, PopoverTrigger, PopoverContent } from '@/shared/ui/primitives/popover';
-import { Calendar } from '@/shared/ui/primitives/calendar';
 import { isoToCalendarDate, dateValueToISO } from '@/shared/lib/date';
 import { formatDate } from '@/shared/lib/format/date';
 
@@ -12,11 +12,17 @@ const props = defineProps<{
   placeholder?: string;
   clearable?: boolean;
   portalTo?: HTMLElement | null;
+  /** Поле внутри готовой строки списка: без своей рамки — она была бы второй. */
+  flush?: boolean;
 }>();
 
 const emit = defineEmits<{
   'update:modelValue': [value: string | null];
 }>();
+
+// Тот же расчёт, что в `TransactionMetaRow`: календарь нужен только раскрытому
+// поповеру, а его модуль — из самых тяжёлых на экране.
+const Calendar = defineAsyncComponent(() => import('@/shared/ui/primitives/calendar/Calendar.vue'));
 
 const isOpen = defineModel<boolean>('open', { default: false });
 
@@ -47,11 +53,16 @@ function handleChange(value: DateValue | undefined) {
       <PopoverTrigger as-child>
         <button
           type="button"
-          class="flex-1 flex items-center justify-between gap-2 px-4 py-3 rounded-xl border border-border-light dark:border-border-dark hover:border-primary/50 transition-all"
           :class="
-            modelValue
-              ? 'text-text-primary-light dark:text-text-primary-dark'
-              : 'text-text-tertiary-light dark:text-text-tertiary-dark'
+            cn(
+              'flex-1 flex items-center justify-between gap-2 py-3 transition-all',
+              flush
+                ? 'px-3'
+                : 'px-4 rounded-xl border border-border-light dark:border-border-dark hover:border-primary/50',
+              modelValue
+                ? 'text-text-primary-light dark:text-text-primary-dark'
+                : 'text-text-tertiary-light dark:text-text-tertiary-dark',
+            )
           "
         >
           <div class="flex items-center gap-2">
@@ -71,7 +82,12 @@ function handleChange(value: DateValue | undefined) {
         </button>
       </PopoverTrigger>
       <PopoverContent class="w-auto p-0" align="start" :to="portalTo">
-        <Calendar :model-value="calendarValue" locale="ru-RU" @update:model-value="handleChange" />
+        <Calendar
+          v-if="isOpen"
+          :model-value="calendarValue"
+          locale="ru-RU"
+          @update:model-value="handleChange"
+        />
       </PopoverContent>
     </Popover>
     <button

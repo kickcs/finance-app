@@ -18,6 +18,8 @@ const props = defineProps<{
   transactions?: Transaction[];
   splitData?: SplitExpenseData;
   splitValidationError?: string | null;
+  /** Переход на страницу закончился — можно дорисовывать ряд действий. */
+  ready?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -77,7 +79,7 @@ const chipIdle = 'border-border-light dark:border-border-dark hover:border-prima
       @select="updateField('categoryId', $event)"
     />
 
-    <div class="flex items-stretch gap-2">
+    <div v-if="ready !== false" class="form-tail flex items-stretch gap-2">
       <!-- Разделение настроено -->
       <div
         v-if="splitData && hasSplit"
@@ -186,9 +188,27 @@ const chipIdle = 'border-border-light dark:border-border-dark hover:border-prima
 </template>
 
 <style scoped>
+/* Scoped-стили между компонентами не наследуются — правило повторяет то, что
+   есть в `TransactionForm` для остального хвоста формы. */
+.form-tail {
+  animation: tail-in 120ms ease-out both;
+}
+
+@keyframes tail-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .meta-chip {
     transition: none;
+  }
+  .form-tail {
+    animation: none;
   }
 }
 </style>
