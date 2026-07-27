@@ -5,6 +5,7 @@ import { useScroll } from '@vueuse/core';
 import TransactionItem from './TransactionItem.vue';
 import DayGroupHeader from './DayGroupHeader.vue';
 import { SwipeableItem } from '@/shared/ui';
+import { getAmountLines } from '../lib/amountLines';
 import type { Transaction, TransactionGroup } from '../model/types';
 
 interface HeaderData {
@@ -66,20 +67,17 @@ const ROW_HEIGHT_TALL = 76;
 const LOADING_HEIGHT = 44;
 
 /**
- * Сколько строк колонка суммы рисует помимо самой суммы.
- *
- * Условия зеркалят `v-if` в колонке суммы `TransactionItem.vue` — меняете там,
- * меняйте здесь, иначе слот окажется меньше содержимого и текст обрежется.
- * Условие конвертации там дополнено `!viewingAccountId`; здесь его нет, потому
- * что `getTransactionItemProps` этот проп не передаёт. Если список когда-нибудь
- * начнёт его прокидывать — добавить и сюда.
+ * Пропсы строки. Из них же считается высота слота, поэтому источник один:
+ * добавится проп, влияющий на колонку суммы, — высота учтёт его сама.
  */
-function amountExtraLines(tx: Transaction): number {
-  let lines = 0;
-  if (tx.type === 'transfer' && tx.to_currency && tx.to_currency !== tx.currency) lines++;
-  if (!tx.is_informational && tx.has_debt_returns && tx.type === 'expense') lines++;
-  if (props.getBalanceAfter?.(tx.id) !== undefined) lines++;
-  return lines;
+function transactionItemProps(tx: Transaction) {
+  return {
+    transaction: tx,
+    currency: props.currency,
+    accountName: props.getAccountName?.(tx.account_id),
+    toAccountName: props.getAccountName?.(tx.to_account_id ?? null),
+    balanceAfter: props.getBalanceAfter?.(tx.id),
+  };
 }
 
 // Плоский список со смещениями: одна и та же таблица кормит и виртуализатор,
@@ -101,7 +99,8 @@ const flatItems = computed<FlatItem[]>(() => {
     start += HEADER_HEIGHT;
 
     group.transactions.forEach((tx, i) => {
-      const size = amountExtraLines(tx) >= 2 ? ROW_HEIGHT_TALL : ROW_HEIGHT;
+      const size =
+        getAmountLines(tx, transactionItemProps(tx)).count >= 2 ? ROW_HEIGHT_TALL : ROW_HEIGHT;
       items.push({
         type: 'transaction',
         data: tx,

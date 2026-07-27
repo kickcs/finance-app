@@ -7,6 +7,7 @@ import { getCategoryById as getCategoryByIdStatic } from '@/entities/category';
 import type { Category } from '@/entities/category';
 import { DEFAULT_CURRENCY } from '@/shared/config/currency';
 import { TRANSFER_COLOR } from '@/shared/config/colors';
+import { getAmountLines } from '../lib/amountLines';
 import type { Transaction } from '../model/types';
 
 const props = defineProps<{
@@ -105,6 +106,30 @@ const displayCurrency = computed(
 const formattedDate = computed(() =>
   formatRelativeDate(new Date(props.transaction.date).getTime()),
 );
+
+// Из этого же расчёта виртуализированный список берёт высоту слота под строку
+const amountLines = computed(() =>
+  getAmountLines(props.transaction, {
+    viewingAccountId: props.viewingAccountId,
+    balanceAfter: props.balanceAfter,
+  }),
+);
+
+const formattedConvertedAmount = computed(() => {
+  const currency = props.transaction.to_currency;
+  if (!currency) return '';
+  return formatCurrency(props.transaction.to_amount || 0, currency, COMPACT_FORMAT);
+});
+
+const formattedOriginalAmount = computed(
+  () => `-${formatCurrency(props.transaction.amount, displayCurrency.value, COMPACT_FORMAT)}`,
+);
+
+const formattedBalanceAfter = computed(() =>
+  props.balanceAfter === undefined
+    ? ''
+    : formatCurrency(props.balanceAfter, displayCurrency.value, COMPACT_FORMAT),
+);
 </script>
 
 <template>
@@ -182,38 +207,24 @@ const formattedDate = computed(() =>
       </p>
       <!-- Conversion for multi-currency transfers -->
       <p
-        v-if="
-          isTransfer &&
-          !viewingAccountId &&
-          transaction.to_currency &&
-          transaction.to_currency !== transaction.currency
-        "
+        v-if="amountLines.conversion"
         class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
       >
-        →
-        {{
-          hidden
-            ? '••••'
-            : formatCurrency(transaction.to_amount || 0, transaction.to_currency, COMPACT_FORMAT)
-        }}
+        → {{ hidden ? MASKED_AMOUNT : formattedConvertedAmount }}
       </p>
       <!-- Original amount indicator when there are debt returns -->
       <p
-        v-if="!isInformational && transaction.has_debt_returns && transaction.type === 'expense'"
+        v-if="amountLines.originalAmount"
         class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark line-through"
       >
-        {{
-          hidden
-            ? '••••'
-            : `-${formatCurrency(transaction.amount, displayCurrency, COMPACT_FORMAT)}`
-        }}
+        {{ hidden ? MASKED_AMOUNT : formattedOriginalAmount }}
       </p>
       <!-- Balance after transaction -->
       <p
-        v-if="balanceAfter !== undefined"
+        v-if="amountLines.balanceAfter"
         class="text-caption-sm text-text-tertiary-light dark:text-text-tertiary-dark"
       >
-        = {{ hidden ? '••••' : formatCurrency(balanceAfter, displayCurrency, COMPACT_FORMAT) }}
+        = {{ hidden ? MASKED_AMOUNT : formattedBalanceAfter }}
       </p>
     </div>
   </button>
