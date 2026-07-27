@@ -35,7 +35,6 @@ const {
   rawValue,
   displayAmount,
   isFocused,
-  isBouncing: amountBounce,
   onInput,
 } = useAmountInput({
   amount: () => props.amount,
@@ -101,12 +100,11 @@ function selectCurrency(cur: string) {
 
       <div class="relative flex items-baseline justify-center gap-1.5 pointer-events-none">
         <span
-          class="amount-value text-4xl font-semibold tabular-nums leading-none transition-[color,transform] duration-200"
+          class="amount-value text-4xl font-semibold tabular-nums leading-none transition-colors duration-200"
           :class="[
             amount
               ? 'text-text-primary-light dark:text-text-primary-dark'
               : 'text-text-tertiary-light dark:text-text-tertiary-dark',
-            amountBounce && 'scale-[1.03]',
           ]"
         >
           {{ displayAmount }}
