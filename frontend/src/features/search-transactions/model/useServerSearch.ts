@@ -77,6 +77,8 @@ export function useServerSearch(userId: MaybeRefOrGetter<string | null>) {
 
   return {
     searchTerm,
+    /** Запрос после дебаунса — им меняется набор результатов, а не вводом */
+    debouncedTerm,
     results,
     isLoading,
     isSearchActive,

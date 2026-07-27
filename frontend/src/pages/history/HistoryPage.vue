@@ -57,6 +57,7 @@ const {
 // Server-side search
 const {
   searchTerm,
+  debouncedTerm,
   results: searchResults,
   isSearchActive,
   isLoading: isSearchLoading,
@@ -214,7 +215,9 @@ const {
 // (а липкий заголовок дня показывает день из старого набора).
 const listRef = ref<InstanceType<typeof VirtualGroupedTransactionList> | null>(null);
 
-watch([serverFilters, searchTerm], () => {
+// Именно debouncedTerm: набор результатов меняется по нему, а не по каждому
+// нажатию клавиши — иначе список дёргался бы наверх прямо во время ввода.
+watch([serverFilters, debouncedTerm], () => {
   nextTick(() => listRef.value?.scrollToTop());
 });
 

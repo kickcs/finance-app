@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, watchEffect } from 'vue';
+import { ref, shallowRef, computed, watchEffect } from 'vue';
 import { useVirtualizer } from '@tanstack/vue-virtual';
-import { useScroll } from '@vueuse/core';
+import { useEventListener } from '@vueuse/core';
 import TransactionItem from './TransactionItem.vue';
 import DayGroupHeader from './DayGroupHeader.vue';
 import { SwipeableItem } from '@/shared/ui';
@@ -67,16 +67,20 @@ const ROW_HEIGHT_TALL = 76;
 const LOADING_HEIGHT = 44;
 
 /**
- * Пропсы строки. Из них же считается высота слота, поэтому источник один:
- * добавится проп, влияющий на колонку суммы, — высота учтёт его сама.
+ * Пропсы, от которых зависит состав колонки суммы, а значит и высота слота.
+ * Они же уходят в строку — добавится ещё один, высота учтёт его сама.
  */
+function amountLineProps(tx: Transaction) {
+  return { balanceAfter: props.getBalanceAfter?.(tx.id) };
+}
+
 function transactionItemProps(tx: Transaction) {
   return {
     transaction: tx,
     currency: props.currency,
     accountName: props.getAccountName?.(tx.account_id),
     toAccountName: props.getAccountName?.(tx.to_account_id ?? null),
-    balanceAfter: props.getBalanceAfter?.(tx.id),
+    ...amountLineProps(tx),
   };
 }
 
@@ -99,8 +103,10 @@ const flatItems = computed<FlatItem[]>(() => {
     start += HEADER_HEIGHT;
 
     group.transactions.forEach((tx, i) => {
+      // Только опции колонки суммы: имена счетов на высоту не влияют, и
+      // разрешать их для всего списка ради высоты незачем
       const size =
-        getAmountLines(tx, transactionItemProps(tx)).count >= 2 ? ROW_HEIGHT_TALL : ROW_HEIGHT;
+        getAmountLines(tx, amountLineProps(tx)).count >= 2 ? ROW_HEIGHT_TALL : ROW_HEIGHT;
       items.push({
         type: 'transaction',
         data: tx,
@@ -138,7 +144,12 @@ const totalSize = computed(() => virtualizer.value.getTotalSize());
 // --- Липкий заголовок дня ---------------------------------------------------
 // Собственный слушатель скролла, а не scrollOffset виртуализатора: тот уведомляет
 // только при смене видимого диапазона (раз в строку), и заголовок отставал бы.
-const { y: scrollY } = useScroll(parentRef);
+// И не useScroll: тот на каждое событие зовёт getComputedStyle ради arrivedState,
+// то есть форсит пересчёт стилей ровно там, где виртуализатор пишет transform.
+const scrollY = shallowRef(0);
+useEventListener(parentRef, 'scroll', () => (scrollY.value = parentRef.value?.scrollTop ?? 0), {
+  passive: true,
+});
 
 const dayHeaders = computed(() => flatItems.value.filter((item) => item.type === 'header'));
 
@@ -202,17 +213,6 @@ function scrollToTop() {
 }
 
 defineExpose({ scrollToTop });
-
-function getTransactionItemProps(index: number) {
-  const tx = getTransactionData(index)!;
-  return {
-    transaction: tx,
-    currency: props.currency,
-    accountName: props.getAccountName?.(tx.account_id),
-    toAccountName: props.getAccountName?.(tx.to_account_id ?? null),
-    balanceAfter: props.getBalanceAfter?.(tx.id),
-  };
-}
 </script>
 
 <template>
@@ -278,13 +278,13 @@ function getTransactionItemProps(index: number) {
               @action-right="emit('transactionEdit', getTransactionData(virtualRow.index)!)"
             >
               <TransactionItem
-                v-bind="getTransactionItemProps(virtualRow.index)"
+                v-bind="transactionItemProps(getTransactionData(virtualRow.index)!)"
                 @click="emit('transactionClick', getTransactionData(virtualRow.index)!)"
               />
             </SwipeableItem>
             <TransactionItem
               v-else-if="getTransactionData(virtualRow.index)"
-              v-bind="getTransactionItemProps(virtualRow.index)"
+              v-bind="transactionItemProps(getTransactionData(virtualRow.index)!)"
               @click="emit('transactionClick', getTransactionData(virtualRow.index)!)"
             />
 
