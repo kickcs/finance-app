@@ -63,16 +63,51 @@ export function getCurrencySymbol(currencyCode: string): string {
   return CURRENCIES[currencyCode]?.symbol ?? currencyCode;
 }
 
+/** Проценты не привязаны к валюте, а интерфейс русскоязычный. */
+const PERCENT_LOCALE = 'ru-RU';
+
 /**
  * Format percentage
+ *
+ * Число идёт через Intl, а не через toFixed: тот всегда ставит точку, и рядом с
+ * суммой «11,03 млн» доля читалась как «29.7%» — разные разделители в соседних
+ * числах одной строки.
  */
 export function formatPercentage(
   value: number,
   decimals: number = 1,
   showSign: boolean = false,
 ): string {
-  const sign = showSign && value > 0 ? '+' : '';
-  return `${sign}${value.toFixed(decimals)}%`;
+  const formatter = getCachedNumberFormat(PERCENT_LOCALE, {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+    signDisplay: showSign ? 'exceptZero' : 'auto',
+  });
+
+  return `${formatter.format(value)}%`;
+}
+
+/**
+ * Доля целого — для легенд и диаграмм, где проценты стоят колонкой и должны
+ * читаться одинаково. Доли меньше процента показываются как «<1%»: «0%» рядом
+ * с ненулевой суммой выглядит как ошибка счёта.
+ */
+export function formatShare(percent: number): string {
+  if (percent > 0 && percent < 1) return '<1%';
+  return formatPercentage(percent, 0);
+}
+
+/** Выше этого изменение считается от околонулевой базы и точное число ничего не измеряет. */
+const PERCENT_DELTA_CAP = 999;
+
+/**
+ * Изменение к прошлому периоду. «48 154%» говорит ровно то же, что и «>999%» —
+ * что в прошлом периоде было почти пусто, — зато не влезает в колонку.
+ */
+export function formatPercentDelta(delta: number, showSign = false): string {
+  if (delta > PERCENT_DELTA_CAP) return `>${PERCENT_DELTA_CAP}%`;
+  if (delta < -PERCENT_DELTA_CAP) return `<-${PERCENT_DELTA_CAP}%`;
+  return formatPercentage(delta, 0, showSign);
 }
 
 /**

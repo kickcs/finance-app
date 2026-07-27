@@ -5,6 +5,7 @@ import { useCountUp } from '@/shared/lib/hooks/useCountUp';
 import {
   formatCurrency,
   formatPercentage,
+  formatPercentDelta,
   COMPACT_FORMAT,
   COMPACT_BARE_FORMAT,
 } from '@/shared/lib/format/currency';
@@ -99,6 +100,20 @@ const barCaption = computed(() => {
   return props.income > 0 ? 'расход к доходу' : 'расходы за период';
 });
 
+/**
+ * Строка собирается целиком, а не по кускам в шаблоне: перенос строки между
+ * интерполяцией и `<template>` печатался пробелом, и выходило «… UZS /день».
+ * В последний день периода делить остаток «на день» уже не на что, поэтому
+ * суффикс исчезает — иначе «можно тратить X/день» стояло под «последний день».
+ */
+const safeDailyCaption = computed(() => {
+  const amount = formatCurrency(Math.max(0, safeDaily.value), props.currency, COMPACT_FORMAT);
+  const perDay = props.daysRemaining > 0 ? `${amount}/день` : amount;
+  const scope = props.balanceLabel ? ` · ${props.balanceLabel.toLowerCase()}` : '';
+
+  return `Можно потратить ${perDay}${scope}`;
+});
+
 const remainingCaption = computed(() => {
   if (props.isPastPeriod) return 'период завершён';
   if (props.daysRemaining <= 0) return 'последний день';
@@ -136,7 +151,7 @@ const comparisonClass = computed(() =>
           class="shrink-0 px-1.5 py-0.5 rounded-md text-caption-sm font-semibold leading-none"
           :class="comparisonClass"
         >
-          {{ formatPercentage(comparisonPercent!, 0, true) }}
+          {{ formatPercentDelta(comparisonPercent!, true) }}
         </span>
       </div>
 
@@ -231,15 +246,7 @@ const comparisonClass = computed(() =>
         :class="STATUS_STYLES[safeDaily < avgDailyExpense ? 'warning' : 'good'].text"
       >
         <UIcon :name="safeDaily < avgDailyExpense ? 'warning' : 'check_circle'" size="xs" />
-        <!-- В последний день периода делить остаток «на день» не на что, поэтому
-             суффикс убирается: иначе выходило «можно тратить X/день» под меткой
-             «последний день». -->
-        <span class="min-w-0 truncate">
-          Можно потратить
-          {{ formatCurrency(Math.max(0, safeDaily), currency, COMPACT_FORMAT) }}
-          <template v-if="daysRemaining > 0">/день</template>
-          <template v-if="balanceLabel">· {{ balanceLabel.toLowerCase() }}</template>
-        </span>
+        <span class="min-w-0 truncate">{{ safeDailyCaption }}</span>
       </div>
     </template>
   </UCard>

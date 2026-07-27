@@ -2,7 +2,12 @@
 import { computed, ref, watch } from 'vue';
 import { useTimeoutFn } from '@vueuse/core';
 import { UCard, Skeleton } from '@/shared/ui';
-import { formatCurrency, COMPACT_FORMAT, COMPACT_BARE_FORMAT } from '@/shared/lib/format/currency';
+import {
+  formatCurrency,
+  formatPercentage,
+  COMPACT_FORMAT,
+  COMPACT_BARE_FORMAT,
+} from '@/shared/lib/format/currency';
 import { formatDate } from '@/shared/lib/format/date';
 import { toLocalISODate } from '@/shared/lib/date';
 import type { SpendingPaceEntry } from '../types';
@@ -31,12 +36,28 @@ const activeIdx = ref<number | null>(null);
 // --- Layout ---
 const W = 400;
 const H = 155;
-const P = { t: 8, r: 8, b: 26, l: 48 };
-const cw = W - P.l - P.r;
+const AXIS_FONT_SIZE = 10;
+/** Средняя ширина знака подписи оси при AXIS_FONT_SIZE, с запасом. */
+const AXIS_CHAR_WIDTH = 5.4;
+const AXIS_TEXT_GAP = 6;
+/** Левое поле вынесено из этих отступов: оно зависит от подписей оси. */
+const P = { t: 8, r: 8, b: 26 };
 const ch = H - P.t - P.b;
 
 const hasEntries = computed(() => props.entries.length > 0);
 const hasBudget = computed(() => props.budgetAmount > 0);
+
+/**
+ * Левое поле раздвигается под самую длинную подпись оси. При фиксированных 48px
+ * «493,5 тыс.» не помещалось и уезжало за край viewBox — от суммы оставалось
+ * «,5 тыс.».
+ */
+const padLeft = computed(() => {
+  const longest = Math.max(0, ...yTicks.value.map((t) => t.label.length));
+  return Math.ceil(longest * AXIS_CHAR_WIDTH) + AXIS_TEXT_GAP;
+});
+
+const cw = computed(() => W - padLeft.value - P.r);
 
 // Y-axis ceiling with headroom (accounts for projected total so the forecast line fits)
 const ceil = computed(() => {
@@ -48,7 +69,7 @@ const ceil = computed(() => {
 
 // Scale helpers
 function sx(dayNum: number): number {
-  return P.l + (dayNum / Math.max(props.totalDays, 1)) * cw;
+  return padLeft.value + (dayNum / Math.max(props.totalDays, 1)) * cw.value;
 }
 
 function sy(v: number): number {
@@ -193,7 +214,7 @@ function handlePointerLeave() {
 // Budget % for tooltip
 const displayBudgetPercent = computed(() => {
   if (!displayEntry.value || !hasBudget.value) return null;
-  return ((displayEntry.value.actual / props.budgetAmount) * 100).toFixed(1);
+  return formatPercentage((displayEntry.value.actual / props.budgetAmount) * 100);
 });
 
 // X-axis label step
@@ -361,7 +382,7 @@ const yTicks = computed(() => {
           <template v-for="(tick, ti) in yTicks" :key="ti">
             <line
               v-if="ti > 0"
-              :x1="P.l"
+              :x1="padLeft"
               :y1="tick.y"
               :x2="W - P.r"
               :y2="tick.y"
@@ -371,11 +392,11 @@ const yTicks = computed(() => {
               opacity="0.5"
             />
             <text
-              :x="P.l - 6"
+              :x="padLeft - 6"
               :y="tick.y + 3"
               text-anchor="end"
               class="fill-text-tertiary-light dark:fill-text-tertiary-dark"
-              style="font-size: 10px"
+              :style="{ fontSize: `${AXIS_FONT_SIZE}px` }"
             >
               {{ tick.label }}
             </text>
@@ -384,7 +405,7 @@ const yTicks = computed(() => {
           <!-- Budget boundary line -->
           <template v-if="hasBudget">
             <line
-              :x1="P.l"
+              :x1="padLeft"
               :y1="sy(budgetAmount)"
               :x2="W - P.r"
               :y2="sy(budgetAmount)"
@@ -534,7 +555,7 @@ const yTicks = computed(() => {
             class="text-xs font-medium whitespace-nowrap"
             :style="{ color: color }"
           >
-            · {{ displayBudgetPercent }}%
+            · {{ displayBudgetPercent }}
           </span>
         </div>
         <!-- Placeholder -->

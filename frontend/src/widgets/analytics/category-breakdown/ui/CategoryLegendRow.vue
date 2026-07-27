@@ -1,10 +1,6 @@
 <script setup lang="ts">
 import { IconBadge } from '@/shared/ui';
-import {
-  formatCurrency,
-  formatPercentage,
-  COMPACT_BARE_FORMAT,
-} from '@/shared/lib/format/currency';
+import { formatCurrency, formatShare, COMPACT_BARE_FORMAT } from '@/shared/lib/format/currency';
 import type { DonutSegment } from '../../donut-chart/types';
 
 defineProps<{
@@ -47,7 +43,7 @@ const emit = defineEmits<{ click: [] }>();
     <span
       class="w-9 shrink-0 text-right text-caption text-text-tertiary-light dark:text-text-tertiary-dark tabular-nums"
     >
-      {{ formatPercentage(segment.percent, 0) }}
+      {{ formatShare(segment.percent) }}
     </span>
 
     <!-- Без символа валюты: она названа в сводке выше, а в каждой строке

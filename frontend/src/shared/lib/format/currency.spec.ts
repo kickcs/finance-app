@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest';
 import {
   getCurrencySymbol,
   formatPercentage,
+  formatShare,
+  formatPercentDelta,
   formatNumberWithSpaces,
   formatMasked,
   CURRENCIES,
@@ -20,12 +22,40 @@ describe('getCurrencySymbol', () => {
 
 describe('formatPercentage', () => {
   it('formats percentage with default decimals', () => {
-    expect(formatPercentage(5)).toBe('5.0%');
+    expect(formatPercentage(5)).toBe('5,0%');
+  });
+
+  it('uses the same decimal separator as amounts', () => {
+    expect(formatPercentage(29.7)).toBe('29,7%');
   });
 
   it('shows sign when requested', () => {
-    expect(formatPercentage(5, 1, true)).toBe('+5.0%');
-    expect(formatPercentage(-3, 1, true)).toBe('-3.0%');
+    expect(formatPercentage(5, 1, true)).toBe('+5,0%');
+    expect(formatPercentage(-3, 1, true)).toBe('-3,0%');
+  });
+});
+
+describe('formatShare', () => {
+  it('rounds to whole percent', () => {
+    expect(formatShare(29.7)).toBe('30%');
+  });
+
+  it('never shows a non-zero share as zero', () => {
+    expect(formatShare(0.4)).toBe('<1%');
+    expect(formatShare(0)).toBe('0%');
+  });
+});
+
+describe('formatPercentDelta', () => {
+  it('formats an ordinary change', () => {
+    expect(formatPercentDelta(467)).toBe('467%');
+    expect(formatPercentDelta(12, true)).toBe('+12%');
+  });
+
+  it('caps growth measured against an almost-empty period', () => {
+    expect(formatPercentDelta(48154)).toBe('>999%');
+    expect(formatPercentDelta(48154, true)).toBe('>999%');
+    expect(formatPercentDelta(-48154)).toBe('<-999%');
   });
 });
 

@@ -31,7 +31,10 @@ const hasData = computed(() => props.entries.some((e) => e.expense > 0));
 const BAR_GAP = 2;
 const CHART_HEIGHT = 140;
 const LABEL_HEIGHT = 20;
-const Y_AXIS_WIDTH = 36;
+const AXIS_FONT_SIZE = 10;
+/** Средняя ширина знака подписи оси при AXIS_FONT_SIZE, с запасом. */
+const AXIS_CHAR_WIDTH = 5.4;
+const AXIS_TEXT_GAP = 6;
 /** Ширина до первого замера ResizeObserver — иначе первый кадр рисуется нулевыми столбцами. */
 const FALLBACK_WIDTH = 300;
 
@@ -45,9 +48,33 @@ const { width: hostWidth } = useElementSize(chartHost);
  */
 const chartWidth = computed(() => (hostWidth.value > 0 ? hostWidth.value : FALLBACK_WIDTH));
 
+const yTicks = computed(() => {
+  const max = maxExpense.value;
+  if (max <= 1) return [];
+  const mid = max / 2;
+  return [
+    {
+      value: mid,
+      y: CHART_HEIGHT - (mid / max) * CHART_HEIGHT,
+      label: formatCurrency(mid, props.currency, COMPACT_BARE_FORMAT),
+    },
+    { value: max, y: 4, label: formatCurrency(max, props.currency, COMPACT_BARE_FORMAT) },
+  ];
+});
+
+/**
+ * Ось раздвигается под самую длинную подпись. Фиксированные 36px рассчитывались
+ * на суммы вроде «5 тыс.», а «987 тыс.» в них не влезало и уезжало за левый край
+ * SVG — на графике оставалось «37 тыс.».
+ */
+const yAxisWidth = computed(() => {
+  const longest = Math.max(0, ...yTicks.value.map((t) => t.label.length));
+  return Math.ceil(longest * AXIS_CHAR_WIDTH) + AXIS_TEXT_GAP;
+});
+
 const barWidth = computed(() => {
   const count = props.entries.length || 1;
-  const usable = chartWidth.value - Y_AXIS_WIDTH - BAR_GAP * count;
+  const usable = chartWidth.value - yAxisWidth.value - BAR_GAP * count;
   return Math.max(1, usable / count);
 });
 
@@ -57,7 +84,7 @@ function barHeight(expense: number): number {
 }
 
 function barX(index: number): number {
-  return Y_AXIS_WIDTH + index * (barWidth.value + BAR_GAP);
+  return yAxisWidth.value + index * (barWidth.value + BAR_GAP);
 }
 
 function formatLabel(dateStr: string): string {
@@ -89,20 +116,6 @@ const selectedEntry = computed(() => {
 function formatTooltipDate(dateStr: string): string {
   return formatDate(dateStr + 'T00:00:00', { format: 'short' });
 }
-
-const yTicks = computed(() => {
-  const max = maxExpense.value;
-  if (max <= 1) return [];
-  const mid = max / 2;
-  return [
-    {
-      value: mid,
-      y: CHART_HEIGHT - (mid / max) * CHART_HEIGHT,
-      label: formatCurrency(mid, props.currency, COMPACT_BARE_FORMAT),
-    },
-    { value: max, y: 4, label: formatCurrency(max, props.currency, COMPACT_BARE_FORMAT) },
-  ];
-});
 </script>
 
 <template>
@@ -151,7 +164,7 @@ const yTicks = computed(() => {
         >
           <template v-for="tick in yTicks" :key="tick.value">
             <line
-              :x1="Y_AXIS_WIDTH"
+              :x1="yAxisWidth"
               :y1="tick.y"
               :x2="chartWidth"
               :y2="tick.y"
@@ -161,11 +174,11 @@ const yTicks = computed(() => {
               opacity="0.4"
             />
             <text
-              :x="Y_AXIS_WIDTH - 4"
+              :x="yAxisWidth - 4"
               :y="tick.y + 3"
               text-anchor="end"
               class="fill-text-tertiary-light dark:fill-text-tertiary-dark"
-              style="font-size: 10px"
+              :style="{ fontSize: `${AXIS_FONT_SIZE}px` }"
             >
               {{ tick.label }}
             </text>

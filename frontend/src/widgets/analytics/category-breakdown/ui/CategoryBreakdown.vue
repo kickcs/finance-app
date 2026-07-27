@@ -55,9 +55,12 @@ function toggleSegment(segment: DonutSegment) {
       @update:model-value="emit('update:categoryType', $event as 'expense' | 'income')"
     />
 
-    <div v-if="loading" class="flex items-center gap-4">
-      <Skeleton class="w-[140px] h-[140px] rounded-full shrink-0" />
-      <div class="flex-1 space-y-2">
+    <div
+      v-if="loading"
+      class="flex flex-col items-center gap-3 sm:flex-row sm:gap-4 sm:items-start"
+    >
+      <Skeleton class="w-[144px] h-[144px] rounded-full shrink-0" />
+      <div class="w-full space-y-2">
         <Skeleton v-for="i in 5" :key="i" class="h-7 rounded" />
       </div>
     </div>
@@ -72,19 +75,23 @@ function toggleSegment(segment: DonutSegment) {
     <!--
       На телефоне кольцо и легенда делят ~316px, и на имя категории остаётся
       меньше полусотни — «Образование» превращается в «Обр…». Поэтому колонкой
-      до sm и рядом только там, где ширины хватает обоим.
+      до sm и рядом только там, где ширины хватает обоим. Ширина легенды при этом
+      ограничена: на десктопе имя категории и её сумма разъезжались по разным
+      краям экрана.
     -->
-    <div v-else class="flex flex-col items-center gap-3 sm:flex-row sm:gap-4 sm:items-start">
+    <div
+      v-else
+      class="flex flex-col items-center gap-3 sm:flex-row sm:gap-4 sm:items-start sm:justify-center"
+    >
       <DonutChart
         :segments="segments"
         :total="total"
         :currency="currency"
         :selected-id="selectedId"
-        :size="112"
         @segment-click="toggleSegment"
       />
 
-      <div class="w-full min-w-0 space-y-0.5">
+      <div class="w-full min-w-0 sm:max-w-[440px] space-y-0.5">
         <CategoryLegendRow
           v-for="seg in topSegments"
           :key="seg.id"
