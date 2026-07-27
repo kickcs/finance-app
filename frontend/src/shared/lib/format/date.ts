@@ -53,6 +53,24 @@ export function formatDate(
 }
 
 /**
+ * ISO-дата (`YYYY-MM-DD`) в компактную подпись чипа: «27 июл», а для прошлых
+ * лет — «27 июл 2025».
+ *
+ * Разбираем строку по частям, а не через `new Date(iso)`: тот трактует
+ * `YYYY-MM-DD` как UTC-полночь, и к западу от Гринвича дата уезжала бы на сутки
+ * назад.
+ *
+ * Живёт в общем слое, потому что подпись нужна и самому полю выбора даты, и
+ * тому, кто заранее считает ширину его чипа для раскладки рядов.
+ */
+export function formatCompactDate(iso: string): string {
+  const [year, month, day] = iso.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  const base = formatDate(date, { format: 'short' });
+  return date.getFullYear() === new Date().getFullYear() ? base : `${base} ${year}`;
+}
+
+/**
  * Format relative date (today, yesterday, etc.)
  */
 export function formatRelativeDate(date: Date | number): string {

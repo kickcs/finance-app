@@ -78,6 +78,28 @@ describe('PersonPicker', () => {
     expect(wrapper.findAll('[data-testid="person-chip"][aria-pressed="true"]')).toHaveLength(2);
   });
 
+  it('ставит замыкающую ячейку последней, после кнопки шита', () => {
+    const wrapper = mount(PersonPicker, {
+      props: { people: [person('Азиз')], selected: '', trailingLabel: '27 июл' },
+      global: {
+        stubs: { PersonPickerSheet: true, UIcon: true, InitialAvatar: true },
+        // Слот рисует потребитель — подменяем его маркером, чтобы проверить
+        // порядок ячеек, а не содержимое чужого компонента.
+      },
+      slots: { trailing: '<i data-testid="trailing-cell" />' },
+    });
+
+    const cells = wrapper.findAll(
+      '[data-testid="person-chip"], [data-testid="person-more"], [data-testid="trailing-cell"]',
+    );
+    expect(cells.at(-1)?.attributes('data-testid')).toBe('trailing-cell');
+  });
+
+  it('без trailingLabel замыкающей ячейки нет', () => {
+    const wrapper = mountPicker({ people: [person('Азиз')] });
+    expect(wrapper.find('[data-testid="trailing-cell"]').exists()).toBe(false);
+  });
+
   it('без людей оставляет только кнопку шита и зовёт добавить', () => {
     const wrapper = mountPicker();
     expect(wrapper.findAll('[data-testid="person-chip"]')).toHaveLength(0);

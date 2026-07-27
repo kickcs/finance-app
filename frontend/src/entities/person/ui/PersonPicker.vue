@@ -23,6 +23,12 @@ const props = defineProps<{
   selected: string | string[];
   label?: string;
   multiple?: boolean;
+  /**
+   * Подпись замыкающего чипа. Он встаёт последним в раскладку рядов и рисуется
+   * слотом `trailing`, поэтому подпись нужна здесь: без неё формула упаковки не
+   * знает его ширины и последний ряд не сойдётся.
+   */
+  trailingLabel?: string;
 }>();
 
 const emit = defineEmits<{
@@ -60,7 +66,10 @@ const inlinePeople = computed(() => {
 
 const hiddenCount = computed(() => props.people.length - inlinePeople.value.length);
 
-type Cell = { kind: 'person'; person: Person } | { kind: 'more'; label: string };
+type Cell =
+  | { kind: 'person'; person: Person }
+  | { kind: 'more'; label: string }
+  | { kind: 'trailing'; label: string };
 
 /**
  * Кнопка шита стоит всегда, даже когда прятать нечего: только через неё
@@ -76,10 +85,14 @@ const moreLabel = computed(() => {
   return inlinePeople.value.length ? 'Другой' : 'Добавить человека';
 });
 
-const cells = computed<Cell[]>(() => [
-  ...inlinePeople.value.map((person) => ({ kind: 'person' as const, person })),
-  { kind: 'more' as const, label: moreLabel.value },
-]);
+const cells = computed<Cell[]>(() => {
+  const list: Cell[] = inlinePeople.value.map((person) => ({ kind: 'person' as const, person }));
+  list.push({ kind: 'more' as const, label: moreLabel.value });
+  if (props.trailingLabel) {
+    list.push({ kind: 'trailing' as const, label: props.trailingLabel });
+  }
+  return list;
+});
 
 const { containerRef, chipRef, rows } = useJustifiedRows(
   cells,
@@ -122,9 +135,15 @@ function getChipStyle(person: Person, maxWidth: number) {
       </span>
     </div>
 
+    <!--
+      `group`, а не `radiogroup`: в сетке рядом с людьми живут кнопка «Ещё» и
+      замыкающий чип (например, дата долга), а радиогруппа обязана состоять из
+      одних радиокнопок. Состояние выбора несёт `aria-pressed` — оно корректно
+      и для одиночного выбора, и для мультивыбора.
+    -->
     <div
       ref="containerRef"
-      :role="multiple ? 'group' : 'radiogroup'"
+      role="group"
       :aria-label="label || 'Человек'"
       class="flex flex-col gap-1.5"
     >
@@ -140,7 +159,7 @@ function getChipStyle(person: Person, maxWidth: number) {
       >
         <template
           v-for="cell in row"
-          :key="cell.item.kind === 'person' ? cell.item.person.id : 'more'"
+          :key="cell.item.kind === 'person' ? cell.item.person.id : cell.item.kind"
         >
           <!-- `min-w-max shrink-0 grow`: чип растёт, добирая ряд до полной
                ширины, но никогда не уходит ниже своего содержимого — поэтому
@@ -150,9 +169,7 @@ function getChipStyle(person: Person, maxWidth: number) {
             :ref="chipRef"
             type="button"
             data-testid="person-chip"
-            :role="multiple ? 'button' : 'radio'"
-            :aria-pressed="multiple ? isSelected(cell.item.person) : undefined"
-            :aria-checked="multiple ? undefined : isSelected(cell.item.person)"
+            :aria-pressed="isSelected(cell.item.person)"
             class="person-chip flex min-w-max shrink-0 grow items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border px-3 py-1.5 text-sm transition-[color,background-color,border-color,transform] duration-200 active:scale-95"
             :class="
               isSelected(cell.item.person)
@@ -171,6 +188,17 @@ function getChipStyle(person: Person, maxWidth: number) {
             />
             {{ cell.item.person.name }}
           </button>
+
+          <!-- Замыкающая ячейка: содержимое рисует потребитель, раскладка —
+               наша. Предел роста отдаём в слот, чтобы чип добирал ряд по тем же
+               правилам, что и остальные. -->
+          <div
+            v-else-if="cell.item.kind === 'trailing'"
+            class="flex min-w-max shrink-0 grow"
+            :style="{ maxWidth: `${cell.maxWidth}px` }"
+          >
+            <slot name="trailing" />
+          </div>
 
           <button
             v-else
