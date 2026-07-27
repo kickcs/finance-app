@@ -11,7 +11,8 @@ export interface InputProps {
   label?: string;
   error?: string;
   disabled?: boolean;
-  variant?: 'default' | 'search' | 'currency';
+  /** `flush` — поле внутри готовой строки списка: без своей рамки, фона и скругления. */
+  variant?: 'default' | 'search' | 'currency' | 'flush';
   icon?: string;
   suffix?: string;
   size?: 'sm' | 'md' | 'lg';
@@ -152,6 +153,12 @@ defineExpose({
           'border border-border-light dark:border-border-dark',
           'focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/20',
           variant === 'search' && 'bg-surface-light dark:bg-surface-dark border-transparent',
+          // Строка списка уже даёт рамку и фон — своя стала бы вторым контуром
+          // внутри первого. Тёмные варианты гасим отдельно: `bg-transparent`
+          // конфликтует только с `bg-card-light`, а `dark:bg-card-dark` для
+          // tailwind-merge — другой ключ, и он бы остался.
+          variant === 'flush' &&
+            'bg-transparent dark:bg-transparent border-transparent dark:border-transparent rounded-none focus-within:border-transparent focus-within:ring-0',
           error && 'border-danger focus-within:border-danger focus-within:ring-danger/20',
           disabled && 'opacity-50 pointer-events-none',
           isShaking && 'animate-shake',
@@ -187,6 +194,8 @@ defineExpose({
             size === 'lg' ? 'py-3.5' : size === 'sm' ? 'py-2' : 'py-3',
             icon || variant === 'search' ? 'pl-2' : 'pl-3',
             suffix || variant === 'currency' ? 'pr-2' : 'pr-3',
+            // Отступы у `flush` задаёт строка списка, иначе они удвоятся.
+            variant === 'flush' && 'px-0',
             variant === 'currency' && 'text-2xl font-semibold min-w-0 flex-1',
             variant !== 'currency' && 'flex-1 min-w-0 text-sm',
           )

@@ -12,7 +12,7 @@ import {
 import { useAccounts } from '@/entities/account';
 import { useCategories } from '@/entities/category';
 import { useProfile } from '@/shared/api';
-import { navigateBack, navigateBackTo } from '@/app/router';
+import { navigateBack, navigateBackTo, isPageTransitioning } from '@/app/router';
 import { ROUTE_NAMES } from '@/app/router/routeNames';
 import { useSplitExpense } from '@/features/split-expense';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
@@ -27,6 +27,20 @@ const { accounts, isLoading: accountsLoading } = useAccounts(userId);
 const { expenseCategories, incomeCategories } = useCategories(userId);
 const { defaultAccountId } = useProfile(userId);
 const { currency: userCurrency } = useUserCurrency();
+
+/**
+ * Клавиатуру открываем и тяжёлый хвост формы дорисовываем после слайда: во
+ * время перехода клавиатура пересчитывает `h-dvh`, а монтирование календаря и
+ * vaul-шита съедает те же кадры, в которых страница едет.
+ *
+ * Защёлка в одну сторону: обратный переход (уход со страницы) снова поднимает
+ * флаг, и простой `computed` выдернул бы хвост формы из уже уезжающего экрана —
+ * ровно тот дефект, который здесь и лечится.
+ */
+const isReady = ref(false);
+watch(isPageTransitioning, (transitioning) => !transitioning && (isReady.value = true), {
+  immediate: true,
+});
 
 // Use the add transaction feature
 const { formData, isValid, setType, updateField } = useTransactionForm();
@@ -235,7 +249,8 @@ async function handleSubmit() {
           :error="validationError"
           :split-data="splitData"
           :split-validation-error="splitValidationError"
-          autofocus-amount
+          :autofocus-amount="isReady"
+          :ready="isReady"
           @submit="handleSubmit"
           @debt-submitted="goBack"
           @add-participant="addParticipant"

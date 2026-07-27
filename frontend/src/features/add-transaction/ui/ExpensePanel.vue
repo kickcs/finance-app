@@ -18,6 +18,8 @@ const props = defineProps<{
   transactions?: Transaction[];
   splitData?: SplitExpenseData;
   splitValidationError?: string | null;
+  /** Переход на страницу закончился — можно дорисовывать ряд действий. */
+  ready?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -77,7 +79,7 @@ const chipIdle = 'border-border-light dark:border-border-dark hover:border-prima
       @select="updateField('categoryId', $event)"
     />
 
-    <div class="flex items-stretch gap-2">
+    <div v-if="ready !== false" class="form-tail flex items-stretch gap-2">
       <!-- Разделение настроено -->
       <div
         v-if="splitData && hasSplit"
@@ -143,10 +145,11 @@ const chipIdle = 'border-border-light dark:border-border-dark hover:border-prima
         />
       </button>
 
+      <!-- Иконка без подписи не читалась: по ней не понимали, что кнопка
+           заполняет форму из чека. -->
       <button
         type="button"
-        aria-label="Сканировать чек"
-        :class="[chipBase, chipIdle, 'flex w-12 shrink-0 items-center justify-center']"
+        :class="[chipBase, chipIdle, 'flex shrink-0 items-center gap-2 px-3 py-2.5']"
         @click="toScanReceipt"
       >
         <UIcon
@@ -154,6 +157,11 @@ const chipIdle = 'border-border-light dark:border-border-dark hover:border-prima
           size="sm"
           class="text-text-tertiary-light dark:text-text-tertiary-dark"
         />
+        <span
+          class="whitespace-nowrap text-sm text-text-secondary-light dark:text-text-secondary-dark"
+        >
+          Скан чека
+        </span>
       </button>
     </div>
 
@@ -180,6 +188,9 @@ const chipIdle = 'border-border-light dark:border-border-dark hover:border-prima
 </template>
 
 <style scoped>
+/* `.form-tail` живёт в `app/styles/index.css`: одно и то же появление нужно и
+   этому ряду, и хвосту в `TransactionForm`. */
+
 @media (prefers-reduced-motion: reduce) {
   .meta-chip {
     transition: none;

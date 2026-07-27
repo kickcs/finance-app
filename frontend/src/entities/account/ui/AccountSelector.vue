@@ -46,7 +46,7 @@ watch(
     >
       <!-- Sliding Indicator -->
       <span
-        class="sliding-indicator absolute top-0 bottom-1 rounded-lg bg-primary/10 border border-primary pointer-events-none transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] z-0"
+        class="sliding-indicator absolute top-0 bottom-1 rounded-lg bg-primary/10 border border-primary pointer-events-none transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] z-0"
         :style="{
           left: indicatorStyle.left,
           width: indicatorStyle.width,

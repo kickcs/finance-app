@@ -11,10 +11,17 @@ const props = withDefaults(
     placeholder?: string;
     /** When false, selecting a free-text name only emits 'select' without 'save-person' */
     autoSave?: boolean;
+    /**
+     * Проброс во внутренний `UInput` — нужен варианту `flush` в строке списка.
+     * Union повторён литералом: `defineProps` не разворачивает `InstanceType`
+     * при генерации рантайм-пропов.
+     */
+    variant?: 'default' | 'search' | 'currency' | 'flush';
   }>(),
   {
     placeholder: 'Имя человека',
     autoSave: true,
+    variant: 'default',
   },
 );
 
@@ -113,6 +120,7 @@ function handleInputWrapperPointerDown(event: PointerEvent) {
       <UInput
         ref="inputRef"
         data-vaul-no-drag
+        :variant="variant"
         :model-value="String(modelValue)"
         type="text"
         :placeholder="placeholder"

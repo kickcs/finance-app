@@ -316,6 +316,30 @@ h6 {
   animation: shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97);
 }
 
+/* Хвост формы «Новой транзакции»: тяжёлые узлы дорисовываются после слайда, и
+   появление не должно быть заметным — только opacity, без сдвига, иначе вместо
+   одного рывка получим другой. Правило глобальное, потому что нужно и родителю
+   (TransactionForm), и панели внутри (ExpensePanel), а scoped-стили между
+   компонентами не наследуются. */
+@keyframes tail-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.form-tail {
+  animation: tail-in 120ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .form-tail {
+    animation: none;
+  }
+}
+
 /* BalanceCard rotating border — @property must be global (cannot be scoped) */
 @property --border-angle {
   syntax: "<angle>";

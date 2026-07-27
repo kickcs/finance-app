@@ -19,6 +19,9 @@ vi.mock('@/app/router', () => ({
   navigateBack: navigateBackMock,
   navigateBackTo: navigateBackToMock,
   transitionName: { value: 'fade' },
+  // Переход считаем завершённым: форма должна быть отрисована целиком, включая
+  // хвост, который на живом экране дорисовывается после слайда.
+  isPageTransitioning: { value: false },
   resetOnboardingVerified: vi.fn(),
 }));
 
@@ -929,12 +932,12 @@ describe('AddTransactionPage', () => {
       );
       const wrapper = await renderPage();
 
-      // Отдельного ряда чипов больше нет — счёт выбирается на карточке суммы,
-      // остальные счета лежат в её списке.
+      // Отдельного ряда чипов больше нет — счёт выбирается в строке над суммой,
+      // остальные счета лежат в её поповере.
       expect(wrapper.text()).toContain('Основной');
       expect(wrapper.find('[data-testid="account-trigger"]').exists()).toBe(true);
 
-      const card = wrapper.findComponent({ name: 'AmountCard' });
+      const card = wrapper.findComponent({ name: 'AmountHeadline' });
       expect(card.props('accounts').map((a: { name: string }) => a.name)).toEqual([
         'Основной',
         'Накопления',
@@ -1172,8 +1175,8 @@ describe('AddTransactionPage', () => {
       const wrapper = await renderPage();
 
       // Уводим расход на второй счёт — не тот, что дефолтный в профиле.
-      // Счёт выбирается на карточке суммы, её список в поповере.
-      const card = wrapper.findComponent({ name: 'AmountCard' });
+      // Счёт выбирается в строке над суммой, её список в поповере.
+      const card = wrapper.findComponent({ name: 'AmountHeadline' });
       card.vm.$emit('update:accountId', mockSecondAccountResponse.id);
       await nextTick();
       await flushPromises();
@@ -1192,20 +1195,18 @@ describe('AddTransactionPage', () => {
     it('сохраняет заполненный долг при переключении типа и обратно', async () => {
       const wrapper = await renderPage({ type: 'debt' });
 
-      const nameInput = wrapper
-        .findAll('input')
-        .find((i) => i.attributes('placeholder') === 'Имя человека');
-      expect(nameInput).toBeDefined();
-      await nameInput!.setValue('Азиз');
+      // Ищем по строке списка, а не по placeholder: подпись поля уехала внутрь
+      // него и теперь зависит от направления долга («Кому дали» / «У кого взяли»).
+      const personInput = () => wrapper.find('[data-testid="debt-row-person"] input');
+
+      expect(personInput().exists()).toBe(true);
+      await personInput().setValue('Азиз');
       await nextTick();
 
       await switchType(wrapper, 'expense');
       await switchType(wrapper, 'debt');
 
-      const restored = wrapper
-        .findAll('input')
-        .find((i) => i.attributes('placeholder') === 'Имя человека');
-      expect((restored?.element as HTMLInputElement).value).toBe('Азиз');
+      expect((personInput().element as HTMLInputElement).value).toBe('Азиз');
     });
 
     it('оставляет выход с экрана, когда счетов нет', async () => {

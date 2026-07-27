@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { computed, nextTick, ref } from 'vue';
+import { computed, defineAsyncComponent, nextTick, ref } from 'vue';
 import { UIcon } from '@/shared/ui';
 import { formatDate } from '@/shared/lib/format/date';
 import { Popover, PopoverTrigger, PopoverContent } from '@/shared/ui/primitives/popover';
-import { Calendar } from '@/shared/ui/primitives/calendar';
 import { CalendarDate, type DateValue } from '@internationalized/date';
 
 const props = defineProps<{
@@ -19,6 +18,10 @@ const emit = defineEmits<{
   'update:date': [value: number];
   'insert-hashtag': [tag: string];
 }>();
+
+// Календарь тянет reka-примитив и открывается по нажатию — в чанк, который
+// парсится в кадре старта слайда, ему попадать незачем.
+const Calendar = defineAsyncComponent(() => import('@/shared/ui/primitives/calendar/Calendar.vue'));
 
 const calendarOpen = ref(false);
 const commentOpen = ref(false);
@@ -106,6 +109,7 @@ function onCommentBlur() {
           class="w-auto p-0"
         >
           <Calendar
+            v-if="calendarOpen"
             :model-value="calendarValue"
             locale="ru-RU"
             @update:model-value="onCalendarSelect"

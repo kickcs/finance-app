@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, defineAsyncComponent, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useTimeoutFn } from '@vueuse/core';
 import { UButton, UTabs } from '@/shared/ui';
 import { formatNumberWithSpaces } from '@/shared/lib/format/currency';
@@ -16,11 +16,10 @@ import { useSmartDefaults } from '../model/useSmartDefaults';
 import { useAmountSuggestions } from '../model/useAmountSuggestions';
 import { usePanelState } from '../model/usePanelState';
 import { useHaptics } from '@/shared/lib/haptics';
-import AmountCard from './AmountCard.vue';
+import AmountHeadline from './AmountHeadline.vue';
 import ExpensePanel from './ExpensePanel.vue';
 import IncomePanel from './IncomePanel.vue';
 import TransferPanel from './TransferPanel.vue';
-import DebtPanel from './DebtPanel.vue';
 import TransactionMetaRow from './TransactionMetaRow.vue';
 
 const props = defineProps<{
@@ -36,6 +35,8 @@ const props = defineProps<{
   splitData?: SplitExpenseData;
   splitValidationError?: string | null;
   autofocusAmount?: boolean;
+  /** Переход на страницу закончился — можно дорисовывать тяжёлый хвост формы. */
+  ready?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -50,6 +51,14 @@ const emit = defineEmits<{
   setIsIncluded: [included: boolean];
   setSplitEnabled: [enabled: boolean];
 }>();
+
+/**
+ * Панель долга тянет PersonSelector, ToggleRow и календарь, а вкладка «Долг»
+ * почти всегда закрыта — парсить её в кадре старта слайда незачем. Обёртка
+ * создаётся один раз на экземпляр формы: `KeepAlive` ниже кэширует по типу
+ * компонента, и пересоздание ссылки внутри жизни формы стёрло бы кэш.
+ */
+const DebtPanel = defineAsyncComponent(() => import('./DebtPanel.vue'));
 
 function applyTypeChange(newType: TransactionType) {
   emit('update:formData', {
@@ -278,6 +287,15 @@ onMounted(() => {
   if (shouldShowHint('split-expense')) {
     showSplitHintDelayed();
   }
+
+  // Чанк долга подтягиваем на простое: синхронный импорт стоил бы кадра при
+  // входе на страницу, а без префетча первый тап по вкладке ждал бы сеть.
+  const prefetchDebtPanel = () => void import('./DebtPanel.vue');
+  if (typeof requestIdleCallback !== 'undefined') {
+    requestIdleCallback(prefetchDebtPanel, { timeout: 2000 });
+  } else {
+    setTimeout(prefetchDebtPanel, 1000);
+  }
 });
 
 onUnmounted(() => stopSplitHint());
@@ -311,6 +329,7 @@ const expensePanelProps = computed(() => ({
   transactions: transactions.value,
   splitData: props.splitData,
   splitValidationError: props.splitValidationError,
+  ready: props.ready !== false,
 }));
 
 const expensePanelHandlers = {
@@ -334,7 +353,7 @@ const expensePanelHandlers = {
     @submit.prevent="emit('submit')"
   >
     <div class="flex flex-1 flex-col gap-3 px-4 pt-1">
-      <AmountCard
+      <AmountHeadline
         :amount="formData.amount"
         :currency="formData.currency"
         :currency-symbol="currencySymbol"
@@ -352,6 +371,10 @@ const expensePanelHandlers = {
         @update:currency="updateField('currency', $event)"
         @update:account-id="handleAccountChange"
       />
+
+      <!-- Волосяная линия вместо карточки: сумма отделена от типа операции, но
+           своей поверхности не получает. -->
+      <div class="-mx-4 border-b border-border-light dark:border-border-dark" />
 
       <UTabs
         :model-value="formData.type"
@@ -430,7 +453,8 @@ const expensePanelHandlers = {
            раскрывается на месте, поэтому подсказки хэштегов не двигают
            кнопку сабмита. -->
       <TransactionMetaRow
-        v-if="formData.type !== 'debt'"
+        v-if="formData.type !== 'debt' && ready !== false"
+        class="form-tail"
         :description="formData.description"
         :date="formData.date"
         :placeholder="descriptionPlaceholder"
@@ -500,6 +524,9 @@ const expensePanelHandlers = {
 .suggestion-chip:active {
   transform: scale(0.95);
 }
+
+/* `.form-tail` (появление хвоста формы после слайда) — глобальный класс в
+   `app/styles/index.css`: он нужен и здесь, и внутри `ExpensePanel`. */
 
 @media (prefers-reduced-motion: reduce) {
   .form-root,

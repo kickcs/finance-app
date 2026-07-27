@@ -170,15 +170,17 @@ provide('isDemo', isDemo);
   opacity: 0;
 }
 
-/* Slide forward - navigating deeper into the app */
+/* Slide forward - navigating deeper into the app.
+   260ms вместо 350: на 350 переход успевает показать десяток кадров, в которых
+   видно, как страница дорисовывает свою раскладку. Кривая та же. */
 .slide-forward-enter-active {
-  transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+  transition: transform 0.26s cubic-bezier(0.32, 0.72, 0, 1);
   z-index: 10;
 }
 
 .slide-forward-leave-active {
   transition:
-    transform 0.35s cubic-bezier(0.32, 0.72, 0, 1),
+    transform 0.26s cubic-bezier(0.32, 0.72, 0, 1),
     opacity 0.2s cubic-bezier(0.32, 0.72, 0, 1);
   z-index: 5;
 }
@@ -204,13 +206,13 @@ provide('isDemo', isDemo);
 /* Slide back - returning to previous screen */
 .slide-back-enter-active {
   transition:
-    transform 0.35s cubic-bezier(0.32, 0.72, 0, 1),
-    opacity 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+    transform 0.26s cubic-bezier(0.32, 0.72, 0, 1),
+    opacity 0.26s cubic-bezier(0.32, 0.72, 0, 1);
   z-index: 5;
 }
 
 .slide-back-leave-active {
-  transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+  transition: transform 0.26s cubic-bezier(0.32, 0.72, 0, 1);
   z-index: 10;
 }
 
