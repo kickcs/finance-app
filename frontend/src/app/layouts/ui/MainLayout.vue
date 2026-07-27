@@ -4,7 +4,7 @@ import type { Ref } from 'vue';
 import { RouterView, useRoute, useRouter } from 'vue-router';
 import { SidebarNav } from '@/widgets/sidebar-nav';
 import BottomNav from '@/widgets/bottom-nav/ui/BottomNav.vue';
-import { transitionName } from '@/app/router';
+import { transitionName, finishPageTransition } from '@/app/router';
 import { ROUTE_NAMES } from '@/app/router/routeNames';
 import { useLayoutData } from '../model/useLayoutData';
 import { useNavbarStyle } from '@/shared/lib/composables';
@@ -34,6 +34,17 @@ const FULLSCREEN_FLOWS: string[] = [
   ROUTE_NAMES.IMPORT_INBOX,
   ROUTE_NAMES.NEW_TRANSACTION,
 ];
+/**
+ * Навбар снимается сразу со сменой роута — и это правильный момент.
+ *
+ * Соблазн отложить снятие до конца перехода есть: классический навбар —
+ * `shrink-0` в потоке, и его исчезновение меняет высоту контейнера, в котором
+ * обе страницы лежат `absolute inset-0`. Но смена роута, перерисовка этого
+ * `v-if` и старт `Transition` происходят в одном flush'е: входящая страница
+ * сразу размечается на итоговую высоту и посреди слайда не прыгает. Отложенное
+ * снятие, наоборот, перенесло бы сдвиг на момент, когда экран уже стоит на
+ * месте, — там он куда заметнее.
+ */
 const hideBottomNav = computed(() => FULLSCREEN_FLOWS.includes(route.name as string));
 
 function handleAddTransaction() {
@@ -82,7 +93,7 @@ function handleAddTransaction() {
           >
             <component :is="Component" />
           </div>
-          <Transition v-else :name="transitionName">
+          <Transition v-else :name="transitionName" @after-enter="finishPageTransition">
             <div :key="route.path" class="absolute inset-0 w-full h-full flex flex-col">
               <component :is="Component" />
             </div>

@@ -19,6 +19,9 @@ vi.mock('@/app/router', () => ({
   navigateBack: navigateBackMock,
   navigateBackTo: navigateBackToMock,
   transitionName: { value: 'fade' },
+  // Переход считаем завершённым: форма должна быть отрисована целиком, включая
+  // хвост, который на живом экране дорисовывается после слайда.
+  isPageTransitioning: { value: false },
   resetOnboardingVerified: vi.fn(),
 }));
 
@@ -1192,20 +1195,18 @@ describe('AddTransactionPage', () => {
     it('сохраняет заполненный долг при переключении типа и обратно', async () => {
       const wrapper = await renderPage({ type: 'debt' });
 
-      const nameInput = wrapper
-        .findAll('input')
-        .find((i) => i.attributes('placeholder') === 'Имя человека');
-      expect(nameInput).toBeDefined();
-      await nameInput!.setValue('Азиз');
+      // Ищем по строке списка, а не по placeholder: подпись поля уехала внутрь
+      // него и теперь зависит от направления долга («Кому дали» / «У кого взяли»).
+      const personInput = () => wrapper.find('[data-testid="debt-row-person"] input');
+
+      expect(personInput().exists()).toBe(true);
+      await personInput().setValue('Азиз');
       await nextTick();
 
       await switchType(wrapper, 'expense');
       await switchType(wrapper, 'debt');
 
-      const restored = wrapper
-        .findAll('input')
-        .find((i) => i.attributes('placeholder') === 'Имя человека');
-      expect((restored?.element as HTMLInputElement).value).toBe('Азиз');
+      expect((personInput().element as HTMLInputElement).value).toBe('Азиз');
     });
 
     it('оставляет выход с экрана, когда счетов нет', async () => {

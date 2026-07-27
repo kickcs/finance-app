@@ -15,6 +15,35 @@ export const transitionName = ref<
 >('fade');
 
 /**
+ * Идёт ли переход между страницами.
+ *
+ * Нужен тому, что не должно случаться посреди слайда: автофокусу поля (мобильная
+ * клавиатура на въезде пересчитывает `h-dvh`, и экран едет вместе с ней) и
+ * монтированию тяжёлых узлов — календаря, vaul-шитов, — которые съедают те же
+ * кадры, в которых страница движется.
+ */
+export const isPageTransitioning = ref(false);
+
+let transitionGuard: ReturnType<typeof setTimeout> | null = null;
+
+function beginPageTransition() {
+  isPageTransitioning.value = true;
+  if (transitionGuard) clearTimeout(transitionGuard);
+  // Страховка от залипания: если `after-enter` не придёт — прерванный переход,
+  // отключённая анимация, — флаг должен сняться сам. Иначе нижняя навигация не
+  // вернётся, а автофокус суммы не сработает вообще никогда.
+  transitionGuard = setTimeout(finishPageTransition, 600);
+}
+
+export function finishPageTransition() {
+  if (transitionGuard) {
+    clearTimeout(transitionGuard);
+    transitionGuard = null;
+  }
+  isPageTransitioning.value = false;
+}
+
+/**
  * Экономия трафика: на сохранении данных или медленной сети префетч отключаем.
  * Тянуть полтора десятка чанков впрок там, где сама открытая страница грузится
  * тяжело, — прямой вред.
@@ -399,9 +428,14 @@ router.beforeEach(async (to, from, next) => {
 
 // Navigation direction detection for transitions
 router.beforeEach((to, from) => {
+  beginPageTransition();
+
   // Skip on initial load
   if (!from.name) {
     transitionName.value = 'fade';
+    // Уходящей страницы нет — защищать нечего, а сумма на экране, открытом по
+    // прямой ссылке, должна получить фокус сразу.
+    finishPageTransition();
     return;
   }
 
@@ -418,6 +452,8 @@ router.beforeEach((to, from) => {
   if (isPopStateNavigation || isRecentPopState) {
     transitionName.value = 'none';
     isPopStateNavigation = false;
+    // Без Transition `after-enter` не придёт — снимаем флаг сами.
+    finishPageTransition();
     return;
   }
 

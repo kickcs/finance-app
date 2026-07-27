@@ -1,18 +1,15 @@
-import { computed, nextTick, onMounted, ref, toValue, watch, type MaybeRefOrGetter } from 'vue';
-import { useEventListener, useTimeoutFn } from '@vueuse/core';
+import { computed, nextTick, ref, toValue, watch, type MaybeRefOrGetter } from 'vue';
+import { useEventListener } from '@vueuse/core';
 import { formatNumberWithSpaces, sanitizeCurrencyInput } from '@/shared/lib/format/currency';
-
-/** Сколько держится пружина на первой набранной цифре. */
-const BOUNCE_MS = 160;
 
 /**
  * Поле ввода суммы: скрытый `input` под нарисованной строкой.
  *
- * Такое поле на экране два: главная сумма на плите (`AmountSlab`) и сумма в
- * ряду с другими полями (`HeroAmount` — вторая сумма перевода, подтверждение
- * импорта). Отличаются они только оформлением, поэтому поведение — санитайз
- * ввода, форматирование разрядов, синхронизация с внешним значением, пружина
- * и автофокус — живёт здесь, в одном месте.
+ * Такое поле на экране два: главная сумма (`AmountHeadline`) и сумма в ряду с
+ * другими полями (`HeroAmount` — вторая сумма перевода, подтверждение импорта).
+ * Отличаются они только оформлением, поэтому поведение — санитайз ввода,
+ * форматирование разрядов, синхронизация с внешним значением и автофокус —
+ * живёт здесь, в одном месте.
  */
 export function useAmountInput(options: {
   amount: MaybeRefOrGetter<number>;
@@ -21,7 +18,6 @@ export function useAmountInput(options: {
 }) {
   const inputRef = ref<HTMLInputElement | null>(null);
   const isFocused = ref(false);
-  const isBouncing = ref(false);
   const rawValue = ref(toValue(options.amount) ? String(toValue(options.amount)) : '');
 
   useEventListener(inputRef, 'focus', () => (isFocused.value = true));
@@ -52,26 +48,31 @@ export function useAmountInput(options: {
     return (formatNumberWithSpaces(intPart || '0') || '0') + decPart;
   });
 
-  const { start: startBounce } = useTimeoutFn(() => (isBouncing.value = false), BOUNCE_MS, {
-    immediate: false,
-  });
-
   function onInput(event: Event) {
     const sanitized = sanitizeCurrencyInput((event.target as HTMLInputElement).value);
     rawValue.value = sanitized;
-    const num = parseFloat(sanitized) || 0;
-    if (!toValue(options.amount) && num > 0) {
-      isBouncing.value = true;
-      startBounce();
-    }
-    options.onChange(num);
+    options.onChange(parseFloat(sanitized) || 0);
   }
 
-  onMounted(() => {
-    if (toValue(options.autofocus)) {
+  /**
+   * Фокус ждёт разрешения снаружи, а не ставится на монтировании: раньше
+   * клавиатура открывалась посреди перехода между страницами, `h-dvh`
+   * пересчитывался, и вход на экран дёргался. Страница включает автофокус
+   * после конца слайда.
+   *
+   * Фокусим один раз: повторное включение флага — это уже возврат на страницу,
+   * а не первый заход, и выдёргивать фокус из другого поля незачем.
+   */
+  const hasFocused = ref(false);
+  watch(
+    () => toValue(options.autofocus),
+    (enabled) => {
+      if (!enabled || hasFocused.value) return;
+      hasFocused.value = true;
       nextTick(() => inputRef.value?.focus());
-    }
-  });
+    },
+    { immediate: true },
+  );
 
-  return { inputRef, rawValue, displayAmount, isFocused, isBouncing, onInput };
+  return { inputRef, rawValue, displayAmount, isFocused, onInput };
 }
