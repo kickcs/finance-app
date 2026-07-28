@@ -63,9 +63,15 @@ function onCommentBlur() {
 
 <template>
   <div class="space-y-2">
-    <div v-if="!commentOpen" class="flex items-center gap-2">
+    <!-- Дата — замыкающий чип ряда в обоих состояниях, раскрытие комментария
+         подменяет только левую половину строки. Раньше оно подменяло строку
+         целиком, и дата уходила с экрана насовсем: поле не схлопывается, пока
+         в нём есть текст, — вернуть чип было нечем. -->
+    <div class="flex items-center gap-2">
       <button
+        v-if="!commentOpen"
         type="button"
+        data-testid="meta-comment-chip"
         class="meta-chip flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 py-2.5 text-left transition-[color,background-color,border-color,transform] duration-200 hover:border-primary/40 active:scale-[0.99]"
         @click="openComment"
       >
@@ -86,10 +92,34 @@ function onCommentBlur() {
         </span>
       </button>
 
+      <div
+        v-else
+        class="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-primary/40 bg-card-light dark:bg-card-dark px-3 py-2.5"
+      >
+        <UIcon
+          name="edit_note"
+          size="sm"
+          class="shrink-0 text-text-tertiary-light dark:text-text-tertiary-dark"
+        />
+        <input
+          ref="commentInput"
+          :value="description"
+          type="text"
+          aria-label="Комментарий"
+          :placeholder="placeholder"
+          class="min-w-0 flex-1 bg-transparent text-sm text-text-primary-light dark:text-text-primary-dark placeholder:text-text-tertiary-light dark:placeholder:text-text-tertiary-dark focus:outline-none"
+          @input="emit('update:description', ($event.target as HTMLInputElement).value)"
+          @focus="commentFocused = true"
+          @blur="onCommentBlur"
+          @keydown.enter.prevent="commentInput?.blur()"
+        />
+      </div>
+
       <Popover v-model:open="calendarOpen">
         <PopoverTrigger as-child>
           <button
             type="button"
+            data-testid="meta-date-chip"
             aria-label="Выбрать дату"
             class="meta-chip flex shrink-0 items-center gap-2 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 py-2.5 text-sm text-text-primary-light dark:text-text-primary-dark transition-[color,background-color,border-color,transform] duration-200 hover:border-primary/40 active:scale-[0.99]"
           >
@@ -118,48 +148,24 @@ function onCommentBlur() {
       </Popover>
     </div>
 
-    <!-- Раскрытый комментарий занимает всю ширину: хэштеги под ним не двигают
-         кнопку сабмита — она живёт в подвале вне скролла. -->
-    <div v-else class="space-y-2">
+    <!-- Хэштеги — отдельной строкой под рядом: они не двигают кнопку сабмита,
+         она живёт в подвале вне скролла. -->
+    <Transition name="hashtags">
       <div
-        class="flex items-center gap-2 rounded-xl border border-primary/40 bg-card-light dark:bg-card-dark px-3 py-2.5"
+        v-if="commentOpen && commentFocused && hashtags.length"
+        class="flex gap-1.5 overflow-x-auto no-scrollbar py-0.5"
       >
-        <UIcon
-          name="edit_note"
-          size="sm"
-          class="shrink-0 text-text-tertiary-light dark:text-text-tertiary-dark"
-        />
-        <input
-          ref="commentInput"
-          :value="description"
-          type="text"
-          aria-label="Комментарий"
-          :placeholder="placeholder"
-          class="min-w-0 flex-1 bg-transparent text-sm text-text-primary-light dark:text-text-primary-dark placeholder:text-text-tertiary-light dark:placeholder:text-text-tertiary-dark focus:outline-none"
-          @input="emit('update:description', ($event.target as HTMLInputElement).value)"
-          @focus="commentFocused = true"
-          @blur="onCommentBlur"
-          @keydown.enter.prevent="commentInput?.blur()"
-        />
-      </div>
-
-      <Transition name="hashtags">
-        <div
-          v-if="commentFocused && hashtags.length"
-          class="flex gap-1.5 overflow-x-auto no-scrollbar py-0.5"
+        <button
+          v-for="h in hashtags"
+          :key="h.tag"
+          type="button"
+          class="hashtag-chip shrink-0 rounded-full border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark px-3 py-1.5 text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark transition-[color,background-color,border-color,transform] duration-200 hover:border-primary/30 hover:bg-primary-light hover:text-primary active:scale-95"
+          @mousedown.prevent="emit('insert-hashtag', h.tag)"
         >
-          <button
-            v-for="h in hashtags"
-            :key="h.tag"
-            type="button"
-            class="hashtag-chip shrink-0 rounded-full border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark px-3 py-1.5 text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark transition-[color,background-color,border-color,transform] duration-200 hover:border-primary/30 hover:bg-primary-light hover:text-primary active:scale-95"
-            @mousedown.prevent="emit('insert-hashtag', h.tag)"
-          >
-            {{ h.tag }}
-          </button>
-        </div>
-      </Transition>
-    </div>
+          {{ h.tag }}
+        </button>
+      </div>
+    </Transition>
   </div>
 </template>
 
