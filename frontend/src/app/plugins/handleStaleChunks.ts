@@ -6,6 +6,16 @@ const RELOAD_STAMP_KEY = 'ouro:chunk-reload-at';
 const RELOAD_COOLDOWN_MS = 15_000;
 
 /**
+ * Сколько ждём снятия воркера, прежде чем перезагрузиться без него.
+ *
+ * Спасательная операция не имеет права сама стать вечным ожиданием: зависший
+ * промис в `unregister()` или `caches` оставил бы пользователя ровно на том
+ * загрузочном экране, ради которого всё и затевалось. Перезагрузка без снятия
+ * воркера может не помочь, но это по-прежнему лучше застывшего экрана.
+ */
+const RECOVERY_TIMEOUT_MS = 3_000;
+
+/**
  * После деплоя старый index.html в кэше браузера ссылается на чанки с прежними
  * хешами, которых на сервере уже нет. Vite сообщает об этом событием
  * `vite:preloadError`; единственное разумное лечение — перезагрузить страницу,
@@ -76,6 +86,9 @@ export function handleStaleChunks(): void {
     reloadsThisDocument += 1;
     writeStamp(Date.now());
     event.preventDefault();
-    void dropStaleServiceWorker().then(reloadDocument);
+    void Promise.race([
+      dropStaleServiceWorker(),
+      new Promise<void>((resolve) => setTimeout(resolve, RECOVERY_TIMEOUT_MS)),
+    ]).then(reloadDocument);
   });
 }
