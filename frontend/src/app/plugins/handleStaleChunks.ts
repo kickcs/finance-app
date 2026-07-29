@@ -1,3 +1,5 @@
+import { reloadDocument } from './reloadDocument';
+
 const RELOAD_STAMP_KEY = 'ouro:chunk-reload-at';
 
 /** Окно, внутри которого повторная ошибка считается признаком цикла, а не нового деплоя. */
@@ -36,6 +38,36 @@ const writeStamp = (value: number): void => {
   }
 };
 
+/**
+ * Снимает устаревшего Service Worker вместе с его кэшами.
+ *
+ * Без этого перезагрузка бесполезна. В precache лежит только оболочка —
+ * `index.html` и входной чанк, — а чанки страниц тянутся из сети по хешам,
+ * зашитым в этой самой закэшированной оболочке. Воркер переживает reload и
+ * отдаёт ту же оболочку с теми же мёртвыми ссылками: страница перезагружается,
+ * чанк снова получает 404, защита от цикла гасит вторую попытку — и приложение
+ * навсегда остаётся на загрузочном экране.
+ *
+ * Мягко обновить воркера тут нечем: `registerType` — `prompt`, а предложение
+ * обновиться показывается только на дашборде. Вход в мини-приложение идёт
+ * `/tma` → инбокс импорта, дашборда не касается, так что ждущий воркер может
+ * простоять сколько угодно. Снятие регистрации — единственный способ гарантированно
+ * увести следующую загрузку в сеть; свежий воркер зарегистрируется на ней заново.
+ */
+async function dropStaleServiceWorker(): Promise<void> {
+  try {
+    const registration = await navigator.serviceWorker?.getRegistration();
+    await registration?.unregister();
+
+    const cacheStorage = globalThis.caches;
+    const keys = (await cacheStorage?.keys()) ?? [];
+    await Promise.all(keys.map((key) => cacheStorage.delete(key)));
+  } catch {
+    // Реестр воркеров или хранилище кэшей недоступны — перезагружаемся как есть:
+    // шанс попасть на свежую оболочку всё равно выше, чем у зависшего экрана.
+  }
+}
+
 export function handleStaleChunks(): void {
   window.addEventListener('vite:preloadError', (event) => {
     if (reloadsThisDocument > 0) return;
@@ -44,6 +76,6 @@ export function handleStaleChunks(): void {
     reloadsThisDocument += 1;
     writeStamp(Date.now());
     event.preventDefault();
-    window.location.reload();
+    void dropStaleServiceWorker().then(reloadDocument);
   });
 }

@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.69';
+export const CURRENT_VERSION = '1.0.70';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,17 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.70',
+    date: '2026-07-29',
+    title: 'Приложение больше не зависает на заставке',
+    items: [
+      {
+        type: 'fix',
+        text: 'После выхода обновления приложение могло навсегда застыть на экране с логотипом — особенно при входе из Telegram. Теперь оно само подхватывает свежую версию и открывается',
+      },
+    ],
+  },
   {
     version: '1.0.69',
     date: '2026-07-27',
