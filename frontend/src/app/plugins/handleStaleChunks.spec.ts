@@ -105,6 +105,21 @@ describe('handleStaleChunks', () => {
     await vi.waitFor(() => expect(reload).toHaveBeenCalledTimes(1));
   });
 
+  it('перезагружается, даже если снятие воркера повисло без ответа', async () => {
+    // Ровно тот отказ, который лечим: висящий промис не должен превратить
+    // спасательную перезагрузку в новое вечное ожидание.
+    const registration: SwMock = {
+      unregister: vi.fn().mockReturnValue(new Promise(() => {})),
+      update: vi.fn().mockResolvedValue(undefined),
+    };
+    stubServiceWorker(registration);
+    const { reload } = await armHandler();
+
+    firePreloadError();
+
+    await vi.waitFor(() => expect(reload).toHaveBeenCalledTimes(1), { timeout: 6000 });
+  });
+
   it('не перезагружается повторно внутри окна защиты от цикла', async () => {
     stubServiceWorker(makeRegistration());
     const { reload } = await armHandler();
