@@ -7,13 +7,29 @@
  * перевод), и панели долга, которая владеет собственным сабмитом.
  *
  * Требует от родителя горизонтальный паддинг `px-4` — подвал компенсирует его
- * через `-mx-4 px-4`, чтобы подложка шла от края до края.
+ * через `-mx-4 px-4`, чтобы подложка шла от края до края. Это мобильное
+ * допущение: в десктопной модалке («Новая операция») родитель — тело
+ * `UOverlay` с `px-5`, у экрана нет ни notch'а, ни жестовой полосы снизу, и
+ * компенсация `-mx-4` там не совпадает с реальным паддингом (лишние 4px по
+ * бокам). Проп `flush` отключает и компенсацию, и safe-area — подвал просто
+ * занимает ширину родителя.
+ *
+ * Он же переключает цвет подложки. Градиент повторяет фон под собой, а под
+ * подвалом разные поверхности: на странице это фон приложения, в модалке —
+ * поверхность карточки. Без переключения в модалке снизу проступала бы
+ * полоса цвета страницы.
  */
+withDefaults(defineProps<{ flush?: boolean }>(), { flush: false });
 </script>
 
 <template>
   <div
-    class="submit-bar sticky bottom-0 -mx-4 mt-auto px-4 pt-3 [--bar-bg:var(--color-background-light)] dark:[--bar-bg:var(--color-background-dark)]"
+    :class="[
+      'submit-bar sticky bottom-0 mt-auto pt-3',
+      flush
+        ? 'submit-bar--flush [--bar-bg:var(--color-card-light)] dark:[--bar-bg:var(--color-card-dark)]'
+        : '-mx-4 px-4 [--bar-bg:var(--color-background-light)] dark:[--bar-bg:var(--color-background-dark)]',
+    ]"
   >
     <slot name="hint" />
     <slot />
@@ -31,5 +47,10 @@
 .submit-bar {
   background: linear-gradient(to bottom, transparent 0, var(--bar-bg) 0.75rem, var(--bar-bg));
   padding-bottom: max(var(--safe-area-inset-bottom), 0.75rem);
+}
+
+/* Десктопная модалка: без safe-area, обычный отступ снизу. */
+.submit-bar.submit-bar--flush {
+  padding-bottom: 0.75rem;
 }
 </style>

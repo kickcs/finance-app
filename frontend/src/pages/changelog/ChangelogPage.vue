@@ -14,7 +14,7 @@ const { isMounted } = useMountedAnimation();
 
 <template>
   <div
-    class="h-full flex flex-col relative bg-background-light dark:bg-background-dark pb-28 md:pb-8 overflow-y-auto"
+    class="h-full flex flex-col relative bg-background-light dark:bg-background-dark pb-28 lg:pb-8 overflow-y-auto"
   >
     <div class="md:hidden">
       <AppHeader title="Что нового" show-back @back="navigateBack" />

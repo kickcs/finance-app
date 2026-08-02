@@ -80,6 +80,17 @@ async function dropStaleServiceWorker(): Promise<void> {
 
 export function handleStaleChunks(): void {
   window.addEventListener('vite:preloadError', (event) => {
+    // Офлайн лечить нечем, а навредить можно. Свежий HTML взять неоткуда, зато
+    // снятие воркера вместе с кэшами отнимет у приложения единственную
+    // офлайн-копию: следующая загрузка упрётся в «нет соединения», и уже
+    // безвозвратно — восстанавливать будет не из чего.
+    //
+    // Вне сети ошибка загрузки чанка означает не протухший деплой, а промах
+    // мимо рантайм-кэша (запись вытеснена по `maxEntries`). Даём ошибке
+    // всплыть: пользователь остаётся на текущей странице, кэш переживает
+    // отключение, и с возвращением сети всё чинится само.
+    if (navigator.onLine === false) return;
+
     if (reloadsThisDocument > 0) return;
     if (Date.now() - readStamp() < RELOAD_COOLDOWN_MS) return;
 

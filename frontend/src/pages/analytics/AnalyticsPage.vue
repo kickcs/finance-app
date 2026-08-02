@@ -413,7 +413,7 @@ onMounted(() => {
     <!-- Content with swipe + slide transition -->
     <main
       ref="swipeContent"
-      class="pt-3 pb-28 md:pb-8"
+      class="pt-3 pb-28 lg:pb-8"
       @touchstart="onSwipeTouchStart"
       @touchend="onSwipeTouchEnd"
     >

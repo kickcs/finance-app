@@ -28,7 +28,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div class="md:hidden shrink-0">
+  <div class="shrink-0">
     <AppHeader>
       <template #logo>
         <div class="relative w-[200px] h-10 overflow-hidden">

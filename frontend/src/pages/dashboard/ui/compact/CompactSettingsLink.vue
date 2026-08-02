@@ -8,7 +8,7 @@ const { showSettingsDot, openDashboardSettings } = useDashboardContext();
 
 <template>
   <div class="flex justify-center items-center gap-1.5 pt-1 pb-2">
-    <DashboardCompactToggle variant="inline" class="hidden md:flex" />
+    <DashboardCompactToggle variant="inline" class="hidden lg:flex" />
     <div class="relative">
       <button
         type="button"

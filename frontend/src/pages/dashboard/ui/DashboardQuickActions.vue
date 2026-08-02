@@ -40,11 +40,11 @@ const { onTouchStart, onClick, stopLongPress } = useQuickActionLongPress({
 
 <template>
   <section v-if="!quickActionsHidden">
-    <div v-if="quickActionsLoading" class="flex gap-2.5 pb-1 md:grid md:grid-cols-3 md:pb-0">
+    <div v-if="quickActionsLoading" class="flex gap-2.5 pb-1 lg:grid lg:grid-cols-3 lg:pb-0">
       <Skeleton
         v-for="i in 4"
         :key="i"
-        class="shrink-0 w-[calc((100%-30px)/4)] md:w-auto aspect-square rounded-2xl"
+        class="shrink-0 w-[calc((100%-30px)/4)] lg:w-auto aspect-square rounded-2xl"
       />
     </div>
 
@@ -60,7 +60,7 @@ const { onTouchStart, onClick, stopLongPress } = useQuickActionLongPress({
 
     <div
       v-else
-      class="flex gap-2.5 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-1 pt-1.5 -mt-1.5 px-1.5 -mx-1.5 md:grid md:grid-cols-3 md:overflow-visible md:pb-0 md:pt-0 md:mt-0 md:px-0 md:mx-0"
+      class="flex gap-2.5 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-1 pt-1.5 -mt-1.5 px-1.5 -mx-1.5 lg:grid lg:grid-cols-3 lg:overflow-visible lg:pb-0 lg:pt-0 lg:mt-0 lg:px-0 lg:mx-0"
     >
       <button
         v-for="({ action, cat }, index) in resolvedSlots"
@@ -71,7 +71,7 @@ const { onTouchStart, onClick, stopLongPress } = useQuickActionLongPress({
             : `Настроить быстрое действие, слот ${index + 1}`
         "
         :class="[
-          'qa-card-shell relative flex items-end justify-center aspect-square rounded-2xl overflow-hidden group cursor-pointer snap-start shrink-0 w-[calc((100%-30px)/4)] md:w-auto md:shrink select-none',
+          'qa-card-shell relative flex items-end justify-center aspect-square rounded-2xl overflow-hidden group cursor-pointer snap-start shrink-0 w-[calc((100%-30px)/4)] lg:w-auto lg:shrink select-none',
           action
             ? 'qa-card-filled border-0'
             : 'bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark items-center',
@@ -97,14 +97,14 @@ const { onTouchStart, onClick, stopLongPress } = useQuickActionLongPress({
 
           <span
             v-if="action.amount != null"
-            class="absolute top-1.5 right-1.5 z-10 text-caption-xs md:text-caption-sm font-semibold leading-none tabular-nums px-1.5 py-[3px] rounded-md"
+            class="absolute top-1.5 right-1.5 z-10 text-caption-xs lg:text-caption-sm font-semibold leading-none tabular-nums px-1.5 py-[3px] rounded-md"
             :style="quickActionBadgeStyle(cat.color)"
           >
             {{ formatNumberWithSpaces(action.amount) }}
           </span>
 
           <span
-            class="relative z-10 text-caption md:text-xs font-semibold truncate w-full text-center leading-tight tracking-tight px-1 pb-2.5 md:pb-3 text-text-primary-light dark:text-text-primary-dark"
+            class="relative z-10 text-caption lg:text-xs font-semibold truncate w-full text-center leading-tight tracking-tight px-1 pb-2.5 lg:pb-3 text-text-primary-light dark:text-text-primary-dark"
           >
             {{ action.label }}
           </span>
@@ -118,7 +118,7 @@ const { onTouchStart, onClick, stopLongPress } = useQuickActionLongPress({
               class="text-text-tertiary-light dark:text-text-tertiary-dark opacity-40 group-hover:text-primary group-hover:opacity-60 transition-all duration-200"
             />
             <span
-              class="text-caption md:text-xs font-medium text-text-tertiary-light dark:text-text-tertiary-dark group-hover:text-text-secondary-light dark:group-hover:text-text-secondary-dark transition-colors duration-200"
+              class="text-caption lg:text-xs font-medium text-text-tertiary-light dark:text-text-tertiary-dark group-hover:text-text-secondary-light dark:group-hover:text-text-secondary-dark transition-colors duration-200"
             >
               Добавить
             </span>

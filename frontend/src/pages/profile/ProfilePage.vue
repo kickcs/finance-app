@@ -195,7 +195,7 @@ async function confirmLogout() {
       </AppHeader>
     </template>
 
-    <main class="space-y-5 pt-4 pb-28 md:pb-8">
+    <main class="space-y-5 pt-4 pb-28 lg:pb-8">
       <!-- Профиль и подписка -->
       <UCard
         data-testid="user-card"

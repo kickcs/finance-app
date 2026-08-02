@@ -35,7 +35,7 @@ async function choose(code: AppLocale) {
       <AppHeader :title="t('pages.settings.language.title')" show-back @back="navigateBack" />
     </template>
 
-    <main class="pt-8 pb-28 md:pb-8">
+    <main class="pt-8 pb-28 lg:pb-8">
       <UCard
         variant="bordered"
         class="overflow-hidden divide-y divide-border-light dark:divide-border-dark"

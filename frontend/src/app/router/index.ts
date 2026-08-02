@@ -7,7 +7,19 @@ import { clearTokens } from '@/shared/api/http';
 import { queryClient } from '@/shared/api/queryClient';
 import { MAIN_NAV_ITEMS } from '@/shared/config/navigation';
 import { STORAGE_KEYS } from '@/shared/config/storageKeys';
+import { platformPage } from '@/shared/lib/platform/platformPage';
+import { useIsDesktop } from '@/shared/lib/platform/useIsDesktop';
+import { getPrefetchTargets } from './prefetchTargets';
 import { ROUTE_NAMES } from './routeNames';
+
+declare module 'vue-router' {
+  interface RouteMeta {
+    /** Маршрут рисуется десктопной оболочкой как модалка поверх фонового
+     *  маршрута (`DesktopLayout`/`AppShell`). На мобиле игнорируется — там
+     *  такие маршруты остаются полноэкранными, как раньше. */
+    desktopOverlay?: boolean;
+  }
+}
 
 // Navigation direction state for page transitions
 export const transitionName = ref<
@@ -78,24 +90,12 @@ const afterLoad = (run: () => void): void => {
 const prefetchPages = () => {
   if (!shouldPrefetch()) return;
 
-  const prefetchPrimary = () => {
-    import('@/pages/history/HistoryPage.vue');
-    import('@/pages/analytics/AnalyticsPage.vue');
-    import('@/pages/profile/ProfilePage.vue');
-    import('@/pages/transactions/new/AddTransactionPage.vue');
-  };
-
-  const prefetchSecondary = () => {
-    import('@/pages/accounts/AccountsPage.vue');
-    import('@/pages/accounts/AccountDetailPage.vue');
-    import('@/pages/debts/list/DebtsListPage.vue');
-    import('@/pages/debts/detail/DebtDetailPage.vue');
-    import('@/pages/debts/new/AddDebtPage.vue');
-    import('@/pages/changelog/ChangelogPage.vue');
-    import('@/pages/settings/currency/CurrencySettingsPage.vue');
-    import('@/pages/settings/categories/CategoriesPage.vue');
-    import('@/pages/settings/import/ImportPage.vue');
-  };
+  // Состав ярусов зависит от платформы: мобильные и десктопные варианты
+  // разделённых страниц лежат в разных чанках, и качать чужой — впустую
+  // потраченный канал.
+  const targets = getPrefetchTargets();
+  const prefetchPrimary = () => targets.primary.forEach((name) => targets.load(name));
+  const prefetchSecondary = () => targets.secondary.forEach((name) => targets.load(name));
 
   // Оба яруса ждут `load` и простоя главного потока. Раньше первый ярус
   // вызывался через requestIdleCallback сразу после готовности роутера, а у
@@ -143,13 +143,19 @@ export const router = createRouter({
     // Main App Layout - wrap all internal pages
     {
       path: '/',
-      component: () => import('@/app/layouts').then((m) => m.MainLayout),
+      component: platformPage(
+        () => import('@/app/layouts/ui/MobileLayout.vue'),
+        () => import('@/app/layouts/ui/DesktopLayout.vue'),
+      ),
       meta: { requiresAuth: true, requiresOnboarding: true },
       children: [
         {
           path: '',
           name: ROUTE_NAMES.DASHBOARD,
-          component: () => import('@/pages/dashboard/DashboardPage.vue'),
+          component: platformPage(
+            () => import('@/pages/dashboard/DashboardPage.vue'),
+            () => import('@/pages/dashboard/desktop/DashboardDesktopPage.vue'),
+          ),
         },
         {
           path: 'history',
@@ -164,7 +170,10 @@ export const router = createRouter({
         {
           path: 'accounts',
           name: ROUTE_NAMES.ACCOUNTS,
-          component: () => import('@/pages/accounts/AccountsPage.vue'),
+          component: platformPage(
+            () => import('@/pages/accounts/AccountsPage.vue'),
+            () => import('@/pages/accounts/desktop/AccountsDesktopPage.vue'),
+          ),
         },
         {
           path: 'accounts/new',
@@ -179,7 +188,11 @@ export const router = createRouter({
         {
           path: 'transactions/new',
           name: ROUTE_NAMES.NEW_TRANSACTION,
-          component: () => import('@/pages/transactions/new/AddTransactionPage.vue'),
+          meta: { desktopOverlay: true },
+          component: platformPage(
+            () => import('@/pages/transactions/new/AddTransactionPage.vue'),
+            () => import('@/pages/transactions/new/desktop/AddTransactionDesktopPage.vue'),
+          ),
         },
         {
           path: 'subscriptions',
@@ -434,6 +447,13 @@ router.beforeEach(async (to, from, next) => {
 
 // Navigation direction detection for transitions
 router.beforeEach((to, from) => {
+  // На десктопе разделы равноправны — боковой слайд там читается как переход
+  // «вглубь», которого нет. Оставляем мгновенную смену.
+  if (useIsDesktop().value) {
+    transitionName.value = 'none';
+    return;
+  }
+
   beginPageTransition();
 
   // Skip on initial load

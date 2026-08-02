@@ -274,7 +274,7 @@ FSD. Стек: Vue 3, TanStack Vue Query, Tailwind v4 (семантически�
 - `import-inbox` → `ImportInboxPage`
 - `import-inbox/:id` → `ImportConfirmPage` (name `import-confirm`)
 
-**`MainLayout.vue`** — `FULLSCREEN_FLOWS = [SCAN_RECEIPT, IMPORT_CONFIRM, IMPORT_INBOX]`, на них скрыт BottomNav (иначе плавающий liquid-glass навбар перекрывает нижние кнопки).
+**`MobileLayout.vue`** — `FULLSCREEN_FLOWS = [SCAN_RECEIPT, IMPORT_CONFIRM, IMPORT_INBOX]`, на них скрыт BottomNav (иначе плавающий liquid-glass навбар перекрывает нижние кнопки).
 
 ### 4.6. Интеграция со скан-чеком
 
@@ -408,5 +408,5 @@ pages/tma/                        TmaEntryPage.vue
 widgets/ImportInboxBanner/        ImportInboxBanner.vue
 shared/lib/telegram/              loadTelegramWebApp.ts — загрузка Telegram Web App SDK
 ```
-Интеграция: `pages/profile/ProfilePage.vue`, `pages/history/HistoryPage.vue`, `app/layouts/ui/MainLayout.vue`, `app/router/index.ts`, `shared/config/routeNames.ts`, `features/scan-receipt/model/{useReceiptWizard,useSubmitStep}.ts`.
+Интеграция: `pages/profile/ProfilePage.vue`, `pages/history/HistoryPage.vue`, `app/layouts/ui/MobileLayout.vue`, `app/router/index.ts`, `shared/config/routeNames.ts`, `features/scan-receipt/model/{useReceiptWizard,useSubmitStep}.ts`.
 ```

@@ -200,8 +200,8 @@ Props: `hoverable`, `clickable`.
 
 ### UModal
 
-Full-screen bottom sheet (mobile) или centered dialog (desktop).
-Props: `v-model`, `title`.
+Центрированный диалог — на всех ширинах одинаково. Мобильного bottom-sheet-режима у него нет (раньше здесь было написано обратное; в коде его никогда не было).
+Props: `v-model`, `title`, `size` (`sm` | `md` | `lg` | `xl`).
 Slots: `default`, `#actions`.
 
 ```vue
@@ -212,6 +212,8 @@ Slots: `default`, `#actions`.
   </template>
 </UModal>
 ```
+
+Если нужна именно шторка на телефоне — это `UOverlay` (см. § 7).
 
 ### UTabs
 
@@ -293,6 +295,54 @@ padding-bottom: env(safe-area-inset-bottom);
 ```
 
 Утилиты: `.safe-area-inset-top`, `.safe-area-inset-bottom`.
+
+### Десктопная версия
+
+**Граница одна — 1024 px**, и живёт она в `@/shared/lib/platform`. Ветвить платформу классами `md:`/`lg:` нельзя: в приложении уже были три разных «десктопа» (768 у оболочки, 1024 у шторок, свой 768 у дашборда), и между 768 и 1023 получалась мёртвая зона.
+
+Мобильная и десктопная разметка разведены по разным компонентам, логика — общая:
+
+```
+pages/accounts/
+  AccountsPage.vue            ← мобильная
+  desktop/AccountsDesktopPage.vue
+  model/useAccountsPage.ts    ← общая логика
+```
+
+```ts
+// в роутере
+component: platformPage(
+  () => import('@/pages/accounts/AccountsPage.vue'),
+  () => import('@/pages/accounts/desktop/AccountsDesktopPage.vue'),
+)
+```
+
+`platformPage` грузит чанк только той ветки, которая реально рендерится.
+
+**Desktop Page**
+
+```vue
+<DesktopPage title="Счета" max-width="1440">
+  <template #header-actions><UButton>Новый счёт</UButton></template>
+  <DesktopColumns :main="8" :aside="4">
+    <template #main><!-- контент --></template>
+    <template #aside><!-- липкая боковая панель --></template>
+  </DesktopColumns>
+</DesktopPage>
+```
+
+`pb-28` в десктопной ветке не нужен — нижней навигации там нет.
+
+**UOverlay** — шторка на телефоне, панель или диалог на компьютере:
+
+```vue
+<UOverlay v-model="isOpen" title="Выбор счёта" desktop="panel">
+  <!-- содержимое -->
+  <template #footer><UButton full-width>Готово</UButton></template>
+</UOverlay>
+```
+
+`desktop="panel"` — правая панель 420 px (по умолчанию), `desktop="dialog"` — центрированный диалог. Мобильная высота у всех одна: `max-h-[85dvh]`.
 
 ---
 

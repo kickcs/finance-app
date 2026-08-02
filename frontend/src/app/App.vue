@@ -87,11 +87,21 @@ onMounted(async () => {
 
   // Wait for router to be ready before removing skeleton
   import('@/app/router').then(async ({ router }) => {
-    await router.isReady();
-    isAppReady.value = true;
+    try {
+      await router.isReady();
+    } catch {
+      // Стартовая навигация может упасть — например, офлайн, когда чанк
+      // страницы не пережил вытеснение из рантайм-кэша. Заставку снимаем
+      // всё равно: `isReady()` отклоняется ровно один раз, и без этого
+      // приложение осталось бы на вечном загрузочном экране — том самом,
+      // ради которого писался handleStaleChunks. Пустая оболочка, из
+      // которой можно уйти в другой раздел, честнее застывшего лоадера.
+    } finally {
+      isAppReady.value = true;
 
-    // Add class to body to trigger CSS transition for skeleton hiding
-    document.body.classList.add('app-ready');
+      // Add class to body to trigger CSS transition for skeleton hiding
+      document.body.classList.add('app-ready');
+    }
   });
 
   // Show changelog modal if there are unseen changes
@@ -125,7 +135,7 @@ provide('isDemo', isDemo);
 
       <!-- App content -->
       <RouterView v-slot="{ Component, route }">
-        <!-- Skip transitions in App.vue for nested routes (they are handled in MainLayout) -->
+        <!-- Skip transitions in App.vue for nested routes (they are handled in AppShell) -->
         <component
           :is="Component"
           v-if="transitionName === 'none' || route.matched.length > 1"

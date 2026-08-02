@@ -1,20 +1,11 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, type ComponentPublicInstance } from 'vue';
-import {
-  DrawerRoot,
-  DrawerPortal,
-  DrawerOverlay,
-  DrawerContent,
-  DrawerHandle,
-  DrawerTitle,
-} from 'vaul-vue';
 import { UIcon, UButton, UProgressBar, InitialAvatar } from '@/shared/ui';
+import { UOverlay } from '@/shared/ui/overlay';
 import { formatCurrency, formatNumberWithSpaces } from '@/shared/lib/format/currency';
 import { PersonPicker, personKey, usePeople } from '@/entities/person';
 import { useDebts } from '@/entities/debt';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
-import { useIsDesktop } from '@/shared/lib/composables/useIsDesktop';
-import { useDrawerKeyboard } from '@/shared/lib/composables';
 import type { SplitExpenseData, SplitMethod } from '../model/types';
 
 const props = defineProps<{
@@ -36,22 +27,10 @@ const emit = defineEmits<{
   setEnabled: [enabled: boolean];
 }>();
 
-const isDesktop = useIsDesktop();
-
 const { userId } = useCurrentUser();
 const { people, createPerson } = usePeople(userId);
 // Порядок людей задаёт частота долгов; запрос уже прогрет дашбордом.
 const { debts } = useDebts(userId);
-
-const drawerContentRef = ref<InstanceType<typeof DrawerContent> | null>(null);
-const footerRef = ref<HTMLDivElement | null>(null);
-const scrollContainerRef = ref<HTMLDivElement | null>(null);
-
-const { setupKeyboardListener, cleanupKeyboardListener } = useDrawerKeyboard(
-  drawerContentRef,
-  footerRef,
-  scrollContainerRef,
-);
 
 const participantNames = computed(() => props.splitData.participants.map((p) => p.personName));
 
@@ -144,317 +123,246 @@ function handleAmountBlur() {
   editingParticipantId.value = null;
 }
 
-function handleOpenChange(open: boolean) {
-  emit('update:open', open);
-}
-
-// Auto-enable split when drawer opens + setup keyboard listener
+// Разделение включается сразу при открытии шторки. Клавиатурный хак,
+// который раньше настраивался здесь же, теперь внутри UOverlay.
 watch(
   () => props.open,
-  async (isOpen) => {
-    if (isOpen) {
-      if (!props.splitData.enabled) {
-        emit('setEnabled', true);
-      }
-      await nextTick();
-      if (!props.open) return;
-      if (!isDesktop.value) setupKeyboardListener();
-    } else {
-      cleanupKeyboardListener();
+  (isOpen) => {
+    if (isOpen && !props.splitData.enabled) {
+      emit('setEnabled', true);
     }
   },
 );
 </script>
 
 <template>
-  <DrawerRoot
-    :open="open"
-    :direction="isDesktop ? 'right' : 'bottom'"
-    @update:open="handleOpenChange"
+  <UOverlay
+    :model-value="open"
+    :title="`Разделить ${formatCurrency(totalAmount, currency)}`"
+    desktop="dialog"
+    @update:model-value="emit('update:open', $event)"
   >
-    <DrawerPortal>
-      <DrawerOverlay class="fixed inset-0 z-50 bg-black/40" />
-      <DrawerContent
-        ref="drawerContentRef"
-        class="fixed z-50 flex flex-col bg-card-light dark:bg-card-dark"
-        :class="
-          isDesktop
-            ? 'top-0 right-0 bottom-0 w-[420px] rounded-l-2xl border-l border-border-light dark:border-border-dark'
-            : 'bottom-0 left-0 right-0 rounded-t-2xl border-t border-border-light dark:border-border-dark max-h-[90dvh]'
-        "
-      >
-        <!-- Handle (mobile only) -->
-        <div v-if="!isDesktop" class="flex justify-center pt-3 pb-1">
-          <DrawerHandle class="w-10 h-1 rounded-full bg-border-light dark:bg-border-dark" />
-        </div>
+    <!-- Люди — чипами по частоте: выбранные подсвечены, повторный тап
+         снимает. Отдельный инпут и отдельный ряд «быстрых контактов»
+         делали одно и то же в двух местах. -->
+    <PersonPicker
+      multiple
+      :people="people"
+      :debts="debts"
+      :selected="participantNames"
+      label="Кто участвует"
+      @select="toggleParticipant"
+      @create="(name: string) => createPerson({ name })"
+    />
 
-        <!-- Header -->
-        <div class="flex items-center justify-between px-5 pb-3" :class="{ 'pt-4': isDesktop }">
-          <DrawerTitle
-            class="text-base font-semibold text-text-primary-light dark:text-text-primary-dark"
-          >
-            Разделить {{ formatCurrency(totalAmount, currency) }}
-          </DrawerTitle>
+    <!-- Participants list -->
+    <Transition v-bind="sectionFade">
+      <div
+        v-if="splitData.participants.length > 0 || splitData.isIncluded"
+        class="mt-4 space-y-1.5"
+      >
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark">
+            Участники
+          </span>
           <button
+            v-if="splitData.method === 'custom'"
             type="button"
-            class="w-8 h-8 rounded-lg flex items-center justify-center text-text-secondary-light dark:text-text-secondary-dark hover:bg-surface-light dark:hover:bg-surface-dark transition-colors"
-            @click="$emit('update:open', false)"
+            class="text-xs text-primary font-medium hover:underline"
+            @click="$emit('setMethod', 'equal')"
           >
-            <UIcon name="close" size="sm" />
+            Поровну
           </button>
         </div>
 
-        <!-- Scrollable content -->
-        <div
-          ref="scrollContainerRef"
-          class="flex-1 overflow-y-auto px-5 pb-5 space-y-4 overscroll-contain"
-          data-vaul-no-drag
-        >
-          <!-- Люди — чипами по частоте: выбранные подсвечены, повторный тап
-               снимает. Отдельный инпут и отдельный ряд «быстрых контактов»
-               делали одно и то же в двух местах. -->
-          <PersonPicker
-            multiple
-            :people="people"
-            :debts="debts"
-            :selected="participantNames"
-            label="Кто участвует"
-            @select="toggleParticipant"
-            @create="(name: string) => createPerson({ name })"
-          />
-
-          <!-- Participants list -->
-          <Transition v-bind="sectionFade">
+        <!-- My row -->
+        <Transition v-bind="sectionFade">
+          <div
+            v-if="splitData.isIncluded"
+            class="flex items-center gap-2.5 p-2.5 rounded-xl bg-primary/[0.04] dark:bg-primary/[0.08] border border-primary/10"
+          >
             <div
-              v-if="splitData.participants.length > 0 || splitData.isIncluded"
-              class="space-y-1.5"
+              class="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center shrink-0"
             >
-              <div class="flex items-center justify-between">
-                <span
-                  class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark"
-                >
-                  Участники
-                </span>
-                <button
-                  v-if="splitData.method === 'custom'"
-                  type="button"
-                  class="text-xs text-primary font-medium hover:underline"
-                  @click="$emit('setMethod', 'equal')"
-                >
-                  Поровну
-                </button>
-              </div>
-
-              <!-- My row -->
-              <Transition v-bind="sectionFade">
-                <div
-                  v-if="splitData.isIncluded"
-                  class="flex items-center gap-2.5 p-2.5 rounded-xl bg-primary/[0.04] dark:bg-primary/[0.08] border border-primary/10"
-                >
-                  <div
-                    class="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center shrink-0"
-                  >
-                    <UIcon name="person" size="sm" class="text-primary" />
-                  </div>
-                  <span
-                    class="flex-1 min-w-0 text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
-                  >
-                    Вы
-                  </span>
-                  <button
-                    type="button"
-                    class="text-sm font-semibold text-primary tabular-nums"
-                    @click="handleAmountTap('my-share')"
-                  >
-                    <template v-if="editingParticipantId === 'my-share'">
-                      <input
-                        :ref="setAmountInputRef('my-share')"
-                        :value="splitData.myShare ? formatNumberWithSpaces(splitData.myShare) : ''"
-                        type="text"
-                        inputmode="decimal"
-                        class="w-20 text-right bg-transparent border-b-2 border-primary outline-none text-sm font-semibold text-primary tabular-nums"
-                        @input="
-                          $emit(
-                            'setMyShare',
-                            Number(($event.target as HTMLInputElement).value.replace(/\s/g, '')) ||
-                              0,
-                          )
-                        "
-                        @blur="handleAmountBlur"
-                        @keydown.enter.prevent="handleAmountBlur"
-                      />
-                    </template>
-                    <template v-else>
-                      {{ formatCurrency(splitData.myShare, currency) }}
-                    </template>
-                  </button>
-                </div>
-              </Transition>
-
-              <!-- Participant rows -->
-              <TransitionGroup
-                tag="div"
-                class="space-y-1.5 relative"
-                enter-active-class="participant-enter-active"
-                enter-from-class="participant-enter-from"
-                enter-to-class="participant-enter-to"
-                leave-active-class="participant-leave-active"
-                leave-from-class="participant-leave-from"
-                leave-to-class="participant-leave-to"
-                move-class="participant-move"
-              >
-                <div
-                  v-for="participant in splitData.participants"
-                  :key="participant.id"
-                  class="flex items-center gap-2.5 p-2.5 rounded-xl bg-surface-light dark:bg-surface-dark"
-                >
-                  <InitialAvatar
-                    :name="participant.personName"
-                    :color="participant.personColor || '#3b82f6'"
-                    size="md"
-                    translucent
-                  />
-                  <span
-                    class="flex-1 min-w-0 text-sm font-medium text-text-primary-light dark:text-text-primary-dark truncate"
-                  >
-                    {{ participant.personName }}
-                  </span>
-
-                  <!-- Amount: tap to edit -->
-                  <button
-                    v-if="editingParticipantId !== participant.id"
-                    type="button"
-                    class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark tabular-nums"
-                    :class="
-                      splitData.method === 'equal'
-                        ? ''
-                        : 'underline decoration-dashed decoration-text-tertiary-light dark:decoration-text-tertiary-dark underline-offset-4'
-                    "
-                    @click="handleAmountTap(participant.id)"
-                  >
-                    {{ formatCurrency(participant.amount, currency) }}
-                  </button>
-                  <input
-                    v-else
-                    :ref="setAmountInputRef(participant.id)"
-                    :value="participant.amount ? formatNumberWithSpaces(participant.amount) : ''"
-                    type="text"
-                    inputmode="decimal"
-                    class="w-20 text-right bg-transparent border-b-2 border-primary outline-none text-sm font-semibold text-primary tabular-nums"
-                    @input="
-                      $emit(
-                        'updateParticipantAmount',
-                        participant.id,
-                        Number(($event.target as HTMLInputElement).value.replace(/\s/g, '')) || 0,
-                      )
-                    "
-                    @blur="handleAmountBlur"
-                    @keydown.enter.prevent="handleAmountBlur"
-                  />
-
-                  <button
-                    type="button"
-                    class="p-1 text-text-tertiary-light dark:text-text-tertiary-dark hover:text-danger transition-colors"
-                    @click="$emit('removeParticipant', participant.id)"
-                  >
-                    <UIcon name="close" size="xs" />
-                  </button>
-                </div>
-              </TransitionGroup>
+              <UIcon name="person" size="sm" class="text-primary" />
             </div>
-          </Transition>
-
-          <!-- Not participating toggle -->
-          <Transition v-bind="sectionFade">
+            <span
+              class="flex-1 min-w-0 text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
+            >
+              Вы
+            </span>
             <button
-              v-if="splitData.participants.length > 0"
               type="button"
-              class="flex items-center gap-2 px-3 py-2 rounded-lg border transition-all active:scale-[0.98]"
-              :class="
-                splitData.isIncluded
-                  ? 'border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark text-text-secondary-light dark:text-text-secondary-dark'
-                  : 'border-primary bg-primary/[0.06] dark:bg-primary/[0.12] text-primary'
-              "
-              @click="$emit('setIsIncluded', !splitData.isIncluded)"
+              class="text-sm font-semibold text-primary tabular-nums"
+              @click="handleAmountTap('my-share')"
             >
-              <div
-                class="w-4 h-4 rounded border flex items-center justify-center transition-colors"
-                :class="
-                  !splitData.isIncluded
-                    ? 'bg-primary border-primary text-white'
-                    : 'border-text-tertiary-light dark:border-text-tertiary-dark'
-                "
-              >
-                <UIcon v-if="!splitData.isIncluded" name="check" size="xs" />
-              </div>
-              <span class="text-xs font-medium">Я не участвую в расходе</span>
-            </button>
-          </Transition>
-
-          <!-- Summary -->
-          <Transition v-bind="sectionFade">
-            <div
-              v-if="splitData.participants.length > 0"
-              class="p-3 rounded-xl bg-surface-light dark:bg-surface-dark space-y-2.5"
-            >
-              <div class="flex justify-between items-center text-sm">
-                <span class="text-text-secondary-light dark:text-text-secondary-dark">
-                  Распределено
-                </span>
-                <span
-                  class="font-semibold tabular-nums"
-                  :class="
-                    isBalanced
-                      ? 'text-success'
-                      : 'text-text-primary-light dark:text-text-primary-dark'
+              <template v-if="editingParticipantId === 'my-share'">
+                <input
+                  :ref="setAmountInputRef('my-share')"
+                  :value="splitData.myShare ? formatNumberWithSpaces(splitData.myShare) : ''"
+                  type="text"
+                  inputmode="decimal"
+                  class="w-20 text-right bg-transparent border-b-2 border-primary outline-none text-sm font-semibold text-primary tabular-nums"
+                  @input="
+                    $emit(
+                      'setMyShare',
+                      Number(($event.target as HTMLInputElement).value.replace(/\s/g, '')) || 0,
+                    )
                   "
-                >
-                  {{ formatCurrency(totalSplit, currency) }}
-                  <span class="text-text-tertiary-light dark:text-text-tertiary-dark font-normal">
-                    / {{ formatCurrency(totalAmount, currency) }}
-                  </span>
-                </span>
-              </div>
-              <UProgressBar
-                :value="totalSplit"
-                :max="totalAmount"
-                :color="progressColor"
-                size="sm"
-              />
+                  @blur="handleAmountBlur"
+                  @keydown.enter.prevent="handleAmountBlur"
+                />
+              </template>
+              <template v-else>
+                {{ formatCurrency(splitData.myShare, currency) }}
+              </template>
+            </button>
+          </div>
+        </Transition>
 
-              <!-- Validation error -->
-              <p v-if="validationError" class="text-xs text-danger flex items-center gap-1">
-                <UIcon name="error" size="xs" />
-                {{ validationError }}
-              </p>
-            </div>
-          </Transition>
-        </div>
+        <!-- Participant rows -->
+        <TransitionGroup
+          tag="div"
+          class="space-y-1.5 relative"
+          enter-active-class="participant-enter-active"
+          enter-from-class="participant-enter-from"
+          enter-to-class="participant-enter-to"
+          leave-active-class="participant-leave-active"
+          leave-from-class="participant-leave-from"
+          leave-to-class="participant-leave-to"
+          move-class="participant-move"
+        >
+          <div
+            v-for="participant in splitData.participants"
+            :key="participant.id"
+            class="flex items-center gap-2.5 p-2.5 rounded-xl bg-surface-light dark:bg-surface-dark"
+          >
+            <InitialAvatar
+              :name="participant.personName"
+              :color="participant.personColor || '#3b82f6'"
+              size="md"
+              translucent
+            />
+            <span
+              class="flex-1 min-w-0 text-sm font-medium text-text-primary-light dark:text-text-primary-dark truncate"
+            >
+              {{ participant.personName }}
+            </span>
 
-        <!-- Footer -->
+            <!-- Amount: tap to edit -->
+            <button
+              v-if="editingParticipantId !== participant.id"
+              type="button"
+              class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark tabular-nums"
+              :class="
+                splitData.method === 'equal'
+                  ? ''
+                  : 'underline decoration-dashed decoration-text-tertiary-light dark:decoration-text-tertiary-dark underline-offset-4'
+              "
+              @click="handleAmountTap(participant.id)"
+            >
+              {{ formatCurrency(participant.amount, currency) }}
+            </button>
+            <input
+              v-else
+              :ref="setAmountInputRef(participant.id)"
+              :value="participant.amount ? formatNumberWithSpaces(participant.amount) : ''"
+              type="text"
+              inputmode="decimal"
+              class="w-20 text-right bg-transparent border-b-2 border-primary outline-none text-sm font-semibold text-primary tabular-nums"
+              @input="
+                $emit(
+                  'updateParticipantAmount',
+                  participant.id,
+                  Number(($event.target as HTMLInputElement).value.replace(/\s/g, '')) || 0,
+                )
+              "
+              @blur="handleAmountBlur"
+              @keydown.enter.prevent="handleAmountBlur"
+            />
+
+            <button
+              type="button"
+              class="p-1 text-text-tertiary-light dark:text-text-tertiary-dark hover:text-danger transition-colors"
+              @click="$emit('removeParticipant', participant.id)"
+            >
+              <UIcon name="close" size="xs" />
+            </button>
+          </div>
+        </TransitionGroup>
+      </div>
+    </Transition>
+
+    <!-- Not participating toggle -->
+    <Transition v-bind="sectionFade">
+      <button
+        v-if="splitData.participants.length > 0"
+        type="button"
+        class="mt-4 flex items-center gap-2 px-3 py-2 rounded-lg border transition-all active:scale-[0.98]"
+        :class="
+          splitData.isIncluded
+            ? 'border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark text-text-secondary-light dark:text-text-secondary-dark'
+            : 'border-primary bg-primary/[0.06] dark:bg-primary/[0.12] text-primary'
+        "
+        @click="$emit('setIsIncluded', !splitData.isIncluded)"
+      >
         <div
-          ref="footerRef"
-          class="px-5 py-3 border-t border-border-light dark:border-border-dark"
-          :style="
-            !isDesktop
-              ? 'padding-bottom: calc(env(safe-area-inset-bottom, 16px) + 1.5rem)'
-              : undefined
+          class="w-4 h-4 rounded border flex items-center justify-center transition-colors"
+          :class="
+            !splitData.isIncluded
+              ? 'bg-primary border-primary text-white'
+              : 'border-text-tertiary-light dark:border-text-tertiary-dark'
           "
         >
-          <UButton
-            type="button"
-            variant="primary"
-            size="lg"
-            full-width
-            :disabled="!canApply"
-            @click="$emit('update:open', false)"
-          >
-            Применить
-          </UButton>
+          <UIcon v-if="!splitData.isIncluded" name="check" size="xs" />
         </div>
-      </DrawerContent>
-    </DrawerPortal>
-  </DrawerRoot>
+        <span class="text-xs font-medium">Я не участвую в расходе</span>
+      </button>
+    </Transition>
+
+    <!-- Summary -->
+    <Transition v-bind="sectionFade">
+      <div
+        v-if="splitData.participants.length > 0"
+        class="mt-4 p-3 rounded-xl bg-surface-light dark:bg-surface-dark space-y-2.5"
+      >
+        <div class="flex justify-between items-center text-sm">
+          <span class="text-text-secondary-light dark:text-text-secondary-dark">Распределено</span>
+          <span
+            class="font-semibold tabular-nums"
+            :class="
+              isBalanced ? 'text-success' : 'text-text-primary-light dark:text-text-primary-dark'
+            "
+          >
+            {{ formatCurrency(totalSplit, currency) }}
+            <span class="text-text-tertiary-light dark:text-text-tertiary-dark font-normal">
+              / {{ formatCurrency(totalAmount, currency) }}
+            </span>
+          </span>
+        </div>
+        <UProgressBar :value="totalSplit" :max="totalAmount" :color="progressColor" size="sm" />
+
+        <!-- Validation error -->
+        <p v-if="validationError" class="text-xs text-danger flex items-center gap-1">
+          <UIcon name="error" size="xs" />
+          {{ validationError }}
+        </p>
+      </div>
+    </Transition>
+
+    <template #footer>
+      <UButton
+        type="button"
+        variant="primary"
+        size="lg"
+        full-width
+        :disabled="!canApply"
+        @click="$emit('update:open', false)"
+      >
+        Применить
+      </UButton>
+    </template>
+  </UOverlay>
 </template>
 
 <style scoped>

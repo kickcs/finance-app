@@ -35,8 +35,20 @@ async function armHandler() {
   return { reload: vi.mocked(reloadDocument) };
 }
 
-const firePreloadError = () =>
-  window.dispatchEvent(new Event('vite:preloadError', { cancelable: true }));
+const firePreloadError = () => {
+  const event = new Event('vite:preloadError', { cancelable: true });
+  window.dispatchEvent(event);
+  return event;
+};
+
+/** `navigator.onLine` в jsdom — геттер на прототипе, поэтому подменяем свойством. */
+function setOnLine(value: boolean) {
+  Object.defineProperty(navigator, 'onLine', { configurable: true, value });
+}
+
+function restoreOnLine() {
+  Reflect.deleteProperty(navigator, 'onLine');
+}
 
 function makeRegistration(): SwMock {
   return {
@@ -52,6 +64,7 @@ beforeEach(() => {
 
 afterEach(() => {
   removeServiceWorker();
+  restoreOnLine();
 });
 
 describe('handleStaleChunks', () => {
@@ -118,6 +131,51 @@ describe('handleStaleChunks', () => {
     firePreloadError();
 
     await vi.waitFor(() => expect(reload).toHaveBeenCalledTimes(1), { timeout: 6000 });
+  });
+
+  it('офлайн не трогает кэши и не перезагружается', async () => {
+    // Вне сети свежий HTML взять неоткуда, а снятие воркера вместе с кэшами
+    // отняло бы у приложения единственную офлайн-копию: следующая загрузка
+    // упёрлась бы в «нет соединения» — и уже безвозвратно, потому что чинить
+    // нечем. Ошибка загрузки чанка офлайн — это не протухший деплой.
+    const registration = makeRegistration();
+    const { cachesDelete } = stubServiceWorker(registration, ['workbox-precache-v2']);
+    setOnLine(false);
+    const { reload } = await armHandler();
+
+    firePreloadError();
+    await new Promise((r) => setTimeout(r, 20));
+
+    expect(reload).not.toHaveBeenCalled();
+    expect(registration.unregister).not.toHaveBeenCalled();
+    expect(cachesDelete).not.toHaveBeenCalled();
+  });
+
+  it('офлайн даёт ошибке всплыть, а не гасит её', async () => {
+    // `preventDefault` заставил бы Vite проглотить ошибку импорта. Без спасательной
+    // перезагрузки это означало бы навигацию, которая молча никуда не ведёт.
+    stubServiceWorker(makeRegistration());
+    setOnLine(false);
+    await armHandler();
+
+    expect(firePreloadError().defaultPrevented).toBe(false);
+  });
+
+  it('вернувшись в сеть, снова спасает как раньше', async () => {
+    // Офлайн-выход не должен «залипать»: следующая ошибка уже в сети лечится
+    // обычным путём.
+    stubServiceWorker(makeRegistration());
+    setOnLine(false);
+    const { reload } = await armHandler();
+
+    firePreloadError();
+    await new Promise((r) => setTimeout(r, 20));
+    expect(reload).not.toHaveBeenCalled();
+
+    setOnLine(true);
+    firePreloadError();
+
+    await vi.waitFor(() => expect(reload).toHaveBeenCalledTimes(1));
   });
 
   it('не перезагружается повторно внутри окна защиты от цикла', async () => {
