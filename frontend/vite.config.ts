@@ -74,7 +74,14 @@ export default defineConfig({
             handler: 'CacheFirst',
             options: {
               cacheName: 'route-chunks',
-              expiration: { maxEntries: 120, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              // Лимит обязан покрывать ВЕСЬ сборочный выхлоп, а не «сколько-то
+              // популярных страниц». Меньше — и вытеснение по LRU выбьет чанк,
+              // который редко открывают: онлайн он просто перекачается, а
+              // офлайн страница перестанет открываться вовсе. Сюда же попадает
+              // и чанк макета, без которого приложение не поднимется совсем.
+              // Сходимость с реальным числом файлов сторожит
+              // `scripts/check-runtime-cache-budget.mjs` после сборки.
+              expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 30 },
               cacheableResponse: { statuses: [200] },
             },
           },

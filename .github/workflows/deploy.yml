@@ -225,6 +225,12 @@ jobs:
         working-directory: frontend
         run: bun run check:bundle
 
+      # Файлов в сборке стало больше, чем вмещает кэш чанков — офлайн у редких
+      # страниц отваливается молча, в диффе этого не видно
+      - name: Frontend runtime cache budget
+        working-directory: frontend
+        run: bun run check:cache
+
       - name: Set up Docker Buildx
         if: (github.event_name == 'push' && github.ref == 'refs/heads/master') || github.event_name == 'workflow_dispatch'
         uses: docker/setup-buildx-action@v3
