@@ -121,7 +121,7 @@ useIntersectionObserver(
 
 <template>
   <div
-    class="h-full flex flex-col relative bg-background-light dark:bg-background-dark pb-28 md:pb-8 overflow-hidden"
+    class="h-full flex flex-col relative bg-background-light dark:bg-background-dark pb-28 lg:pb-8 overflow-hidden"
   >
     <!-- Header -->
     <AppHeader blur show-back title="Долги" @back="goBack">

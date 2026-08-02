@@ -1,20 +1,14 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent } from 'vue';
-import { AccountStack } from '@/widgets/account-stack';
 import { BudgetSection, BudgetSectionSkeleton } from '@/widgets/budget-section';
 import { DebtsSectionSkeleton } from '@/widgets/debts-section';
 import { UpcomingSubscriptionsSkeleton } from '@/widgets/upcoming-subscriptions';
-import { UIcon, DiscoveryDot } from '@/shared/ui';
 import { SIDE_PANEL_WIDGET_IDS } from '@/shared/config/dashboard';
-import DashboardQuickActions from './DashboardQuickActions.vue';
-import DashboardTopExpenses from './DashboardTopExpenses.vue';
-import DashboardCompactToggle from './DashboardCompactToggle.vue';
+import DashboardQuickActions from '../ui/DashboardQuickActions.vue';
+import DashboardTopExpenses from '../ui/DashboardTopExpenses.vue';
 import { useDashboardContext } from '../model/dashboardContext';
 
 const {
-  visibleAccounts,
-  hiddenAccountCount,
-  accountsLoading,
   categoryBreakdown,
   analyticsLoading,
   debts,
@@ -27,15 +21,17 @@ const {
   isHidden,
   widgetOrder,
   hiddenWidgets,
-  showSettingsDot,
   nav,
   openBudgetSheet,
   openFinancialPeriodModal,
-  openDashboardSettings,
 } = useDashboardContext();
 
+// 'accounts' переехали в сетку основной колонки (см. DashboardDesktopPage) —
+// в боковой панели их больше нет, иначе счета задублируются на странице.
 const orderedWidgets = computed(() =>
-  widgetOrder.value.filter((id) => SIDE_PANEL_WIDGET_IDS.has(id) && !hiddenWidgets.value.has(id)),
+  widgetOrder.value.filter(
+    (id) => SIDE_PANEL_WIDGET_IDS.has(id) && id !== 'accounts' && !hiddenWidgets.value.has(id),
+  ),
 );
 
 const DebtsSection = defineAsyncComponent({
@@ -69,19 +65,6 @@ const UpcomingSubscriptions = defineAsyncComponent({
             <BudgetSectionSkeleton />
           </template>
         </Suspense>
-      </section>
-
-      <section v-else-if="widgetId === 'accounts'">
-        <AccountStack
-          :accounts="visibleAccounts"
-          :loading="accountsLoading"
-          :hidden="isHidden"
-          :hidden-count="hiddenAccountCount"
-          class="hover:shadow-md transition-shadow duration-300 rounded-xl"
-          @account-click="nav.toAccount"
-          @add-click="nav.toNewAccount"
-          @view-all="nav.toAccounts"
-        />
       </section>
 
       <section v-else-if="widgetId === 'top_expenses'">
@@ -130,20 +113,5 @@ const UpcomingSubscriptions = defineAsyncComponent({
         </Suspense>
       </section>
     </template>
-
-    <div class="flex justify-center items-center gap-2 mt-2 pb-4 md:pb-0">
-      <DashboardCompactToggle variant="inline" />
-      <div class="relative">
-        <button
-          type="button"
-          class="flex items-center gap-2 text-body-sm font-medium text-text-tertiary-light dark:text-text-tertiary-dark hover:text-text-secondary-light dark:hover:text-text-secondary-dark transition-colors px-4 py-2 rounded-xl hover:bg-surface-light dark:hover:bg-surface-dark"
-          @click="openDashboardSettings"
-        >
-          <UIcon name="tune" size="sm" />
-          Настроить вид дашборда
-        </button>
-        <DiscoveryDot :show="showSettingsDot" />
-      </div>
-    </div>
   </div>
 </template>

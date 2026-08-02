@@ -38,6 +38,8 @@ const props = defineProps<{
   autofocusAmount?: boolean;
   /** Переход на страницу закончился — можно дорисовывать тяжёлый хвост формы. */
   ready?: boolean;
+  /** Десктопная модалка: подвал без safe-area и без компенсации `-mx-4`. */
+  flush?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -466,6 +468,7 @@ const expensePanelHandlers = {
           :account-id="formData.accountId"
           :accounts="accounts"
           :default-account-id="defaultAccountId"
+          :flush="flush"
           @submitted="emit('debt-submitted')"
           @update:account-id="handleAccountChange"
           @balance-effect="debtEffect = $event"
@@ -489,7 +492,7 @@ const expensePanelHandlers = {
 
       <!-- Кнопка прилипает к низу: на «Переводе» форма выше экрана, и раньше до
            сабмита приходилось доскроллить. -->
-      <SubmitBar v-if="formData.type !== 'debt'">
+      <SubmitBar v-if="formData.type !== 'debt'" :flush="flush">
         <template #hint>
           <p
             v-if="error"

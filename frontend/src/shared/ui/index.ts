@@ -38,3 +38,5 @@ export { PageContainer } from './page-container';
 export { MasterDetailLayout } from './master-detail-layout';
 export { DiscoveryDot } from './discovery-dot';
 export { default as SelectChips } from './SelectChips.vue';
+export { DesktopPage, DesktopColumns } from './desktop-page';
+export { UOverlay } from './overlay';

@@ -22,6 +22,8 @@ const props = defineProps<{
   accountId: string | null;
   accounts: AccountWithBalances[];
   defaultAccountId?: string | null;
+  /** Десктопная модалка: подвал без safe-area и без компенсации `-mx-4`. */
+  flush?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -334,7 +336,7 @@ function withSymbol(value: number) {
 
     <!-- Кнопка прилипает к низу: без этого раскрытое «Ещё» плюс поднявшаяся
          под комментарием клавиатура уносили её за экран. -->
-    <SubmitBar>
+    <SubmitBar :flush="flush">
       <template #hint>
         <p v-if="error" role="alert" class="pb-2 text-xs text-danger">{{ error }}</p>
         <p

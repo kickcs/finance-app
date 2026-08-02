@@ -72,14 +72,14 @@ const UpcomingSubscriptions = defineAsyncComponent({
         </Suspense>
       </section>
 
-      <section v-else-if="widgetId === 'debts'" class="grid grid-cols-1 md:hidden">
+      <section v-else-if="widgetId === 'debts'" class="grid grid-cols-1">
         <Suspense>
           <DebtsSection
             :debts="debts"
             :currency="currency"
             :loading="debtsLoading"
             :hidden="isHidden"
-            class="md:hover:-translate-y-1 md:hover:shadow-md transition-[transform,box-shadow] duration-300 rounded-xl"
+            class="rounded-xl"
             @debt-click="nav.toDebt"
             @person-click="nav.toDebts"
             @add-click="nav.toNewDebt"
@@ -91,7 +91,7 @@ const UpcomingSubscriptions = defineAsyncComponent({
         </Suspense>
       </section>
 
-      <section v-else-if="widgetId === 'subscriptions'" class="grid grid-cols-1 md:hidden">
+      <section v-else-if="widgetId === 'subscriptions'" class="grid grid-cols-1">
         <Suspense>
           <UpcomingSubscriptions
             :user-id="userId ?? ''"

@@ -1,11 +1,5 @@
-import { useMediaQuery } from '@vueuse/core';
-import type { Ref } from 'vue';
-
-let cached: Ref<boolean> | null = null;
-
-export function useIsDesktop(): Ref<boolean> {
-  if (!cached) {
-    cached = useMediaQuery('(min-width: 1024px)');
-  }
-  return cached;
-}
+/**
+ * Слой платформы переехал в `@/shared/lib/platform`. Файл оставлен реэкспортом,
+ * чтобы одиннадцать существующих мест импорта не пришлось править механически.
+ */
+export { useIsDesktop, DESKTOP_MIN_WIDTH } from '@/shared/lib/platform/useIsDesktop';

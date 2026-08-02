@@ -96,7 +96,7 @@ const railMuted = 'text-text-tertiary-light dark:text-text-tertiary-dark';
         </div>
 
         <!-- Desktop: 'К счетам' Button -->
-        <div class="hidden md:flex shrink-0">
+        <div class="hidden lg:flex shrink-0">
           <button
             type="button"
             aria-label="Перейти ко всем счетам"

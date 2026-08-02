@@ -49,7 +49,7 @@ function goHome() {
 
 <template>
   <div
-    class="h-full flex flex-col relative bg-background-light dark:bg-background-dark pb-28 md:pb-8 overflow-y-auto"
+    class="h-full flex flex-col relative bg-background-light dark:bg-background-dark pb-28 lg:pb-8 overflow-y-auto"
   >
     <AppHeader title="Импорт данных" show-back @back="navigateBack" />
 

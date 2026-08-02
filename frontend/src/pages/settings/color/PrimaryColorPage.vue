@@ -28,7 +28,7 @@ const selectedValue = computed({
       <AppHeader title="Основной цвет" show-back @back="navigateBack" />
     </template>
 
-    <main class="pt-8 pb-28 md:pb-8 space-y-6">
+    <main class="pt-8 pb-28 lg:pb-8 space-y-6">
       <!-- Color Picker -->
       <UCard class="p-5" variant="bordered">
         <h2
