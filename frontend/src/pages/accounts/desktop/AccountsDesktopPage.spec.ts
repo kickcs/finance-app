@@ -36,8 +36,10 @@ async function mountPage(initialPath = '/accounts') {
     // defineAsyncComponent(() => import('vuedraggable')) резолвится сюда
     global: { stubs: { AsyncComponentWrapper: DraggableStub } },
   });
-  await flushPromises();
-  await flushPromises();
+  // Карточки появляются после двух независимых асинхронных цепочек: запроса
+  // счетов и резолва ленивого vuedraggable. Фиксированное число flushPromises
+  // против них — гонка, поэтому ждём саму отрисовку.
+  await vi.waitFor(() => expect(wrapper.find('[data-testid="account-row"]').exists()).toBe(true));
   return { wrapper, router };
 }
 

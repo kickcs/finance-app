@@ -3,7 +3,7 @@ import { watchDebounced } from '@vueuse/core';
 import { useHaptics } from '@/shared/lib/haptics';
 import { useToast } from '@/shared/ui';
 import { usePhotoStep, type OcrResult } from './usePhotoStep';
-import { useItemsStep } from './useItemsStep';
+import { useItemsStep, type ExpectedOperation } from './useItemsStep';
 import { uid } from './uid';
 import { useParticipantsStep } from './useParticipantsStep';
 import { useLastParty } from './useLastParty';
@@ -15,6 +15,8 @@ export function useReceiptWizard(
   userId: () => string | null,
   /** Optional Telegram-imported op id to confirm once the receipt is submitted. */
   importedId: () => string | null = () => null,
+  /** Сумма и валюта той же операции — из них считается «Сбор по операции». */
+  expectedOp: () => ExpectedOperation | null = () => null,
 ) {
   const { trigger } = useHaptics();
   const { toast } = useToast();
@@ -24,12 +26,13 @@ export function useReceiptWizard(
   const direction = ref<WizardDirection>('forward');
 
   // Step 2: Items (delegated to useItemsStep)
-  const itemsStep = useItemsStep();
+  const itemsStep = useItemsStep(expectedOp);
   const {
     items,
     currency,
     storeName,
-    charges,
+    userCharges,
+    gapDismissed,
     totalAmount,
     getItemWithChargesTotal,
     setOcrTotalAmount,
@@ -65,7 +68,7 @@ export function useReceiptWizard(
   const { freshDraft } = draftStore;
 
   watchDebounced(
-    [items, charges, participants, formData, currentStep],
+    [items, userCharges, gapDismissed, participants, formData, currentStep],
     () => {
       if (currentStep.value < 2 || submitStep.isSuccess.value) return;
       draftStore.save({
@@ -74,7 +77,10 @@ export function useReceiptWizard(
         currency: currency.value,
         storeName: storeName.value,
         ocrTotalAmount: itemsStep.ocrTotalAmount.value,
-        charges: charges.value,
+        // Сбор по операции не сохраняем: он пересчитается из суммы операции,
+        // а сохранённый сложился бы с пересчитанным и удвоил разницу.
+        charges: userCharges.value,
+        gapDismissed: gapDismissed.value,
         totalAmount: totalAmount.value,
         participants: participants.value,
         payerId: submitStep.payerId.value,
@@ -92,7 +98,8 @@ export function useReceiptWizard(
     currency.value = draft.currency;
     storeName.value = draft.storeName;
     itemsStep.setOcrTotalAmount(draft.ocrTotalAmount);
-    charges.value = draft.charges;
+    userCharges.value = draft.charges;
+    gapDismissed.value = draft.gapDismissed ?? false;
     participants.value = draft.participants;
     submitStep.payerId.value = draft.payerId;
     formData.value = draft.formData;
@@ -149,7 +156,7 @@ export function useReceiptWizard(
     // Seed charges from OCR. Prefer flat amount when present (preserves exact value);
     // fall back to percent when only that is given.
     if (result.serviceChargeAmount && result.serviceChargeAmount > 0) {
-      charges.value = [
+      userCharges.value = [
         {
           id: uid(),
           label: 'Обслуживание',
@@ -159,7 +166,7 @@ export function useReceiptWizard(
         },
       ];
     } else if (result.serviceChargePercent && result.serviceChargePercent >= 0.1) {
-      charges.value = [
+      userCharges.value = [
         {
           id: uid(),
           label: 'Обслуживание',
@@ -169,7 +176,7 @@ export function useReceiptWizard(
         },
       ];
     } else {
-      charges.value = [];
+      userCharges.value = [];
     }
 
     // Use hashtags from OCR for description, fallback to store name

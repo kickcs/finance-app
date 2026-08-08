@@ -599,6 +599,8 @@ function toScanReceipt() {
     query: {
       importedId: current.id,
       expectedAmount: String(Math.abs(current.amount ?? 0)),
+      // Валюта нужна, чтобы не считать «сбор по операции» между разными валютами
+      expectedCurrency: current.currency,
     },
   });
 }

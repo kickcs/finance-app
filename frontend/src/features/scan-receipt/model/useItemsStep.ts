@@ -2,11 +2,26 @@ import { ref, computed } from 'vue';
 import { useHaptics } from '@/shared/lib/haptics';
 import { calcLineTotal, calcLineTotalWithCharges, getTotalChargesAmount } from './calcLineTotal';
 import { uid } from './uid';
-import type { ReceiptItem, ReceiptCharge } from './types';
+import type { ReceiptItem, ReceiptCharge, AmountReceiptCharge } from './types';
 
 export type NewChargeInput =
   | { label: string; type: 'percent'; percent: number }
   | { label: string; type: 'amount'; amount: number };
+
+/** Сумма и валюта банковской операции, к которой сканируется чек (Telegram-импорт). */
+export interface ExpectedOperation {
+  amount: number;
+  currency: string;
+}
+
+/**
+ * Id строки «Сбор по операции». Константа, а не uid(): при ручной правке строка
+ * копируется в userCharges с тем же id, иначе `:key` в списке сменится, Vue
+ * пересоздаст строку и поле ввода потеряет фокус на первом же символе.
+ */
+export const GAP_CHARGE_ID = 'op-gap';
+
+const GAP_CHARGE_LABEL = 'Сбор по операции';
 
 /** Максимум строк при «разложить по 1 шт» — защита от случайного qty=100. */
 const MAX_EXPLODE_LINES = 10;
@@ -20,13 +35,18 @@ export function canExplodeItem(item: Pick<ReceiptItem, 'qty'>): boolean {
   return Number.isInteger(item.qty) && item.qty >= 2 && item.qty <= MAX_EXPLODE_LINES;
 }
 
-export function useItemsStep() {
+export function useItemsStep(expectedOp: () => ExpectedOperation | null = () => null) {
   const { trigger } = useHaptics();
 
   const items = ref<ReceiptItem[]>([]);
   const currency = ref('UZS');
   const storeName = ref<string | null>(null);
-  const charges = ref<ReceiptCharge[]>([]);
+
+  // Сборы, которые завёл пользователь. Наружу отдаётся `charges` — они же плюс
+  // живой «Сбор по операции».
+  const userCharges = ref<ReceiptCharge[]>([]);
+  /** Пользователь тронул авто-сбор руками — больше не пересчитываем его сами. */
+  const gapDismissed = ref(false);
 
   // Итог чека из OCR — источник правды для сверки «позиции vs чек»
   const ocrTotalAmount = ref<number | null>(null);
@@ -35,23 +55,70 @@ export function useItemsStep() {
   // Computed
   const subtotal = computed(() => items.value.reduce((sum, item) => sum + calcLineTotal(item), 0));
 
+  const userChargesAmount = computed(() =>
+    getTotalChargesAmount(subtotal.value, userCharges.value),
+  );
+
+  /**
+   * Разница между списанием банка и тем, что объяснил чек. Живой остаток: правка
+   * позиций пересчитывает его, поэтому итог чека всегда равен сумме операции.
+   * Обратно в userCharges не пишем — иначе «поправил пользователь» и «поправил
+   * пересчёт» стали бы неразличимы.
+   */
+  const gapCharge = computed<AmountReceiptCharge | null>(() => {
+    if (gapDismissed.value) return null;
+    const op = expectedOp();
+    if (!op || op.amount <= 0 || op.currency !== currency.value) return null;
+    // Без позиций сбор был бы равен всей сумме операции
+    if (subtotal.value <= 0) return null;
+    const gap = op.amount - subtotal.value - userChargesAmount.value;
+    if (gap <= 0) return null;
+    return {
+      id: GAP_CHARGE_ID,
+      label: GAP_CHARGE_LABEL,
+      type: 'amount',
+      amount: gap,
+      enabled: true,
+    };
+  });
+
+  const charges = computed<ReceiptCharge[]>(() =>
+    gapCharge.value ? [...userCharges.value, gapCharge.value] : userCharges.value,
+  );
+
+  /**
+   * Id строки, которую сейчас считает приложение (для пометки «авто»). Не сам
+   * GAP_CHARGE_ID: замороженная строка носит тот же id, но пересчёт ей уже не
+   * положен — иначе пометка врала бы ровно после ручной правки.
+   */
+  const autoChargeId = computed(() => gapCharge.value?.id ?? null);
+
   const chargesAmount = computed(() => getTotalChargesAmount(subtotal.value, charges.value));
 
   const totalAmount = computed(() => subtotal.value + chargesAmount.value);
 
-  // Расхождение суммы позиций+сборов с итогом чека (>1% — предупреждаем)
+  // Расхождение суммы позиций+сборов с итогом чека (>1% — предупреждаем).
+  // Считается без сбора по операции: этот сбор объясняет разницу с банком, а не
+  // с напечатанным итогом, и иначе плашка горела бы всегда.
   const totalMismatch = computed<{ diff: number } | null>(() => {
     if (mismatchDismissed.value) return null;
     const ocr = ocrTotalAmount.value;
     if (!ocr || ocr <= 0 || items.value.length === 0) return null;
-    const diff = ocr - totalAmount.value;
+    const diff = ocr - (subtotal.value + userChargesAmount.value);
     if (Math.abs(diff) / ocr <= 0.01) return null;
     return { diff };
   });
 
+  // Новый чек — обе «я это уже видел» отметки сбрасываются: и скрытая плашка
+  // сверки, и отказ от авто-сбора. Замороженную строку сбора тоже убираем: она
+  // носит тот же id, что и ожившый авто-сбор, и осталась бы дублем в списке.
+  // Восстановление черновика ставит gapDismissed и userCharges после этого
+  // вызова, поэтому сохранённый выбор не затирается.
   function setOcrTotalAmount(value: number | null) {
     ocrTotalAmount.value = value && value > 0 ? value : null;
     mismatchDismissed.value = false;
+    gapDismissed.value = false;
+    userCharges.value = userCharges.value.filter((c) => c.id !== GAP_CHARGE_ID);
   }
 
   function dismissMismatch() {
@@ -187,34 +254,52 @@ export function useItemsStep() {
   }
 
   function addCharge(input: NewChargeInput) {
-    charges.value.push({ id: uid(), enabled: true, ...input });
+    userCharges.value.push({ id: uid(), enabled: true, ...input });
     trigger('selection');
   }
 
+  /** Замораживает авто-сбор обычной строкой — с тем же id, чтобы не дёрнулся `:key`. */
+  function materializeGapCharge(patch: { amount?: number; enabled?: boolean }) {
+    const gap = gapCharge.value;
+    if (!gap) return;
+    userCharges.value.push({ ...gap, ...patch });
+    gapDismissed.value = true;
+  }
+
   function removeCharge(id: string) {
-    charges.value = charges.value.filter((c) => c.id !== id);
+    if (id === GAP_CHARGE_ID) gapDismissed.value = true;
+    userCharges.value = userCharges.value.filter((c) => c.id !== id);
     trigger('warning');
   }
 
   function toggleCharge(id: string) {
-    const charge = charges.value.find((c) => c.id === id);
+    const charge = userCharges.value.find((c) => c.id === id);
     if (charge) {
       charge.enabled = !charge.enabled;
+      trigger('selection');
+      return;
+    }
+    if (id === GAP_CHARGE_ID) {
+      materializeGapCharge({ enabled: false });
       trigger('selection');
     }
   }
 
   function updateChargePercent(id: string, percent: number) {
-    const charge = charges.value.find((c) => c.id === id);
+    const charge = userCharges.value.find((c) => c.id === id);
     if (charge && charge.type === 'percent') {
       charge.percent = percent;
     }
   }
 
   function updateChargeAmount(id: string, amount: number) {
-    const charge = charges.value.find((c) => c.id === id);
+    const charge = userCharges.value.find((c) => c.id === id);
     if (charge && charge.type === 'amount') {
       charge.amount = amount;
+      return;
+    }
+    if (id === GAP_CHARGE_ID) {
+      materializeGapCharge({ amount });
     }
   }
 
@@ -223,6 +308,10 @@ export function useItemsStep() {
     currency,
     storeName,
     charges,
+    autoChargeId,
+    /** Только пользовательские сборы — это они уезжают в черновик, без авто-сбора. */
+    userCharges,
+    gapDismissed,
     subtotal,
     chargesAmount,
     totalAmount,

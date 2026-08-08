@@ -20,6 +20,8 @@ const props = defineProps<{
   currency: string;
   subtotal: number;
   charges: ReceiptCharge[];
+  /** Id строки, которую считает приложение, — она помечается «авто». */
+  autoChargeId?: string | null;
   chargesAmount: number;
   totalAmount: number;
   ocrTotalAmount: number | null;
@@ -177,6 +179,7 @@ function validateAndNext() {
               :charge="charge"
               :amount="calcChargeAmount(subtotal, charge)"
               :currency="currency"
+              :auto="charge.id === autoChargeId"
               @toggle="emit('toggleCharge', charge.id)"
               @update-percent="emit('updateChargePercent', charge.id, $event)"
               @update-amount="emit('updateChargeAmount', charge.id, $event)"

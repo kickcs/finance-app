@@ -9,6 +9,8 @@ const props = defineProps<{
   charge: ReceiptCharge;
   amount: number;
   currency: string;
+  /** Строку посчитало приложение, а не пользователь — помечаем, иначе читается как баг. */
+  auto?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -67,6 +69,12 @@ function handleKeydown(event: KeyboardEvent) {
         class="text-caption font-mono font-medium text-text-secondary-light dark:text-text-secondary-dark truncate"
       >
         {{ charge.label }}
+      </span>
+      <span
+        v-if="auto"
+        class="text-caption-sm font-mono uppercase px-1 py-px rounded bg-primary/10 text-primary flex-shrink-0"
+      >
+        авто
       </span>
       <button
         v-if="!isEditing && charge.type === 'percent'"
