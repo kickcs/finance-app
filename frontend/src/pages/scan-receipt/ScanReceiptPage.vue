@@ -39,9 +39,21 @@ const expectedAmount = computed<number | null>(() => {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 });
 
+// «Сбор по операции» на шаге 2 требует ещё и валюту — считать разницу между
+// разными валютами бессмысленно. Ссылка без неё оставляет предупреждение
+// работать, просто без авто-сбора.
+const expectedOp = computed<{ amount: number; currency: string } | null>(() => {
+  const amount = expectedAmount.value;
+  const rawCurrency = route.query.expectedCurrency;
+  if (amount === null) return null;
+  if (typeof rawCurrency !== 'string' || rawCurrency.length === 0) return null;
+  return { amount, currency: rawCurrency };
+});
+
 const wizard = useReceiptWizard(
   () => userId.value,
   () => importedId.value,
+  () => expectedOp.value,
 );
 
 const { accounts } = useAccounts(userId);
@@ -127,6 +139,7 @@ function handleBack() {
           :currency="wizard.currency.value"
           :subtotal="wizard.subtotal.value"
           :charges="wizard.charges.value"
+          :auto-charge-id="wizard.autoChargeId.value"
           :charges-amount="wizard.chargesAmount.value"
           :total-amount="wizard.totalAmount.value"
           :ocr-total-amount="wizard.ocrTotalAmount.value"

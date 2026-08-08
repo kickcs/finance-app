@@ -11,7 +11,10 @@ export interface ReceiptDraft {
   currency: string;
   storeName: string | null;
   ocrTotalAmount: number | null;
+  /** Только пользовательские сборы: авто-сбор по операции пересчитывается заново */
   charges: ReceiptCharge[];
+  /** Пользователь тронул авто-сбор руками — не воскрешать его при восстановлении */
+  gapDismissed?: boolean;
   /** Итог на момент сохранения — для баннера «Продолжить?» без пересчёта */
   totalAmount: number;
   participants: Participant[];

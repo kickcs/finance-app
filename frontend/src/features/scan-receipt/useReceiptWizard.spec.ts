@@ -18,7 +18,7 @@ vi.mock('@/shared/lib/haptics', () => ({
 // ── Imports after mocks ──────────────────────────────────────────────────────
 
 import { usePhotoStep } from './model/usePhotoStep';
-import { useItemsStep } from './model/useItemsStep';
+import { useItemsStep, GAP_CHARGE_ID } from './model/useItemsStep';
 import { useParticipantsStep } from './model/useParticipantsStep';
 import { useLastParty } from './model/useLastParty';
 import { useReceiptWizard } from './model/useReceiptWizard';
@@ -294,6 +294,148 @@ describe('useItemsStep', () => {
     addCharge({ label: 'Обслуживание', type: 'percent', percent: 10 });
     expect(subtotal.value).toBe(10000);
     expect(chargesAmount.value).toBe(1000);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// useItemsStep — сбор по операции (Telegram-импорт)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('useItemsStep — сбор по операции', () => {
+  function withOp(amount: number | null = 300000, opCurrency = 'UZS') {
+    return mountComposable(() =>
+      useItemsStep(() => (amount === null ? null : { amount, currency: opCurrency })),
+    );
+  }
+
+  function addPricedItem(step: ReturnType<typeof withOp>, unitPrice: number): string {
+    const id = step.addItem();
+    step.updateItem(id, { qty: 1, unitPrice });
+    return id;
+  }
+
+  function gapAmountOf(step: ReturnType<typeof withOp>): number {
+    const gap = step.charges.value.find((c) => c.id === GAP_CHARGE_ID);
+    if (gap?.type !== 'amount') throw new Error('сбор по операции не найден');
+    return gap.amount;
+  }
+
+  it('без суммы операции сбор не появляется', () => {
+    const step = withOp(null);
+    addPricedItem(step, 290000);
+    expect(step.charges.value).toHaveLength(0);
+    expect(step.totalAmount.value).toBe(290000);
+  });
+
+  it('добавляет сбор на разницу между суммой банка и суммой чека', () => {
+    const step = withOp(300000);
+    addPricedItem(step, 290000);
+    expect(step.charges.value).toHaveLength(1);
+    expect(gapAmountOf(step)).toBe(10000);
+    expect(step.totalAmount.value).toBe(300000);
+  });
+
+  it('пересчитывает сбор на лету при правке позиций', () => {
+    const step = withOp(300000);
+    const id = addPricedItem(step, 290000);
+    step.updateItem(id, { unitPrice: 296000 });
+    expect(gapAmountOf(step)).toBe(4000);
+    expect(step.totalAmount.value).toBe(300000);
+  });
+
+  it('не добавляет сбор, когда чек больше суммы операции', () => {
+    const step = withOp(300000);
+    addPricedItem(step, 310000);
+    expect(step.charges.value).toHaveLength(0);
+    expect(step.totalAmount.value).toBe(310000);
+  });
+
+  it('не добавляет сбор, пока нет позиций', () => {
+    const step = withOp(300000);
+    expect(step.charges.value).toHaveLength(0);
+    expect(step.totalAmount.value).toBe(0);
+  });
+
+  it('не добавляет сбор при несовпадении валют чека и операции', () => {
+    const step = withOp(300000, 'USD');
+    addPricedItem(step, 290000);
+    expect(step.charges.value).toHaveLength(0);
+  });
+
+  it('вычитает пользовательские сборы из остатка', () => {
+    const step = withOp(300000);
+    addPricedItem(step, 290000);
+    step.addCharge({ label: 'Обслуживание', type: 'amount', amount: 5000 });
+    expect(gapAmountOf(step)).toBe(5000);
+    expect(step.totalAmount.value).toBe(300000);
+  });
+
+  it('ручная правка суммы отключает автопересчёт', () => {
+    const step = withOp(300000);
+    const id = addPricedItem(step, 290000);
+    step.updateChargeAmount(GAP_CHARGE_ID, 7000);
+    expect(step.totalAmount.value).toBe(297000);
+
+    step.updateItem(id, { unitPrice: 280000 });
+    expect(gapAmountOf(step)).toBe(7000);
+    expect(step.totalAmount.value).toBe(287000);
+  });
+
+  it('удалённый сбор не возвращается после правки позиций', () => {
+    const step = withOp(300000);
+    const id = addPricedItem(step, 290000);
+    step.removeCharge(GAP_CHARGE_ID);
+    expect(step.charges.value).toHaveLength(0);
+
+    step.updateItem(id, { unitPrice: 250000 });
+    expect(step.charges.value).toHaveLength(0);
+    expect(step.totalAmount.value).toBe(250000);
+  });
+
+  it('выключение тумблера замораживает сбор выключенным', () => {
+    const step = withOp(300000);
+    addPricedItem(step, 290000);
+    step.toggleCharge(GAP_CHARGE_ID);
+    expect(step.charges.value).toHaveLength(1);
+    expect(step.charges.value[0].enabled).toBe(false);
+    expect(step.totalAmount.value).toBe(290000);
+
+    step.toggleCharge(GAP_CHARGE_ID);
+    expect(step.charges.value[0].enabled).toBe(true);
+    expect(step.totalAmount.value).toBe(300000);
+  });
+
+  it('помечает «авто» только живой сбор — после ручной правки метка снимается', () => {
+    const step = withOp(300000);
+    addPricedItem(step, 290000);
+    expect(step.autoChargeId.value).toBe(GAP_CHARGE_ID);
+
+    step.updateChargeAmount(GAP_CHARGE_ID, 7000);
+    expect(step.autoChargeId.value).toBeNull();
+  });
+
+  it('сброс чека после ручной правки не оставляет вторую строку сбора', () => {
+    const step = withOp(300000);
+    addPricedItem(step, 290000);
+    step.updateChargeAmount(GAP_CHARGE_ID, 3000);
+
+    // Переход в ручной режим сбрасывает итог чека и оживляет авто-сбор
+    step.setOcrTotalAmount(null);
+
+    expect(step.charges.value.filter((c) => c.id === GAP_CHARGE_ID)).toHaveLength(1);
+    expect(step.totalAmount.value).toBe(300000);
+  });
+
+  it('распределяет сбор по позициям пропорционально их долям', () => {
+    const step = withOp(300000);
+    const a = addPricedItem(step, 200000);
+    const b = addPricedItem(step, 90000);
+    const itemA = step.items.value.find((i) => i.id === a)!;
+    const itemB = step.items.value.find((i) => i.id === b)!;
+
+    // сбор 10 000 на подытог 290 000 → 6 897 и 3 103
+    expect(step.getItemWithChargesTotal(itemA)).toBe(206897);
+    expect(step.getItemWithChargesTotal(itemB)).toBe(93103);
   });
 });
 
@@ -867,6 +1009,42 @@ describe('useReceiptWizard — ручной режим и мульти-фото'
     expect(wizard.currency.value).toBe('USD');
     expect(wizard.formData.value.currency).toBe('USD');
     expect(wizard.ocrTotalAmount.value).toBeNull();
+  });
+
+  it('новый снимок возвращает авто-сбор после ручного отказа', async () => {
+    const ocrFor = (name: string, amount: number) =>
+      makeOcrResponse({
+        items: [{ name, quantity: 1, unitPrice: amount, totalPrice: amount }],
+        totalAmount: amount,
+      });
+
+    server.use(http.post('*/api/receipts/scan', () => HttpResponse.json(ocrFor('Яблоки', 290000))));
+
+    const wizard = mountComposable(() =>
+      useReceiptWizard(
+        () => USER_ID,
+        () => null,
+        () => ({ amount: 300000, currency: 'UZS' }),
+      ),
+    );
+
+    wizard.addFile(makeJpeg('1.jpg'));
+    wizard.scanReceipt();
+    await flushPromises();
+    expect(wizard.totalAmount.value).toBe(300000);
+
+    wizard.removeCharge(GAP_CHARGE_ID);
+    expect(wizard.totalAmount.value).toBe(290000);
+
+    // Переснял чек — это уже другой чек, отказ от прежнего сбора к нему не относится
+    server.use(http.post('*/api/receipts/scan', () => HttpResponse.json(ocrFor('Груши', 250000))));
+
+    wizard.addFile(makeJpeg('2.jpg'));
+    wizard.scanReceipt();
+    await flushPromises();
+
+    expect(wizard.charges.value).toHaveLength(1);
+    expect(wizard.totalAmount.value).toBe(300000);
   });
 
   it('addFile принимает максимум 3 кадра', () => {
