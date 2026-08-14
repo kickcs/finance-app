@@ -9,7 +9,8 @@ export { default as ClosedDebtCard } from './ui/ClosedDebtCard.vue';
 export { default as DebtsSummaryCard } from './ui/DebtsSummaryCard.vue';
 export { default as PersonDebtRow } from './ui/PersonDebtRow.vue';
 export { default as DebtHero } from './ui/DebtHero.vue';
-export { default as DebtAmountBreakdown } from './ui/DebtAmountBreakdown.vue';
+export { default as DebtProgressMeter } from './ui/DebtProgressMeter.vue';
+export { default as DebtPaymentFields } from './ui/DebtPaymentFields.vue';
 
 // Model/Types
 export * from './model/types';

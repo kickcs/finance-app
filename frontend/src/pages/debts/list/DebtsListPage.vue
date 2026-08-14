@@ -10,7 +10,7 @@ import {
   PersonDebtRow,
 } from '@/entities/debt';
 import { CloseAllDebtsModal, DeleteDebtModal } from '@/features/close-debt';
-import { PartialPaymentModal } from '@/features/partial-payment';
+import { PaymentDrawer } from '@/features/partial-payment';
 import {
   UButton,
   UIcon,
@@ -87,9 +87,9 @@ const {
   total,
   accounts,
   showDeleteModal,
-  showPartialPaymentModal,
+  isPaymentOpen,
+  paymentDraft,
   isDeleting,
-  isPaying,
   goBack,
   handleDebtClick,
   handlePersonClick,
@@ -101,7 +101,7 @@ const {
   handleDetailEdit,
   handleDetailDelete,
   handleDeleteDebt,
-  handlePartialPayment,
+  submitPayment,
   handleDetailTogglePrivate,
   handleDetailClose,
   handleRefresh,
@@ -121,7 +121,7 @@ useIntersectionObserver(
 
 <template>
   <div
-    class="h-full flex flex-col relative bg-background-light dark:bg-background-dark pb-28 lg:pb-8 overflow-hidden"
+    class="h-full flex flex-col overflow-hidden bg-background-light dark:bg-background-dark relative"
   >
     <!-- Header -->
     <AppHeader blur show-back title="Долги" @back="goBack">
@@ -147,7 +147,7 @@ useIntersectionObserver(
     >
       <template #master>
         <PullToRefresh :on-refresh="handleRefresh" :container-ref="scrollContainerRef">
-          <div ref="masterContentRef" class="pt-8 space-y-6">
+          <div ref="masterContentRef" class="pt-8 pb-28 lg:pb-8 space-y-6">
             <!-- Status Tabs -->
             <UTabs
               v-model="statusFilter"
@@ -362,12 +362,12 @@ useIntersectionObserver(
       :is-deleting="isDeleting"
       @confirm="handleDeleteDebt"
     />
-    <PartialPaymentModal
-      v-model="showPartialPaymentModal"
+    <PaymentDrawer
+      v-model="isPaymentOpen"
       :debt="selectedDebt"
       :accounts="accounts"
-      :is-paying="isPaying"
-      @confirm="handlePartialPayment"
+      :draft="paymentDraft"
+      @confirm="submitPayment"
     />
   </div>
 </template>

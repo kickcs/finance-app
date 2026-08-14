@@ -11,6 +11,7 @@ import {
   mockOverdueDebtResponse,
 } from '@/test/mocks/handlers/debts';
 import { mockAccountResponse } from '@/test/mocks/handlers/accounts';
+import { formatCurrency } from '@/shared/lib/format/currency';
 
 // Mock app router — vi.hoisted runs before vi.mock hoisting
 const { navigateBackMock } = vi.hoisted(() => ({
@@ -21,6 +22,10 @@ vi.mock('@/app/router', () => ({
   transitionName: { value: 'fade' },
   resetOnboardingVerified: vi.fn(),
 }));
+
+// PaymentDrawer рендерит настоящую vaul-шторку; закрытие роняет jsdom на чтении
+// style отсоединённого узла — см. комментарий в стабе.
+vi.mock('vaul-vue', async () => (await import('@/test/stubs/vaul')).vaulStub);
 
 // ---------------------------------------------------------------------------
 
@@ -135,12 +140,13 @@ describe('DebtDetailPage', () => {
       expect(wrapper.text()).toContain('Осталось');
     });
 
-    it('shows "Погашено" with paid amount', async () => {
+    it('shows "Погашено" with paid amount in the progress meter', async () => {
       const wrapper = await renderPage(mockGivenDebtResponse.id);
-      // paid = 50000 - 30000 = 20000
-      const breakdown = wrapper.find('[data-testid="debt-breakdown"]');
-      expect(breakdown.text()).toContain('Погашено');
-      expect(breakdown.text()).toContain('20');
+      // paid = 50000 - 30000 = 20000; the meter replaces the old breakdown card
+      const meter = wrapper.find('[data-testid="debt-meter"]');
+      expect(meter.exists()).toBe(true);
+      expect(meter.text()).toContain('Погашено');
+      expect(meter.text()).toContain('20');
     });
 
     it('does not show a fee row when the debt has no transfer fee', async () => {
@@ -148,17 +154,17 @@ describe('DebtDetailPage', () => {
       expect(wrapper.find('[data-testid="debt-fee-row"]').exists()).toBe(false);
     });
 
-    it('shows progress bar with 40%', async () => {
+    it('shows the progress meter at 40%', async () => {
       const wrapper = await renderPage(mockGivenDebtResponse.id);
       // (50000 - 30000) / 50000 = 40%
-      expect(wrapper.text()).toContain('Погашено 40%');
+      const meter = wrapper.find('[data-testid="debt-meter"]');
+      expect(meter.text()).toContain('40%');
     });
 
-    it('shows the total debt amount', async () => {
+    it('shows the total debt amount in the progress meter', async () => {
       const wrapper = await renderPage(mockGivenDebtResponse.id);
-      const breakdown = wrapper.find('[data-testid="debt-breakdown"]');
-      expect(breakdown.text()).toContain('Сумма долга');
-      expect(breakdown.text()).toContain('50');
+      const meter = wrapper.find('[data-testid="debt-meter"]');
+      expect(meter.text()).toContain('50');
     });
 
     it('shows payment button', async () => {
@@ -204,10 +210,10 @@ describe('DebtDetailPage', () => {
       expect(wrapper.text()).toContain('Осталось');
     });
 
-    it('hides the breakdown entirely when there is nothing to break down', async () => {
+    it('hides the progress meter entirely when there is nothing to break down', async () => {
       const wrapper = await renderPage(mockTakenDebtResponse.id);
-      // Нетронутый долг без комиссии: сумма, остаток и число в шапке совпадают
-      expect(wrapper.find('[data-testid="debt-breakdown"]').exists()).toBe(false);
+      // Нетронутый долг: paid=0, forgiven=0 — метру нечего показывать
+      expect(wrapper.find('[data-testid="debt-meter"]').exists()).toBe(false);
       expect(wrapper.text()).not.toContain('Погашено');
     });
 
@@ -253,13 +259,32 @@ describe('DebtDetailPage', () => {
       expect(wrapper.text()).toContain('Удалить долг');
     });
 
-    it('does NOT show progress bar', async () => {
+    it('hides the meter when the debt was simply paid in full', async () => {
       const wrapper = await renderPage(mockClosedDebtResponse.id);
-      // Closed debt with remaining=0 should not display progress section
-      expect(wrapper.text()).not.toContain('Погашено');
-      // The UProgressBar component should not be present in debt details section
+      // remaining=0, forgiven=0 → сплошная полоса и подпись, дословно
+      // повторяющая «Сумма долга» из заголовка: показывать нечего
+      expect(wrapper.find('[data-testid="debt-meter"]').exists()).toBe(false);
+      // The old UProgressBar component is fully replaced by DebtProgressMeter
       const progressBars = wrapper.findAllComponents({ name: 'UProgressBar' });
       expect(progressBars.length).toBe(0);
+    });
+
+    it('shows the meter when part of a closed debt was forgiven', async () => {
+      // Часть отдали, часть простили — способ закрытия долга виден только здесь
+      server.use(
+        http.get('*/api/debts', () =>
+          HttpResponse.json([
+            { ...mockClosedDebtResponse, forgivenAmount: 5000, remainingAmount: 0 },
+          ]),
+        ),
+      );
+
+      const wrapper = await renderPage(mockClosedDebtResponse.id);
+      const meter = wrapper.find('[data-testid="debt-meter"]');
+
+      expect(meter.exists()).toBe(true);
+      expect(meter.text()).toContain('прощено');
+      expect(meter.find('[data-segment="forgiven"]').exists()).toBe(true);
     });
   });
 
@@ -284,43 +309,30 @@ describe('DebtDetailPage', () => {
   // Debt Details Card
   // -----------------------------------------------------------------------
   describe('debt details card', () => {
-    it('shows original amount', async () => {
+    it('shows original amount in the creation timeline node', async () => {
       server.use(
         http.get('*/api/debts', () => HttpResponse.json([mockGivenDebtResponse])),
         http.get('*/api/accounts', () => HttpResponse.json([mockAccountResponse])),
       );
       const wrapper = await renderPage(mockGivenDebtResponse.id);
-      expect(wrapper.text()).toContain('Сумма долга');
+      // «Дата создания» больше не отдельная строка — сумма и дата создания
+      // теперь только в первом узле тайм-лайна
+      expect(wrapper.text()).toContain('Долг создан');
       // totalAmount = 50000
       expect(wrapper.text()).toContain('50');
     });
 
-    it('shows currency', async () => {
+    it('shows currency embedded in the amount (no separate "Валюта" row)', async () => {
       server.use(
         http.get('*/api/debts', () => HttpResponse.json([mockGivenDebtResponse])),
         http.get('*/api/accounts', () => HttpResponse.json([mockAccountResponse])),
       );
       const wrapper = await renderPage(mockGivenDebtResponse.id);
-      expect(wrapper.text()).toContain('Валюта');
-      expect(wrapper.text()).toContain('UZS');
-    });
-
-    it('shows debt type "Вам должны" for given debt', async () => {
-      server.use(
-        http.get('*/api/debts', () => HttpResponse.json([mockGivenDebtResponse])),
-        http.get('*/api/accounts', () => HttpResponse.json([mockAccountResponse])),
+      const heroAmount = wrapper.find('[data-testid="debt-hero-amount"]');
+      expect(heroAmount.text()).toBe(
+        formatCurrency(mockGivenDebtResponse.remainingAmount, mockGivenDebtResponse.currency),
       );
-      const wrapper = await renderPage(mockGivenDebtResponse.id);
-      expect(wrapper.text()).toContain('Вам должны');
-    });
-
-    it('shows debt type "Вы должны" for taken debt', async () => {
-      server.use(
-        http.get('*/api/debts', () => HttpResponse.json([mockTakenDebtResponse])),
-        http.get('*/api/accounts', () => HttpResponse.json([mockAccountResponse])),
-      );
-      const wrapper = await renderPage(mockTakenDebtResponse.id);
-      expect(wrapper.text()).toContain('Вы должны');
+      expect(wrapper.text()).not.toContain('Валюта');
     });
 
     it('shows linked account name when present', async () => {
@@ -334,13 +346,14 @@ describe('DebtDetailPage', () => {
       expect(wrapper.text()).toContain('Основной');
     });
 
-    it('shows created date', async () => {
+    it('shows created date in the timeline instead of a separate "Дата создания" row', async () => {
       server.use(
         http.get('*/api/debts', () => HttpResponse.json([mockGivenDebtResponse])),
         http.get('*/api/accounts', () => HttpResponse.json([mockAccountResponse])),
       );
       const wrapper = await renderPage(mockGivenDebtResponse.id);
-      expect(wrapper.text()).toContain('Дата создания');
+      expect(wrapper.text()).toContain('Долг создан');
+      expect(wrapper.text()).not.toContain('Дата создания');
     });
   });
 
@@ -348,7 +361,7 @@ describe('DebtDetailPage', () => {
   // Debt Without Linked Account
   // -----------------------------------------------------------------------
   describe('debt without linked account', () => {
-    it('hides account row when no linked account', async () => {
+    it('hides the meta card entirely when there is nothing left to show', async () => {
       const debtWithoutAccount = {
         ...mockGivenDebtResponse,
         id: 'debt-no-acc',
@@ -360,11 +373,12 @@ describe('DebtDetailPage', () => {
       );
       const wrapper = await renderPage('debt-no-acc');
 
-      // Should NOT show the "Счёт" row with account name
-      // The detail card should still exist but without account info
-      expect(wrapper.text()).toContain('Сумма долга');
+      // mockGivenDebtResponse has nextPaymentDate: null too, so the meta card
+      // (Дата возврата + Счёт) has nothing left to render at all
+      expect(wrapper.text()).not.toContain('Счёт');
       // "Основной" account name should NOT appear since accountId is null
       expect(wrapper.text()).not.toContain('Основной');
+      expect(wrapper.find('[data-testid="debt-hero"]').exists()).toBe(true);
     });
   });
 
@@ -472,7 +486,7 @@ describe('DebtDetailPage', () => {
   // Payment Button
   // -----------------------------------------------------------------------
   describe('payment button', () => {
-    it('clicking payment button shows payment modal', async () => {
+    it('clicking payment button shows the payment drawer', async () => {
       server.use(
         http.get('*/api/debts', () => HttpResponse.json([mockGivenDebtResponse])),
         http.get('*/api/accounts', () => HttpResponse.json([mockAccountResponse])),
@@ -485,7 +499,7 @@ describe('DebtDetailPage', () => {
       await paymentBtn.trigger('click');
       await flushPromises();
 
-      const modal = wrapper.findComponent({ name: 'PartialPaymentModal' });
+      const modal = wrapper.findComponent({ name: 'PaymentDrawer' });
       expect(modal.exists()).toBe(true);
       expect(modal.props('modelValue')).toBe(true);
     });
@@ -545,13 +559,13 @@ describe('DebtDetailPage', () => {
       await flushPromises();
       await flushPromises();
 
-      // Open payment modal
+      // Open payment drawer
       await currentWrapper.find('[data-testid="payment-btn"]').trigger('click');
       await flushPromises();
 
       // Emit partial payment (10000 < 30000 remaining, so debt stays open)
-      const modal = currentWrapper.findComponent({ name: 'PartialPaymentModal' });
-      modal.vm.$emit('confirm', 10000, 'acc-1', {});
+      const modal = currentWrapper.findComponent({ name: 'PaymentDrawer' });
+      modal.vm.$emit('confirm', { amount: 10000, accountId: 'acc-1' });
       await flushPromises();
       await flushPromises();
 
@@ -608,13 +622,13 @@ describe('DebtDetailPage', () => {
       await flushPromises();
       await flushPromises();
 
-      // Open payment modal
+      // Open payment drawer
       await currentWrapper.find('[data-testid="payment-btn"]').trigger('click');
       await flushPromises();
 
       // Emit full payment (30000 >= 30000 remaining, so debt closes)
-      const modal = currentWrapper.findComponent({ name: 'PartialPaymentModal' });
-      modal.vm.$emit('confirm', 30000, 'acc-1', {});
+      const modal = currentWrapper.findComponent({ name: 'PaymentDrawer' });
+      modal.vm.$emit('confirm', { amount: 30000, accountId: 'acc-1' });
       await flushPromises();
       await flushPromises();
 
@@ -671,13 +685,13 @@ describe('DebtDetailPage', () => {
       await flushPromises();
       await flushPromises();
 
-      // Open payment modal
+      // Open payment drawer
       await currentWrapper.find('[data-testid="payment-btn"]').trigger('click');
       await flushPromises();
 
       // Emit forgive: amount=0, forgiveRemainder=true
-      const modal = currentWrapper.findComponent({ name: 'PartialPaymentModal' });
-      modal.vm.$emit('confirm', 0, 'acc-1', { forgiveRemainder: true });
+      const modal = currentWrapper.findComponent({ name: 'PaymentDrawer' });
+      modal.vm.$emit('confirm', { amount: 0, accountId: 'acc-1', forgiveRemainder: true });
       await flushPromises();
       await flushPromises();
 

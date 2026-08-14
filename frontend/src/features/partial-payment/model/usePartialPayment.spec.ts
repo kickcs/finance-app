@@ -8,6 +8,8 @@ import { usePartialPayment } from './usePartialPayment';
 import { mockGivenDebtResponse, mockTakenDebtResponse } from '@/test/mocks/handlers/debts';
 import { mockTransactionResponse } from '@/test/mocks/handlers/transactions';
 import { CATEGORY_IDS } from '@/entities/category';
+import { debtQueryKeys } from '@/entities/debt';
+import { queryClient } from '@/shared/api/queryClient';
 import type { Debt } from '@/shared/api/database.types';
 
 // ── Mocks ──────────────────────────────────────────────────────────────────
@@ -148,6 +150,9 @@ describe('usePartialPayment', () => {
     server.resetHandlers();
     currentWrapper?.unmount();
     currentWrapper = null;
+    // makePartialPayment writes to the app-wide singleton queryClient, not a
+    // per-test instance — clear it so cache-inspecting tests don't leak state.
+    queryClient.clear();
     await flushPromises();
   });
 
@@ -367,6 +372,70 @@ describe('usePartialPayment', () => {
 
       expect(result).toBe(true);
       expect(txPostSpy).not.toHaveBeenCalled();
+    });
+
+    it('restores the optimistic cache patch instead of leaving a phantom payment applied', async () => {
+      server.use(
+        http.get('*/api/debts/:id', () =>
+          HttpResponse.json({
+            ...mockGivenDebtResponse,
+            id: givenDebt.id,
+            isClosed: true,
+            remainingAmount: 0,
+          }),
+        ),
+      );
+      // Seed the cache exactly as it was before the optimistic patch would apply.
+      queryClient.setQueryData(debtQueryKeys.list(USER_ID), [givenDebt]);
+
+      const c = mountComposable();
+      await c.makePartialPayment(givenDebt, 10000, ACCOUNT_ID, USER_ID);
+      await flushPromises();
+
+      // The optimistic patch (remaining 30000 -> 20000) must be rolled back —
+      // nothing was actually paid, the debt was already closed elsewhere.
+      const cached = queryClient.getQueryData<Debt[]>(debtQueryKeys.list(USER_ID));
+      expect(cached?.[0]?.remaining_amount).toBe(30000);
+      expect(cached?.[0]?.is_closed).toBe(false);
+    });
+  });
+
+  // ── Partial server failure (transaction created, then a later step fails) ──
+
+  describe('reconciling after a partial failure', () => {
+    it('invalidates debt-related cache instead of silently rolling back when the debt update fails after the payment transaction was already created', async () => {
+      server.use(
+        http.post('*/api/transactions', () =>
+          HttpResponse.json({ ...mockTransactionResponse, id: 'tx-mid-fail' }),
+        ),
+        http.patch('*/api/debts/:id', () =>
+          HttpResponse.json({ message: 'Internal Server Error' }, { status: 500 }),
+        ),
+      );
+
+      const c = mountComposable();
+      const result = await c.makePartialPayment(givenDebt, 10000, ACCOUNT_ID, USER_ID);
+      await flushPromises();
+
+      expect(result).toBe(false);
+      // A transaction already landed on the server — the UI must be reconciled
+      // from the server, not just reverted to "as if nothing happened".
+      expect(invalidateDebtRelated).toHaveBeenCalledWith(expect.anything(), USER_ID);
+    });
+
+    it('does not invalidate cache when the transaction request itself fails before anything was created', async () => {
+      server.use(
+        http.post('*/api/transactions', () =>
+          HttpResponse.json({ message: 'Internal Server Error' }, { status: 500 }),
+        ),
+      );
+
+      const c = mountComposable();
+      const result = await c.makePartialPayment(givenDebt, 10000, ACCOUNT_ID, USER_ID);
+      await flushPromises();
+
+      expect(result).toBe(false);
+      expect(invalidateDebtRelated).not.toHaveBeenCalled();
     });
   });
 

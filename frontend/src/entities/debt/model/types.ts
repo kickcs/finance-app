@@ -30,6 +30,22 @@ export function getDebtDisplayName(debt: Debt): string {
   return debt.person_name?.trim() || debt.name.trim();
 }
 
+/**
+ * Долг разложен на три непересекающиеся части: отдано, прощено, осталось.
+ *
+ * Прощение обнуляет остаток наравне с оплатой, поэтому «сумма − остаток» — это
+ * отданное И прощённое разом; прощённое приходится вычитать явно, иначе части
+ * в сумме дают больше самого долга.
+ */
+export function getDebtSplit(debt: Debt): { paid: number; forgiven: number; remaining: number } {
+  const forgiven = debt.forgiven_amount ?? 0;
+  return {
+    paid: Math.max(0, debt.total_amount - debt.remaining_amount - forgiven),
+    forgiven,
+    remaining: debt.remaining_amount,
+  };
+}
+
 export function getDebtProgress(debt: Debt): number {
   if (debt.total_amount === 0) return 0;
   const paid = debt.total_amount - debt.remaining_amount;

@@ -48,12 +48,16 @@ const paymentTransactions = computed(() => {
         <div
           class="absolute -left-5 top-0.5 w-2.5 h-2.5 rounded-full bg-primary border-2 border-card-light dark:border-card-dark shadow-[0_0_0_2px] shadow-border-light dark:shadow-border-dark"
         />
-        <p class="text-xs font-medium text-text-primary-light dark:text-text-primary-dark">
-          Долг создан
+        <p
+          class="flex items-center justify-between gap-3 text-xs font-medium text-text-primary-light dark:text-text-primary-dark"
+        >
+          <span>Долг создан</span>
+          <span class="font-semibold tabular-nums">
+            {{ formatCurrency(debt.total_amount, debt.currency) }}
+          </span>
         </p>
         <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
-          {{ formatDate(debt.created_at, { format: 'short' }) }} ·
-          {{ formatCurrency(debt.total_amount, debt.currency) }}
+          {{ formatDate(debt.created_at, { format: 'short' }) }}
         </p>
       </div>
 
@@ -72,10 +76,14 @@ const paymentTransactions = computed(() => {
         <div
           class="absolute -left-5 top-0.5 w-2.5 h-2.5 rounded-full bg-success border-2 border-card-light dark:border-card-dark shadow-[0_0_0_2px] shadow-border-light dark:shadow-border-dark"
         />
-        <p class="text-xs font-medium text-text-primary-light dark:text-text-primary-dark">
-          Платёж
+        <p
+          class="flex items-center justify-between gap-3 text-xs font-medium text-text-primary-light dark:text-text-primary-dark"
+        >
+          <span>Платёж</span>
+          <span class="font-semibold tabular-nums text-success">
+            +{{ formatCurrency(tx.amount, tx.currency) }}
+          </span>
         </p>
-        <p class="text-xs text-success">+{{ formatCurrency(tx.amount, tx.currency) }}</p>
         <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
           {{ formatDate(tx.date || tx.created_at, { format: 'short' }) }}
           <template v-if="tx.description">· {{ tx.description }}</template>
@@ -87,11 +95,13 @@ const paymentTransactions = computed(() => {
         <div
           class="absolute -left-5 top-0.5 w-2.5 h-2.5 rounded-full bg-warning border-2 border-card-light dark:border-card-dark shadow-[0_0_0_2px] shadow-border-light dark:shadow-border-dark"
         />
-        <p class="text-xs font-medium text-text-primary-light dark:text-text-primary-dark">
-          Прощено
-        </p>
-        <p class="text-xs text-warning">
-          {{ formatCurrency(debt.forgiven_amount, debt.currency) }}
+        <p
+          class="flex items-center justify-between gap-3 text-xs font-medium text-text-primary-light dark:text-text-primary-dark"
+        >
+          <span>Прощено</span>
+          <span class="font-semibold tabular-nums text-warning">
+            {{ formatCurrency(debt.forgiven_amount, debt.currency) }}
+          </span>
         </p>
         <p
           v-if="debt.closed_at"
@@ -112,16 +122,14 @@ const paymentTransactions = computed(() => {
           class="absolute -left-5 top-0.5 w-2.5 h-2.5 rounded-full bg-card-light dark:bg-card-dark border-2 shadow-[0_0_0_2px] shadow-border-light dark:shadow-border-dark"
           :style="{ borderColor: debtColor }"
         />
+        <!-- Остаток не повторяем: он стоит заголовком страницы, а здесь нужен
+             только конец ленты — «история на этом не закончилась» -->
         <p
           class="text-xs font-medium"
           :class="debt.is_closed ? 'text-success' : ''"
           :style="!debt.is_closed ? { color: debtColor } : undefined"
         >
-          {{
-            debt.is_closed
-              ? 'Погашен'
-              : `Осталось ${formatCurrency(debt.remaining_amount, debt.currency)}`
-          }}
+          {{ debt.is_closed ? 'Погашен' : 'Ещё не закрыт' }}
         </p>
         <p
           v-if="debt.is_closed && debt.closed_at"
