@@ -25,7 +25,6 @@ describe('ConfirmImportedHandler', () => {
     countPending: jest.fn(),
     markConfirmed: jest.fn(),
     markDismissed: jest.fn(),
-    findLatestBalance: jest.fn(),
     findTransferCounterpart: jest.fn(),
   };
   const cardRepo = {

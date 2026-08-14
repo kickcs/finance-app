@@ -41,7 +41,6 @@ describe('IngestBankMessageHandler', () => {
     countPending: jest.fn(),
     markConfirmed: jest.fn(),
     markDismissed: jest.fn(),
-    findLatestBalance: jest.fn(),
     findLatestPendingExpenseByCard: jest.fn(),
     decreaseAmount: jest.fn(),
     findTransferCounterpart: jest.fn(),
@@ -98,29 +97,14 @@ describe('IngestBankMessageHandler', () => {
     });
   });
 
-  it('balance_change: amount = дельта от последнего баланса карты', async () => {
+  it('«Счет по карте изменен» попадает в инбокс доходом на сумму из сообщения', async () => {
     linkRepo.findByTelegramUserId.mockResolvedValue({ userId: 'user-1' });
-    importedRepo.findLatestBalance.mockResolvedValue(887801.08);
     importedRepo.insertIfNew.mockResolvedValue({ id: 'imp-3' });
     await handler.execute(new IngestBankMessageCommand('42', BALANCE_CHANGE));
     const arg = (importedRepo.insertIfNew.mock.calls as ImportedTransactionCreate[][])[0][0];
-    expect(arg.type).toBe('balance_change');
-    expect(arg.amount).toBeCloseTo(13244800 - 887801.08, 2);
-    expect(importedRepo.findLatestBalance).toHaveBeenCalledWith(
-      'user-1',
-      '*1951',
-      expect.any(Date),
-    );
-  });
-
-  it('balance_change без предыдущего баланса: amount = null', async () => {
-    linkRepo.findByTelegramUserId.mockResolvedValue({ userId: 'user-1' });
-    importedRepo.findLatestBalance.mockResolvedValue(null);
-    importedRepo.insertIfNew.mockResolvedValue({ id: 'imp-4' });
-    await handler.execute(new IngestBankMessageCommand('42', BALANCE_CHANGE));
-    expect(
-      (importedRepo.insertIfNew.mock.calls as ImportedTransactionCreate[][])[0][0].amount,
-    ).toBeNull();
+    expect(arg.type).toBe('income');
+    expect(arg.amount).toBe(13244800);
+    expect(arg.balanceAfter).toBeNull();
   });
 
   it('reversal: уменьшает последний pending-расход по карте на сумму отмены', async () => {

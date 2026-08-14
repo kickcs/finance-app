@@ -122,20 +122,20 @@ URL мини-приложения строится из `PUBLIC_APP_URL` (`<PUBL
 |---|---|
 | «Оплата» | `expense` |
 | «Пополнение» | `income` |
-| «Счет по карте изменен» | `balance_change` (зарплата/изменение баланса; `amount=null`) |
+| «Счет по карте изменен» | `income` — зачисление не от операции по карте (зарплата, перевод со счёта) |
 
 **Фолбэк по знаку суммы.** Если маркер на первой строке не найден, тип берётся из строки суммы (ищется среди первых двух строк — перед суммой может стоять только заголовок): `➖` → `expense`, `➕` → `income`. Это покрывает два реальных случая HUMO:
 - **headerless** — заголовка нет вовсе, первая строка сразу «➖ 36.000,00 UZS»;
 - **нейтральный заголовок** — «💸 Операция», который сам по себе о направлении операции ничего не говорит.
 
-`balance_change` через фолбэк недостижим: его строка суммы начинается с `💸`, а не с `➖`/`➕`, — он распознаётся только по маркеру.
+«Счет по карте изменен» через фолбэк недостижим: строка суммы начинается с `💸`, а не с `➖`/`➕`, — распознаётся только по маркеру.
 
 **Извлечение:**
 - `cardMask` — `💳…(\*\d+)` → `*1234`.
 - `occurredAt` — `HH:MM DD.MM.YYYY`, **таймзона жёстко `+05:00`** (Ташкент).
 - `merchant` — строка с `📍`.
-- `amount` — строка с `➖`/`➕`, regex `([\d.]+,\d{2})\s*([A-Z]{3})`.
-- `balanceAfter` — строка с `💰` (expense/income) или `💸` (balance_change).
+- `amount` — строка с `➖`/`➕`, regex `([\d.]+,\d{2})\s*([A-Z]{3})`. Для «Счет по карте изменен» — строка `💸` (знака нет; отбор по regex, т.к. `💸` бывает и заголовком).
+- `balanceAfter` — строка с `💰`. Её нет в «Счет по карте изменен» → `null`.
 - `currency` — из той же regex-группы что и сумма (а не из первого попавшегося кода в тексте — это был баг, исправлен).
 - **Формат чисел узбекский:** `.` = разряды, `,` = дробь. `parseUzAmount("12.543.101,08") → 12543101.08`.
 
@@ -153,7 +153,7 @@ URL мини-приложения строится из `PUBLIC_APP_URL` (`<PUBL
 
 | Команда | Логика |
 |---|---|
-| `IngestBankMessage` | Найти link по telegramUserId (иначе `not_linked`); распарсить; для `balance_change` вычислить **дельту зарплаты**: `amount = balanceAfter − findLatestBalance(userId, cardMask, occurredAt)` (null если предыдущего баланса нет); `insertIfNew` (идемпотентно по dedup). Возвращает `imported\|duplicate\|unparsed\|not_linked` |
+| `IngestBankMessage` | Найти link по telegramUserId (иначе `not_linked`); распарсить; `insertIfNew` (идемпотентно по dedup). Возвращает `imported\|duplicate\|unparsed\|not_linked` |
 | `LinkTelegramAccount` | Атомарно `consume(token)`; коллизия с другим userId → `already_linked_other`; чистит старые связи по userId И telegramUserId (перелинковка); создаёт связь |
 | `CreateLinkToken` | 24 байта `base64url`, TTL 15 мин, `deepLink = https://t.me/<BOT_USERNAME>?start=<token>` |
 | `ConfirmImported` | Проверка владения (userId), статус pending; **`assertAccountOwnership` для accountId и toAccountId** (через `ACCOUNT_REPOSITORY`); `markConfirmed(id, transactionId)`; upsert card→account; если `toAccountId` задан — `findTransferCounterpart` (обратный тип, та же сумма, ±15 мин, карта замаплена на counter-account) и тоже подтвердить. Возвращает `{ success, counterpartId }` |
@@ -174,7 +174,7 @@ URL мини-приложения строится из `PUBLIC_APP_URL` (`<PUBL
 
 `domain/models.ts`:
 ```
-ImportedTransactionType   = expense | income | balance_change | unparsed
+ImportedTransactionType   = expense | income | reversal | unparsed
 ImportedTransactionStatus = pending | confirmed | dismissed
 ```
 
@@ -252,9 +252,9 @@ FSD. Стек: Vue 3, TanStack Vue Query, Tailwind v4 (семантически�
 
 `src/pages/import-inbox/`:
 - **`ImportInboxPage.vue`** — список или `EmptyState`; клик → `IMPORT_CONFIRM`.
-- **`ui/ImportInboxItem.vue`** — иконка/цвет по типу (balance_change=swap_vert/primary, income=↓/success, expense=↑/danger); «Сумма неизвестна» при `amount=null`.
+- **`ui/ImportInboxItem.vue`** — иконка/цвет по типу (income=↓/success, expense=↑/danger); «Сумма неизвестна» при `amount=null`.
 - **`confirm/ImportConfirmPage.vue`** — флоу подтверждения:
-  - **Prefill** (watch на item, keyed `prefilledId` чтобы рефетч не затёр правки): income→income; balance_change с `amount<0`→expense, иначе→income; expense→expense; `date = occurred_at ?? now`; `description = merchant`; `accountId = suggested_account_id`; `categoryId = suggested_category_id` (отдельный watch: ждёт загрузки категорий, не трогает уже выбранную и пропускает удалённую категорию — `model/categoryPrefill.ts`).
+  - **Prefill** (watch на item, keyed `prefilledId` чтобы рефетч не затёр правки): income→income; expense→expense; `date = occurred_at ?? now`; `description = merchant`; `accountId = suggested_account_id`; `categoryId = suggested_category_id` (отдельный watch: ждёт загрузки категорий, не трогает уже выбранную и пропускает удалённую категорию — `model/categoryPrefill.ts`).
   - **Submit:** `submitAndWait` создаёт транзакцию → `confirmImported(id, {transactionId, accountId, toAccountId?})`.
   - **Retry-bookkeeping:** `createdTransactionId` / `splitDebtsCreated` — если confirm упал после создания транзакции, ретрай НЕ дублирует (переиспользует id, только повторяет confirm). Сброс при смене item и после успешного confirm.
   - **Split:** `createDebtsForSplit` после транзакции; при неудаче — `rollbackTransaction`.
@@ -338,7 +338,7 @@ FSD. Стек: Vue 3, TanStack Vue Query, Tailwind v4 (семантически�
 ## 8. Известные ограничения и edge-cases
 
 - **Долг во флоу подтверждения** помечает импорт `dismissed`, не `confirmed` (DebtPanel не отдаёт transactionId). Транзакция-долг не линкуется к импорту.
-- **Зарплата (`balance_change`)** содержит только новый баланс. Сумма = дельта от последнего известного баланса карты. **Если предыдущего баланса нет — `amount=null`**, пользователь вводит вручную (есть подсказка в UI).
+- **«Счет по карте изменен»** — зачисление на сумму из строки `💸`; остатка по карте банк в нём не присылает, поэтому `balanceAfter=null`. Направление в тексте не указано — во всех наблюдавшихся сообщениях это зачисление, но списание таким же форматом попало бы в инбокс доходом (тип правится в форме подтверждения). До 14.08.2026 это сообщение читалось как «новый баланс» и сумма считалась дельтой от предыдущего остатка — данные выходили мусорными (тип `balance_change` удалён; две записи в проде остались `dismissed`).
 - **Дата не распарсилась** → `occurred_at=null` → во флоу подставляется `now()`.
 - **Баннер не появляется мгновенно** если приложение всё время открыто на Истории — обновится в пределах 30с (поллинг) или сразу при возврате фокуса/pull-to-refresh.
 - **Дебаунс ответа бота 3с** — это только про сообщение бота, не про запись в БД.

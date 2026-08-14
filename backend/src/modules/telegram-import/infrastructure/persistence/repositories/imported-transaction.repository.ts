@@ -80,8 +80,7 @@ export class ImportedTransactionRepository implements IImportedTransactionReposi
       ...toDomain(orm),
       suggestedAccountId: (rows.raw[i] as { suggested_account_id: string | null })
         .suggested_account_id,
-      // здесь проверяется тип ИМПОРТА (не транзакции, как в SQL-фильтре ниже):
-      // balance_change не маппится на тип транзакции до ввода суммы → без подсказки
+      // здесь проверяется тип ИМПОРТА (не транзакции, как в SQL-фильтре ниже)
       suggestedCategoryId:
         orm.merchant && (orm.type === 'expense' || orm.type === 'income')
           ? (categorySuggestions.get(suggestionKey(orm.merchant, orm.type)) ?? null)
@@ -138,20 +137,6 @@ export class ImportedTransactionRepository implements IImportedTransactionReposi
 
   async markDismissed(id: string): Promise<void> {
     await this.repo.update(id, { status: 'dismissed' });
-  }
-
-  async findLatestBalance(userId: string, cardMask: string, before: Date): Promise<number | null> {
-    const row = await this.repo
-      .createQueryBuilder('it')
-      .where('it.userId = :userId', { userId })
-      .andWhere('it.cardMask = :cardMask', { cardMask })
-      .andWhere('it.balanceAfter IS NOT NULL')
-      .andWhere('it.occurredAt < :before', { before })
-      .orderBy('it.occurredAt', 'DESC')
-      .getOne();
-    return row?.balanceAfter !== null && row?.balanceAfter !== undefined
-      ? Number(row.balanceAfter)
-      : null;
   }
 
   async findLatestPendingExpenseByCard(

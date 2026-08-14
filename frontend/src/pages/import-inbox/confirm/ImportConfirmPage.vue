@@ -345,18 +345,8 @@ watch(
 
     const absAmount = Math.abs(current.amount ?? 0);
 
-    if (current.type === 'income') {
-      setType('income');
-      updateField('amount', absAmount);
-    } else if (current.type === 'balance_change') {
-      // Signed delta: negative → money left the card (expense), otherwise income.
-      // Null amount stays 0 so the user types it in manually.
-      setType(current.amount !== null && current.amount < 0 ? 'expense' : 'income');
-      updateField('amount', absAmount);
-    } else {
-      setType('expense');
-      updateField('amount', absAmount);
-    }
+    setType(current.type === 'income' ? 'income' : 'expense');
+    updateField('amount', absAmount);
 
     updateField('currency', current.currency);
     // occurred_at may be null when the backend couldn't parse a date → default to now.
@@ -397,14 +387,12 @@ watch(
 );
 
 // --- Context card presentation ----------------------------------------------
-const isBalanceChange = computed(() => item.value?.type === 'balance_change');
-const needsManualAmount = computed(() => isBalanceChange.value && item.value?.amount === null);
+/** Банк прислал операцию без распознанной суммы — её вводит пользователь. */
+const needsManualAmount = computed(() => item.value?.amount === null);
 const relativeDate = computed(() =>
   item.value?.occurred_at ? formatRelativeDate(new Date(item.value.occurred_at)) : '',
 );
-const provenanceTitle = computed(
-  () => item.value?.merchant || (isBalanceChange.value ? 'Изменение баланса' : 'Операция по карте'),
-);
+const provenanceTitle = computed(() => item.value?.merchant || 'Операция по карте');
 
 // --- Navigation between pending imports --------------------------------------
 // The next import follows the user's chosen review order (same as the inbox list).
@@ -695,19 +683,13 @@ function toScanReceipt() {
             </button>
           </div>
 
-          <!-- Balance-change explainer -->
+          <!-- Amount the bank didn't spell out -->
           <div
-            v-if="isBalanceChange"
+            v-if="needsManualAmount"
             class="mt-2.5 flex items-start gap-2 rounded-xl bg-info-light px-3 py-2"
           >
             <UIcon name="info" size="xs" class="text-info mt-0.5 shrink-0" />
-            <p class="text-xs text-info leading-snug">
-              Баланс карты изменился.
-              <template v-if="needsManualAmount">
-                Сумма не распознана — укажите её вручную.
-              </template>
-              <template v-else>Проверьте тип и сумму операции перед сохранением.</template>
-            </p>
+            <p class="text-xs text-info leading-snug">Сумма не распознана — укажите её вручную.</p>
           </div>
         </section>
 

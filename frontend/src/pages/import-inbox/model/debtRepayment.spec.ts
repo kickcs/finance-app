@@ -108,15 +108,8 @@ describe('eligibleRepaymentGroupsForImport', () => {
     expect(eligibleRepaymentGroupsForImport(debts, incomeImport)).toEqual([]);
   });
 
-  it('balance_change и нулевая/отсутствующая сумма → пусто', () => {
+  it('нулевая/отсутствующая сумма → пусто', () => {
     const debts = [makeDebt({})];
-    expect(
-      eligibleRepaymentGroupsForImport(debts, {
-        type: 'balance_change',
-        amount: -100_000,
-        currency: 'UZS',
-      }),
-    ).toEqual([]);
     expect(
       eligibleRepaymentGroupsForImport(debts, { type: 'income', amount: null, currency: 'UZS' }),
     ).toEqual([]);

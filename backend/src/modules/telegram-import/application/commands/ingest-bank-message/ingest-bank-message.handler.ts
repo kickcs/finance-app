@@ -86,21 +86,11 @@ export class IngestBankMessageHandler implements ICommandHandler<IngestBankMessa
       return 'unparsed';
     }
 
-    let amount = parsed.amount;
-    if (parsed.type === 'balance_change' && parsed.balanceAfter !== null) {
-      const prev = await this.importedRepo.findLatestBalance(
-        link.userId,
-        parsed.cardMask,
-        parsed.occurredAt,
-      );
-      amount = prev === null ? null : Math.round((parsed.balanceAfter - prev) * 100) / 100;
-    }
-
     const inserted = await this.importedRepo.insertIfNew({
       userId: link.userId,
       rawText: command.text,
       type: parsed.type,
-      amount,
+      amount: parsed.amount,
       currency: parsed.currency,
       merchant: parsed.merchant,
       cardMask: parsed.cardMask,
