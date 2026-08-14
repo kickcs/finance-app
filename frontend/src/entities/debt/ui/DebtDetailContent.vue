@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { UButton, UIcon, UCard, UToggle } from '@/shared/ui';
+import { UButton, UIcon, UCard } from '@/shared/ui';
 import { formatDate } from '@/shared/lib/format/date';
 import { isPastDate } from '@/shared/lib/date';
 import { useHaptics } from '@/shared/lib/haptics';
@@ -16,28 +16,14 @@ const props = defineProps<{
   transactionsLoading: boolean;
 }>();
 
-// Редактирование живёт в шапке хоста (страница или панель) — сюда оно не приходит
-const emit = defineEmits<{
-  payment: [];
-  delete: [];
-  'toggle-private': [value: boolean];
-}>();
+// Всё, кроме платежа, живёт в шапке хоста (страница или панель) и её шторке действий
+const emit = defineEmits<{ payment: [] }>();
 
 const { trigger } = useHaptics();
 
 function handlePayment() {
   trigger('selection');
   emit('payment');
-}
-
-function handleDelete() {
-  trigger('selection');
-  emit('delete');
-}
-
-function handleTogglePrivate(value: boolean) {
-  trigger('selection');
-  emit('toggle-private', value);
 }
 
 const linkedAccount = computed(() => {
@@ -125,33 +111,5 @@ const hasMeta = computed(() => !!props.debt.next_payment_date || !!linkedAccount
       :transactions="transactions"
       :is-loading="transactionsLoading"
     />
-
-    <!-- У закрытого долга нет меню «···» в шапке, а скрытую сумму всё равно надо уметь
-         вернуть обратно — переключатель и удаление живут одной карточкой прямо здесь -->
-    <UCard v-if="debt.is_closed" variant="bordered" class="p-1">
-      <div class="flex items-center justify-between gap-4 px-3 py-2.5">
-        <span class="flex items-center gap-2.5">
-          <UIcon
-            name="visibility_off"
-            size="sm"
-            class="text-text-tertiary-light dark:text-text-tertiary-dark"
-          />
-          <span class="text-body-sm text-text-primary-light dark:text-text-primary-dark">
-            Скрыть сумму
-          </span>
-        </span>
-        <UToggle :model-value="debt.is_private" @update:model-value="handleTogglePrivate" />
-      </div>
-
-      <button
-        type="button"
-        data-testid="delete-debt-btn"
-        class="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-body-sm text-danger transition-colors hover:bg-surface-light dark:hover:bg-surface-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger"
-        @click="handleDelete"
-      >
-        <UIcon name="delete" size="sm" />
-        Удалить долг
-      </button>
-    </UCard>
   </div>
 </template>

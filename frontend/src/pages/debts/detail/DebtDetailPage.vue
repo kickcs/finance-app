@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { onClickOutside, onKeyStroke } from '@vueuse/core';
 import { useRouter, useRoute } from 'vue-router';
 import { ROUTE_NAMES } from '@/app/router/routeNames';
-import { USpinner, NotFoundState, UButton, UIcon, UToggle, useToast } from '@/shared/ui';
+import { USpinner, NotFoundState, UButton, UIcon, useToast } from '@/shared/ui';
 import { AppHeader } from '@/widgets/header';
 import {
   useDebts,
   DebtDetailContent,
+  DebtActionsSheet,
   useDebtTransactions,
   getDebtDisplayName,
   type Debt,
@@ -79,7 +79,6 @@ async function handleDeleteDebt() {
 const showEditDrawer = ref(false);
 function handleEdit() {
   trigger('selection');
-  isMoreMenuOpen.value = false;
   showEditDrawer.value = true;
 }
 
@@ -97,17 +96,12 @@ function goBack() {
   navigateBack();
 }
 
-// «Ещё»-меню шапки: «Редактировать» — своя кнопка, здесь — скрыть сумму и удаление
-const isMoreMenuOpen = ref(false);
-// Меню висит поверх контента, поэтому закрывается как оверлей, а не только повторным тапом
-const moreMenuRef = ref<HTMLElement | null>(null);
-onClickOutside(moreMenuRef, () => (isMoreMenuOpen.value = false));
-onKeyStroke('Escape', () => (isMoreMenuOpen.value = false));
+// «Ещё» — шторка действий: «Редактировать» стоит своей кнопкой рядом
+const isActionsOpen = ref(false);
 
-function handleDeleteFromMenu() {
+function openActions() {
   trigger('selection');
-  isMoreMenuOpen.value = false;
-  showDeleteModal.value = true;
+  isActionsOpen.value = true;
 }
 </script>
 
@@ -116,64 +110,30 @@ function handleDeleteFromMenu() {
     class="h-full flex flex-col overflow-hidden bg-background-light dark:bg-background-dark relative"
   >
     <!-- Header -->
-    <div ref="moreMenuRef" class="relative">
-      <AppHeader :title="headerTitle" show-back blur @back="goBack">
-        <template v-if="debt && !debt.is_closed" #actions>
-          <UButton
-            variant="ghost"
-            size="sm"
-            class="!p-2"
-            aria-label="Редактировать"
-            @click="handleEdit"
-          >
-            <UIcon name="edit" size="sm" />
-          </UButton>
-          <UButton
-            variant="ghost"
-            size="sm"
-            class="!p-2"
-            aria-label="Ещё"
-            aria-controls="debt-detail-more-menu"
-            :aria-expanded="isMoreMenuOpen"
-            data-testid="debt-more-btn"
-            @click="(trigger('selection'), (isMoreMenuOpen = !isMoreMenuOpen))"
-          >
-            <UIcon name="more_horiz" size="sm" />
-          </UButton>
-        </template>
-      </AppHeader>
-
-      <!-- Выпадает поверх контента, а не внутри потока — иначе открытие меню двигало бы всю страницу -->
-      <div
-        v-if="isMoreMenuOpen && debt && !debt.is_closed"
-        id="debt-detail-more-menu"
-        class="absolute inset-x-5 top-full z-20 mt-2 rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark shadow-lg p-1"
-      >
-        <div class="flex items-center justify-between gap-4 px-3 py-2.5">
-          <span class="flex items-center gap-2.5">
-            <UIcon
-              name="visibility_off"
-              size="sm"
-              class="text-text-tertiary-light dark:text-text-tertiary-dark"
-            />
-            <span class="text-body-sm text-text-primary-light dark:text-text-primary-dark">
-              Скрыть сумму
-            </span>
-          </span>
-          <UToggle :model-value="debt.is_private" @update:model-value="handleTogglePrivate" />
-        </div>
-
-        <button
-          type="button"
-          data-testid="delete-debt-btn"
-          class="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-body-sm text-danger transition-colors hover:bg-surface-light dark:hover:bg-surface-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger"
-          @click="handleDeleteFromMenu"
+    <AppHeader :title="headerTitle" show-back blur @back="goBack">
+      <template v-if="debt" #actions>
+        <UButton
+          v-if="!debt.is_closed"
+          variant="ghost"
+          size="sm"
+          class="!p-2"
+          aria-label="Редактировать"
+          @click="handleEdit"
         >
-          <UIcon name="delete" size="sm" />
-          Удалить долг
-        </button>
-      </div>
-    </div>
+          <UIcon name="edit" size="sm" />
+        </UButton>
+        <UButton
+          variant="ghost"
+          size="sm"
+          class="!p-2"
+          aria-label="Ещё"
+          data-testid="debt-more-btn"
+          @click="openActions"
+        >
+          <UIcon name="more_horiz" size="sm" />
+        </UButton>
+      </template>
+    </AppHeader>
 
     <!-- Content -->
     <main class="flex-1 overflow-y-auto">
@@ -198,11 +158,18 @@ function handleDeleteFromMenu() {
           :accounts="accounts"
           :transactions-loading="transactionsLoading"
           @payment="openPayment"
-          @delete="showDeleteModal = true"
-          @toggle-private="handleTogglePrivate"
         />
       </div>
     </main>
+
+    <!-- Actions Sheet -->
+    <DebtActionsSheet
+      v-if="debt"
+      v-model="isActionsOpen"
+      :debt="debt"
+      @delete="showDeleteModal = true"
+      @toggle-private="handleTogglePrivate"
+    />
 
     <!-- Delete Debt Modal -->
     <DeleteDebtModal

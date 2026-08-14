@@ -11,6 +11,7 @@ export { default as PersonDebtRow } from './ui/PersonDebtRow.vue';
 export { default as DebtHero } from './ui/DebtHero.vue';
 export { default as DebtProgressMeter } from './ui/DebtProgressMeter.vue';
 export { default as DebtPaymentFields } from './ui/DebtPaymentFields.vue';
+export { default as DebtActionsSheet } from './ui/DebtActionsSheet.vue';
 
 // Model/Types
 export * from './model/types';

@@ -53,6 +53,18 @@ async function renderPage(debtId: string) {
   return currentWrapper;
 }
 
+/** Содержимое шторки действий телепортируется в body — внутри wrapper его нет */
+function findInBody(selector: string): HTMLElement | null {
+  return document.body.querySelector(selector);
+}
+
+async function clickInBody(selector: string) {
+  const el = findInBody(selector);
+  if (!el) throw new Error(`Не найдено в body: ${selector}`);
+  el.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  await flushPromises();
+}
+
 // ===========================================================================
 describe('DebtDetailPage', () => {
   beforeEach(() => {
@@ -177,13 +189,13 @@ describe('DebtDetailPage', () => {
     it('shows delete button inside the "more" menu', async () => {
       const wrapper = await renderPage(mockGivenDebtResponse.id);
 
-      // Удаление и скрытие суммы живут в меню «···», а не на первом экране
-      expect(wrapper.find('[data-testid="delete-debt-btn"]').exists()).toBe(false);
+      // Удаление и скрытие суммы живут в шторке «···», а не на первом экране
+      expect(findInBody('[data-testid="delete-debt-btn"]')).toBeNull();
 
       await wrapper.find('[data-testid="debt-more-btn"]').trigger('click');
       await flushPromises();
 
-      expect(wrapper.find('[data-testid="delete-debt-btn"]').exists()).toBe(true);
+      expect(findInBody('[data-testid="delete-debt-btn"]')).not.toBeNull();
     });
   });
 
@@ -250,13 +262,18 @@ describe('DebtDetailPage', () => {
       expect(wrapper.find('[data-testid="payment-btn"]').exists()).toBe(false);
     });
 
-    it('shows "Удалить долг" button at bottom', async () => {
+    it('keeps "Удалить долг" in the actions sheet for a closed debt too', async () => {
       const wrapper = await renderPage(mockClosedDebtResponse.id);
-      // У закрытого долга нечего платить — удаление вынесено прямо на страницу,
-      // а не спрятано в меню «···»
-      expect(wrapper.find('[data-testid="debt-more-btn"]').exists()).toBe(false);
-      expect(wrapper.find('[data-testid="delete-debt-btn"]').exists()).toBe(true);
-      expect(wrapper.text()).toContain('Удалить долг');
+      // Закрытый долг платить нечем, но скрыть сумму и удалить его можно —
+      // из той же шторки «···», а не отдельной карточкой внизу страницы
+      expect(findInBody('[data-testid="delete-debt-btn"]')).toBeNull();
+
+      await wrapper.find('[data-testid="debt-more-btn"]').trigger('click');
+      await flushPromises();
+
+      const deleteBtn = findInBody('[data-testid="delete-debt-btn"]');
+      expect(deleteBtn).not.toBeNull();
+      expect(deleteBtn?.textContent).toContain('Удалить долг');
     });
 
     it('hides the meter when the debt was simply paid in full', async () => {
@@ -412,11 +429,8 @@ describe('DebtDetailPage', () => {
       await wrapper.find('[data-testid="debt-more-btn"]').trigger('click');
       await flushPromises();
 
-      const deleteBtn = wrapper.find('[data-testid="delete-debt-btn"]');
-      expect(deleteBtn.exists()).toBe(true);
-
-      await deleteBtn.trigger('click');
-      await flushPromises();
+      expect(findInBody('[data-testid="delete-debt-btn"]')).not.toBeNull();
+      await clickInBody('[data-testid="delete-debt-btn"]');
 
       const modal = wrapper.findComponent({ name: 'DeleteDebtModal' });
       expect(modal.exists()).toBe(true);
@@ -444,12 +458,10 @@ describe('DebtDetailPage', () => {
       await flushPromises();
       await flushPromises();
 
-      // Open the "···" menu, then the delete modal from it
+      // Open the "···" sheet, then the delete modal from it
       await currentWrapper.find('[data-testid="debt-more-btn"]').trigger('click');
       await flushPromises();
-      const deleteBtn = currentWrapper.find('[data-testid="delete-debt-btn"]');
-      await deleteBtn.trigger('click');
-      await flushPromises();
+      await clickInBody('[data-testid="delete-debt-btn"]');
 
       // Confirm deletion via modal emit
       const modal = currentWrapper.findComponent({ name: 'DeleteDebtModal' });
@@ -468,13 +480,15 @@ describe('DebtDetailPage', () => {
       );
       const wrapper = await renderPage(mockClosedDebtResponse.id);
 
-      // У закрытого долга удаление стоит прямо на странице, без меню «···»
-      const deleteBtn = wrapper.find('[data-testid="delete-debt-btn"]');
-      expect(deleteBtn.exists()).toBe(true);
-      expect(deleteBtn.text()).toContain('Удалить долг');
-
-      await deleteBtn.trigger('click');
+      // Удаление закрытого долга — из той же шторки «···»
+      await wrapper.find('[data-testid="debt-more-btn"]').trigger('click');
       await flushPromises();
+
+      const deleteBtn = findInBody('[data-testid="delete-debt-btn"]');
+      expect(deleteBtn).not.toBeNull();
+      expect(deleteBtn?.textContent).toContain('Удалить долг');
+
+      await clickInBody('[data-testid="delete-debt-btn"]');
 
       const modal = wrapper.findComponent({ name: 'DeleteDebtModal' });
       expect(modal.exists()).toBe(true);

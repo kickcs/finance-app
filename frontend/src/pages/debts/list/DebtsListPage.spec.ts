@@ -26,6 +26,10 @@ const mockAlexeiTakenDebtResponse = {
   transactionId: 'tx-debt-alexei-taken',
 };
 
+// PaymentDrawer и DebtActionsSheet рендерят настоящую vaul-шторку; её закрытие
+// роняет jsdom — в проекте для этого есть стаб
+vi.mock('vaul-vue', async () => (await import('@/test/stubs/vaul')).vaulStub);
+
 // Mock app router — vi.hoisted runs before vi.mock hoisting
 const { navigateBackMock } = vi.hoisted(() => ({
   navigateBackMock: vi.fn(),
@@ -575,7 +579,10 @@ describe('DebtsListPage', () => {
       const moreBtn = panel.find('[data-testid="debt-panel-more-btn"]');
       expect(moreBtn.exists()).toBe(true);
       await moreBtn.trigger('click');
-      expect(panel.find('[data-testid="delete-debt-btn"]').exists()).toBe(true);
+      await flushPromises();
+
+      // Шторка действий телепортируется в body — внутри панели её нет
+      expect(document.body.querySelector('[data-testid="delete-debt-btn"]')).not.toBeNull();
     });
 
     it('opens PaymentDrawer for the selected debt, closes it optimistically, and clears the selection once the debt closes', async () => {
