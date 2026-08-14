@@ -31,8 +31,6 @@ export interface IImportedTransactionRepository {
   countPending(userId: string): Promise<number>;
   markConfirmed(id: string, transactionId: string): Promise<void>;
   markDismissed(id: string): Promise<void>;
-  /** Последний известный баланс карты до occurredAt (для дельты balance_change) */
-  findLatestBalance(userId: string, cardMask: string, before: Date): Promise<number | null>;
   /** Последний pending-расход по карте до occurredAt (для уменьшения при отмене операции) */
   findLatestPendingExpenseByCard(
     userId: string,

@@ -1,12 +1,12 @@
 import type { User } from '@/shared/api/composables/useAuth';
 
-export type ImportedTransactionType = 'expense' | 'income' | 'balance_change';
+export type ImportedTransactionType = 'expense' | 'income';
 export type ImportedTransactionStatus = 'pending' | 'confirmed' | 'dismissed';
 
 export interface ImportedTransaction {
   id: string;
   type: ImportedTransactionType;
-  amount: number | null; // для balance_change — подписанная дельта или null
+  amount: number | null; // null, если банк прислал сообщение без распознаваемой суммы
   currency: string;
   merchant: string | null;
   card_mask: string;

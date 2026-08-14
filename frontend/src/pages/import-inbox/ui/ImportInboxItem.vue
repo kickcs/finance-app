@@ -13,18 +13,10 @@ defineEmits<{
   click: [];
 }>();
 
-const isBalanceChange = computed(() => props.item.type === 'balance_change');
 const isIncome = computed(() => props.item.type === 'income');
 
 /** Directional icon + accent color, mirroring the transaction list's visual language. */
 const visual = computed(() => {
-  if (isBalanceChange.value) {
-    return {
-      icon: 'swap_vert',
-      iconClass: 'text-primary',
-      bgClass: 'bg-primary-light',
-    };
-  }
   if (isIncome.value) {
     return {
       icon: 'arrow_downward',
@@ -42,11 +34,10 @@ const visual = computed(() => {
 /** Primary label: merchant when present, otherwise a sensible fallback per type. */
 const title = computed(() => {
   if (props.item.merchant) return props.item.merchant;
-  if (isBalanceChange.value) return 'Изменение баланса';
   return isIncome.value ? 'Пополнение' : 'Списание';
 });
 
-/** Signed, colored amount string. Null amount on balance_change → «Сумма неизвестна». */
+/** Signed, colored amount string. Null amount → «Сумма неизвестна». */
 const amount = computed(() => {
   const { amount: value, currency } = props.item;
 
@@ -54,13 +45,6 @@ const amount = computed(() => {
     return {
       text: 'Сумма неизвестна',
       class: 'text-text-tertiary-light dark:text-text-tertiary-dark',
-    };
-  }
-
-  if (isBalanceChange.value) {
-    return {
-      text: formatCurrency(value, currency, { showSign: true }),
-      class: value >= 0 ? 'text-success' : 'text-danger',
     };
   }
 
@@ -91,17 +75,9 @@ const relativeDate = computed(() =>
 
     <!-- Details -->
     <div class="flex-1 min-w-0">
-      <div class="flex items-center gap-2">
-        <p class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark truncate">
-          {{ title }}
-        </p>
-        <span
-          v-if="isBalanceChange && item.merchant"
-          class="shrink-0 text-caption-xs font-medium px-1.5 py-0.5 rounded-md bg-primary-light text-primary"
-        >
-          Изменение баланса
-        </span>
-      </div>
+      <p class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark truncate">
+        {{ title }}
+      </p>
       <div
         class="mt-0.5 flex items-center gap-1.5 text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
       >

@@ -86,13 +86,13 @@ describe('HumoMessageParser', () => {
     expect(r.balanceAfter).toBe(887801.08);
   });
 
-  it('парсит смену баланса: amount=null, balanceAfter=новый баланс, HUMO-CARD и 🕘 не ломают', () => {
+  it('«Счет по карте изменен» = зачисление: 💸 — сумма, HUMO-CARD и 🕘 не ломают', () => {
     const r = parser.parse(BALANCE_CHANGE)!;
-    expect(r.type).toBe('balance_change');
-    expect(r.amount).toBeNull();
+    expect(r.type).toBe('income');
+    expect(r.amount).toBe(13244800);
     expect(r.merchant).toBeNull();
     expect(r.cardMask).toBe('*1951');
-    expect(r.balanceAfter).toBe(13244800);
+    expect(r.balanceAfter).toBeNull();
     expect(r.occurredAt.toISOString()).toBe('2026-06-12T10:39:00.000Z'); // 15:39 +05:00
   });
 

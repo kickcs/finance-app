@@ -4,10 +4,13 @@ import {
   type ParsedMessageType,
 } from './parsed-bank-message';
 
+/** Зачисление не от операции по карте (зарплата, перевод со счёта): сумма в строке 💸. */
+const BALANCE_CREDIT_MARKER = 'Счет по карте изменен';
+
 const TYPE_MARKERS: Array<{ marker: string; type: ParsedMessageType }> = [
   { marker: 'Оплата', type: 'expense' },
   { marker: 'Пополнение', type: 'income' },
-  { marker: 'Счет по карте изменен', type: 'balance_change' },
+  { marker: BALANCE_CREDIT_MARKER, type: 'income' },
   // Возврат/отмена операции: приходит с ➕, но это НЕ доход — сумма возвращается
   // на карту. Маркер имеет приоритет над фолбэком по знаку (иначе распознался бы
   // как income). Ingest уменьшает на эту сумму связанный расход по той же карте.
@@ -78,29 +81,24 @@ export class HumoMessageParser implements BankMessageParser {
     const merchantLine = lines.find((l) => l.startsWith('📍'));
     const merchant = merchantLine ? merchantLine.replace('📍', '').trim() : null;
 
-    let amount: number | null = null;
-    let balanceAfter: number | null = null;
-    let currency = 'UZS';
+    // В «Счет по карте изменен» сумма стоит в строке 💸 и знака не имеет; в остальных
+    // сообщениях — в строке ➖/➕. Отбор по AMOUNT_RE, т.к. 💸 бывает и заголовком.
+    const isBalanceCredit = lines[0].includes(BALANCE_CREDIT_MARKER);
+    const amountLine = lines.find((l) =>
+      isBalanceCredit
+        ? l.startsWith('💸') && AMOUNT_RE.test(l)
+        : l.startsWith('➖') || l.startsWith('➕'),
+    );
+    const am = amountLine?.match(AMOUNT_RE);
+    if (!am) return null;
+    const amount = parseUzAmount(am[1]);
+    if (amount === null) return null;
+    const currency = am[2] || 'UZS';
 
-    if (type === 'balance_change') {
-      // 💸 здесь — новый баланс карты, суммы операции нет
-      const balanceLine = lines.find((l) => l.startsWith('💸'));
-      const m = balanceLine?.match(AMOUNT_RE);
-      if (!m) return null;
-      balanceAfter = parseUzAmount(m[1]);
-      currency = m[2] || 'UZS';
-    } else {
-      const amountLine = lines.find((l) => l.startsWith('➖') || l.startsWith('➕'));
-      const am = amountLine?.match(AMOUNT_RE);
-      if (!am) return null;
-      amount = parseUzAmount(am[1]);
-      if (amount === null) return null;
-      currency = am[2] || 'UZS';
-
-      const balanceLine = lines.find((l) => l.startsWith('💰'));
-      const bm = balanceLine?.match(AMOUNT_RE);
-      balanceAfter = bm ? parseUzAmount(bm[1]) : null;
-    }
+    // Остаток по карте банк присылает только для операций по ней.
+    const balanceLine = lines.find((l) => l.startsWith('💰'));
+    const bm = balanceLine?.match(AMOUNT_RE);
+    const balanceAfter = bm ? parseUzAmount(bm[1]) : null;
 
     return {
       type,
