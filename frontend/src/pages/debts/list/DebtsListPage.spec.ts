@@ -12,6 +12,8 @@ import {
   mockSecondGivenDebtResponse,
   buildPaginatedDebtsResponse,
 } from '@/test/mocks/handlers/debts';
+import { mockTransactionResponse } from '@/test/mocks/handlers/transactions';
+import { setIsDesktopForTests } from '@/shared/lib/platform';
 
 /** Алексей taken debt — used when we need 2 groups for the same person */
 const mockAlexeiTakenDebtResponse = {
@@ -540,6 +542,104 @@ describe('DebtsListPage', () => {
       expect(router.currentRoute.value.query.person).toBeUndefined();
       // Clear filter btn should be gone
       expect(wrapper.find('[data-testid="clear-filter-btn"]').exists()).toBe(false);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Single Payment Flow (desktop detail panel — PaymentDrawer)
+  // -----------------------------------------------------------------------
+  describe('single payment flow (desktop detail panel)', () => {
+    afterEach(() => {
+      setIsDesktopForTests(null);
+    });
+
+    it('keeps the person name and the secondary actions in the detail panel', async () => {
+      // У панели нет `AppHeader`, куда детальная страница унесла имя и «···», —
+      // без собственной строки-шапки редактирование и удаление были бы недоступны
+      setIsDesktopForTests(true);
+      server.use(
+        http.get('*/api/debts/paginated', () =>
+          HttpResponse.json(buildPaginatedDebtsResponse([mockGivenDebtResponse])),
+        ),
+        // Панель читает долг не из пагинированного списка, а из `useDebts`
+        http.get('*/api/debts', () => HttpResponse.json([mockGivenDebtResponse])),
+      );
+      const { wrapper } = await renderPage();
+
+      await wrapper.find('[data-testid="person-debt-row"]').trigger('click');
+      await flushPromises();
+
+      const panel = wrapper.findComponent({ name: 'DebtDetailPanel' });
+      expect(panel.text()).toContain(mockGivenDebtResponse.personName);
+
+      const moreBtn = panel.find('[data-testid="debt-panel-more-btn"]');
+      expect(moreBtn.exists()).toBe(true);
+      await moreBtn.trigger('click');
+      expect(panel.find('[data-testid="delete-debt-btn"]').exists()).toBe(true);
+    });
+
+    it('opens PaymentDrawer for the selected debt, closes it optimistically, and clears the selection once the debt closes', async () => {
+      setIsDesktopForTests(true);
+      server.use(
+        http.get('*/api/debts/paginated', () =>
+          HttpResponse.json(buildPaginatedDebtsResponse([mockGivenDebtResponse])),
+        ),
+      );
+      const { wrapper } = await renderPage();
+
+      // Select the debt via its person row — desktop mode sets selectedDebtId directly.
+      const personRow = wrapper.find('[data-testid="person-debt-row"]');
+      expect(personRow.exists()).toBe(true);
+      await personRow.trigger('click');
+      await flushPromises();
+
+      const drawer = wrapper.findComponent({ name: 'PaymentDrawer' });
+      expect(drawer.exists()).toBe(true);
+      expect(drawer.props('debt')?.id).toBe(mockGivenDebtResponse.id);
+      expect(drawer.props('modelValue')).toBe(false);
+
+      // "Внести платёж" in the detail panel opens the drawer.
+      const panel = wrapper.findComponent({ name: 'DebtDetailPanel' });
+      expect(panel.exists()).toBe(true);
+      panel.vm.$emit('payment');
+      await nextTick();
+      expect(wrapper.findComponent({ name: 'PaymentDrawer' }).props('modelValue')).toBe(true);
+
+      let resolveTx!: () => void;
+      server.use(
+        http.post('*/api/transactions', async () => {
+          await new Promise<void>((resolve) => {
+            resolveTx = resolve;
+          });
+          return HttpResponse.json({ ...mockTransactionResponse, id: 'tx-single-pay' });
+        }),
+        http.patch('*/api/debts/:id', async ({ request, params }) => {
+          const body = (await request.json()) as Record<string, unknown>;
+          return HttpResponse.json({ ...mockGivenDebtResponse, id: params.id, ...body });
+        }),
+      );
+
+      // Pay the full remaining amount — closes the debt.
+      wrapper.findComponent({ name: 'PaymentDrawer' }).vm.$emit('confirm', {
+        amount: mockGivenDebtResponse.remainingAmount,
+        accountId: 'acc-1',
+      });
+      await nextTick();
+
+      // Drawer hides immediately, before the transaction POST resolves.
+      expect(wrapper.findComponent({ name: 'PaymentDrawer' }).props('modelValue')).toBe(false);
+
+      // Let the flow reach the (blocked) transaction POST — snapshotting the
+      // cache and re-fetching the debt happen first, each a separate microtask hop.
+      await flushPromises();
+      await flushPromises();
+      resolveTx();
+      await flushPromises();
+      await flushPromises();
+      await flushPromises();
+
+      // The payment closed the debt — desktop selection (and the panel) is cleared.
+      expect(wrapper.findComponent({ name: 'DebtDetailPanel' }).exists()).toBe(false);
     });
   });
 });

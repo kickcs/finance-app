@@ -1,14 +1,13 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import { UModal, UButton, UIcon, UInput, UProgressBar } from '@/shared/ui';
-import { CategoryChips, INCOME_CATEGORIES, EXPENSE_CATEGORIES } from '@/entities/category';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { pluralize } from '@/shared/lib/format/pluralize';
 import { AccountSelector, type AccountWithBalances } from '@/entities/account';
 import { DEFAULT_CURRENCY } from '@/entities/currency';
 import type { Debt } from '@/shared/api/database.types';
 import { sortDebtsByDateAsc } from '../model/sortDebts';
-import { useDebtPaymentForm, ForgivenessToggle } from '@/entities/debt';
+import { useDebtPaymentForm, DebtPaymentFields } from '@/entities/debt';
 import { useHaptics } from '@/shared/lib/haptics';
 
 const props = defineProps<{
@@ -45,18 +44,11 @@ const totalDebt = computed(() => {
   return props.debts.reduce((sum, d) => sum + d.remaining_amount, 0);
 });
 
-const {
-  paymentAmount,
-  forgiveRemainder,
-  excessCategoryId,
-  isOverpayment,
-  excess,
-  remainder,
-  reset,
-} = useDebtPaymentForm({
-  remainingAmount: totalDebt,
-  debtType: debtDirection,
-});
+const { paymentAmount, forgiveRemainder, excessCategoryId, isOverpayment, reset } =
+  useDebtPaymentForm({
+    remainingAmount: totalDebt,
+    debtType: debtDirection,
+  });
 
 watch(
   () => props.modelValue,
@@ -85,10 +77,6 @@ const totalsByCurrency = computed(() => {
 
 const debtCurrency = computed(() => props.debts[0]?.currency || DEFAULT_CURRENCY);
 const isMixedCurrency = computed(() => totalsByCurrency.value.length > 1);
-
-const excessCategories = computed(() => {
-  return debtDirection.value === 'given' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
-});
 
 // FIFO distribution preview
 const debtDistribution = computed(() => {
@@ -320,65 +308,31 @@ function setForgiveOnly() {
           </UButton>
         </div>
 
-        <!-- Overpayment Info & Category Selector -->
-        <div v-if="isOverpayment" class="space-y-3">
-          <div class="p-3 rounded-xl bg-primary/5 border border-primary/20">
-            <div class="flex items-start gap-2">
-              <UIcon name="info" size="sm" class="text-primary mt-0.5 shrink-0" />
-              <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
-                Сумма превышает долг на
-                <span class="font-semibold text-primary">
-                  {{ formatCurrency(excess, debtCurrency) }}
-                </span>
-                . Разница будет записана как
-                {{ debtDirection === 'given' ? 'отдельный доход' : 'отдельный расход' }}.
-              </p>
-            </div>
-          </div>
-          <CategoryChips
-            :categories="excessCategories"
-            :selected-id="excessCategoryId"
-            label="Категория переплаты"
-            @select="excessCategoryId = $event"
-          />
-        </div>
-
-        <!-- Forgiveness Toggle (only when amount < total and not overpaying) -->
-        <div v-if="!isOverpayment && paymentAmount < totalDebt" class="space-y-2">
-          <ForgivenessToggle
-            v-model="forgiveRemainder"
-            :remainder-amount="remainder"
-            :currency="debtCurrency"
-          />
-        </div>
-
-        <!-- Forgiveness-only info (when amount = 0 and forgiving) -->
-        <div
-          v-if="paymentAmount === 0 && forgiveRemainder"
-          class="p-3 rounded-xl bg-warning/5 border border-warning/20"
+        <DebtPaymentFields
+          v-model:amount="paymentAmount"
+          v-model:forgive-remainder="forgiveRemainder"
+          v-model:excess-category-id="excessCategoryId"
+          :remaining="totalDebt"
+          :currency="debtCurrency"
+          :direction="debtDirection"
         >
-          <div class="flex items-start gap-2">
-            <UIcon name="volunteer_activism" size="sm" class="text-warning mt-0.5 shrink-0" />
-            <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
-              Все долги
-              <template v-if="isMixedCurrency">
-                (
-                <span v-for="(item, i) in totalsByCurrency" :key="item.currency">
-                  <span class="font-semibold">
-                    {{ formatCurrency(item.amount, item.currency) }}
-                  </span>
-                  <template v-if="i < totalsByCurrency.length - 1">+</template>
-                </span>
-                )
-              </template>
-              <template v-else>
-                на сумму
-                <span class="font-semibold">{{ formatCurrency(totalDebt, debtCurrency) }}</span>
-              </template>
-              будут прощены и списаны как подарок.
-            </p>
-          </div>
-        </div>
+          <template #forgive-note>
+            Все долги
+            <template v-if="isMixedCurrency">
+              (
+              <span v-for="(item, i) in totalsByCurrency" :key="item.currency">
+                <span class="font-semibold">{{ formatCurrency(item.amount, item.currency) }}</span>
+                <template v-if="i < totalsByCurrency.length - 1">+</template>
+              </span>
+              )
+            </template>
+            <template v-else>
+              на сумму
+              <span class="font-semibold">{{ formatCurrency(totalDebt, debtCurrency) }}</span>
+            </template>
+            будут прощены и списаны как подарок.
+          </template>
+        </DebtPaymentFields>
 
         <!-- Distribution Preview (when amount differs from total) -->
         <div

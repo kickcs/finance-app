@@ -74,6 +74,10 @@ export function usePartialPayment() {
       );
     }
 
+    // Once true, a POST already reached the server — a catch-block rollback must
+    // reconcile from the server instead of quietly pretending nothing happened.
+    let transactionCreated = false;
+
     try {
       const txDate = options?.transactionDate ?? new Date().toISOString();
 
@@ -83,6 +87,9 @@ export function usePartialPayment() {
       if (!options?.skipInvalidation) {
         const freshDebt = await debtsApi.getById(debt.id);
         if (freshDebt?.is_closed) {
+          // The optimistic patch above assumed this payment would apply — it didn't
+          // (someone else closed the debt first), so undo it before refetching.
+          if (snapshot) restoreDebtCaches(queryClient, snapshot);
           await invalidateDebtRelated(queryClient, userId);
           if (!options?.skipToast) toast({ title: 'Долг уже закрыт', variant: 'default' });
           return true;
@@ -146,6 +153,7 @@ export function usePartialPayment() {
         });
 
         closeTransactionId = transaction.id;
+        transactionCreated = true;
         options?.onTransactionCreated?.(transaction.id);
       }
 
@@ -163,6 +171,7 @@ export function usePartialPayment() {
           date: txDate,
           is_debt_related: false,
         });
+        transactionCreated = true;
       }
 
       // Remaining amount after payment (also used as forgiven amount when forgiving)
@@ -205,6 +214,7 @@ export function usePartialPayment() {
             account_id: selectedAccountId,
           });
         }
+        transactionCreated = true;
 
         if (!closeTransactionId) {
           closeTransactionId = tx.id;
@@ -233,6 +243,12 @@ export function usePartialPayment() {
       return true;
     } catch (e) {
       if (snapshot) restoreDebtCaches(queryClient, snapshot);
+      // A transaction may already have landed on the server before this failed —
+      // the cache rollback above would otherwise make it look like nothing happened.
+      // Refetch the real state instead of pretending the payment never started.
+      if (snapshot && transactionCreated) {
+        await invalidateDebtRelated(queryClient, userId).catch(() => {});
+      }
       console.error('Failed to make partial payment:', e);
       error.value = 'Не удалось внести платёж';
       if (!options?.skipToast) toast({ title: 'Не удалось внести платёж', variant: 'error' });

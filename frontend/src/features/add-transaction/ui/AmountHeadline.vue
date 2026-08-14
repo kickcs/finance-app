@@ -5,7 +5,7 @@ import { getCurrencyByCode } from '@/entities/currency';
 import { AccountPopover, type AccountWithBalances } from '@/entities/account';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { Popover, PopoverTrigger, PopoverContent } from '@/shared/ui/primitives/popover';
-import { useAmountInput } from '../model/useAmountInput';
+import { useAmountInput } from '@/shared/lib/hooks/useAmountInput';
 
 /**
  * Сумма операции — прямо на фоне страницы, без карточки.

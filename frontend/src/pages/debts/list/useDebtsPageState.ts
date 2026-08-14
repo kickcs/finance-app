@@ -3,20 +3,16 @@ import { useRouter, useRoute } from 'vue-router';
 import { ROUTE_NAMES } from '@/app/router/routeNames';
 import {
   useInfiniteDebts,
+  useDebts,
   getDebtDisplayName,
   foldGroupsIntoPeople,
-  debtsApi,
-  debtQueryKeys,
-  snapshotDebtCaches,
-  restoreDebtCaches,
-  applyDebtUpdate,
   type Debt,
   type DebtsFilters,
   type PersonDebtSummary,
 } from '@/entities/debt';
 import { useAccounts } from '@/entities/account';
 import { useCloseAllDebts, useCloseDebt } from '@/features/close-debt';
-import { usePartialPayment } from '@/features/partial-payment';
+import { useDebtPaymentFlow } from '@/features/partial-payment';
 import { useIsDesktop } from '@/shared/lib/composables/useIsDesktop';
 import { useExchangeRates } from '@/shared/api';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
@@ -24,7 +20,6 @@ import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 import { DEFAULT_CURRENCY } from '@/shared/config/currency';
 import { useToast } from '@/shared/ui';
 import { navigateBack } from '@/app/router';
-import { useQueryClient } from '@tanstack/vue-query';
 
 const STATUS_TABS = [
   { id: 'active', label: 'Активные' },
@@ -42,9 +37,9 @@ export function useDebtsPageState() {
   const { userId } = useCurrentUser();
   const { currency } = useUserCurrency();
   const { convert } = useExchangeRates(currency);
-  const queryClient = useQueryClient();
   const { toast } = useToast();
   const { accounts } = useAccounts(userId);
+  const { updateDebt } = useDebts(userId);
 
   // --- Filters ---
   const personFilter = ref<string | null>(route.query.person as string | null);
@@ -207,12 +202,17 @@ export function useDebtsPageState() {
 
   // --- Detail panel actions ---
   const showDeleteModal = ref(false);
-  const showPartialPaymentModal = ref(false);
   const { isDeleting, deleteDebt } = useCloseDebt();
-  const { isPaying, makePartialPayment } = usePartialPayment();
+  const paymentFlow = useDebtPaymentFlow({
+    userId,
+    debt: selectedDebt,
+    onClosed: () => {
+      selectedDebtId.value = null;
+    },
+  });
 
   function handleDetailPayment() {
-    showPartialPaymentModal.value = true;
+    paymentFlow.open();
   }
 
   function handleDetailEdit() {
@@ -234,40 +234,12 @@ export function useDebtsPageState() {
     }
   }
 
-  // TODO: This logic is duplicated in DebtDetailPage.vue (with different post-payment navigation).
-  // Consider extracting a shared helper, e.g. `makePartialPaymentFlow(debt, amount, accountId, userId, options)`.
-  async function handlePartialPayment(
-    amount: number,
-    accountId: string,
-    options: { forgiveRemainder?: boolean; excessCategoryId?: string } = {},
-  ) {
-    if (!selectedDebt.value || !userId.value) return;
-    const willClose = amount >= selectedDebt.value.remaining_amount || options.forgiveRemainder;
-    const success = await makePartialPayment(
-      selectedDebt.value,
-      amount,
-      accountId,
-      userId.value,
-      options,
-    );
-    if (success) {
-      showPartialPaymentModal.value = false;
-      if (willClose) {
-        selectedDebtId.value = null;
-      }
-    }
-  }
-
   async function handleDetailTogglePrivate(value: boolean) {
     if (!selectedDebt.value) return;
-    const debtId = selectedDebt.value.id;
-    const snapshot = await snapshotDebtCaches(queryClient);
-    applyDebtUpdate(queryClient, debtId, { is_private: value });
     try {
-      await debtsApi.update(debtId, { is_private: value });
-      await queryClient.invalidateQueries({ queryKey: debtQueryKeys.all });
+      await updateDebt(selectedDebt.value.id, { is_private: value });
     } catch {
-      restoreDebtCaches(queryClient, snapshot);
+      // updateDebt (useDebts) уже откатывает оптимистичный патч кэша сама — здесь только тост.
       toast({ title: 'Не удалось обновить', variant: 'error' });
     }
   }
@@ -320,9 +292,9 @@ export function useDebtsPageState() {
 
     // Detail panel modals
     showDeleteModal,
-    showPartialPaymentModal,
     isDeleting,
-    isPaying,
+    isPaymentOpen: paymentFlow.isOpen,
+    paymentDraft: paymentFlow.draft,
 
     // Functions
     goBack,
@@ -336,7 +308,7 @@ export function useDebtsPageState() {
     handleDetailEdit,
     handleDetailDelete,
     handleDeleteDebt,
-    handlePartialPayment,
+    submitPayment: paymentFlow.submit,
     handleDetailTogglePrivate,
     handleDetailClose,
     handleRefresh,

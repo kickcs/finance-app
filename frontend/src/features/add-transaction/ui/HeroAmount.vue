@@ -4,7 +4,7 @@ import { UIcon } from '@/shared/ui';
 import { getCurrencyByCode } from '@/entities/currency';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { Popover, PopoverTrigger, PopoverContent } from '@/shared/ui/primitives/popover';
-import { useAmountInput } from '../model/useAmountInput';
+import { useAmountInput } from '@/shared/lib/hooks/useAmountInput';
 
 /**
  * Сумма в ряду с другими полями: вторая сумма перевода, подтверждение импорта.

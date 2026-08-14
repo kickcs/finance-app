@@ -1,13 +1,11 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 import { UButton, UIcon, UCard, UToggle } from '@/shared/ui';
 import { formatDate } from '@/shared/lib/format/date';
 import { isPastDate } from '@/shared/lib/date';
 import { useHaptics } from '@/shared/lib/haptics';
-import { DEBT_DIRECTION_DISPLAY } from '../model/types';
 import DebtPaymentTimeline from './DebtPaymentTimeline.vue';
 import DebtHero from './DebtHero.vue';
-import DebtAmountBreakdown from './DebtAmountBreakdown.vue';
 import type { Debt, Transaction } from '@/shared/api/database.types';
 import type { AccountWithBalances } from '@/entities/account';
 
@@ -18,31 +16,22 @@ const props = defineProps<{
   transactionsLoading: boolean;
 }>();
 
+// Редактирование живёт в шапке хоста (страница или панель) — сюда оно не приходит
 const emit = defineEmits<{
   payment: [];
-  edit: [];
   delete: [];
   'toggle-private': [value: boolean];
 }>();
 
 const { trigger } = useHaptics();
 
-const isMenuOpen = ref(false);
-
 function handlePayment() {
   trigger('selection');
   emit('payment');
 }
 
-function handleEdit() {
-  trigger('selection');
-  isMenuOpen.value = false;
-  emit('edit');
-}
-
 function handleDelete() {
   trigger('selection');
-  isMenuOpen.value = false;
   emit('delete');
 }
 
@@ -62,45 +51,84 @@ const isOverdue = computed(
     !!props.debt.next_payment_date &&
     isPastDate(props.debt.next_payment_date),
 );
+
+// Мета-карточку не рисуем вовсе, если обеих ячеек нет — иначе висела бы пустая рамка
+const hasMeta = computed(() => !!props.debt.next_payment_date || !!linkedAccount.value);
 </script>
 
 <template>
   <div class="space-y-4">
     <DebtHero :debt="debt" />
 
-    <!-- Действия сразу под шапкой: главное действие не должно ждать прокрутки -->
-    <div v-if="!debt.is_closed" class="flex items-center gap-2">
-      <UButton
-        variant="primary"
-        size="lg"
-        class="flex-1"
-        data-testid="payment-btn"
-        @click="handlePayment"
-      >
-        <UIcon name="payments" size="sm" class="mr-1.5" />
-        Внести платёж
-      </UButton>
-      <UButton variant="secondary" size="lg" aria-label="Редактировать" @click="handleEdit">
-        <UIcon name="edit" size="sm" />
-      </UButton>
-      <UButton
-        variant="ghost"
-        size="lg"
-        aria-label="Ещё"
-        aria-controls="debt-more-menu"
-        :aria-expanded="isMenuOpen"
-        data-testid="debt-more-btn"
-        @click="(trigger('selection'), (isMenuOpen = !isMenuOpen))"
-      >
-        <UIcon name="more_horiz" size="sm" />
-      </UButton>
+    <!-- «Редактировать» и «Ещё» переехали в шапку страницы -->
+    <UButton
+      v-if="!debt.is_closed"
+      variant="primary"
+      size="lg"
+      full-width
+      data-testid="payment-btn"
+      @click="handlePayment"
+    >
+      <UIcon name="payments" size="sm" class="mr-1.5" />
+      Внести платёж
+    </UButton>
+
+    <div v-if="debt.description" class="px-1">
+      <p class="text-caption text-text-tertiary-light dark:text-text-tertiary-dark mb-1">
+        Комментарий
+      </p>
+      <p class="text-body-sm text-text-primary-light dark:text-text-primary-dark">
+        {{ debt.description }}
+      </p>
     </div>
 
-    <div
-      v-if="isMenuOpen && !debt.is_closed"
-      id="debt-more-menu"
-      class="rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark p-1"
-    >
+    <!-- Мета-строка: только то, что не сказано герой/тайм-лайном (валюта — у каждой суммы, тип — эйбрау в герое, дата создания — первый узел тайм-лайна) -->
+    <UCard v-if="hasMeta" variant="bordered" class="p-4">
+      <div class="grid grid-cols-2 gap-4">
+        <div v-if="debt.next_payment_date">
+          <p
+            class="text-caption-sm font-semibold uppercase tracking-wider text-text-tertiary-light dark:text-text-tertiary-dark mb-1"
+          >
+            Дата возврата
+          </p>
+          <p
+            class="text-body-sm"
+            :class="
+              isOverdue ? 'text-danger' : 'text-text-primary-light dark:text-text-primary-dark'
+            "
+          >
+            {{ formatDate(debt.next_payment_date, { format: 'short' }) }}
+          </p>
+        </div>
+
+        <div v-if="linkedAccount">
+          <p
+            class="text-caption-sm font-semibold uppercase tracking-wider text-text-tertiary-light dark:text-text-tertiary-dark mb-1"
+          >
+            Счёт
+          </p>
+          <p
+            class="flex items-center gap-2 text-body-sm text-text-primary-light dark:text-text-primary-dark"
+          >
+            <span
+              class="h-2.5 w-2.5 shrink-0 rounded-full"
+              :style="{ backgroundColor: linkedAccount.color }"
+            />
+            <span class="truncate">{{ linkedAccount.name }}</span>
+          </p>
+        </div>
+      </div>
+    </UCard>
+
+    <DebtPaymentTimeline
+      :debt="debt"
+      :transactions="transactions"
+      :is-loading="transactionsLoading"
+    />
+
+    <!-- У закрытого долга нет меню «···» в шапке, а скрытую сумму всё равно надо уметь
+         вернуть обратно — переключатель и удаление живут одной карточкой прямо здесь -->
+    <UCard v-if="debt.is_closed" variant="bordered" class="p-1">
       <div class="flex items-center justify-between gap-4 px-3 py-2.5">
         <span class="flex items-center gap-2.5">
           <UIcon
@@ -124,115 +152,6 @@ const isOverdue = computed(
         <UIcon name="delete" size="sm" />
         Удалить долг
       </button>
-    </div>
-
-    <DebtAmountBreakdown :debt="debt" />
-
-    <div
-      v-if="debt.description"
-      class="p-4 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl"
-    >
-      <p
-        class="text-caption font-medium text-text-tertiary-light dark:text-text-tertiary-dark mb-1.5"
-      >
-        Комментарий
-      </p>
-      <p class="text-body-sm text-text-primary-light dark:text-text-primary-dark">
-        {{ debt.description }}
-      </p>
-    </div>
-
-    <DebtPaymentTimeline
-      :debt="debt"
-      :transactions="transactions"
-      :is-loading="transactionsLoading"
-    />
-
-    <!-- Технические детали вторичны, поэтому внизу и тише -->
-    <UCard variant="bordered" class="p-5 space-y-3">
-      <div class="flex items-center justify-between gap-4">
-        <span class="text-caption text-text-tertiary-light dark:text-text-tertiary-dark">
-          Валюта
-        </span>
-        <span class="text-body-sm text-text-primary-light dark:text-text-primary-dark">
-          {{ debt.currency }}
-        </span>
-      </div>
-
-      <div class="flex items-center justify-between gap-4">
-        <span class="text-caption text-text-tertiary-light dark:text-text-tertiary-dark">
-          Тип долга
-        </span>
-        <span class="text-body-sm text-text-primary-light dark:text-text-primary-dark">
-          {{ DEBT_DIRECTION_DISPLAY[debt.debt_type] }}
-        </span>
-      </div>
-
-      <div v-if="linkedAccount" class="flex items-center justify-between gap-4">
-        <span class="text-caption text-text-tertiary-light dark:text-text-tertiary-dark">Счёт</span>
-        <span class="flex items-center gap-2">
-          <span
-            class="h-2.5 w-2.5 rounded-full"
-            :style="{ backgroundColor: linkedAccount.color }"
-          />
-          <span class="text-body-sm text-text-primary-light dark:text-text-primary-dark">
-            {{ linkedAccount.name }}
-          </span>
-        </span>
-      </div>
-
-      <div v-if="debt.next_payment_date" class="flex items-center justify-between gap-4">
-        <span class="text-caption text-text-tertiary-light dark:text-text-tertiary-dark">
-          Дата возврата
-        </span>
-        <span
-          class="text-body-sm"
-          :class="isOverdue ? 'text-danger' : 'text-text-primary-light dark:text-text-primary-dark'"
-        >
-          {{ formatDate(debt.next_payment_date, { format: 'short' }) }}
-        </span>
-      </div>
-
-      <div class="flex items-center justify-between gap-4">
-        <span class="text-caption text-text-tertiary-light dark:text-text-tertiary-dark">
-          Дата создания
-        </span>
-        <span class="text-body-sm text-text-primary-light dark:text-text-primary-dark">
-          {{ formatDate(debt.created_at, { format: 'short' }) }}
-        </span>
-      </div>
     </UCard>
-
-    <!-- У закрытого долга нет меню «···», а скрытую сумму всё равно надо уметь
-         вернуть обратно — поэтому переключатель дублируется прямо на странице -->
-    <div
-      v-if="debt.is_closed"
-      class="flex items-center justify-between gap-4 rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark px-4 py-3"
-    >
-      <span class="flex items-center gap-2.5">
-        <UIcon
-          name="visibility_off"
-          size="sm"
-          class="text-text-tertiary-light dark:text-text-tertiary-dark"
-        />
-        <span class="text-body-sm text-text-primary-light dark:text-text-primary-dark">
-          Скрыть сумму
-        </span>
-      </span>
-      <UToggle :model-value="debt.is_private" @update:model-value="handleTogglePrivate" />
-    </div>
-
-    <UButton
-      v-if="debt.is_closed"
-      variant="ghost"
-      size="lg"
-      full-width
-      class="text-danger"
-      data-testid="delete-debt-btn"
-      @click="handleDelete"
-    >
-      <UIcon name="delete" size="sm" class="mr-2" />
-      Удалить долг
-    </UButton>
   </div>
 </template>
