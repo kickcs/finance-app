@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.71';
+export const CURRENT_VERSION = '1.0.72';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,21 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.72',
+    date: '2026-08-14',
+    title: 'Видимая галочка прощения и шторка действий',
+    items: [
+      {
+        type: 'fix',
+        text: 'В строке «Простить остаток» не было видно галочки, пока она не отмечена — в тёмной теме её рамка совпадала с фоном. Теперь пустая галочка видна сразу',
+      },
+      {
+        type: 'improvement',
+        text: 'Меню «···» на карточке долга стало шторкой: закрывается свайпом, не перекрывает содержимое. У погашенного долга скрыть сумму и удалить теперь можно оттуда же',
+      },
+    ],
+  },
   {
     version: '1.0.71',
     date: '2026-08-14',

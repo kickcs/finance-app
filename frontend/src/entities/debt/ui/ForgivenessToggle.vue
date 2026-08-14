@@ -24,10 +24,15 @@ const emit = defineEmits<{
     "
     @click="emit('update:modelValue', !modelValue)"
   >
+    <!-- Невыбранная рамка не может быть `border-*`: в тёмной теме это ровно тот
+         же цвет, что и фон строки, а в светлой контраст 1.05:1 — пустого
+         чекбокса не было видно вовсе. Нужна и своя заливка, и заметная рамка. -->
     <div
       class="w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors shrink-0"
       :class="
-        modelValue ? 'bg-primary border-primary' : 'border-border-light dark:border-border-dark'
+        modelValue
+          ? 'bg-primary border-primary'
+          : 'bg-card-light dark:bg-card-dark border-text-tertiary-light dark:border-text-tertiary-dark'
       "
     >
       <UIcon v-if="modelValue" name="check" size="xs" class="text-white" />
