@@ -3,13 +3,17 @@ import { ref } from 'vue';
 import { useHaptics } from '@/shared/lib/haptics';
 import type { TransactionToastData } from '@/shared/lib/composables/useToast';
 
-defineProps<{
-  data: TransactionToastData;
-}>();
+/**
+ * `compact` — для флоу, где тост встаёт поверх экрана с теми же данными
+ * (подтверждение импорта, скан чека): категория и счёт там видны прямо под
+ * карточкой, поэтому вторая строка только съедает высоту.
+ */
+withDefaults(defineProps<{ data: TransactionToastData; compact?: boolean }>(), {
+  compact: false,
+});
 
 const emit = defineEmits<{
   undo: [];
-  dismiss: [];
 }>();
 
 const { trigger } = useHaptics();
@@ -24,14 +28,19 @@ function handleUndo() {
 </script>
 
 <template>
-  <div class="relative flex items-center gap-3">
+  <div class="flex min-w-0 flex-1 items-center" :class="compact ? 'gap-2.5' : 'gap-3'">
     <!-- Success badge: pop-in circle + expanding ring + drawn checkmark -->
-    <div class="relative h-9 w-9 flex-shrink-0">
+    <div class="relative flex-shrink-0" :class="compact ? 'h-7 w-7' : 'h-9 w-9'">
       <span class="success-badge-ring absolute inset-0 rounded-full bg-success/40" />
       <span
         class="success-badge-circle relative flex h-full w-full items-center justify-center rounded-full bg-success shadow-sm shadow-success/30"
       >
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" class="checkmark-icon">
+        <svg
+          viewBox="0 0 16 16"
+          fill="none"
+          class="checkmark-icon"
+          :class="compact ? 'h-3.5 w-3.5' : 'h-4 w-4'"
+        >
           <path
             d="M4 8.5L7 11.5L12 5"
             stroke="white"
@@ -45,11 +54,13 @@ function handleUndo() {
 
     <div class="min-w-0 flex-1">
       <p
-        class="truncate text-body font-semibold tabular-nums tracking-tight text-text-primary-light dark:text-text-primary-dark"
+        class="truncate font-semibold tabular-nums tracking-tight text-text-primary-light dark:text-text-primary-dark"
+        :class="compact ? 'text-body-sm' : 'text-body'"
       >
         {{ data.amount }}
       </p>
       <p
+        v-if="!compact"
         class="mt-0.5 truncate text-body-sm text-text-secondary-light dark:text-text-secondary-dark"
       >
         {{ data.categoryName }} · {{ data.accountName }}
@@ -57,9 +68,10 @@ function handleUndo() {
     </div>
 
     <button
-      class="flex-shrink-0 whitespace-nowrap rounded-xl bg-primary-light px-3 py-2 text-body-sm font-semibold text-primary transition-all hover:bg-primary/20 active:scale-95 disabled:pointer-events-none disabled:opacity-50 dark:text-primary-hover"
+      class="flex-shrink-0 whitespace-nowrap rounded-xl bg-primary-light font-semibold text-primary transition-all hover:bg-primary/20 active:scale-95 disabled:pointer-events-none disabled:opacity-50 dark:text-primary-hover"
+      :class="compact ? 'px-2.5 py-1.5 text-xs' : 'px-3 py-2 text-body-sm'"
       :disabled="isUndoing"
-      @click="handleUndo"
+      @click.stop="handleUndo"
     >
       {{ isUndoing ? '…' : 'Отменить' }}
     </button>

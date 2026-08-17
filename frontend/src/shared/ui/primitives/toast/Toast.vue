@@ -20,7 +20,9 @@ const props = withDefaults(
 const emits = defineEmits<ToastRootEmits>();
 
 const toastVariants = cva(
-  'group pointer-events-auto relative flex w-auto max-w-[min(90vw,360px)] items-center gap-2.5 overflow-hidden rounded-2xl border px-3.5 py-2.5 shadow-lg backdrop-blur-md transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--reka-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--reka-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=open]:duration-300 data-[state=closed]:duration-200 mt-1.5',
+  // Свайп вертикальный — тост уходит к своему краю экрана, поэтому и переменные
+  // Reka берём по оси Y: с горизонтальными палец тянул, а карточка стояла.
+  'group pointer-events-auto relative flex w-auto max-w-[min(90vw,360px)] items-center gap-2.5 overflow-hidden rounded-2xl border px-3.5 py-2.5 shadow-lg backdrop-blur-md transition-all data-[swipe=cancel]:translate-y-0 data-[swipe=end]:translate-y-[var(--reka-toast-swipe-end-y)] data-[swipe=move]:translate-y-[var(--reka-toast-swipe-move-y)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=open]:duration-300 data-[state=closed]:duration-200 mt-1.5',
   {
     variants: {
       variant: {
@@ -33,6 +35,8 @@ const toastVariants = cva(
         warning:
           'border-warning/30 bg-warning/15 dark:bg-warning/20 text-text-primary-light dark:text-text-primary-dark shadow-warning/5',
         undo: 'border-border-light/40 dark:border-border-dark/50 bg-card-light/85 dark:bg-card-dark/85 text-text-primary-light dark:text-text-primary-dark shadow-black/5 dark:shadow-black/20',
+        'transaction-success':
+          'w-full border-border-light/40 dark:border-border-dark/50 bg-card-light/85 dark:bg-card-dark/85 text-text-primary-light dark:text-text-primary-dark shadow-black/5 dark:shadow-black/20',
       },
     },
     defaultVariants: {

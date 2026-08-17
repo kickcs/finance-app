@@ -9,19 +9,21 @@ const props = defineProps<ToastCloseProps & { class?: HTMLAttributes['class'] }>
 </script>
 
 <template>
+  <!-- Видим всегда: на тач-устройствах hover не наступает, и крестик, спрятанный
+       под group-hover, для телефона равносилен его отсутствию. -->
   <ToastClose
+    aria-label="Закрыть"
     :class="
       cn(
-        'flex-shrink-0 rounded-full p-1 opacity-0 transition-opacity',
+        'flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full opacity-70 transition-opacity',
         'text-text-tertiary-light dark:text-text-tertiary-dark',
-        'hover:text-text-primary-light dark:hover:text-text-primary-dark',
-        'focus:opacity-100 focus:outline-none',
-        'group-hover:opacity-100',
+        'hover:opacity-100 hover:text-text-primary-light dark:hover:text-text-primary-dark',
+        'focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
         props.class,
       )
     "
     v-bind="props"
   >
-    <Cross2Icon class="h-3.5 w-3.5" />
+    <Cross2Icon class="h-4 w-4" />
   </ToastClose>
 </template>

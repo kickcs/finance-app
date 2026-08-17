@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { watch, onUnmounted } from 'vue';
-import { useToast, type ToasterToast } from '@/shared/lib/composables/useToast';
+import { useToast, type ToasterToast, type ToastVariant } from '@/shared/lib/composables/useToast';
 import { UIcon } from '@/shared/ui/icon';
 import Toast from './Toast.vue';
 import ToastClose from './ToastClose.vue';
@@ -29,19 +28,22 @@ const variantIconClasses: Record<string, string> = {
   undo: 'bg-primary-light text-primary dark:text-primary-hover',
 };
 
-const variantProgressClasses: Record<string, string> = {
+const variantProgressClasses: Record<ToastVariant, string> = {
   default: 'bg-primary',
   success: 'bg-success',
   error: 'bg-danger',
   warning: 'bg-warning',
   undo: 'bg-primary',
+  'transaction-success': 'bg-success',
 };
 
-// Calculate animation duration (fallback to default 3000ms if not specified)
-const getDuration = (duration?: number) => duration || 3000;
-
-type StandardVariant = 'default' | 'success' | 'error' | 'warning' | 'undo';
-const toStandardVariant = (v?: string): StandardVariant => (v as StandardVariant) ?? 'default';
+// Тост с действием тапом не закрываем: попадание мимо кнопки — промах, а не
+// намерение. Обновление PWA предлагается один раз за сессию, и случайный тап
+// по карточке лишил бы пользователя единственной кнопки «Обновить».
+function handleCardClick(t: ToasterToast) {
+  if (t.action) return;
+  dismiss(t.id);
+}
 
 function handleTransactionUndo(t: ToasterToast) {
   dismiss(t.id);
@@ -55,139 +57,68 @@ function handleTransactionUndo(t: ToasterToast) {
     duration: 2000,
   });
 }
-
-// Auto-dismiss transaction-success toasts (standalone divs don't use Reka UI auto-dismiss)
-const autoDismissTimers = new Map<string, ReturnType<typeof setTimeout>>();
-
-watch(toasts, (current) => {
-  for (const t of current) {
-    if (t.variant === 'transaction-success' && t.open && !autoDismissTimers.has(t.id)) {
-      const duration = t.duration || 5000;
-      autoDismissTimers.set(
-        t.id,
-        setTimeout(() => {
-          dismiss(t.id);
-          autoDismissTimers.delete(t.id);
-        }, duration),
-      );
-    }
-  }
-  // Clean up timers for removed toasts
-  for (const id of autoDismissTimers.keys()) {
-    if (!current.find((t) => t.id === id)) {
-      clearTimeout(autoDismissTimers.get(id));
-      autoDismissTimers.delete(id);
-    }
-  }
-});
-
-onUnmounted(() => {
-  for (const timer of autoDismissTimers.values()) {
-    clearTimeout(timer);
-  }
-  autoDismissTimers.clear();
-});
 </script>
 
 <template>
   <ToastViewport :position="position">
-    <template v-for="toast in toasts" :key="toast.id">
-      <!-- Transaction success: glass card on design tokens -->
-      <div
-        v-if="toast.variant === 'transaction-success' && toast.transactionData"
-        class="transaction-toast pointer-events-auto relative mt-1.5 w-full max-w-[min(90vw,360px)] overflow-hidden rounded-2xl border border-border-light/40 bg-card-light/85 p-3.5 shadow-lg shadow-black/5 backdrop-blur-md dark:border-border-dark/50 dark:bg-card-dark/85 dark:shadow-black/20"
-        :class="
-          toast.open
-            ? position === 'top'
-              ? 'transaction-toast-enter-top'
-              : 'transaction-toast-enter'
-            : position === 'top'
-              ? 'transaction-toast-leave-top'
-              : 'transaction-toast-leave'
-        "
-      >
-        <!-- Soft success wash behind the badge -->
-        <div
-          class="pointer-events-none absolute inset-0"
-          style="
-            background: radial-gradient(
-              140px circle at 2.5rem 50%,
-              color-mix(in srgb, var(--color-success) 10%, transparent),
-              transparent 70%
-            );
-          "
-        />
-        <TransactionSuccessToast
-          :data="toast.transactionData"
-          @undo="handleTransactionUndo(toast)"
-          @dismiss="dismiss(toast.id)"
-        />
-        <!-- Progress bar -->
-        <div class="absolute bottom-0 left-0 h-[2.5px] w-full bg-black/5 dark:bg-white/10">
-          <div
-            class="h-full w-full origin-left bg-success"
-            :style="{ animation: `shrink ${getDuration(toast.duration)}ms linear forwards` }"
-          />
-        </div>
-      </div>
+    <!-- Тап в любое место карточки закрывает её: крестик — подсказка, а не
+         единственная мишень. Кнопки внутри гасят всплытие сами. -->
+    <Toast
+      v-for="t in toasts"
+      :key="t.id"
+      :variant="t.variant ?? 'default'"
+      :open="t.open"
+      :duration="t.duration"
+      :position="position"
+      class="group relative overflow-hidden"
+      @click="handleCardClick(t)"
+      @update:open="(open: boolean) => !open && dismiss(t.id)"
+    >
+      <TransactionSuccessToast
+        v-if="t.variant === 'transaction-success' && t.transactionData"
+        :data="t.transactionData"
+        :compact="position === 'top'"
+        @undo="handleTransactionUndo(t)"
+      />
 
-      <!-- Standard toasts -->
-      <Toast
-        v-else
-        :variant="toStandardVariant(toast.variant)"
-        :open="toast.open"
-        :duration="toast.duration"
-        :position="position"
-        class="relative overflow-hidden group"
-        @update:open="(open: boolean) => !open && dismiss(toast.id)"
-      >
+      <template v-else>
         <!-- Icon in tinted badge -->
         <div
-          v-if="toast.variant && toast.variant !== 'default'"
+          v-if="t.variant && t.variant in variantIconClasses"
           class="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full"
-          :class="variantIconClasses[toast.variant]"
+          :class="variantIconClasses[t.variant]"
         >
-          <UIcon :name="variantIcons[toast.variant || 'default']" size="xs" filled />
+          <UIcon :name="variantIcons[t.variant]" size="xs" filled />
         </div>
 
-        <!-- Content -->
-        <div class="flex-1 min-w-0">
-          <ToastTitle v-if="toast.title" class="text-[0.8125rem] font-medium leading-tight">
-            {{ toast.title }}
+        <div class="min-w-0 flex-1">
+          <ToastTitle v-if="t.title" class="text-[0.8125rem] font-medium leading-tight">
+            {{ t.title }}
           </ToastTitle>
           <ToastDescription
-            v-if="toast.description"
+            v-if="t.description"
             class="text-[0.75rem] opacity-80 leading-tight mt-0.5"
           >
-            {{ toast.description }}
+            {{ t.description }}
           </ToastDescription>
         </div>
 
-        <!-- Action -->
-        <ToastAction
-          v-if="toast.action"
-          :alt-text="toast.action.label"
-          @click="toast.action.onClick"
-        >
-          {{ toast.action.label }}
+        <ToastAction v-if="t.action" :alt-text="t.action.label" @click.stop="t.action.onClick">
+          {{ t.action.label }}
         </ToastAction>
+      </template>
 
-        <ToastClose
-          :class="
-            toast.action ? 'opacity-60' : 'opacity-0 group-hover:opacity-100 transition-opacity'
-          "
+      <ToastClose @click.stop />
+
+      <!-- Progress bar -->
+      <div class="absolute bottom-0 left-0 h-[2px] w-full bg-black/5 dark:bg-white/10">
+        <div
+          class="h-full w-full origin-left"
+          :class="variantProgressClasses[t.variant ?? 'default']"
+          :style="{ animation: `shrink ${t.duration}ms linear forwards` }"
         />
-
-        <!-- Progress bar -->
-        <div class="absolute bottom-0 left-0 h-[2px] w-full bg-black/5 dark:bg-white/10">
-          <div
-            class="h-full w-full origin-left"
-            :class="variantProgressClasses[toast.variant || 'default']"
-            :style="{ animation: `shrink ${getDuration(toast.duration)}ms linear forwards` }"
-          />
-        </div>
-      </Toast>
-    </template>
+      </div>
+    </Toast>
   </ToastViewport>
 </template>
 
@@ -198,59 +129,6 @@ onUnmounted(() => {
   }
   to {
     transform: scaleX(0);
-  }
-}
-
-.transaction-toast-enter {
-  animation: tx-toast-in 0.35s cubic-bezier(0.21, 1.02, 0.73, 1);
-}
-
-.transaction-toast-leave {
-  animation: tx-toast-out 0.2s ease-in forwards;
-}
-
-@keyframes tx-toast-in {
-  from {
-    opacity: 0;
-    transform: translateY(100%) scale(0.92);
-  }
-}
-
-@keyframes tx-toast-out {
-  to {
-    opacity: 0;
-    transform: translateY(20%) scale(0.95);
-  }
-}
-
-.transaction-toast-enter-top {
-  animation: tx-toast-in-top 0.35s cubic-bezier(0.21, 1.02, 0.73, 1);
-}
-
-.transaction-toast-leave-top {
-  animation: tx-toast-out-top 0.2s ease-in forwards;
-}
-
-@keyframes tx-toast-in-top {
-  from {
-    opacity: 0;
-    transform: translateY(-100%) scale(0.92);
-  }
-}
-
-@keyframes tx-toast-out-top {
-  to {
-    opacity: 0;
-    transform: translateY(-20%) scale(0.95);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .transaction-toast-enter,
-  .transaction-toast-leave,
-  .transaction-toast-enter-top,
-  .transaction-toast-leave-top {
-    animation-duration: 0.01ms;
   }
 }
 </style>

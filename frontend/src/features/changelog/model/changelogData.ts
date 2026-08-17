@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.72';
+export const CURRENT_VERSION = '1.0.73';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,21 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.73',
+    date: '2026-08-17',
+    title: 'Уведомления убираются пальцем',
+    items: [
+      {
+        type: 'fix',
+        text: 'Зелёная карточка после добавления транзакции закрывала верх экрана, и убрать её было нечем: крестика на телефоне не появлялось, а единственная кнопка удаляла саму транзакцию. Теперь карточка закрывается тапом в любое место или смахиванием',
+      },
+      {
+        type: 'improvement',
+        text: 'При быстром подтверждении импорта уведомления больше не копятся стопкой — новое заменяет предыдущее. В самом импорте карточка стала ниже и не перекрывает сумму',
+      },
+    ],
+  },
   {
     version: '1.0.72',
     date: '2026-08-14',

@@ -38,6 +38,10 @@ export type ToasterToast = Toast & {
 const TOAST_LIMIT = 3;
 const TOAST_REMOVE_DELAY = 300;
 
+// Длительность материализуется здесь, чтобы полоска прогресса и таймер Reka
+// читали одно значение, а не два независимых фолбэка.
+export const TOAST_DURATION = 3000;
+
 const toasts = ref<ToasterToast[]>([]);
 
 let count = 0;
@@ -50,9 +54,18 @@ function genId() {
 function addToast(toast: Toast) {
   const id = toast.id || genId();
 
+  // Success-карточка — самый крупный тост, и подтверждают их подряд: в очереди
+  // импорта стопка из трёх закрывала пол-экрана. Новая гасит предыдущую.
+  if (toast.variant === 'transaction-success') {
+    for (const t of toasts.value) {
+      if (t.variant === 'transaction-success' && t.open) dismissToast(t.id);
+    }
+  }
+
   const newToast: ToasterToast = {
     ...toast,
     id,
+    duration: toast.duration ?? TOAST_DURATION,
     open: true,
   };
 
