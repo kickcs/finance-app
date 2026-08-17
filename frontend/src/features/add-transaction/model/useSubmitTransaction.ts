@@ -336,7 +336,6 @@ export function useSubmitTransaction() {
 
       toast({
         variant: 'transaction-success',
-        duration: 5000,
         transactionData: { amount, categoryName, accountName, onUndo },
       });
     },

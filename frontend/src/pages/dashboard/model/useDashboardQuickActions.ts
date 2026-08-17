@@ -117,7 +117,6 @@ export function useDashboardQuickActions(
 
         toast({
           variant: 'transaction-success',
-          duration: 5000,
           transactionData: {
             amount,
             categoryName,
