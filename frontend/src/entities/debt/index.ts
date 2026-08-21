@@ -20,6 +20,7 @@ export { useDebtPaymentForm } from './model/useDebtPaymentForm';
 // Lib
 export * from './lib/groupDebtsByPerson';
 export { foldGroupsIntoPeople, type PersonDebtSummary } from './lib/foldGroupsIntoPeople';
+export { findClosingRecords, debtHasClosingRecords } from './lib/findClosingRecords';
 
 // API
 export * from './api';

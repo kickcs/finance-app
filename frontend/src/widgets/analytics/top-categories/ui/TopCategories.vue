@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { UCard, EmptyState, IconBadge } from '@/shared/ui';
-import { formatMasked } from '@/shared/lib/format/currency';
+import { formatMasked, COMPACT_FORMAT } from '@/shared/lib/format/currency';
 import type { CategoryStat } from '@/features/analytics-filters';
 
 const props = defineProps<{
@@ -35,7 +35,7 @@ function getBarWidth(amount: number): string {
         <div class="flex items-center gap-3 mb-2">
           <!-- Rank -->
           <span
-            class="w-5 h-5 rounded text-xs font-semibold flex items-center justify-center"
+            class="w-5 h-5 shrink-0 rounded text-xs font-semibold flex items-center justify-center"
             :class="[
               index === 0
                 ? 'bg-primary-light text-primary'
@@ -48,19 +48,22 @@ function getBarWidth(amount: number): string {
           <!-- Category icon -->
           <IconBadge :icon="category.icon" size="sm" :color="category.color" class="shrink-0" />
 
-          <!-- Category name -->
+          <!-- Category name: ужимается первым, потому что номер и сумма
+               сокращению не подлежат -->
           <span
-            class="flex-1 text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
+            class="flex-1 min-w-0 truncate text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
           >
             {{ category.name }}
           </span>
 
           <!-- Amount and percent -->
-          <div class="text-right">
-            <p class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark">
-              {{ formatMasked(category.amount, currency, hidden ?? false) }}
+          <div class="shrink-0 text-right">
+            <p
+              class="text-sm font-semibold tabular-nums text-text-primary-light dark:text-text-primary-dark"
+            >
+              {{ formatMasked(category.amount, currency, hidden ?? false, COMPACT_FORMAT) }}
             </p>
-            <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
+            <p class="text-xs tabular-nums text-text-tertiary-light dark:text-text-tertiary-dark">
               {{ category.percent.toFixed(1) }}%
             </p>
           </div>

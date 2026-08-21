@@ -205,6 +205,18 @@ export const debtHandlers = [
     return HttpResponse.json(buildMockDebtResponse(body));
   }),
 
+  http.post('*/api/debts/:id/reopen', ({ params }) => {
+    return HttpResponse.json({
+      ...mockClosedDebtResponse,
+      id: params.id,
+      isClosed: false,
+      closedAt: null,
+      closeTransactionId: null,
+      forgivenAmount: 0,
+      remainingAmount: mockClosedDebtResponse.totalAmount,
+    });
+  }),
+
   http.patch('*/api/debts/:id', async ({ request, params }) => {
     const body = (await request.json()) as Record<string, unknown>;
     return HttpResponse.json({

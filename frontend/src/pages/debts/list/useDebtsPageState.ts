@@ -11,7 +11,7 @@ import {
   type PersonDebtSummary,
 } from '@/entities/debt';
 import { useAccounts } from '@/entities/account';
-import { useCloseAllDebts, useCloseDebt } from '@/features/close-debt';
+import { useCloseAllDebts, useCloseDebt, useReopenDebt } from '@/features/close-debt';
 import { useDebtPaymentFlow } from '@/features/partial-payment';
 import { useIsDesktop } from '@/shared/lib/composables/useIsDesktop';
 import { useExchangeRates } from '@/shared/api';
@@ -20,6 +20,7 @@ import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 import { DEFAULT_CURRENCY } from '@/shared/config/currency';
 import { useToast } from '@/shared/ui';
 import { navigateBack } from '@/app/router';
+import type { Transaction } from '@/shared/api/database.types';
 
 const STATUS_TABS = [
   { id: 'active', label: 'Активные' },
@@ -225,6 +226,23 @@ export function useDebtsPageState() {
     showDeleteModal.value = true;
   }
 
+  // Отмена закрытия. Записи закрытия приносит панель: она уже держит
+  // транзакции выбранного долга, а список — нет.
+  const showReopenModal = ref(false);
+  const reopenClosingRecords = ref<Transaction[]>([]);
+  const { isReopening, reopenDebt } = useReopenDebt();
+
+  function handleDetailReopen(closingRecords: Transaction[]) {
+    reopenClosingRecords.value = closingRecords;
+    showReopenModal.value = true;
+  }
+
+  async function handleReopenDebt() {
+    if (!selectedDebt.value || !userId.value) return;
+    const success = await reopenDebt(selectedDebt.value.id, userId.value);
+    if (success) showReopenModal.value = false;
+  }
+
   async function handleDeleteDebt() {
     if (!selectedDebt.value || !userId.value) return;
     const success = await deleteDebt(selectedDebt.value, userId.value);
@@ -293,6 +311,9 @@ export function useDebtsPageState() {
     // Detail panel modals
     showDeleteModal,
     isDeleting,
+    showReopenModal,
+    reopenClosingRecords,
+    isReopening,
     isPaymentOpen: paymentFlow.isOpen,
     paymentDraft: paymentFlow.draft,
 
@@ -308,6 +329,8 @@ export function useDebtsPageState() {
     handleDetailEdit,
     handleDetailDelete,
     handleDeleteDebt,
+    handleDetailReopen,
+    handleReopenDebt,
     submitPayment: paymentFlow.submit,
     handleDetailTogglePrivate,
     handleDetailClose,

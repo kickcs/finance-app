@@ -20,6 +20,7 @@ defineProps<{
 const emit = defineEmits<{
   'update:modelValue': [value: boolean];
   delete: [];
+  reopen: [];
   'toggle-private': [value: boolean];
 }>();
 
@@ -28,6 +29,12 @@ const { trigger } = useHaptics();
 function handleTogglePrivate(value: boolean) {
   trigger('selection');
   emit('toggle-private', value);
+}
+
+function handleReopen() {
+  trigger('selection');
+  emit('update:modelValue', false);
+  emit('reopen');
 }
 
 function handleDelete() {
@@ -60,6 +67,30 @@ function handleDelete() {
         </span>
         <UToggle :model-value="debt.is_private" @update:model-value="handleTogglePrivate" />
       </div>
+
+      <!-- Закрытие правится только отсюда: транзакцию закрытия долг держит за
+           собой, и в истории она не редактируется -->
+      <button
+        v-if="debt.is_closed"
+        type="button"
+        data-testid="reopen-debt-btn"
+        class="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors hover:bg-surface-light dark:hover:bg-surface-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        @click="handleReopen"
+      >
+        <UIcon
+          name="undo"
+          size="sm"
+          class="text-text-tertiary-light dark:text-text-tertiary-dark"
+        />
+        <span class="min-w-0">
+          <span class="block text-body-sm text-text-primary-light dark:text-text-primary-dark">
+            Отменить закрытие
+          </span>
+          <span class="block text-caption text-text-tertiary-light dark:text-text-tertiary-dark">
+            Долг снова станет активным
+          </span>
+        </span>
+      </button>
 
       <button
         type="button"

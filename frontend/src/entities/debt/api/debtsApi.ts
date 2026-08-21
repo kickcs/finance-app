@@ -174,6 +174,12 @@ export const debtsApi = {
     return transformDebt(data);
   },
 
+  /** Отменяет закрытие: снимает транзакции закрытия и возвращает долг в активные. */
+  async reopen(id: string): Promise<Debt> {
+    const data = await http.post<DebtResponse>(`/debts/${id}/reopen`);
+    return transformDebt(data);
+  },
+
   async delete(id: string): Promise<void> {
     await http.delete(`/debts/${id}`);
   },

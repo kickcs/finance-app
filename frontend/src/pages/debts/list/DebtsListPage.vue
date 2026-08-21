@@ -9,7 +9,7 @@ import {
   DebtsSummaryCard,
   PersonDebtRow,
 } from '@/entities/debt';
-import { CloseAllDebtsModal, DeleteDebtModal } from '@/features/close-debt';
+import { CloseAllDebtsModal, DeleteDebtModal, ReopenDebtModal } from '@/features/close-debt';
 import { PaymentDrawer } from '@/features/partial-payment';
 import {
   UButton,
@@ -87,6 +87,9 @@ const {
   total,
   accounts,
   showDeleteModal,
+  showReopenModal,
+  reopenClosingRecords,
+  isReopening,
   isPaymentOpen,
   paymentDraft,
   isDeleting,
@@ -101,6 +104,8 @@ const {
   handleDetailEdit,
   handleDetailDelete,
   handleDeleteDebt,
+  handleDetailReopen,
+  handleReopenDebt,
   submitPayment,
   handleDetailTogglePrivate,
   handleDetailClose,
@@ -339,6 +344,7 @@ useIntersectionObserver(
           @payment="handleDetailPayment"
           @edit="handleDetailEdit"
           @delete="handleDetailDelete"
+          @reopen="handleDetailReopen"
           @toggle-private="handleDetailTogglePrivate"
         />
       </template>
@@ -361,6 +367,14 @@ useIntersectionObserver(
       :currency="selectedDebtCurrency"
       :is-deleting="isDeleting"
       @confirm="handleDeleteDebt"
+    />
+    <ReopenDebtModal
+      v-model="showReopenModal"
+      :debt="selectedDebt"
+      :closing-records="reopenClosingRecords"
+      :accounts="accounts"
+      :is-reopening="isReopening"
+      @confirm="handleReopenDebt"
     />
     <PaymentDrawer
       v-model="isPaymentOpen"
