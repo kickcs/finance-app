@@ -11,7 +11,7 @@ import { useHaptics } from '@/shared/lib/haptics';
 import type { AccountWithBalances } from '@/entities/account';
 import { useDebtForm } from '../model/useDebtForm';
 import DebtDirectionPill from './DebtDirectionPill.vue';
-import DatePickerField from './DatePickerField.vue';
+import { DatePickerField } from '@/shared/ui/date-picker';
 import DueDateField from './DueDateField.vue';
 import SubmitBar from './SubmitBar.vue';
 

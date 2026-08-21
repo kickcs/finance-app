@@ -46,6 +46,15 @@ export function getTodayISO(): string {
   return toLocalISODate(new Date());
 }
 
+/**
+ * Превращает дату из календаря (YYYY-MM-DD) в метку времени для бэкенда.
+ * Якорь — полдень UTC: полночь бэкенд прочитал бы как предыдущие сутки в зонах
+ * западнее Гринвича. Пустая дата означает «сейчас».
+ */
+export function calendarDateToIso(date: string | null | undefined): string {
+  return date ? `${date}T12:00:00.000Z` : new Date().toISOString();
+}
+
 /** Convert ISO date string (YYYY-MM-DD) to CalendarDate. Returns undefined for null/empty. */
 export function isoToCalendarDate(dateStr: string | null | undefined): DateValue | undefined {
   if (!dateStr) return undefined;

@@ -136,6 +136,30 @@ describe('UpdateDebtHandler', () => {
     expect(result.forgivenAmount).toBe(200);
   });
 
+  it('should backdate the debt creation date', async () => {
+    const debt = createTestDebt();
+    mockRepository.findById.mockResolvedValue(debt);
+    mockRepository.save.mockImplementation((d) => Promise.resolve(d));
+
+    const backdated = new Date('2026-08-01T10:30:00.000Z');
+    const command = new UpdateDebtCommand('debt-1', 'user-1', { createdAt: backdated });
+
+    const result = await handler.execute(command);
+
+    expect(result.createdAt).toBe(backdated.toISOString());
+  });
+
+  it('should leave the creation date alone when it is not in the payload', async () => {
+    const debt = createTestDebt();
+    const before = debt.createdAt.toISOString();
+    mockRepository.findById.mockResolvedValue(debt);
+    mockRepository.save.mockImplementation((d) => Promise.resolve(d));
+
+    const result = await handler.execute(new UpdateDebtCommand('debt-1', 'user-1', { name: 'X' }));
+
+    expect(result.createdAt).toBe(before);
+  });
+
   it('should reopen a closed debt', async () => {
     const debt = createTestDebt({ isClosed: true });
     mockRepository.findById.mockResolvedValue(debt);

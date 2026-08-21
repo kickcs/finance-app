@@ -169,6 +169,7 @@ export const debtsApi = {
     if (updates.description !== undefined) payload.description = updates.description;
     if (updates.forgiven_amount !== undefined) payload.forgivenAmount = updates.forgiven_amount;
     if (updates.is_private !== undefined) payload.isPrivate = updates.is_private;
+    if (updates.created_at !== undefined) payload.createdAt = updates.created_at;
 
     const data = await http.patch<DebtResponse>(`/debts/${id}`, payload);
     return transformDebt(data);

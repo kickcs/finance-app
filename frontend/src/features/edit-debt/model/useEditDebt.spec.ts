@@ -5,6 +5,7 @@ import { renderWithProviders, mockUser } from '@/test/test-utils';
 import { server } from '@/test/mocks/server';
 import { http, HttpResponse } from 'msw';
 import { useEditDebt } from './useEditDebt';
+import { toLocalISODate } from '@/shared/lib/date';
 import type { Debt } from '@/shared/api/database.types';
 import { mockGivenDebtResponse } from '@/test/mocks/handlers/debts';
 
@@ -100,6 +101,12 @@ describe('useEditDebt', () => {
       expect(result.formData.value.total_amount).toBe(100000);
     });
 
+    it('initializes created_at as a local calendar date', () => {
+      const debt = makeDebt();
+      const { result } = mountComposable(debt);
+      expect(result.formData.value.created_at).toBe(toLocalISODate(new Date(debt.created_at)));
+    });
+
     it('handles null debt', () => {
       const { result } = mountComposable(null);
       expect(result.formData.value.person_name).toBe('');
@@ -192,6 +199,18 @@ describe('useEditDebt', () => {
     it('no warning when amount changes but no linked transaction', () => {
       const { result } = mountComposable(makeDebt({ transaction_id: null }));
       result.updateField('total_amount', 99999);
+      expect(result.warnings.value).toHaveLength(0);
+    });
+
+    it('warns that the linked transaction date moves too', () => {
+      const { result } = mountComposable(makeDebt({ transaction_id: 'tx-1' }));
+      result.updateField('created_at', '2024-11-03');
+      expect(result.warnings.value).toEqual(['Дата связанной транзакции тоже будет обновлена']);
+    });
+
+    it('no warning when the date changes but there is no linked transaction', () => {
+      const { result } = mountComposable(makeDebt({ transaction_id: null }));
+      result.updateField('created_at', '2024-11-03');
       expect(result.warnings.value).toHaveLength(0);
     });
 
@@ -387,6 +406,70 @@ describe('useEditDebt', () => {
 
       expect(success).toBe(false);
       expect(toastMock).toHaveBeenCalledWith(expect.objectContaining({ variant: 'error' }));
+    });
+
+    it('sends the picked date keeping the original time of day', async () => {
+      let patchBody: Record<string, unknown> = {};
+      server.use(
+        http.patch('*/api/debts/:id', async ({ request }) => {
+          patchBody = (await request.json()) as Record<string, unknown>;
+          return HttpResponse.json(mockGivenDebtResponse);
+        }),
+      );
+
+      const debt = makeDebt();
+      const { result } = mountComposable(debt);
+      result.updateField('created_at', '2024-11-03');
+      await result.submit();
+      await flushPromises();
+
+      const sent = new Date(patchBody.createdAt as string);
+      const original = new Date(debt.created_at);
+      expect(toLocalISODate(sent)).toBe('2024-11-03');
+      expect(sent.getHours()).toBe(original.getHours());
+      expect(sent.getMinutes()).toBe(original.getMinutes());
+    });
+
+    it('moves the linked transaction date along with the debt date', async () => {
+      let txPatchBody: Record<string, unknown> = {};
+      server.use(
+        http.patch('*/api/debts/:id', () => HttpResponse.json(mockGivenDebtResponse)),
+        http.patch('*/api/transactions/:id', async ({ request }) => {
+          txPatchBody = (await request.json()) as Record<string, unknown>;
+          return HttpResponse.json({});
+        }),
+      );
+
+      const { result } = mountComposable(makeDebt({ transaction_id: 'tx-debt-1' }));
+      result.updateField('created_at', '2024-11-03');
+      await result.submit();
+      await flushPromises();
+
+      // Полдень UTC, а не голая дата: полночь UTC отъезжает на сутки назад
+      // в зонах западнее Гринвича.
+      expect(txPatchBody).toHaveProperty('date', '2024-11-03T12:00:00.000Z');
+    });
+
+    it('patches the transaction once when amount and date change together', async () => {
+      const txPatchSpy = vi.fn();
+      let txPatchBody: Record<string, unknown> = {};
+      server.use(
+        http.patch('*/api/debts/:id', () => HttpResponse.json(mockGivenDebtResponse)),
+        http.patch('*/api/transactions/:id', async ({ request }) => {
+          txPatchSpy();
+          txPatchBody = (await request.json()) as Record<string, unknown>;
+          return HttpResponse.json({});
+        }),
+      );
+
+      const { result } = mountComposable(makeDebt({ transaction_id: 'tx-debt-1' }));
+      result.updateField('total_amount', 75000);
+      result.updateField('created_at', '2024-11-03');
+      await result.submit();
+      await flushPromises();
+
+      expect(txPatchSpy).toHaveBeenCalledTimes(1);
+      expect(txPatchBody).toMatchObject({ amount: 75000, date: '2024-11-03T12:00:00.000Z' });
     });
 
     it('sends description as null when cleared', async () => {

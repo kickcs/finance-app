@@ -96,6 +96,7 @@ export class DebtsController {
               ? new Date(dto.nextPaymentDate)
               : null
             : undefined,
+        createdAt: dto.createdAt ? new Date(dto.createdAt) : undefined,
       }),
     );
   }

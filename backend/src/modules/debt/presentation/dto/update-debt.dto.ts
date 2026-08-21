@@ -89,4 +89,8 @@ export class UpdateDebtDto {
   @IsOptional()
   @IsBoolean()
   isPrivate?: boolean;
+
+  @IsOptional()
+  @IsDateString()
+  createdAt?: string;
 }

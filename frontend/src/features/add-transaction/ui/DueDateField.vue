@@ -2,7 +2,7 @@
 import { ref, computed, watch } from 'vue';
 import { useDocumentVisibility } from '@vueuse/core';
 import { toLocalISODate, getTodayISO } from '@/shared/lib/date';
-import DatePickerField from './DatePickerField.vue';
+import { DatePickerField } from '@/shared/ui/date-picker';
 
 /**
  * Срок возврата долга.
