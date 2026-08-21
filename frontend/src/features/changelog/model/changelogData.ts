@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.76';
+export const CURRENT_VERSION = '1.0.77';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,17 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.77',
+    date: '2026-08-21',
+    title: 'В долге правится почти всё',
+    items: [
+      {
+        type: 'improvement',
+        text: 'В «Редактировать долг» добавились срок возврата, счёт и направление «дал / взял». Смена счёта переносит операцию долга на новый счёт и пересчитывает балансы обоих, а смена направления разворачивает саму операцию: расход становится доходом и наоборот. Направление можно менять, пока по долгу ничего не вернули — после первого платежа оно фиксируется',
+      },
+    ],
+  },
   {
     version: '1.0.76',
     date: '2026-08-21',

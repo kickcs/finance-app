@@ -10,7 +10,8 @@ import {
 } from 'vaul-vue';
 import { UInput, UButton, UIcon, ToggleRow } from '@/shared/ui';
 import { DatePickerField } from '@/shared/ui/date-picker';
-import type { Debt } from '@/entities/debt';
+import { DueDateField, DebtDirectionPill, type Debt } from '@/entities/debt';
+import { AccountSelector, useAccounts } from '@/entities/account';
 import { getCurrencySymbol } from '@/shared/lib/format/currency';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useIsDesktop } from '@/shared/lib/composables/useIsDesktop';
@@ -29,8 +30,18 @@ const emit = defineEmits<{
 
 const isDesktop = useIsDesktop();
 const { userId } = useCurrentUser();
-const { formData, isValid, isDirty, isSubmitting, warnings, updateField, submit, reset } =
-  useEditDebt(() => props.debt, userId);
+const { accounts } = useAccounts(userId);
+const {
+  formData,
+  isValid,
+  isDirty,
+  isSubmitting,
+  warnings,
+  canChangeDirection,
+  updateField,
+  submit,
+  reset,
+} = useEditDebt(() => props.debt, userId);
 
 // Refs for keyboard handling
 const drawerContentRef = ref<InstanceType<typeof DrawerContent> | null>(null);
@@ -123,6 +134,27 @@ async function handleSubmit() {
           class="flex-1 overflow-y-auto px-5 pb-5 space-y-5 overscroll-contain"
           data-vaul-no-drag
         >
+          <!-- Direction -->
+          <div class="flex flex-col gap-1.5 w-full">
+            <span
+              class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark ml-0.5"
+            >
+              Направление
+            </span>
+            <DebtDirectionPill
+              v-if="canChangeDirection"
+              :model-value="formData.debt_type"
+              @update:model-value="updateField('debt_type', $event)"
+            />
+            <p
+              v-else
+              class="rounded-xl bg-surface-light px-3 py-2.5 text-sm text-text-secondary-light dark:bg-surface-dark dark:text-text-secondary-dark"
+            >
+              {{ formData.debt_type === 'given' ? 'Дал в долг' : 'Взял в долг' }} — сменить нельзя,
+              по долгу уже есть платежи
+            </p>
+          </div>
+
           <!-- Person Name -->
           <UInput
             :model-value="formData.person_name"
@@ -156,6 +188,21 @@ async function handleSubmit() {
               @update:model-value="handleDateChange"
             />
           </div>
+
+          <!-- Account -->
+          <AccountSelector
+            v-if="accounts.length"
+            label="Счёт"
+            :accounts="accounts"
+            :selected-id="formData.account_id"
+            @select="updateField('account_id', $event)"
+          />
+
+          <!-- Due Date -->
+          <DueDateField
+            :model-value="formData.next_payment_date"
+            @update:model-value="updateField('next_payment_date', $event)"
+          />
 
           <!-- Description -->
           <UInput

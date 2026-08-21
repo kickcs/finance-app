@@ -6,6 +6,7 @@ import { server } from '@/test/mocks/server';
 import { http, HttpResponse } from 'msw';
 import { useEditDebt } from './useEditDebt';
 import { toLocalISODate } from '@/shared/lib/date';
+import { CATEGORY_IDS } from '@/entities/category';
 import type { Debt } from '@/shared/api/database.types';
 import { mockGivenDebtResponse } from '@/test/mocks/handlers/debts';
 
@@ -218,6 +219,45 @@ describe('useEditDebt', () => {
       const { result } = mountComposable(makeDebt({ transaction_id: 'tx-1' }));
       result.updateField('person_name', 'Другой');
       expect(result.warnings.value).toHaveLength(0);
+    });
+  });
+
+  // ── Direction guard ───────────────────────────────────────────────────
+
+  describe('direction', () => {
+    it('allows flipping while nothing has been repaid', () => {
+      const { result } = mountComposable(
+        makeDebt({ total_amount: 50000, remaining_amount: 50000 }),
+      );
+      expect(result.canChangeDirection.value).toBe(true);
+    });
+
+    it('locks the flip once a payment landed', () => {
+      const { result } = mountComposable(
+        makeDebt({ total_amount: 50000, remaining_amount: 30000 }),
+      );
+      expect(result.canChangeDirection.value).toBe(false);
+    });
+
+    it('ignores a flip attempted on a partly repaid debt', async () => {
+      let patchBody: Record<string, unknown> = {};
+      server.use(
+        http.patch('*/api/debts/:id', async ({ request }) => {
+          patchBody = (await request.json()) as Record<string, unknown>;
+          return HttpResponse.json(mockGivenDebtResponse);
+        }),
+        http.patch('*/api/transactions/:id', () => HttpResponse.json({})),
+      );
+
+      const { result } = mountComposable(
+        makeDebt({ debt_type: 'given', total_amount: 50000, remaining_amount: 30000 }),
+      );
+      result.updateField('debt_type', 'taken');
+      result.updateField('description', 'Чтобы форма стала грязной');
+      await result.submit();
+      await flushPromises();
+
+      expect(patchBody).not.toHaveProperty('debtType');
     });
   });
 
@@ -470,6 +510,162 @@ describe('useEditDebt', () => {
 
       expect(txPatchSpy).toHaveBeenCalledTimes(1);
       expect(txPatchBody).toMatchObject({ amount: 75000, date: '2024-11-03T12:00:00.000Z' });
+    });
+
+    it('flips the debt, its name and its transaction together', async () => {
+      let patchBody: Record<string, unknown> = {};
+      let txPatchBody: Record<string, unknown> = {};
+      server.use(
+        http.patch('*/api/debts/:id', async ({ request }) => {
+          patchBody = (await request.json()) as Record<string, unknown>;
+          return HttpResponse.json(mockGivenDebtResponse);
+        }),
+        http.patch('*/api/transactions/:id', async ({ request }) => {
+          txPatchBody = (await request.json()) as Record<string, unknown>;
+          return HttpResponse.json({});
+        }),
+      );
+
+      const { result } = mountComposable(
+        makeDebt({
+          debt_type: 'given',
+          person_name: 'Алексей',
+          total_amount: 50000,
+          remaining_amount: 50000,
+          transaction_id: 'tx-debt-1',
+        }),
+      );
+      result.updateField('debt_type', 'taken');
+      await result.submit();
+      await flushPromises();
+
+      expect(patchBody).toHaveProperty('debtType', 'taken');
+      expect(patchBody).toHaveProperty('name', 'Долг для Алексей');
+      expect(txPatchBody).toHaveProperty('type', 'income');
+      expect(txPatchBody).toHaveProperty('categoryId', CATEGORY_IDS.DEBT_TAKEN);
+    });
+
+    it('moves the linked transaction to the newly picked account', async () => {
+      let patchBody: Record<string, unknown> = {};
+      let txPatchBody: Record<string, unknown> = {};
+      server.use(
+        http.patch('*/api/debts/:id', async ({ request }) => {
+          patchBody = (await request.json()) as Record<string, unknown>;
+          return HttpResponse.json(mockGivenDebtResponse);
+        }),
+        http.patch('*/api/transactions/:id', async ({ request }) => {
+          txPatchBody = (await request.json()) as Record<string, unknown>;
+          return HttpResponse.json({});
+        }),
+      );
+
+      const { result } = mountComposable(makeDebt({ account_id: 'acc-1' }));
+      result.updateField('account_id', 'acc-2');
+      await result.submit();
+      await flushPromises();
+
+      expect(patchBody).toHaveProperty('accountId', 'acc-2');
+      expect(txPatchBody).toHaveProperty('accountId', 'acc-2');
+    });
+
+    it('sends the due date and leaves the transaction alone', async () => {
+      let patchBody: Record<string, unknown> = {};
+      const txPatchSpy = vi.fn();
+      server.use(
+        http.patch('*/api/debts/:id', async ({ request }) => {
+          patchBody = (await request.json()) as Record<string, unknown>;
+          return HttpResponse.json(mockGivenDebtResponse);
+        }),
+        http.patch('*/api/transactions/:id', () => {
+          txPatchSpy();
+          return HttpResponse.json({});
+        }),
+      );
+
+      const { result } = mountComposable(makeDebt({ next_payment_date: null }));
+      result.updateField('next_payment_date', '2026-09-01');
+      await result.submit();
+      await flushPromises();
+
+      expect(patchBody).toHaveProperty('nextPaymentDate', '2026-09-01');
+      expect(txPatchSpy).not.toHaveBeenCalled();
+    });
+
+    it('clears the due date when it is dropped', async () => {
+      let patchBody: Record<string, unknown> = {};
+      server.use(
+        http.patch('*/api/debts/:id', async ({ request }) => {
+          patchBody = (await request.json()) as Record<string, unknown>;
+          return HttpResponse.json(mockGivenDebtResponse);
+        }),
+      );
+
+      const { result } = mountComposable(makeDebt({ next_payment_date: '2026-09-01' }));
+      result.updateField('next_payment_date', null);
+      await result.submit();
+      await flushPromises();
+
+      expect(patchBody).toHaveProperty('nextPaymentDate', null);
+    });
+
+    it('patches the transaction before the debt', async () => {
+      const order: string[] = [];
+      server.use(
+        http.patch('*/api/debts/:id', () => {
+          order.push('debt');
+          return HttpResponse.json(mockGivenDebtResponse);
+        }),
+        http.patch('*/api/transactions/:id', () => {
+          order.push('transaction');
+          return HttpResponse.json({});
+        }),
+      );
+
+      const { result } = mountComposable(makeDebt({ transaction_id: 'tx-debt-1' }));
+      result.updateField('total_amount', 75000);
+      await result.submit();
+      await flushPromises();
+
+      expect(order).toEqual(['transaction', 'debt']);
+    });
+
+    it('leaves the debt untouched when the transaction patch fails', async () => {
+      const debtPatchSpy = vi.fn();
+      server.use(
+        http.patch('*/api/transactions/:id', () => HttpResponse.json({}, { status: 500 })),
+        http.patch('*/api/debts/:id', () => {
+          debtPatchSpy();
+          return HttpResponse.json(mockGivenDebtResponse);
+        }),
+      );
+
+      const { result } = mountComposable(makeDebt({ transaction_id: 'tx-debt-1' }));
+      result.updateField('total_amount', 75000);
+      const success = await result.submit();
+      await flushPromises();
+
+      expect(success).toBe(false);
+      expect(debtPatchSpy).not.toHaveBeenCalled();
+      expect(toastMock).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'Не удалось обновить долг' }),
+      );
+    });
+
+    it('says the operation already moved when only the debt patch fails', async () => {
+      server.use(
+        http.patch('*/api/transactions/:id', () => HttpResponse.json({})),
+        http.patch('*/api/debts/:id', () => HttpResponse.json({}, { status: 500 })),
+      );
+
+      const { result } = mountComposable(makeDebt({ transaction_id: 'tx-debt-1' }));
+      result.updateField('total_amount', 75000);
+      const success = await result.submit();
+      await flushPromises();
+
+      expect(success).toBe(false);
+      expect(toastMock).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'Долг не обновлён, но операция уже изменена' }),
+      );
     });
 
     it('sends description as null when cleared', async () => {

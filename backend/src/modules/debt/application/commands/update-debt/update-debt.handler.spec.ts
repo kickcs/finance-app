@@ -136,6 +136,47 @@ describe('UpdateDebtHandler', () => {
     expect(result.forgivenAmount).toBe(200);
   });
 
+  it('should flip the direction of an untouched debt', async () => {
+    const debt = createTestDebt();
+    mockRepository.findById.mockResolvedValue(debt);
+    mockRepository.save.mockImplementation((d) => Promise.resolve(d));
+
+    const command = new UpdateDebtCommand('debt-1', 'user-1', { debtType: 'taken' });
+
+    const result = await handler.execute(command);
+
+    expect(result.debtType).toBe('taken');
+  });
+
+  it('should refuse to flip the direction once a payment landed', async () => {
+    const debt = createTestDebt();
+    debt.makePayment(400);
+    debt.clearDomainEvents();
+    mockRepository.findById.mockResolvedValue(debt);
+
+    const command = new UpdateDebtCommand('debt-1', 'user-1', { debtType: 'taken' });
+
+    await expect(handler.execute(command)).rejects.toThrow(ConflictException);
+    expect(mockRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('should allow re-sending the same direction on a partly repaid debt', async () => {
+    const debt = createTestDebt();
+    debt.makePayment(400);
+    debt.clearDomainEvents();
+    mockRepository.findById.mockResolvedValue(debt);
+    mockRepository.save.mockImplementation((d) => Promise.resolve(d));
+
+    const command = new UpdateDebtCommand('debt-1', 'user-1', {
+      debtType: 'given',
+      description: 'Правим только описание',
+    });
+
+    const result = await handler.execute(command);
+
+    expect(result.description).toBe('Правим только описание');
+  });
+
   it('should backdate the debt creation date', async () => {
     const debt = createTestDebt();
     mockRepository.findById.mockResolvedValue(debt);

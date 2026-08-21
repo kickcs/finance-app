@@ -18,7 +18,12 @@ vi.mock('@/entities/person', () => ({
   },
   usePeople: () => ({ people: { value: [] }, createPerson: vi.fn() }),
 }));
-vi.mock('@/entities/debt', () => ({ useDebts: () => ({ debts: { value: [] } }) }));
+// Мокаем частично: панель тянет из entities не только useDebts, но и готовые
+// контролы (DueDateField, DebtDirectionPill) — их подменять незачем.
+vi.mock('@/entities/debt', async (importOriginal) => ({
+  ...((await importOriginal()) as Record<string, unknown>),
+  useDebts: () => ({ debts: { value: [] } }),
+}));
 
 const accounts = [
   {
