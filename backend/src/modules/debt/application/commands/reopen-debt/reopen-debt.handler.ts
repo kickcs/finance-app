@@ -1,11 +1,24 @@
 import { CommandHandler, ICommandHandler, CommandBus } from '@nestjs/cqrs';
 import { Inject, NotFoundException, ForbiddenException, ConflictException } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { DataSource, EntityManager } from 'typeorm';
 import { ReopenDebtCommand } from './reopen-debt.command';
+import { Debt } from '../../../domain/aggregates/debt';
 import { IDebtRepository, DEBT_REPOSITORY } from '../../../domain/repositories';
 import { DebtResponseMapper, type DebtResponseDto } from '../../mappers/debt-response.mapper';
 import { DeleteTransactionCommand } from '../../../../accounting/application/commands/delete-transaction/delete-transaction.command';
 import { DEBT_CATEGORY_IDS } from '../../../../accounting/domain/constants/default-categories';
+
+interface CloseTransactionRow {
+  id: string;
+  category_id: string;
+  date: Date;
+}
+
+interface OffsetRow {
+  id: string;
+  debt_id: string;
+  amount: string;
+}
 
 /**
  * Отменяет закрытие долга: снимает записи, созданные закрытием, и возвращает
@@ -28,6 +41,14 @@ export class ReopenDebtHandler implements ICommandHandler<ReopenDebtCommand> {
     if (!debt) throw new NotFoundException('Debt not found');
     if (debt.userId !== command.userId) throw new ForbiddenException('Access denied');
     if (!debt.isClosed) throw new ConflictException('Debt is not closed');
+
+    const closeTransaction = await this.findCloseTransaction(debt);
+
+    // Зачёт закрыл долг не в одиночку: на другой стороне ровно на ту же сумму
+    // уменьшился встречный долг. Отменять его половинками нельзя.
+    if (closeTransaction?.category_id === DEBT_CATEGORY_IDS.OFFSET) {
+      return this.reverseOffset(debt, closeTransaction);
+    }
 
     // Закрытие оставляет после себя платёж, на который ссылается долг, и —
     // если остаток прощали — информационную запись прощения.
@@ -53,12 +74,18 @@ export class ReopenDebtHandler implements ICommandHandler<ReopenDebtCommand> {
       }
     }
 
-    // Остаток считаем по уцелевшим возвратам, а не вычитанием суммы закрытия:
-    // так частичные платежи, сделанные до закрытия, переживают отмену.
+    // Остаток считаем по уцелевшим возвратам и зачётам, а не вычитанием суммы
+    // закрытия: так частичные платежи, сделанные до закрытия, переживают отмену.
     const paidRows: { paid: string }[] = await this.dataSource.query(
       `SELECT COALESCE(SUM(amount), 0) AS paid FROM transactions
-       WHERE debt_id = $1 AND is_informational = false AND category_id IN ($2, $3)`,
-      [command.id, DEBT_CATEGORY_IDS.RETURN_TO_ME, DEBT_CATEGORY_IDS.RETURN_FROM_ME],
+       WHERE debt_id = $1
+         AND ((is_informational = false AND category_id IN ($2, $3)) OR category_id = $4)`,
+      [
+        command.id,
+        DEBT_CATEGORY_IDS.RETURN_TO_ME,
+        DEBT_CATEGORY_IDS.RETURN_FROM_ME,
+        DEBT_CATEGORY_IDS.OFFSET,
+      ],
     );
     const paid = Number(paidRows[0]?.paid ?? 0);
 
@@ -74,5 +101,70 @@ export class ReopenDebtHandler implements ICommandHandler<ReopenDebtCommand> {
 
     const saved = await this.debtRepository.save(reopened);
     return DebtResponseMapper.toResponse(saved);
+  }
+
+  private async findCloseTransaction(debt: Debt): Promise<CloseTransactionRow | null> {
+    if (!debt.closeTransactionId) return null;
+    const rows: CloseTransactionRow[] = await this.dataSource.query(
+      'SELECT id, category_id, date FROM transactions WHERE id = $1',
+      [debt.closeTransactionId],
+    );
+    return rows[0] ?? null;
+  }
+
+  /**
+   * Разбирает зачёт целиком. Все его записи созданы одним вызовом и потому
+   * несут одну и ту же отметку времени — по ней и по человеку с валютой они и
+   * находятся: отдельного поля-связки у транзакций нет.
+   */
+  private async reverseOffset(
+    debt: Debt,
+    closeTransaction: CloseTransactionRow,
+  ): Promise<DebtResponseDto> {
+    const rows: OffsetRow[] = await this.dataSource.query(
+      `SELECT t.id, t.debt_id, t.amount
+       FROM transactions t
+       JOIN debts d ON d.id = t.debt_id
+       WHERE t.user_id = $1
+         AND t.category_id = $2
+         AND t.date = $3
+         AND d.currency = $4
+         AND d.person_name IS NOT DISTINCT FROM $5`,
+      [
+        debt.userId,
+        DEBT_CATEGORY_IDS.OFFSET,
+        closeTransaction.date,
+        debt.currency,
+        debt.personName,
+      ],
+    );
+
+    const restoredBy = new Map<string, number>();
+    for (const row of rows) {
+      restoredBy.set(row.debt_id, (restoredBy.get(row.debt_id) ?? 0) + Number(row.amount));
+    }
+
+    await this.dataSource.transaction(async (manager: EntityManager) => {
+      await manager.query('DELETE FROM transactions WHERE id = ANY($1)', [rows.map((r) => r.id)]);
+
+      for (const [debtId, amount] of restoredBy) {
+        const affected = debtId === debt.id ? debt : await this.debtRepository.findById(debtId);
+        if (!affected) continue;
+        affected.update({
+          isClosed: false,
+          remainingAmount: Math.min(
+            affected.totalAmountValue,
+            affected.remainingAmountValue + amount,
+          ),
+          ...(affected.closeTransactionId && rows.some((r) => r.id === affected.closeTransactionId)
+            ? { closeTransactionId: null }
+            : {}),
+        });
+        await this.debtRepository.save(affected, manager);
+      }
+    });
+
+    const reloaded = (await this.debtRepository.findById(debt.id)) ?? debt;
+    return DebtResponseMapper.toResponse(reloaded);
   }
 }

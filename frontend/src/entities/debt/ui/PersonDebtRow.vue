@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { UIcon } from '@/shared/ui';
-import { formatMasked } from '@/shared/lib/format/currency';
+import { formatCurrency, formatMasked, COMPACT_FORMAT } from '@/shared/lib/format/currency';
 import { formatDate } from '@/shared/lib/format/date';
 import { getInitial } from '@/shared/lib/format/text';
 import { pluralize } from '@/shared/lib/format/pluralize';
@@ -18,6 +18,7 @@ const emit = defineEmits<{ click: [] }>();
 
 const isGiven = computed(() => props.person.direction === 'given');
 const isOverdue = computed(() => props.person.overdueDays !== null);
+const isMutual = computed(() => props.person.mutual.length > 0);
 
 /**
  * Мета-строка отвечает на «что с этим не так»: просрочка важнее срока, срок
@@ -27,6 +28,11 @@ const meta = computed(() => {
   const { overdueDays, nearestDueDate, debtCount } = props.person;
   if (overdueDays !== null) {
     return `просрочено ${overdueDays} ${pluralize(overdueDays, 'день', 'дня', 'дней')}`;
+  }
+  if (isMutual.value) {
+    return props.person.hasPrivate
+      ? 'можно зачесть'
+      : `зачёт ${formatCurrency(props.person.offsetTotal, props.currency, COMPACT_FORMAT)}`;
   }
   if (nearestDueDate) return `до ${formatDate(nearestDueDate, { format: 'short' })}`;
   if (debtCount > 1) return `${debtCount} ${pluralize(debtCount, 'долг', 'долга', 'долгов')}`;
@@ -61,14 +67,23 @@ const ariaLabel = computed(() =>
     "
     @click="emit('click')"
   >
+    <!-- Двуцветный кружок у встречных долгов: направление одним цветом
+         обозначить нельзя — человек одновременно и должник, и кредитор. -->
     <div
       :class="
         cn(
           'flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-body-sm font-semibold',
-          isGiven
-            ? 'bg-debt-given-light text-debt-given'
-            : 'bg-debt-received-light text-debt-received',
+          isGiven ? 'text-debt-given' : 'text-debt-received',
+          !isMutual && (isGiven ? 'bg-debt-given-light' : 'bg-debt-received-light'),
         )
+      "
+      :style="
+        isMutual
+          ? {
+              background:
+                'linear-gradient(135deg, var(--color-debt-given-light) 50%, var(--color-debt-received-light) 50%)',
+            }
+          : undefined
       "
     >
       {{ getInitial(person.personName) }}
@@ -89,11 +104,14 @@ const ariaLabel = computed(() =>
       <p
         :class="
           cn(
-            'text-caption',
-            isOverdue ? 'text-danger' : 'text-text-tertiary-light dark:text-text-tertiary-dark',
+            'flex items-center gap-1 text-caption',
+            isOverdue && 'text-danger',
+            !isOverdue && isMutual && 'text-primary',
+            !isOverdue && !isMutual && 'text-text-tertiary-light dark:text-text-tertiary-dark',
           )
         "
       >
+        <UIcon v-if="!isOverdue && isMutual" name="compare_arrows" size="xs" class="shrink-0" />
         {{ meta }}
       </p>
     </div>

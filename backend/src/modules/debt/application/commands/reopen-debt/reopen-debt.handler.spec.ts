@@ -7,6 +7,7 @@ import { ReopenDebtCommand } from './reopen-debt.command';
 import { DEBT_REPOSITORY } from '../../../domain/repositories';
 import { Debt } from '../../../domain/aggregates/debt';
 import { DeleteTransactionCommand } from '../../../../accounting/application/commands/delete-transaction/delete-transaction.command';
+import { DEBT_CATEGORY_IDS } from '../../../../accounting/domain/constants/default-categories';
 
 describe('ReopenDebtHandler', () => {
   let handler: ReopenDebtHandler;
@@ -15,6 +16,7 @@ describe('ReopenDebtHandler', () => {
     findByUserId: jest.fn(),
     findByTransactionId: jest.fn(),
     findByCloseTransactionId: jest.fn(),
+    findActiveByPerson: jest.fn(),
     hasOpenDebtsForTransaction: jest.fn(),
     save: jest.fn(),
     delete: jest.fn(),
@@ -22,7 +24,11 @@ describe('ReopenDebtHandler', () => {
     getPaginated: jest.fn(),
   };
   const mockCommandBus = { execute: jest.fn() };
-  const mockDataSource = { query: jest.fn() };
+  const mockManager = { query: jest.fn() };
+  const mockDataSource = {
+    query: jest.fn(),
+    transaction: jest.fn((cb: (m: typeof mockManager) => Promise<void>) => cb(mockManager)),
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -39,6 +45,8 @@ describe('ReopenDebtHandler', () => {
     // clearAllMocks оставляет неизрасходованные mockResolvedValueOnce, и кейс,
     // падающий на середине потока, отравляет очередь следующему.
     mockDataSource.query.mockReset();
+    mockManager.query.mockReset();
+    mockManager.query.mockResolvedValue(undefined);
     mockCommandBus.execute.mockReset();
     mockRepository.save.mockImplementation((debt: Debt) => Promise.resolve(debt));
     mockCommandBus.execute.mockResolvedValue(undefined);
@@ -70,9 +78,19 @@ describe('ReopenDebtHandler', () => {
     return debt;
   }
 
-  /** Первый query — поиск записей прощения, второй — сумма уцелевших возвратов. */
-  function mockQueries(forgivenRows: { id: string }[], paid: number) {
+  const CLOSE_DATE = new Date('2026-08-01T10:00:00.000Z');
+
+  /**
+   * Порядок запросов: транзакция закрытия (чтобы отличить зачёт), записи
+   * прощения, сумма уцелевших возвратов.
+   */
+  function mockQueries(
+    forgivenRows: { id: string }[],
+    paid: number,
+    closeCategoryId: string = DEBT_CATEGORY_IDS.RETURN_TO_ME,
+  ) {
     mockDataSource.query
+      .mockResolvedValueOnce([{ id: 'tx-close-1', category_id: closeCategoryId, date: CLOSE_DATE }])
       .mockResolvedValueOnce(forgivenRows)
       .mockResolvedValueOnce([{ paid: String(paid) }]);
   }
@@ -183,6 +201,61 @@ describe('ReopenDebtHandler', () => {
     const result = await handler.execute(new ReopenDebtCommand('debt-1', 'user-1'));
 
     expect(result.remainingAmount).toBe(0);
+  });
+
+  describe('отмена зачёта', () => {
+    it('снимает обе стороны зачёта и возвращает остатки', async () => {
+      const closed = createClosedDebt({ totalAmount: 300 });
+      const counter = Debt.create({
+        id: 'debt-2',
+        userId: 'user-1',
+        name: 'Counter debt',
+        totalAmount: 1000,
+        currency: 'USD',
+        debtType: 'taken',
+      });
+      counter.update({ remainingAmount: 700 });
+
+      mockRepository.findById.mockImplementation((id: string) =>
+        Promise.resolve(id === 'debt-1' ? closed : counter),
+      );
+      mockDataSource.query
+        .mockResolvedValueOnce([
+          { id: 'tx-close-1', category_id: DEBT_CATEGORY_IDS.OFFSET, date: CLOSE_DATE },
+        ])
+        .mockResolvedValueOnce([
+          { id: 'tx-close-1', debt_id: 'debt-1', amount: '300' },
+          { id: 'tx-offset-2', debt_id: 'debt-2', amount: '300' },
+        ]);
+
+      const result = await handler.execute(new ReopenDebtCommand('debt-1', 'user-1'));
+
+      expect(mockManager.query).toHaveBeenCalledWith(
+        'DELETE FROM transactions WHERE id = ANY($1)',
+        [['tx-close-1', 'tx-offset-2']],
+      );
+      expect(result.isClosed).toBe(false);
+      expect(result.remainingAmount).toBe(300);
+      expect(result.closeTransactionId).toBeNull();
+      expect(counter.remainingAmountValue).toBe(1000);
+      // Записи зачёта удаляются напрямую: DeleteTransactionCommand переоткрыл бы
+      // долг по логике прощения и обнулил остаток.
+      expect(mockCommandBus.execute).not.toHaveBeenCalled();
+    });
+
+    it('не восстанавливает больше исходной суммы долга', async () => {
+      const closed = createClosedDebt({ totalAmount: 100 });
+      mockRepository.findById.mockResolvedValue(closed);
+      mockDataSource.query
+        .mockResolvedValueOnce([
+          { id: 'tx-close-1', category_id: DEBT_CATEGORY_IDS.OFFSET, date: CLOSE_DATE },
+        ])
+        .mockResolvedValueOnce([{ id: 'tx-close-1', debt_id: 'debt-1', amount: '250' }]);
+
+      const result = await handler.execute(new ReopenDebtCommand('debt-1', 'user-1'));
+
+      expect(result.remainingAmount).toBe(100);
+    });
   });
 
   it('throws NotFoundException when the debt does not exist', async () => {

@@ -15,7 +15,7 @@ import {
 } from '../../../domain/repositories/account.repository.interface';
 import { DomainEventPublisher } from '../../../../../shared';
 import { toTransactionResponse } from '../../helpers/to-transaction-response';
-import { DEBT_CATEGORY_IDS } from '../../../domain/constants/default-categories';
+import { INFORMATIONAL_ONLY_CATEGORY_IDS } from '../../../domain/constants/default-categories';
 
 @CommandHandler(CreateTransactionCommand)
 export class CreateTransactionHandler implements ICommandHandler<CreateTransactionCommand> {
@@ -51,22 +51,24 @@ export class CreateTransactionHandler implements ICommandHandler<CreateTransacti
     const transactionId = crypto.randomUUID();
     let transaction: Transaction;
 
-    // Cross-field guard: informational flag is reserved for the debt-forgiveness
-    // marker category, and forgiveness rows must be informational. Transfers can
-    // never be informational (Transaction.createTransfer hardcodes false anyway,
-    // but reject early so the contract is enforced at the API boundary too).
+    // Cross-field guard: the informational flag is reserved for marker categories
+    // (прощение, взаимозачёт), and those categories must be informational.
+    // Transfers can never be informational (Transaction.createTransfer hardcodes
+    // false anyway, but reject early so the contract is enforced at the API
+    // boundary too).
+    const isMarkerCategory = INFORMATIONAL_ONLY_CATEGORY_IDS.includes(categoryId);
     if (isInformational) {
       if (type === 'transfer') {
         throw new BadRequestException('Transfers cannot be informational');
       }
-      if (categoryId !== DEBT_CATEGORY_IDS.FORGIVEN) {
+      if (!isMarkerCategory) {
         throw new BadRequestException(
-          `Informational transactions are only allowed for category "${DEBT_CATEGORY_IDS.FORGIVEN}"`,
+          `Informational transactions are only allowed for categories ${INFORMATIONAL_ONLY_CATEGORY_IDS.map((id) => `"${id}"`).join(', ')}`,
         );
       }
-    } else if (categoryId === DEBT_CATEGORY_IDS.FORGIVEN) {
+    } else if (isMarkerCategory) {
       throw new BadRequestException(
-        `Category "${DEBT_CATEGORY_IDS.FORGIVEN}" can only be used with isInformational=true`,
+        `Category "${categoryId}" can only be used with isInformational=true`,
       );
     }
 

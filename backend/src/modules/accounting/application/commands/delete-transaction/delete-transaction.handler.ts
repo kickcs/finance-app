@@ -13,6 +13,7 @@ import {
 import { IDebtRepository, DEBT_REPOSITORY } from '../../../../debt/domain/repositories';
 import { DomainEventPublisher } from '../../../../../shared';
 import { BalanceCalculationService, TransferDomainService } from '../../../domain/services';
+import { DEBT_CATEGORY_IDS } from '../../../domain/constants/default-categories';
 
 @CommandHandler(DeleteTransactionCommand)
 export class DeleteTransactionHandler implements ICommandHandler<DeleteTransactionCommand> {
@@ -36,6 +37,14 @@ export class DeleteTransactionHandler implements ICommandHandler<DeleteTransacti
 
     if (transaction.userId !== command.userId) {
       throw new ForbiddenException('Transaction does not belong to user');
+    }
+
+    // Зачёт всегда двусторонний: удалив одну его запись, вторую сторону оставили
+    // бы уменьшенной без причины. Разбирается он только со стороны долга.
+    if (transaction.categoryId === DEBT_CATEGORY_IDS.OFFSET) {
+      throw new BadRequestException(
+        'Запись о взаимозачёте нельзя удалить — отмените зачёт со стороны долга.',
+      );
     }
 
     // Prevent deletion if transaction is linked to open debts (as source or direct transaction)

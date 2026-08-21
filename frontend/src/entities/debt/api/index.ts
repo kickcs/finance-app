@@ -1,4 +1,4 @@
-export { debtsApi } from './debtsApi';
+export { debtsApi, type OffsetResult } from './debtsApi';
 export { useDebts } from './useDebts';
 export { debtQueryKeys, type DebtQueryKeys } from './queryKeys';
 export {
