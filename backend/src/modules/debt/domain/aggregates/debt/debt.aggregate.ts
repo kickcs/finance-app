@@ -270,6 +270,7 @@ export class Debt extends AggregateRoot<string> {
     forgivenAmount?: number;
     isPrivate?: boolean;
     feeAmount?: number;
+    createdAt?: Date;
   }): void {
     if (data.name !== undefined) this._name = data.name;
     if (data.totalAmount !== undefined)
@@ -297,6 +298,9 @@ export class Debt extends AggregateRoot<string> {
     if (data.forgivenAmount !== undefined) this._forgivenAmount = data.forgivenAmount;
     if (data.isPrivate !== undefined) this._isPrivate = data.isPrivate;
     if (data.feeAmount !== undefined) this._feeAmount = data.feeAmount;
+    // Дата долга правится: её нередко ставят задним числом, когда долг заводят
+    // не в день займа.
+    if (data.createdAt !== undefined) this._createdAt = data.createdAt;
   }
 
   setTransactionId(transactionId: string): void {

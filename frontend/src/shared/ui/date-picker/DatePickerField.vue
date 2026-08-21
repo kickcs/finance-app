@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent } from 'vue';
 import { type DateValue } from '@internationalized/date';
-import { UIcon } from '@/shared/ui';
+import { UIcon } from '@/shared/ui/icon';
 import { cn } from '@/shared/lib/utils';
 import { Popover, PopoverTrigger, PopoverContent } from '@/shared/ui/primitives/popover';
 import { isoToCalendarDate, dateValueToISO } from '@/shared/lib/date';

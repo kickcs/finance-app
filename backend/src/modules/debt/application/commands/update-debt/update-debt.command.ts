@@ -18,6 +18,7 @@ export class UpdateDebtCommand {
       description?: string | null;
       forgivenAmount?: number;
       isPrivate?: boolean;
+      createdAt?: Date;
     },
   ) {}
 }

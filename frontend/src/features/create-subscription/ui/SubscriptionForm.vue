@@ -15,7 +15,7 @@ import {
   type RecurringSubscriptionInsert,
 } from '@/entities/recurring-subscription';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
-import DatePickerField from '@/features/add-transaction/ui/DatePickerField.vue';
+import { DatePickerField } from '@/shared/ui/date-picker';
 import ServicePresetPicker from './ServicePresetPicker.vue';
 import type { ServicePreset } from '@/entities/recurring-subscription';
 

@@ -5,7 +5,7 @@ import { debtsApi } from '@/entities/debt';
 import { queryClient } from '@/shared/api/queryClient';
 import { invalidateDebtRelated } from '@/shared/api/invalidation';
 import { useToast } from '@/shared/ui';
-import { getTodayISO } from '@/shared/lib/date';
+import { getTodayISO, calendarDateToIso } from '@/shared/lib/date';
 import { CATEGORY_IDS } from '@/entities/category';
 import { DEFAULT_CURRENCY } from '@/entities/currency';
 import { buildDebtName, type DebtDirection } from '@/entities/debt';
@@ -77,9 +77,7 @@ export function useDebtForm() {
             description:
               formData.value.description ||
               `${isGiven ? 'Дал в долг' : 'Взял в долг'}: ${formData.value.person_name}`,
-            date: formData.value.debt_date
-              ? `${formData.value.debt_date}T12:00:00.000Z`
-              : new Date().toISOString(),
+            date: calendarDateToIso(formData.value.debt_date),
             is_debt_related: true,
             // Сервер сам создаст отдельный расход «Комиссия за перевод»
             // и спишет его со счёта в той же БД-транзакции.
@@ -104,6 +102,9 @@ export function useDebtForm() {
           is_private: formData.value.is_private,
           next_payment_date: formData.value.due_date,
           fee_amount: formData.value.fee,
+          // Выбранная дата — дата самого долга, а не только его транзакции:
+          // без неё долг, заведённый задним числом, штампуется сегодняшним днём.
+          created_at: calendarDateToIso(formData.value.debt_date),
         });
 
         if (transactionId) {

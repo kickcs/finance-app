@@ -171,6 +171,35 @@ describe('useDebtForm', () => {
       expect(patchTxBody?.debtId).toBe('debt-given-2');
     });
 
+    it('stamps both the debt and its transaction with the picked date', async () => {
+      let debtBody: any = null;
+      let txBody: any = null;
+
+      server.use(
+        http.post('*/api/transactions', async ({ request }) => {
+          txBody = (await request.json()) as Record<string, unknown>;
+          return HttpResponse.json({ ...mockTransactionResponse, id: 'tx-dated' });
+        }),
+        http.post('*/api/debts', async ({ request }) => {
+          debtBody = (await request.json()) as Record<string, unknown>;
+          return HttpResponse.json(buildMockDebtResponse(debtBody, { id: 'debt-dated' }));
+        }),
+        http.patch('*/api/transactions/:id', () => HttpResponse.json(mockTransactionResponse)),
+      );
+
+      const c = mountComposable();
+      fillValidForm(c, { debt_type: 'given' });
+      c.formData.value.debt_date = '2024-11-03';
+
+      await c.createDebt(USER_ID);
+      await flushPromises();
+
+      // Полдень UTC, а не полночь: западнее Гринвича полночь читается как
+      // предыдущие сутки.
+      expect(debtBody?.createdAt).toBe('2024-11-03T12:00:00.000Z');
+      expect(txBody?.date).toBe('2024-11-03T12:00:00.000Z');
+    });
+
     it('invalidates cache and shows success toast', async () => {
       server.use(
         http.post('*/api/transactions', () =>

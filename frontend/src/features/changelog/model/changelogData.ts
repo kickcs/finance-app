@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.75';
+export const CURRENT_VERSION = '1.0.76';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,17 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.76',
+    date: '2026-08-21',
+    title: 'Дату долга можно изменить',
+    items: [
+      {
+        type: 'fix',
+        text: 'Долг, заведённый задним числом, больше не приходится удалять и создавать заново. Откройте долг, нажмите «Редактировать» и выберите нужную дату — вместе с ней сдвинется и дата операции по счёту',
+      },
+    ],
+  },
   {
     version: '1.0.75',
     date: '2026-08-21',

@@ -9,6 +9,7 @@ import {
   DrawerTitle,
 } from 'vaul-vue';
 import { UInput, UButton, UIcon, ToggleRow } from '@/shared/ui';
+import { DatePickerField } from '@/shared/ui/date-picker';
 import type { Debt } from '@/entities/debt';
 import { getCurrencySymbol } from '@/shared/lib/format/currency';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
@@ -57,6 +58,16 @@ watch(
 );
 
 const currencySymbol = computed(() => (props.debt ? getCurrencySymbol(props.debt.currency) : ''));
+
+// Календарь портируется внутрь шторки: в портале на body тап по нему читается
+// как клик снаружи, и vaul закрывает шторку вместе с выбором даты.
+const datePortalTarget = computed<HTMLElement | null>(
+  () => (drawerContentRef.value?.$el as HTMLElement | undefined) ?? null,
+);
+
+function handleDateChange(value: string | null) {
+  if (value) updateField('created_at', value);
+}
 
 async function handleSubmit() {
   const success = await submit();
@@ -130,6 +141,21 @@ async function handleSubmit() {
             :suffix="currencySymbol"
             @update:model-value="updateField('total_amount', Number($event) || 0)"
           />
+
+          <!-- Debt Date -->
+          <div class="flex flex-col gap-1.5 w-full">
+            <span
+              class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark ml-0.5"
+            >
+              Дата долга
+            </span>
+            <DatePickerField
+              :model-value="formData.created_at"
+              aria-label="Дата долга"
+              :portal-to="datePortalTarget"
+              @update:model-value="handleDateChange"
+            />
+          </div>
 
           <!-- Description -->
           <UInput
