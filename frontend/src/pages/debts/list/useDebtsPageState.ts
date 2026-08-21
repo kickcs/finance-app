@@ -9,9 +9,11 @@ import {
   type Debt,
   type DebtsFilters,
   type PersonDebtSummary,
+  type MutualPosition,
 } from '@/entities/debt';
 import { useAccounts } from '@/entities/account';
 import { useCloseAllDebts, useCloseDebt, useReopenDebt } from '@/features/close-debt';
+import { useOffsetDebts } from '@/features/offset-debts';
 import { useDebtPaymentFlow } from '@/features/partial-payment';
 import { useIsDesktop } from '@/shared/lib/composables/useIsDesktop';
 import { useExchangeRates } from '@/shared/api';
@@ -120,6 +122,38 @@ export function useDebtsPageState() {
   // Плоский список для режима «фильтр по человеку»: считается из filteredGroups,
   // чтобы ?type=given из дашборда не тянул за собой встречные долги.
   const filteredDebts = computed(() => filteredGroups.value.flatMap((g) => g.debts));
+
+  // Человек, по которому включён фильтр: сервер в этом режиме отдаёт только его
+  // группы, так что в `people` он единственный.
+  const filteredPerson = computed<PersonDebtSummary | null>(() => {
+    if (!personFilter.value) return null;
+    return people.value.find((p) => p.personName === personFilter.value) ?? null;
+  });
+
+  const mutualPositions = computed<MutualPosition[]>(() => filteredPerson.value?.mutual ?? []);
+
+  // --- Взаимозачёт ---
+  const { isOffsetting, offsetDebts } = useOffsetDebts();
+  const showOffsetModal = ref(false);
+  const offsetPosition = ref<MutualPosition | null>(null);
+
+  function openOffset(position: MutualPosition) {
+    offsetPosition.value = position;
+    showOffsetModal.value = true;
+  }
+
+  async function handleOffset() {
+    if (!offsetPosition.value || !personFilter.value || !userId.value) return;
+    const success = await offsetDebts(
+      personFilter.value,
+      offsetPosition.value.currency,
+      userId.value,
+    );
+    if (success) {
+      showOffsetModal.value = false;
+      offsetPosition.value = null;
+    }
+  }
 
   // --- Selected debt (desktop detail panel) ---
   const selectedDebtId = ref<string | null>(null);
@@ -288,6 +322,8 @@ export function useDebtsPageState() {
     // Debt lists
     groups: filteredGroups,
     people,
+    filteredPerson,
+    mutualPositions,
     allDebtsFromGroups,
     filteredDebts,
     totalDebtsCount,
@@ -308,6 +344,11 @@ export function useDebtsPageState() {
     total,
     accounts,
 
+    // Взаимозачёт
+    showOffsetModal,
+    offsetPosition,
+    isOffsetting,
+
     // Detail panel modals
     showDeleteModal,
     isDeleting,
@@ -325,6 +366,8 @@ export function useDebtsPageState() {
     clearFilter,
     openCloseAllForPerson,
     handleCloseAll,
+    openOffset,
+    handleOffset,
     handleDetailPayment,
     handleDetailEdit,
     handleDetailDelete,

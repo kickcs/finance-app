@@ -36,6 +36,8 @@ export interface IDebtRepository {
   findByUserId(userId: string): Promise<Debt[]>;
   findByTransactionId(transactionId: string): Promise<Debt | null>;
   findByCloseTransactionId(transactionId: string): Promise<Debt | null>;
+  /** Открытые долги одного человека в одной валюте — материал для взаимозачёта. */
+  findActiveByPerson(userId: string, personName: string, currency: string): Promise<Debt[]>;
   hasOpenDebtsForTransaction(transactionId: string): Promise<boolean>;
   /** Pass `manager` to participate in an open DB transaction. */
   save(debt: Debt, manager?: EntityManager): Promise<Debt>;

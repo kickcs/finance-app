@@ -8,8 +8,10 @@ import {
   ClosedDebtCard,
   DebtsSummaryCard,
   PersonDebtRow,
+  MutualDebtCard,
 } from '@/entities/debt';
 import { CloseAllDebtsModal, DeleteDebtModal, ReopenDebtModal } from '@/features/close-debt';
+import { OffsetDebtsModal } from '@/features/offset-debts';
 import { PaymentDrawer } from '@/features/partial-payment';
 import {
   UButton,
@@ -72,6 +74,8 @@ const {
   selectedDebt,
   selectedDebtCurrency,
   people,
+  filteredPerson,
+  mutualPositions,
   allDebtsFromGroups,
   filteredDebts,
   totalGivenDebts,
@@ -79,6 +83,9 @@ const {
   fetchNextPage,
   hasNextPage,
   isFetchingNextPage,
+  showOffsetModal,
+  offsetPosition,
+  isOffsetting,
   showCloseAllModal,
   closeAllPersonName,
   closeAllDebtsForPerson,
@@ -100,6 +107,8 @@ const {
   clearFilter,
   openCloseAllForPerson,
   handleCloseAll,
+  openOffset,
+  handleOffset,
   handleDetailPayment,
   handleDetailEdit,
   handleDetailDelete,
@@ -184,11 +193,25 @@ useIntersectionObserver(
 
             <!-- Active Debts Tab -->
             <template v-else-if="statusFilter === 'active'">
+              <!-- У встречных долгов карточка зачёта заменяет сводку: числа те же,
+                   но она ещё и объясняет, что с ними можно сделать. -->
+              <template v-if="mutualPositions.length > 0">
+                <MutualDebtCard
+                  v-for="position in mutualPositions"
+                  :key="position.currency"
+                  :position="position"
+                  :masked="filteredPerson?.hasPrivate"
+                  :show-currency="mutualPositions.length > 1"
+                  :is-offsetting="isOffsetting && offsetPosition?.currency === position.currency"
+                  @offset="(trigger('selection'), openOffset(position))"
+                />
+              </template>
               <DebtsSummaryCard
-                v-if="allDebtsFromGroups.length > 0"
+                v-else-if="allDebtsFromGroups.length > 0"
                 :total-given="totalGivenDebts"
                 :total-taken="totalTakenDebts"
                 :currency="currency"
+                :title="personFilter ? `Итог: ${personFilter}` : 'Итог по всем'"
               />
 
               <!-- Currency Filter Chips -->
@@ -375,6 +398,14 @@ useIntersectionObserver(
       :accounts="accounts"
       :is-reopening="isReopening"
       @confirm="handleReopenDebt"
+    />
+    <OffsetDebtsModal
+      v-model="showOffsetModal"
+      :person-name="personFilter || ''"
+      :position="offsetPosition"
+      :masked="filteredPerson?.hasPrivate"
+      :is-offsetting="isOffsetting"
+      @confirm="handleOffset"
     />
     <PaymentDrawer
       v-model="isPaymentOpen"

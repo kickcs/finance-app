@@ -12,12 +12,13 @@ import {
 } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { CurrentUser } from '../../../../common';
-import { CreateDebtDto, UpdateDebtDto, GetDebtsPaginatedDto } from '../dto';
+import { CreateDebtDto, UpdateDebtDto, GetDebtsPaginatedDto, OffsetDebtsDto } from '../dto';
 import {
   CreateDebtCommand,
   UpdateDebtCommand,
   DeleteDebtCommand,
   ReopenDebtCommand,
+  OffsetDebtsCommand,
 } from '../../application/commands';
 import { GetDebtsQuery, GetDebtByIdQuery, GetDebtsPaginatedQuery } from '../../application/queries';
 
@@ -50,6 +51,12 @@ export class DebtsController {
         dto.personName,
       ),
     );
+  }
+
+  // Объявлен до `:id`, иначе Nest примет "offset" за идентификатор долга.
+  @Post('offset')
+  async offset(@CurrentUser('sub') userId: string, @Body() dto: OffsetDebtsDto): Promise<unknown> {
+    return this.commandBus.execute(new OffsetDebtsCommand(userId, dto.personName, dto.currency));
   }
 
   @Get(':id')

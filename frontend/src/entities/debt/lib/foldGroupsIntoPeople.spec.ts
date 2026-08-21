@@ -128,6 +128,89 @@ describe('foldGroupsIntoPeople', () => {
     expect(result[0].hasPrivate).toBe(true);
   });
 
+  it('собирает встречную позицию с суммой зачёта по меньшей стороне', () => {
+    const result = foldGroupsIntoPeople(
+      [
+        group('Эрмурат', 'given', [makeDebt({ id: 'a', remaining_amount: 30381 })]),
+        group('Эрмурат', 'taken', [
+          makeDebt({ id: 'b', remaining_amount: 137170, debt_type: 'taken' }),
+        ]),
+      ],
+      identity,
+    );
+
+    expect(result[0].mutual).toEqual([
+      { currency: 'UZS', given: 30381, taken: 137170, offsetAmount: 30381 },
+    ]);
+    expect(result[0].offsetTotal).toBe(30381);
+  });
+
+  it('не считает встречной позицию с одной стороной', () => {
+    const result = foldGroupsIntoPeople(
+      [group('Азиз', 'given', [makeDebt({ id: 'a', remaining_amount: 3000 })])],
+      identity,
+    );
+
+    expect(result[0].mutual).toEqual([]);
+    expect(result[0].offsetTotal).toBe(0);
+  });
+
+  it('не зачитывает разные валюты друг против друга', () => {
+    const convert = (amount: number, currency: string) =>
+      currency === 'USD' ? amount * 12000 : amount;
+
+    const result = foldGroupsIntoPeople(
+      [
+        group('Жасур', 'given', [makeDebt({ id: 'a', currency: 'USD', remaining_amount: 100 })]),
+        group('Жасур', 'taken', [
+          makeDebt({ id: 'b', currency: 'UZS', remaining_amount: 500000, debt_type: 'taken' }),
+        ]),
+      ],
+      convert,
+    );
+
+    expect(result[0].mutual).toEqual([]);
+  });
+
+  it('складывает несколько долгов одной стороны внутри валюты', () => {
+    const result = foldGroupsIntoPeople(
+      [
+        group('Азиз', 'given', [
+          makeDebt({ id: 'a', remaining_amount: 200 }),
+          makeDebt({ id: 'b', remaining_amount: 300 }),
+        ]),
+        group('Азиз', 'taken', [makeDebt({ id: 'c', remaining_amount: 900, debt_type: 'taken' })]),
+      ],
+      identity,
+    );
+
+    expect(result[0].mutual).toEqual([
+      { currency: 'UZS', given: 500, taken: 900, offsetAmount: 500 },
+    ]);
+  });
+
+  it('сортирует встречные валюты по убыванию зачёта и суммирует его в валюте пользователя', () => {
+    const convert = (amount: number, currency: string) =>
+      currency === 'USD' ? amount * 12000 : amount;
+
+    const result = foldGroupsIntoPeople(
+      [
+        group('Жасур', 'given', [
+          makeDebt({ id: 'a', currency: 'UZS', remaining_amount: 50000 }),
+          makeDebt({ id: 'b', currency: 'USD', remaining_amount: 100 }),
+        ]),
+        group('Жасур', 'taken', [
+          makeDebt({ id: 'c', currency: 'UZS', remaining_amount: 80000, debt_type: 'taken' }),
+          makeDebt({ id: 'd', currency: 'USD', remaining_amount: 40, debt_type: 'taken' }),
+        ]),
+      ],
+      convert,
+    );
+
+    expect(result[0].mutual.map((m) => m.currency)).toEqual(['USD', 'UZS']);
+    expect(result[0].offsetTotal).toBe(50000 + 40 * 12000);
+  });
+
   it('не падает на пустом списке групп', () => {
     expect(foldGroupsIntoPeople([], identity)).toEqual([]);
   });

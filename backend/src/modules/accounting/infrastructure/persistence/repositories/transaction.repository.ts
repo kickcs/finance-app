@@ -537,10 +537,10 @@ export class TransactionRepository implements ITransactionRepository {
           }
           continue;
         case DEBT_CATEGORY_IDS.FORGIVEN:
-          // Forgiveness rows in this category exist only as bookkeeping markers.
-          // Informational ones are filtered upstream (createBaseQuery); any stray
-          // non-informational row with this category is still semantically a
-          // forgiveness event, not part of regular spending — drop it from totals.
+        case DEBT_CATEGORY_IDS.OFFSET:
+          // Прощение и взаимозачёт живут в ленте только как отметки. Информационные
+          // строки отсеиваются выше (createBaseQuery); если такая строка почему-то
+          // оказалась обычной, она всё равно не трата и не доход — выкидываем.
           continue;
       }
 

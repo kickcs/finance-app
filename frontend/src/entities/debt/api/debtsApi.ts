@@ -44,6 +44,20 @@ interface PaginatedDebtsBackendResponse {
   totalDebtsCount: number;
 }
 
+interface OffsetBackendResponse {
+  personName: string;
+  currency: string;
+  offsetAmount: number;
+  debts: DebtResponse[];
+}
+
+export interface OffsetResult {
+  person_name: string;
+  currency: string;
+  offset_amount: number;
+  debts: Debt[];
+}
+
 function transformDebt(debt: DebtResponse): Debt {
   return {
     id: debt.id,
@@ -173,6 +187,23 @@ export const debtsApi = {
 
     const data = await http.patch<DebtResponse>(`/debts/${id}`, payload);
     return transformDebt(data);
+  },
+
+  /**
+   * Взаимозачёт встречных долгов человека в одной валюте. Возвращает долги,
+   * которых он коснулся, — их остатки уже пересчитаны сервером.
+   */
+  async offset(personName: string, currency: string): Promise<OffsetResult> {
+    const data = await http.post<OffsetBackendResponse>('/debts/offset', {
+      personName,
+      currency,
+    });
+    return {
+      person_name: data.personName,
+      currency: data.currency,
+      offset_amount: data.offsetAmount,
+      debts: data.debts.map(transformDebt),
+    };
   },
 
   /** Отменяет закрытие: снимает транзакции закрытия и возвращает долг в активные. */

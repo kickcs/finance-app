@@ -183,7 +183,17 @@ export const DEBT_CATEGORY_IDS = {
   RETURN_TO_ME: 'debt_return_to_me',
   RETURN_FROM_ME: 'debt_return_from_me',
   FORGIVEN: 'debt_forgiven',
+  OFFSET: 'debt_offset',
 } as const;
+
+/**
+ * Категории, которые существуют только как информационные отметки: они видны в
+ * ленте, но не двигают баланс и не попадают в аналитику.
+ */
+export const INFORMATIONAL_ONLY_CATEGORY_IDS: readonly string[] = [
+  DEBT_CATEGORY_IDS.FORGIVEN,
+  DEBT_CATEGORY_IDS.OFFSET,
+];
 
 export const ALL_DEBT_CATEGORY_IDS = Object.values(DEBT_CATEGORY_IDS);
 

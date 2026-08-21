@@ -47,6 +47,14 @@ export class DebtRepository implements IDebtRepository {
     return DebtMapper.toDomain(ormEntity);
   }
 
+  async findActiveByPerson(userId: string, personName: string, currency: string): Promise<Debt[]> {
+    const ormEntities = await this.ormRepository.find({
+      where: { userId, personName, currency, isClosed: false },
+      order: { createdAt: 'ASC' },
+    });
+    return ormEntities.map((entity) => DebtMapper.toDomain(entity));
+  }
+
   async hasOpenDebtsForTransaction(transactionId: string): Promise<boolean> {
     const count = await this.ormRepository.count({
       where: [

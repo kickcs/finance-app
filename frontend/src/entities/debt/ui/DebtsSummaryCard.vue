@@ -2,11 +2,15 @@
 import { computed } from 'vue';
 import { formatCurrency } from '@/shared/lib/format/currency';
 
-const props = defineProps<{
-  totalGiven: number;
-  totalTaken: number;
-  currency: string;
-}>();
+const props = withDefaults(
+  defineProps<{
+    totalGiven: number;
+    totalTaken: number;
+    currency: string;
+    title?: string;
+  }>(),
+  { title: 'Итог по всем' },
+);
 
 const net = computed(() => props.totalGiven - props.totalTaken);
 const isPositive = computed(() => net.value >= 0);
@@ -27,7 +31,7 @@ const givenShare = computed(() => (total.value > 0 ? (props.totalGiven / total.v
     <p
       class="text-caption-sm font-semibold uppercase tracking-wider text-text-tertiary-light dark:text-text-tertiary-dark"
     >
-      Итог по всем
+      {{ title }}
     </p>
 
     <p
