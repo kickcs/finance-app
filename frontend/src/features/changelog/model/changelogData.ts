@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.73';
+export const CURRENT_VERSION = '1.0.74';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,17 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.74',
+    date: '2026-08-20',
+    title: 'Расходы за месяц читаются на десктопе',
+    items: [
+      {
+        type: 'fix',
+        text: 'В блоке «Расходы за месяц» на большом экране номер категории сплющивался в полоску, а длинные суммы разъезжались. Теперь номер, значок и сумма стоят на своих местах, сумма пишется сокращённо (2,31 млн), а название категории при нехватке места аккуратно обрезается',
+      },
+    ],
+  },
   {
     version: '1.0.73',
     date: '2026-08-17',
