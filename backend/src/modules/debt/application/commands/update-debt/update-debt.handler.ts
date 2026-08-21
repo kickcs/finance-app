@@ -25,6 +25,16 @@ export class UpdateDebtHandler implements ICommandHandler<UpdateDebtCommand> {
       throw new ConflictException('Debt is already closed');
     }
 
+    // Направление задаёт категории платежей возврата. Перевернуть долг, по
+    // которому уже возвращали, значит развернуть их в обратную сторону.
+    if (
+      command.data.debtType !== undefined &&
+      command.data.debtType !== debt.debtTypeValue &&
+      debt.remainingAmountValue !== debt.totalAmountValue
+    ) {
+      throw new ConflictException('Cannot change the direction of a debt with payments');
+    }
+
     debt.update(command.data);
     const savedDebt = await this.debtRepository.save(debt);
 

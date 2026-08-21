@@ -5,14 +5,12 @@ import { getCurrencyByCode } from '@/entities/currency';
 import { sanitizeCurrencyInput, formatCurrency } from '@/shared/lib/format/currency';
 import { formatCompactDate } from '@/shared/lib/format/date';
 import { PersonPicker, usePeople } from '@/entities/person';
-import { useDebts } from '@/entities/debt';
+import { useDebts, DueDateField, DebtDirectionPill } from '@/entities/debt';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useHaptics } from '@/shared/lib/haptics';
 import type { AccountWithBalances } from '@/entities/account';
 import { useDebtForm } from '../model/useDebtForm';
-import DebtDirectionPill from './DebtDirectionPill.vue';
 import { DatePickerField } from '@/shared/ui/date-picker';
-import DueDateField from './DueDateField.vue';
 import SubmitBar from './SubmitBar.vue';
 
 const props = defineProps<{

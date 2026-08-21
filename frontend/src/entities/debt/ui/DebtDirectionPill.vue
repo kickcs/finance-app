@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { UIcon } from '@/shared/ui';
 import { useHaptics } from '@/shared/lib/haptics';
-import type { DebtDirection } from '@/entities/debt';
+import type { DebtDirection } from '../model/types';
 
 defineProps<{
   modelValue: DebtDirection;
