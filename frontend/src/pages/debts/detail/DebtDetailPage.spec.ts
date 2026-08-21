@@ -196,6 +196,8 @@ describe('DebtDetailPage', () => {
       await flushPromises();
 
       expect(findInBody('[data-testid="delete-debt-btn"]')).not.toBeNull();
+      // Отменять нечего, пока долг не закрыт
+      expect(findInBody('[data-testid="reopen-debt-btn"]')).toBeNull();
     });
   });
 
@@ -274,6 +276,42 @@ describe('DebtDetailPage', () => {
       const deleteBtn = findInBody('[data-testid="delete-debt-btn"]');
       expect(deleteBtn).not.toBeNull();
       expect(deleteBtn?.textContent).toContain('Удалить долг');
+    });
+
+    it('offers "Отменить закрытие" in the actions sheet', async () => {
+      const wrapper = await renderPage(mockClosedDebtResponse.id);
+
+      await wrapper.find('[data-testid="debt-more-btn"]').trigger('click');
+      await flushPromises();
+
+      const reopenBtn = findInBody('[data-testid="reopen-debt-btn"]');
+      expect(reopenBtn).not.toBeNull();
+      expect(reopenBtn?.textContent).toContain('Отменить закрытие');
+    });
+
+    it('reopens the debt through POST /debts/:id/reopen after confirmation', async () => {
+      const reopenSpy = vi.fn();
+      server.use(
+        http.post('*/api/debts/:id/reopen', ({ params }) => {
+          reopenSpy(params.id);
+          return HttpResponse.json({
+            ...mockClosedDebtResponse,
+            isClosed: false,
+            closedAt: null,
+            closeTransactionId: null,
+            remainingAmount: mockClosedDebtResponse.totalAmount,
+          });
+        }),
+      );
+
+      const wrapper = await renderPage(mockClosedDebtResponse.id);
+      await wrapper.find('[data-testid="debt-more-btn"]').trigger('click');
+      await flushPromises();
+      await clickInBody('[data-testid="reopen-debt-btn"]');
+      await clickInBody('[data-testid="confirm-reopen-btn"]');
+      await flushPromises();
+
+      expect(reopenSpy).toHaveBeenCalledWith(mockClosedDebtResponse.id);
     });
 
     it('hides the meter when the debt was simply paid in full', async () => {

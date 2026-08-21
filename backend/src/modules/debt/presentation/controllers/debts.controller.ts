@@ -17,6 +17,7 @@ import {
   CreateDebtCommand,
   UpdateDebtCommand,
   DeleteDebtCommand,
+  ReopenDebtCommand,
 } from '../../application/commands';
 import { GetDebtsQuery, GetDebtByIdQuery, GetDebtsPaginatedQuery } from '../../application/queries';
 
@@ -97,6 +98,11 @@ export class DebtsController {
             : undefined,
       }),
     );
+  }
+
+  @Post(':id/reopen')
+  async reopen(@CurrentUser('sub') userId: string, @Param('id') id: string): Promise<unknown> {
+    return this.commandBus.execute(new ReopenDebtCommand(id, userId));
   }
 
   @Delete(':id')

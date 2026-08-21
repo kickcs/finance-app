@@ -6,6 +6,8 @@ import { useDebts } from '../api/useDebts';
 import { useDebtTransactions } from '../api/useDebtTransactions';
 import { useAccounts } from '@/entities/account';
 import { getDebtDisplayName } from '../model/types';
+import { findClosingRecords } from '../lib/findClosingRecords';
+import type { Transaction } from '@/shared/api/database.types';
 import DebtDetailContent from './DebtDetailContent.vue';
 import DebtActionsSheet from './DebtActionsSheet.vue';
 
@@ -18,6 +20,8 @@ const emit = defineEmits<{
   payment: [];
   edit: [];
   delete: [];
+  /** Шторка действий живёт здесь, а модалку отмены рисует страница-хост. */
+  reopen: [closingRecords: Transaction[]];
   'toggle-private': [value: boolean];
 }>();
 
@@ -104,6 +108,7 @@ function handleEdit() {
         v-model="isActionsOpen"
         :debt="debt"
         @delete="emit('delete')"
+        @reopen="emit('reopen', findClosingRecords(debt, transactions))"
         @toggle-private="emit('toggle-private', $event)"
       />
 

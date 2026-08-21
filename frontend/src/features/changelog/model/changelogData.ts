@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.74';
+export const CURRENT_VERSION = '1.0.75';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,17 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.75',
+    date: '2026-08-21',
+    title: 'Закрытие долга можно отменить',
+    items: [
+      {
+        type: 'feature',
+        text: 'Если долг закрыли не тем способом — например отметили оплаченным, хотя на самом деле простили, и деньги ошибочно вернулись на счёт, — теперь это можно откатить. Откройте долг, нажмите «···» и выберите «Отменить закрытие»: транзакция закрытия удалится, баланс счёта вернётся к прежнему, а долг снова станет активным, и его можно закрыть заново правильно',
+      },
+    ],
+  },
   {
     version: '1.0.74',
     date: '2026-08-20',

@@ -9,12 +9,18 @@ import {
   DebtDetailContent,
   DebtActionsSheet,
   useDebtTransactions,
+  findClosingRecords,
   getDebtDisplayName,
   type Debt,
 } from '@/entities/debt';
 import { DEFAULT_CURRENCY } from '@/shared/config/currency';
 import { useAccounts } from '@/entities/account';
-import { DeleteDebtModal, useCloseDebt } from '@/features/close-debt';
+import {
+  DeleteDebtModal,
+  ReopenDebtModal,
+  useCloseDebt,
+  useReopenDebt,
+} from '@/features/close-debt';
 import { useDebtPaymentFlow, PaymentDrawer } from '@/features/partial-payment';
 import { EditDebtDrawer } from '@/features/edit-debt';
 import { navigateBack } from '@/app/router';
@@ -50,6 +56,7 @@ const headerTitle = computed(() => {
 
 // Modal states
 const showDeleteModal = ref(false);
+const showReopenModal = ref(false);
 
 // Close debt logic
 const { isDeleting, deleteDebt } = useCloseDebt();
@@ -74,6 +81,17 @@ async function handleDeleteDebt() {
     showDeleteModal.value = false;
     router.replace({ name: ROUTE_NAMES.DEBTS_LIST });
   }
+}
+
+// Отмена закрытия: единственный способ поправить долг, закрытый не тем способом
+const { isReopening, reopenDebt } = useReopenDebt();
+
+const closingRecords = computed(() => findClosingRecords(debt.value, transactions.value));
+
+async function handleReopenDebt() {
+  if (!debt.value || !userId.value) return;
+  const success = await reopenDebt(debt.value.id, userId.value);
+  if (success) showReopenModal.value = false;
 }
 
 const showEditDrawer = ref(false);
@@ -168,7 +186,18 @@ function openActions() {
       v-model="isActionsOpen"
       :debt="debt"
       @delete="showDeleteModal = true"
+      @reopen="showReopenModal = true"
       @toggle-private="handleTogglePrivate"
+    />
+
+    <!-- Reopen Debt Modal -->
+    <ReopenDebtModal
+      v-model="showReopenModal"
+      :debt="debt"
+      :closing-records="closingRecords"
+      :accounts="accounts"
+      :is-reopening="isReopening"
+      @confirm="handleReopenDebt"
     />
 
     <!-- Delete Debt Modal -->
