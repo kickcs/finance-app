@@ -37,7 +37,16 @@ export function usePanelState(props: PanelProps, emit: PanelEmit) {
     );
   });
 
-  const hasSufficientFunds = computed(() => props.formData.amount <= currentBalance.value);
+  /**
+   * Хватает ли на счёте денег под операцию. Доход счёт не списывает — сравнивать
+   * его сумму с остатком нечего: иначе на подтверждении импорта зарплата,
+   * которая больше текущего остатка, выдавала «Не хватает …» ровно на разницу.
+   * Долг тут считается списанием по умолчанию: направление зависит от формы, и
+   * там, где оно известно (`TransactionForm`), предупреждение считают своё.
+   */
+  const hasSufficientFunds = computed(
+    () => props.formData.type === 'income' || props.formData.amount <= currentBalance.value,
+  );
 
   function updateField<K extends keyof TransactionFormData>(
     field: K,
