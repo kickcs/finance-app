@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.77';
+export const CURRENT_VERSION = '1.0.78';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,17 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.78',
+    date: '2026-08-29',
+    title: 'Доход из Telegram больше не «не хватает»',
+    items: [
+      {
+        type: 'fix',
+        text: 'На подтверждении операции из Telegram доход больше не показывает предупреждение «Не хватает …». Зарплата или любое другое поступление больше остатка на счёте — это нормально: деньги приходят, а не списываются. Предупреждение осталось там, где оно и нужно, — на расходе и переводе',
+      },
+    ],
+  },
   {
     version: '1.0.77',
     date: '2026-08-21',
