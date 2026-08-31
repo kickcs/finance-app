@@ -13,6 +13,7 @@ import {
 import { CloseAllDebtsDrawer, DeleteDebtModal, ReopenDebtModal } from '@/features/close-debt';
 import { OffsetDebtsModal } from '@/features/offset-debts';
 import { PaymentDrawer } from '@/features/partial-payment';
+import { ShareDebtsDrawer } from '@/features/share-debts';
 import {
   UButton,
   UIcon,
@@ -99,6 +100,11 @@ const {
   handleDetailClose,
   handleRefresh,
   toCurrencyItems,
+  showShareDrawer,
+  sharePayload,
+  hiddenShareCount,
+  canShare,
+  openShare,
 } = useDebtsPageState();
 
 /**
@@ -139,6 +145,19 @@ useIntersectionObserver(
     <!-- Header -->
     <AppHeader blur show-back title="Долги" class="shrink-0" @back="goBack">
       <template #actions>
+        <!-- Поделиться можно только тем, что сейчас на экране: открытыми
+             долгами конкретного человека -->
+        <UButton
+          v-if="canShare"
+          variant="ghost"
+          size="sm"
+          class="!p-2"
+          :aria-label="`Поделиться долгами: ${personFilter}`"
+          data-testid="share-debts-btn"
+          @click="(trigger('selection'), openShare())"
+        >
+          <UIcon name="share" size="sm" />
+        </UButton>
         <UButton
           variant="ghost"
           size="sm"
@@ -424,6 +443,11 @@ useIntersectionObserver(
       :accounts="accounts"
       :draft="paymentDraft"
       @confirm="submitPayment"
+    />
+    <ShareDebtsDrawer
+      v-model="showShareDrawer"
+      :payload="sharePayload"
+      :hidden-count="hiddenShareCount"
     />
   </div>
 </template>

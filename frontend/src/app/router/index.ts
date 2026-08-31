@@ -326,6 +326,12 @@ export const router = createRouter({
       name: ROUTE_NAMES.SHARED_RECEIPT,
       component: () => import('@/pages/shared-receipt/SharedReceiptPage.vue'),
     },
+    // Публичная сверка по долгам — доступна без авторизации (ссылки /d/<token>)
+    {
+      path: '/shared-debts/:token',
+      name: ROUTE_NAMES.SHARED_DEBTS,
+      component: () => import('@/pages/shared-debts/SharedDebtsPage.vue'),
+    },
     // Вход из Telegram Mini App — публичный, авторизуется сам по initData
     {
       path: '/tma',

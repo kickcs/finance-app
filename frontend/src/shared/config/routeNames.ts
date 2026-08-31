@@ -20,6 +20,7 @@ export const ROUTE_NAMES = {
   SETTINGS_COLOR: 'settings-color',
   SCAN_RECEIPT: 'scan-receipt',
   SHARED_RECEIPT: 'shared-receipt',
+  SHARED_DEBTS: 'shared-debts',
   IMPORT_INBOX: 'import-inbox',
   IMPORT_CONFIRM: 'import-confirm',
   DASHBOARD_SETTINGS: 'dashboard-settings',

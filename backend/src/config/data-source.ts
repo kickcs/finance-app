@@ -18,7 +18,10 @@ import {
   CategoryOrmEntity,
   QuickActionOrmEntity,
 } from '../modules/accounting/infrastructure/persistence/typeorm';
-import { DebtOrmEntity } from '../modules/debt/infrastructure/persistence/typeorm';
+import {
+  DebtOrmEntity,
+  SharedDebtsOrmEntity,
+} from '../modules/debt/infrastructure/persistence/typeorm';
 import {
   BudgetOrmEntity,
   GoalOrmEntity,
@@ -57,6 +60,7 @@ export const dataSourceOptions: DataSourceOptions = {
     CategoryOrmEntity,
     QuickActionOrmEntity,
     DebtOrmEntity,
+    SharedDebtsOrmEntity,
     BudgetOrmEntity,
     GoalOrmEntity,
     ExchangeRateOrmEntity,

@@ -2,6 +2,7 @@ import { join } from 'path';
 import { Injectable, Logger } from '@nestjs/common';
 import { Resvg } from '@resvg/resvg-js';
 import { SharedReceiptService, type SharedReceiptPayload } from './shared-receipt.service';
+import { escapeXml, formatAmount, truncate } from '../../../../shared/utils/share';
 
 // Бандленные шрифты (кириллица) — рендер не зависит от шрифтов системы/контейнера
 const FONT_DIR = join(process.cwd(), 'assets', 'fonts');
@@ -11,28 +12,9 @@ const FONT_FAMILY = 'DejaVu Sans';
 const OG_WIDTH = 1200;
 const OG_HEIGHT = 630;
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24h
-
-/**
- * Escapes text for safe embedding inside SVG/XML content.
- */
-function escapeSvg(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;');
-}
-
-function formatAmount(amount: number): string {
-  return Math.round(amount)
-    .toString()
-    .replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-}
-
-function truncate(value: string, max: number): string {
-  return value.length > max ? `${value.slice(0, max - 1)}…` : value;
-}
+// Кэш живёт в памяти процесса, а токены раздаются наружу: без потолка
+// краулер, обошедший тысячу ссылок, оставил бы в куче тысячу PNG.
+const CACHE_MAX_ENTRIES = 200;
 
 function formatDateShort(timestamp: number): string {
   const d = new Date(timestamp);
@@ -59,11 +41,11 @@ const HAIRLINE = '#e4e4e7';
  * и CTA справа. Pure function — без I/O; все строки экранируются.
  */
 export function buildOgSvg(payload: SharedReceiptPayload): string {
-  const storeName = escapeSvg(truncate((payload.storeName || 'Чек').toUpperCase(), 24));
+  const storeName = escapeXml(truncate((payload.storeName || 'Чек').toUpperCase(), 24));
   const rawTotal = `${formatAmount(payload.totalAmount)} ${payload.currency}`;
-  const totalText = escapeSvg(rawTotal);
+  const totalText = escapeXml(rawTotal);
   const totalSize = rawTotal.length > 12 ? 56 : 72;
-  const dateText = escapeSvg(formatDateShort(payload.date));
+  const dateText = escapeXml(formatDateShort(payload.date));
 
   const participantsCount = payload.participants.length;
   const visible = payload.participants.slice(0, 3);
@@ -75,8 +57,8 @@ export function buildOgSvg(payload: SharedReceiptPayload): string {
     const color = /^#[0-9a-fA-F]{3,8}$/.test(p.color) ? p.color : PRIMARY;
     rows.push(
       `<circle cx="136" cy="${y - 9}" r="9" fill="${color}" />`,
-      `<text x="162" y="${y}" font-size="26" fill="${INK_SOFT}" font-family="${FONT_FAMILY}">${escapeSvg(truncate(p.name, 16))}</text>`,
-      `<text x="624" y="${y}" text-anchor="end" font-size="26" font-weight="700" fill="${INK}" font-family="${FONT_FAMILY}">${escapeSvg(`${formatAmount(p.total)}`)}</text>`,
+      `<text x="162" y="${y}" font-size="26" fill="${INK_SOFT}" font-family="${FONT_FAMILY}">${escapeXml(truncate(p.name, 16))}</text>`,
+      `<text x="624" y="${y}" text-anchor="end" font-size="26" font-weight="700" fill="${INK}" font-family="${FONT_FAMILY}">${escapeXml(`${formatAmount(p.total)}`)}</text>`,
     );
   });
   if (extraCount > 0) {
@@ -148,6 +130,11 @@ export class OgImageService {
         },
       });
       const buf = resvg.render().asPng();
+      if (this.cache.size >= CACHE_MAX_ENTRIES) {
+        // Map держит порядок вставки — выкидываем самый давний
+        const oldest = this.cache.keys().next();
+        if (!oldest.done) this.cache.delete(oldest.value);
+      }
       this.cache.set(token, { buf, at: Date.now() });
       return buf;
     } catch (error) {

@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import type { Repository } from 'typeorm';
 import { SharedReceiptOrmEntity } from '../../infrastructure/persistence/typeorm/shared-receipt.orm-entity';
 import { generateUrlSafeToken } from '../../../../shared/utils/token';
+import { getPublicAppUrl } from '../../../../shared/utils/share';
 
 export interface SharedReceiptPayload {
   storeName: string | null;
@@ -47,8 +48,7 @@ export class SharedReceiptService {
     });
     await this.repository.save(entity);
 
-    const publicAppUrl = process.env.PUBLIC_APP_URL || 'http://localhost:3000';
-    const url = `${publicAppUrl}/r/${token}`;
+    const url = `${getPublicAppUrl()}/r/${token}`;
 
     return { token, url };
   }
