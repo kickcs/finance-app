@@ -1,30 +1,28 @@
-import { ref, computed, watch } from 'vue';
-import { useRouter, useRoute } from 'vue-router';
+import { computed, ref, watch } from 'vue';
+import { useRouter } from 'vue-router';
+import { useRouteQuery } from '@vueuse/router';
 import { ROUTE_NAMES } from '@/app/router/routeNames';
 import {
-  useInfiniteDebts,
-  useDebtMutations,
-  getDebtDisplayName,
   foldGroupsIntoPeople,
+  getDebtDisplayName,
+  useDebts,
+  useInfiniteDebts,
   type Debt,
   type DebtsFilters,
-  type PersonDebtSummary,
   type MutualPosition,
+  type PersonDebtSummary,
 } from '@/entities/debt';
 import { useAccounts } from '@/entities/account';
-import { useDeleteDebt } from '@/features/delete-debt';
-import { useReopenDebt } from '@/features/reopen-debt';
 import { useOffsetDebts } from '@/features/offset-debts';
-import { useCloseAllDebts, useDebtPaymentFlow } from '@/features/pay-debt';
-import { buildSharePayload, selectShareableDebts, useDebtShare } from '@/features/share-debts';
-import { useIsDesktop } from '@/shared/lib/composables/useIsDesktop';
+import { useCloseAllDebts } from '@/features/pay-debt';
+import { buildSharePayload, selectShareableDebts } from '@/features/share-debts';
 import { useExchangeRates, useProfile } from '@/shared/api';
+import { DEFAULT_CURRENCY } from '@/shared/config/currency';
+import { useIsDesktop } from '@/shared/lib/composables/useIsDesktop';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
-import { DEFAULT_CURRENCY } from '@/shared/config/currency';
-import { useToast } from '@/shared/ui';
 import { navigateBack } from '@/app/router';
-import type { Transaction } from '@/shared/api/database.types';
+import { useDebtDetail } from './useDebtDetail';
 
 const STATUS_TABS = [
   { id: 'active', label: 'Активные' },
@@ -35,44 +33,36 @@ function toCurrencyItems(currencies: string[]) {
   return currencies.map((c) => ({ id: c, label: c }));
 }
 
-export function useDebtsPageState() {
+export function useDebtsPage() {
   const router = useRouter();
-  const route = useRoute();
   const isDesktop = useIsDesktop();
   const { userId } = useCurrentUser();
   const { currency } = useUserCurrency();
   const { convert } = useExchangeRates(currency);
-  const { toast } = useToast();
-  const { accounts } = useAccounts(userId);
-  const { updateDebt } = useDebtMutations(userId);
   const { profile } = useProfile(userId);
+  const { accounts } = useAccounts(userId);
 
-  // --- Filters ---
-  const personFilter = ref<string | null>(route.query.person as string | null);
-  const typeFilter = ref<'given' | 'taken' | null>(route.query.type as 'given' | 'taken' | null);
+  // --- Фильтры ---
+  // Живут в адресе: раньше каждый из них вели дважды — локальным ref'ом и
+  // `router.replace`, а третьим местом был watch, тянувший ref обратно из
+  // query. Теперь состояние одно, и возврат на экран поднимает тот же список.
+  const personFilter = useRouteQuery<string | null>('person', null);
+  const typeFilter = useRouteQuery<'given' | 'taken' | null>('type', null);
+  const statusFilter = useRouteQuery<'active' | 'closed'>('status', 'active');
+  // Валюта в адрес не идёт: она перебирает то, что уже загружено, и сбрасывается
+  // при смене вкладки — делиться такой ссылкой нечем.
   const currencyFilter = ref<string | null>(null);
-  const statusFilter = ref<'active' | 'closed'>('active');
 
   watch(statusFilter, () => {
     currencyFilter.value = null;
   });
 
-  watch(
-    () => route.query,
-    (newQuery) => {
-      personFilter.value = newQuery.person as string | null;
-      typeFilter.value = newQuery.type as 'given' | 'taken' | null;
-    },
-  );
-
-  // --- Server-side filters ---
   const serverFilters = computed<DebtsFilters>(() => ({
     status: statusFilter.value,
     ...(currencyFilter.value ? { currency: currencyFilter.value } : {}),
     ...(personFilter.value ? { personName: personFilter.value } : {}),
   }));
 
-  // --- Infinite debts ---
   const {
     groups,
     totalDebtsCount,
@@ -84,7 +74,6 @@ export function useDebtsPageState() {
     refetch,
   } = useInfiniteDebts(userId, serverFilters);
 
-  // --- Derived from groups ---
   const allDebtsFromGroups = computed(() => groups.value.flatMap((g) => g.debts));
 
   // TODO: typeFilter is client-side only. Currently safe because typeFilter
@@ -102,24 +91,20 @@ export function useDebtsPageState() {
     return Array.from(currencies).sort();
   });
 
-  // --- Totals from server summary ---
-  const totalGivenDebts = computed(() => {
-    const given = totalSummary.value.totalGiven;
-    return Object.entries(given).reduce(
+  const totalGivenDebts = computed(() =>
+    Object.entries(totalSummary.value.totalGiven).reduce(
       (sum, [cur, amount]) => sum + convert(amount, cur || DEFAULT_CURRENCY),
       0,
-    );
-  });
+    ),
+  );
 
-  const totalTakenDebts = computed(() => {
-    const taken = totalSummary.value.totalTaken;
-    return Object.entries(taken).reduce(
+  const totalTakenDebts = computed(() =>
+    Object.entries(totalSummary.value.totalTaken).reduce(
       (sum, [cur, amount]) => sum + convert(amount, cur || DEFAULT_CURRENCY),
       0,
-    );
-  });
+    ),
+  );
 
-  // --- People ---
   const people = computed(() => foldGroupsIntoPeople(filteredGroups.value, convert));
 
   // Плоский список для режима «фильтр по человеку»: считается из filteredGroups,
@@ -186,35 +171,58 @@ export function useDebtsPageState() {
     showShareDrawer.value = true;
   }
 
-  // --- Selected debt (desktop detail panel) ---
-  const selectedDebtId = ref<string | null>(null);
-  const selectedDebt = computed<Debt | null>(() => {
+  // --- Выбранный долг (десктопная панель) ---
+  // Тоже в адресе: обновление страницы и возврат назад оставляют панель открытой.
+  const selectedDebtId = useRouteQuery<string | null>('debt', null);
+  const debtFromGroups = computed<Debt | null>(() => {
     if (!selectedDebtId.value) return null;
     return allDebtsFromGroups.value.find((d) => d.id === selectedDebtId.value) ?? null;
   });
-  const selectedDebtCurrency = computed(() => selectedDebt.value?.currency || DEFAULT_CURRENCY);
 
-  /**
-   * Шаринг из панели одного долга: у человека с единственным долгом фильтра по
-   * имени нет, кнопка в шапке списка не появляется. Правило снимка то же —
-   * уходит только открытый в панели долг.
-   */
-  const {
-    isOpen: showDebtShareDrawer,
-    payload: debtSharePayload,
-    open: openDebtShare,
-  } = useDebtShare(userId, selectedDebt);
+  // Ссылка на долг, которого нет в загруженной ленте (другая вкладка, страница
+  // за курсором), — единственный повод сходить за плоским списком. Пока выбор
+  // приходит тапом по экрану, запрос выключен.
+  const lookupUserId = computed(() =>
+    selectedDebtId.value && !debtFromGroups.value ? userId.value : null,
+  );
+  const { debts: lookupDebts } = useDebts(lookupUserId);
 
-  // --- Navigation ---
+  const selectedDebt = computed<Debt | null>(
+    () =>
+      debtFromGroups.value ?? lookupDebts.value.find((d) => d.id === selectedDebtId.value) ?? null,
+  );
+
+  function closeDetail() {
+    selectedDebtId.value = null;
+  }
+
+  const detail = useDebtDetail({ debt: selectedDebt, onGone: closeDetail });
+
+  // --- Навигация ---
   function goBack() {
     navigateBack();
   }
+
+  /**
+   * Фильтр едет с переходом на экран долга и возвращается оттуда обратно:
+   * закрытый платежом долг уводит на список, и без этого человек оказывался в
+   * общем списке вместо того, из которого пришёл.
+   */
+  const listQuery = computed(() => ({
+    ...(personFilter.value ? { person: personFilter.value } : {}),
+    ...(typeFilter.value ? { type: typeFilter.value } : {}),
+    ...(statusFilter.value !== 'active' ? { status: statusFilter.value } : {}),
+  }));
 
   function handleDebtClick(debt: Debt) {
     if (isDesktop.value) {
       selectedDebtId.value = debt.id;
     } else {
-      router.push({ name: ROUTE_NAMES.DEBT_DETAIL, params: { id: debt.id } });
+      router.push({
+        name: ROUTE_NAMES.DEBT_DETAIL,
+        params: { id: debt.id },
+        query: listQuery.value,
+      });
     }
   }
 
@@ -229,7 +237,6 @@ export function useDebtsPageState() {
       return;
     }
     personFilter.value = person.personName;
-    router.replace({ path: '/debts', query: { person: person.personName } });
   }
 
   function handleAddDebt() {
@@ -239,10 +246,9 @@ export function useDebtsPageState() {
   function clearFilter() {
     personFilter.value = null;
     typeFilter.value = null;
-    router.replace({ path: '/debts' });
   }
 
-  // --- Close all debts ---
+  // --- Закрыть все долги человека ---
   const { isClosing, progress, total, closeAllDebts } = useCloseAllDebts();
   const showCloseAllDrawer = ref(false);
   const closeAllPersonName = ref<string | null>(null);
@@ -277,77 +283,12 @@ export function useDebtsPageState() {
     }
   }
 
-  // --- Detail panel actions ---
-  const showDeleteModal = ref(false);
-  const { isDeleting, deleteDebt } = useDeleteDebt();
-  const paymentFlow = useDebtPaymentFlow({
-    userId,
-    debt: selectedDebt,
-    onClosed: () => {
-      selectedDebtId.value = null;
-    },
-  });
-
-  function handleDetailPayment() {
-    paymentFlow.open();
-  }
-
-  function handleDetailEdit() {
-    if (selectedDebtId.value) {
-      router.push({ name: ROUTE_NAMES.DEBT_DETAIL, params: { id: selectedDebtId.value } });
-    }
-  }
-
-  function handleDetailDelete() {
-    showDeleteModal.value = true;
-  }
-
-  // Отмена закрытия. Записи закрытия приносит панель: она уже держит
-  // транзакции выбранного долга, а список — нет.
-  const showReopenModal = ref(false);
-  const reopenClosingRecords = ref<Transaction[]>([]);
-  const { isReopening, reopenDebt } = useReopenDebt();
-
-  function handleDetailReopen(closingRecords: Transaction[]) {
-    reopenClosingRecords.value = closingRecords;
-    showReopenModal.value = true;
-  }
-
-  async function handleReopenDebt() {
-    if (!selectedDebt.value || !userId.value) return;
-    const success = await reopenDebt(selectedDebt.value.id, userId.value);
-    if (success) showReopenModal.value = false;
-  }
-
-  async function handleDeleteDebt() {
-    if (!selectedDebt.value || !userId.value) return;
-    const success = await deleteDebt(selectedDebt.value, userId.value);
-    if (success) {
-      showDeleteModal.value = false;
-      selectedDebtId.value = null;
-    }
-  }
-
-  async function handleDetailTogglePrivate(value: boolean) {
-    if (!selectedDebt.value) return;
-    try {
-      await updateDebt(selectedDebt.value.id, { is_private: value });
-    } catch {
-      // updateDebt (useDebts) уже откатывает оптимистичный патч кэша сама — здесь только тост.
-      toast({ title: 'Не удалось обновить', variant: 'error' });
-    }
-  }
-
-  function handleDetailClose() {
-    selectedDebtId.value = null;
-  }
-
   async function handleRefresh() {
     await refetch();
   }
 
   return {
-    // State
+    // Состояние
     userId,
     currency,
     isLoading,
@@ -358,10 +299,8 @@ export function useDebtsPageState() {
     currencyFilter,
     availableCurrencies,
     selectedDebtId,
-    selectedDebt,
-    selectedDebtCurrency,
 
-    // Debt lists
+    // Списки
     groups: filteredGroups,
     people,
     filteredPerson,
@@ -372,12 +311,12 @@ export function useDebtsPageState() {
     totalGivenDebts,
     totalTakenDebts,
 
-    // Infinite scroll
+    // Бесконечная лента
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
 
-    // Close all
+    // Закрыть все
     showCloseAllDrawer,
     closeAllPersonName,
     closeAllDebtsForPerson,
@@ -392,27 +331,19 @@ export function useDebtsPageState() {
     hiddenShareCount,
     canShare,
     openShare,
-    showDebtShareDrawer,
-    debtSharePayload,
-    openDebtShare,
 
     // Взаимозачёт
     showOffsetModal,
     offsetPosition,
     isOffsetting,
 
-    // Detail panel modals
-    showDeleteModal,
-    isDeleting,
-    showReopenModal,
-    reopenClosingRecords,
-    isReopening,
-    isPaymentOpen: paymentFlow.isOpen,
-    paymentDraft: paymentFlow.draft,
+    // Действия над выбранным долгом
+    detail,
 
-    // Functions
+    // Функции
     goBack,
     handleDebtClick,
+    closeDetail,
     handlePersonClick,
     handleAddDebt,
     clearFilter,
@@ -420,18 +351,9 @@ export function useDebtsPageState() {
     handleCloseAll,
     openOffset,
     handleOffset,
-    handleDetailPayment,
-    handleDetailEdit,
-    handleDetailDelete,
-    handleDeleteDebt,
-    handleDetailReopen,
-    handleReopenDebt,
-    submitPayment: paymentFlow.submit,
-    handleDetailTogglePrivate,
-    handleDetailClose,
     handleRefresh,
 
-    // Helpers
+    // Хелперы
     toCurrencyItems,
   };
 }

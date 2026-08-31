@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.83';
+export const CURRENT_VERSION = '1.0.84';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,25 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.84',
+    date: '2026-08-31',
+    title: 'Список долгов запоминает, что открыто',
+    items: [
+      {
+        type: 'improvement',
+        text: 'Вкладка, фильтр по человеку и открытый долг теперь в адресе страницы: обновление и кнопка «назад» возвращают тот же экран, а ссылкой можно поделиться.',
+      },
+      {
+        type: 'improvement',
+        text: 'После погашения долга список открывается с тем же фильтром, из которого вы в него зашли.',
+      },
+      {
+        type: 'improvement',
+        text: 'На широком экране правка долга открывается шторкой прямо в панели — раньше она уводила на отдельную страницу.',
+      },
+    ],
+  },
   {
     version: '1.0.83',
     date: '2026-08-31',

@@ -557,6 +557,50 @@ describe('DebtsListPage', () => {
   });
 
   // -----------------------------------------------------------------------
+  // Взаимозачёт
+  // -----------------------------------------------------------------------
+  describe('взаимозачёт встречных долгов', () => {
+    it('подтверждение зачёта уходит на сервер вместе с валютой', async () => {
+      let offsetBody: Record<string, unknown> = {};
+      server.use(
+        http.get('*/api/debts/paginated', () =>
+          HttpResponse.json(
+            buildPaginatedDebtsResponse([mockGivenDebtResponse, mockAlexeiTakenDebtResponse]),
+          ),
+        ),
+        http.post('*/api/debts/offset', async ({ request }) => {
+          offsetBody = (await request.json()) as Record<string, unknown>;
+          return HttpResponse.json({
+            personName: 'Алексей',
+            currency: 'UZS',
+            offsetAmount: 20000,
+            debts: [
+              { ...mockGivenDebtResponse, remainingAmount: 10000 },
+              { ...mockAlexeiTakenDebtResponse, remainingAmount: 0, isClosed: true },
+            ],
+          });
+        }),
+      );
+
+      const { wrapper } = await renderPage({ person: 'Алексей' });
+
+      const card = wrapper.find('[data-testid="mutual-debt-card"]');
+      expect(card.exists()).toBe(true);
+      await card.find('[data-testid="offset-debts-btn"]').trigger('click');
+      await flushPromises();
+
+      const modal = wrapper.findComponent({ name: 'OffsetDebtsModal' });
+      expect(modal.props('modelValue')).toBe(true);
+      modal.vm.$emit('confirm');
+      await flushPromises();
+      await flushPromises();
+
+      expect(offsetBody).toEqual({ personName: 'Алексей', currency: 'UZS' });
+      expect(wrapper.findComponent({ name: 'OffsetDebtsModal' }).props('modelValue')).toBe(false);
+    });
+  });
+
+  // -----------------------------------------------------------------------
   // Single Payment Flow (desktop detail panel — PaymentDrawer)
   // -----------------------------------------------------------------------
   describe('single payment flow (desktop detail panel)', () => {
@@ -592,6 +636,26 @@ describe('DebtsListPage', () => {
       expect(document.body.querySelector('[data-testid="delete-debt-btn"]')).not.toBeNull();
     });
 
+    it('правка из панели открывает шторку, а не уводит на экран долга', async () => {
+      setIsDesktopForTests(true);
+      server.use(
+        http.get('*/api/debts/paginated', () =>
+          HttpResponse.json(buildPaginatedDebtsResponse([mockGivenDebtResponse])),
+        ),
+      );
+      const { wrapper, router } = await renderPage();
+
+      await wrapper.find('[data-testid="person-debt-row"]').trigger('click');
+      await flushPromises();
+
+      const panel = wrapper.findComponent({ name: 'DebtDetailPanel' });
+      await panel.find('[aria-label="Редактировать"]').trigger('click');
+      await flushPromises();
+
+      expect(router.currentRoute.value.name).toBe('debts-list');
+      expect(wrapper.findComponent({ name: 'EditDebtDrawer' }).props('modelValue')).toBe(true);
+    });
+
     it('opens PaymentDrawer for the selected debt, closes it optimistically, and clears the selection once the debt closes', async () => {
       setIsDesktopForTests(true);
       server.use(
@@ -615,7 +679,7 @@ describe('DebtsListPage', () => {
       // "Внести платёж" in the detail panel opens the drawer.
       const panel = wrapper.findComponent({ name: 'DebtDetailPanel' });
       expect(panel.exists()).toBe(true);
-      panel.vm.$emit('payment');
+      await panel.find('[data-testid="payment-btn"]').trigger('click');
       await nextTick();
       expect(wrapper.findComponent({ name: 'PaymentDrawer' }).props('modelValue')).toBe(true);
 

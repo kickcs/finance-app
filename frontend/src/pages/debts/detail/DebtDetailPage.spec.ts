@@ -626,6 +626,40 @@ describe('DebtDetailPage', () => {
       expect(router.currentRoute.value.name).toBe('debts-list');
     });
 
+    it('возвращает в список с тем же фильтром, из которого пришли', async () => {
+      server.use(
+        http.get('*/api/debts', () => HttpResponse.json([mockGivenDebtResponse])),
+        http.get('*/api/accounts', () => HttpResponse.json([mockAccountResponse])),
+        http.get('*/api/debts/:id', () => HttpResponse.json(mockGivenDebtResponse)),
+      );
+
+      const router = createTestRouter(routes);
+      // Фильтр списка приезжает сюда в адресе — с ним же и уезжает обратно
+      router.push(
+        `/debts/${mockGivenDebtResponse.id}?person=%D0%90%D0%BB%D0%B5%D0%BA%D1%81%D0%B5%D0%B9`,
+      );
+      await router.isReady();
+
+      currentWrapper = renderWithProviders(DebtDetailPage, {
+        router,
+        provideAuth: { user: mockUser },
+      });
+      await flushPromises();
+      await flushPromises();
+
+      await currentWrapper.find('[data-testid="payment-btn"]').trigger('click');
+      await flushPromises();
+
+      currentWrapper
+        .findComponent({ name: 'PaymentDrawer' })
+        .vm.$emit('confirm', { amount: 30000, accountId: 'acc-1' });
+      await flushPromises();
+      await flushPromises();
+
+      expect(router.currentRoute.value.name).toBe('debts-list');
+      expect(router.currentRoute.value.query.person).toBe('Алексей');
+    });
+
     it('navigates to debts list when debt is forgiven (forgiveRemainder)', async () => {
       server.use(
         http.get('*/api/debts', () => HttpResponse.json([mockGivenDebtResponse])),

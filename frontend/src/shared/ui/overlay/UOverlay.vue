@@ -81,13 +81,13 @@ watch(
 // Содержимое отдаётся наружу ради порталов: календарь в портале на body тап по
 // себе отдаёт шторке как клик снаружи, и она закрывается вместе с выбором даты.
 const dialogContentRef = ref<{ $el?: HTMLElement } | null>(null);
+// `$el` компонента, у которого в корне фрагмент, — якорный комментарий, а
+// Teleport в комментарий падает: наружу отдаём только настоящий элемент.
 defineExpose({
-  contentEl: computed<HTMLElement | null>(
-    () =>
-      (dialogContentRef.value?.$el as HTMLElement | undefined) ??
-      (drawerContentRef.value?.$el as HTMLElement | undefined) ??
-      null,
-  ),
+  contentEl: computed<HTMLElement | null>(() => {
+    const el = dialogContentRef.value?.$el ?? drawerContentRef.value?.$el;
+    return el instanceof HTMLElement ? el : null;
+  }),
 });
 
 const OVERLAY_CLASS = 'fixed inset-0 z-50 bg-black/40';
