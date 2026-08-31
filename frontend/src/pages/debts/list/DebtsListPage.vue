@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import { useIntersectionObserver } from '@vueuse/core';
+import { computed, ref } from 'vue';
+import { useIntersectionObserver, useScroll } from '@vueuse/core';
 import { AppHeader } from '@/widgets/header';
 import {
   DebtCard,
@@ -38,27 +38,6 @@ const currencyFilterEmptyProps = {
   iconBgClass:
     'bg-surface-light dark:bg-surface-dark text-text-tertiary-light dark:text-text-tertiary-dark',
 } as const;
-
-// PullToRefresh: find scroll container from MasterDetailLayout
-const masterContentRef = ref<HTMLElement | null>(null);
-const scrollContainerRef = ref<HTMLElement | null>(null);
-
-onMounted(() => {
-  if (masterContentRef.value) {
-    let el: HTMLElement | null = masterContentRef.value.parentElement;
-    while (el) {
-      const style = getComputedStyle(el);
-      if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
-        scrollContainerRef.value = el;
-        break;
-      }
-      el = el.parentElement;
-    }
-  }
-});
-
-// Infinite scroll sentinel
-const sentinelRef = ref<HTMLElement | null>(null);
 
 const {
   userId,
@@ -122,6 +101,24 @@ const {
   toCurrencyItems,
 } = useDebtsPageState();
 
+/**
+ * Единственный скроллер страницы живёт внутри MasterDetailLayout и отдаётся
+ * наружу через expose — раньше страница искала его обходом parentElement в
+ * onMounted, и любая правка вёрстки макета молча ломала pull-to-refresh.
+ *
+ * По нему же панель фильтров понимает, уехал ли под неё контент: разделитель
+ * появляется только когда есть что отделять.
+ */
+const layoutRef = ref<InstanceType<typeof MasterDetailLayout> | null>(null);
+const scrollEl = computed<HTMLElement | null>(() => layoutRef.value?.masterScrollEl ?? null);
+const { y: scrollY } = useScroll(scrollEl);
+const isScrolled = computed(() => scrollY.value > 4);
+
+const showCurrencyChips = computed(() => availableCurrencies.value.length > 1);
+
+// Infinite scroll sentinel
+const sentinelRef = ref<HTMLElement | null>(null);
+
 useIntersectionObserver(
   sentinelRef,
   ([{ isIntersecting }]) => {
@@ -129,7 +126,9 @@ useIntersectionObserver(
       fetchNextPage();
     }
   },
-  { rootMargin: '200px' },
+  // Догружаем за экран до конца списка: на длинных списках людей спиннер внизу
+  // при таком запасе просто не успевает показаться.
+  { rootMargin: '400px' },
 );
 </script>
 
@@ -138,7 +137,7 @@ useIntersectionObserver(
     class="h-full flex flex-col overflow-hidden bg-background-light dark:bg-background-dark relative"
   >
     <!-- Header -->
-    <AppHeader blur show-back title="Долги" @back="goBack">
+    <AppHeader blur show-back title="Долги" class="shrink-0" @back="goBack">
       <template #actions>
         <UButton
           variant="ghost"
@@ -154,206 +153,218 @@ useIntersectionObserver(
     </AppHeader>
 
     <MasterDetailLayout
+      ref="layoutRef"
       :selected="selectedDebtId"
       empty-icon="handshake"
       empty-text="Выберите долг для просмотра деталей"
       @close="handleDetailClose"
     >
       <template #master>
-        <PullToRefresh :on-refresh="handleRefresh" :container-ref="scrollContainerRef">
-          <div ref="masterContentRef" class="pt-8 pb-28 lg:pb-8 space-y-6">
-            <!-- Status Tabs -->
-            <UTabs
-              v-model="statusFilter"
-              :items="statusTabs"
-              size="sm"
-              @update:model-value="trigger('selection')"
-            />
-
-            <!-- Loading Skeleton -->
-            <template v-if="isLoading">
-              <template v-if="statusFilter === 'active'">
-                <div data-testid="debt-loading" class="grid grid-cols-2 gap-3">
-                  <Skeleton class="h-20 rounded-2xl" />
-                  <Skeleton class="h-20 rounded-2xl" />
-                </div>
-                <div class="space-y-3">
-                  <Skeleton class="h-6 w-32" />
-                  <Skeleton class="h-16 rounded-xl" />
-                  <Skeleton class="h-16 rounded-xl" />
-                  <Skeleton class="h-16 rounded-xl" />
-                </div>
-              </template>
-              <div v-else class="space-y-3">
-                <Skeleton class="h-6 w-40" />
-                <Skeleton class="h-16 rounded-xl" />
-                <Skeleton class="h-16 rounded-xl" />
-              </div>
-            </template>
-
-            <!-- Active Debts Tab -->
-            <template v-else-if="statusFilter === 'active'">
-              <!-- У встречных долгов карточка зачёта заменяет сводку: числа те же,
-                   но она ещё и объясняет, что с ними можно сделать. -->
-              <template v-if="mutualPositions.length > 0">
-                <MutualDebtCard
-                  v-for="position in mutualPositions"
-                  :key="position.currency"
-                  :position="position"
-                  :masked="filteredPerson?.hasPrivate"
-                  :show-currency="mutualPositions.length > 1"
-                  :is-offsetting="isOffsetting && offsetPosition?.currency === position.currency"
-                  @offset="(trigger('selection'), openOffset(position))"
-                />
-              </template>
-              <DebtsSummaryCard
-                v-else-if="allDebtsFromGroups.length > 0"
-                :total-given="totalGivenDebts"
-                :total-taken="totalTakenDebts"
-                :currency="currency"
-                :title="personFilter ? `Итог: ${personFilter}` : 'Итог по всем'"
+        <PullToRefresh :on-refresh="handleRefresh" :container-ref="scrollEl">
+          <div :class="isDesktop ? 'pb-8' : 'pb-[calc(7rem+var(--safe-area-inset-bottom))]'">
+            <!-- Панель управления липнет к верху скроллера: на длинном списке
+                 людей переключатель «Активные/Закрытые» и фильтр валют раньше
+                 уезжали вверх и возвращались только полной прокруткой назад.
+                 Отрицательные поля растягивают подложку на всю ширину, чтобы
+                 контент затекал под размытие, а не под пустое поле. -->
+            <div
+              :class="[
+                'sticky top-0 z-10 pt-3 pb-3 space-y-2.5',
+                'bg-background-light dark:bg-background-dark',
+                'border-b transition-colors duration-150',
+                isScrolled ? 'border-border-light dark:border-border-dark' : 'border-transparent',
+                isDesktop ? '-ml-8 pl-8 -mr-4 pr-4' : '-mx-5 px-5',
+              ]"
+            >
+              <UTabs
+                v-model="statusFilter"
+                :items="statusTabs"
+                size="sm"
+                @update:model-value="trigger('selection')"
               />
 
-              <!-- Currency Filter Chips -->
               <SelectChips
-                v-if="availableCurrencies.length > 1"
+                v-if="showCurrencyChips"
                 v-model="currencyFilter"
                 :items="toCurrencyItems(availableCurrencies)"
                 all-label="Все валюты"
               />
+            </div>
 
-              <!-- Debts List -->
-              <div class="space-y-3">
-                <!-- Person Filter Indicator -->
-                <div v-if="personFilter" class="flex items-center gap-2 px-1">
-                  <div
-                    class="flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm"
+            <div class="pt-4 space-y-5">
+              <!-- Loading Skeleton -->
+              <template v-if="isLoading">
+                <template v-if="statusFilter === 'active'">
+                  <div data-testid="debt-loading" class="space-y-5">
+                    <Skeleton class="h-40 rounded-2xl" />
+                    <div class="space-y-3">
+                      <Skeleton class="h-6 w-32" />
+                      <Skeleton class="h-[212px] rounded-2xl" />
+                    </div>
+                  </div>
+                </template>
+                <div v-else class="space-y-3">
+                  <Skeleton class="h-6 w-40" />
+                  <Skeleton class="h-16 rounded-xl" />
+                  <Skeleton class="h-16 rounded-xl" />
+                </div>
+              </template>
+
+              <!-- Active Debts Tab -->
+              <template v-else-if="statusFilter === 'active'">
+                <!-- У встречных долгов карточка зачёта заменяет сводку: числа те же,
+                     но она ещё и объясняет, что с ними можно сделать. -->
+                <template v-if="mutualPositions.length > 0">
+                  <MutualDebtCard
+                    v-for="position in mutualPositions"
+                    :key="position.currency"
+                    :position="position"
+                    :masked="filteredPerson?.hasPrivate"
+                    :show-currency="mutualPositions.length > 1"
+                    :is-offsetting="isOffsetting && offsetPosition?.currency === position.currency"
+                    @offset="(trigger('selection'), openOffset(position))"
+                  />
+                </template>
+                <DebtsSummaryCard
+                  v-else-if="allDebtsFromGroups.length > 0"
+                  :total-given="totalGivenDebts"
+                  :total-taken="totalTakenDebts"
+                  :currency="currency"
+                  :title="personFilter ? `Итог: ${personFilter}` : 'Итог по всем'"
+                />
+
+                <!-- Debts List -->
+                <div class="space-y-3">
+                  <SectionHeader
+                    :title="personFilter ? `Долги: ${personFilter}` : 'По людям'"
+                    :count="personFilter ? filteredDebts.length : people.length"
+                    :show-add="false"
+                    :show-view-all="false"
                   >
-                    <span>{{ personFilter }}</span>
-                    <button
-                      type="button"
-                      class="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center hover:bg-primary/30"
-                      :aria-label="`Сбросить фильтр по ${personFilter}`"
-                      data-testid="clear-filter-btn"
-                      @click="clearFilter"
+                    <!-- Сброс фильтра переехал в заголовок секции: отдельная
+                         плашка над ним дублировала имя человека, которое уже
+                         стоит и в заголовке, и в сводке. -->
+                    <template #badge>
+                      <button
+                        v-if="personFilter"
+                        type="button"
+                        class="ml-1 inline-flex items-center gap-1 rounded-full bg-primary/10 py-1 pl-2.5 pr-2 text-caption text-primary transition-colors hover:bg-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                        :aria-label="`Сбросить фильтр по ${personFilter}`"
+                        data-testid="clear-filter-btn"
+                        @click="clearFilter"
+                      >
+                        Все люди
+                        <UIcon name="close" size="xs" />
+                      </button>
+                    </template>
+                  </SectionHeader>
+
+                  <!-- People: one row per person, netted -->
+                  <div
+                    v-if="!personFilter && people.length > 0"
+                    class="rounded-2xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark overflow-hidden divide-y divide-border-light dark:divide-border-dark"
+                  >
+                    <PersonDebtRow
+                      v-for="person in people"
+                      :key="person.personName"
+                      :person="person"
+                      :currency="currency"
+                      :selected="isDesktop && person.debts.some((d) => d.id === selectedDebtId)"
+                      @click="(trigger('selection'), handlePersonClick(person))"
+                    />
+                  </div>
+
+                  <!-- Filtered by person: their debts, flat -->
+                  <div v-else-if="personFilter && filteredDebts.length > 0" class="space-y-2">
+                    <DebtCard
+                      v-for="debt in filteredDebts"
+                      :key="debt.id"
+                      :debt="debt"
+                      :class="
+                        isDesktop &&
+                        selectedDebtId === debt.id &&
+                        'ring-2 ring-primary ring-offset-2 ring-offset-background-light dark:ring-offset-background-dark'
+                      "
+                      @click="(trigger('selection'), handleDebtClick(debt))"
+                    />
+                    <UButton
+                      v-if="filteredDebts.length > 1"
+                      variant="secondary"
+                      full-width
+                      class="mt-3"
+                      data-testid="close-all-btn"
+                      @click="(trigger('selection'), openCloseAllForPerson(personFilter))"
                     >
-                      <UIcon name="close" size="xs" />
-                    </button>
+                      <UIcon name="check_circle" size="sm" />
+                      Закрыть все долги
+                    </UButton>
+                  </div>
+
+                  <!-- Empty State: filtered by currency -->
+                  <UCard v-else-if="currencyFilter" data-testid="empty-state-filtered" class="py-4">
+                    <EmptyState v-bind="currencyFilterEmptyProps" />
+                  </UCard>
+
+                  <!-- Empty State: no debts at all -->
+                  <UCard v-else data-testid="empty-state" class="py-4">
+                    <EmptyState
+                      icon="celebration"
+                      title="Вы без долгов!"
+                      description="Отличная финансовая дисциплина"
+                      icon-bg-class="bg-success/10 text-success"
+                      :action="{ label: 'Создать долг', onClick: handleAddDebt }"
+                    />
+                  </UCard>
+                </div>
+              </template>
+
+              <!-- Closed Debts Tab -->
+              <template v-else-if="statusFilter === 'closed'">
+                <div v-if="allDebtsFromGroups.length > 0" class="space-y-3">
+                  <SectionHeader
+                    title="Погашенные долги"
+                    :count="allDebtsFromGroups.length"
+                    :show-add="false"
+                    :show-view-all="false"
+                  />
+                  <div class="space-y-1.5">
+                    <ClosedDebtCard
+                      v-for="debt in allDebtsFromGroups"
+                      :key="debt.id"
+                      :debt="debt"
+                      :user-currency="currency"
+                      :class="
+                        isDesktop &&
+                        selectedDebtId === debt.id &&
+                        'ring-2 ring-primary ring-offset-2 ring-offset-background-light dark:ring-offset-background-dark'
+                      "
+                      @click="(trigger('selection'), handleDebtClick(debt))"
+                    />
                   </div>
                 </div>
-
-                <SectionHeader
-                  :title="personFilter ? `Долги: ${personFilter}` : 'По людям'"
-                  :show-add="false"
-                  :show-view-all="false"
-                />
-
-                <!-- People: one row per person, netted -->
-                <div
-                  v-if="!personFilter && people.length > 0"
-                  class="rounded-2xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark overflow-hidden divide-y divide-border-light dark:divide-border-dark"
-                >
-                  <PersonDebtRow
-                    v-for="person in people"
-                    :key="person.personName"
-                    :person="person"
-                    :currency="currency"
-                    :selected="isDesktop && person.debts.some((d) => d.id === selectedDebtId)"
-                    @click="(trigger('selection'), handlePersonClick(person))"
-                  />
-                </div>
-
-                <!-- Filtered by person: their debts, flat -->
-                <div v-else-if="personFilter && filteredDebts.length > 0" class="space-y-2">
-                  <DebtCard
-                    v-for="debt in filteredDebts"
-                    :key="debt.id"
-                    :debt="debt"
-                    :class="
-                      isDesktop &&
-                      selectedDebtId === debt.id &&
-                      'ring-2 ring-primary ring-offset-2 ring-offset-background-light dark:ring-offset-background-dark'
-                    "
-                    @click="(trigger('selection'), handleDebtClick(debt))"
-                  />
-                  <UButton
-                    v-if="filteredDebts.length > 1"
-                    variant="secondary"
-                    full-width
-                    data-testid="close-all-btn"
-                    @click="(trigger('selection'), openCloseAllForPerson(personFilter))"
-                  >
-                    <UIcon name="check_circle" size="sm" />
-                    Закрыть все долги
-                  </UButton>
-                </div>
-
                 <!-- Empty State: filtered by currency -->
-                <UCard v-else-if="currencyFilter" data-testid="empty-state-filtered" class="py-4">
+                <UCard
+                  v-else-if="currencyFilter"
+                  data-testid="closed-empty-state-filtered"
+                  class="py-4"
+                >
                   <EmptyState v-bind="currencyFilterEmptyProps" />
                 </UCard>
-
-                <!-- Empty State: no debts at all -->
-                <UCard v-else data-testid="empty-state" class="py-4">
+                <UCard v-else data-testid="closed-empty-state" class="py-4">
                   <EmptyState
-                    icon="celebration"
-                    title="Вы без долгов!"
-                    description="Отличная финансовая дисциплина"
-                    icon-bg-class="bg-success/10 text-success"
-                    :action="{ label: 'Создать долг', onClick: handleAddDebt }"
+                    icon="history"
+                    title="Нет закрытых долгов"
+                    description="Здесь будут погашенные долги"
+                    icon-bg-class="bg-surface-light dark:bg-surface-dark text-text-tertiary-light dark:text-text-tertiary-dark"
                   />
                 </UCard>
-              </div>
-            </template>
+              </template>
 
-            <!-- Closed Debts Tab -->
-            <template v-else-if="statusFilter === 'closed'">
-              <!-- Currency Filter Chips -->
-              <SelectChips
-                v-if="availableCurrencies.length > 1"
-                v-model="currencyFilter"
-                :items="toCurrencyItems(availableCurrencies)"
-                all-label="Все валюты"
-              />
-              <div v-if="allDebtsFromGroups.length > 0" class="space-y-3">
-                <SectionHeader title="Погашенные долги" :show-add="false" :show-view-all="false" />
-                <div class="space-y-1.5">
-                  <ClosedDebtCard
-                    v-for="debt in allDebtsFromGroups"
-                    :key="debt.id"
-                    :debt="debt"
-                    :user-currency="currency"
-                    :class="
-                      isDesktop &&
-                      selectedDebtId === debt.id &&
-                      'ring-2 ring-primary ring-offset-2 ring-offset-background-light dark:ring-offset-background-dark'
-                    "
-                    @click="(trigger('selection'), handleDebtClick(debt))"
-                  />
-                </div>
+              <!-- Infinite scroll sentinel (shared across tabs) -->
+              <div ref="sentinelRef" class="h-1" />
+              <div v-if="isFetchingNextPage" class="flex justify-center py-4">
+                <USpinner size="sm" />
               </div>
-              <!-- Empty State: filtered by currency -->
-              <UCard
-                v-else-if="currencyFilter"
-                data-testid="closed-empty-state-filtered"
-                class="py-4"
-              >
-                <EmptyState v-bind="currencyFilterEmptyProps" />
-              </UCard>
-              <UCard v-else data-testid="closed-empty-state" class="py-4">
-                <EmptyState
-                  icon="history"
-                  title="Нет закрытых долгов"
-                  description="Здесь будут погашенные долги"
-                  icon-bg-class="bg-surface-light dark:bg-surface-dark text-text-tertiary-light dark:text-text-tertiary-dark"
-                />
-              </UCard>
-            </template>
-
-            <!-- Infinite scroll sentinel (shared across tabs) -->
-            <div ref="sentinelRef" class="h-1" />
-            <div v-if="isFetchingNextPage" class="flex justify-center py-4">
-              <USpinner size="sm" />
             </div>
           </div>
         </PullToRefresh>
