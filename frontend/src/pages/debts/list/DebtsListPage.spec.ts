@@ -528,8 +528,8 @@ describe('DebtsListPage', () => {
       await closeAllBtn.trigger('click');
       await flushPromises();
 
-      // Find CloseAllDebtsModal and emit confirm
-      const modal = wrapper.findComponent({ name: 'CloseAllDebtsModal' });
+      // Find CloseAllDebtsDrawer and emit confirm
+      const modal = wrapper.findComponent({ name: 'CloseAllDebtsDrawer' });
       expect(modal.exists()).toBe(true);
       expect(modal.props('modelValue')).toBe(true);
 

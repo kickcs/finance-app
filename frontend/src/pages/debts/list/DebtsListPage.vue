@@ -10,7 +10,7 @@ import {
   PersonDebtRow,
   MutualDebtCard,
 } from '@/entities/debt';
-import { CloseAllDebtsModal, DeleteDebtModal, ReopenDebtModal } from '@/features/close-debt';
+import { CloseAllDebtsDrawer, DeleteDebtModal, ReopenDebtModal } from '@/features/close-debt';
 import { OffsetDebtsModal } from '@/features/offset-debts';
 import { PaymentDrawer } from '@/features/partial-payment';
 import {
@@ -86,7 +86,7 @@ const {
   showOffsetModal,
   offsetPosition,
   isOffsetting,
-  showCloseAllModal,
+  showCloseAllDrawer,
   closeAllPersonName,
   closeAllDebtsForPerson,
   isClosing,
@@ -374,8 +374,8 @@ useIntersectionObserver(
     </MasterDetailLayout>
 
     <!-- Modals -->
-    <CloseAllDebtsModal
-      v-model="showCloseAllModal"
+    <CloseAllDebtsDrawer
+      v-model="showCloseAllDrawer"
       :debts="closeAllDebtsForPerson"
       :person-name="closeAllPersonName || personFilter || ''"
       :accounts="accounts"

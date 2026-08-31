@@ -8,7 +8,7 @@ import ForgivenessToggle from './ForgivenessToggle.vue';
 /**
  * Общий блок полей платежа: плашка переплаты + категория, тумблер прощения,
  * плашка «весь долг будет прощён». Раньше это ~120 строк, продублированных
- * дословно между `PartialPaymentModal` и `CloseAllDebtsModal` — форма живёт
+ * дословно между `PaymentDrawer` и `CloseAllDebtsDrawer` — форма живёт
  * у родителя (там же `reset()` на открытии), этот компонент только считает
  * производные от `amount`/`remaining` и рисует.
  */
