@@ -86,6 +86,21 @@ export default defineConfig({
             },
           },
           {
+            // Шрифты карточек шаринга. Лежат в public/share-fonts/, а не в
+            // выходном fonts/: ALWAYS_PRECACHED в appShellPrecachePlugin
+            // форсит в precache любой fonts/*.woff2, а первой отрисовке они не
+            // нужны. Имена нехешированные — смена шрифта требует
+            // переименования файла.
+            urlPattern: ({ url, sameOrigin }) =>
+              sameOrigin && url.pathname.startsWith('/share-fonts/'),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'share-fonts',
+              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              cacheableResponse: { statuses: [200] },
+            },
+          },
+          {
             // Иконки и сплэши: нужны установленному PWA, но не первой отрисовке
             urlPattern: ({ url, sameOrigin }) =>
               sameOrigin && /^\/(splash\/|logo-)/.test(url.pathname),
