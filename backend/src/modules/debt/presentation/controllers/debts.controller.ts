@@ -12,13 +12,20 @@ import {
 } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { CurrentUser } from '../../../../common';
-import { CreateDebtDto, UpdateDebtDto, GetDebtsPaginatedDto, OffsetDebtsDto } from '../dto';
+import {
+  CreateDebtDto,
+  UpdateDebtDto,
+  GetDebtsPaginatedDto,
+  OffsetDebtsDto,
+  PayDebtDto,
+} from '../dto';
 import {
   CreateDebtCommand,
   UpdateDebtCommand,
   DeleteDebtCommand,
   ReopenDebtCommand,
   OffsetDebtsCommand,
+  PayDebtCommand,
 } from '../../application/commands';
 import { GetDebtsQuery, GetDebtByIdQuery, GetDebtsPaginatedQuery } from '../../application/queries';
 
@@ -30,8 +37,11 @@ export class DebtsController {
   ) {}
 
   @Get()
-  async findAll(@CurrentUser('sub') userId: string): Promise<unknown> {
-    return this.queryBus.execute(new GetDebtsQuery(userId));
+  async findAll(
+    @CurrentUser('sub') userId: string,
+    @Query('status') status?: 'active' | 'closed',
+  ): Promise<unknown> {
+    return this.queryBus.execute(new GetDebtsQuery(userId, status));
   }
 
   @Get('paginated')
@@ -105,6 +115,25 @@ export class DebtsController {
             : undefined,
         createdAt: dto.createdAt ? new Date(dto.createdAt) : undefined,
       }),
+    );
+  }
+
+  @Post(':id/payments')
+  async pay(
+    @CurrentUser('sub') userId: string,
+    @Param('id') id: string,
+    @Body() dto: PayDebtDto,
+  ): Promise<unknown> {
+    return this.commandBus.execute(
+      new PayDebtCommand(
+        userId,
+        id,
+        dto.amount,
+        dto.accountId,
+        dto.date ? new Date(dto.date) : new Date(),
+        dto.forgiveRemainder ?? false,
+        dto.excessCategoryId,
+      ),
     );
   }
 

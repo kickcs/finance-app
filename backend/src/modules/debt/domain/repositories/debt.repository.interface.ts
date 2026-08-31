@@ -33,7 +33,7 @@ export interface PaginatedDebtGroups {
 
 export interface IDebtRepository {
   findById(id: string): Promise<Debt | null>;
-  findByUserId(userId: string): Promise<Debt[]>;
+  findByUserId(userId: string, status?: 'active' | 'closed'): Promise<Debt[]>;
   findByTransactionId(transactionId: string): Promise<Debt | null>;
   findByCloseTransactionId(transactionId: string): Promise<Debt | null>;
   /** Открытые долги одного человека в одной валюте — материал для взаимозачёта. */

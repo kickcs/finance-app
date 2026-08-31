@@ -7,13 +7,16 @@ export * from './delete-debt/delete-debt.handler';
 export * from './reopen-debt/reopen-debt.command';
 export * from './reopen-debt/reopen-debt.handler';
 export * from './offset-debts/offset-debts.command';
+export * from './pay-debt/pay-debt.command';
 export * from './offset-debts/offset-debts.handler';
+export * from './pay-debt/pay-debt.handler';
 
 import { CreateDebtHandler } from './create-debt/create-debt.handler';
 import { UpdateDebtHandler } from './update-debt/update-debt.handler';
 import { DeleteDebtHandler } from './delete-debt/delete-debt.handler';
 import { ReopenDebtHandler } from './reopen-debt/reopen-debt.handler';
 import { OffsetDebtsHandler } from './offset-debts/offset-debts.handler';
+import { PayDebtHandler } from './pay-debt/pay-debt.handler';
 
 export const CommandHandlers = [
   CreateDebtHandler,
@@ -21,4 +24,5 @@ export const CommandHandlers = [
   DeleteDebtHandler,
   ReopenDebtHandler,
   OffsetDebtsHandler,
+  PayDebtHandler,
 ];

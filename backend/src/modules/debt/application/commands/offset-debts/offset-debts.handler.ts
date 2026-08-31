@@ -141,12 +141,10 @@ export class OffsetDebtsHandler implements ICommandHandler<OffsetDebtsCommand> {
         ),
       );
 
-      const remainingAfter = round2(debt.remainingAmountValue - amount);
-      const willClose = remainingAfter <= 0;
-      debt.update({
-        remainingAmount: remainingAfter,
-        ...(willClose ? { isClosed: true, closeTransactionId: transaction.id } : {}),
-      });
+      // Остаток и закрытие считает агрегат: правило «платёж в ноль закрывает
+      // долг» должно быть одним и тем же для зачёта и для обычного платежа.
+      debt.makePayment(amount);
+      if (debt.isClosed) debt.setCloseTransactionId(transaction.id);
 
       await this.debtRepository.save(debt, ctx.manager);
       ctx.touched.set(debt.id, debt);
