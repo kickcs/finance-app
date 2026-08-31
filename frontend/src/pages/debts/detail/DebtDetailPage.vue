@@ -23,6 +23,7 @@ import {
 } from '@/features/close-debt';
 import { useDebtPaymentFlow, PaymentDrawer } from '@/features/partial-payment';
 import { EditDebtDrawer } from '@/features/edit-debt';
+import { ShareDebtsDrawer, useDebtShare } from '@/features/share-debts';
 import { navigateBack } from '@/app/router';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useHaptics } from '@/shared/lib/haptics';
@@ -121,6 +122,10 @@ function openActions() {
   trigger('selection');
   isActionsOpen.value = true;
 }
+
+// Человек с единственным долгом в список по фильтру не попадает — тап уводит
+// прямо сюда, так что кнопка шаринга нужна и здесь, не только в списке.
+const { isOpen: isShareOpen, payload: sharePayload, open: openShare } = useDebtShare(userId, debt);
 </script>
 
 <template>
@@ -185,6 +190,7 @@ function openActions() {
       v-if="debt"
       v-model="isActionsOpen"
       :debt="debt"
+      @share="openShare"
       @delete="showDeleteModal = true"
       @reopen="showReopenModal = true"
       @toggle-private="handleTogglePrivate"
@@ -217,6 +223,9 @@ function openActions() {
       :draft="paymentDraft"
       @confirm="submitPayment"
     />
+
+    <!-- Share Drawer -->
+    <ShareDebtsDrawer v-model="isShareOpen" :payload="sharePayload" />
 
     <!-- Edit Debt Drawer -->
     <EditDebtDrawer

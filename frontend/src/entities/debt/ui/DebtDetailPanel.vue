@@ -19,6 +19,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   payment: [];
   edit: [];
+  /** Шаринг — фича, сущности он не виден: карточку собирает страница-хост. */
+  share: [];
   delete: [];
   /** Шторка действий живёт здесь, а модалку отмены рисует страница-хост. */
   reopen: [closingRecords: Transaction[]];
@@ -107,6 +109,7 @@ function handleEdit() {
       <DebtActionsSheet
         v-model="isActionsOpen"
         :debt="debt"
+        @share="emit('share')"
         @delete="emit('delete')"
         @reopen="emit('reopen', findClosingRecords(debt, transactions))"
         @toggle-private="emit('toggle-private', $event)"

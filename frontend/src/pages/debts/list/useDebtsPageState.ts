@@ -15,7 +15,7 @@ import { useAccounts } from '@/entities/account';
 import { useCloseAllDebts, useCloseDebt, useReopenDebt } from '@/features/close-debt';
 import { useOffsetDebts } from '@/features/offset-debts';
 import { useDebtPaymentFlow } from '@/features/partial-payment';
-import { buildSharePayload, selectShareableDebts } from '@/features/share-debts';
+import { buildSharePayload, selectShareableDebts, useDebtShare } from '@/features/share-debts';
 import { useIsDesktop } from '@/shared/lib/composables/useIsDesktop';
 import { useExchangeRates, useProfile } from '@/shared/api';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
@@ -196,6 +196,17 @@ export function useDebtsPageState() {
     return allDebtsFromGroups.value.find((d) => d.id === selectedDebtId.value) ?? null;
   });
   const selectedDebtCurrency = computed(() => selectedDebt.value?.currency || DEFAULT_CURRENCY);
+
+  /**
+   * Шаринг из панели одного долга: у человека с единственным долгом фильтра по
+   * имени нет, кнопка в шапке списка не появляется. Правило снимка то же —
+   * уходит только открытый в панели долг.
+   */
+  const {
+    isOpen: showDebtShareDrawer,
+    payload: debtSharePayload,
+    open: openDebtShare,
+  } = useDebtShare(userId, selectedDebt);
 
   // --- Navigation ---
   function goBack() {
@@ -384,6 +395,9 @@ export function useDebtsPageState() {
     hiddenShareCount,
     canShare,
     openShare,
+    showDebtShareDrawer,
+    debtSharePayload,
+    openDebtShare,
 
     // Взаимозачёт
     showOffsetModal,

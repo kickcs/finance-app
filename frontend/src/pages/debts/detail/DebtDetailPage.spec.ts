@@ -768,4 +768,61 @@ describe('DebtDetailPage', () => {
       expect(navigateBackMock).toHaveBeenCalled();
     });
   });
+  // -----------------------------------------------------------------------
+  // Sharing
+  // -----------------------------------------------------------------------
+  describe('sharing', () => {
+    it('offers sharing from the actions sheet of an active debt', async () => {
+      server.use(http.get('*/api/debts', () => HttpResponse.json([mockGivenDebtResponse])));
+      const wrapper = await renderPage(mockGivenDebtResponse.id);
+
+      await wrapper.find('[data-testid="debt-more-btn"]').trigger('click');
+      await flushPromises();
+
+      const shareBtn = findInBody('[data-testid="share-debt-btn"]');
+      expect(shareBtn).not.toBeNull();
+      expect((shareBtn as HTMLButtonElement).disabled).toBe(false);
+    });
+
+    it('hides sharing for a closed debt', async () => {
+      server.use(http.get('*/api/debts', () => HttpResponse.json([mockClosedDebtResponse])));
+      const wrapper = await renderPage(mockClosedDebtResponse.id);
+
+      await wrapper.find('[data-testid="debt-more-btn"]').trigger('click');
+      await flushPromises();
+
+      expect(findInBody('[data-testid="share-debt-btn"]')).toBeNull();
+    });
+
+    it('disables sharing for a private debt and says how to fix it', async () => {
+      server.use(
+        http.get('*/api/debts', () =>
+          HttpResponse.json([{ ...mockGivenDebtResponse, isPrivate: true }]),
+        ),
+      );
+      const wrapper = await renderPage(mockGivenDebtResponse.id);
+
+      await wrapper.find('[data-testid="debt-more-btn"]').trigger('click');
+      await flushPromises();
+
+      const shareBtn = findInBody('[data-testid="share-debt-btn"]') as HTMLButtonElement | null;
+      expect(shareBtn).not.toBeNull();
+      expect(shareBtn!.disabled).toBe(true);
+      expect(shareBtn!.textContent).toContain('Сначала откройте сумму');
+    });
+
+    it('opens the share drawer with a snapshot of this one debt', async () => {
+      server.use(http.get('*/api/debts', () => HttpResponse.json([mockGivenDebtResponse])));
+      const wrapper = await renderPage(mockGivenDebtResponse.id);
+
+      await wrapper.find('[data-testid="debt-more-btn"]').trigger('click');
+      await flushPromises();
+      await clickInBody('[data-testid="share-debt-btn"]');
+
+      const drawer = findInBody('[data-testid="share-debts-drawer"]');
+      expect(drawer).not.toBeNull();
+      expect(drawer!.textContent).toContain('Алексей');
+      expect(drawer!.textContent).toContain('1 долг');
+    });
+  });
 });

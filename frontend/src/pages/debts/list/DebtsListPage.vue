@@ -105,6 +105,9 @@ const {
   hiddenShareCount,
   canShare,
   openShare,
+  showDebtShareDrawer,
+  debtSharePayload,
+  openDebtShare,
 } = useDebtsPageState();
 
 /**
@@ -396,6 +399,7 @@ useIntersectionObserver(
           :user-id="userId"
           @payment="handleDetailPayment"
           @edit="handleDetailEdit"
+          @share="openDebtShare"
           @delete="handleDetailDelete"
           @reopen="handleDetailReopen"
           @toggle-private="handleDetailTogglePrivate"
@@ -449,5 +453,6 @@ useIntersectionObserver(
       :payload="sharePayload"
       :hidden-count="hiddenShareCount"
     />
+    <ShareDebtsDrawer v-model="showDebtShareDrawer" :payload="debtSharePayload" />
   </div>
 </template>
