@@ -11,6 +11,7 @@ import {
   downloadBlob,
 } from '@/shared/lib/share/shareCard';
 import { debtShareApi, type SharedDebtsPayload } from '@/entities/debt';
+import { ensureShareFonts } from '@/shared/lib/share/shareFonts';
 import { renderDebtsCardToCanvas } from './renderDebtsCard';
 
 function buildShareText(payload: SharedDebtsPayload): string {
@@ -71,6 +72,7 @@ export function useDebtsShare() {
     // памяти под холст), и снаружи оставил бы кнопку навсегда в загрузке.
     let canvas: HTMLCanvasElement | null = null;
     try {
+      await ensureShareFonts();
       canvas = renderDebtsCardToCanvas(payload);
       const blob = await canvasToBlob(canvas);
       const filename = buildFilename(payload);
@@ -102,6 +104,7 @@ export function useDebtsShare() {
     isSharing.value = true;
     let canvas: HTMLCanvasElement | null = null;
     try {
+      await ensureShareFonts();
       canvas = renderDebtsCardToCanvas(payload);
       const blob = await canvasToBlob(canvas);
       downloadBlob(blob, buildFilename(payload));
