@@ -9,7 +9,7 @@ import type { LastParty } from '../../model/useLastParty';
 import type { ReceiptItem, ReceiptCharge, Participant } from '../../model/types';
 import ReceiptPaper from '../ReceiptPaper.vue';
 import AssignableItemRow from '../AssignableItemRow.vue';
-import ManageParticipantsSheet from '../ManageParticipantsSheet.vue';
+import ParticipantsDrawer from '../ParticipantsDrawer.vue';
 import ParticipantsBar from '../ParticipantsBar.vue';
 
 const props = defineProps<{
@@ -308,8 +308,8 @@ function handleTapRow(item: ReceiptItem) {
       </UButton>
     </div>
 
-    <!-- Manage participants sheet -->
-    <ManageParticipantsSheet
+    <!-- Выбор участников: шторка на телефоне, панель на компьютере -->
+    <ParticipantsDrawer
       v-model:open="manageOpen"
       :participants="participants"
       :has-me="hasMe"
