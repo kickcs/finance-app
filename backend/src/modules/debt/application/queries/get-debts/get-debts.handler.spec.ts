@@ -55,7 +55,7 @@ describe('GetDebtsHandler', () => {
     expect(result[1].id).toBe('debt-2');
     expect(result[1].name).toBe('Debt 2');
     expect(result[1].debtType).toBe('taken');
-    expect(mockRepository.findByUserId).toHaveBeenCalledWith('user-1');
+    expect(mockRepository.findByUserId).toHaveBeenCalledWith('user-1', undefined);
   });
 
   it('should return empty array when user has no debts', async () => {
@@ -65,6 +65,6 @@ describe('GetDebtsHandler', () => {
     const result = await handler.execute(query);
 
     expect(result).toEqual([]);
-    expect(mockRepository.findByUserId).toHaveBeenCalledWith('user-no-debts');
+    expect(mockRepository.findByUserId).toHaveBeenCalledWith('user-no-debts', undefined);
   });
 });

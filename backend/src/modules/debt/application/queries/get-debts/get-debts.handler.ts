@@ -12,7 +12,7 @@ export class GetDebtsHandler implements IQueryHandler<GetDebtsQuery> {
   ) {}
 
   async execute(query: GetDebtsQuery) {
-    const debts = await this.debtRepository.findByUserId(query.userId);
+    const debts = await this.debtRepository.findByUserId(query.userId, query.status);
     return DebtResponseMapper.toResponseList(debts);
   }
 }

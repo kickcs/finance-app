@@ -1,11 +1,9 @@
 // UI
 export { default as DebtCard } from './ui/DebtCard.vue';
 export { default as DebtCardSkeleton } from './ui/DebtCardSkeleton.vue';
-export { default as DebtDetailPanel } from './ui/DebtDetailPanel.vue';
 export { default as ForgivenessToggle } from './ui/ForgivenessToggle.vue';
 export { default as DebtDetailContent } from './ui/DebtDetailContent.vue';
 export { default as DebtPaymentTimeline } from './ui/DebtPaymentTimeline.vue';
-export { default as ClosedDebtCard } from './ui/ClosedDebtCard.vue';
 export { default as DebtsSummaryCard } from './ui/DebtsSummaryCard.vue';
 export { default as PersonDebtRow } from './ui/PersonDebtRow.vue';
 export { default as DebtHero } from './ui/DebtHero.vue';
@@ -19,15 +17,24 @@ export { default as MutualDebtCard } from './ui/MutualDebtCard.vue';
 
 // Model/Types
 export * from './model/types';
+export {
+  useDebtFormModel,
+  makeDebtFormFields,
+  debtCategoryId,
+  debtTransactionType,
+  type DebtFormFields,
+  type DebtFormModelOptions,
+} from './model/useDebtFormModel';
 export { useDebtPaymentForm } from './model/useDebtPaymentForm';
 
 // Lib
 export * from './lib/groupDebtsByPerson';
 export {
+  foldDebtsIntoPeople,
   foldGroupsIntoPeople,
   type PersonDebtSummary,
   type MutualPosition,
-} from './lib/foldGroupsIntoPeople';
+} from './lib/foldDebtsIntoPeople';
 export { findClosingRecords, debtHasClosingRecords } from './lib/findClosingRecords';
 
 // API

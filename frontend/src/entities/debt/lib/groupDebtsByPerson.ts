@@ -1,6 +1,5 @@
-import { isPastDate } from '@/shared/lib/date';
 import { DEFAULT_CURRENCY } from '@/shared/config/currency';
-import { type Debt, type DebtDirection, getDebtDisplayName } from '../model/types';
+import { type Debt, type DebtDirection, getDebtDisplayName, isDebtOverdue } from '../model/types';
 
 export interface DebtByPerson {
   personName: string;
@@ -61,8 +60,7 @@ export function groupDebtsByPerson(
 }
 
 export function countOverdueDebts(debts: Debt[]): number {
-  return debts.filter((d) => !d.is_closed && d.next_payment_date && isPastDate(d.next_payment_date))
-    .length;
+  return debts.filter(isDebtOverdue).length;
 }
 
 /**

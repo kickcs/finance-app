@@ -22,6 +22,8 @@ export interface DebtResponseDto {
   forgivenAmount: number;
   isPrivate: boolean;
   feeAmount: number;
+  /** Есть запись — комиссию можно править; нет — она заведена до этой связи. */
+  feeTransactionId: string | null;
 }
 
 export class DebtResponseMapper {
@@ -48,6 +50,7 @@ export class DebtResponseMapper {
       forgivenAmount: debt.forgivenAmount,
       isPrivate: debt.isPrivate,
       feeAmount: debt.feeAmount,
+      feeTransactionId: debt.feeTransactionId,
     };
   }
 

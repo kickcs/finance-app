@@ -23,9 +23,12 @@ export class DebtRepository implements IDebtRepository {
     return DebtMapper.toDomain(ormEntity);
   }
 
-  async findByUserId(userId: string): Promise<Debt[]> {
+  async findByUserId(userId: string, status?: 'active' | 'closed'): Promise<Debt[]> {
     const ormEntities = await this.ormRepository.find({
-      where: { userId },
+      where: {
+        userId,
+        ...(status ? { isClosed: status === 'closed' } : {}),
+      },
       order: { createdAt: 'DESC' },
     });
     return ormEntities.map((entity) => DebtMapper.toDomain(entity));

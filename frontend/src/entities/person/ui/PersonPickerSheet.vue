@@ -3,7 +3,7 @@ import { ref, computed, watch, nextTick } from 'vue';
 import { UIcon, UInput, InitialAvatar } from '@/shared/ui';
 import { UOverlay } from '@/shared/ui/overlay';
 import { useIsDesktop } from '@/shared/lib/composables/useIsDesktop';
-import { personKey } from '../lib/foldDebtsByPersonName';
+import { personKey } from '../lib/personKey';
 import type { Person } from '../model/types';
 
 /**

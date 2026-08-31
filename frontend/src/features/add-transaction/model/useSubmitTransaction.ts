@@ -380,7 +380,7 @@ export function useSubmitTransaction() {
     try {
       // Open split debts linked to the transaction block its deletion on the
       // backend — remove them first.
-      const debts = await debtsApi.getAll(userId);
+      const debts = await debtsApi.getAll('active');
       const linkedDebts = debts.filter(
         (d) => d.source_transaction_id === transactionId && !d.is_closed,
       );

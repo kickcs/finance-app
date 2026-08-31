@@ -1,7 +1,7 @@
 import type { InfiniteData, QueryClient } from '@tanstack/vue-query';
 import type { Debt } from '@/shared/api/database.types';
 import { debtQueryKeys } from './queryKeys';
-import type { DebtsFilters, PaginatedDebtsResult } from '../model/types';
+import type { DebtsFilters, DebtStatus, PaginatedDebtsResult } from '../model/types';
 
 /**
  * Optimistic cache helpers for debt mutations.
@@ -75,12 +75,28 @@ function applyToListCaches(
   debtId: string,
   updates: Partial<Debt> | null,
 ): void {
-  queryClient.setQueriesData<Debt[]>({ queryKey: debtQueryKeys.listPrefix() }, (old) => {
-    if (!old) return old;
-    return updates === null
-      ? old.filter((d) => d.id !== debtId)
-      : old.map((d) => (d.id === debtId ? { ...d, ...updates } : d));
-  });
+  // Списки бывают со статусом в ключе (`['debts','list',uid,'active']`), и
+  // закрывшийся долг обязан из такого списка исчезнуть, а не остаться
+  // закрытым — поэтому записи перебираются вручную, ради доступа к ключу.
+  const entries = queryClient.getQueriesData<Debt[]>({ queryKey: debtQueryKeys.listPrefix() });
+  for (const [queryKey, data] of entries) {
+    if (!data) continue;
+    if (!data.some((debt) => debt.id === debtId)) continue;
+
+    const status = queryKey[3] as DebtStatus | undefined;
+    const next: Debt[] = [];
+    for (const debt of data) {
+      if (debt.id !== debtId) {
+        next.push(debt);
+        continue;
+      }
+      if (updates === null) continue;
+      const after = { ...debt, ...updates };
+      if (status && after.is_closed !== (status === 'closed')) continue;
+      next.push(after);
+    }
+    queryClient.setQueryData(queryKey, next);
+  }
 }
 
 function applyToInfiniteCaches(

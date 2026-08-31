@@ -29,6 +29,8 @@ export interface DebtProps {
    * показа полной стоимости долга и в расчётах остатка не участвует.
    */
   feeAmount: number;
+  /** Та самая расходная запись. Без неё комиссию нечем править. */
+  feeTransactionId: string | null;
 }
 
 export interface CreateDebtProps {
@@ -44,7 +46,6 @@ export interface CreateDebtProps {
   nextPaymentDate?: Date;
   createdAt?: Date;
   description?: string;
-  feeAmount?: number;
 }
 
 export class Debt extends AggregateRoot<string> {
@@ -67,6 +68,7 @@ export class Debt extends AggregateRoot<string> {
   private _forgivenAmount: number;
   private _isPrivate: boolean;
   private _feeAmount: number;
+  private _feeTransactionId: string | null;
 
   private constructor(props: DebtProps) {
     super(props.id);
@@ -89,6 +91,7 @@ export class Debt extends AggregateRoot<string> {
     this._forgivenAmount = props.forgivenAmount;
     this._isPrivate = props.isPrivate;
     this._feeAmount = props.feeAmount;
+    this._feeTransactionId = props.feeTransactionId;
   }
 
   static create(props: CreateDebtProps): Debt {
@@ -105,7 +108,6 @@ export class Debt extends AggregateRoot<string> {
       nextPaymentDate,
       createdAt,
       description,
-      feeAmount,
     } = props;
 
     const currencyVo = Currency.create(currency);
@@ -129,7 +131,8 @@ export class Debt extends AggregateRoot<string> {
       closedAt: null,
       forgivenAmount: 0,
       isPrivate: false,
-      feeAmount: feeAmount ?? 0,
+      feeAmount: 0,
+      feeTransactionId: null,
     });
 
     debt.addDomainEvent(
@@ -216,6 +219,9 @@ export class Debt extends AggregateRoot<string> {
   get feeAmount(): number {
     return this._feeAmount;
   }
+  get feeTransactionId(): string | null {
+    return this._feeTransactionId;
+  }
 
   // Behaviors
   makePayment(amount: number): void {
@@ -249,6 +255,20 @@ export class Debt extends AggregateRoot<string> {
     }
   }
 
+  /**
+   * Правка суммы долга двигает остаток на ту же дельту: возвращённое уже
+   * возвращено, меняется только то, что осталось вернуть.
+   */
+  changeTotalAmount(amount: number): void {
+    const next = Money.create(amount, this.currency);
+    const delta = next.amount - this._totalAmount.amount;
+    this._totalAmount = next;
+    this._remainingAmount = Money.create(
+      Math.max(0, this._remainingAmount.amount + delta),
+      this.currency,
+    );
+  }
+
   setForgivenAmount(amount: number): void {
     this._forgivenAmount = amount;
   }
@@ -269,7 +289,6 @@ export class Debt extends AggregateRoot<string> {
     description?: string | null;
     forgivenAmount?: number;
     isPrivate?: boolean;
-    feeAmount?: number;
     createdAt?: Date;
   }): void {
     if (data.name !== undefined) this._name = data.name;
@@ -297,7 +316,6 @@ export class Debt extends AggregateRoot<string> {
     if (data.description !== undefined) this._description = data.description;
     if (data.forgivenAmount !== undefined) this._forgivenAmount = data.forgivenAmount;
     if (data.isPrivate !== undefined) this._isPrivate = data.isPrivate;
-    if (data.feeAmount !== undefined) this._feeAmount = data.feeAmount;
     // Дата долга правится: её нередко ставят задним числом, когда долг заводят
     // не в день займа.
     if (data.createdAt !== undefined) this._createdAt = data.createdAt;
@@ -309,5 +327,14 @@ export class Debt extends AggregateRoot<string> {
 
   setCloseTransactionId(transactionId: string): void {
     this._closeTransactionId = transactionId;
+  }
+
+  /**
+   * Комиссия и её запись меняются только вместе: сумма без записи — число,
+   * которое ничего не списало, запись без суммы — расход из ниоткуда.
+   */
+  setFee(amount: number, transactionId: string | null): void {
+    this._feeAmount = amount;
+    this._feeTransactionId = transactionId;
   }
 }

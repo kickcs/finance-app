@@ -15,8 +15,8 @@ import { navigateBack } from '@/app/router';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 import { useExchangeRates } from '@/shared/api';
-import { usePeople, foldDebtsByPersonName, personKey, type Person } from '@/entities/person';
-import { useDebts } from '@/entities/debt';
+import { usePeople, personKey, type Person } from '@/entities/person';
+import { useDebts, foldDebtsIntoPeople } from '@/entities/debt';
 import { listTransition } from '@/shared/lib/transitions';
 import { colorForName } from '@/shared/config/colors';
 import { useHaptics } from '@/shared/lib/haptics';
@@ -29,7 +29,7 @@ const { trigger } = useHaptics();
 const { userId } = useCurrentUser();
 const { currency } = useUserCurrency();
 const { people, isLoading, createPerson, updatePerson, deletePerson } = usePeople(userId);
-const { debts } = useDebts(userId);
+const { debts } = useDebts(userId, { status: 'active' });
 const { convert } = useExchangeRates(currency);
 const { toast } = useToast();
 
@@ -43,7 +43,9 @@ const personToDelete = ref<Person | null>(null);
  * Долги хранят имя человека строкой, без person_id, поэтому нетто ищется по
  * нормализованному имени — тем же ключом, что и на странице долгов.
  */
-const debtNetByPerson = computed(() => foldDebtsByPersonName(debts.value, convert));
+const debtNetByPerson = computed(
+  () => new Map(foldDebtsIntoPeople(debts.value, convert).map((p) => [p.key, p])),
+);
 
 function netFor(person: Person) {
   return debtNetByPerson.value.get(personKey(person.name));

@@ -2,18 +2,12 @@
 import { computed, ref } from 'vue';
 import { useIntersectionObserver, useScroll } from '@vueuse/core';
 import { AppHeader } from '@/widgets/header';
-import {
-  DebtCard,
-  DebtDetailPanel,
-  ClosedDebtCard,
-  DebtsSummaryCard,
-  PersonDebtRow,
-  MutualDebtCard,
-} from '@/entities/debt';
-import { CloseAllDebtsDrawer, DeleteDebtModal, ReopenDebtModal } from '@/features/close-debt';
+import { DebtCard, DebtsSummaryCard, PersonDebtRow, MutualDebtCard } from '@/entities/debt';
 import { OffsetDebtsModal } from '@/features/offset-debts';
-import { PaymentDrawer } from '@/features/partial-payment';
+import { CloseAllDebtsDrawer } from '@/features/pay-debt';
 import { ShareDebtsDrawer } from '@/features/share-debts';
+import DebtDetailPanel from '../detail/DebtDetailPanel.vue';
+import DebtDetailOverlays from '../detail/DebtDetailOverlays.vue';
 import {
   UButton,
   UIcon,
@@ -28,7 +22,7 @@ import {
   PullToRefresh,
 } from '@/shared/ui';
 import { useHaptics } from '@/shared/lib/haptics';
-import { useDebtsPageState } from './useDebtsPageState';
+import { useDebtsPage } from '../model/useDebtsPage';
 
 const { trigger } = useHaptics();
 
@@ -41,7 +35,6 @@ const currencyFilterEmptyProps = {
 } as const;
 
 const {
-  userId,
   currency,
   isLoading,
   isDesktop,
@@ -51,8 +44,6 @@ const {
   currencyFilter,
   availableCurrencies,
   selectedDebtId,
-  selectedDebt,
-  selectedDebtCurrency,
   people,
   filteredPerson,
   mutualPositions,
@@ -73,31 +64,16 @@ const {
   progress,
   total,
   accounts,
-  showDeleteModal,
-  showReopenModal,
-  reopenClosingRecords,
-  isReopening,
-  isPaymentOpen,
-  paymentDraft,
-  isDeleting,
   goBack,
   handleDebtClick,
   handlePersonClick,
   handleAddDebt,
   clearFilter,
+  closeDetail,
   openCloseAllForPerson,
   handleCloseAll,
   openOffset,
   handleOffset,
-  handleDetailPayment,
-  handleDetailEdit,
-  handleDetailDelete,
-  handleDeleteDebt,
-  handleDetailReopen,
-  handleReopenDebt,
-  submitPayment,
-  handleDetailTogglePrivate,
-  handleDetailClose,
   handleRefresh,
   toCurrencyItems,
   showShareDrawer,
@@ -105,10 +81,7 @@ const {
   hiddenShareCount,
   canShare,
   openShare,
-  showDebtShareDrawer,
-  debtSharePayload,
-  openDebtShare,
-} = useDebtsPageState();
+} = useDebtsPage();
 
 /**
  * Единственный скроллер страницы живёт внутри MasterDetailLayout и отдаётся
@@ -179,7 +152,7 @@ useIntersectionObserver(
       :selected="selectedDebtId"
       empty-icon="handshake"
       empty-text="Выберите долг для просмотра деталей"
-      @close="handleDetailClose"
+      @close="closeDetail"
     >
       <template #master>
         <PullToRefresh :on-refresh="handleRefresh" :container-ref="scrollEl">
@@ -244,7 +217,7 @@ useIntersectionObserver(
                     :masked="filteredPerson?.hasPrivate"
                     :show-currency="mutualPositions.length > 1"
                     :is-offsetting="isOffsetting && offsetPosition?.currency === position.currency"
-                    @offset="(trigger('selection'), openOffset(position))"
+                    @offset="openOffset(position)"
                   />
                 </template>
                 <DebtsSummaryCard
@@ -292,7 +265,7 @@ useIntersectionObserver(
                       :person="person"
                       :currency="currency"
                       :selected="isDesktop && person.debts.some((d) => d.id === selectedDebtId)"
-                      @click="(trigger('selection'), handlePersonClick(person))"
+                      @click="handlePersonClick(person)"
                     />
                   </div>
 
@@ -307,7 +280,7 @@ useIntersectionObserver(
                         selectedDebtId === debt.id &&
                         'ring-2 ring-primary ring-offset-2 ring-offset-background-light dark:ring-offset-background-dark'
                       "
-                      @click="(trigger('selection'), handleDebtClick(debt))"
+                      @click="handleDebtClick(debt)"
                     />
                     <UButton
                       v-if="filteredDebts.length > 1"
@@ -350,7 +323,7 @@ useIntersectionObserver(
                     :show-view-all="false"
                   />
                   <div class="space-y-1.5">
-                    <ClosedDebtCard
+                    <DebtCard
                       v-for="debt in allDebtsFromGroups"
                       :key="debt.id"
                       :debt="debt"
@@ -360,7 +333,7 @@ useIntersectionObserver(
                         selectedDebtId === debt.id &&
                         'ring-2 ring-primary ring-offset-2 ring-offset-background-light dark:ring-offset-background-dark'
                       "
-                      @click="(trigger('selection'), handleDebtClick(debt))"
+                      @click="handleDebtClick(debt)"
                     />
                   </div>
                 </div>
@@ -393,17 +366,7 @@ useIntersectionObserver(
       </template>
 
       <template #detail>
-        <DebtDetailPanel
-          v-if="selectedDebtId && userId"
-          :debt-id="selectedDebtId"
-          :user-id="userId"
-          @payment="handleDetailPayment"
-          @edit="handleDetailEdit"
-          @share="openDebtShare"
-          @delete="handleDetailDelete"
-          @reopen="handleDetailReopen"
-          @toggle-private="handleDetailTogglePrivate"
-        />
+        <DebtDetailPanel v-if="selectedDebtId" />
       </template>
     </MasterDetailLayout>
 
@@ -418,21 +381,6 @@ useIntersectionObserver(
       :total="total"
       @confirm="handleCloseAll"
     />
-    <DeleteDebtModal
-      v-model="showDeleteModal"
-      :debt="selectedDebt"
-      :currency="selectedDebtCurrency"
-      :is-deleting="isDeleting"
-      @confirm="handleDeleteDebt"
-    />
-    <ReopenDebtModal
-      v-model="showReopenModal"
-      :debt="selectedDebt"
-      :closing-records="reopenClosingRecords"
-      :accounts="accounts"
-      :is-reopening="isReopening"
-      @confirm="handleReopenDebt"
-    />
     <OffsetDebtsModal
       v-model="showOffsetModal"
       :person-name="personFilter || ''"
@@ -441,18 +389,13 @@ useIntersectionObserver(
       :is-offsetting="isOffsetting"
       @confirm="handleOffset"
     />
-    <PaymentDrawer
-      v-model="isPaymentOpen"
-      :debt="selectedDebt"
-      :accounts="accounts"
-      :draft="paymentDraft"
-      @confirm="submitPayment"
-    />
     <ShareDebtsDrawer
       v-model="showShareDrawer"
       :payload="sharePayload"
       :hidden-count="hiddenShareCount"
     />
-    <ShareDebtsDrawer v-model="showDebtShareDrawer" :payload="debtSharePayload" />
+
+    <!-- Шторки выбранного долга: те же, что на его экране -->
+    <DebtDetailOverlays />
   </div>
 </template>

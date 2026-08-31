@@ -1,15 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { findClosingRecords, debtHasClosingRecords } from './findClosingRecords';
-import type { Debt, Transaction } from '@/shared/api/database.types';
-
-function makeDebt(overrides: Partial<Debt> = {}): Debt {
-  return {
-    id: 'debt-1',
-    close_transaction_id: null,
-    forgiven_amount: 0,
-    ...overrides,
-  } as Debt;
-}
+import type { Transaction } from '@/shared/api/database.types';
+import { makeDebt } from '@/test/fixtures/debt';
 
 function makeTx(overrides: Partial<Transaction> = {}): Transaction {
   return {

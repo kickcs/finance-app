@@ -27,6 +27,7 @@ vi.mock('@/shared/lib/haptics', () => ({
 }));
 
 vi.mock('@/shared/api/invalidation', () => ({
+  invalidateDebtRelated: vi.fn().mockResolvedValue(undefined),
   invalidateTransactionRelated: vi.fn().mockResolvedValue(undefined),
   invalidateAccountRelated: vi.fn().mockResolvedValue(undefined),
 }));
@@ -60,6 +61,7 @@ function makeDebt(overrides: Partial<Debt> = {}): Debt {
     forgiven_amount: 0,
     is_private: false,
     fee_amount: 0,
+    fee_transaction_id: null,
     ...overrides,
   };
 }
@@ -99,19 +101,19 @@ describe('useEditDebt', () => {
     it('initializes form from debt data', () => {
       const { result } = mountComposable(makeDebt({ person_name: 'Олег', total_amount: 100000 }));
       expect(result.formData.value.person_name).toBe('Олег');
-      expect(result.formData.value.total_amount).toBe(100000);
+      expect(result.formData.value.amount).toBe(100000);
     });
 
     it('initializes created_at as a local calendar date', () => {
       const debt = makeDebt();
       const { result } = mountComposable(debt);
-      expect(result.formData.value.created_at).toBe(toLocalISODate(new Date(debt.created_at)));
+      expect(result.formData.value.date).toBe(toLocalISODate(new Date(debt.created_at)));
     });
 
     it('handles null debt', () => {
       const { result } = mountComposable(null);
       expect(result.formData.value.person_name).toBe('');
-      expect(result.formData.value.total_amount).toBe(0);
+      expect(result.formData.value.amount).toBe(0);
     });
 
     it('starts clean (not dirty)', () => {
@@ -178,7 +180,7 @@ describe('useEditDebt', () => {
     it('reset restores original values', () => {
       const { result } = mountComposable(makeDebt({ person_name: 'Олег' }));
       result.updateField('person_name', 'Изменённое');
-      result.updateField('total_amount', 999);
+      result.updateField('amount', 999);
 
       result.reset();
 
@@ -192,26 +194,26 @@ describe('useEditDebt', () => {
   describe('warnings', () => {
     it('shows warning when amount changes and debt has linked transaction', () => {
       const { result } = mountComposable(makeDebt({ transaction_id: 'tx-1' }));
-      result.updateField('total_amount', 99999);
+      result.updateField('amount', 99999);
       expect(result.warnings.value).toHaveLength(1);
       expect(result.warnings.value[0]).toContain('транзакции');
     });
 
     it('no warning when amount changes but no linked transaction', () => {
       const { result } = mountComposable(makeDebt({ transaction_id: null }));
-      result.updateField('total_amount', 99999);
+      result.updateField('amount', 99999);
       expect(result.warnings.value).toHaveLength(0);
     });
 
     it('warns that the linked transaction date moves too', () => {
       const { result } = mountComposable(makeDebt({ transaction_id: 'tx-1' }));
-      result.updateField('created_at', '2024-11-03');
+      result.updateField('date', '2024-11-03');
       expect(result.warnings.value).toEqual(['Дата связанной транзакции тоже будет обновлена']);
     });
 
     it('no warning when the date changes but there is no linked transaction', () => {
       const { result } = mountComposable(makeDebt({ transaction_id: null }));
-      result.updateField('created_at', '2024-11-03');
+      result.updateField('date', '2024-11-03');
       expect(result.warnings.value).toHaveLength(0);
     });
 
@@ -282,7 +284,7 @@ describe('useEditDebt', () => {
 
     it('does not submit when invalid', async () => {
       const { result } = mountComposable(makeDebt({ person_name: '' }));
-      result.updateField('total_amount', 999);
+      result.updateField('amount', 999);
       const success = await result.submit();
       expect(success).toBe(false);
     });
@@ -306,7 +308,7 @@ describe('useEditDebt', () => {
       expect(patchBody).not.toHaveProperty('isPrivate');
     });
 
-    it('adjusts remaining_amount by delta when total changes', async () => {
+    it('sends only the total and leaves the remainder to the server', async () => {
       let patchBody: Record<string, unknown> = {};
       server.use(
         http.patch('*/api/debts/:id', async ({ request }) => {
@@ -315,44 +317,19 @@ describe('useEditDebt', () => {
         }),
       );
 
-      // Debt: total=50000, remaining=30000 (paid 20000)
       const { result } = mountComposable(
         makeDebt({
           total_amount: 50000,
           remaining_amount: 30000,
         }),
       );
-      result.updateField('total_amount', 70000); // +20000
+      result.updateField('amount', 70000);
       await result.submit();
       await flushPromises();
 
-      // remaining should be 30000 + 20000 = 50000
       expect(patchBody).toHaveProperty('totalAmount', 70000);
-      expect(patchBody).toHaveProperty('remainingAmount', 50000);
-    });
-
-    it('clamps remaining to 0 when total decreases below paid', async () => {
-      let patchBody: Record<string, unknown> = {};
-      server.use(
-        http.patch('*/api/debts/:id', async ({ request }) => {
-          patchBody = (await request.json()) as Record<string, unknown>;
-          return HttpResponse.json(mockGivenDebtResponse);
-        }),
-      );
-
-      // Debt: total=50000, remaining=30000 (paid 20000)
-      // Decrease total to 10000 → remaining = 30000 + (10000-50000) = -10000 → clamped to 0
-      const { result } = mountComposable(
-        makeDebt({
-          total_amount: 50000,
-          remaining_amount: 30000,
-        }),
-      );
-      result.updateField('total_amount', 10000);
-      await result.submit();
-      await flushPromises();
-
-      expect(patchBody).toHaveProperty('remainingAmount', 0);
+      expect(patchBody).not.toHaveProperty('remainingAmount');
+      expect(patchBody).not.toHaveProperty('isClosed');
     });
 
     it('updates linked transaction when amount changes', async () => {
@@ -366,7 +343,7 @@ describe('useEditDebt', () => {
       );
 
       const { result } = mountComposable(makeDebt({ transaction_id: 'tx-debt-1' }));
-      result.updateField('total_amount', 75000);
+      result.updateField('amount', 75000);
       await result.submit();
       await flushPromises();
 
@@ -402,7 +379,7 @@ describe('useEditDebt', () => {
       );
 
       const { result } = mountComposable(makeDebt({ transaction_id: null }));
-      result.updateField('total_amount', 99000);
+      result.updateField('amount', 99000);
       await result.submit();
       await flushPromises();
 
@@ -416,7 +393,7 @@ describe('useEditDebt', () => {
       );
 
       const { result } = mountComposable(makeDebt({ transaction_id: 'tx-1' }));
-      result.updateField('total_amount', 99000);
+      result.updateField('amount', 99000);
       await result.submit();
       await flushPromises();
 
@@ -459,7 +436,7 @@ describe('useEditDebt', () => {
 
       const debt = makeDebt();
       const { result } = mountComposable(debt);
-      result.updateField('created_at', '2024-11-03');
+      result.updateField('date', '2024-11-03');
       await result.submit();
       await flushPromises();
 
@@ -481,7 +458,7 @@ describe('useEditDebt', () => {
       );
 
       const { result } = mountComposable(makeDebt({ transaction_id: 'tx-debt-1' }));
-      result.updateField('created_at', '2024-11-03');
+      result.updateField('date', '2024-11-03');
       await result.submit();
       await flushPromises();
 
@@ -503,8 +480,8 @@ describe('useEditDebt', () => {
       );
 
       const { result } = mountComposable(makeDebt({ transaction_id: 'tx-debt-1' }));
-      result.updateField('total_amount', 75000);
-      result.updateField('created_at', '2024-11-03');
+      result.updateField('amount', 75000);
+      result.updateField('date', '2024-11-03');
       await result.submit();
       await flushPromises();
 
@@ -583,7 +560,7 @@ describe('useEditDebt', () => {
       );
 
       const { result } = mountComposable(makeDebt({ next_payment_date: null }));
-      result.updateField('next_payment_date', '2026-09-01');
+      result.updateField('due_date', '2026-09-01');
       await result.submit();
       await flushPromises();
 
@@ -601,7 +578,7 @@ describe('useEditDebt', () => {
       );
 
       const { result } = mountComposable(makeDebt({ next_payment_date: '2026-09-01' }));
-      result.updateField('next_payment_date', null);
+      result.updateField('due_date', null);
       await result.submit();
       await flushPromises();
 
@@ -622,7 +599,7 @@ describe('useEditDebt', () => {
       );
 
       const { result } = mountComposable(makeDebt({ transaction_id: 'tx-debt-1' }));
-      result.updateField('total_amount', 75000);
+      result.updateField('amount', 75000);
       await result.submit();
       await flushPromises();
 
@@ -640,7 +617,7 @@ describe('useEditDebt', () => {
       );
 
       const { result } = mountComposable(makeDebt({ transaction_id: 'tx-debt-1' }));
-      result.updateField('total_amount', 75000);
+      result.updateField('amount', 75000);
       const success = await result.submit();
       await flushPromises();
 
@@ -658,7 +635,7 @@ describe('useEditDebt', () => {
       );
 
       const { result } = mountComposable(makeDebt({ transaction_id: 'tx-debt-1' }));
-      result.updateField('total_amount', 75000);
+      result.updateField('amount', 75000);
       const success = await result.submit();
       await flushPromises();
 

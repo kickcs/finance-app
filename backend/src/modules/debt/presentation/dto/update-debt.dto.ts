@@ -25,12 +25,6 @@ export class UpdateDebtDto {
   totalAmount?: number;
 
   @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @Max(1_000_000_000_000)
-  remainingAmount?: number;
-
-  @IsOptional()
   @ValidateIf((o: UpdateDebtDto) => o.monthlyPayment !== null)
   @IsNumber()
   @Min(0)
@@ -62,15 +56,6 @@ export class UpdateDebtDto {
   transactionId?: string | null;
 
   @IsOptional()
-  @ValidateIf((o: UpdateDebtDto) => o.closeTransactionId !== null)
-  @IsUUID()
-  closeTransactionId?: string | null;
-
-  @IsOptional()
-  @IsBoolean()
-  isClosed?: boolean;
-
-  @IsOptional()
   @ValidateIf((o: UpdateDebtDto) => o.sourceTransactionId !== null)
   @IsUUID()
   sourceTransactionId?: string | null;
@@ -82,15 +67,16 @@ export class UpdateDebtDto {
   description?: string | null;
 
   @IsOptional()
-  @IsNumber()
-  @Min(0)
-  forgivenAmount?: number;
-
-  @IsOptional()
   @IsBoolean()
   isPrivate?: boolean;
 
   @IsOptional()
   @IsDateString()
   createdAt?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(1_000_000_000_000)
+  feeAmount?: number;
 }

@@ -1,0 +1,16 @@
+{
+  "name": "deck",
+  "version": "1.0.0",
+  "description": "Инвесторская презентация Ouro Finance: HTML-слайды 1920x1080 -> PDF",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "fonts": "node scripts/fonts.mjs",
+    "capture": "node scripts/capture.mjs",
+    "pdf": "node scripts/build-pdf.mjs",
+    "pdf:en": "node scripts/build-pdf.mjs --lang=en"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^25.5.0"
+  }
+}

@@ -82,7 +82,7 @@ const backgroundLocation = computed<RouteLocationNormalizedLoaded>(() => {
              query (`backgroundLocation.path`). Навигация на фоновом маршруте,
              меняющая лишь query (`router.replace({ query })` — так выбор
              счёта пишет `?id=` в AccountsDesktopPage, а выбор человека в
-             useDebtsPageState), не меняет `:key` и поэтому не размонтирует
+             useDebtsPage), не меняет `:key` и поэтому не размонтирует
              страницу; ключ по `fullPath` размонтировал бы её на каждый такой
              replace. Между входом и выходом из оверлея `:key` тоже не
              меняется — инстанс страницы под модалкой переживает её открытие и

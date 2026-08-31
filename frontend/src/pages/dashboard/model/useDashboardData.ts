@@ -23,7 +23,7 @@ export function useDashboardData() {
   const { convert, isLoading: ratesLoading } = useExchangeRates(currency);
 
   const { accounts, isLoading: accountsLoading } = useAccounts(userId);
-  const { debts, isLoading: debtsLoading } = useDebts(userId);
+  const { debts, isLoading: debtsLoading } = useDebts(userId, { status: 'active' });
   const {
     budget,
     isLoading: budgetLoading,

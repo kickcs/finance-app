@@ -1,33 +1,40 @@
-import { ref, computed, watch, type MaybeRefOrGetter, toValue } from 'vue';
-import { useDebts, buildDebtName, type Debt, type DebtDirection } from '@/entities/debt';
-import { CATEGORY_IDS } from '@/entities/category';
+import { computed, ref, type MaybeRefOrGetter, toValue } from 'vue';
+import {
+  useDebtMutations,
+  useDebtFormModel,
+  buildDebtName,
+  debtCategoryId,
+  debtTransactionType,
+  getDebtSplit,
+  type Debt,
+  type DebtFormFields,
+  type DebtUpdate,
+} from '@/entities/debt';
 import { transactionsApi } from '@/entities/transaction';
-import { toLocalISODate, getTodayISO, calendarDateToIso } from '@/shared/lib/date';
+import { toLocalISODate, calendarDateToIso } from '@/shared/lib/date';
 import type { Transaction } from '@/shared/api/database.types';
 import { queryClient } from '@/shared/api/queryClient';
 import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
 import { useToast } from '@/shared/ui';
 import { useHaptics } from '@/shared/lib/haptics';
 
-export interface EditDebtFormData {
-  person_name: string;
-  total_amount: number;
-  description: string;
-  is_private: boolean;
-  /** Дата долга, YYYY-MM-DD в локальной зоне — в таком виде её отдаёт календарь. */
-  created_at: string;
-  next_payment_date: string | null;
-  account_id: string | null;
-  debt_type: DebtDirection;
-}
-
-/**
- * Сколько по долгу уже вернули. Пока хоть что-то возвращено, направление
- * менять нельзя: платежи лежат в своих категориях возврата, и переворот долга
- * оставил бы их указывать в обратную сторону.
- */
-function paidAmount(debt: Debt): number {
-  return Math.max(0, debt.total_amount - debt.remaining_amount);
+/** Долг в поля формы. Обратный ход — в `submit`. */
+function toFormFields(d: Debt | null): Partial<DebtFormFields> | null {
+  if (!d) return null;
+  return {
+    debt_type: d.debt_type,
+    person_name: d.person_name ?? '',
+    amount: d.total_amount,
+    currency: d.currency,
+    account_id: d.account_id,
+    date: toLocalISODate(new Date(d.created_at)),
+    due_date: d.next_payment_date,
+    description: d.description ?? '',
+    is_private: d.is_private,
+    fee: d.fee_amount,
+    // Долг без операции создания деньгами не двигал — комиссии у него нет.
+    skip_transaction: !d.transaction_id,
+  };
 }
 
 /**
@@ -52,82 +59,51 @@ export function useEditDebt(
   debt: MaybeRefOrGetter<Debt | null>,
   userId: MaybeRefOrGetter<string | null>,
 ) {
-  const { updateDebt } = useDebts(userId);
+  const { updateDebt } = useDebtMutations(userId);
   const { toast } = useToast();
   const { trigger } = useHaptics();
 
-  const initial = makeFormData(toValue(debt));
-  const formData = ref<EditDebtFormData>(initial);
-  const isSubmitting = ref(false);
-  const originalData = ref<EditDebtFormData>({ ...initial });
-
-  function makeFormData(d: Debt | null): EditDebtFormData {
-    return {
-      person_name: d?.person_name ?? '',
-      total_amount: d?.total_amount ?? 0,
-      description: d?.description ?? '',
-      is_private: d?.is_private ?? false,
-      created_at: d ? toLocalISODate(new Date(d.created_at)) : getTodayISO(),
-      next_payment_date: d?.next_payment_date ?? null,
-      account_id: d?.account_id ?? null,
-      debt_type: (d?.debt_type as DebtDirection) ?? 'taken',
-    };
-  }
-
-  // Re-init when debt changes (not immediate — initial values set above)
-  watch(
-    () => toValue(debt),
-    (d) => {
-      if (d) {
-        const data = makeFormData(d);
-        formData.value = data;
-        originalData.value = { ...data };
-      }
-    },
-  );
-
-  const isValid = computed(() => {
-    return (
-      formData.value.person_name.trim().length > 0 &&
-      formData.value.total_amount > 0 &&
-      formData.value.created_at.length > 0 &&
-      // Счёт нельзя обнулить у долга, за которым стоит операция: ей некуда
-      // будет лечь.
-      (formData.value.account_id !== null || !toValue(debt)?.transaction_id)
-    );
+  const { fields, original, isValid, isDirty, changed, updateField, reset } = useDebtFormModel({
+    initial: () => toFormFields(toValue(debt)),
+    // Счёт нельзя обнулить у долга, за которым стоит операция: ей некуда лечь.
+    requiresAccount: () => !!toValue(debt)?.transaction_id,
   });
 
+  const isSubmitting = ref(false);
+
+  /**
+   * Направление задаёт категории платежей возврата. Перевернуть долг, по
+   * которому уже возвращали, значит развернуть их в обратную сторону.
+   */
   const canChangeDirection = computed(() => {
     const d = toValue(debt);
-    return !!d && paidAmount(d) === 0;
+    return !!d && getDebtSplit(d).paid === 0;
   });
 
-  const isDirty = computed(() => {
-    return JSON.stringify(formData.value) !== JSON.stringify(originalData.value);
+  /**
+   * Комиссию правит расходная запись за ней. У долгов, заведённых до этой
+   * связи, её нет — там комиссия остаётся такой, какой была.
+   */
+  const canChangeFee = computed(() => {
+    const d = toValue(debt);
+    return !!d && !!d.transaction_id && (d.fee_amount === 0 || !!d.fee_transaction_id);
   });
 
   const warnings = computed(() => {
     const result: string[] = [];
     const d = toValue(debt);
     if (!d?.transaction_id) return result;
-    if (formData.value.total_amount !== originalData.value.total_amount) {
-      result.push('Сумма связанной транзакции тоже будет обновлена');
-    }
-    if (formData.value.created_at !== originalData.value.created_at) {
-      result.push('Дата связанной транзакции тоже будет обновлена');
-    }
-    if (formData.value.account_id !== originalData.value.account_id) {
+    const c = changed.value;
+    if (c.amount !== undefined) result.push('Сумма связанной транзакции тоже будет обновлена');
+    if (c.date !== undefined) result.push('Дата связанной транзакции тоже будет обновлена');
+    if (c.account_id !== undefined) {
       result.push('Операция переедет на выбранный счёт, балансы обоих пересчитаются');
     }
-    if (formData.value.debt_type !== originalData.value.debt_type) {
+    if (c.debt_type !== undefined) {
       result.push('Операция сменит направление: расход станет доходом или наоборот');
     }
     return result;
   });
-
-  function updateField<K extends keyof EditDebtFormData>(field: K, value: EditDebtFormData[K]) {
-    formData.value[field] = value;
-  }
 
   async function submit(): Promise<boolean> {
     const d = toValue(debt);
@@ -136,50 +112,44 @@ export function useEditDebt(
     isSubmitting.value = true;
     let transactionSaved = false;
     try {
-      const updates: Partial<Debt> = {};
-      const f = formData.value;
-      const o = originalData.value;
+      const f = fields.value;
+      const c = changed.value;
+      const updates: DebtUpdate = {};
 
-      // Направление переворачивается только у долга, по которому ещё ничего не
-      // возвращали, — иначе платежи остались бы в категориях обратной стороны.
-      const nextType = canChangeDirection.value ? f.debt_type : o.debt_type;
-      const directionChanged = nextType !== o.debt_type;
+      const nextType = canChangeDirection.value ? f.debt_type : original.value.debt_type;
+      const directionChanged = nextType !== original.value.debt_type;
 
-      if (f.person_name !== o.person_name) updates.person_name = f.person_name;
+      if (c.person_name !== undefined) updates.person_name = f.person_name;
       // Имя собирается из направления и человека, поэтому его пересобирает
       // любое из двух изменений.
-      if (f.person_name !== o.person_name || directionChanged) {
+      if (c.person_name !== undefined || directionChanged) {
         updates.name = buildDebtName(nextType, f.person_name);
       }
       if (directionChanged) updates.debt_type = nextType;
-      if (f.total_amount !== o.total_amount) {
-        updates.total_amount = f.total_amount;
-        // Adjust remaining by the same delta to preserve paid amount
-        const delta = f.total_amount - o.total_amount;
-        updates.remaining_amount = Math.max(0, d.remaining_amount + delta);
+      // Остаток за суммой двигает сервер: правило «возвращённое остаётся
+      // возвращённым» одно на всех, и клиенту его знать незачем.
+      if (c.amount !== undefined) updates.total_amount = f.amount;
+      if (c.description !== undefined) updates.description = f.description || null;
+      if (c.is_private !== undefined) updates.is_private = f.is_private;
+      if (c.date !== undefined && f.date) {
+        updates.created_at = withPickedDate(d.created_at, f.date);
       }
-      if (f.description !== o.description) updates.description = f.description || null;
-      if (f.is_private !== o.is_private) updates.is_private = f.is_private;
-      if (f.created_at !== o.created_at) {
-        updates.created_at = withPickedDate(d.created_at, f.created_at);
-      }
-      if (f.next_payment_date !== o.next_payment_date) {
-        updates.next_payment_date = f.next_payment_date;
-      }
-      if (f.account_id !== o.account_id) updates.account_id = f.account_id;
+      if (c.due_date !== undefined) updates.next_payment_date = f.due_date;
+      if (c.account_id !== undefined) updates.account_id = f.account_id;
+      // Комиссию правит сервер: он же двигает её расходную запись.
+      if (c.fee !== undefined && canChangeFee.value) updates.fee_amount = f.fee;
 
       // Всё, что долг делит со своей операцией создания, едет одним патчем:
       // за одно редактирование могли изменить и сумму, и счёт, и направление.
       const transactionPatch: Partial<Transaction> = {};
       if (updates.total_amount !== undefined) transactionPatch.amount = updates.total_amount;
-      if (f.created_at !== o.created_at) transactionPatch.date = calendarDateToIso(f.created_at);
-      if (f.account_id !== o.account_id && f.account_id) transactionPatch.account_id = f.account_id;
+      if (c.date !== undefined && f.date) transactionPatch.date = calendarDateToIso(f.date);
+      if (c.account_id !== undefined && f.account_id) transactionPatch.account_id = f.account_id;
       if (directionChanged) {
         // «Дал» — деньги ушли со счёта, «взял» — пришли. Категория идёт следом:
         // по ней операция опознаётся как долговая в истории и аналитике.
-        transactionPatch.type = nextType === 'given' ? 'expense' : 'income';
-        transactionPatch.category_id =
-          nextType === 'given' ? CATEGORY_IDS.DEBT_GIVEN : CATEGORY_IDS.DEBT_TAKEN;
+        transactionPatch.type = debtTransactionType(nextType);
+        transactionPatch.category_id = debtCategoryId(nextType);
       }
 
       // Сначала операция, потом долг. Оборвётся посередине — долг останется
@@ -204,7 +174,9 @@ export function useEditDebt(
 
       // Инвалидация только метит кэш устаревшим — баланс на экране должен
       // смениться сразу, поэтому активные запросы дёргаем принудительно.
-      if (transactionId && uid) await queryClient.refetchQueries({ type: 'active' });
+      if ((transactionId || updates.fee_amount !== undefined) && uid) {
+        await queryClient.refetchQueries({ type: 'active' });
+      }
 
       trigger('success');
       toast({ title: 'Долг обновлён' });
@@ -224,17 +196,12 @@ export function useEditDebt(
     }
   }
 
-  function reset() {
-    const d = makeFormData(toValue(debt));
-    formData.value = d;
-    originalData.value = { ...d };
-  }
-
   return {
-    formData,
+    formData: fields,
     isValid,
     isDirty,
     canChangeDirection,
+    canChangeFee,
     isSubmitting,
     warnings,
     updateField,

@@ -14,7 +14,7 @@ import { useSplitExpense } from '@/features/split-expense';
 import { useAccounts, AccountPickerSheet } from '@/entities/account';
 import { useCategories, CategoryPickerSheet } from '@/entities/category';
 import { useDebts } from '@/entities/debt';
-import { useCloseAllDebts } from '@/features/close-debt';
+import { useCloseAllDebts } from '@/features/pay-debt';
 import { useHashtags } from '@/entities/transaction';
 import { usePeople } from '@/entities/person';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
@@ -123,7 +123,7 @@ function resetDebtAssign() {
 }
 
 // --- Погашение существующего долга -------------------------------------------
-const { debts } = useDebts(userId);
+const { debts } = useDebts(userId, { status: 'active' });
 const { closeAllDebts, isClosing } = useCloseAllDebts();
 const showRepaymentSheet = ref(false);
 const repaymentSuggestionDismissed = ref(false);

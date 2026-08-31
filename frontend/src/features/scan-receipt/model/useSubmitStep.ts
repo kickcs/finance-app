@@ -1,7 +1,7 @@
 import { ref, computed, type Ref, type ComputedRef } from 'vue';
 import { transactionsApi } from '@/entities/transaction';
-import { debtsApi, debtQueryKeys } from '@/entities/debt';
-import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
+import { debtsApi } from '@/entities/debt';
+import { invalidateDebtRelated } from '@/shared/api/invalidation';
 import { useQueryClient } from '@tanstack/vue-query';
 import { useToast } from '@/shared/ui';
 import { useHaptics } from '@/shared/lib/haptics';
@@ -136,7 +136,7 @@ export function useSubmitStep(
           createdTakenDebt.value = true;
         }
 
-        queryClient.invalidateQueries({ queryKey: debtQueryKeys.list(uid_) });
+        await invalidateDebtRelated(queryClient, uid_);
         isSuccess.value = true;
         trigger('success');
       } catch (error: unknown) {
@@ -217,10 +217,8 @@ export function useSubmitStep(
         }
       }
 
-      // Invalidate caches
-      invalidateTransactionRelated(queryClient, uid_);
-      invalidateAccountRelated(queryClient, uid_);
-      queryClient.invalidateQueries({ queryKey: debtQueryKeys.list(uid_) });
+      // Долг тянет за собой транзакцию и баланс — сбрасывается всё разом
+      await invalidateDebtRelated(queryClient, uid_);
 
       isSuccess.value = true;
       trigger('success');

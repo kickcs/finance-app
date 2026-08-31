@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { UIcon } from '@/shared/ui';
+import { UIcon, InitialAvatar } from '@/shared/ui';
 import { formatCurrency, formatMasked, COMPACT_FORMAT } from '@/shared/lib/format/currency';
 import { formatDate } from '@/shared/lib/format/date';
 import { getInitial } from '@/shared/lib/format/text';
 import { pluralize } from '@/shared/lib/format/pluralize';
 import { cn } from '@/shared/lib/utils';
-import type { PersonDebtSummary } from '../lib/foldGroupsIntoPeople';
+import { useHaptics } from '@/shared/lib/haptics';
+import { DEBT_DIRECTION_COLORS } from '../model/types';
+import type { PersonDebtSummary } from '../lib/foldDebtsIntoPeople';
 
 const props = defineProps<{
   person: PersonDebtSummary;
@@ -15,6 +17,13 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{ click: [] }>();
+
+const { trigger } = useHaptics();
+
+function handleClick() {
+  trigger('selection');
+  emit('click');
+}
 
 const isGiven = computed(() => props.person.direction === 'given');
 const isOverdue = computed(() => props.person.overdueDays !== null);
@@ -65,29 +74,32 @@ const ariaLabel = computed(() =>
         selected && 'bg-surface-light dark:bg-surface-dark',
       )
     "
-    @click="emit('click')"
+    @click="handleClick"
   >
     <!-- Двуцветный кружок у встречных долгов: направление одним цветом
          обозначить нельзя — человек одновременно и должник, и кредитор. -->
     <div
+      v-if="isMutual"
       :class="
         cn(
           'flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-body-sm font-semibold',
           isGiven ? 'text-debt-given' : 'text-debt-received',
-          !isMutual && (isGiven ? 'bg-debt-given-light' : 'bg-debt-received-light'),
         )
       "
-      :style="
-        isMutual
-          ? {
-              background:
-                'linear-gradient(135deg, var(--color-debt-given-light) 50%, var(--color-debt-received-light) 50%)',
-            }
-          : undefined
-      "
+      :style="{
+        background:
+          'linear-gradient(135deg, var(--color-debt-given-light) 50%, var(--color-debt-received-light) 50%)',
+      }"
     >
       {{ getInitial(person.personName) }}
     </div>
+    <InitialAvatar
+      v-else
+      :name="person.personName"
+      :color="DEBT_DIRECTION_COLORS[person.direction]"
+      size="lg"
+      translucent
+    />
 
     <!-- Сумма стоит в одной строке с именем, а мета-строка занимает всю ширину
          под ними. Прошлая вёрстка держала сумму отдельной правой колонкой, и

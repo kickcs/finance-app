@@ -147,6 +147,69 @@ export const mockSecondGivenDebtResponse = {
   transactionId: 'tx-debt-5',
 };
 
+/** Все известные моки долгов — общий источник для поиска по id. */
+export const mockDebtResponses: MockDebtResponse[] = [
+  mockGivenDebtResponse,
+  mockTakenDebtResponse,
+  mockClosedDebtResponse,
+  mockOverdueDebtResponse,
+  mockSecondGivenDebtResponse,
+];
+
+export function findMockDebt(id: string): MockDebtResponse | undefined {
+  return mockDebtResponses.find((d) => d.id === id);
+}
+
+export interface PayDebtBody {
+  amount?: number;
+  forgiveRemainder?: boolean;
+  excessCategoryId?: string;
+}
+
+/**
+ * Ответ `POST /debts/:id/payments`. Платёж целиком считает сервер, поэтому мок
+ * повторяет его арифметику: остаток, закрытие и прощённое выводятся из суммы.
+ */
+export function payDebtResult(debt: MockDebtResponse, body: PayDebtBody) {
+  const amount = body.amount ?? 0;
+  const paid = Math.min(amount, debt.remainingAmount);
+  const forgiven = body.forgiveRemainder ? debt.remainingAmount - paid : 0;
+  const remaining = Math.max(0, debt.remainingAmount - paid - forgiven);
+  const isClosed = remaining <= 0;
+
+  const transactionIds: string[] = [];
+  if (paid > 0) transactionIds.push(`tx-payment-${debt.id}`);
+  if (amount > debt.remainingAmount) transactionIds.push(`tx-excess-${debt.id}`);
+  if (forgiven > 0) transactionIds.push(`tx-forgive-${debt.id}`);
+
+  return {
+    debt: {
+      ...debt,
+      remainingAmount: remaining,
+      isClosed,
+      forgivenAmount: debt.forgivenAmount + forgiven,
+      closedAt: isClosed ? new Date().toISOString() : null,
+      closeTransactionId: isClosed ? (transactionIds[0] ?? null) : null,
+    },
+    paymentTransactionId: paid > 0 ? `tx-payment-${debt.id}` : null,
+    transactionIds,
+  };
+}
+
+/**
+ * Обработчик платежа: ищет долг по id среди переданных и общих моков. Спеки со
+ * своими долгами передают их аргументами, остальным хватает реестра.
+ */
+export function payDebtHandler(...extraDebts: MockDebtResponse[]) {
+  return http.post('*/api/debts/:id/payments', async ({ request, params }) => {
+    const id = params.id as string;
+    const body = (await request.json()) as PayDebtBody;
+    const target = extraDebts.find((d) => d.id === id) ?? findMockDebt(id);
+    if (!target) return HttpResponse.json({ message: 'Not found' }, { status: 404 });
+    return HttpResponse.json(payDebtResult(target, body));
+  });
+}
+
 export function buildPaginatedDebtsResponse(debts: MockDebtResponse[]) {
   const groupMap = new Map<string, MockDebtResponse[]>();
   for (const debt of debts) {
@@ -188,14 +251,7 @@ export const debtHandlers = [
   // GET single debt (must be before GET list to avoid wildcard match)
   http.get('*/api/debts/:id', ({ params }) => {
     const id = params.id as string;
-    const allDebts = [
-      mockGivenDebtResponse,
-      mockTakenDebtResponse,
-      mockClosedDebtResponse,
-      mockOverdueDebtResponse,
-      mockSecondGivenDebtResponse,
-    ];
-    const found = allDebts.find((d) => d.id === id);
+    const found = findMockDebt(id);
     if (found) return HttpResponse.json(found);
     return HttpResponse.json({ message: 'Not found' }, { status: 404 });
   }),
@@ -204,6 +260,8 @@ export const debtHandlers = [
     const body = (await request.json()) as Record<string, unknown>;
     return HttpResponse.json(buildMockDebtResponse(body));
   }),
+
+  payDebtHandler(),
 
   http.post('*/api/debts/:id/reopen', ({ params }) => {
     return HttpResponse.json({

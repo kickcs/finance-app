@@ -15,7 +15,11 @@ import {
 } from '../../../domain/repositories/account.repository.interface';
 import { DomainEventPublisher } from '../../../../../shared';
 import { toTransactionResponse } from '../../helpers/to-transaction-response';
-import { INFORMATIONAL_ONLY_CATEGORY_IDS } from '../../../domain/constants/default-categories';
+import {
+  INFORMATIONAL_ONLY_CATEGORY_IDS,
+  FEE_CATEGORY_ID,
+  FEE_DESCRIPTION,
+} from '../../../domain/constants/default-categories';
 
 @CommandHandler(CreateTransactionCommand)
 export class CreateTransactionHandler implements ICommandHandler<CreateTransactionCommand> {
@@ -269,11 +273,11 @@ export class CreateTransactionHandler implements ICommandHandler<CreateTransacti
       crypto.randomUUID(),
       userId,
       account.id,
-      'commission',
+      FEE_CATEGORY_ID,
       feeAmount,
       currency,
       date,
-      'Комиссия за перевод',
+      FEE_DESCRIPTION,
       false,
       undefined,
     );

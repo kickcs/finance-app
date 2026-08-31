@@ -1,10 +1,12 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
+import { DataSource } from 'typeorm';
 import { CreateDebtCommand } from './create-debt.command';
 import { Debt } from '../../../domain/aggregates/debt';
 import { IDebtRepository, DEBT_REPOSITORY } from '../../../domain/repositories';
 import { DomainEventPublisher } from '../../../../../shared';
 import { DebtResponseMapper } from '../../mappers/debt-response.mapper';
+import { DebtFeeService } from '../../services/debt-fee.service';
 
 @CommandHandler(CreateDebtCommand)
 export class CreateDebtHandler implements ICommandHandler<CreateDebtCommand> {
@@ -12,6 +14,8 @@ export class CreateDebtHandler implements ICommandHandler<CreateDebtCommand> {
     @Inject(DEBT_REPOSITORY)
     private readonly debtRepository: IDebtRepository,
     private readonly eventPublisher: DomainEventPublisher,
+    private readonly debtFee: DebtFeeService,
+    private readonly dataSource: DataSource,
   ) {}
 
   async execute(command: CreateDebtCommand) {
@@ -28,7 +32,6 @@ export class CreateDebtHandler implements ICommandHandler<CreateDebtCommand> {
       nextPaymentDate: command.nextPaymentDate,
       createdAt: command.createdAt,
       description: command.description,
-      feeAmount: command.feeAmount,
     });
 
     if (command.transactionId) {
@@ -48,7 +51,14 @@ export class CreateDebtHandler implements ICommandHandler<CreateDebtCommand> {
       debt.update({ isPrivate: command.isPrivate });
     }
 
-    const savedDebt = await this.debtRepository.save(debt);
+    // Комиссия и её расход заводятся одной транзакцией с самим долгом: иначе
+    // со счёта уже списано, а долг, к которому это списание относится, не создан.
+    let savedDebt = debt;
+    await this.dataSource.transaction(async (manager) => {
+      if (command.feeAmount) await this.debtFee.apply(debt, command.feeAmount, manager);
+      savedDebt = await this.debtRepository.save(debt, manager);
+    });
+
     await this.eventPublisher.publishEvents(debt);
 
     return DebtResponseMapper.toResponse(savedDebt);

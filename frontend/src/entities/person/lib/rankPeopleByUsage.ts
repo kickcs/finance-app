@@ -1,4 +1,4 @@
-import { personKey } from './foldDebtsByPersonName';
+import { personKey } from './personKey';
 import type { Person } from '../model/types';
 
 /**

@@ -192,7 +192,7 @@ describe('оболочки приложения', () => {
   it('навигация на фоне, меняющая только query, не перемонтирует страницу', async () => {
     // Регресс: `:key` фона был навешен на `backgroundPath` (fullPath, с
     // query) — router.replace({ query }) (так `AccountsDesktopPage` и
-    // useDebtsPageState пишут выбор в URL) менял `fullPath` и поэтому
+    // useDebtsPage пишут выбор в URL) менял `fullPath` и поэтому
     // размонтировал и заново монтировал страницу под ним.
     setIsDesktopForTests(true);
     const { default: DesktopLayout } = await import('./DesktopLayout.vue');

@@ -8,23 +8,24 @@ import ForgivenessToggle from './ForgivenessToggle.vue';
 /**
  * Общий блок полей платежа: плашка переплаты + категория, тумблер прощения,
  * плашка «весь долг будет прощён». Раньше это ~120 строк, продублированных
- * дословно между `PaymentDrawer` и `CloseAllDebtsDrawer` — форма живёт
- * у родителя (там же `reset()` на открытии), этот компонент только считает
- * производные от `amount`/`remaining` и рисует.
+ * дословно между `PaymentDrawer` и `CloseAllDebtsDrawer`. Форма живёт у
+ * родителя: он держит `reset()` и сам считает переплату с остатком, потому что
+ * по ним же проверяет форму. Здесь только отрисовка.
  */
 const props = defineProps<{
   remaining: number;
   currency: string;
   direction: 'given' | 'taken';
+  isOverpayment: boolean;
+  /** Сколько сверх долга — плашка переплаты. */
+  excess: number;
+  /** Что останется непогашенным — тумблер прощения. */
+  remainder: number;
 }>();
 
 const amount = defineModel<number>('amount', { required: true });
 const forgiveRemainder = defineModel<boolean>('forgiveRemainder', { required: true });
 const excessCategoryId = defineModel<string>('excessCategoryId', { required: true });
-
-const isOverpayment = computed(() => amount.value > props.remaining);
-const excess = computed(() => (isOverpayment.value ? amount.value - props.remaining : 0));
-const remainder = computed(() => (isOverpayment.value ? 0 : props.remaining - amount.value));
 
 const excessCategories = computed(() =>
   props.direction === 'given' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES,

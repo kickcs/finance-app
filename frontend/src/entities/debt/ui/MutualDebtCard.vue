@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { UButton, UIcon } from '@/shared/ui';
+import { UBadge, UButton, UIcon } from '@/shared/ui';
 import { formatMasked } from '@/shared/lib/format/currency';
 import { cn } from '@/shared/lib/utils';
+import { useHaptics } from '@/shared/lib/haptics';
 import { DEBT_DIRECTION_COLORS } from '../model/types';
-import type { MutualPosition } from '../lib/foldGroupsIntoPeople';
+import type { MutualPosition } from '../lib/foldDebtsIntoPeople';
 
 const props = defineProps<{
   position: MutualPosition;
@@ -16,6 +17,13 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{ offset: [] }>();
+
+const { trigger } = useHaptics();
+
+function handleOffset() {
+  trigger('selection');
+  emit('offset');
+}
 
 const total = computed(() => props.position.given + props.position.taken);
 
@@ -58,12 +66,9 @@ const money = (amount: number) => formatMasked(amount, props.position.currency, 
         <UIcon name="compare_arrows" size="xs" />
         Встречные долги
       </p>
-      <span
-        v-if="showCurrency"
-        class="rounded-full bg-surface-light dark:bg-surface-dark px-2 py-0.5 text-caption-sm font-semibold text-text-secondary-light dark:text-text-secondary-dark"
-      >
+      <UBadge v-if="showCurrency" variant="neutral" size="sm" shape="pill">
         {{ position.currency }}
-      </span>
+      </UBadge>
     </header>
 
     <div class="mt-3 flex items-start justify-between gap-4">
@@ -111,7 +116,7 @@ const money = (amount: number) => formatMasked(amount, props.position.currency, 
       full-width
       data-testid="offset-debts-btn"
       :loading="isOffsetting"
-      @click="emit('offset')"
+      @click="handleOffset"
     >
       <UIcon name="compare_arrows" size="sm" />
       Зачесть

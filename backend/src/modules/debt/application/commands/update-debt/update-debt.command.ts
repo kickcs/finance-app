@@ -5,20 +5,18 @@ export class UpdateDebtCommand {
     public readonly data: {
       name?: string;
       totalAmount?: number;
-      remainingAmount?: number;
       monthlyPayment?: number | null;
       nextPaymentDate?: Date | null;
       debtType?: 'given' | 'taken';
       personName?: string | null;
       accountId?: string | null;
       transactionId?: string | null;
-      closeTransactionId?: string | null;
-      isClosed?: boolean;
       sourceTransactionId?: string | null;
       description?: string | null;
-      forgivenAmount?: number;
       isPrivate?: boolean;
       createdAt?: Date;
+      /** Комиссия за выдачу: меняет и число на долге, и его расходную запись. */
+      feeAmount?: number;
     },
   ) {}
 }

@@ -1,8 +1,11 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { CreateDebtHandler } from './create-debt.handler';
 import { CreateDebtCommand } from './create-debt.command';
+import { DataSource } from 'typeorm';
 import { DEBT_REPOSITORY } from '../../../domain/repositories';
 import { DomainEventPublisher } from '../../../../../shared';
+import { DebtFeeService } from '../../services/debt-fee.service';
+import type { Debt } from '../../../domain/aggregates/debt';
 
 describe('CreateDebtHandler', () => {
   let handler: CreateDebtHandler;
@@ -19,6 +22,17 @@ describe('CreateDebtHandler', () => {
     publishEvents: jest.fn(),
     publishEventsFromMultiple: jest.fn(),
   };
+  // Комиссию заводит сервис — здесь важно лишь, что она доезжает до долга
+  const mockDebtFee = {
+    apply: jest.fn((debt: Debt, amount: number) => {
+      debt.setFee(amount, 'tx-fee');
+      return Promise.resolve();
+    }),
+  };
+  const mockManager = {};
+  const mockDataSource = {
+    transaction: jest.fn((cb: (m: unknown) => Promise<void>) => cb(mockManager)),
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -26,6 +40,8 @@ describe('CreateDebtHandler', () => {
         CreateDebtHandler,
         { provide: DEBT_REPOSITORY, useValue: mockRepository },
         { provide: DomainEventPublisher, useValue: mockEventPublisher },
+        { provide: DebtFeeService, useValue: mockDebtFee },
+        { provide: DataSource, useValue: mockDataSource },
       ],
     }).compile();
 
@@ -177,9 +193,11 @@ describe('CreateDebtHandler', () => {
 
     const result = await handler.execute(command);
 
-    // The fee never touches the debt amount — it is paid on top of it
+    // Комиссия не входит в сумму долга — она платится сверх неё
     expect(result.feeAmount).toBe(5_000);
     expect(result.totalAmount).toBe(1_000_000);
+    // …и заводится своей записью в той же транзакции, что и долг
+    expect(mockDebtFee.apply).toHaveBeenCalledWith(expect.anything(), 5_000, mockManager);
   });
 
   it('should default the fee to zero when not provided', async () => {
@@ -191,6 +209,7 @@ describe('CreateDebtHandler', () => {
     const result = await handler.execute(command);
 
     expect(result.feeAmount).toBe(0);
+    expect(mockDebtFee.apply).not.toHaveBeenCalled();
   });
 
   it('should default currency to USD when not provided', async () => {

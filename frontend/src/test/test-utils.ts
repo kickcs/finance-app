@@ -90,6 +90,15 @@ export function mountComposable<T>(
   return { result, wrapper };
 }
 
+/**
+ * Текст всего документа: содержимое `UModal`/`UOverlay` уезжает в портал и в
+ * обёртке компонента не находится. Неразрывные пробелы разрядов заменены на
+ * обычные — иначе сумму не сверить строковым литералом.
+ */
+export function bodyText(): string {
+  return (document.body.textContent ?? '').replace(/\u00a0/g, ' ');
+}
+
 /** Reusable mock user for tests */
 export const mockUser: User = {
   id: 'test-user-1',

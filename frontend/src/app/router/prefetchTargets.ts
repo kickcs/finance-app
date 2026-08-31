@@ -24,7 +24,6 @@ const LOADERS: Record<string, () => Promise<unknown>> = {
   'accounts/AccountDetailPage': () => import('@/pages/accounts/AccountDetailPage.vue'),
   'debts/DebtsListPage': () => import('@/pages/debts/list/DebtsListPage.vue'),
   'debts/DebtDetailPage': () => import('@/pages/debts/detail/DebtDetailPage.vue'),
-  'debts/AddDebtPage': () => import('@/pages/debts/new/AddDebtPage.vue'),
   'changelog/ChangelogPage': () => import('@/pages/changelog/ChangelogPage.vue'),
   'settings/CurrencySettingsPage': () =>
     import('@/pages/settings/currency/CurrencySettingsPage.vue'),
@@ -72,7 +71,6 @@ export function getPrefetchTargets(): PrefetchTargets {
       ...(desktop ? [] : ['accounts/AccountDetailPage']),
       'debts/DebtsListPage',
       'debts/DebtDetailPage',
-      'debts/AddDebtPage',
       'changelog/ChangelogPage',
       'settings/CurrencySettingsPage',
       'settings/CategoriesPage',

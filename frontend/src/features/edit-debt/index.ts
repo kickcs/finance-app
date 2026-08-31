@@ -1,2 +1,3 @@
 export { EditDebtDrawer } from './ui';
-export { useEditDebt, type EditDebtFormData } from './model/useEditDebt';
+export { useEditDebt } from './model/useEditDebt';
+export type { DebtFormFields } from '@/entities/debt';

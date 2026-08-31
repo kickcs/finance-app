@@ -45,7 +45,7 @@ const { userId } = useCurrentUser();
 const { people, createPerson } = usePeople(userId);
 // Долги — сигнал частоты для порядка людей. Запрос уже прогрет дашбордом,
 // поэтому здесь это чтение кэша, а не поход в сеть.
-const { debts } = useDebts(userId);
+const { debts } = useDebts(userId, { status: 'active' });
 const { trigger } = useHaptics();
 const { formData, isValid, isSubmitting, error, createDebt, updateField } = useDebtForm();
 
@@ -167,7 +167,7 @@ const personLabel = computed(() =>
  * сошёлся бы не по той ширине.
  */
 const debtDateLabel = computed(() =>
-  formData.value.debt_date ? formatCompactDate(formData.value.debt_date) : 'Дата',
+  formData.value.date ? formatCompactDate(formData.value.date) : 'Дата',
 );
 const skipToggleTitle = computed(() =>
   formData.value.debt_type === 'given' ? 'Не списывать с баланса' : 'Не добавлять на баланс',
@@ -232,8 +232,8 @@ function withSymbol(value: number) {
           class="w-full"
           variant="chip"
           aria-label="Дата долга"
-          :model-value="formData.debt_date"
-          @update:model-value="updateField('debt_date', $event)"
+          :model-value="formData.date"
+          @update:model-value="updateField('date', $event)"
         />
       </template>
     </PersonPicker>

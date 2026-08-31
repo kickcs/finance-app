@@ -30,7 +30,7 @@ const emit = defineEmits<{
 const { userId } = useCurrentUser();
 const { people, createPerson } = usePeople(userId);
 // Порядок людей задаёт частота долгов; запрос уже прогрет дашбордом.
-const { debts } = useDebts(userId);
+const { debts } = useDebts(userId, { status: 'active' });
 
 const participantNames = computed(() => props.splitData.participants.map((p) => p.personName));
 

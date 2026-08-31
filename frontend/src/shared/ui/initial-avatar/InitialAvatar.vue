@@ -28,7 +28,7 @@ const sizeClasses: Record<string, string> = {
     class="rounded-full flex items-center justify-center font-bold shrink-0"
     :class="[sizeClasses[size], translucent ? '' : 'text-white']"
     :style="{
-      backgroundColor: translucent ? color + '18' : color,
+      backgroundColor: translucent ? `color-mix(in srgb, ${color} 10%, transparent)` : color,
       color: translucent ? color : undefined,
     }"
   >
