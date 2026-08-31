@@ -6,7 +6,7 @@ import { formatDate } from '@/shared/lib/format/date';
 import { getInitial } from '@/shared/lib/format/text';
 import { pluralize } from '@/shared/lib/format/pluralize';
 import { cn } from '@/shared/lib/utils';
-import type { PersonDebtSummary } from '../lib/foldGroupsIntoPeople';
+import type { PersonDebtSummary } from '../lib/foldDebtsIntoPeople';
 
 const props = defineProps<{
   person: PersonDebtSummary;

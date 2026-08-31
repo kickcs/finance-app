@@ -3,7 +3,7 @@ import { useRouter, useRoute } from 'vue-router';
 import { ROUTE_NAMES } from '@/app/router/routeNames';
 import {
   useInfiniteDebts,
-  useDebts,
+  useDebtMutations,
   getDebtDisplayName,
   foldGroupsIntoPeople,
   type Debt,
@@ -43,7 +43,7 @@ export function useDebtsPageState() {
   const { convert } = useExchangeRates(currency);
   const { toast } = useToast();
   const { accounts } = useAccounts(userId);
-  const { updateDebt } = useDebts(userId);
+  const { updateDebt } = useDebtMutations(userId);
   const { profile } = useProfile(userId);
 
   // --- Filters ---
@@ -135,7 +135,7 @@ export function useDebtsPageState() {
   const mutualPositions = computed<MutualPosition[]>(() => filteredPerson.value?.mutual ?? []);
 
   // --- Взаимозачёт ---
-  const { isOffsetting, offsetDebts } = useOffsetDebts();
+  const { isOffsetting, offsetDebts } = useOffsetDebts(userId);
   const showOffsetModal = ref(false);
   const offsetPosition = ref<MutualPosition | null>(null);
 
@@ -146,11 +146,7 @@ export function useDebtsPageState() {
 
   async function handleOffset() {
     if (!offsetPosition.value || !personFilter.value || !userId.value) return;
-    const success = await offsetDebts(
-      personFilter.value,
-      offsetPosition.value.currency,
-      userId.value,
-    );
+    const success = await offsetDebts(personFilter.value, offsetPosition.value.currency);
     if (success) {
       showOffsetModal.value = false;
       offsetPosition.value = null;

@@ -5,7 +5,7 @@ import { formatCurrency, formatMasked } from '@/shared/lib/format/currency';
 import { formatDate } from '@/shared/lib/format/date';
 import { useHaptics } from '@/shared/lib/haptics';
 import type { Debt } from '@/shared/api/database.types';
-import { DEBT_DIRECTION_DISPLAY, getDebtDisplayName } from '../model/types';
+import { DEBT_DIRECTION_DISPLAY, maskDebtName } from '../model/types';
 
 const props = defineProps<{
   debt: Debt;
@@ -24,7 +24,7 @@ function handleClick() {
 }
 
 const isForgiven = computed(() => props.debt.forgiven_amount > 0);
-const displayName = computed(() => getDebtDisplayName(props.debt));
+const displayName = computed(() => maskDebtName(props.debt));
 
 const durationDays = computed(() => {
   if (!props.debt.closed_at) return null;
@@ -63,7 +63,7 @@ const showCurrencyBadge = computed(() => props.debt.currency !== props.userCurre
           <p
             class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark truncate"
           >
-            {{ debt.is_private ? '•••' : displayName }}
+            {{ displayName }}
           </p>
           <UIcon
             v-if="debt.is_private"

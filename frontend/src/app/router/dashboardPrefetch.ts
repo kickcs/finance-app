@@ -32,8 +32,8 @@ export function prefetchDashboardData(userId: string) {
 
   import('@/entities/debt/api/debtsApi').then(({ debtsApi }) => {
     queryClient.prefetchQuery({
-      queryKey: debtQueryKeys.list(userId),
-      queryFn: () => debtsApi.getAll(userId),
+      queryKey: debtQueryKeys.list(userId, 'active'),
+      queryFn: () => debtsApi.getAll('active'),
     });
   });
 

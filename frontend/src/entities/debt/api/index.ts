@@ -1,5 +1,6 @@
 export { debtsApi, type OffsetResult } from './debtsApi';
-export { useDebts } from './useDebts';
+export { useDebts, type UseDebtsOptions } from './useDebts';
+export { useDebtMutations } from './useDebtMutations';
 export { debtQueryKeys, type DebtQueryKeys } from './queryKeys';
 export {
   snapshotDebtCaches,
@@ -11,4 +12,9 @@ export {
 } from './debtCache';
 export { useDebtTransactions } from './useDebtTransactions';
 export { useInfiniteDebts } from './useInfiniteDebts';
-export { debtShareApi, type SharedDebtsPayload, type SharedDebtEntry } from './debtShareApi';
+export {
+  debtShareApi,
+  toSharedDebtEntry,
+  type SharedDebtsPayload,
+  type SharedDebtEntry,
+} from './debtShareApi';

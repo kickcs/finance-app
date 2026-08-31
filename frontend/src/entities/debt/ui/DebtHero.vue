@@ -2,9 +2,8 @@
 import { computed } from 'vue';
 import { UBadge } from '@/shared/ui';
 import { formatMasked } from '@/shared/lib/format/currency';
-import { isPastDate } from '@/shared/lib/date';
 import { cn } from '@/shared/lib/utils';
-import { DEBT_DIRECTION_LABELS, getDebtSplit } from '../model/types';
+import { DEBT_DIRECTION_LABELS, getDebtSplit, isDebtOverdue } from '../model/types';
 import type { Debt } from '../model/types';
 import DebtProgressMeter from './DebtProgressMeter.vue';
 
@@ -12,12 +11,7 @@ const props = defineProps<{ debt: Debt }>();
 
 const isGiven = computed(() => props.debt.debt_type === 'given');
 
-const isOverdue = computed(
-  () =>
-    !props.debt.is_closed &&
-    !!props.debt.next_payment_date &&
-    isPastDate(props.debt.next_payment_date),
-);
+const isOverdue = computed(() => isDebtOverdue(props.debt));
 
 // У закрытого долга остаток нулевой, поэтому под подписью «Сумма долга»
 // показываем исходную сумму — иначе на странице был бы только ноль.

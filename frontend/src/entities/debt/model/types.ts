@@ -1,3 +1,4 @@
+import { isPastDate } from '@/shared/lib/date';
 import type { Debt } from '@/shared/api/database.types';
 
 // Re-export from database types for consistency
@@ -28,6 +29,28 @@ export function buildDebtName(direction: DebtDirection, personName: string): str
 
 export function getDebtDisplayName(debt: Debt): string {
   return debt.person_name?.trim() || debt.name.trim();
+}
+
+/** Скрытый долг прячет имя человека везде, где долг показан. */
+export function maskDebtName(debt: Debt): string {
+  return debt.is_private ? '•••' : getDebtDisplayName(debt);
+}
+
+/** Закрытый долг не просрочен, даже если срок давно прошёл. */
+export function isDebtOverdue(debt: Debt): boolean {
+  return !debt.is_closed && !!debt.next_payment_date && isPastDate(debt.next_payment_date);
+}
+
+const MS_IN_DAY = 24 * 60 * 60 * 1000;
+
+/**
+ * Дни просрочки, минимум один: `isPastDate` считает просрочкой любую дату
+ * строго раньше сегодняшней, и без пола вчерашний срок давал бы «0 дней».
+ */
+export function getDebtOverdueDays(debt: Debt): number | null {
+  if (!isDebtOverdue(debt)) return null;
+  const due = new Date(debt.next_payment_date!).getTime();
+  return Math.max(1, Math.floor((Date.now() - due) / MS_IN_DAY));
 }
 
 /**
@@ -66,8 +89,10 @@ export interface DebtsPaginatedCursor {
   createdAt: string;
 }
 
+export type DebtStatus = 'active' | 'closed';
+
 export interface DebtsFilters {
-  status?: 'active' | 'closed';
+  status?: DebtStatus;
   currency?: string;
   personName?: string;
 }

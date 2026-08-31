@@ -69,7 +69,7 @@ export function useEditTransaction(userId: MaybeRefOrGetter<string | null>) {
     // Check if there are OPEN split debts linked to this transaction
     // Closed debts are OK - the transaction amount already reflects payments
     try {
-      const allDebts = await debtsApi.getAll(toValue(userId) ?? '');
+      const allDebts = await debtsApi.getAll();
       const linkedDebts = allDebts.filter(
         (d) => d.source_transaction_id === transaction.id && !d.is_closed,
       );

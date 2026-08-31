@@ -13,12 +13,13 @@ import { useIsDesktop } from '@/shared/lib/composables/useIsDesktop';
 import { ENTITY_COLORS } from '@/shared/config/colors';
 import { formatCurrency, COMPACT_FORMAT } from '@/shared/lib/format/currency';
 import { pluralize } from '@/shared/lib/format/pluralize';
-import type { Person, PersonDebtNet } from '@/entities/person';
+import type { Person } from '@/entities/person';
+import type { PersonDebtSummary } from '@/entities/debt';
 
 const props = defineProps<{
   open: boolean;
   person: Person | null;
-  debtNet?: PersonDebtNet;
+  debtNet?: PersonDebtSummary;
   currency: string;
   saving?: boolean;
 }>();

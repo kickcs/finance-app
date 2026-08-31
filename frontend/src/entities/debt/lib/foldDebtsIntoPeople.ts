@@ -1,6 +1,11 @@
-import { isPastDate } from '@/shared/lib/date';
+import { personKey } from '@/entities/person/lib/personKey';
 import { DEFAULT_CURRENCY } from '@/shared/config/currency';
-import type { Debt, DebtDirection, DebtGroupResponse } from '../model/types';
+import {
+  getDebtOverdueDays,
+  type Debt,
+  type DebtDirection,
+  type DebtGroupResponse,
+} from '../model/types';
 
 /**
  * Встречные долги одного человека в одной валюте. Зачёт возможен только внутри
@@ -17,6 +22,8 @@ export interface MutualPosition {
 }
 
 export interface PersonDebtSummary {
+  /** Нормализованное имя: по нему человека находят в других списках. */
+  key: string;
   personName: string;
   /** Нетто в валюте пользователя: > 0 — вам должны, < 0 — вы должны. */
   net: number;
@@ -35,38 +42,36 @@ export interface PersonDebtSummary {
   offsetTotal: number;
 }
 
-const MS_IN_DAY = 24 * 60 * 60 * 1000;
-
 function round2(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
 /**
- * `isPastDate` считает просрочкой любую дату строго раньше сегодняшней, поэтому
- * минимум — один день. Без пола получалось бы «просрочено 0 дней» на долге,
- * срок которого истёк вчера, а часы ещё не набежали.
+ * Сворачивает долги в одну строку на человека: «дал» плюсом, «взял» минусом,
+ * чтобы встречные долги гасили друг друга и человек показывался одной итоговой
+ * суммой вместо двух.
+ *
+ * Закрытые долги не отсеиваются — что попадёт в свёртку, решает вызывающий
+ * (страница долгов сворачивает и закрытые тоже, на вкладке «Закрытые»).
  */
-function daysOverdue(dueDate: string): number {
-  return Math.max(1, Math.floor((Date.now() - new Date(dueDate).getTime()) / MS_IN_DAY));
-}
-
-/**
- * Сервер группирует долги по паре (человек, направление), поэтому встречные
- * долги одного человека приезжают двумя группами. В списке человек — одна
- * строка, значит группы складываются со знаком: «дал» плюсом, «взял» минусом.
- */
-export function foldGroupsIntoPeople(
-  groups: DebtGroupResponse[],
+export function foldDebtsIntoPeople(
+  debts: Debt[],
   convert: (amount: number, fromCurrency: string) => number,
 ): PersonDebtSummary[] {
   const byPerson = new Map<string, PersonDebtSummary>();
   const sidesByPerson = new Map<string, Map<string, { given: number; taken: number }>>();
 
-  for (const group of groups) {
-    let person = byPerson.get(group.person_name);
+  for (const debt of debts) {
+    // Сервер группирует по `person_name` и пустое имя отдаёт как '' — ключ
+    // считается так же, иначе безымянные долги разъедутся по строкам.
+    const personName = debt.person_name?.trim() ?? '';
+    const key = personKey(personName);
+
+    let person = byPerson.get(key);
     if (!person) {
       person = {
-        personName: group.person_name,
+        key,
+        personName,
         net: 0,
         direction: 'given',
         debts: [],
@@ -77,44 +82,41 @@ export function foldGroupsIntoPeople(
         mutual: [],
         offsetTotal: 0,
       };
-      byPerson.set(group.person_name, person);
-      sidesByPerson.set(group.person_name, new Map());
+      byPerson.set(key, person);
+      sidesByPerson.set(key, new Map());
     }
-    const sides = sidesByPerson.get(group.person_name)!;
+    const sides = sidesByPerson.get(key)!;
 
-    for (const debt of group.debts) {
-      const debtCurrency = debt.currency || DEFAULT_CURRENCY;
-      const amount = convert(debt.remaining_amount, debtCurrency);
-      person.net += debt.debt_type === 'given' ? amount : -amount;
+    const debtCurrency = debt.currency || DEFAULT_CURRENCY;
+    const amount = convert(debt.remaining_amount, debtCurrency);
+    person.net += debt.debt_type === 'given' ? amount : -amount;
 
-      const side = sides.get(debtCurrency) ?? { given: 0, taken: 0 };
-      side[debt.debt_type === 'given' ? 'given' : 'taken'] += debt.remaining_amount;
-      sides.set(debtCurrency, side);
+    const side = sides.get(debtCurrency) ?? { given: 0, taken: 0 };
+    side[debt.debt_type === 'given' ? 'given' : 'taken'] += debt.remaining_amount;
+    sides.set(debtCurrency, side);
 
-      person.debts.push(debt);
-      person.debtCount += 1;
-      if (debt.is_private) person.hasPrivate = true;
+    person.debts.push(debt);
+    person.debtCount += 1;
+    if (debt.is_private) person.hasPrivate = true;
 
-      if (debt.next_payment_date) {
-        if (!person.nearestDueDate || debt.next_payment_date < person.nearestDueDate) {
-          person.nearestDueDate = debt.next_payment_date;
-        }
-        if (isPastDate(debt.next_payment_date)) {
-          person.overdueDays = Math.max(
-            person.overdueDays ?? 0,
-            daysOverdue(debt.next_payment_date),
-          );
-        }
+    if (debt.next_payment_date) {
+      if (!person.nearestDueDate || debt.next_payment_date < person.nearestDueDate) {
+        person.nearestDueDate = debt.next_payment_date;
       }
+      const overdue = getDebtOverdueDays(debt);
+      if (overdue !== null) person.overdueDays = Math.max(person.overdueDays ?? 0, overdue);
     }
   }
 
   const people = Array.from(byPerson.values());
   for (const person of people) {
-    person.net = Math.round(person.net * 100) / 100;
+    // Конвертация делением оставляет хвост в последних разрядах, и встречные
+    // долги, гасящие друг друга ровно, давали бы не 0, а 1e-11 — строка
+    // показывала бы «должен вам 0».
+    person.net = round2(person.net);
     person.direction = person.net >= 0 ? 'given' : 'taken';
 
-    const sides = sidesByPerson.get(person.personName);
+    const sides = sidesByPerson.get(person.key);
     if (!sides) continue;
     // Валюты сравниваются между собой только после приведения к валюте
     // пользователя: 40 долларов зачёта важнее 50 000 сумов, а не наоборот.
@@ -144,4 +146,18 @@ export function foldGroupsIntoPeople(
     }
     return Math.abs(b.net) - Math.abs(a.net);
   });
+}
+
+/**
+ * Тот же расчёт для страницы долгов: сервер отдаёт встречные долги человека
+ * двумя группами, свёртка их снова склеивает.
+ */
+export function foldGroupsIntoPeople(
+  groups: DebtGroupResponse[],
+  convert: (amount: number, fromCurrency: string) => number,
+): PersonDebtSummary[] {
+  return foldDebtsIntoPeople(
+    groups.flatMap((group) => group.debts),
+    convert,
+  );
 }

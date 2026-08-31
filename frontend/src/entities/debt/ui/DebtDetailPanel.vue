@@ -5,7 +5,7 @@ import { useHaptics } from '@/shared/lib/haptics';
 import { useDebts } from '../api/useDebts';
 import { useDebtTransactions } from '../api/useDebtTransactions';
 import { useAccounts } from '@/entities/account';
-import { getDebtDisplayName } from '../model/types';
+import { maskDebtName } from '../model/types';
 import { findClosingRecords } from '../lib/findClosingRecords';
 import type { Transaction } from '@/shared/api/database.types';
 import DebtDetailContent from './DebtDetailContent.vue';
@@ -79,7 +79,7 @@ function handleEdit() {
         <h2
           class="min-w-0 truncate text-h3 font-bold text-text-primary-light dark:text-text-primary-dark"
         >
-          {{ debt.is_private ? '•••' : getDebtDisplayName(debt) }}
+          {{ maskDebtName(debt) }}
         </h2>
 
         <div class="flex shrink-0 items-center gap-1">

@@ -10,7 +10,7 @@ import {
   DebtActionsSheet,
   useDebtTransactions,
   findClosingRecords,
-  getDebtDisplayName,
+  maskDebtName,
   type Debt,
 } from '@/entities/debt';
 import { DEFAULT_CURRENCY } from '@/shared/config/currency';
@@ -52,7 +52,7 @@ const debt = computed<Debt | null>(() => {
 // только в шапке, и маскировать его должна она.
 const headerTitle = computed(() => {
   if (!debt.value) return 'Долг';
-  return debt.value.is_private ? '•••' : getDebtDisplayName(debt.value);
+  return maskDebtName(debt.value);
 });
 
 // Modal states

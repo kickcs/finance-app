@@ -1,5 +1,11 @@
 import { ref, computed, watch, type MaybeRefOrGetter, toValue } from 'vue';
-import { useDebts, buildDebtName, type Debt, type DebtDirection } from '@/entities/debt';
+import {
+  useDebtMutations,
+  buildDebtName,
+  getDebtSplit,
+  type Debt,
+  type DebtDirection,
+} from '@/entities/debt';
 import { CATEGORY_IDS } from '@/entities/category';
 import { transactionsApi } from '@/entities/transaction';
 import { toLocalISODate, getTodayISO, calendarDateToIso } from '@/shared/lib/date';
@@ -27,7 +33,7 @@ export interface EditDebtFormData {
  * оставил бы их указывать в обратную сторону.
  */
 function paidAmount(debt: Debt): number {
-  return Math.max(0, debt.total_amount - debt.remaining_amount);
+  return getDebtSplit(debt).paid;
 }
 
 /**
@@ -52,7 +58,7 @@ export function useEditDebt(
   debt: MaybeRefOrGetter<Debt | null>,
   userId: MaybeRefOrGetter<string | null>,
 ) {
-  const { updateDebt } = useDebts(userId);
+  const { updateDebt } = useDebtMutations(userId);
   const { toast } = useToast();
   const { trigger } = useHaptics();
 

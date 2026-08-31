@@ -27,6 +27,7 @@ vi.mock('@/shared/lib/haptics', () => ({
 }));
 
 vi.mock('@/shared/api/invalidation', () => ({
+  invalidateDebtRelated: vi.fn().mockResolvedValue(undefined),
   invalidateTransactionRelated: vi.fn().mockResolvedValue(undefined),
   invalidateAccountRelated: vi.fn().mockResolvedValue(undefined),
 }));

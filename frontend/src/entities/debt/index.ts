@@ -24,10 +24,11 @@ export { useDebtPaymentForm } from './model/useDebtPaymentForm';
 // Lib
 export * from './lib/groupDebtsByPerson';
 export {
+  foldDebtsIntoPeople,
   foldGroupsIntoPeople,
   type PersonDebtSummary,
   type MutualPosition,
-} from './lib/foldGroupsIntoPeople';
+} from './lib/foldDebtsIntoPeople';
 export { findClosingRecords, debtHasClosingRecords } from './lib/findClosingRecords';
 
 // API

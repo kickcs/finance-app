@@ -3,14 +3,14 @@ import { computed } from 'vue';
 import { UIcon, UProgressBar } from '@/shared/ui';
 import { formatCurrency, formatMasked } from '@/shared/lib/format/currency';
 import { formatDate } from '@/shared/lib/format/date';
-import { isPastDate } from '@/shared/lib/date';
 import { DEFAULT_CURRENCY } from '@/shared/config/currency';
 import { useHaptics } from '@/shared/lib/haptics';
 import {
   DEBT_DIRECTION_COLORS,
   DEBT_DIRECTION_DISPLAY,
-  getDebtDisplayName,
   getDebtProgress,
+  maskDebtName,
+  isDebtOverdue,
 } from '../model/types';
 import type { Debt } from '../model/types';
 
@@ -40,11 +40,9 @@ const nextPaymentFormatted = computed(() => {
   return formatDate(props.debt.next_payment_date, { format: 'short' });
 });
 
-const isOverdue = computed(
-  () => !!props.debt.next_payment_date && isPastDate(props.debt.next_payment_date),
-);
+const isOverdue = computed(() => isDebtOverdue(props.debt));
 
-const displayName = computed(() => getDebtDisplayName(props.debt));
+const displayName = computed(() => maskDebtName(props.debt));
 
 // Get debt type info
 const isGiven = computed(() => props.debt.debt_type === 'given');
@@ -96,7 +94,7 @@ const isFromSplit = computed(() => !!props.debt.source_transaction_id);
             <p
               class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark truncate flex items-center gap-1"
             >
-              {{ debt.is_private ? '•••' : displayName }}
+              {{ displayName }}
               <UIcon
                 v-if="debt.is_private"
                 name="visibility_off"

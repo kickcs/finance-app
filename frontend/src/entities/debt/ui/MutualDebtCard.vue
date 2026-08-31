@@ -4,7 +4,7 @@ import { UButton, UIcon } from '@/shared/ui';
 import { formatMasked } from '@/shared/lib/format/currency';
 import { cn } from '@/shared/lib/utils';
 import { DEBT_DIRECTION_COLORS } from '../model/types';
-import type { MutualPosition } from '../lib/foldGroupsIntoPeople';
+import type { MutualPosition } from '../lib/foldDebtsIntoPeople';
 
 const props = defineProps<{
   position: MutualPosition;

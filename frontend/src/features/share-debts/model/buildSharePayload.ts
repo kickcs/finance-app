@@ -1,5 +1,5 @@
 import type { Debt, SharedDebtsPayload, SharedDebtEntry } from '@/entities/debt';
-import { getDebtSplit } from '@/entities/debt';
+import { toSharedDebtEntry } from '@/entities/debt';
 
 /**
  * Приватные долги в снимок не попадают: ссылка открывается без авторизации, и
@@ -40,18 +40,7 @@ export function buildSharePayload({
     if (debt.debt_type === 'given') totalGiven += converted;
     else totalTaken += converted;
 
-    const { paid, forgiven } = getDebtSplit(debt);
-    entries.push({
-      title: debt.name,
-      direction: debt.debt_type,
-      currency: debt.currency,
-      totalAmount: debt.total_amount,
-      remainingAmount: debt.remaining_amount,
-      paidAmount: paid,
-      forgivenAmount: forgiven,
-      dueDate: debt.next_payment_date,
-      createdAt: debt.created_at,
-    });
+    entries.push(toSharedDebtEntry(debt));
   }
 
   return {

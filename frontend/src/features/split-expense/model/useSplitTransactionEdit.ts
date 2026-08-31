@@ -58,7 +58,7 @@ export function useSplitTransactionEdit(
 
     isLoading.value = true;
     try {
-      const allDebts = await debtsApi.getAll(uid);
+      const allDebts = await debtsApi.getAll();
       splitDebts.value = allDebts.filter((d) => d.source_transaction_id === txId);
     } catch {
       splitDebts.value = [];

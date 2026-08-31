@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { foldGroupsIntoPeople } from './foldGroupsIntoPeople';
+import { foldDebtsIntoPeople, foldGroupsIntoPeople } from './foldDebtsIntoPeople';
 import type { Debt, DebtGroupResponse } from '../model/types';
 
 const identity = (amount: number) => amount;
@@ -32,7 +32,12 @@ function makeDebt(over: Partial<Debt> = {}): Debt {
 }
 
 function group(personName: string, debtType: 'given' | 'taken', debts: Debt[]): DebtGroupResponse {
-  return { person_name: personName, debt_type: debtType, debts };
+  // Сервер группирует по полю самого долга — в фикстуре оно должно совпадать
+  return {
+    person_name: personName,
+    debt_type: debtType,
+    debts: debts.map((d) => ({ ...d, person_name: personName, debt_type: debtType })),
+  };
 }
 
 function daysAgoISODate(days: number): string {
@@ -213,5 +218,108 @@ describe('foldGroupsIntoPeople', () => {
 
   it('не падает на пустом списке групп', () => {
     expect(foldGroupsIntoPeople([], identity)).toEqual([]);
+  });
+});
+
+describe('foldDebtsIntoPeople', () => {
+  it('складывает given плюсом, taken минусом', () => {
+    const [person] = foldDebtsIntoPeople(
+      [
+        makeDebt({ person_name: 'Аня', debt_type: 'given', remaining_amount: 300 }),
+        makeDebt({ id: 'd2', person_name: 'Аня', debt_type: 'taken', remaining_amount: 100 }),
+      ],
+      identity,
+    );
+
+    expect(person.net).toBe(200);
+    expect(person.debtCount).toBe(2);
+  });
+
+  it('оставляет отрицательное нетто, когда вы должны больше', () => {
+    const [person] = foldDebtsIntoPeople(
+      [
+        makeDebt({ debt_type: 'given', remaining_amount: 50 }),
+        makeDebt({ id: 'd2', debt_type: 'taken', remaining_amount: 200 }),
+      ],
+      identity,
+    );
+
+    expect(person.net).toBe(-150);
+    expect(person.direction).toBe('taken');
+  });
+
+  it('сопоставляет имена без учёта регистра и обрамляющих пробелов', () => {
+    const people = foldDebtsIntoPeople(
+      [
+        makeDebt({ person_name: '  Аня ', remaining_amount: 100 }),
+        makeDebt({ id: 'd2', person_name: 'аня', remaining_amount: 50 }),
+      ],
+      identity,
+    );
+
+    expect(people).toHaveLength(1);
+    expect(people[0].key).toBe('аня');
+    expect(people[0].net).toBe(150);
+  });
+
+  it('закрытые долги не отсеивает — что сворачивать, решает вызывающий', () => {
+    const people = foldDebtsIntoPeople(
+      [makeDebt({ is_closed: true, remaining_amount: 0, next_payment_date: daysAgoISODate(10) })],
+      identity,
+    );
+
+    expect(people).toHaveLength(1);
+    expect(people[0].net).toBe(0);
+    expect(people[0].overdueDays).toBeNull();
+  });
+
+  it('собирает безымянные долги в одну строку с пустым ключом', () => {
+    const people = foldDebtsIntoPeople(
+      [makeDebt({ person_name: null }), makeDebt({ id: 'd2', person_name: '   ' })],
+      identity,
+    );
+
+    expect(people).toHaveLength(1);
+    expect(people[0].key).toBe('');
+    expect(people[0].debtCount).toBe(2);
+  });
+
+  it('конвертирует валюту переданной функцией', () => {
+    const convert = (amount: number, from: string) => (from === 'USD' ? amount * 12_000 : amount);
+    const [person] = foldDebtsIntoPeople(
+      [makeDebt({ currency: 'USD', remaining_amount: 10 })],
+      convert,
+    );
+
+    expect(person.net).toBe(120_000);
+  });
+
+  it('подставляет валюту по умолчанию, когда поле пустое', () => {
+    const seen: string[] = [];
+    const convert = (amount: number, from: string) => {
+      seen.push(from);
+      return amount;
+    };
+
+    foldDebtsIntoPeople([makeDebt({ currency: '' })], convert);
+
+    expect(seen).toEqual(['UZS']);
+  });
+
+  it('разделяет разных людей', () => {
+    const people = foldDebtsIntoPeople(
+      [
+        makeDebt({ person_name: 'Аня', remaining_amount: 100 }),
+        makeDebt({ id: 'd2', person_name: 'Борис', remaining_amount: 70 }),
+      ],
+      identity,
+    );
+
+    expect(people).toHaveLength(2);
+    expect(people.find((p) => p.key === 'борис')?.net).toBe(70);
+  });
+
+  it('возвращает пустой список на пустом входе', () => {
+    expect(foldDebtsIntoPeople([], identity)).toEqual([]);
   });
 });

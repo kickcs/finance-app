@@ -1,6 +1,11 @@
 import { http, HttpError } from '@/shared/api/http';
 import type { Debt, DebtInsert } from '@/shared/api/database.types';
-import type { DebtsPaginatedCursor, DebtsFilters, PaginatedDebtsResult } from '../model/types';
+import type {
+  DebtsPaginatedCursor,
+  DebtsFilters,
+  DebtStatus,
+  PaginatedDebtsResult,
+} from '../model/types';
 
 // Response type from NestJS backend (camelCase)
 interface DebtResponse {
@@ -86,9 +91,11 @@ function transformDebt(debt: DebtResponse): Debt {
 }
 
 export const debtsApi = {
-  async getAll(_userId?: string): Promise<Debt[]> {
-    // Backend gets userId from JWT token — _userId kept for caller compatibility
-    const data = await http.get<DebtResponse[]>('/debts');
+  /** Без статуса приезжают все долги, включая закрытые. */
+  async getAll(status?: DebtStatus): Promise<Debt[]> {
+    const data = await http.get<DebtResponse[]>('/debts', {
+      params: status ? { status } : undefined,
+    });
     return data.map(transformDebt);
   },
 

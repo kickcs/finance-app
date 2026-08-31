@@ -109,7 +109,7 @@ export function useDashboardPage() {
     await Promise.all([
       invalidateTransactionRelated(queryClient, uid),
       invalidateAccountRelated(queryClient, uid),
-      queryClient.invalidateQueries({ queryKey: debtQueryKeys.list(uid) }),
+      queryClient.invalidateQueries({ queryKey: debtQueryKeys.all }),
       queryClient.invalidateQueries({ queryKey: budgetQueryKeys.all }),
       invalidateSubscriptionRelated(queryClient, uid),
     ]);

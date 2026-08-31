@@ -7,7 +7,7 @@ export { default as PersonPickerSheet } from './ui/PersonPickerSheet.vue';
 export * from './model/types';
 
 // Lib
-export { foldDebtsByPersonName, personKey, type PersonDebtNet } from './lib/foldDebtsByPersonName';
+export { personKey } from './lib/personKey';
 export { rankPeopleByUsage, type DebtUsage } from './lib/rankPeopleByUsage';
 
 // API

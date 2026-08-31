@@ -45,7 +45,7 @@ const { userId } = useCurrentUser();
 const { people, createPerson } = usePeople(userId);
 // Долги — сигнал частоты для порядка людей. Запрос уже прогрет дашбордом,
 // поэтому здесь это чтение кэша, а не поход в сеть.
-const { debts } = useDebts(userId);
+const { debts } = useDebts(userId, { status: 'active' });
 const { trigger } = useHaptics();
 const { formData, isValid, isSubmitting, error, createDebt, updateField } = useDebtForm();
 

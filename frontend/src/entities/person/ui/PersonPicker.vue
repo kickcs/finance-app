@@ -3,7 +3,7 @@ import { ref, computed, defineAsyncComponent } from 'vue';
 import { UIcon, InitialAvatar } from '@/shared/ui';
 import { useHaptics } from '@/shared/lib/haptics';
 import { useJustifiedRows } from '@/shared/lib/hooks/useJustifiedRows';
-import { personKey } from '../lib/foldDebtsByPersonName';
+import { personKey } from '../lib/personKey';
 import { rankPeopleByUsage, type DebtUsage } from '../lib/rankPeopleByUsage';
 import type { Person } from '../model/types';
 

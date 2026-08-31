@@ -2,10 +2,10 @@
 import { computed } from 'vue';
 import { UButton, UIcon, UCard } from '@/shared/ui';
 import { formatDate } from '@/shared/lib/format/date';
-import { isPastDate } from '@/shared/lib/date';
 import { useHaptics } from '@/shared/lib/haptics';
 import DebtPaymentTimeline from './DebtPaymentTimeline.vue';
 import DebtHero from './DebtHero.vue';
+import { isDebtOverdue } from '../model/types';
 import type { Debt, Transaction } from '@/shared/api/database.types';
 import type { AccountWithBalances } from '@/entities/account';
 
@@ -31,12 +31,7 @@ const linkedAccount = computed(() => {
   return props.accounts.find((a) => a.id === props.debt.account_id) ?? null;
 });
 
-const isOverdue = computed(
-  () =>
-    !props.debt.is_closed &&
-    !!props.debt.next_payment_date &&
-    isPastDate(props.debt.next_payment_date),
-);
+const isOverdue = computed(() => isDebtOverdue(props.debt));
 
 // Мета-карточку не рисуем вовсе, если обеих ячеек нет — иначе висела бы пустая рамка
 const hasMeta = computed(() => !!props.debt.next_payment_date || !!linkedAccount.value);

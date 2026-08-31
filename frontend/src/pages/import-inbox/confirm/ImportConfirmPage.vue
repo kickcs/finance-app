@@ -123,7 +123,7 @@ function resetDebtAssign() {
 }
 
 // --- Погашение существующего долга -------------------------------------------
-const { debts } = useDebts(userId);
+const { debts } = useDebts(userId, { status: 'active' });
 const { closeAllDebts, isClosing } = useCloseAllDebts();
 const showRepaymentSheet = ref(false);
 const repaymentSuggestionDismissed = ref(false);
