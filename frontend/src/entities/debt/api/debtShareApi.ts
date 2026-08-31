@@ -11,6 +11,7 @@ export interface SharedDebtEntry {
   totalAmount: number;
   remainingAmount: number;
   paidAmount: number;
+  forgivenAmount: number;
   dueDate: string | null;
   createdAt: string;
 }

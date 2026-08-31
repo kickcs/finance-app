@@ -43,12 +43,19 @@ async function load() {
 
 onMounted(load);
 
+/**
+ * Прощённое называем отдельной частью: без него «отдано 20 000 из 50 000»
+ * рядом с остатком 20 000 не сходится, а по этой странице двое сверяются.
+ */
 function debtMeta(debt: SharedDebts['debts'][number]): string {
   const parts: string[] = [];
   if (debt.paidAmount > 0) {
     parts.push(
       `отдано ${formatCurrency(debt.paidAmount, debt.currency)} из ${formatCurrency(debt.totalAmount, debt.currency)}`,
     );
+  }
+  if (debt.forgivenAmount > 0) {
+    parts.push(`прощено ${formatCurrency(debt.forgivenAmount, debt.currency)}`);
   }
   if (debt.dueDate) parts.push(`до ${formatDate(debt.dueDate, { format: 'short' })}`);
   return parts.length > 0 ? parts.join(' · ') : 'без срока';

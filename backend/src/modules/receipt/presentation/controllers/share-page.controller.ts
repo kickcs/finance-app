@@ -2,25 +2,7 @@ import { Controller, Get, Param, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import { Public } from '../../../../common';
 import { SharedReceiptService } from '../../application/services/shared-receipt.service';
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;');
-}
-
-function formatAmount(amount: number): string {
-  return Math.round(amount)
-    .toString()
-    .replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-}
-
-function getPublicAppUrl(): string {
-  return process.env.PUBLIC_APP_URL || 'http://localhost:3000';
-}
+import { escapeXml, formatAmount, getPublicAppUrl } from '../../../../shared/utils/share';
 
 function pluralizeParticipants(count: number): string {
   const mod10 = count % 10;
@@ -58,18 +40,18 @@ export class SharePageController {
 
     const publicAppUrl = getPublicAppUrl();
     const participantsCount = payload.participants.length;
-    const ogImageUrl = escapeHtml(`${publicAppUrl}/api/receipts/shared/${token}/og.png`);
-    const pageUrl = escapeHtml(`${publicAppUrl}/r/${token}`);
+    const ogImageUrl = escapeXml(`${publicAppUrl}/api/receipts/shared/${token}/og.png`);
+    const pageUrl = escapeXml(`${publicAppUrl}/r/${token}`);
     const redirectUrl = `${publicAppUrl}/shared/${token}`;
-    const escapedRedirectUrl = escapeHtml(redirectUrl);
+    const escapedRedirectUrl = escapeXml(redirectUrl);
 
     const amountText = `${formatAmount(payload.totalAmount)} ${payload.currency}`;
     const rawTitle = payload.storeName
       ? `Чек из ${payload.storeName} — ${amountText}`
       : `Чек — ${amountText}`;
-    const title = escapeHtml(rawTitle);
-    const bodyLine = escapeHtml(rawTitle);
-    const description = escapeHtml(
+    const title = escapeXml(rawTitle);
+    const bodyLine = escapeXml(rawTitle);
+    const description = escapeXml(
       `${participantsCount} ${pluralizeParticipants(participantsCount)} · доли и реквизиты внутри`,
     );
 

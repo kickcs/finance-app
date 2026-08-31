@@ -24,8 +24,12 @@ function buildShareText(payload: SharedDebtsPayload): string {
 
   for (const debt of payload.debts) {
     const remaining = formatCurrency(debt.remainingAmount, debt.currency);
-    const due = debt.dueDate ? ` (до ${formatLocalDate(debt.dueDate)})` : '';
-    lines.push(`${debt.title}: ${remaining}${due}`);
+    const forgiven =
+      debt.forgivenAmount > 0
+        ? `, прощено ${formatCurrency(debt.forgivenAmount, debt.currency)}`
+        : '';
+    const due = debt.dueDate ? `, до ${formatLocalDate(debt.dueDate)}` : '';
+    lines.push(`${debt.title}: ${remaining}${forgiven}${due}`);
   }
 
   if (payload.debts.length === 0) lines.push('Открытых долгов нет');
@@ -63,8 +67,11 @@ export function useDebtsShare() {
    */
   async function shareAsImage(payload: SharedDebtsPayload): Promise<void> {
     isSharing.value = true;
-    const canvas = renderDebtsCardToCanvas(payload);
+    // Рендер тоже внутри try: он умеет бросать (нет 2d-контекста, не хватило
+    // памяти под холст), и снаружи оставил бы кнопку навсегда в загрузке.
+    let canvas: HTMLCanvasElement | null = null;
     try {
+      canvas = renderDebtsCardToCanvas(payload);
       const blob = await canvasToBlob(canvas);
       const filename = buildFilename(payload);
       const file = new File([blob], filename, { type: 'image/png' });
@@ -83,16 +90,19 @@ export function useDebtsShare() {
       toast({ title: 'Не удалось поделиться', variant: 'error' });
     } finally {
       // Освобождаем буфер сразу: на длинных списках холст занимает мегабайты
-      canvas.width = 0;
-      canvas.height = 0;
+      if (canvas) {
+        canvas.width = 0;
+        canvas.height = 0;
+      }
       isSharing.value = false;
     }
   }
 
   async function saveAsImage(payload: SharedDebtsPayload): Promise<void> {
     isSharing.value = true;
-    const canvas = renderDebtsCardToCanvas(payload);
+    let canvas: HTMLCanvasElement | null = null;
     try {
+      canvas = renderDebtsCardToCanvas(payload);
       const blob = await canvasToBlob(canvas);
       downloadBlob(blob, buildFilename(payload));
       toast({ title: 'Изображение сохранено', variant: 'success' });
@@ -100,8 +110,10 @@ export function useDebtsShare() {
       console.error('Save debts image failed:', error);
       toast({ title: 'Не удалось сохранить', variant: 'error' });
     } finally {
-      canvas.width = 0;
-      canvas.height = 0;
+      if (canvas) {
+        canvas.width = 0;
+        canvas.height = 0;
+      }
       isSharing.value = false;
     }
   }
@@ -164,9 +176,11 @@ export function useDebtsShare() {
       try {
         await navigator.share({ title: `Долги: ${personName}`, url: createdUrl.value });
         return;
-      } catch {
-        // Отменил шаринг — молча выходим, ссылка уже на экране
-        return;
+      } catch (error) {
+        // Отменил шаринг — молча выходим, ссылка уже на экране.
+        // Любой другой отказ (шаринг ссылок не поддержан, нет жеста) — не повод
+        // оставить тап без ответа: кладём ссылку в буфер.
+        if (error instanceof Error && error.name === 'AbortError') return;
       }
     }
     await copyLink();

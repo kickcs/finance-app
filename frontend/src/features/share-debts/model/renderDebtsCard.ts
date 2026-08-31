@@ -123,6 +123,9 @@ function drawDebts(ctx: CanvasRenderingContext2D, payload: SharedDebtsPayload, y
     ctx.textAlign = 'left';
     ctx.textBaseline = 'alphabetic';
     ctx.fillText(debt.title, PADDING_X + 20, centerY + 5, TITLE_MAX_WIDTH);
+    // Ширину названия меряем тем же шрифтом, каким оно нарисовано: с жирным
+    // шрифтом суммы замер выходит шире, и пунктир стартовал бы поверх текста
+    const titleWidth = Math.min(ctx.measureText(debt.title).width, TITLE_MAX_WIDTH);
 
     // Остаток
     const amountText = formatCurrency(debt.remainingAmount, debt.currency);
@@ -132,8 +135,6 @@ function drawDebts(ctx: CanvasRenderingContext2D, payload: SharedDebtsPayload, y
     ctx.fillText(amountText, AMOUNT_X, centerY + 5);
 
     // Пунктир между названием и суммой
-    const titleWidth = Math.min(ctx.measureText(debt.title).width, TITLE_MAX_WIDTH);
-    ctx.font = `700 15px ${SHARE_FONT_FAMILY}`;
     const amountWidth = ctx.measureText(amountText).width;
     const lineStartX = PADDING_X + 20 + titleWidth + 10;
     const lineEndX = AMOUNT_X - amountWidth - 10;
@@ -150,12 +151,17 @@ function drawDebts(ctx: CanvasRenderingContext2D, payload: SharedDebtsPayload, y
 
     y += ROW_HEIGHT;
 
-    // Вторая строка: что уже погашено и до какого срока
+    // Вторая строка: что уже погашено и до какого срока.
+    // Прощённое называем отдельно — иначе на карточке, по которой двое
+    // сверяются, «отдано 20 000 из 50 000» рядом с остатком 20 000 не сходится.
     const parts: string[] = [];
     if (debt.paidAmount > 0) {
       parts.push(
         `отдано ${formatCurrency(debt.paidAmount, debt.currency)} из ${formatCurrency(debt.totalAmount, debt.currency)}`,
       );
+    }
+    if (debt.forgivenAmount > 0) {
+      parts.push(`прощено ${formatCurrency(debt.forgivenAmount, debt.currency)}`);
     }
     if (debt.dueDate) parts.push(`до ${formatLocalDate(debt.dueDate)}`);
 

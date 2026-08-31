@@ -32,6 +32,9 @@ class SharedDebtEntryDto {
   @IsNumber()
   paidAmount: number;
 
+  @IsNumber()
+  forgivenAmount: number;
+
   @IsOptional()
   @IsString()
   @MaxLength(40)

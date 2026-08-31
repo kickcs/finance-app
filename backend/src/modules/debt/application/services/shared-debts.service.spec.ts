@@ -20,6 +20,7 @@ const mockPayload: SharedDebtsPayload = {
       totalAmount: 300000,
       remainingAmount: 229648,
       paidAmount: 70352,
+      forgivenAmount: 0,
       dueDate: null,
       createdAt: '2026-08-01',
     },

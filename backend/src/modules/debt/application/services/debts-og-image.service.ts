@@ -2,6 +2,7 @@ import { join } from 'path';
 import { Injectable, Logger } from '@nestjs/common';
 import { Resvg } from '@resvg/resvg-js';
 import { SharedDebtsService, type SharedDebtsPayload } from './shared-debts.service';
+import { escapeXml, formatAmount, truncate } from '../../../../shared/utils/share';
 
 // Бандленные шрифты (кириллица) — рендер не зависит от шрифтов системы/контейнера
 const FONT_DIR = join(process.cwd(), 'assets', 'fonts');
@@ -11,25 +12,9 @@ const FONT_FAMILY = 'DejaVu Sans';
 const OG_WIDTH = 1200;
 const OG_HEIGHT = 630;
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24h
-
-function escapeSvg(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;');
-}
-
-function formatAmount(amount: number): string {
-  return Math.round(amount)
-    .toString()
-    .replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-}
-
-function truncate(value: string, max: number): string {
-  return value.length > max ? `${value.slice(0, max - 1)}…` : value;
-}
+// Кэш живёт в памяти процесса, а токены раздаются наружу: без потолка
+// краулер, обошедший тысячу ссылок, оставил бы в куче тысячу PNG.
+const CACHE_MAX_ENTRIES = 200;
 
 // Палитра приложения (frontend design tokens)
 const BG = '#100e28';
@@ -50,13 +35,13 @@ const HAIRLINE = '#e4e4e7';
  * экранируются перед вставкой в разметку.
  */
 export function buildDebtsOgSvg(payload: SharedDebtsPayload): string {
-  const personName = escapeSvg(truncate(payload.personName.toUpperCase(), 22));
+  const personName = escapeXml(truncate(payload.personName.toUpperCase(), 22));
   const isPositive = payload.net >= 0;
   const netColor = isPositive ? DEBT_GIVEN : DEBT_TAKEN;
   const rawNet = `${isPositive ? '+' : '−'}${formatAmount(Math.abs(payload.net))} ${payload.currency}`;
-  const netText = escapeSvg(rawNet);
+  const netText = escapeXml(rawNet);
   const netSize = rawNet.length > 13 ? 54 : 68;
-  const netCaption = escapeSvg(isPositive ? 'должен вам' : 'вы должны');
+  const netCaption = escapeXml(isPositive ? 'должен вам' : 'вы должны');
 
   const visible = payload.debts.slice(0, 3);
   const extraCount = payload.debts.length - visible.length;
@@ -67,8 +52,8 @@ export function buildDebtsOgSvg(payload: SharedDebtsPayload): string {
     const color = debt.direction === 'given' ? DEBT_GIVEN : DEBT_TAKEN;
     rows.push(
       `<circle cx="136" cy="${y - 9}" r="9" fill="${color}" />`,
-      `<text x="162" y="${y}" font-size="25" fill="${INK_SOFT}" font-family="${FONT_FAMILY}">${escapeSvg(truncate(debt.title, 20))}</text>`,
-      `<text x="624" y="${y}" text-anchor="end" font-size="25" font-weight="700" fill="${INK}" font-family="${FONT_FAMILY}">${escapeSvg(formatAmount(debt.remainingAmount))}</text>`,
+      `<text x="162" y="${y}" font-size="25" fill="${INK_SOFT}" font-family="${FONT_FAMILY}">${escapeXml(truncate(debt.title, 20))}</text>`,
+      `<text x="624" y="${y}" text-anchor="end" font-size="25" font-weight="700" fill="${INK}" font-family="${FONT_FAMILY}">${escapeXml(formatAmount(debt.remainingAmount))}</text>`,
     );
   });
   if (extraCount > 0) {
@@ -139,6 +124,11 @@ export class DebtsOgImageService {
         },
       });
       const buf = resvg.render().asPng();
+      if (this.cache.size >= CACHE_MAX_ENTRIES) {
+        // Map держит порядок вставки — выкидываем самый давний
+        const oldest = this.cache.keys().next();
+        if (!oldest.done) this.cache.delete(oldest.value);
+      }
       this.cache.set(token, { buf, at: Date.now() });
       return buf;
     } catch (error) {

@@ -106,8 +106,19 @@ describe('buildSharePayload', () => {
     });
 
     expect(payload.debts[0].paidAmount).toBe(20000);
+    expect(payload.debts[0].forgivenAmount).toBe(10000);
     expect(payload.debts[0].remainingAmount).toBe(20000);
     expect(payload.debts[0].totalAmount).toBe(50000);
+  });
+
+  it('три части долга в сумме дают его полную сумму', () => {
+    const payload = buildSharePayload({
+      ...baseInput,
+      debts: [makeDebt({ total_amount: 50000, remaining_amount: 20000, forgiven_amount: 10000 })],
+    });
+
+    const { paidAmount, forgivenAmount, remainingAmount, totalAmount } = payload.debts[0];
+    expect(paidAmount + forgivenAmount + remainingAmount).toBe(totalAmount);
   });
 
   it('на пустом списке отдаёт нулевой итог, а не падает', () => {

@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import type { Repository } from 'typeorm';
 import { SharedDebtsOrmEntity } from '../../infrastructure/persistence/typeorm/shared-debts.orm-entity';
 import { generateUrlSafeToken } from '../../../../shared/utils/token';
+import { getPublicAppUrl } from '../../../../shared/utils/share';
 
 export interface SharedDebtEntry {
   /** Название долга — то, что видит владелец в списке. */
@@ -13,6 +14,8 @@ export interface SharedDebtEntry {
   totalAmount: number;
   remainingAmount: number;
   paidAmount: number;
+  /** Прощённая часть — третья корзина рядом с отданным и остатком. */
+  forgivenAmount: number;
   dueDate: string | null;
   createdAt: string;
 }
@@ -61,8 +64,4 @@ export class SharedDebtsService {
     }
     return entity.payload;
   }
-}
-
-export function getPublicAppUrl(): string {
-  return process.env.PUBLIC_APP_URL || 'http://localhost:3000';
 }

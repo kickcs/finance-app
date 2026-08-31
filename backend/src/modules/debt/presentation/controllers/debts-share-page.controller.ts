@@ -1,25 +1,8 @@
 import { Controller, Get, Param, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import { Public } from '../../../../common';
-import {
-  SharedDebtsService,
-  getPublicAppUrl,
-} from '../../application/services/shared-debts.service';
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;');
-}
-
-function formatAmount(amount: number): string {
-  return Math.round(amount)
-    .toString()
-    .replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-}
+import { SharedDebtsService } from '../../application/services/shared-debts.service';
+import { escapeXml, formatAmount, getPublicAppUrl } from '../../../../shared/utils/share';
 
 function pluralizeDebts(count: number): string {
   const mod10 = count % 10;
@@ -61,19 +44,19 @@ export class DebtsSharePageController {
     }
 
     const publicAppUrl = getPublicAppUrl();
-    const ogImageUrl = escapeHtml(`${publicAppUrl}/api/debt-shares/${token}/og.png`);
-    const pageUrl = escapeHtml(`${publicAppUrl}/d/${token}`);
+    const ogImageUrl = escapeXml(`${publicAppUrl}/api/debt-shares/${token}/og.png`);
+    const pageUrl = escapeXml(`${publicAppUrl}/d/${token}`);
     const redirectUrl = `${publicAppUrl}/shared-debts/${token}`;
-    const escapedRedirectUrl = escapeHtml(redirectUrl);
+    const escapedRedirectUrl = escapeXml(redirectUrl);
 
     const isPositive = payload.net >= 0;
     const amountText = `${formatAmount(Math.abs(payload.net))} ${payload.currency}`;
     const rawTitle = isPositive
       ? `${payload.personName} должен ${amountText}`
       : `Вы должны ${payload.personName} ${amountText}`;
-    const title = escapeHtml(rawTitle);
+    const title = escapeXml(rawTitle);
     const debtsCount = payload.debts.length;
-    const description = escapeHtml(
+    const description = escapeXml(
       `${debtsCount} ${pluralizeDebts(debtsCount)} · список и суммы внутри`,
     );
 
