@@ -34,11 +34,12 @@ const formattedBalance = computed(() => {
 <template>
   <button
     :class="[
-      'w-full flex items-center gap-3 rounded-xl transition-all duration-150',
+      'w-full min-w-0 flex items-center gap-3 rounded-xl transition-all duration-150',
       'bg-card-light dark:bg-card-dark',
       'border border-border-light dark:border-border-dark',
       'hover:bg-surface-light dark:hover:bg-surface-dark',
       'active:opacity-80',
+      'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset',
       compact ? 'p-3' : 'p-4',
     ]"
     @click="$emit('click')"
@@ -66,13 +67,13 @@ const formattedBalance = computed(() => {
           {{ account.balances.length }}
         </span>
       </div>
-      <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
+      <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark truncate">
         {{ getAccountTypeLabel(account.type) }}
       </p>
     </div>
 
     <!-- Balance -->
-    <div v-if="showBalance" class="text-right shrink-0 min-w-0 max-w-[45%]">
+    <div v-if="showBalance" class="text-right shrink-0 min-w-0 max-w-[42%] tabular-nums">
       <!-- Hidden -->
       <p
         v-if="hidden"
@@ -111,8 +112,8 @@ const formattedBalance = computed(() => {
     <!-- Arrow -->
     <UIcon
       name="chevron_right"
-      size="xs"
-      class="text-text-tertiary-light dark:text-text-tertiary-dark"
+      size="sm"
+      class="shrink-0 -mr-1 text-text-tertiary-light dark:text-text-tertiary-dark"
     />
   </button>
 </template>

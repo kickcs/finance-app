@@ -34,7 +34,8 @@ export function useAccountsPage(selectedAccountId: MaybeRefOrGetter<string | nul
   const { convert } = useExchangeRates(currency);
 
   // Use real data from API
-  const { accounts, totalBalancesByCurrency, isLoading, reorderAccounts } = useAccounts(userId);
+  const { accounts, totalBalancesByCurrency, isLoading, reorderAccounts, refetch } =
+    useAccounts(userId);
 
   // Local mutable list for draggable (mobile only, harmless if unused)
   const localAccounts = ref<AccountWithBalances[]>([]);
@@ -72,6 +73,29 @@ export function useAccountsPage(selectedAccountId: MaybeRefOrGetter<string | nul
     } catch (error) {
       console.error('Failed to reorder accounts:', error);
     }
+  }
+
+  /**
+   * Клавиатурная альтернатива перетаскиванию: ручка drag реагирует на стрелки.
+   * Ищем позицию по id, а не по индексу из слота vuedraggable — список между
+   * рендером слота и нажатием мог переехать (drag, рефетч, оптимистик).
+   */
+  function moveAccount(accountId: string, delta: -1 | 1) {
+    const from = localAccounts.value.findIndex((a) => a.id === accountId);
+    const to = from + delta;
+    if (from === -1 || to < 0 || to >= localAccounts.value.length) return;
+
+    const next = [...localAccounts.value];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    localAccounts.value = next;
+
+    trigger('selection');
+    void handleDragEnd();
+  }
+
+  async function handleRefresh() {
+    await refetch();
   }
 
   // ─── Edit / Delete account (desktop detail panel) ─────────────────────
@@ -135,6 +159,8 @@ export function useAccountsPage(selectedAccountId: MaybeRefOrGetter<string | nul
     handleAddAccount,
     handleDragStart,
     handleDragEnd,
+    handleRefresh,
+    moveAccount,
     selectedAccount,
     showEditAccountModal,
     showDeleteAccountModal,
