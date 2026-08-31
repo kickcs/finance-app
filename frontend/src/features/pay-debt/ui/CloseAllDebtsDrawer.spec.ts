@@ -2,34 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { mount } from '@vue/test-utils';
 import CloseAllDebtsDrawer from './CloseAllDebtsDrawer.vue';
 import type { Debt } from '@/shared/api/database.types';
+import { makeDebt } from '@/test/fixtures/debt';
 import type { AccountWithBalances } from '@/entities/account';
-
-function makeDebt(overrides: Partial<Debt> & { id: string }): Debt {
-  return {
-    user_id: 'user-1',
-    name: overrides.id,
-    total_amount: 10_000,
-    remaining_amount: 10_000,
-    monthly_payment: null,
-    next_payment_date: null,
-    created_at: '2026-01-01T00:00:00.000Z',
-    debt_type: 'given',
-    person_name: 'Алексей',
-    account_id: null,
-    transaction_id: null,
-    close_transaction_id: null,
-    is_closed: false,
-    currency: 'UZS',
-    source_transaction_id: null,
-    description: null,
-    closed_at: null,
-    forgiven_amount: 0,
-    is_private: false,
-    fee_amount: 0,
-    fee_transaction_id: null,
-    ...overrides,
-  } as Debt;
-}
 
 const accounts = [{ id: 'acc-1', name: 'Карта' }] as unknown as AccountWithBalances[];
 

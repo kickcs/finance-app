@@ -218,8 +218,8 @@ describe('DebtsListPage', () => {
       await flushPromises();
 
       expect(wrapper.text()).toContain('Погашенные долги');
-      // Closed debt should be shown via ClosedDebtCard
-      const closedDebtCards = wrapper.findAllComponents({ name: 'ClosedDebtCard' });
+      // Погашенный долг рисует та же DebtCard — в закрытом виде
+      const closedDebtCards = wrapper.findAllComponents({ name: 'DebtCard' });
       expect(closedDebtCards.length).toBe(1);
     });
 

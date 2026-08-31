@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { UProgressBar } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
 
 const props = withDefaults(
@@ -58,16 +59,15 @@ const netCaption = computed(() => {
 
     <!-- Одна дорожка вместо двух сегментов с зазором: доля задаётся шириной
          заливки, поэтому на крайних значениях не остаётся паразитной щели. -->
-    <div
+    <UProgressBar
       v-if="isSplit"
-      class="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-debt-received"
+      class="mt-4"
+      :value="givenShare"
+      color="var(--color-debt-given)"
+      track-color="var(--color-debt-received)"
+      size="sm"
       aria-hidden="true"
-    >
-      <div
-        class="h-full rounded-full bg-debt-given transition-[width] duration-500 motion-reduce:transition-none"
-        :style="{ width: `${givenShare}%` }"
-      />
-    </div>
+    />
 
     <div
       class="mt-4 grid grid-cols-2 divide-x divide-border-light dark:divide-border-dark"

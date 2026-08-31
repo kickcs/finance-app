@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.84';
+export const CURRENT_VERSION = '1.0.85';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,25 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.85',
+    date: '2026-08-31',
+    title: 'Долги: цвета и полосы на своих местах',
+    items: [
+      {
+        type: 'fix',
+        text: 'Значок долга в списке снова с цветной подложкой, а полоса погашения — в цвете направления: «вам должны» и «вы должны» больше не выглядят одинаково.',
+      },
+      {
+        type: 'fix',
+        text: 'Подтверждение удаления скрытого долга больше не показывает имя человека и сумму.',
+      },
+      {
+        type: 'improvement',
+        text: 'В итоговой карточке долгов полоса двух чаш стала сплошной — на крайних значениях в ней не остаётся пустой щели.',
+      },
+    ],
+  },
   {
     version: '1.0.84',
     date: '2026-08-31',

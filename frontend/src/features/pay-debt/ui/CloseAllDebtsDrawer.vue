@@ -16,6 +16,7 @@ import { pluralize } from '@/shared/lib/format/pluralize';
 import { DEFAULT_CURRENCY } from '@/entities/currency';
 import type { Debt } from '@/shared/api/database.types';
 import { sortDebtsByDateAsc } from '../model/sortDebts';
+import PaymentPresetRow from './PaymentPresetRow.vue';
 
 /**
  * Шторка «закрыть все долги человека» — тот же язык, что и у платежа по
@@ -75,11 +76,18 @@ const currencySymbol = computed(() => getCurrencySymbol(debtCurrency.value));
 const isMixedCurrency = computed(() => totalsByCurrency.value.length > 1);
 const isPrivate = computed(() => props.debts.some((d) => d.is_private));
 
-const { paymentAmount, forgiveRemainder, excessCategoryId, isOverpayment, reset } =
-  useDebtPaymentForm({
-    remainingAmount: totalDebt,
-    debtType: debtDirection,
-  });
+const {
+  paymentAmount,
+  forgiveRemainder,
+  excessCategoryId,
+  isOverpayment,
+  excess,
+  remainder,
+  reset,
+} = useDebtPaymentForm({
+  remainingAmount: totalDebt,
+  debtType: debtDirection,
+});
 
 /**
  * `immediate` обязателен: страница может отрендерить шторку сразу открытой, и
@@ -164,42 +172,6 @@ const forgivenAfter = computed(
   () =>
     aggregate.value.forgiven + (forgiveRemainder.value ? totalDebt.value - paymentPart.value : 0),
 );
-
-// --- Пресеты ---
-
-const halfAmount = computed(() => Math.round(totalDebt.value / 2));
-const isHalfActive = computed(() => paymentAmount.value === halfAmount.value);
-const isAllActive = computed(
-  () => paymentAmount.value === totalDebt.value && !forgiveRemainder.value,
-);
-const isForgiveActive = computed(() => paymentAmount.value === 0 && forgiveRemainder.value);
-
-function presetClass(active: boolean) {
-  return [
-    'px-3.5 py-1.5 rounded-lg text-sm font-medium border transition-colors',
-    active
-      ? 'border-primary bg-primary/10 text-primary'
-      : 'border-border-light dark:border-border-dark text-text-secondary-light dark:text-text-secondary-dark hover:text-text-primary-light dark:hover:text-text-primary-dark',
-  ];
-}
-
-function applyHalf() {
-  trigger('selection');
-  forgiveRemainder.value = false;
-  paymentAmount.value = halfAmount.value;
-}
-
-function applyAll() {
-  trigger('selection');
-  forgiveRemainder.value = false;
-  paymentAmount.value = totalDebt.value;
-}
-
-function applyForgive() {
-  trigger('selection');
-  paymentAmount.value = 0;
-  forgiveRemainder.value = true;
-}
 
 // --- Отправка ---
 
@@ -303,37 +275,14 @@ function confirm() {
         </p>
       </div>
 
-      <!-- Пресеты -->
-      <div class="flex justify-center gap-2">
-        <button
-          v-if="!isMixedCurrency"
-          type="button"
-          data-testid="close-all-preset-half"
-          :disabled="isClosing"
-          :class="presetClass(isHalfActive)"
-          @click="applyHalf"
-        >
-          Половина
-        </button>
-        <button
-          type="button"
-          data-testid="close-all-preset-all"
-          :disabled="isClosing"
-          :class="presetClass(isAllActive)"
-          @click="applyAll"
-        >
-          Всё
-        </button>
-        <button
-          type="button"
-          data-testid="close-all-preset-forgive"
-          :disabled="isClosing"
-          :class="presetClass(isForgiveActive)"
-          @click="applyForgive"
-        >
-          Простить
-        </button>
-      </div>
+      <PaymentPresetRow
+        v-model:amount="paymentAmount"
+        v-model:forgive-remainder="forgiveRemainder"
+        :total="totalDebt"
+        :disabled="isClosing"
+        :show-half="!isMixedCurrency"
+        id-prefix="close-all-preset"
+      />
 
       <!-- Живой предпросмотр по всем долгам сразу -->
       <DebtProgressMeter
@@ -410,6 +359,9 @@ function confirm() {
         v-model:amount="paymentAmount"
         v-model:forgive-remainder="forgiveRemainder"
         v-model:excess-category-id="excessCategoryId"
+        :is-overpayment="isOverpayment"
+        :excess="excess"
+        :remainder="remainder"
         :inert="isClosing || undefined"
         :remaining="totalDebt"
         :currency="debtCurrency"

@@ -7,6 +7,8 @@ export interface ProgressBarProps {
   value: number;
   max?: number;
   color?: string;
+  /** Цвет дорожки, когда она сама что-то значит (две чаши одного итога). */
+  trackColor?: string;
   size?: 'xs' | 'sm' | 'md' | 'lg';
   showLabel?: boolean;
   ariaLabel?: string;
@@ -31,8 +33,14 @@ const sizeClasses = {
   lg: 'h-2.5',
 };
 
+/**
+ * Свой цвет приходит либо хексом, либо токеном `var(--color-…)`. Раньше проверка
+ * знала только про хекс, и полоса, покрашенная токеном, молча уезжала в primary.
+ */
+const isCustomColor = computed(() => props.color.startsWith('#') || props.color.startsWith('var('));
+
 const indicatorStyle = computed(() => {
-  if (props.color.startsWith('#')) {
+  if (isCustomColor.value) {
     return {
       transform: `translateX(-${100 - percentage.value}%)`,
       backgroundColor: props.color,
@@ -45,7 +53,7 @@ const indicatorStyle = computed(() => {
 });
 
 const colorClass = computed(() => {
-  if (props.color.startsWith('#')) return '';
+  if (isCustomColor.value) return '';
 
   const colorMap: Record<string, string> = {
     primary: 'bg-primary',
@@ -69,9 +77,11 @@ const colorClass = computed(() => {
 
     <ProgressRoot
       :model-value="percentage"
+      :style="trackColor ? { backgroundColor: trackColor } : undefined"
       :class="
         cn(
-          'relative w-full overflow-hidden rounded-full bg-surface-light dark:bg-surface-dark',
+          'relative w-full overflow-hidden rounded-full',
+          !trackColor && 'bg-surface-light dark:bg-surface-dark',
           sizeClasses[size],
         )
       "

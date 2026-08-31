@@ -4,7 +4,6 @@ export { default as DebtCardSkeleton } from './ui/DebtCardSkeleton.vue';
 export { default as ForgivenessToggle } from './ui/ForgivenessToggle.vue';
 export { default as DebtDetailContent } from './ui/DebtDetailContent.vue';
 export { default as DebtPaymentTimeline } from './ui/DebtPaymentTimeline.vue';
-export { default as ClosedDebtCard } from './ui/ClosedDebtCard.vue';
 export { default as DebtsSummaryCard } from './ui/DebtsSummaryCard.vue';
 export { default as PersonDebtRow } from './ui/PersonDebtRow.vue';
 export { default as DebtHero } from './ui/DebtHero.vue';

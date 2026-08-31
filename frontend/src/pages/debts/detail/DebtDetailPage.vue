@@ -63,7 +63,7 @@ function goBack() {
     </AppHeader>
 
     <main class="flex-1 overflow-y-auto">
-      <div class="px-5 pt-4 pb-28 lg:pb-8">
+      <div class="px-5 pt-4 pb-28">
         <DebtDetailBody />
       </div>
     </main>

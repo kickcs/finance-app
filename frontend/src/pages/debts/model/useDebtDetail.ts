@@ -109,6 +109,9 @@ export function useDebtDetail(options: UseDebtDetailOptions) {
     const value = toValue(debt);
     if (!value || !userId.value) return;
     if (await deleteDebt(value, userId.value)) {
+      // Отклик по факту ответа сервера, а не по нажатию: обе операции могут
+      // не пройти, и вибрация «получилось» до ответа была бы враньём.
+      trigger('success');
       isDeleteOpen.value = false;
       onGone?.();
     }
@@ -117,7 +120,10 @@ export function useDebtDetail(options: UseDebtDetailOptions) {
   async function confirmReopen() {
     const value = toValue(debt);
     if (!value || !userId.value) return;
-    if (await reopenDebt(value.id, userId.value)) isReopenOpen.value = false;
+    if (await reopenDebt(value.id, userId.value)) {
+      trigger('success');
+      isReopenOpen.value = false;
+    }
   }
 
   async function togglePrivate(value: boolean) {

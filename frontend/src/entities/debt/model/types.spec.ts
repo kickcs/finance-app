@@ -1,34 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { isDebtOverdue, getDebtOverdueDays, maskDebtName, getDebtSplit } from './types';
-import type { Debt } from './types';
-
-function makeDebt(over: Partial<Debt> = {}): Debt {
-  return {
-    id: 'd1',
-    user_id: 'u1',
-    name: 'Долг от Азиза',
-    total_amount: 1000,
-    remaining_amount: 1000,
-    monthly_payment: null,
-    next_payment_date: null,
-    created_at: '2026-07-01T00:00:00.000Z',
-    debt_type: 'given',
-    person_name: 'Азиз',
-    account_id: null,
-    transaction_id: null,
-    close_transaction_id: null,
-    is_closed: false,
-    currency: 'UZS',
-    source_transaction_id: null,
-    description: null,
-    closed_at: null,
-    forgiven_amount: 0,
-    is_private: false,
-    fee_amount: 0,
-    fee_transaction_id: null,
-    ...over,
-  };
-}
+import { makeDebt } from '@/test/fixtures/debt';
 
 function daysAgoISODate(days: number): string {
   return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);

@@ -15,6 +15,7 @@ import { formatCurrency, getCurrencySymbol } from '@/shared/lib/format/currency'
 import { DEFAULT_CURRENCY } from '@/entities/currency';
 import type { Debt } from '@/shared/api/database.types';
 import type { DebtPaymentSubmit } from '../model/useDebtPaymentFlow';
+import PaymentPresetRow from './PaymentPresetRow.vue';
 
 /**
  * Шторка платежа по долгу — сумма и есть интерфейс: восемь блоков и два
@@ -46,11 +47,18 @@ const debtDirection = computed<'given' | 'taken'>(() =>
 );
 const remaining = computed(() => props.debt?.remaining_amount ?? 0);
 
-const { paymentAmount, forgiveRemainder, excessCategoryId, isOverpayment, reset } =
-  useDebtPaymentForm({
-    remainingAmount: remaining,
-    debtType: debtDirection,
-  });
+const {
+  paymentAmount,
+  forgiveRemainder,
+  excessCategoryId,
+  isOverpayment,
+  excess,
+  remainder,
+  reset,
+} = useDebtPaymentForm({
+  remainingAmount: remaining,
+  debtType: debtDirection,
+});
 
 /**
  * `reset()` всегда выставляет верные дефолты (сумма = остаток, категория
@@ -80,36 +88,6 @@ const isValid = computed(() => {
   if (isOverpayment.value && !excessCategoryId.value) return false;
   return true;
 });
-
-const halfAmount = computed(() => Math.round(remaining.value / 2));
-const isHalfActive = computed(() => paymentAmount.value === halfAmount.value);
-const isAllActive = computed(() => paymentAmount.value === remaining.value);
-const isForgiveActive = computed(() => paymentAmount.value === 0 && forgiveRemainder.value);
-
-function presetClass(active: boolean) {
-  return [
-    'px-3.5 py-1.5 rounded-lg text-sm font-medium border transition-colors',
-    active
-      ? 'border-primary bg-primary/10 text-primary'
-      : 'border-border-light dark:border-border-dark text-text-secondary-light dark:text-text-secondary-dark hover:text-text-primary-light dark:hover:text-text-primary-dark',
-  ];
-}
-
-function applyHalf() {
-  trigger('selection');
-  paymentAmount.value = halfAmount.value;
-}
-
-function applyAll() {
-  trigger('selection');
-  paymentAmount.value = remaining.value;
-}
-
-function applyForgive() {
-  trigger('selection');
-  paymentAmount.value = 0;
-  forgiveRemainder.value = true;
-}
 
 // Предпросмотр метра: что станет с долгом, если подтвердить прямо сейчас.
 const split = computed(() => (props.debt ? getDebtSplit(props.debt) : null));
@@ -158,33 +136,11 @@ function confirm() {
         input-testid="payment-amount-input"
       />
 
-      <!-- Пресеты -->
-      <div class="flex justify-center gap-2">
-        <button
-          type="button"
-          data-testid="preset-half"
-          :class="presetClass(isHalfActive)"
-          @click="applyHalf"
-        >
-          Половина
-        </button>
-        <button
-          type="button"
-          data-testid="preset-all"
-          :class="presetClass(isAllActive)"
-          @click="applyAll"
-        >
-          Всё
-        </button>
-        <button
-          type="button"
-          data-testid="preset-forgive"
-          :class="presetClass(isForgiveActive)"
-          @click="applyForgive"
-        >
-          Простить
-        </button>
-      </div>
+      <PaymentPresetRow
+        v-model:amount="paymentAmount"
+        v-model:forgive-remainder="forgiveRemainder"
+        :total="remaining"
+      />
 
       <!-- Живой предпросмотр: полоса двигается прямо во время набора суммы -->
       <DebtProgressMeter
@@ -214,6 +170,9 @@ function confirm() {
         v-model:amount="paymentAmount"
         v-model:forgive-remainder="forgiveRemainder"
         v-model:excess-category-id="excessCategoryId"
+        :is-overpayment="isOverpayment"
+        :excess="excess"
+        :remainder="remainder"
         :remaining="remaining"
         :currency="debtCurrency"
         :direction="debtDirection"

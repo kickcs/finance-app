@@ -2,13 +2,7 @@
 import { computed, ref } from 'vue';
 import { useIntersectionObserver, useScroll } from '@vueuse/core';
 import { AppHeader } from '@/widgets/header';
-import {
-  DebtCard,
-  ClosedDebtCard,
-  DebtsSummaryCard,
-  PersonDebtRow,
-  MutualDebtCard,
-} from '@/entities/debt';
+import { DebtCard, DebtsSummaryCard, PersonDebtRow, MutualDebtCard } from '@/entities/debt';
 import { OffsetDebtsModal } from '@/features/offset-debts';
 import { CloseAllDebtsDrawer } from '@/features/pay-debt';
 import { ShareDebtsDrawer } from '@/features/share-debts';
@@ -223,7 +217,7 @@ useIntersectionObserver(
                     :masked="filteredPerson?.hasPrivate"
                     :show-currency="mutualPositions.length > 1"
                     :is-offsetting="isOffsetting && offsetPosition?.currency === position.currency"
-                    @offset="(trigger('selection'), openOffset(position))"
+                    @offset="openOffset(position)"
                   />
                 </template>
                 <DebtsSummaryCard
@@ -271,7 +265,7 @@ useIntersectionObserver(
                       :person="person"
                       :currency="currency"
                       :selected="isDesktop && person.debts.some((d) => d.id === selectedDebtId)"
-                      @click="(trigger('selection'), handlePersonClick(person))"
+                      @click="handlePersonClick(person)"
                     />
                   </div>
 
@@ -286,7 +280,7 @@ useIntersectionObserver(
                         selectedDebtId === debt.id &&
                         'ring-2 ring-primary ring-offset-2 ring-offset-background-light dark:ring-offset-background-dark'
                       "
-                      @click="(trigger('selection'), handleDebtClick(debt))"
+                      @click="handleDebtClick(debt)"
                     />
                     <UButton
                       v-if="filteredDebts.length > 1"
@@ -329,7 +323,7 @@ useIntersectionObserver(
                     :show-view-all="false"
                   />
                   <div class="space-y-1.5">
-                    <ClosedDebtCard
+                    <DebtCard
                       v-for="debt in allDebtsFromGroups"
                       :key="debt.id"
                       :debt="debt"
@@ -339,7 +333,7 @@ useIntersectionObserver(
                         selectedDebtId === debt.id &&
                         'ring-2 ring-primary ring-offset-2 ring-offset-background-light dark:ring-offset-background-dark'
                       "
-                      @click="(trigger('selection'), handleDebtClick(debt))"
+                      @click="handleDebtClick(debt)"
                     />
                   </div>
                 </div>

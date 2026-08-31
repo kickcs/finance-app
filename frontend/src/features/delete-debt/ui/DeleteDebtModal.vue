@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ConfirmDeleteModal, UIcon } from '@/shared/ui';
-import { formatCurrency } from '@/shared/lib/format/currency';
-import { getDebtDisplayName } from '@/entities/debt';
+import { formatMasked } from '@/shared/lib/format/currency';
+import { maskDebtName } from '@/entities/debt';
 import type { Debt } from '@/shared/api/database.types';
 
 defineProps<{
@@ -44,10 +44,10 @@ const emit = defineEmits<{
       </div>
       <div class="flex-1 min-w-0">
         <p class="font-semibold text-text-primary-light dark:text-text-primary-dark truncate">
-          {{ getDebtDisplayName(debt) }}
+          {{ maskDebtName(debt) }}
         </p>
         <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
-          {{ formatCurrency(debt.total_amount, currency) }}
+          {{ formatMasked(debt.total_amount, currency, debt.is_private) }}
         </p>
       </div>
     </div>
