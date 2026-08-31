@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.81';
+export const CURRENT_VERSION = '1.0.82';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,25 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.82',
+    date: '2026-08-31',
+    title: 'Новые картинки для долгов и чеков',
+    items: [
+      {
+        type: 'improvement',
+        text: 'Картинка, которой вы делитесь в мессенджере, полностью переделана: суммы стали крупнее и читаемее, длинные названия больше не сплющиваются.',
+      },
+      {
+        type: 'improvement',
+        text: 'Во встречных долгах теперь видно обе стороны — сколько должны вам и сколько должны вы, а не только разницу.',
+      },
+      {
+        type: 'improvement',
+        text: 'Так же выглядят и превью ссылок на чек и на сверку по долгам.',
+      },
+    ],
+  },
   {
     version: '1.0.81',
     date: '2026-08-31',
