@@ -5,15 +5,23 @@ import { CqrsModule } from '@nestjs/cqrs';
 import { DEBT_REPOSITORY } from './domain/repositories';
 import { CommandHandlers } from './application/commands';
 import { QueryHandlers } from './application/queries';
-import { DebtOrmEntity } from './infrastructure/persistence/typeorm';
+import { SharedDebtsService } from './application/services/shared-debts.service';
+import { DebtsOgImageService } from './application/services/debts-og-image.service';
+import { DebtOrmEntity, SharedDebtsOrmEntity } from './infrastructure/persistence/typeorm';
 import { DebtRepository } from './infrastructure/persistence/repositories';
-import { DebtsController } from './presentation/controllers';
+import {
+  DebtsController,
+  SharedDebtsController,
+  DebtsSharePageController,
+} from './presentation/controllers';
 
 @Module({
-  imports: [CqrsModule, TypeOrmModule.forFeature([DebtOrmEntity])],
-  controllers: [DebtsController],
+  imports: [CqrsModule, TypeOrmModule.forFeature([DebtOrmEntity, SharedDebtsOrmEntity])],
+  controllers: [DebtsController, SharedDebtsController, DebtsSharePageController],
   providers: [
     { provide: DEBT_REPOSITORY, useClass: DebtRepository },
+    SharedDebtsService,
+    DebtsOgImageService,
     ...CommandHandlers,
     ...QueryHandlers,
   ],

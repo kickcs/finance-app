@@ -371,6 +371,41 @@ describe('DebtsListPage', () => {
       expect(clearBtn.exists()).toBe(true);
     });
 
+    it('показывает кнопку «поделиться» только когда открыт человек', async () => {
+      server.use(
+        http.get('*/api/debts/paginated', () =>
+          HttpResponse.json(buildPaginatedDebtsResponse([mockGivenDebtResponse])),
+        ),
+      );
+
+      const withoutFilter = await renderPage();
+      expect(withoutFilter.wrapper.find('[data-testid="share-debts-btn"]').exists()).toBe(false);
+      withoutFilter.wrapper.unmount();
+
+      const { wrapper } = await renderPage({ person: 'Алексей' });
+      expect(wrapper.find('[data-testid="share-debts-btn"]').exists()).toBe(true);
+    });
+
+    it('открывает шторку «поделиться» с итогом по человеку', async () => {
+      server.use(
+        http.get('*/api/debts/paginated', () =>
+          HttpResponse.json(
+            buildPaginatedDebtsResponse([mockGivenDebtResponse, mockSecondGivenDebtResponse]),
+          ),
+        ),
+      );
+      const { wrapper } = await renderPage({ person: 'Алексей' });
+
+      await wrapper.find('[data-testid="share-debts-btn"]').trigger('click');
+      await flushPromises();
+
+      const drawer = document.body.querySelector('[data-testid="share-debts-drawer"]');
+      expect(drawer).not.toBeNull();
+      // 30 000 + 20 000 остатка по двум долгам Алексея
+      expect(drawer?.textContent).toContain('Алексей');
+      expect(drawer?.textContent).toContain('2 долга');
+    });
+
     it('shows "close all" button when >1 groups for same person', async () => {
       // Need 2 groups (given + taken) so groups.length > 1 condition is met
       server.use(

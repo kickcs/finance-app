@@ -11,3 +11,4 @@ export {
 } from './debtCache';
 export { useDebtTransactions } from './useDebtTransactions';
 export { useInfiniteDebts } from './useInfiniteDebts';
+export { debtShareApi, type SharedDebtsPayload, type SharedDebtEntry } from './debtShareApi';

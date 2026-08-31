@@ -38,7 +38,10 @@ async function bootstrap() {
   // Global prefix for API — excludes the public /r/:token OG share-redirect page,
   // which must live outside /api so Telegram/social link previews resolve it directly.
   app.setGlobalPrefix('api', {
-    exclude: [{ path: 'r/:token', method: RequestMethod.GET }],
+    exclude: [
+      { path: 'r/:token', method: RequestMethod.GET },
+      { path: 'd/:token', method: RequestMethod.GET },
+    ],
   });
 
   // Global validation pipe

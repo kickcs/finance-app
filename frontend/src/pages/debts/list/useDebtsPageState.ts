@@ -15,8 +15,9 @@ import { useAccounts } from '@/entities/account';
 import { useCloseAllDebts, useCloseDebt, useReopenDebt } from '@/features/close-debt';
 import { useOffsetDebts } from '@/features/offset-debts';
 import { useDebtPaymentFlow } from '@/features/partial-payment';
+import { buildSharePayload, selectShareableDebts } from '@/features/share-debts';
 import { useIsDesktop } from '@/shared/lib/composables/useIsDesktop';
-import { useExchangeRates } from '@/shared/api';
+import { useExchangeRates, useProfile } from '@/shared/api';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 import { DEFAULT_CURRENCY } from '@/shared/config/currency';
@@ -43,6 +44,7 @@ export function useDebtsPageState() {
   const { toast } = useToast();
   const { accounts } = useAccounts(userId);
   const { updateDebt } = useDebts(userId);
+  const { profile } = useProfile(userId);
 
   // --- Filters ---
   const personFilter = ref<string | null>(route.query.person as string | null);
@@ -153,6 +155,38 @@ export function useDebtsPageState() {
       showOffsetModal.value = false;
       offsetPosition.value = null;
     }
+  }
+
+  // --- Поделиться долгами человека ---
+  const showShareDrawer = ref(false);
+
+  /**
+   * Снимок собирается из того, что сейчас на экране: пришёл человек по фильтру
+   * `?type=given` — уходят только эти долги, иначе получатель увидел бы то,
+   * чего отправитель не видел.
+   */
+  const sharePayload = computed(() => {
+    if (!personFilter.value) return null;
+    return buildSharePayload({
+      personName: personFilter.value,
+      currency: currency.value,
+      debts: filteredDebts.value,
+      ownerName: profile.value?.name ?? null,
+      convert,
+    });
+  });
+
+  /** Приватные долги в снимок не идут — их количество показываем в шторке. */
+  const hiddenShareCount = computed(
+    () => filteredDebts.value.length - selectShareableDebts(filteredDebts.value).length,
+  );
+
+  /** Делиться можно только открытыми долгами конкретного человека. */
+  const canShare = computed(() => !!personFilter.value && statusFilter.value === 'active');
+
+  function openShare() {
+    if (!canShare.value) return;
+    showShareDrawer.value = true;
   }
 
   // --- Selected debt (desktop detail panel) ---
@@ -343,6 +377,13 @@ export function useDebtsPageState() {
     progress,
     total,
     accounts,
+
+    // Поделиться
+    showShareDrawer,
+    sharePayload,
+    hiddenShareCount,
+    canShare,
+    openShare,
 
     // Взаимозачёт
     showOffsetModal,

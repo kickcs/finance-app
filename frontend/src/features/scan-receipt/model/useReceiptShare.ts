@@ -5,6 +5,18 @@ import { formatCurrency } from '@/shared/lib/format/currency';
 import { formatLocalDate } from '@/shared/lib/format/date';
 import { getInitial } from '@/shared/lib/format/text';
 import { toLocalISODate } from '@/shared/lib/date';
+import {
+  APP_URL,
+  SHARE_COLORS,
+  SHARE_FONT_FAMILY,
+  SHARE_SCALE,
+  buildShareFilename,
+  canvasToBlob,
+  createGoldGradient,
+  downloadBlob,
+  drawBrandLogo,
+  drawBrandWatermark,
+} from '@/shared/lib/share/shareCard';
 import type { ParticipantSummary, ReceiptCharge } from './types';
 
 export interface ReceiptShareData {
@@ -19,11 +31,11 @@ export interface ReceiptShareData {
 }
 
 // --- Canvas layout constants ---
-const FONT_FAMILY = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+const FONT_FAMILY = SHARE_FONT_FAMILY;
 const CARD_WIDTH = 480;
 const PADDING_X = 28;
 const PADDING_Y = 24;
-const SCALE = 2; // retina
+const SCALE = SHARE_SCALE;
 const HEADER_HEIGHT = 180;
 const PARTICIPANT_NAME_HEIGHT = 36;
 const PARTICIPANT_GAP = 12;
@@ -37,60 +49,19 @@ const NAME_MAX_WIDTH = CONTENT_WIDTH - 200;
 const AMOUNT_X = CARD_WIDTH - PADDING_X;
 
 // Colors
-const BG_COLOR = '#FAFAFA';
-const BRAND_COLOR = '#c59b3f'; // Gold from logo
-const BRAND_GOLD_LIGHT = '#e8c865';
-const TEXT_PRIMARY = '#09090B';
-const TEXT_SECONDARY = '#71717A';
-const TEXT_TERTIARY = '#A1A1AA';
-const TEXT_WHITE = '#FFFFFF';
-const DIVIDER_COLOR = '#E4E4E7';
+const BG_COLOR = SHARE_COLORS.bg;
+const BRAND_COLOR = SHARE_COLORS.brand;
+const TEXT_PRIMARY = SHARE_COLORS.textPrimary;
+const TEXT_SECONDARY = SHARE_COLORS.textSecondary;
+const TEXT_TERTIARY = SHARE_COLORS.textTertiary;
+const TEXT_WHITE = SHARE_COLORS.textWhite;
+const DIVIDER_COLOR = SHARE_COLORS.divider;
 
-function createGoldGradient(
-  ctx: CanvasRenderingContext2D,
-  x1: number,
-  y1: number,
-  x2: number,
-  y2: number,
-): CanvasGradient {
-  const g = ctx.createLinearGradient(x1, y1, x2, y2);
-  g.addColorStop(0, BRAND_COLOR);
-  g.addColorStop(0.5, BRAND_GOLD_LIGHT);
-  g.addColorStop(1, BRAND_COLOR);
-  return g;
-}
-
-// Brand
 const APP_NAME = 'OURO FINANCE';
-const APP_URL = 'app.ouro-finance.top';
 const LOGO_SIZE = 24;
 
 function formatItemName(item: { name: string; sharedWith: number }): string {
   return item.sharedWith > 1 ? `${item.name} (1/${item.sharedWith})` : item.name;
-}
-
-// --- Logo drawing (programmatic — gold ring from favicon.svg) ---
-
-function drawLogo(ctx: CanvasRenderingContext2D, cx: number, cy: number, size: number): void {
-  const r = size / 2;
-  const strokeWidth = size * 0.18;
-
-  // Gold gradient ring
-  const gradient = createGoldGradient(ctx, cx - r, cy - r, cx + r, cy + r);
-
-  // Dark circle background
-  ctx.beginPath();
-  ctx.fillStyle = TEXT_PRIMARY;
-  ctx.arc(cx, cy, r, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Gold ring
-  ctx.beginPath();
-  ctx.strokeStyle = gradient;
-  ctx.lineWidth = strokeWidth;
-  ctx.lineCap = 'round';
-  ctx.arc(cx, cy, r * 0.55, 0, Math.PI * 2);
-  ctx.stroke();
 }
 
 // --- Canvas drawing helpers ---
@@ -114,7 +85,7 @@ function drawHeader(ctx: CanvasRenderingContext2D, data: ReceiptShareData, y: nu
   const totalBrandWidth = LOGO_SIZE + 8 + brandWidth;
   const brandStartX = (CARD_WIDTH - totalBrandWidth) / 2;
 
-  drawLogo(ctx, brandStartX + LOGO_SIZE / 2, y + 10, LOGO_SIZE);
+  drawBrandLogo(ctx, brandStartX + LOGO_SIZE / 2, y + 10, LOGO_SIZE);
 
   ctx.font = `700 13px ${FONT_FAMILY}`;
   ctx.fillStyle = BRAND_COLOR;
@@ -337,59 +308,12 @@ function renderCardToCanvas(data: ReceiptShareData): HTMLCanvasElement {
     ctx.fillText(`Суммы включают ${chargeLabels}`, CARD_WIDTH / 2, y + 24);
   }
 
-  // Watermark: logo + brand name + URL
-  const wmY = totalHeight - WATERMARK_SECTION_HEIGHT + 12;
-
-  // Thin divider above watermark
-  ctx.beginPath();
-  ctx.strokeStyle = DIVIDER_COLOR;
-  ctx.lineWidth = 0.5;
-  ctx.moveTo(CARD_WIDTH / 2 - 80, wmY - 4);
-  ctx.lineTo(CARD_WIDTH / 2 + 80, wmY - 4);
-  ctx.stroke();
-
-  // Logo + Brand
-  const wmLogoSize = 20;
-  ctx.font = `800 12px ${FONT_FAMILY}`;
-  const wmBrandWidth = ctx.measureText(APP_NAME).width;
-  const wmTotalWidth = wmLogoSize + 6 + wmBrandWidth;
-  const wmStartX = (CARD_WIDTH - wmTotalWidth) / 2;
-
-  drawLogo(ctx, wmStartX + wmLogoSize / 2, wmY + 10, wmLogoSize);
-
-  ctx.font = `800 12px ${FONT_FAMILY}`;
-  ctx.fillStyle = BRAND_COLOR;
-  ctx.textAlign = 'left';
-  ctx.fillText(APP_NAME, wmStartX + wmLogoSize + 6, wmY + 14);
-
-  // URL
-  ctx.font = `500 11px ${FONT_FAMILY}`;
-  ctx.fillStyle = TEXT_TERTIARY;
-  ctx.textAlign = 'center';
-  ctx.fillText(APP_URL, CARD_WIDTH / 2, wmY + 34);
+  drawBrandWatermark(ctx, CARD_WIDTH, totalHeight - WATERMARK_SECTION_HEIGHT + 12);
 
   return canvas;
 }
 
 // --- Sharing utilities ---
-
-function canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob> {
-  return new Promise((resolve, reject) => {
-    canvas.toBlob(
-      (blob) => (blob ? resolve(blob) : reject(new Error('Canvas toBlob failed'))),
-      'image/png',
-    );
-  });
-}
-
-function downloadBlob(blob: Blob, filename: string): void {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
 
 function buildShareText(data: ReceiptShareData): string {
   const title = data.storeName || 'Чек';
@@ -421,12 +345,11 @@ function buildShareText(data: ReceiptShareData): string {
 }
 
 function buildFilename(data: ReceiptShareData): string {
-  const name = (data.storeName || 'receipt')
-    .toLowerCase()
-    .replace(/[^a-zа-яё0-9]+/gi, '-')
-    .replace(/^-|-$/g, '');
-  const date = toLocalISODate(new Date(data.date));
-  return `ouro-${name}-${date}.png`;
+  return buildShareFilename(
+    data.storeName || 'receipt',
+    toLocalISODate(new Date(data.date)),
+    'receipt',
+  );
 }
 
 export function useReceiptShare() {
