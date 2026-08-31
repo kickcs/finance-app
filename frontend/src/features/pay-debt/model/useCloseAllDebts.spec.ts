@@ -54,6 +54,7 @@ function makeDebt(partial: Record<string, any>): Debt {
     forgiven_amount: raw.forgivenAmount,
     is_private: raw.isPrivate,
     fee_amount: 0,
+    fee_transaction_id: null,
   };
 }
 

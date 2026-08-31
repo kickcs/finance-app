@@ -94,6 +94,7 @@ export type DebtUpdate = Partial<
     | 'description'
     | 'is_private'
     | 'created_at'
+    | 'fee_amount'
   >
 >;
 

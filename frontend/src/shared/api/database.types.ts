@@ -311,6 +311,8 @@ export type Database = {
           is_private: boolean;
           /** Комиссия за перевод, уплаченная при выдаче долга. Информационное поле. */
           fee_amount: number;
+          /** Расход-комиссия за долгом. Нет записи — комиссию править нечем. */
+          fee_transaction_id: string | null;
         };
         Insert: {
           id?: string;

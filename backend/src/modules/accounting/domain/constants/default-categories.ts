@@ -198,6 +198,14 @@ export const INFORMATIONAL_ONLY_CATEGORY_IDS: readonly string[] = [
 export const ALL_DEBT_CATEGORY_IDS = Object.values(DEBT_CATEGORY_IDS);
 
 /**
+ * Комиссия за перевод — всегда отдельный расход, а не часть суммы операции.
+ * Категория и подпись живут здесь, потому что комиссию заводят два модуля:
+ * перевод в accounting и выдача долга в debt.
+ */
+export const FEE_CATEGORY_ID = 'commission';
+export const FEE_DESCRIPTION = 'Комиссия за перевод';
+
+/**
  * Synthetic category id returned by analytics for outstanding given-debt balance.
  * Not a real DB category — exists only in API responses to keep
  * sum(categoryBreakdown) === totalExpense identity.

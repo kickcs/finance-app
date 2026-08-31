@@ -41,6 +41,7 @@ describe('GetDebtsPaginatedHandler', () => {
     forgivenAmount: 0,
     isPrivate: false,
     feeAmount: 0,
+    feeTransactionId: null,
   };
 
   beforeEach(async () => {

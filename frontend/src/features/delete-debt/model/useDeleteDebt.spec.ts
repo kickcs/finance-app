@@ -52,6 +52,7 @@ const givenDebt: Debt = {
   forgiven_amount: mockGivenDebtResponse.forgivenAmount,
   is_private: mockGivenDebtResponse.isPrivate,
   fee_amount: 0,
+  fee_transaction_id: null,
 };
 
 const takenDebt: Debt = {
@@ -76,6 +77,7 @@ const takenDebt: Debt = {
   forgiven_amount: mockTakenDebtResponse.forgivenAmount,
   is_private: mockTakenDebtResponse.isPrivate,
   fee_amount: 0,
+  fee_transaction_id: null,
 };
 
 let currentWrapper: ReturnType<typeof renderWithProviders> | null = null;

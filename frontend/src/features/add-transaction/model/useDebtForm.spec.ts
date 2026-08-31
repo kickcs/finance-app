@@ -189,7 +189,7 @@ describe('useDebtForm', () => {
 
       const c = mountComposable();
       fillValidForm(c, { debt_type: 'given' });
-      c.formData.value.debt_date = '2024-11-03';
+      c.formData.value.date = '2024-11-03';
 
       await c.createDebt(USER_ID);
       await flushPromises();
@@ -393,7 +393,7 @@ describe('useDebtForm', () => {
   // ── комиссия за перевод ──────────────────────────────────────────────────
 
   describe('комиссия за перевод', () => {
-    it('отправляет комиссию в транзакцию и в долг, не трогая сумму долга', async () => {
+    it('отправляет комиссию долгу, а не транзакции, и не трогает сумму долга', async () => {
       let txBody: any = null;
       let debtBody: any = null;
 
@@ -415,23 +415,24 @@ describe('useDebtForm', () => {
       await c.createDebt(USER_ID);
       await flushPromises();
 
-      expect(txBody?.feeAmount).toBe(5000);
+      // Расход-комиссию заводит сам долг: только так за ней остаётся запись,
+      // по которой комиссию потом можно исправить.
+      expect(txBody?.feeAmount).toBeUndefined();
       expect(txBody?.amount).toBe(50000);
       expect(debtBody?.feeAmount).toBe(5000);
       expect(debtBody?.totalAmount).toBe(50000);
     });
 
-    it('не отправляет feeAmount, когда комиссия нулевая', async () => {
-      let txBody: any = null;
+    it('нулевая комиссия так и уезжает нулём', async () => {
+      let debtBody: any = null;
 
       server.use(
-        http.post('*/api/transactions', async ({ request }) => {
-          txBody = (await request.json()) as Record<string, unknown>;
-          return HttpResponse.json({ ...mockTransactionResponse, id: 'tx-nofee' });
-        }),
+        http.post('*/api/transactions', () =>
+          HttpResponse.json({ ...mockTransactionResponse, id: 'tx-nofee' }),
+        ),
         http.post('*/api/debts', async ({ request }) => {
-          const body = (await request.json()) as Record<string, unknown>;
-          return HttpResponse.json(buildMockDebtResponse(body, { id: 'debt-nofee' }));
+          debtBody = (await request.json()) as Record<string, unknown>;
+          return HttpResponse.json(buildMockDebtResponse(debtBody, { id: 'debt-nofee' }));
         }),
       );
 
@@ -441,7 +442,7 @@ describe('useDebtForm', () => {
       await c.createDebt(USER_ID);
       await flushPromises();
 
-      expect(txBody?.feeAmount).toBeUndefined();
+      expect(debtBody?.feeAmount).toBe(0);
     });
 
     it('обнуляет комиссию при переключении на «взял в долг»', () => {

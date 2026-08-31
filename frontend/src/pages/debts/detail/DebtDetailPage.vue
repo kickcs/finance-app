@@ -224,11 +224,6 @@ const { isOpen: isShareOpen, payload: sharePayload, open: openShare } = useDebtS
     <ShareDebtsDrawer v-model="isShareOpen" :payload="sharePayload" />
 
     <!-- Edit Debt Drawer -->
-    <EditDebtDrawer
-      :open="showEditDrawer"
-      :debt="debt"
-      @update:open="showEditDrawer = $event"
-      @saved="showEditDrawer = false"
-    />
+    <EditDebtDrawer v-model="showEditDrawer" :debt="debt" @saved="showEditDrawer = false" />
   </div>
 </template>

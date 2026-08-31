@@ -30,6 +30,7 @@ export class DebtMapper {
       forgivenAmount: Number(ormEntity.forgivenAmount),
       isPrivate: ormEntity.isPrivate,
       feeAmount: Number(ormEntity.feeAmount ?? 0),
+      feeTransactionId: ormEntity.feeTransactionId,
     });
   }
 
@@ -56,6 +57,7 @@ export class DebtMapper {
     ormEntity.forgivenAmount = debt.forgivenAmount;
     ormEntity.isPrivate = debt.isPrivate;
     ormEntity.feeAmount = debt.feeAmount;
+    ormEntity.feeTransactionId = debt.feeTransactionId;
     return ormEntity;
   }
 }

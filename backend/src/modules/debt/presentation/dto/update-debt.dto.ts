@@ -73,4 +73,10 @@ export class UpdateDebtDto {
   @IsOptional()
   @IsDateString()
   createdAt?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(1_000_000_000_000)
+  feeAmount?: number;
 }

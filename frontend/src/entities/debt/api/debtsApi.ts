@@ -31,6 +31,7 @@ interface DebtResponse {
   forgivenAmount: number;
   isPrivate: boolean;
   feeAmount: number;
+  feeTransactionId: string | null;
 }
 
 interface DebtGroupBackendResponse {
@@ -111,6 +112,7 @@ function transformDebt(debt: DebtResponse): Debt {
     is_private: debt.isPrivate,
     // Долги, созданные до появления комиссии, приезжают без поля
     fee_amount: debt.feeAmount ?? 0,
+    fee_transaction_id: debt.feeTransactionId ?? null,
   };
 }
 
@@ -209,6 +211,7 @@ export const debtsApi = {
     if (updates.description !== undefined) payload.description = updates.description;
     if (updates.is_private !== undefined) payload.isPrivate = updates.is_private;
     if (updates.created_at !== undefined) payload.createdAt = updates.created_at;
+    if (updates.fee_amount !== undefined) payload.feeAmount = updates.fee_amount;
 
     const data = await http.patch<DebtResponse>(`/debts/${id}`, payload);
     return transformDebt(data);

@@ -75,4 +75,8 @@ export class DebtOrmEntity {
 
   @Column({ name: 'fee_amount', type: 'decimal', precision: 18, scale: 2, default: 0 })
   feeAmount: number;
+
+  /** Расход-комиссия, заведённый вместе с долгом: по нему её и правят. */
+  @Column({ name: 'fee_transaction_id', type: 'uuid', nullable: true })
+  feeTransactionId: string | null;
 }

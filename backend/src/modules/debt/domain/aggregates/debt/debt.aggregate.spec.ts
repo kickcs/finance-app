@@ -372,6 +372,7 @@ describe('Debt Aggregate', () => {
         sourceTransactionId: null,
         createdAt: now,
         description: 'Some description',
+        feeTransactionId: null,
         closedAt: null,
         forgivenAmount: 0,
         isPrivate: true,

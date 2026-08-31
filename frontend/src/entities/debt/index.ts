@@ -19,6 +19,14 @@ export { default as MutualDebtCard } from './ui/MutualDebtCard.vue';
 
 // Model/Types
 export * from './model/types';
+export {
+  useDebtFormModel,
+  makeDebtFormFields,
+  debtCategoryId,
+  debtTransactionType,
+  type DebtFormFields,
+  type DebtFormModelOptions,
+} from './model/useDebtFormModel';
 export { useDebtPaymentForm } from './model/useDebtPaymentForm';
 
 // Lib

@@ -51,6 +51,7 @@ function makeDebt(overrides: Partial<Debt> = {}): Debt {
     forgiven_amount: 0,
     is_private: false,
     fee_amount: 0,
+    fee_transaction_id: null,
     ...overrides,
   };
 }

@@ -67,6 +67,7 @@ function toDebt(response: MockDebtResponse): Debt {
     forgiven_amount: response.forgivenAmount,
     is_private: response.isPrivate,
     fee_amount: response.feeAmount,
+    fee_transaction_id: null,
   };
 }
 

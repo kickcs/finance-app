@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.82';
+export const CURRENT_VERSION = '1.0.83';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,21 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.83',
+    date: '2026-08-31',
+    title: 'Правка долга стала полнее',
+    items: [
+      {
+        type: 'feature',
+        text: 'Комиссию за перевод теперь можно исправить после создания долга — раньше её значение оставалось навсегда.',
+      },
+      {
+        type: 'improvement',
+        text: 'Человека в форме долга выбираете чипами, как при создании: имя больше не нужно набирать руками.',
+      },
+    ],
+  },
   {
     version: '1.0.82',
     date: '2026-08-31',

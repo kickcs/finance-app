@@ -15,6 +15,8 @@ export class UpdateDebtCommand {
       description?: string | null;
       isPrivate?: boolean;
       createdAt?: Date;
+      /** Комиссия за выдачу: меняет и число на долге, и его расходную запись. */
+      feeAmount?: number;
     },
   ) {}
 }

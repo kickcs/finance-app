@@ -4,6 +4,7 @@ import { UpdateDebtHandler } from './update-debt.handler';
 import { UpdateDebtCommand } from './update-debt.command';
 import { DEBT_REPOSITORY } from '../../../domain/repositories';
 import { Debt } from '../../../domain/aggregates/debt';
+import { DebtFeeService } from '../../services/debt-fee.service';
 
 describe('UpdateDebtHandler', () => {
   let handler: UpdateDebtHandler;
@@ -17,9 +18,20 @@ describe('UpdateDebtHandler', () => {
     exists: jest.fn(),
   };
 
+  const mockDebtFee = {
+    apply: jest.fn((debt: Debt, amount: number) => {
+      debt.setFee(amount, amount > 0 ? 'tx-fee' : null);
+      return Promise.resolve();
+    }),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [UpdateDebtHandler, { provide: DEBT_REPOSITORY, useValue: mockRepository }],
+      providers: [
+        UpdateDebtHandler,
+        { provide: DEBT_REPOSITORY, useValue: mockRepository },
+        { provide: DebtFeeService, useValue: mockDebtFee },
+      ],
     }).compile();
 
     handler = module.get<UpdateDebtHandler>(UpdateDebtHandler);
@@ -67,6 +79,19 @@ describe('UpdateDebtHandler', () => {
     expect(result.totalAmount).toBe(1500);
     // Возвращённые 400 остаются возвращёнными: 1500 − 400
     expect(result.remainingAmount).toBe(1100);
+  });
+
+  it('should hand the fee over to the fee service', async () => {
+    const debt = createTestDebt();
+    mockRepository.findById.mockResolvedValue(debt);
+    mockRepository.save.mockImplementation((d) => Promise.resolve(d));
+
+    const result = await handler.execute(
+      new UpdateDebtCommand('debt-1', 'user-1', { feeAmount: 5 }),
+    );
+
+    expect(mockDebtFee.apply).toHaveBeenCalledWith(debt, 5);
+    expect(result.feeAmount).toBe(5);
   });
 
   it('should throw NotFoundException when debt does not exist', async () => {

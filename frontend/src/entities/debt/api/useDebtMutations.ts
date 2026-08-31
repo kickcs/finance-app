@@ -129,6 +129,7 @@ function buildOptimisticDebt(userId: string, input: Omit<DebtInsert, 'user_id'>)
     description: input.description ?? null,
     closed_at: null,
     forgiven_amount: input.forgiven_amount ?? 0,
+    fee_transaction_id: null,
     is_private: input.is_private ?? false,
     ...input,
     // После спреда: в DebtInsert поле необязательное, а в Debt — нет

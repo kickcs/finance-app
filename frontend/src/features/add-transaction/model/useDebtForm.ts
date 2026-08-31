@@ -5,106 +5,69 @@ import { debtsApi } from '@/entities/debt';
 import { queryClient } from '@/shared/api/queryClient';
 import { invalidateDebtRelated } from '@/shared/api/invalidation';
 import { useToast } from '@/shared/ui';
-import { getTodayISO, calendarDateToIso } from '@/shared/lib/date';
-import { CATEGORY_IDS } from '@/entities/category';
-import { DEFAULT_CURRENCY } from '@/entities/currency';
-import { buildDebtName, type DebtDirection } from '@/entities/debt';
+import { calendarDateToIso } from '@/shared/lib/date';
+import {
+  useDebtFormModel,
+  debtCategoryId,
+  debtTransactionType,
+  buildDebtName,
+  type DebtFormFields,
+} from '@/entities/debt';
 
-export interface DebtFormData {
-  debt_type: DebtDirection;
-  person_name: string;
-  amount: number;
-  currency: string;
-  account_id: string | null;
-  debt_date: string | null;
-  description: string;
-  skip_transaction: boolean;
-  is_private: boolean;
-  due_date: string | null;
-  /** Комиссия за перевод — платится сверх суммы долга, только при выдаче. */
-  fee: number;
-}
+export type DebtFormData = DebtFormFields;
 
-function makeInitialFormData(): DebtFormData {
-  return {
-    debt_type: 'taken',
-    person_name: '',
-    amount: 0,
-    currency: DEFAULT_CURRENCY,
-    account_id: null,
-    debt_date: getTodayISO(),
-    description: '',
-    skip_transaction: false,
-    is_private: false,
-    due_date: null,
-    fee: 0,
-  };
-}
-
+/** Создание долга поверх общей модели формы: она держит поля, здесь — запрос. */
 export function useDebtForm() {
   const { toast } = useToast();
-  const formData = ref<DebtFormData>(makeInitialFormData());
+  const { fields, isValid, updateField, reset } = useDebtFormModel();
   const error = ref<string | null>(null);
-
-  const isValid = computed(() => {
-    return (
-      formData.value.person_name.trim().length > 0 &&
-      formData.value.amount > 0 &&
-      formData.value.account_id !== null &&
-      formData.value.currency !== ''
-    );
-  });
 
   const mutation = useMutation({
     mutationFn: async (userId: string): Promise<string> => {
-      const accountId = formData.value.account_id;
+      const f = fields.value;
+      const accountId = f.account_id;
       if (!accountId) throw new Error('account_id is required');
-      const isGiven = formData.value.debt_type === 'given';
-      const currency = formData.value.currency;
-      const categoryId = isGiven ? CATEGORY_IDS.DEBT_GIVEN : CATEGORY_IDS.DEBT_TAKEN;
 
       let transactionId: string | null = null;
 
       try {
-        if (!formData.value.skip_transaction) {
+        if (!f.skip_transaction) {
           const transaction = await transactionsApi.create({
             user_id: userId,
             account_id: accountId,
-            category_id: categoryId,
-            amount: formData.value.amount,
-            currency,
-            type: isGiven ? 'expense' : 'income',
+            category_id: debtCategoryId(f.debt_type),
+            amount: f.amount,
+            currency: f.currency,
+            type: debtTransactionType(f.debt_type),
             description:
-              formData.value.description ||
-              `${isGiven ? 'Дал в долг' : 'Взял в долг'}: ${formData.value.person_name}`,
-            date: calendarDateToIso(formData.value.debt_date),
+              f.description ||
+              `${f.debt_type === 'given' ? 'Дал в долг' : 'Взял в долг'}: ${f.person_name}`,
+            date: calendarDateToIso(f.date),
             is_debt_related: true,
-            // Сервер сам создаст отдельный расход «Комиссия за перевод»
-            // и спишет его со счёта в той же БД-транзакции.
-            fee_amount: formData.value.fee > 0 ? formData.value.fee : undefined,
           });
           transactionId = transaction.id;
         }
 
-        const debtName = buildDebtName(formData.value.debt_type, formData.value.person_name);
+        // Комиссию заводит сам долг: её расход привязывается к нему, иначе
+        // потом эту запись не найти и комиссию не исправить.
         const debt = await debtsApi.create({
           user_id: userId,
-          name: debtName,
-          total_amount: formData.value.amount,
-          remaining_amount: formData.value.amount,
-          debt_type: formData.value.debt_type,
-          person_name: formData.value.person_name,
+          name: buildDebtName(f.debt_type, f.person_name),
+          total_amount: f.amount,
+          remaining_amount: f.amount,
+          debt_type: f.debt_type,
+          person_name: f.person_name,
           account_id: accountId,
           transaction_id: transactionId,
           is_closed: false,
-          currency,
-          description: formData.value.description || null,
-          is_private: formData.value.is_private,
-          next_payment_date: formData.value.due_date,
-          fee_amount: formData.value.fee,
+          currency: f.currency,
+          description: f.description || null,
+          is_private: f.is_private,
+          next_payment_date: f.due_date,
+          fee_amount: f.skip_transaction ? 0 : f.fee,
           // Выбранная дата — дата самого долга, а не только его транзакции:
           // без неё долг, заведённый задним числом, штампуется сегодняшним днём.
-          created_at: calendarDateToIso(formData.value.debt_date),
+          created_at: calendarDateToIso(f.date),
         });
 
         if (transactionId) {
@@ -126,12 +89,13 @@ export function useDebtForm() {
 
     onSuccess: (_, userId) => {
       invalidateDebtRelated(queryClient, userId).catch(console.error);
-      const isGiven = formData.value.debt_type === 'given';
+      const { debt_type, person_name } = fields.value;
       toast({
         title: 'Долг создан',
-        description: isGiven
-          ? `Вы дали в долг ${formData.value.person_name}`
-          : `Вы взяли в долг у ${formData.value.person_name}`,
+        description:
+          debt_type === 'given'
+            ? `Вы дали в долг ${person_name}`
+            : `Вы взяли в долг у ${person_name}`,
         variant: 'success',
         duration: 2500,
       });
@@ -164,26 +128,14 @@ export function useDebtForm() {
     }
   }
 
-  function updateField<K extends keyof DebtFormData>(field: K, value: DebtFormData[K]) {
-    formData.value[field] = value;
-    // Комиссию платит тот, кто отправляет деньги, и только если транзакция
-    // вообще создаётся — иначе оставшееся значение уехало бы в payload.
-    if (
-      (field === 'debt_type' && value !== 'given') ||
-      (field === 'skip_transaction' && value === true)
-    ) {
-      formData.value.fee = 0;
-    }
-  }
-
   function resetForm() {
-    formData.value = makeInitialFormData();
+    reset();
     error.value = null;
     mutation.reset();
   }
 
   return {
-    formData,
+    formData: fields,
     isValid,
     isSubmitting,
     error,
