@@ -2,318 +2,22 @@ import { ref } from 'vue';
 import { useToast } from '@/shared/ui';
 import { useHaptics } from '@/shared/lib/haptics';
 import { formatCurrency } from '@/shared/lib/format/currency';
-import { formatLocalDate } from '@/shared/lib/format/date';
-import { getInitial } from '@/shared/lib/format/text';
 import { toLocalISODate } from '@/shared/lib/date';
 import {
   APP_URL,
-  SHARE_COLORS,
-  SHARE_FONT_FAMILY,
-  SHARE_SCALE,
   buildShareFilename,
   canvasToBlob,
-  createGoldGradient,
   downloadBlob,
-  drawBrandLogo,
-  drawBrandWatermark,
 } from '@/shared/lib/share/shareCard';
-import type { ParticipantSummary, ReceiptCharge } from './types';
+import { ensureShareFonts } from '@/shared/lib/share/shareFonts';
+import { renderReceiptCardToCanvas, type ReceiptShareData } from './renderReceiptCard';
 
-export interface ReceiptShareData {
-  storeName: string | null;
-  date: number;
-  currency: string;
-  totalAmount: number;
-  subtotal: number;
-  charges: ReceiptCharge[];
-  chargesAmount: number;
-  participants: ParticipantSummary[];
-}
+export type { ReceiptShareData };
 
-// --- Canvas layout constants ---
-const FONT_FAMILY = SHARE_FONT_FAMILY;
-const CARD_WIDTH = 480;
-const PADDING_X = 28;
-const PADDING_Y = 24;
-const SCALE = SHARE_SCALE;
-const HEADER_HEIGHT = 180;
-const PARTICIPANT_NAME_HEIGHT = 36;
-const PARTICIPANT_GAP = 12;
-const PARTICIPANT_SECTION_HEADER = 40; // "КТО СКОЛЬКО ДОЛЖЕН" title
-const DIVIDER_GAP = 24;
-const ITEM_HEIGHT = 22; // px per item row under a participant
-const SERVICE_CHARGE_HEIGHT = 30;
-const WATERMARK_SECTION_HEIGHT = 80; // logo + name + URL
-const CONTENT_WIDTH = CARD_WIDTH - PADDING_X * 2;
-const NAME_MAX_WIDTH = CONTENT_WIDTH - 200;
-const AMOUNT_X = CARD_WIDTH - PADDING_X;
-
-// Colors
-const BG_COLOR = SHARE_COLORS.bg;
-const BRAND_COLOR = SHARE_COLORS.brand;
-const TEXT_PRIMARY = SHARE_COLORS.textPrimary;
-const TEXT_SECONDARY = SHARE_COLORS.textSecondary;
-const TEXT_TERTIARY = SHARE_COLORS.textTertiary;
-const TEXT_WHITE = SHARE_COLORS.textWhite;
-const DIVIDER_COLOR = SHARE_COLORS.divider;
-
-const APP_NAME = 'OURO FINANCE';
-const LOGO_SIZE = 24;
-
+/** Доля общей позиции в текстовом шаринге: «Ачик-чучук (1/2)». */
 function formatItemName(item: { name: string; sharedWith: number }): string {
   return item.sharedWith > 1 ? `${item.name} (1/${item.sharedWith})` : item.name;
 }
-
-// --- Canvas drawing helpers ---
-
-function drawDivider(ctx: CanvasRenderingContext2D, y: number): number {
-  y += 4;
-  ctx.beginPath();
-  ctx.strokeStyle = DIVIDER_COLOR;
-  ctx.lineWidth = 1;
-  ctx.moveTo(PADDING_X, y);
-  ctx.lineTo(CARD_WIDTH - PADDING_X, y);
-  ctx.stroke();
-  return y + DIVIDER_GAP - 4;
-}
-
-function drawHeader(ctx: CanvasRenderingContext2D, data: ReceiptShareData, y: number): number {
-  // Brand with logo
-  const brandText = APP_NAME;
-  ctx.font = `700 13px ${FONT_FAMILY}`;
-  const brandWidth = ctx.measureText(brandText).width;
-  const totalBrandWidth = LOGO_SIZE + 8 + brandWidth;
-  const brandStartX = (CARD_WIDTH - totalBrandWidth) / 2;
-
-  drawBrandLogo(ctx, brandStartX + LOGO_SIZE / 2, y + 10, LOGO_SIZE);
-
-  ctx.font = `700 13px ${FONT_FAMILY}`;
-  ctx.fillStyle = BRAND_COLOR;
-  ctx.textAlign = 'left';
-  ctx.fillText(brandText, brandStartX + LOGO_SIZE + 8, y + 15);
-  y += 40;
-
-  // Store name
-  ctx.font = `600 16px ${FONT_FAMILY}`;
-  ctx.fillStyle = TEXT_TERTIARY;
-  ctx.textAlign = 'center';
-  ctx.fillText(
-    (data.storeName || 'Чек оплачен').toUpperCase(),
-    CARD_WIDTH / 2,
-    y + 16,
-    CONTENT_WIDTH,
-  );
-  y += 34;
-
-  // Amount
-  ctx.font = `900 48px ${FONT_FAMILY}`;
-  ctx.fillStyle = TEXT_PRIMARY;
-  ctx.textAlign = 'center';
-  ctx.fillText(formatCurrency(data.totalAmount, data.currency), CARD_WIDTH / 2, y + 48);
-  y += 70;
-
-  // Date
-  ctx.font = `500 14px ${FONT_FAMILY}`;
-  ctx.fillStyle = TEXT_SECONDARY;
-  ctx.textAlign = 'center';
-  ctx.fillText(formatLocalDate(data.date), CARD_WIDTH / 2, y + 14);
-  y += 36;
-
-  return y;
-}
-
-function calcParticipantsHeight(data: ReceiptShareData): number {
-  const owers = data.participants.filter((p) => !p.isMe && p.total > 0);
-
-  // Section header "КТО СКОЛЬКО ДОЛЖЕН"
-  let h = PARTICIPANT_SECTION_HEADER;
-
-  if (owers.length === 0) {
-    return h + 40; // empty state text
-  }
-
-  // Each participant row + their item rows
-  for (const p of owers) {
-    h += PARTICIPANT_NAME_HEIGHT + p.items.length * ITEM_HEIGHT;
-  }
-  // Gaps between participants (not after last)
-  if (owers.length > 1) {
-    h += (owers.length - 1) * PARTICIPANT_GAP;
-  }
-
-  return h;
-}
-
-function drawParticipants(
-  ctx: CanvasRenderingContext2D,
-  data: ReceiptShareData,
-  y: number,
-): number {
-  ctx.font = `600 13px ${FONT_FAMILY}`;
-  ctx.fillStyle = TEXT_TERTIARY;
-  ctx.textAlign = 'left';
-  ctx.fillText('КТО СКОЛЬКО ДОЛЖЕН', PADDING_X, y + 15);
-  y += PARTICIPANT_SECTION_HEADER;
-
-  const owers = data.participants.filter((p) => !p.isMe && p.total > 0);
-
-  if (owers.length === 0) {
-    ctx.font = `400 15px ${FONT_FAMILY}`;
-    ctx.fillStyle = TEXT_TERTIARY;
-    ctx.textAlign = 'center';
-    ctx.fillText('Никто ничего не должен', CARD_WIDTH / 2, y + 15);
-    return y + 40;
-  }
-
-  for (let i = 0; i < owers.length; i++) {
-    const p = owers[i];
-    const centerY = y + PARTICIPANT_NAME_HEIGHT / 2;
-
-    // Color dot (Avatar)
-    ctx.beginPath();
-    ctx.fillStyle = p.color;
-    ctx.arc(PADDING_X + 16, centerY, 14, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Initial letter in avatar
-    ctx.font = `600 12px ${FONT_FAMILY}`;
-    ctx.fillStyle = TEXT_WHITE;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(getInitial(p.name), PADDING_X + 16, centerY + 1);
-
-    // Name
-    ctx.font = `500 16px ${FONT_FAMILY}`;
-    ctx.fillStyle = TEXT_PRIMARY;
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'alphabetic';
-    ctx.fillText(p.name, PADDING_X + 40, centerY + 5, NAME_MAX_WIDTH);
-
-    // Amount
-    ctx.font = `700 16px ${FONT_FAMILY}`;
-    ctx.fillStyle = TEXT_PRIMARY;
-    ctx.textAlign = 'right';
-    ctx.fillText(formatCurrency(p.total, data.currency), AMOUNT_X, centerY + 5);
-
-    // Dotted line connecting name and amount
-    const nameWidth = ctx.measureText(p.name).width;
-    const amountStr = formatCurrency(p.total, data.currency);
-    const amountWidth = ctx.measureText(amountStr).width;
-
-    const lineStartX = PADDING_X + 40 + nameWidth + 10;
-    const lineEndX = AMOUNT_X - amountWidth - 10;
-
-    if (lineEndX > lineStartX) {
-      ctx.beginPath();
-      ctx.setLineDash([2, 4]);
-      ctx.strokeStyle = DIVIDER_COLOR;
-      ctx.lineWidth = 2;
-      ctx.moveTo(lineStartX, centerY + 1);
-      ctx.lineTo(lineEndX, centerY + 1);
-      ctx.stroke();
-      ctx.setLineDash([]);
-    }
-
-    y += PARTICIPANT_NAME_HEIGHT;
-
-    // Item rows
-    for (const item of p.items) {
-      const itemCenterY = y + ITEM_HEIGHT / 2;
-      const itemName = formatItemName(item);
-      const itemAmount = formatCurrency(item.share, data.currency);
-
-      // Item name
-      ctx.font = `400 12px ${FONT_FAMILY}`;
-      ctx.fillStyle = TEXT_SECONDARY;
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(itemName, PADDING_X + 40, itemCenterY, NAME_MAX_WIDTH - 12);
-
-      // Item amount
-      ctx.textAlign = 'right';
-      ctx.fillStyle = TEXT_TERTIARY;
-      ctx.fillText(itemAmount, AMOUNT_X, itemCenterY);
-
-      y += ITEM_HEIGHT;
-    }
-
-    // Reset baseline for subsequent participant rows
-    ctx.textBaseline = 'alphabetic';
-
-    // Gap between participants
-    if (i < owers.length - 1) {
-      y += PARTICIPANT_GAP;
-    }
-  }
-  return y;
-}
-
-function renderCardToCanvas(data: ReceiptShareData): HTMLCanvasElement {
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d')!;
-
-  const participantsHeight = calcParticipantsHeight(data);
-  const enabledCharges = data.charges.filter((c) => c.enabled);
-  const hasCharges = enabledCharges.length > 0 && data.chargesAmount > 0;
-
-  const totalHeight =
-    PADDING_Y +
-    HEADER_HEIGHT +
-    DIVIDER_GAP +
-    participantsHeight +
-    (hasCharges ? SERVICE_CHARGE_HEIGHT * enabledCharges.length : 0) +
-    PADDING_Y +
-    WATERMARK_SECTION_HEIGHT;
-
-  // Set canvas size (retina)
-  canvas.width = CARD_WIDTH * SCALE;
-  canvas.height = totalHeight * SCALE;
-  canvas.style.width = `${CARD_WIDTH}px`;
-  canvas.style.height = `${totalHeight}px`;
-  ctx.scale(SCALE, SCALE);
-
-  // Background
-  ctx.fillStyle = BG_COLOR;
-  ctx.fillRect(0, 0, CARD_WIDTH, totalHeight);
-
-  // Header banner — gold gradient
-  ctx.fillStyle = createGoldGradient(ctx, 0, 0, CARD_WIDTH, 0);
-  ctx.fillRect(0, 0, CARD_WIDTH, 8);
-
-  let y = PADDING_Y;
-  y = drawHeader(ctx, data, y);
-
-  // Cutout circles (receipt paper effect)
-  ctx.globalCompositeOperation = 'destination-out';
-  ctx.beginPath();
-  ctx.arc(0, y + 4, 16, 0, Math.PI * 2);
-  ctx.arc(CARD_WIDTH, y + 4, 16, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.globalCompositeOperation = 'source-over';
-
-  y = drawDivider(ctx, y);
-  y = drawParticipants(ctx, data, y);
-
-  if (hasCharges) {
-    ctx.font = `500 13px ${FONT_FAMILY}`;
-    ctx.fillStyle = TEXT_TERTIARY;
-    ctx.textAlign = 'center';
-    const chargeLabels = enabledCharges
-      .map((c) =>
-        c.type === 'amount'
-          ? `${formatCurrency(c.amount, data.currency)} ${c.label.toLowerCase()}`
-          : `${c.percent}% ${c.label.toLowerCase()}`,
-      )
-      .join(', ');
-    ctx.fillText(`Суммы включают ${chargeLabels}`, CARD_WIDTH / 2, y + 24);
-  }
-
-  drawBrandWatermark(ctx, CARD_WIDTH, totalHeight - WATERMARK_SECTION_HEIGHT + 12);
-
-  return canvas;
-}
-
-// --- Sharing utilities ---
 
 function buildShareText(data: ReceiptShareData): string {
   const title = data.storeName || 'Чек';
@@ -360,7 +64,8 @@ export function useReceiptShare() {
   async function shareAsImage(data: ReceiptShareData): Promise<void> {
     isSharing.value = true;
     try {
-      const canvas = renderCardToCanvas(data);
+      await ensureShareFonts();
+      const canvas = renderReceiptCardToCanvas(data);
       const blob = await canvasToBlob(canvas);
       canvas.width = 0;
       canvas.height = 0;
@@ -412,7 +117,8 @@ export function useReceiptShare() {
   async function saveToGallery(data: ReceiptShareData): Promise<void> {
     isSharing.value = true;
     try {
-      const canvas = renderCardToCanvas(data);
+      await ensureShareFonts();
+      const canvas = renderReceiptCardToCanvas(data);
       const blob = await canvasToBlob(canvas);
       canvas.width = 0;
       canvas.height = 0;
