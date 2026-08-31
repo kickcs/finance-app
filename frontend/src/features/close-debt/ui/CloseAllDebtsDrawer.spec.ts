@@ -95,6 +95,24 @@ describe('CloseAllDebtsDrawer', () => {
     expect(wrapper.find('[data-testid="close-all-submit"]').text()).toContain('Простить все долги');
   });
 
+  it('частично оплаченный долг с прощением остатка не выдаётся за полностью прощённый', async () => {
+    const wrapper = mountDrawer(twoDebts);
+    // «Простить» включает прощение остатка, поверх набираем неполную сумму.
+    await wrapper.find('[data-testid="close-all-preset-forgive"]').trigger('click');
+    const input = wrapper.find<HTMLInputElement>('[data-testid="close-all-amount-input"]');
+    input.element.value = '15000';
+    await input.trigger('input');
+
+    // 15 000: первый долг (10 000) закрыт деньгами, второму достаётся 5 000
+    // деньгами и 15 000 прощением — это не «Простится».
+    const [first, second] = rows(wrapper);
+    expect(first).toContain('Закроется');
+    expect(second).toContain('Часть + прощение');
+    expect(second).not.toContain('Простится');
+    // Оба долга всё равно уходят из списка.
+    expect(wrapper.text()).toContain('закроется 2 из 2');
+  });
+
   it('отдаёт выбранный счёт и параметры платежа наружу', async () => {
     const wrapper = mountDrawer(twoDebts);
     await wrapper.find('[data-testid="close-all-submit"]').trigger('click');

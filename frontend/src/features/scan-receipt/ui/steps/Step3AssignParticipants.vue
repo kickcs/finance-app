@@ -312,7 +312,6 @@ function handleTapRow(item: ReceiptItem) {
     <ParticipantsDrawer
       v-model:open="manageOpen"
       :participants="participants"
-      :has-me="hasMe"
       :assigned-counts="assignedCounts"
       @add="(name, isMe) => emit('addParticipant', name, isMe)"
       @remove="handleRemoveParticipant"

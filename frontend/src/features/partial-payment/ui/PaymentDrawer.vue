@@ -6,10 +6,10 @@ import { AccountSelector, type AccountWithBalances } from '@/entities/account';
 import {
   DebtProgressMeter,
   DebtPaymentFields,
+  DebtAmountHeadline,
   useDebtPaymentForm,
   getDebtSplit,
 } from '@/entities/debt';
-import { useAmountInput } from '@/shared/lib/hooks/useAmountInput';
 import { useHaptics } from '@/shared/lib/haptics';
 import { formatCurrency, getCurrencySymbol } from '@/shared/lib/format/currency';
 import { DEFAULT_CURRENCY } from '@/entities/currency';
@@ -51,17 +51,6 @@ const { paymentAmount, forgiveRemainder, excessCategoryId, isOverpayment, reset 
     remainingAmount: remaining,
     debtType: debtDirection,
   });
-
-const {
-  inputRef: hiddenInputRef,
-  rawValue,
-  displayAmount,
-  isFocused,
-  onInput,
-} = useAmountInput({
-  amount: () => paymentAmount.value,
-  onChange: (value) => (paymentAmount.value = value),
-});
 
 /**
  * `reset()` всегда выставляет верные дефолты (сумма = остаток, категория
@@ -160,54 +149,14 @@ function confirm() {
   >
     <div v-if="debt" data-testid="payment-drawer" class="space-y-5">
       <!--
-        Сумма-героем: скрытый input поверх нарисованной строки, как в
-        HeroAmount/AmountHeadline — но без импорта feature→feature, поэтому
-        минимальная вёрстка собрана прямо здесь.
+        Сумма-героем: скрытый input поверх нарисованной строки. Раскладка общая
+        со шторкой закрытия всех долгов, поэтому живёт в `entities/debt`.
       -->
-      <div class="flex flex-col items-center gap-1">
-        <div class="relative w-full cursor-text py-1">
-          <input
-            ref="hiddenInputRef"
-            type="text"
-            inputmode="decimal"
-            :value="rawValue"
-            aria-label="Сумма платежа"
-            data-testid="payment-amount-input"
-            class="absolute inset-0 w-full h-full opacity-0 caret-transparent cursor-text"
-            @input="onInput"
-            @keydown.enter.prevent
-          />
-
-          <div class="relative flex items-baseline justify-center gap-1.5 pointer-events-none">
-            <span
-              class="amount-value text-4xl font-semibold tabular-nums leading-none transition-colors duration-200"
-              :class="
-                paymentAmount
-                  ? 'text-text-primary-light dark:text-text-primary-dark'
-                  : 'text-text-tertiary-light dark:text-text-tertiary-dark'
-              "
-            >
-              {{ displayAmount }}
-            </span>
-
-            <span
-              class="amount-caret inline-block h-8 w-[2px] self-center rounded-full transition-opacity duration-150"
-              :class="isFocused ? 'bg-primary animate-caret-blink' : 'opacity-0'"
-            />
-
-            <span
-              class="text-base leading-none text-text-tertiary-light dark:text-text-tertiary-dark"
-            >
-              {{ currencySymbol }}
-            </span>
-          </div>
-
-          <div
-            class="amount-underline absolute bottom-0 left-1/2 h-[2px] -translate-x-1/2 rounded-full bg-primary transition-all duration-300 ease-out"
-            :class="isFocused ? 'w-16 opacity-100' : 'w-0 opacity-0'"
-          />
-        </div>
-      </div>
+      <DebtAmountHeadline
+        v-model="paymentAmount"
+        :currency-symbol="currencySymbol"
+        input-testid="payment-amount-input"
+      />
 
       <!-- Пресеты -->
       <div class="flex justify-center gap-2">
@@ -284,28 +233,3 @@ function confirm() {
     </template>
   </UOverlay>
 </template>
-
-<style scoped>
-@keyframes caret-blink {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0;
-  }
-}
-.animate-caret-blink {
-  animation: caret-blink 1s step-end infinite;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .animate-caret-blink {
-    animation: none;
-  }
-  .amount-value,
-  .amount-underline {
-    transition: none;
-  }
-}
-</style>

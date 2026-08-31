@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue';
 import { useTimeoutFn } from '@vueuse/core';
-import { UButton, UIcon, UInput, InitialAvatar } from '@/shared/ui';
+import { UButton, UIcon, UInput, InitialAvatar, useToast } from '@/shared/ui';
 import { UOverlay } from '@/shared/ui/overlay';
 import { cn } from '@/shared/lib/utils';
 import { pluralize } from '@/shared/lib/format/pluralize';
@@ -27,7 +27,6 @@ import type { Participant } from '../model/types';
 const props = defineProps<{
   open: boolean;
   participants: Participant[];
-  hasMe: boolean;
   /** Сколько позиций назначено участнику — для подтверждения удаления */
   assignedCounts: Record<string, number>;
 }>();
@@ -55,6 +54,7 @@ interface PersonRow {
 }
 
 const { trigger } = useHaptics();
+const { toast } = useToast();
 const isDesktop = useIsDesktop();
 const { userId } = useCurrentUser();
 const { people, isLoading, createPerson } = usePeople(userId);
@@ -82,7 +82,9 @@ const participantByKey = computed(() => {
   const map = new Map<string, Participant>();
   for (const p of props.participants) {
     if (p.isMe) continue;
-    map.set(personKey(p.name), p);
+    // Первый одноимённый занимает строку контакта, тёзки получают свои строки.
+    const key = personKey(p.name);
+    if (!map.has(key)) map.set(key, p);
   }
   return map;
 });
@@ -116,24 +118,32 @@ const rows = computed<PersonRow[]>(() => {
   for (const p of props.participants) {
     if (p.isMe) continue;
     const key = personKey(p.name);
-    if (contactKeys.has(key)) continue;
+    // Строку контакта займёт первый участник с этим именем; его тёзки всё равно
+    // получают собственную строку — иначе второй «Иван» пропал бы из списка
+    // вместе с единственной возможностью его убрать. Ключ строки — id
+    // участника, чтобы у тёзок вне контактов не совпадали `:key`.
+    if (contactKeys.has(key) && participantByKey.value.get(key) === p) continue;
     list.push({
-      key,
+      key: `participant:${p.id}`,
       name: p.name,
       color: p.color,
       participant: p,
       isMe: false,
-      inContacts: false,
+      inContacts: contactKeys.has(key),
     });
   }
 
   for (const contact of contacts.value) {
     const key = personKey(contact.name);
+    const participant = participantByKey.value.get(key) ?? null;
     list.push({
       key,
       name: contact.name,
-      color: contact.color,
-      participant: participantByKey.value.get(key) ?? null,
+      // Цвет добавленного участника важнее цвета контакта: иначе один и тот же
+      // человек светился бы в шторке одним цветом, а в чипах плательщиков и на
+      // панели участников — другим (цвет участнику раздаёт мастер по порядку).
+      color: participant?.color ?? contact.color,
+      participant,
       isMe: false,
       inContacts: true,
     });
@@ -154,7 +164,7 @@ const filteredRows = computed(() => {
 const canCreate = computed(() => {
   if (!query.value) return false;
   const key = personKey(query.value);
-  return !rows.value.some((row) => row.key === key || personKey(row.name) === key);
+  return !rows.value.some((row) => personKey(row.name) === key);
 });
 
 const selectedCount = computed(() => props.participants.length);
@@ -187,15 +197,15 @@ function assignedCount(participant: Participant): number {
   return props.assignedCounts[participant.id] ?? 0;
 }
 
-/** Подпись под именем: позиции, плательщик или пометка «не в контактах». */
+/**
+ * Подпись под именем — только у добавленных: сколько позиций на них назначено.
+ * Невыбранная строка всегда приходит из контактов, подписывать её нечем.
+ */
 function rowMeta(row: PersonRow): string | null {
-  if (row.participant) {
-    const count = assignedCount(row.participant);
-    if (count > 0) return `${count} ${pluralize(count, 'позиция', 'позиции', 'позиций')}`;
-    return 'Без позиций';
-  }
-  if (!row.inContacts) return 'Не в контактах';
-  return null;
+  if (!row.participant) return null;
+  const count = assignedCount(row.participant);
+  if (count > 0) return `${count} ${pluralize(count, 'позиция', 'позиции', 'позиций')}`;
+  return 'Без позиций';
 }
 
 function rowAriaLabel(row: PersonRow): string {
@@ -265,6 +275,9 @@ function handleCreate() {
 
 /** Enter на клавиатуре: добавляем первое совпадение или заводим новое имя. */
 function handleSearchEnter() {
+  // Без запроса первой строкой стоит «Я» — Enter в пустом поиске молча
+  // записывал бы вас в чек, хотя ничего не искали.
+  if (!query.value) return;
   const first = filteredRows.value[0];
   if (first && !first.participant) {
     toggleRow(first);
@@ -280,6 +293,11 @@ async function saveToContacts(row: PersonRow) {
   try {
     await createPerson({ name: row.name, color: row.color ?? undefined });
     trigger('success');
+  } catch {
+    // Оптимистичный контакт откатывается сам, но молча: без этого ветка
+    // уходила в необработанный reject, а человек считал, что сохранилось.
+    trigger('error');
+    toast({ title: 'Не удалось сохранить в контакты', variant: 'error' });
   } finally {
     const next = new Set(savingKeys.value);
     next.delete(row.key);

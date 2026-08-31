@@ -32,7 +32,7 @@ function contact(name: string) {
 
 function mountDrawer(props: Record<string, unknown> = {}) {
   return mount(ParticipantsDrawer, {
-    props: { open: true, participants: [], hasMe: false, assignedCounts: {}, ...props },
+    props: { open: true, participants: [], assignedCounts: {}, ...props },
     global: {
       provide: { user: ref({ id: 'u1' }) },
       stubs: { UOverlay: OverlayStub, UIcon: true, InitialAvatar: true },
@@ -147,6 +147,23 @@ describe('ParticipantsDrawer', () => {
     const options = wrapper.findAll('[data-testid="payer-option"]');
     await options[options.length - 1].trigger('click');
     expect(wrapper.emitted('setPaidBy')?.[0]).toEqual(['p-timur', 'p-anya']);
+  });
+
+  it('Enter в пустом поиске никого не добавляет', async () => {
+    const wrapper = mountDrawer();
+    await wrapper.find('input').trigger('keydown', { key: 'Enter' });
+    expect(wrapper.emitted('add')).toBeUndefined();
+  });
+
+  it('тёзка добавленного контакта получает свою строку', () => {
+    peopleRef.value = [contact('Иван')];
+    const wrapper = mountDrawer({
+      participants: [participant('Иван', { id: 'p-1' }), participant('Иван', { id: 'p-2' })],
+    });
+    // «Я» + строка контакта (первый Иван) + отдельная строка для второго
+    const rows = wrapper.findAll('[data-testid="participant-row"]');
+    expect(rows).toHaveLength(3);
+    expect(rows.filter((r) => r.attributes('aria-pressed') === 'true')).toHaveLength(2);
   });
 
   it('кнопка «Готово» закрывает шторку', async () => {

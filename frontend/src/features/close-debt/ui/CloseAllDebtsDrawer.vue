@@ -6,10 +6,10 @@ import { AccountSelector, type AccountWithBalances } from '@/entities/account';
 import {
   DebtPaymentFields,
   DebtProgressMeter,
+  DebtAmountHeadline,
   useDebtPaymentForm,
   getDebtSplit,
 } from '@/entities/debt';
-import { useAmountInput } from '@/shared/lib/hooks/useAmountInput';
 import { useHaptics } from '@/shared/lib/haptics';
 import { formatCurrency, getCurrencySymbol } from '@/shared/lib/format/currency';
 import { pluralize } from '@/shared/lib/format/pluralize';
@@ -81,17 +81,6 @@ const { paymentAmount, forgiveRemainder, excessCategoryId, isOverpayment, reset 
     debtType: debtDirection,
   });
 
-const {
-  inputRef: hiddenInputRef,
-  rawValue,
-  displayAmount,
-  isFocused,
-  onInput,
-} = useAmountInput({
-  amount: () => paymentAmount.value,
-  onChange: (value) => (paymentAmount.value = value),
-});
-
 /**
  * `immediate` обязателен: страница может отрендерить шторку сразу открытой, и
  * без первого прогона сумма осталась бы нулевой, а счёт — невыбранным.
@@ -109,6 +98,8 @@ watch(
 
 // --- Предпросмотр распределения (FIFO: сначала самые старые долги) ---
 
+type DistributionStatus = 'closed' | 'forgiven' | 'paidAndForgiven' | 'partial' | 'open';
+
 const debtDistribution = computed(() => {
   const sorted = sortDebtsByDateAsc(props.debts);
   let budget = paymentAmount.value;
@@ -123,10 +114,14 @@ const debtDistribution = computed(() => {
       status: (allocated >= debt.remaining_amount
         ? 'closed'
         : willForgive
-          ? 'forgiven'
+          ? // Часть уходит со счёта, часть списывается: назвать это просто
+            // «Простится» значило бы спрятать реальное списание денег.
+            allocated > 0
+            ? 'paidAndForgiven'
+            : 'forgiven'
           : allocated > 0
             ? 'partial'
-            : 'open') as 'closed' | 'forgiven' | 'partial' | 'open',
+            : 'open') as DistributionStatus,
     };
   });
 });
@@ -134,13 +129,16 @@ const debtDistribution = computed(() => {
 const STATUS_META = {
   closed: { label: 'Закроется', class: 'text-success' },
   forgiven: { label: 'Простится', class: 'text-warning' },
+  paidAndForgiven: { label: 'Часть + прощение', class: 'text-warning' },
   partial: { label: 'Частично', class: 'text-primary' },
   open: { label: 'Не покрыт', class: 'text-text-tertiary-light dark:text-text-tertiary-dark' },
 } as const;
 
+/** Долг уходит из списка, если он оплачен целиком или остаток прощён. */
+const CLOSING_STATUSES: DistributionStatus[] = ['closed', 'forgiven', 'paidAndForgiven'];
+
 const closingCount = computed(
-  () =>
-    debtDistribution.value.filter((d) => d.status === 'closed' || d.status === 'forgiven').length,
+  () => debtDistribution.value.filter((d) => CLOSING_STATUSES.includes(d.status)).length,
 );
 
 /**
@@ -220,8 +218,7 @@ const progressPercent = computed(() => {
 const confirmLabel = computed(() => {
   if (props.isClosing) return `Закрываем ${props.progress ?? 0} из ${props.total ?? 0}`;
   if (forgiveRemainder.value && paymentAmount.value === 0) return 'Простить все долги';
-  if (paymentAmount.value >= totalDebt.value && !isMixedCurrency.value) return 'Закрыть все долги';
-  if (isMixedCurrency.value) return 'Закрыть все долги';
+  if (isMixedCurrency.value || paymentAmount.value >= totalDebt.value) return 'Закрыть все долги';
   return `Внести ${formatCurrency(paymentAmount.value, debtCurrency.value, { showSymbol: false })}`;
 });
 
@@ -281,53 +278,16 @@ function confirm() {
       </div>
 
       <!--
-        Сумма-героем — та же раскладка, что в шторке одиночного платежа:
-        скрытый input поверх нарисованной строки.
+        Сумма-героем — та же раскладка, что в шторке одиночного платежа
+        (`PaymentDrawer`), поэтому она вынесена в `entities/debt`.
       -->
-      <div v-if="!isMixedCurrency" class="flex flex-col items-center gap-1">
-        <div class="relative w-full cursor-text py-1">
-          <input
-            ref="hiddenInputRef"
-            type="text"
-            inputmode="decimal"
-            :value="rawValue"
-            aria-label="Сумма платежа"
-            data-testid="close-all-amount-input"
-            class="absolute inset-0 w-full h-full opacity-0 caret-transparent cursor-text"
-            @input="onInput"
-            @keydown.enter.prevent
-          />
-
-          <div class="relative flex items-baseline justify-center gap-1.5 pointer-events-none">
-            <span
-              class="amount-value text-4xl font-semibold tabular-nums leading-none transition-colors duration-200"
-              :class="
-                paymentAmount
-                  ? 'text-text-primary-light dark:text-text-primary-dark'
-                  : 'text-text-tertiary-light dark:text-text-tertiary-dark'
-              "
-            >
-              {{ displayAmount }}
-            </span>
-
-            <span
-              class="amount-caret inline-block h-8 w-[2px] self-center rounded-full transition-opacity duration-150"
-              :class="isFocused ? 'bg-primary animate-caret-blink' : 'opacity-0'"
-            />
-
-            <span
-              class="text-base leading-none text-text-tertiary-light dark:text-text-tertiary-dark"
-            >
-              {{ currencySymbol }}
-            </span>
-          </div>
-
-          <div
-            class="amount-underline absolute bottom-0 left-1/2 h-[2px] -translate-x-1/2 rounded-full bg-primary transition-all duration-300 ease-out"
-            :class="isFocused ? 'w-16 opacity-100' : 'w-0 opacity-0'"
-          />
-        </div>
-      </div>
+      <DebtAmountHeadline
+        v-if="!isMixedCurrency"
+        v-model="paymentAmount"
+        :currency-symbol="currencySymbol"
+        :disabled="isClosing"
+        input-testid="close-all-amount-input"
+      />
 
       <!--
         Разные валюты: одной суммой их не набрать — сумма платежа зафиксирована
@@ -349,6 +309,7 @@ function confirm() {
           v-if="!isMixedCurrency"
           type="button"
           data-testid="close-all-preset-half"
+          :disabled="isClosing"
           :class="presetClass(isHalfActive)"
           @click="applyHalf"
         >
@@ -357,6 +318,7 @@ function confirm() {
         <button
           type="button"
           data-testid="close-all-preset-all"
+          :disabled="isClosing"
           :class="presetClass(isAllActive)"
           @click="applyAll"
         >
@@ -365,6 +327,7 @@ function confirm() {
         <button
           type="button"
           data-testid="close-all-preset-forgive"
+          :disabled="isClosing"
           :class="presetClass(isForgiveActive)"
           @click="applyForgive"
         >
@@ -431,7 +394,7 @@ function confirm() {
         </ul>
       </div>
 
-      <div class="space-y-2">
+      <div class="space-y-2" :inert="isClosing || undefined">
         <AccountSelector
           :accounts="accounts"
           :selected-id="selectedAccountId"
@@ -447,6 +410,7 @@ function confirm() {
         v-model:amount="paymentAmount"
         v-model:forgive-remainder="forgiveRemainder"
         v-model:excess-category-id="excessCategoryId"
+        :inert="isClosing || undefined"
         :remaining="totalDebt"
         :currency="debtCurrency"
         :direction="debtDirection"
@@ -489,28 +453,3 @@ function confirm() {
     </template>
   </UOverlay>
 </template>
-
-<style scoped>
-@keyframes caret-blink {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0;
-  }
-}
-.animate-caret-blink {
-  animation: caret-blink 1s step-end infinite;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .animate-caret-blink {
-    animation: none;
-  }
-  .amount-value,
-  .amount-underline {
-    transition: none;
-  }
-}
-</style>
