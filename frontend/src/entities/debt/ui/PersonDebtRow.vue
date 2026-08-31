@@ -59,8 +59,8 @@ const ariaLabel = computed(() =>
     :aria-label="ariaLabel"
     :class="
       cn(
-        'flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors',
-        'hover:bg-surface-light dark:hover:bg-surface-dark',
+        'flex w-full items-center gap-3 py-3.5 pl-4 pr-3 text-left transition-colors',
+        'hover:bg-surface-light dark:hover:bg-surface-dark active:bg-surface-light dark:active:bg-surface-dark',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary',
         selected && 'bg-surface-light dark:bg-surface-dark',
       )
@@ -89,44 +89,65 @@ const ariaLabel = computed(() =>
       {{ getInitial(person.personName) }}
     </div>
 
+    <!-- Сумма стоит в одной строке с именем, а мета-строка занимает всю ширину
+         под ними. Прошлая вёрстка держала сумму отдельной правой колонкой, и
+         на длинных значениях («1 200 000 UZS») мете оставалось столько места,
+         что от неё было видно один символ и многоточие. -->
     <div class="min-w-0 flex-1">
-      <p
-        class="flex items-center gap-1 truncate text-body font-semibold text-text-primary-light dark:text-text-primary-dark"
-      >
-        {{ person.personName }}
+      <div class="flex items-baseline gap-2">
+        <p
+          class="flex min-w-0 items-center gap-1 text-body font-semibold text-text-primary-light dark:text-text-primary-dark"
+        >
+          <span class="truncate">{{ person.personName }}</span>
+          <UIcon
+            v-if="person.hasPrivate"
+            name="visibility_off"
+            size="xs"
+            class="shrink-0 text-text-tertiary-light dark:text-text-tertiary-dark"
+          />
+        </p>
+        <p
+          :class="
+            cn(
+              'ml-auto shrink-0 text-body font-bold tabular-nums',
+              isGiven ? 'text-debt-given' : 'text-debt-received',
+            )
+          "
+        >
+          {{ formattedAmount }}
+        </p>
+      </div>
+
+      <p class="mt-0.5 flex min-w-0 items-center gap-1 text-caption">
+        <span :class="cn('shrink-0', isGiven ? 'text-debt-given' : 'text-debt-received')">
+          {{ amountLabel }}
+        </span>
+        <span class="shrink-0 text-text-tertiary-light dark:text-text-tertiary-dark">·</span>
         <UIcon
-          v-if="person.hasPrivate"
-          name="visibility_off"
+          v-if="!isOverdue && isMutual"
+          name="compare_arrows"
           size="xs"
-          class="shrink-0 text-text-tertiary-light dark:text-text-tertiary-dark"
+          class="shrink-0 text-primary"
         />
-      </p>
-      <p
-        :class="
-          cn(
-            'flex items-center gap-1 text-caption',
-            isOverdue && 'text-danger',
-            !isOverdue && isMutual && 'text-primary',
-            !isOverdue && !isMutual && 'text-text-tertiary-light dark:text-text-tertiary-dark',
-          )
-        "
-      >
-        <UIcon v-if="!isOverdue && isMutual" name="compare_arrows" size="xs" class="shrink-0" />
-        {{ meta }}
+        <span
+          :class="
+            cn(
+              'truncate',
+              isOverdue && 'text-danger',
+              !isOverdue && isMutual && 'text-primary',
+              !isOverdue && !isMutual && 'text-text-tertiary-light dark:text-text-tertiary-dark',
+            )
+          "
+        >
+          {{ meta }}
+        </span>
       </p>
     </div>
 
-    <div class="shrink-0 text-right">
-      <p
-        :class="
-          cn('text-body font-bold tabular-nums', isGiven ? 'text-debt-given' : 'text-debt-received')
-        "
-      >
-        {{ formattedAmount }}
-      </p>
-      <p class="text-caption-sm text-text-tertiary-light dark:text-text-tertiary-dark">
-        {{ amountLabel }}
-      </p>
-    </div>
+    <UIcon
+      name="chevron_right"
+      size="sm"
+      class="-mr-1 shrink-0 text-text-tertiary-light dark:text-text-tertiary-dark"
+    />
   </button>
 </template>
