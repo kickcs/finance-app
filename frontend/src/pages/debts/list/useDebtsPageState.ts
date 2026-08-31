@@ -202,7 +202,7 @@ export function useDebtsPageState() {
 
   // --- Close all debts ---
   const { isClosing, progress, total, closeAllDebts } = useCloseAllDebts();
-  const showCloseAllModal = ref(false);
+  const showCloseAllDrawer = ref(false);
   const closeAllPersonName = ref<string | null>(null);
 
   const closeAllDebtsForPerson = computed(() => {
@@ -214,7 +214,7 @@ export function useDebtsPageState() {
 
   function openCloseAllForPerson(personName: string) {
     closeAllPersonName.value = personName;
-    showCloseAllModal.value = true;
+    showCloseAllDrawer.value = true;
   }
 
   async function handleCloseAll(
@@ -229,7 +229,7 @@ export function useDebtsPageState() {
       options,
     );
     if (success) {
-      showCloseAllModal.value = false;
+      showCloseAllDrawer.value = false;
       closeAllPersonName.value = null;
       clearFilter();
     }
@@ -336,7 +336,7 @@ export function useDebtsPageState() {
     isFetchingNextPage,
 
     // Close all
-    showCloseAllModal,
+    showCloseAllDrawer,
     closeAllPersonName,
     closeAllDebtsForPerson,
     isClosing,
