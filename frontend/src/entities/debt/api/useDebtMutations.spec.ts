@@ -110,16 +110,6 @@ describe('useDebtMutations', () => {
     expect(cached?.map((d) => d.id)).toEqual([TAKEN_ID]);
   });
 
-  it('закрывшийся долг исчезает из списка активных', async () => {
-    const { api, queryClient } = mountMutations();
-    seedList(queryClient, [toDebt(mockGivenDebtResponse)]);
-
-    await api.updateDebt(GIVEN_ID, { is_closed: true, remaining_amount: 0 });
-
-    const cached = queryClient.getQueryData<Debt[]>(debtQueryKeys.list(USER_ID, 'active'));
-    expect(cached).toEqual([]);
-  });
-
   it('возвращает список в прежний вид, когда сервер отказал', async () => {
     server.use(http.delete('*/api/debts/:id', () => new HttpResponse(null, { status: 500 })));
     const { api, queryClient } = mountMutations();

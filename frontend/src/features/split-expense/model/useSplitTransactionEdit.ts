@@ -1,6 +1,6 @@
 // frontend/src/features/split-expense/model/useSplitTransactionEdit.ts
 import { ref, computed, watch, type MaybeRefOrGetter, toValue } from 'vue';
-import { debtsApi, buildDebtName, type Debt } from '@/entities/debt';
+import { debtsApi, buildDebtName, type Debt, type DebtUpdate } from '@/entities/debt';
 import { queryClient } from '@/shared/api/queryClient';
 import { invalidateDebtRelated } from '@/shared/api/invalidation';
 import { useToast } from '@/shared/ui';
@@ -229,13 +229,10 @@ export function useSplitTransactionEdit(
           continue;
         }
 
-        const updates: Partial<Debt> = {};
-        if (update.amount !== undefined) {
-          updates.total_amount = update.amount;
-          // Preserve payments: remaining = new_total - already_paid
-          const paidAmount = debt.total_amount - debt.remaining_amount;
-          updates.remaining_amount = Math.max(0, update.amount - paidAmount);
-        }
+        const updates: DebtUpdate = {};
+        // Остаток за суммой двигает сервер: правило «возвращённое остаётся
+        // возвращённым» одно на всех.
+        if (update.amount !== undefined) updates.total_amount = update.amount;
         if (update.personName !== undefined) {
           updates.person_name = update.personName;
           updates.name = buildDebtName(debt.debt_type as 'given' | 'taken', update.personName);

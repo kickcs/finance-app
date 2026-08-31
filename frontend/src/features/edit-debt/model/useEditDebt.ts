@@ -5,6 +5,7 @@ import {
   getDebtSplit,
   type Debt,
   type DebtDirection,
+  type DebtUpdate,
 } from '@/entities/debt';
 import { CATEGORY_IDS } from '@/entities/category';
 import { transactionsApi } from '@/entities/transaction';
@@ -142,7 +143,7 @@ export function useEditDebt(
     isSubmitting.value = true;
     let transactionSaved = false;
     try {
-      const updates: Partial<Debt> = {};
+      const updates: DebtUpdate = {};
       const f = formData.value;
       const o = originalData.value;
 
@@ -158,12 +159,9 @@ export function useEditDebt(
         updates.name = buildDebtName(nextType, f.person_name);
       }
       if (directionChanged) updates.debt_type = nextType;
-      if (f.total_amount !== o.total_amount) {
-        updates.total_amount = f.total_amount;
-        // Adjust remaining by the same delta to preserve paid amount
-        const delta = f.total_amount - o.total_amount;
-        updates.remaining_amount = Math.max(0, d.remaining_amount + delta);
-      }
+      // Остаток за суммой двигает сервер: правило «возвращённое остаётся
+      // возвращённым» одно на всех, и клиенту его знать незачем.
+      if (f.total_amount !== o.total_amount) updates.total_amount = f.total_amount;
       if (f.description !== o.description) updates.description = f.description || null;
       if (f.is_private !== o.is_private) updates.is_private = f.is_private;
       if (f.created_at !== o.created_at) {

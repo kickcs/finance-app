@@ -11,8 +11,10 @@ import {
   mockClosedDebtResponse,
   mockSecondGivenDebtResponse,
   buildPaginatedDebtsResponse,
+  payDebtHandler,
+  payDebtResult,
+  type PayDebtBody,
 } from '@/test/mocks/handlers/debts';
-import { mockTransactionResponse } from '@/test/mocks/handlers/transactions';
 import { setIsDesktopForTests } from '@/shared/lib/platform';
 
 /** Алексей taken debt — used when we need 2 groups for the same person */
@@ -414,6 +416,7 @@ describe('DebtsListPage', () => {
             buildPaginatedDebtsResponse([mockGivenDebtResponse, mockAlexeiTakenDebtResponse]),
           ),
         ),
+        payDebtHandler(mockAlexeiTakenDebtResponse),
       );
       const { wrapper } = await renderPage({ person: 'Алексей' });
 
@@ -519,38 +522,7 @@ describe('DebtsListPage', () => {
             buildPaginatedDebtsResponse([mockGivenDebtResponse, mockAlexeiTakenDebtResponse]),
           ),
         ),
-        http.post('*/api/transactions', async ({ request }) => {
-          const body = (await request.json()) as Record<string, unknown>;
-          return HttpResponse.json({
-            id: `tx-close-${Date.now()}`,
-            userId: 'test-user-1',
-            accountId: body.accountId,
-            categoryId: body.categoryId,
-            amount: body.amount,
-            currency: body.currency,
-            type: body.type,
-            description: body.description,
-            date: body.date,
-            createdAt: new Date().toISOString(),
-            isDebtRelated: body.isDebtRelated ?? false,
-            debtId: body.debtId ?? null,
-            toAccountId: null,
-            toAmount: null,
-            toCurrency: null,
-            returnedAmount: 0,
-            netAmount: body.amount,
-            hasDebtReturns: false,
-          });
-        }),
-        http.patch('*/api/debts/:id', async ({ request, params }) => {
-          const body = (await request.json()) as Record<string, unknown>;
-          return HttpResponse.json({
-            ...mockGivenDebtResponse,
-            id: params.id,
-            ...body,
-          });
-        }),
-        // GET /api/debts/:id is NOT called in bulk mode (skipInvalidation=true)
+        payDebtHandler(mockAlexeiTakenDebtResponse),
       );
 
       const { wrapper, router } = await renderPage({ person: 'Алексей' });
@@ -647,17 +619,14 @@ describe('DebtsListPage', () => {
       await nextTick();
       expect(wrapper.findComponent({ name: 'PaymentDrawer' }).props('modelValue')).toBe(true);
 
-      let resolveTx!: () => void;
+      let resolvePayment!: () => void;
       server.use(
-        http.post('*/api/transactions', async () => {
+        http.post('*/api/debts/:id/payments', async ({ request }) => {
+          const body = (await request.json()) as PayDebtBody;
           await new Promise<void>((resolve) => {
-            resolveTx = resolve;
+            resolvePayment = resolve;
           });
-          return HttpResponse.json({ ...mockTransactionResponse, id: 'tx-single-pay' });
-        }),
-        http.patch('*/api/debts/:id', async ({ request, params }) => {
-          const body = (await request.json()) as Record<string, unknown>;
-          return HttpResponse.json({ ...mockGivenDebtResponse, id: params.id, ...body });
+          return HttpResponse.json(payDebtResult(mockGivenDebtResponse, body));
         }),
       );
 
@@ -671,11 +640,11 @@ describe('DebtsListPage', () => {
       // Drawer hides immediately, before the transaction POST resolves.
       expect(wrapper.findComponent({ name: 'PaymentDrawer' }).props('modelValue')).toBe(false);
 
-      // Let the flow reach the (blocked) transaction POST — snapshotting the
-      // cache and re-fetching the debt happen first, each a separate microtask hop.
+      // Let the flow reach the (blocked) payment POST — снимок кэша делается
+      // раньше, отдельным микротаск-хопом.
       await flushPromises();
       await flushPromises();
-      resolveTx();
+      resolvePayment();
       await flushPromises();
       await flushPromises();
       await flushPromises();

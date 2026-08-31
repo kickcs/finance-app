@@ -4,6 +4,7 @@ import type {
   DebtsPaginatedCursor,
   DebtsFilters,
   DebtStatus,
+  DebtUpdate,
   PaginatedDebtsResult,
 } from '../model/types';
 
@@ -54,6 +55,29 @@ interface OffsetBackendResponse {
   currency: string;
   offsetAmount: number;
   debts: DebtResponse[];
+}
+
+export interface PayDebtPayload {
+  amount: number;
+  accountId: string;
+  /** ISO-дата записей. По умолчанию — сейчас. */
+  date?: string;
+  forgiveRemainder?: boolean;
+  /** Обязательна, если сумма больше остатка. */
+  excessCategoryId?: string;
+}
+
+export interface PayDebtResult {
+  debt: Debt;
+  /** Запись самого платежа. Null, когда остаток только прощён. */
+  payment_transaction_id: string | null;
+  transaction_ids: string[];
+}
+
+interface PayDebtBackendResponse {
+  debt: DebtResponse;
+  paymentTransactionId: string | null;
+  transactionIds: string[];
 }
 
 export interface OffsetResult {
@@ -168,12 +192,11 @@ export const debtsApi = {
     return transformDebt(data);
   },
 
-  async update(id: string, updates: Partial<Debt>): Promise<Debt> {
+  async update(id: string, updates: DebtUpdate): Promise<Debt> {
     // Build payload with only defined keys (keep null — needed to clear nullable fields via PATCH)
     const payload: Record<string, unknown> = {};
     if (updates.name !== undefined) payload.name = updates.name;
     if (updates.total_amount !== undefined) payload.totalAmount = updates.total_amount;
-    if (updates.remaining_amount !== undefined) payload.remainingAmount = updates.remaining_amount;
     if (updates.monthly_payment !== undefined) payload.monthlyPayment = updates.monthly_payment;
     if (updates.next_payment_date !== undefined)
       payload.nextPaymentDate = updates.next_payment_date;
@@ -181,14 +204,9 @@ export const debtsApi = {
     if (updates.person_name !== undefined) payload.personName = updates.person_name;
     if (updates.account_id !== undefined) payload.accountId = updates.account_id;
     if (updates.transaction_id !== undefined) payload.transactionId = updates.transaction_id;
-    if (updates.close_transaction_id !== undefined)
-      payload.closeTransactionId = updates.close_transaction_id;
-    if (updates.is_closed !== undefined) payload.isClosed = updates.is_closed;
-    if (updates.currency !== undefined) payload.currency = updates.currency;
     if (updates.source_transaction_id !== undefined)
       payload.sourceTransactionId = updates.source_transaction_id;
     if (updates.description !== undefined) payload.description = updates.description;
-    if (updates.forgiven_amount !== undefined) payload.forgivenAmount = updates.forgiven_amount;
     if (updates.is_private !== undefined) payload.isPrivate = updates.is_private;
     if (updates.created_at !== undefined) payload.createdAt = updates.created_at;
 
@@ -210,6 +228,25 @@ export const debtsApi = {
       currency: data.currency,
       offset_amount: data.offsetAmount,
       debts: data.debts.map(transformDebt),
+    };
+  },
+
+  /**
+   * Платёж по долгу. Сервер сам считает остаток, решает, закрылся ли долг, и
+   * заводит записи возврата, переплаты и прощения — всё одной транзакцией.
+   */
+  async pay(debtId: string, payload: PayDebtPayload): Promise<PayDebtResult> {
+    const data = await http.post<PayDebtBackendResponse>(`/debts/${debtId}/payments`, {
+      amount: payload.amount,
+      accountId: payload.accountId,
+      date: payload.date,
+      forgiveRemainder: payload.forgiveRemainder ?? false,
+      excessCategoryId: payload.excessCategoryId,
+    });
+    return {
+      debt: transformDebt(data.debt),
+      payment_transaction_id: data.paymentTransactionId,
+      transaction_ids: data.transactionIds,
     };
   },
 

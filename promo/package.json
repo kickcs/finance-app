@@ -1,0 +1,44 @@
+{
+  "name": "promo",
+  "version": "1.0.0",
+  "description": "My Remotion video",
+  "repository": {},
+  "license": "UNLICENSED",
+  "private": true,
+  "dependencies": {
+    "@remotion/cli": "4.0.507",
+    "@remotion/google-fonts": "4.0.507",
+    "@remotion/media": "^4.0.507",
+    "@remotion/tailwind-v4": "4.0.507",
+    "@remotion/transitions": "4.0.507",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.507",
+    "tailwindcss": "4.0.0"
+  },
+  "devDependencies": {
+    "@remotion/eslint-config-flat": "4.0.507",
+    "@types/react": "19.2.7",
+    "@types/web": "0.0.166",
+    "eslint": "9.19.0",
+    "prettier": "3.8.1",
+    "puppeteer-core": "^25.5.0",
+    "typescript": "5.9.3"
+  },
+  "scripts": {
+    "dev": "remotion studio",
+    "capture": "node scripts/capture.mjs",
+    "build": "remotion bundle",
+    "upgrade": "remotion upgrade",
+    "lint": "eslint src && tsc",
+    "seed": "bun scripts/seed.mjs",
+    "audio": "node scripts/make-audio.mjs && ffmpeg -y -loglevel error -i public/audio/bed.wav -af loudnorm=I=-18:TP=-1.5:LRA=11 -ar 44100 public/audio/bed-norm.wav && mv public/audio/bed-norm.wav public/audio/bed.wav && echo \"✓ bed.wav выровнен по громкости (-18 LUFS)\"",
+    "render": "remotion render Promo --timeout=180000 --concurrency=2 out/promo-16x9-raw.mp4 && ffmpeg -y -loglevel error -i out/promo-16x9-raw.mp4 -af loudnorm=I=-16:TP=-1.5:LRA=11 -c:v copy -c:a aac -b:a 192k -shortest out/promo-16x9.mp4 && rm out/promo-16x9-raw.mp4 && echo \"✓ out/promo-16x9.mp4 (мастеринг -16 LUFS)\"",
+    "measure": "bun scripts/measure-copy.mjs",
+    "render:en": "remotion render PromoEn --timeout=180000 --concurrency=2 out/promo-16x9-en-raw.mp4 && ffmpeg -y -loglevel error -i out/promo-16x9-en-raw.mp4 -af loudnorm=I=-16:TP=-1.5:LRA=11 -c:v copy -c:a aac -b:a 192k -shortest out/promo-16x9-en.mp4 && rm out/promo-16x9-en-raw.mp4 && echo \"✓ out/promo-16x9-en.mp4 (мастеринг -16 LUFS)\""
+  },
+  "sideEffects": [
+    "*.css",
+    "./src/fonts.ts"
+  ]
+}

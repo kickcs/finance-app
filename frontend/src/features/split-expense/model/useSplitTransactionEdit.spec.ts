@@ -475,7 +475,8 @@ describe('useSplitTransactionEdit', () => {
       await flushPromises();
 
       expect(patchBody).toHaveProperty('totalAmount', 45000);
-      expect(patchBody).toHaveProperty('remainingAmount', 45000);
+      // Остаток за суммой двигает сервер
+      expect(patchBody).not.toHaveProperty('remainingAmount');
     });
 
     it('creates new debts', async () => {

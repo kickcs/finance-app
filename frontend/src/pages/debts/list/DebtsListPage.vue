@@ -10,9 +10,10 @@ import {
   PersonDebtRow,
   MutualDebtCard,
 } from '@/entities/debt';
-import { CloseAllDebtsDrawer, DeleteDebtModal, ReopenDebtModal } from '@/features/close-debt';
+import { DeleteDebtModal } from '@/features/delete-debt';
+import { ReopenDebtModal } from '@/features/reopen-debt';
 import { OffsetDebtsModal } from '@/features/offset-debts';
-import { PaymentDrawer } from '@/features/partial-payment';
+import { PaymentDrawer, CloseAllDebtsDrawer } from '@/features/pay-debt';
 import { ShareDebtsDrawer } from '@/features/share-debts';
 import {
   UButton,

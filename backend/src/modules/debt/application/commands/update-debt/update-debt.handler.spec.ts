@@ -26,7 +26,7 @@ describe('UpdateDebtHandler', () => {
     jest.clearAllMocks();
   });
 
-  function createTestDebt(overrides: Partial<{ userId: string; isClosed: boolean }> = {}) {
+  function createTestDebt(overrides: Partial<{ userId: string }> = {}) {
     const debt = Debt.create({
       id: 'debt-1',
       userId: overrides.userId ?? 'user-1',
@@ -36,9 +36,6 @@ describe('UpdateDebtHandler', () => {
       debtType: 'given',
       personName: 'John',
     });
-    if (overrides.isClosed) {
-      debt.close();
-    }
     debt.clearDomainEvents();
     return debt;
   }
@@ -56,30 +53,20 @@ describe('UpdateDebtHandler', () => {
     expect(mockRepository.save).toHaveBeenCalledTimes(1);
   });
 
-  it('should update debt remaining amount', async () => {
+  it('should move the remainder along with the total amount', async () => {
     const debt = createTestDebt();
+    debt.makePayment(400);
+    debt.clearDomainEvents();
     mockRepository.findById.mockResolvedValue(debt);
     mockRepository.save.mockImplementation((d) => Promise.resolve(d));
 
-    const command = new UpdateDebtCommand('debt-1', 'user-1', { remainingAmount: 500 });
+    const command = new UpdateDebtCommand('debt-1', 'user-1', { totalAmount: 1500 });
 
     const result = await handler.execute(command);
 
-    expect(result.remainingAmount).toBe(500);
-  });
-
-  it('should close debt via update', async () => {
-    const debt = createTestDebt();
-    mockRepository.findById.mockResolvedValue(debt);
-    mockRepository.save.mockImplementation((d) => Promise.resolve(d));
-
-    const command = new UpdateDebtCommand('debt-1', 'user-1', { isClosed: true });
-
-    const result = await handler.execute(command);
-
-    expect(result.isClosed).toBe(true);
-    expect(result.remainingAmount).toBe(0);
-    expect(result.closedAt).toBeDefined();
+    expect(result.totalAmount).toBe(1500);
+    // Возвращённые 400 остаются возвращёнными: 1500 − 400
+    expect(result.remainingAmount).toBe(1100);
   });
 
   it('should throw NotFoundException when debt does not exist', async () => {
@@ -99,15 +86,6 @@ describe('UpdateDebtHandler', () => {
     await expect(handler.execute(command)).rejects.toThrow(ForbiddenException);
   });
 
-  it('should throw ConflictException when trying to close an already closed debt', async () => {
-    const debt = createTestDebt({ isClosed: true });
-    mockRepository.findById.mockResolvedValue(debt);
-
-    const command = new UpdateDebtCommand('debt-1', 'user-1', { isClosed: true });
-
-    await expect(handler.execute(command)).rejects.toThrow(ConflictException);
-  });
-
   it('should update description and isPrivate together', async () => {
     const debt = createTestDebt();
     mockRepository.findById.mockResolvedValue(debt);
@@ -122,18 +100,6 @@ describe('UpdateDebtHandler', () => {
 
     expect(result.description).toBe('Updated description');
     expect(result.isPrivate).toBe(true);
-  });
-
-  it('should update forgivenAmount', async () => {
-    const debt = createTestDebt();
-    mockRepository.findById.mockResolvedValue(debt);
-    mockRepository.save.mockImplementation((d) => Promise.resolve(d));
-
-    const command = new UpdateDebtCommand('debt-1', 'user-1', { forgivenAmount: 200 });
-
-    const result = await handler.execute(command);
-
-    expect(result.forgivenAmount).toBe(200);
   });
 
   it('should flip the direction of an untouched debt', async () => {
@@ -199,18 +165,5 @@ describe('UpdateDebtHandler', () => {
     const result = await handler.execute(new UpdateDebtCommand('debt-1', 'user-1', { name: 'X' }));
 
     expect(result.createdAt).toBe(before);
-  });
-
-  it('should reopen a closed debt', async () => {
-    const debt = createTestDebt({ isClosed: true });
-    mockRepository.findById.mockResolvedValue(debt);
-    mockRepository.save.mockImplementation((d) => Promise.resolve(d));
-
-    const command = new UpdateDebtCommand('debt-1', 'user-1', { isClosed: false });
-
-    const result = await handler.execute(command);
-
-    expect(result.isClosed).toBe(false);
-    expect(result.closedAt).toBeNull();
   });
 });

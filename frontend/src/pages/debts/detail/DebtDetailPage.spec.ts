@@ -567,37 +567,6 @@ describe('DebtDetailPage', () => {
         http.get('*/api/accounts', () => HttpResponse.json([mockAccountResponse])),
         // GET /api/debts/:id — re-fetch for fresh data
         http.get('*/api/debts/:id', () => HttpResponse.json(mockGivenDebtResponse)),
-        http.post('*/api/transactions', async ({ request }) => {
-          const body = (await request.json()) as Record<string, unknown>;
-          return HttpResponse.json({
-            id: 'tx-payment-1',
-            userId: 'test-user-1',
-            accountId: body.accountId,
-            categoryId: body.categoryId,
-            amount: body.amount,
-            currency: body.currency,
-            type: body.type,
-            description: body.description,
-            date: body.date,
-            createdAt: new Date().toISOString(),
-            isDebtRelated: body.isDebtRelated,
-            debtId: body.debtId,
-            toAccountId: null,
-            toAmount: null,
-            toCurrency: null,
-            returnedAmount: 0,
-            netAmount: body.amount,
-            hasDebtReturns: false,
-          });
-        }),
-        http.patch('*/api/debts/:id', async ({ request, params }) => {
-          const body = (await request.json()) as Record<string, unknown>;
-          return HttpResponse.json({
-            ...mockGivenDebtResponse,
-            id: params.id,
-            ...body,
-          });
-        }),
       );
 
       const router = createTestRouter(routes);
@@ -630,37 +599,6 @@ describe('DebtDetailPage', () => {
         http.get('*/api/debts', () => HttpResponse.json([mockGivenDebtResponse])),
         http.get('*/api/accounts', () => HttpResponse.json([mockAccountResponse])),
         http.get('*/api/debts/:id', () => HttpResponse.json(mockGivenDebtResponse)),
-        http.post('*/api/transactions', async ({ request }) => {
-          const body = (await request.json()) as Record<string, unknown>;
-          return HttpResponse.json({
-            id: 'tx-payment-close',
-            userId: 'test-user-1',
-            accountId: body.accountId,
-            categoryId: body.categoryId,
-            amount: body.amount,
-            currency: body.currency,
-            type: body.type,
-            description: body.description,
-            date: body.date,
-            createdAt: new Date().toISOString(),
-            isDebtRelated: body.isDebtRelated,
-            debtId: body.debtId,
-            toAccountId: null,
-            toAmount: null,
-            toCurrency: null,
-            returnedAmount: 0,
-            netAmount: body.amount,
-            hasDebtReturns: false,
-          });
-        }),
-        http.patch('*/api/debts/:id', async ({ request, params }) => {
-          const body = (await request.json()) as Record<string, unknown>;
-          return HttpResponse.json({
-            ...mockGivenDebtResponse,
-            id: params.id,
-            ...body,
-          });
-        }),
       );
 
       const router = createTestRouter(routes);
@@ -693,37 +631,6 @@ describe('DebtDetailPage', () => {
         http.get('*/api/debts', () => HttpResponse.json([mockGivenDebtResponse])),
         http.get('*/api/accounts', () => HttpResponse.json([mockAccountResponse])),
         http.get('*/api/debts/:id', () => HttpResponse.json(mockGivenDebtResponse)),
-        http.post('*/api/transactions', async ({ request }) => {
-          const body = (await request.json()) as Record<string, unknown>;
-          return HttpResponse.json({
-            id: 'tx-forgive-1',
-            userId: 'test-user-1',
-            accountId: body.accountId,
-            categoryId: body.categoryId,
-            amount: body.amount,
-            currency: body.currency,
-            type: body.type,
-            description: body.description,
-            date: body.date,
-            createdAt: new Date().toISOString(),
-            isDebtRelated: body.isDebtRelated ?? false,
-            debtId: body.debtId ?? null,
-            toAccountId: null,
-            toAmount: null,
-            toCurrency: null,
-            returnedAmount: 0,
-            netAmount: body.amount,
-            hasDebtReturns: false,
-          });
-        }),
-        http.patch('*/api/debts/:id', async ({ request, params }) => {
-          const body = (await request.json()) as Record<string, unknown>;
-          return HttpResponse.json({
-            ...mockGivenDebtResponse,
-            id: params.id,
-            ...body,
-          });
-        }),
       );
 
       const router = createTestRouter(routes);

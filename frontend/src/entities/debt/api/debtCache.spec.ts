@@ -194,6 +194,28 @@ describe('debtCache', () => {
       expect(queryClient.getQueryData(filteredKey)).toEqual(emptyData);
     });
 
+    it('убирает закрывшийся долг из списка со статусом active', () => {
+      const activeListKey = debtQueryKeys.list(USER_ID, 'active');
+      queryClient.setQueryData<Debt[]>(activeListKey, [debtA, debtB]);
+
+      applyDebtUpdate(queryClient, 'debt-a', { is_closed: true, remaining_amount: 0 });
+
+      expect(queryClient.getQueryData<Debt[]>(activeListKey)?.map((d) => d.id)).toEqual(['debt-b']);
+      // Список без статуса держит все долги — там он остаётся, но уже закрытым
+      expect(
+        queryClient.getQueryData<Debt[]>(listKey)?.find((d) => d.id === 'debt-a')?.is_closed,
+      ).toBe(true);
+    });
+
+    it('возвращает закрытый долг в список closed', () => {
+      const closedListKey = debtQueryKeys.list(USER_ID, 'closed');
+      queryClient.setQueryData<Debt[]>(closedListKey, [{ ...debtA, is_closed: true }]);
+
+      applyDebtUpdate(queryClient, 'debt-a', { is_closed: false, remaining_amount: 100 });
+
+      expect(queryClient.getQueryData<Debt[]>(closedListKey)).toEqual([]);
+    });
+
     it('does not change totalSummary for non-amount updates', () => {
       applyDebtUpdate(queryClient, 'debt-a', { is_private: true });
 

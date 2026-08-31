@@ -2,6 +2,7 @@ import { toValue, type MaybeRefOrGetter } from 'vue';
 import { useMutation, useQueryClient, type QueryClient } from '@tanstack/vue-query';
 import { invalidateDebtRelated } from '@/shared/api/invalidation';
 import type { Debt, DebtInsert } from '@/shared/api/database.types';
+import type { DebtUpdate } from '../model/types';
 import { debtQueryKeys } from './queryKeys';
 import { debtsApi, type OffsetResult } from './debtsApi';
 import {
@@ -59,7 +60,7 @@ export function useDebtMutations(userId: MaybeRefOrGetter<string | null>) {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, updates }: { id: string; updates: Partial<Debt> }) =>
+    mutationFn: ({ id, updates }: { id: string; updates: DebtUpdate }) =>
       debtsApi.update(id, updates),
     onMutate: async ({ id, updates }) => {
       const context = await snapshot();
@@ -101,7 +102,7 @@ export function useDebtMutations(userId: MaybeRefOrGetter<string | null>) {
   return {
     createDebt: (debt: Omit<DebtInsert, 'user_id'>): Promise<Debt> =>
       createMutation.mutateAsync(debt),
-    updateDebt: (id: string, updates: Partial<Debt>): Promise<Debt> =>
+    updateDebt: (id: string, updates: DebtUpdate): Promise<Debt> =>
       updateMutation.mutateAsync({ id, updates }),
     deleteDebt: (id: string): Promise<void> => deleteMutation.mutateAsync(id),
     reopenDebt: (id: string): Promise<Debt> => reopenMutation.mutateAsync(id),

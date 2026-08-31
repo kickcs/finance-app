@@ -249,6 +249,20 @@ export class Debt extends AggregateRoot<string> {
     }
   }
 
+  /**
+   * Правка суммы долга двигает остаток на ту же дельту: возвращённое уже
+   * возвращено, меняется только то, что осталось вернуть.
+   */
+  changeTotalAmount(amount: number): void {
+    const next = Money.create(amount, this.currency);
+    const delta = next.amount - this._totalAmount.amount;
+    this._totalAmount = next;
+    this._remainingAmount = Money.create(
+      Math.max(0, this._remainingAmount.amount + delta),
+      this.currency,
+    );
+  }
+
   setForgivenAmount(amount: number): void {
     this._forgivenAmount = amount;
   }

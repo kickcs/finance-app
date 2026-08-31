@@ -1,0 +1,325 @@
+<meta charset="utf-8">
+<title>Ouro Finance&nbsp;— презентация</title>
+<link rel="stylesheet" href="/public/fonts/fonts.css">
+<link rel="stylesheet" href="/src/deck.css">
+
+<!-- 1 · Титул -->
+<section class="slide slide--title">
+  <div class="title__mark"><img src="/public/brand/mark.png" alt=""></div>
+  <h1 class="title__word">Ouro&nbsp;Finance</h1>
+  <svg class="tear tear--wide" width="560" height="7" aria-hidden="true"><line x1="3.5" y1="3.5" x2="556.5" y2="3.5" stroke="#b8873a" stroke-opacity=".5" stroke-width="6" stroke-dasharray="0.1 15" stroke-linecap="round"/></svg>
+  <p class="title__date">Август 2026</p>
+</section>
+
+<!-- 2 · Проблема -->
+<section class="slide">
+  <header class="head"><p class="eyebrow">Проблема</p><svg class="tear" width="1696" height="7" aria-hidden="true"><line x1="3.5" y1="3.5" x2="1692.5" y2="3.5" stroke="#b8873a" stroke-opacity=".5" stroke-width="6" stroke-dasharray="0.1 15" stroke-linecap="round"/></svg></header>
+  <div class="pane">
+    <h2 class="h2 h2--wide">Деньги общие,<br>а учёт&nbsp;— личный</h2>
+    <div class="cards3">
+      <article class="card">
+        <p class="card__tag">Банк пишет в Telegram</p>
+        <p class="card__text">Уведомление о списании приходит сообщением. Приложение о нём не знает&nbsp;— трату надо вбить руками, а вечером уже не вспомнить, за что списали 43 000.</p>
+      </article>
+      <article class="card">
+        <p class="card__tag">Счёт делят вчетвером</p>
+        <p class="card__text">Один платит за всех, остальные считают доли в заметках или в уме. Позиции чека при этом никто не разбирает&nbsp;— делят «примерно поровну».</p>
+      </article>
+      <article class="card">
+        <p class="card__tag">Долг живёт в переписке</p>
+        <p class="card__text">«Я тебе за такси», «ты мне за продукты». Встречные долги никто не сводит, и через месяц проще забыть, чем поднимать разговор.</p>
+      </article>
+    </div>
+    <p class="kicker">Через неделю человек не помнит ни сколько потратил, ни кто кому должен.</p>
+  </div>
+  <footer class="foot"><span class="foot__num">02</span><span class="foot__of">/ 12</span><span class="foot__brand">Ouro Finance</span></footer>
+</section>
+
+<!-- 4 · Решение (сигнатурный слайд) -->
+<section class="slide">
+  <header class="head"><p class="eyebrow">Решение</p><svg class="tear" width="1696" height="7" aria-hidden="true"><line x1="3.5" y1="3.5" x2="1692.5" y2="3.5" stroke="#b8873a" stroke-opacity=".5" stroke-width="6" stroke-dasharray="0.1 15" stroke-linecap="round"/></svg></header>
+  <div class="pane cols cols--38">
+    <div class="col">
+      <h2 class="h2">Приложение само узнаёт трату<br>и само считает,<br>кто кому должен</h2>
+      <p class="lede">Одно событие&nbsp;— ужин на четверых&nbsp;— обычно рассыпается на четыре разных: трата, чек, спор о долях и четыре долга. Здесь это остаётся одним событием от начала до конца.</p>
+      <p class="lede lede--tight">Чек превращается в доли, доли&nbsp;— в долги, долги сворачиваются в одну цифру на человека. Руками не считает никто.</p>
+    </div>
+    <div class="col col--flow">
+      <div class="flowline">
+        <div class="stage">
+          <p class="stage__label">Чек<svg class="stage__arrow" width="15" height="9" aria-hidden="true"><path d="M1 4.5h11M8.5 1.5l3 3-3 3" fill="none" stroke="#b8873a" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></p>
+          <div class="tape"><svg class="tape__edge tape__edge--top" width="288" height="6.5" aria-hidden="true"><line x1="6.5" y1="0" x2="281.5" y2="0" stroke="#f2f2f8" stroke-width="13" stroke-dasharray="0.1 16" stroke-linecap="round"/></svg>
+            <p class="tape__shop">CHORSU GRILL</p>
+            <p class="tape__date">426 000 UZS · 6 позиций</p>
+            <div class="tape__rule"></div>
+            <p class="tape__row"><span>Шашлык из баранины ×4</span><span>192 000</span></p>
+            <p class="tape__row"><span>Лагман ×2</span><span>90 000</span></p>
+            <p class="tape__row"><span>Салат «Ачик-чучук» ×2</span><span>52 000</span></p>
+            <p class="tape__row"><span>Компот ×4</span><span>36 000</span></p>
+            <p class="tape__row"><span>Лепёшка тандырная ×4</span><span>32 000</span></p>
+            <p class="tape__row"><span>Чай зелёный ×2</span><span>24 000</span></p>
+            <div class="tape__rule"></div>
+            <p class="tape__row tape__row--total"><span>ИТОГО</span><span>426 000</span></p><svg class="tape__edge tape__edge--bottom" width="288" height="6.5" aria-hidden="true"><line x1="6.5" y1="6.5" x2="281.5" y2="6.5" stroke="#f2f2f8" stroke-width="13" stroke-dasharray="0.1 16" stroke-linecap="round"/></svg>
+          </div>
+        </div>
+
+        <div class="stage stage--slips">
+          <p class="stage__label">Доли<svg class="stage__arrow" width="15" height="9" aria-hidden="true"><path d="M1 4.5h11M8.5 1.5l3 3-3 3" fill="none" stroke="#b8873a" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></p>
+          <div class="slips">
+            <div class="slip slip--a"><svg class="slip__edge" width="116" height="5.5" aria-hidden="true"><line x1="5.5" y1="0" x2="110.5" y2="0" stroke="#f2f2f8" stroke-width="11" stroke-dasharray="0.1 14" stroke-linecap="round"/></svg><p class="slip__who">Вы</p><p class="slip__sum">106 500</p></div>
+            <div class="slip slip--b"><svg class="slip__edge" width="116" height="5.5" aria-hidden="true"><line x1="5.5" y1="0" x2="110.5" y2="0" stroke="#f2f2f8" stroke-width="11" stroke-dasharray="0.1 14" stroke-linecap="round"/></svg><p class="slip__who">Ахмед</p><p class="slip__sum">106 500</p></div>
+            <div class="slip slip--c"><svg class="slip__edge" width="116" height="5.5" aria-hidden="true"><line x1="5.5" y1="0" x2="110.5" y2="0" stroke="#f2f2f8" stroke-width="11" stroke-dasharray="0.1 14" stroke-linecap="round"/></svg><p class="slip__who">Анна</p><p class="slip__sum">106 500</p></div>
+            <div class="slip slip--d"><svg class="slip__edge" width="116" height="5.5" aria-hidden="true"><line x1="5.5" y1="0" x2="110.5" y2="0" stroke="#f2f2f8" stroke-width="11" stroke-dasharray="0.1 14" stroke-linecap="round"/></svg><p class="slip__who">Коля</p><p class="slip__sum">106 500</p></div>
+          </div>
+        </div>
+
+        <div class="stage">
+          <p class="stage__label">Долги</p>
+          <div class="netto">
+            <p class="netto__cap">Итог по человеку</p>
+            <p class="netto__row"><span class="dot dot--amber"></span>Ахмед<b class="amber">+106 500</b></p>
+            <p class="netto__row"><span class="dot dot--amber"></span>Анна<b class="amber">+106 500</b></p>
+            <p class="netto__row"><span class="dot dot--amber"></span>Коля<b class="amber">+106 500</b></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <footer class="foot"><span class="foot__num">03</span><span class="foot__of">/ 12</span><span class="foot__brand">Ouro Finance</span></footer>
+</section>
+
+<!-- 5 · Чек -->
+<section class="slide">
+  <header class="head"><p class="eyebrow">Продукт · чек</p><svg class="tear" width="1696" height="7" aria-hidden="true"><line x1="3.5" y1="3.5" x2="1692.5" y2="3.5" stroke="#b8873a" stroke-opacity=".5" stroke-width="6" stroke-dasharray="0.1 15" stroke-linecap="round"/></svg></header>
+  <div class="pane cols cols--55">
+    <div class="col">
+      <h2 class="h2">Сфоткал чек —<br>позиции разобрались сами</h2>
+      <p class="lede">Распознавание вытаскивает из фотографии строки, количество, цены, НДС и сервисный сбор. Дальше человек не набирает&nbsp;— он только правит, если распознано неточно.</p>
+      <ul class="bullets">
+        <li>До трёх кадров одного длинного чека склеиваются в один список</li>
+        <li>HEIC с айфона принимается как есть, без конвертации</li>
+        <li>Чека нет вовсе&nbsp;— позиции можно завести руками, шаги те же</li>
+        <li>Черновик сохраняется сам: можно закрыть приложение и вернуться</li>
+      </ul>
+      <p class="note">На экране&nbsp;— настоящий чек из демо-режима: ужин в Chorsu&nbsp;Grill на 426&nbsp;000&nbsp;UZS.</p>
+    </div>
+    <div class="col col--shot"><figure class="phone"><img src="/public/shots/scan.jpg" alt="Экран распознанных позиций чека"></figure></div>
+  </div>
+  <footer class="foot"><span class="foot__num">04</span><span class="foot__of">/ 12</span><span class="foot__brand">Ouro Finance</span></footer>
+</section>
+
+<!-- 6 · Разделение -->
+<section class="slide">
+  <header class="head"><p class="eyebrow">Продукт · разделение</p><svg class="tear" width="1696" height="7" aria-hidden="true"><line x1="3.5" y1="3.5" x2="1692.5" y2="3.5" stroke="#b8873a" stroke-opacity=".5" stroke-width="6" stroke-dasharray="0.1 15" stroke-linecap="round"/></svg></header>
+  <div class="pane cols cols--shot-first">
+    <div class="col col--shot"><figure class="phone"><img src="/public/shots/split.jpg" alt="Экран назначения позиций участникам"></figure></div>
+    <div class="col">
+      <h2 class="h2">Позиции разлетаются<br>по людям</h2>
+      <p class="lede">Поровну на всех, по позициям или дроблением одной строки на двоих. Люди берутся из контактов в один тап, а пресет «как в прошлый раз» повторяет расклад прошлого ужина.</p>
+      <ul class="bullets">
+        <li>Индикатор «назначено 6 из 6» не даёт сохранить недоделенный чек</li>
+        <li>Платил друг&nbsp;— вместо вашей траты появляется ваш долг ему на вашу долю</li>
+        <li>Одна трата и все долги связаны навсегда: правка суммы правит доли</li>
+        <li>Чек можно отправить ссылкой&nbsp;— в Telegram он раскрывается карточкой</li>
+      </ul>
+    </div>
+  </div>
+  <footer class="foot"><span class="foot__num">05</span><span class="foot__of">/ 12</span><span class="foot__brand">Ouro Finance</span></footer>
+</section>
+
+<!-- 7 · Долги -->
+<section class="slide">
+  <header class="head"><p class="eyebrow">Продукт · долги</p><svg class="tear" width="1696" height="7" aria-hidden="true"><line x1="3.5" y1="3.5" x2="1692.5" y2="3.5" stroke="#b8873a" stroke-opacity=".5" stroke-width="6" stroke-dasharray="0.1 15" stroke-linecap="round"/></svg></header>
+  <div class="pane cols cols--55">
+    <div class="col">
+      <h2 class="h2">Не список расписок,<br>а одна цифра на человека</h2>
+      <p class="lede">Все долги с одним человеком сворачиваются в нетто: встречные вычитаются, остаётся сумма и сторона. Экран отвечает на единственный вопрос, который у людей возникает,&nbsp;— <b>кто кому и сколько</b>.</p>
+      <div class="legend">
+        <span class="legend__item"><span class="dot dot--amber"></span>вам должны</span>
+        <span class="legend__item"><span class="dot dot--violet"></span>вы должны</span>
+      </div>
+      <ul class="bullets">
+        <li>Погашение одной суммой: закрывает долги человека от старых к новым</li>
+        <li>Частичный платёж, переплата и прощение остатка&nbsp;— каждый со своим следом</li>
+        <li>Комиссия за перевод ложится отдельным расходом и не искажает сумму долга</li>
+        <li>Срок возврата и приватность&nbsp;— у каждого долга свои</li>
+      </ul>
+    </div>
+    <div class="col col--shot"><figure class="phone"><img src="/public/shots/debts.jpg" alt="Список долгов по людям с нетто-суммами"></figure></div>
+  </div>
+  <footer class="foot"><span class="foot__num">06</span><span class="foot__of">/ 12</span><span class="foot__brand">Ouro Finance</span></footer>
+</section>
+
+<!-- 8 · Telegram-импорт -->
+<section class="slide">
+  <header class="head"><p class="eyebrow">Интеграция · Telegram</p><svg class="tear" width="1696" height="7" aria-hidden="true"><line x1="3.5" y1="3.5" x2="1692.5" y2="3.5" stroke="#b8873a" stroke-opacity=".5" stroke-width="6" stroke-dasharray="0.1 15" stroke-linecap="round"/></svg></header>
+  <div class="pane">
+    <div class="head2">
+      <h2 class="h2 h2--mid">Переслал уведомление банка —<br>трата уже в приложении</h2>
+      <p class="lede lede--side">Единственное действие человека&nbsp;— переслать сообщение боту. Всё остальное делает разбор: сумму, счёт, категорию и дубли определяет сервер.</p>
+    </div>
+
+    <ol class="chain">
+      <li class="chain__step">
+        <span class="chain__n">01</span>
+        <p class="chain__t">Банк присылает уведомление</p>
+        <p class="chain__d">«Оплата 43 000 UZS, карта ···4821, KORZINKA»</p>
+      </li>
+      <li class="chain__arrow" aria-hidden="true"></li>
+      <li class="chain__step">
+        <span class="chain__n">02</span>
+        <p class="chain__t">Человек пересылает боту</p>
+        <p class="chain__d">Один жест в том же приложении, где сообщение и пришло</p>
+      </li>
+      <li class="chain__arrow" aria-hidden="true"></li>
+      <li class="chain__step chain__step--hot">
+        <span class="chain__n">03</span>
+        <p class="chain__t">Разбор и черновик</p>
+        <p class="chain__d">Сумма, счёт по цифрам карты, категория по истории мерчанта</p>
+      </li>
+      <li class="chain__arrow" aria-hidden="true"></li>
+      <li class="chain__step">
+        <span class="chain__n">04</span>
+        <p class="chain__t">Подтверждение в один тап</p>
+        <p class="chain__d">В приложении или прямо в Telegram&nbsp;— операция в истории</p>
+      </li>
+    </ol>
+
+    <div class="strip">
+      <div class="strip__cell"><p class="strip__k">Счёт</p><p class="strip__v">Подставляется по последним цифрам карты</p></div>
+      <div class="strip__cell"><p class="strip__k">Категория</p><p class="strip__v">Запоминается по мерчанту после трёх одинаковых подтверждений</p></div>
+      <div class="strip__cell"><p class="strip__k">Дубли</p><p class="strip__v">Повторная пересылка того же сообщения не создаёт вторую трату</p></div>
+      <div class="strip__cell"><p class="strip__k">Переводы</p><p class="strip__v">Списание и зачисление между своими картами сводятся в один перевод</p></div>
+    </div>
+
+    <p class="honest"><span class="honest__tag">Как есть сегодня</span> Разбирается HUMO (UZS)&nbsp;— один банк. Парсеры вынесены в отдельный слой, добавление банка не трогает остальное приложение.</p>
+  </div>
+  <footer class="foot"><span class="foot__num">07</span><span class="foot__of">/ 12</span><span class="foot__brand">Ouro Finance</span></footer>
+</section>
+
+<!-- 9 · Аналитика -->
+<section class="slide">
+  <header class="head"><p class="eyebrow">Продукт · аналитика</p><svg class="tear" width="1696" height="7" aria-hidden="true"><line x1="3.5" y1="3.5" x2="1692.5" y2="3.5" stroke="#b8873a" stroke-opacity=".5" stroke-width="6" stroke-dasharray="0.1 15" stroke-linecap="round"/></svg></header>
+  <div class="pane cols cols--shot-first">
+    <div class="col col--shot"><figure class="phone"><img src="/public/shots/analytics.jpg" alt="Аналитика: доходы, расходы, кольцо категорий"></figure></div>
+    <div class="col">
+      <h2 class="h2">Видно, куда уходят<br>деньги</h2>
+      <p class="lede">Одна страница вместо вкладок: доходы, расходы, баланс и средний расход сверху, дальше кольцо категорий, темп расходов с прогнозом до конца периода и сравнение с прошлым.</p>
+      <ul class="bullets">
+        <li>Отдельный сегмент «невозвращённые долги»&nbsp;— деньги, которые ушли, но не потрачены</li>
+        <li>Начало финансового месяца настраивается: зарплата 10-го&nbsp;— и месяц с 10-го</li>
+        <li>Свайп между периодами, фильтр по счетам, день / месяц / год</li>
+        <li>Всё пересчитано в домашнюю валюту&nbsp;— счета могут быть в шести</li>
+      </ul>
+    </div>
+  </div>
+  <footer class="foot"><span class="foot__num">08</span><span class="foot__of">/ 12</span><span class="foot__brand">Ouro Finance</span></footer>
+</section>
+
+<!-- 10 · Бюджет и повседневность -->
+<section class="slide">
+  <header class="head"><p class="eyebrow">Продукт · каждый день</p><svg class="tear" width="1696" height="7" aria-hidden="true"><line x1="3.5" y1="3.5" x2="1692.5" y2="3.5" stroke="#b8873a" stroke-opacity=".5" stroke-width="6" stroke-dasharray="0.1 15" stroke-linecap="round"/></svg></header>
+  <div class="pane cols cols--45">
+    <div class="col">
+      <h2 class="h2">И видно, сколько<br>можно потратить сегодня</h2>
+      <p class="lede">Главный экран отвечает на вопрос, который человек задаёт себе каждый день. Не «сколько я потратил в прошлом месяце», а «сколько можно сейчас».</p>
+      <div class="metrics">
+        <div class="metric"><p class="metric__k">Расход / дн</p><p class="metric__v metric__v--warn">567 200</p></div>
+        <div class="metric"><p class="metric__k">Безопасно</p><p class="metric__v metric__v--ok">1 463 000</p></div>
+        <div class="metric"><p class="metric__k">Осталось</p><p class="metric__v">12 дн</p></div>
+      </div>
+      <p class="note">Цифры с экрана справа: безопасный остаток на день&nbsp;— это доступные деньги, поделённые на дни до конца месяца, с цветом статуса.</p>
+      <ul class="bullets">
+        <li>Новая трата&nbsp;— сумма и категория, оба поля предсказаны по истории</li>
+        <li>История сгруппирована по дням с итогом за каждый день</li>
+        <li>Работает офлайн: данные из кэша появляются мгновенно</li>
+      </ul>
+    </div>
+    <div class="col col--pair">
+      <figure class="phone phone--sm phone--back"><img src="/public/shots/home.jpg" alt="Главный экран: баланс и дневной бюджет"></figure>
+      <figure class="phone phone--sm phone--front"><img src="/public/shots/add.jpg" alt="Экран новой операции"></figure>
+    </div>
+  </div>
+  <footer class="foot"><span class="foot__num">09</span><span class="foot__of">/ 12</span><span class="foot__brand">Ouro Finance</span></footer>
+</section>
+
+<!-- 11 · Отличия -->
+<section class="slide">
+  <header class="head"><p class="eyebrow">Отличия</p><svg class="tear" width="1696" height="7" aria-hidden="true"><line x1="3.5" y1="3.5" x2="1692.5" y2="3.5" stroke="#b8873a" stroke-opacity=".5" stroke-width="6" stroke-dasharray="0.1 15" stroke-linecap="round"/></svg></header>
+  <div class="pane">
+    <div class="head2">
+      <h2 class="h2 h2--mid">Трекеры считают ваши деньги.<br>Сплиттеры&nbsp;— общие</h2>
+      <p class="lede lede--side">Человеку же приходится держать оба приложения и сводить их вручную. У нас трата и долг&nbsp;— одна запись, а не две в разных местах.</p>
+    </div>
+    <table class="cmp">
+      <thead>
+        <tr>
+          <th class="cmp__row-h"></th>
+          <th>Трекеры расходов<span class="cmp__sub">Money Lover, Дзен-мани</span></th>
+          <th>Сплиттеры<span class="cmp__sub">Splitwise</span></th>
+          <th class="cmp__us">Ouro Finance</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td class="cmp__row-h">Учёт личных трат, категории, бюджет</td><td class="yes">есть</td><td class="no">нет</td><td class="cmp__us yes">есть</td></tr>
+        <tr><td class="cmp__row-h">Позиции чека превращаются в доли людей</td><td class="no">нет</td><td class="no">нет</td><td class="cmp__us yes">есть</td></tr>
+        <tr><td class="cmp__row-h">Долги сворачиваются в нетто по человеку</td><td class="no">нет</td><td class="yes">есть</td><td class="cmp__us yes">есть</td></tr>
+        <tr><td class="cmp__row-h">Трата и долг&nbsp;— одно событие, а не два</td><td class="no">нет</td><td class="no">нет</td><td class="cmp__us yes">есть</td></tr>
+        <tr><td class="cmp__row-h">Ввод из уведомлений местного банка</td><td class="no">нет</td><td class="no">нет</td><td class="cmp__us yes">есть</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <footer class="foot"><span class="foot__num">10</span><span class="foot__of">/ 12</span><span class="foot__brand">Ouro Finance</span></footer>
+</section>
+
+<!-- 12 · Готовность -->
+<section class="slide">
+  <header class="head"><p class="eyebrow">Состояние продукта</p><svg class="tear" width="1696" height="7" aria-hidden="true"><line x1="3.5" y1="3.5" x2="1692.5" y2="3.5" stroke="#b8873a" stroke-opacity=".5" stroke-width="6" stroke-dasharray="0.1 15" stroke-linecap="round"/></svg></header>
+  <div class="pane cols cols--60">
+    <div class="col">
+      <h2 class="h2">Что уже работает</h2>
+      <p class="lede">Продукт в проде и обновляется еженедельно. Метрик мы не показываем&nbsp;— пользователей набирали без продвижения, и любая цифра сейчас сказала бы больше о нас, чем о рынке.</p>
+      <div class="status">
+        <div class="status__col">
+          <p class="status__h status__h--live">В проде</p>
+          <ul class="status__list">
+            <li>Скан чека с распознаванием позиций</li>
+            <li>Разделение счёта и нетто-долги</li>
+            <li>Импорт уведомлений HUMO через Telegram</li>
+            <li>Telegram Mini App для подтверждения</li>
+            <li>Аналитика, бюджет, дневной остаток</li>
+            <li>Шесть валют в одном счёте</li>
+            <li>Регулярные платежи с напоминаниями</li>
+            <li>PWA с офлайном, десктопная версия</li>
+          </ul>
+        </div>
+        <div class="status__col">
+          <p class="status__h status__h--wip">В работе</p>
+          <ul class="status__list status__list--wip">
+            <li>Другие банки Узбекистана</li>
+            <li>Английский язык интерфейса</li>
+            <li>Приложения для iOS и Android</li>
+            <li>Десктоп для остальных страниц</li>
+            <li>Премиум-функции за подпиской</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="col col--desk">
+      <figure class="desk"><img src="/public/shots/desktop-home.jpg" alt="Десктопная веб-версия приложения"></figure>
+      <p class="note note--center">Одно и то же приложение: телефон, десктоп и Telegram Mini App.</p>
+    </div>
+  </div>
+  <footer class="foot"><span class="foot__num">11</span><span class="foot__of">/ 12</span><span class="foot__brand">Ouro Finance</span></footer>
+</section>
+
+<!-- Модель -->
+<section class="slide">
+  <header class="head"><p class="eyebrow">Модель</p><svg class="tear" width="1696" height="7" aria-hidden="true"><line x1="3.5" y1="3.5" x2="1692.5" y2="3.5" stroke="#b8873a" stroke-opacity=".5" stroke-width="6" stroke-dasharray="0.1 15" stroke-linecap="round"/></svg></header>
+  <div class="pane">
+    <h2 class="h2 h2--wide">Монетизация&nbsp;—<br>подписка</h2>
+    <p class="lede lede--lead">Приём платежей уже подключён и работает. Включение подписки&nbsp;— следующий шаг.</p>
+  </div>
+  <footer class="foot"><span class="foot__num">12</span><span class="foot__of">/ 12</span><span class="foot__brand">Ouro Finance</span></footer>
+</section>
+

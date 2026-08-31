@@ -21,10 +21,6 @@ export class UpdateDebtHandler implements ICommandHandler<UpdateDebtCommand> {
       throw new ForbiddenException('Access denied');
     }
 
-    if (debt.isClosed && command.data.isClosed === true) {
-      throw new ConflictException('Debt is already closed');
-    }
-
     // Направление задаёт категории платежей возврата. Перевернуть долг, по
     // которому уже возвращали, значит развернуть их в обратную сторону.
     if (
@@ -35,7 +31,11 @@ export class UpdateDebtHandler implements ICommandHandler<UpdateDebtCommand> {
       throw new ConflictException('Cannot change the direction of a debt with payments');
     }
 
-    debt.update(command.data);
+    // Сумму двигает агрегат: правка «было 1000, стало 1200» обязана сдвинуть и
+    // остаток, иначе долг молча теряет или приобретает возвращённое.
+    const { totalAmount, ...rest } = command.data;
+    debt.update(rest);
+    if (totalAmount !== undefined) debt.changeTotalAmount(totalAmount);
     const savedDebt = await this.debtRepository.save(debt);
 
     return DebtResponseMapper.toResponse(savedDebt);

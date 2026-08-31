@@ -12,9 +12,10 @@ import {
   type MutualPosition,
 } from '@/entities/debt';
 import { useAccounts } from '@/entities/account';
-import { useCloseAllDebts, useCloseDebt, useReopenDebt } from '@/features/close-debt';
+import { useDeleteDebt } from '@/features/delete-debt';
+import { useReopenDebt } from '@/features/reopen-debt';
 import { useOffsetDebts } from '@/features/offset-debts';
-import { useDebtPaymentFlow } from '@/features/partial-payment';
+import { useCloseAllDebts, useDebtPaymentFlow } from '@/features/pay-debt';
 import { buildSharePayload, selectShareableDebts, useDebtShare } from '@/features/share-debts';
 import { useIsDesktop } from '@/shared/lib/composables/useIsDesktop';
 import { useExchangeRates, useProfile } from '@/shared/api';
@@ -278,7 +279,7 @@ export function useDebtsPageState() {
 
   // --- Detail panel actions ---
   const showDeleteModal = ref(false);
-  const { isDeleting, deleteDebt } = useCloseDebt();
+  const { isDeleting, deleteDebt } = useDeleteDebt();
   const paymentFlow = useDebtPaymentFlow({
     userId,
     debt: selectedDebt,

@@ -15,13 +15,9 @@ import {
 } from '@/entities/debt';
 import { DEFAULT_CURRENCY } from '@/shared/config/currency';
 import { useAccounts } from '@/entities/account';
-import {
-  DeleteDebtModal,
-  ReopenDebtModal,
-  useCloseDebt,
-  useReopenDebt,
-} from '@/features/close-debt';
-import { useDebtPaymentFlow, PaymentDrawer } from '@/features/partial-payment';
+import { DeleteDebtModal, useDeleteDebt } from '@/features/delete-debt';
+import { ReopenDebtModal, useReopenDebt } from '@/features/reopen-debt';
+import { useDebtPaymentFlow, PaymentDrawer } from '@/features/pay-debt';
 import { EditDebtDrawer } from '@/features/edit-debt';
 import { ShareDebtsDrawer, useDebtShare } from '@/features/share-debts';
 import { navigateBack } from '@/app/router';
@@ -60,7 +56,7 @@ const showDeleteModal = ref(false);
 const showReopenModal = ref(false);
 
 // Close debt logic
-const { isDeleting, deleteDebt } = useCloseDebt();
+const { isDeleting, deleteDebt } = useDeleteDebt();
 
 // Payment drawer: общий поток шторки-платежа, шаренный с DebtsListPage
 const {

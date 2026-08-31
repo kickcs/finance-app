@@ -1,0 +1,519 @@
+<meta charset="utf-8">
+<title>Ouro share cards — mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600&display=block" rel="stylesheet">
+<style>
+  body { margin: 0; background: #2a2d34; font: 13px/1.4 "IBM Plex Mono", monospace; color: #9aa1ae; }
+  .wrap { display: flex; flex-wrap: wrap; gap: 36px; padding: 36px; align-items: flex-start; }
+  .col { display: flex; flex-direction: column; gap: 10px; }
+  h2 { font: 600 11px/1 "IBM Plex Mono", monospace; letter-spacing: 1.5px; text-transform: uppercase; color: #6f7683; margin: 0; }
+  canvas, svg { display: block; }
+  .og { width: 620px; height: 325px; }
+</style>
+<div class="wrap">
+  <div class="col"><h2>Долги · встречные</h2><canvas id="debts"></canvas></div>
+  <div class="col"><h2>Долги · односторонние</h2><canvas id="debtsSimple"></canvas></div>
+  <div class="col"><h2>Чек · PNG в чат</h2><canvas id="receipt"></canvas></div>
+  <div class="col"><h2>Долги · стресс (длинные имена, USD)</h2><canvas id="debtsStress"></canvas></div>
+</div>
+<div class="wrap">
+  <div class="col"><h2>Долги · OG 1200×630</h2><div id="ogDebts"></div></div>
+  <div class="col"><h2>Чек · OG 1200×630</h2><div id="ogReceipt"></div></div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// TOKENS
+// ─────────────────────────────────────────────────────────────────────────────
+const T = {
+  ground:    '#E6E9F0',
+  rule:      'rgba(20,24,40,0.055)',
+  paper:     '#FFFFFF',
+  ink:       '#141418',
+  inkSoft:   '#565B6B',
+  inkFaint:  '#98A0B0',
+  hairline:  '#E2E6EC',
+  perf:      '#C6CDD9',
+  goldText:  '#96691C',
+  gold1:     '#C59B3F',
+  gold2:     '#E8C865',
+  givenText: '#C2620A',
+  givenRail: '#F59E0B',
+  takenText: '#7E22CE',
+  takenRail: '#A855F7',
+};
+const DISPLAY = '"Golos Text", -apple-system, sans-serif';
+const MONO    = '"IBM Plex Mono", ui-monospace, monospace';
+const SCALE = 2;
+const APP_URL = 'app.ouro-finance.top';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PRIMITIVES
+// ─────────────────────────────────────────────────────────────────────────────
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+
+/**
+ * Рваный верхний край: зубцы неравной глубины, изредка — укус вдвое глубже.
+ * Ровная пила читалась бы как декор, неровная — как оторванная бумага.
+ */
+function tearPoints(x, w, amp, seed) {
+  const rng = mulberry32(seed);
+  const pts = [[x, amp * 0.5]];
+  let px = x;
+  while (px < x + w) {
+    px = Math.min(px + 4 + rng() * 5, x + w);
+    const deep = rng() < 0.18 ? 1.7 : 1;
+    pts.push([px, rng() * amp * deep]);
+  }
+  return pts;
+}
+
+function cardPath(ctx, x, y, w, h, r, amp, seed) {
+  const pts = tearPoints(x, w, amp, seed);
+  ctx.beginPath();
+  ctx.moveTo(pts[0][0], y + pts[0][1]);
+  for (const [px, dy] of pts) ctx.lineTo(px, y + dy);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.closePath();
+}
+
+function drawGround(ctx, w, h) {
+  ctx.fillStyle = T.ground;
+  ctx.fillRect(0, 0, w, h);
+  ctx.strokeStyle = T.rule;
+  ctx.lineWidth = 1;
+  for (let y = 12.5; y < h; y += 26) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
+}
+
+/** Кольцо-ороборос — единственное место, где живёт золотой градиент. */
+function drawMark(ctx, cx, cy, size) {
+  const r = size / 2;
+  ctx.beginPath(); ctx.fillStyle = T.ink; ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+  const g = ctx.createLinearGradient(cx - r, cy - r, cx + r, cy + r);
+  g.addColorStop(0, T.gold1); g.addColorStop(0.5, T.gold2); g.addColorStop(1, T.gold1);
+  ctx.beginPath();
+  ctx.strokeStyle = g; ctx.lineWidth = size * 0.17;
+  ctx.arc(cx, cy, r * 0.55, 0, Math.PI * 2); ctx.stroke();
+}
+
+/**
+ * maxWidth у fillText не обрезает, а сплющивает глифы по горизонтали — на
+ * длинном названии это читается как сломанный шрифт. Режем сами.
+ */
+function fit(ctx, str, max) {
+  if (max === undefined || ctx.measureText(str).width <= max) return str;
+  let lo = 0, hi = str.length;
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >> 1;
+    if (ctx.measureText(str.slice(0, mid) + '…').width <= max) lo = mid; else hi = mid - 1;
+  }
+  return str.slice(0, lo).trimEnd() + '…';
+}
+function text(ctx, str, x, y, { font, color, align = 'left', track = 0, max }) {
+  ctx.font = font; ctx.fillStyle = color; ctx.textAlign = align;
+  ctx.letterSpacing = track ? `${track}px` : '0px';
+  ctx.fillText(fit(ctx, str, max), x, y);
+  ctx.letterSpacing = '0px';
+}
+function width(ctx, str, font, track = 0) {
+  ctx.font = font; ctx.letterSpacing = track ? `${track}px` : '0px';
+  const w = ctx.measureText(str).width;
+  ctx.letterSpacing = '0px';
+  return w;
+}
+
+function drawTear(ctx, cardX, cardW, y) {
+  ctx.save();
+  ctx.fillStyle = T.ground;
+  ctx.beginPath(); ctx.arc(cardX, y, 10, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cardX + cardW, y, 10, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath();
+  ctx.setLineDash([1.5, 6]); ctx.lineCap = 'round';
+  ctx.strokeStyle = T.perf; ctx.lineWidth = 2;
+  ctx.moveTo(cardX + 17, y); ctx.lineTo(cardX + cardW - 17, y); ctx.stroke();
+  ctx.restore();
+}
+
+function rail(ctx, x, y, h, color) {
+  ctx.fillStyle = color;
+  ctx.beginPath(); ctx.roundRect(x, y, 3, h, 1.5); ctx.fill();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FORMAT
+// ─────────────────────────────────────────────────────────────────────────────
+const bare = (a) => Math.round(a).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+const money = (a, c) => `${bare(a)} ${c}`;
+const dmy = (t) => new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit' }).format(new Date(t));
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ОБЩАЯ ОБОЛОЧКА
+// ─────────────────────────────────────────────────────────────────────────────
+const W = 480, MARGIN = 20, CARD_W = W - MARGIN * 2, PAD = 24;
+const CX = MARGIN + PAD, CR = MARGIN + CARD_W - PAD, CW = CR - CX;
+const GUTTER = 15, TEAR_AMP = 6, CARD_Y = 16;
+
+/** Курсор от верха карточки до первой строки шапки — общий для обеих карточек. */
+function eyebrow(ctx, draw, rightLabel) {
+  let y = CARD_Y + TEAR_AMP + 9;
+  if (draw) {
+    drawMark(ctx, CX + 9, y + 8, 18);
+    text(ctx, 'OURO FINANCE', CX + 26, y + 12, { font: `700 11px ${DISPLAY}`, color: T.goldText, track: 1.6 });
+    text(ctx, rightLabel, CR, y + 12, { font: `500 11px ${MONO}`, color: T.inkFaint, align: 'right' });
+    ctx.beginPath(); ctx.strokeStyle = T.hairline; ctx.lineWidth = 1;
+    ctx.moveTo(CX, y + 28.5); ctx.lineTo(CR, y + 28.5); ctx.stroke();
+  }
+  return y + 28;
+}
+
+/** Сумма-герой: валюта мельче и тише, иначе съедает ширину у самих цифр. */
+function hero(ctx, draw, y, amount, currency, color) {
+  const aw = width(ctx, amount, `800 38px ${DISPLAY}`, -0.8);
+  if (draw) {
+    text(ctx, amount, CX, y, { font: `800 38px ${DISPLAY}`, color, track: -0.8 });
+    text(ctx, currency, CX + aw + 7, y, { font: `600 17px ${DISPLAY}`, color: T.inkSoft });
+  }
+}
+
+function footer(ctx, draw, y) {
+  if (draw) text(ctx, APP_URL, W / 2, y, { font: `500 11px ${MONO}`, color: '#8B93A3', align: 'center' });
+}
+
+/** Два прохода одним кодом: сначала меряем высоту, потом рисуем. */
+function render(canvas, body, seed) {
+  const ctx = canvas.getContext('2d');
+  const cardH = body(ctx, false) - CARD_Y;
+  const H = CARD_Y + cardH + 18 + 12 + 16;
+
+  canvas.width = W * SCALE; canvas.height = H * SCALE;
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  ctx.scale(SCALE, SCALE);
+
+  drawGround(ctx, W, H);
+  ctx.save();
+  ctx.shadowColor = 'rgba(17,22,40,0.14)'; ctx.shadowBlur = 20; ctx.shadowOffsetY = 6;
+  ctx.fillStyle = T.paper;
+  cardPath(ctx, MARGIN, CARD_Y, CARD_W, cardH, 16, TEAR_AMP, seed);
+  ctx.fill();
+  ctx.restore();
+
+  body(ctx, true);
+  footer(ctx, true, CARD_Y + cardH + 18 + 11);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// КАРТОЧКА ДОЛГОВ
+// ─────────────────────────────────────────────────────────────────────────────
+const ROW_SUB = 20, ROW_GAP = 30;
+
+function debtsBody(p) {
+  return (ctx, draw) => {
+    const mixed = p.debts.some((d) => d.currency !== p.currency);
+    let y = eyebrow(ctx, draw, dmy(p.snapshotAt));
+
+    y += 24;
+    if (draw) text(ctx, p.personName, CX, y, { font: `600 15px ${DISPLAY}`, color: T.ink, max: CW });
+
+    y += 44;
+    const pos = p.net >= 0;
+    hero(ctx, draw, y, `${pos ? '+' : '−'}${bare(Math.abs(p.net))}`, p.currency, pos ? T.givenText : T.takenText);
+
+    // Строка сверки. При встречных долгах она показывает обе стороны — иначе
+    // сумма строк ниже не сходится с нетто и проверить его нечем. Она же
+    // объясняет цвета рельсов: янтарный — вам, фиолетовый — вы.
+    y += 25;
+    if (draw) {
+      const mutual = p.totalGiven > 0 && p.totalTaken > 0;
+      if (mutual) {
+        const a = `вам должны ${bare(p.totalGiven)}`;
+        const f = `500 13px ${DISPLAY}`;
+        text(ctx, a, CX, y, { font: f, color: T.givenText });
+        const sep = '  ·  ';
+        const aw = width(ctx, a, f);
+        text(ctx, sep, CX + aw, y, { font: f, color: T.inkFaint });
+        text(ctx, `вы должны ${bare(p.totalTaken)}`, CX + aw + width(ctx, sep, f), y, { font: f, color: T.takenText });
+      } else {
+        text(ctx, pos ? 'должен вам' : 'вы должны', CX, y, { font: `500 14px ${DISPLAY}`, color: T.inkSoft });
+      }
+    }
+
+    y += 26;
+    if (draw) drawTear(ctx, MARGIN, CARD_W, y);
+    y += 28;
+
+    if (p.debts.length === 0) {
+      if (draw) text(ctx, 'Открытых долгов нет', CX, y, { font: `400 14px ${DISPLAY}`, color: T.inkFaint });
+      return y + 24;
+    }
+
+    p.debts.forEach((d, i) => {
+      if (draw) {
+        rail(ctx, CX, y - 13, ROW_SUB + 17, d.direction === 'given' ? T.givenRail : T.takenRail);
+        const amount = mixed ? money(d.remainingAmount, d.currency) : bare(d.remainingAmount);
+        const aw = width(ctx, amount, `600 15px ${MONO}`);
+        text(ctx, d.title, CX + GUTTER, y, { font: `500 15px ${DISPLAY}`, color: T.ink, max: CW - GUTTER - aw - 16 });
+        text(ctx, amount, CR, y, { font: `600 15px ${MONO}`, color: T.ink, align: 'right' });
+
+        const parts = [];
+        if (d.paidAmount > 0) parts.push(`отдано ${bare(d.paidAmount)} из ${bare(d.totalAmount)}`);
+        if (d.forgivenAmount > 0) parts.push(`прощено ${bare(d.forgivenAmount)}`);
+        if (d.dueDate) parts.push(`до ${dmy(Date.parse(d.dueDate))}`);
+        text(ctx, parts.join('  ·  ') || 'без срока', CX + GUTTER, y + ROW_SUB,
+             { font: `400 12px ${DISPLAY}`, color: T.inkFaint, max: CW - GUTTER });
+      }
+      y += ROW_SUB + (i < p.debts.length - 1 ? ROW_GAP : 0);
+    });
+
+    return y + 26;
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// КАРТОЧКА ЧЕКА
+// ─────────────────────────────────────────────────────────────────────────────
+const P_ROW = 24, ITEM = 19, P_GAP = 18;
+
+function receiptBody(d) {
+  return (ctx, draw) => {
+    const owers = d.participants.filter((p) => !p.isMe && p.total > 0);
+    const charges = d.charges.filter((c) => c.enabled);
+    const hasCharges = charges.length > 0 && d.chargesAmount > 0;
+    let y = eyebrow(ctx, draw, dmy(d.date));
+
+    y += 24;
+    if (draw) text(ctx, d.storeName || 'Чек', CX, y, { font: `600 15px ${DISPLAY}`, color: T.ink, max: CW });
+
+    y += 44;
+    hero(ctx, draw, y, bare(d.totalAmount), d.currency, T.ink);
+
+    y += 25;
+    const back = owers.reduce((s, p) => s + p.total, 0);
+    if (draw) text(ctx, back > 0 ? `вам вернут ${bare(back)} ${d.currency}` : 'делить не с кем',
+                   CX, y, { font: `500 14px ${DISPLAY}`, color: T.inkSoft });
+
+    y += 26;
+    if (draw) drawTear(ctx, MARGIN, CARD_W, y);
+    y += 30;
+
+    if (owers.length === 0) {
+      if (draw) text(ctx, 'Никто ничего не должен', CX, y, { font: `400 14px ${DISPLAY}`, color: T.inkFaint });
+      return y + 24;
+    }
+
+    owers.forEach((p, i) => {
+      if (draw) {
+        rail(ctx, CX, y - 14, P_ROW + (p.items.length - 1) * ITEM + 18, p.color);
+        const amount = bare(p.total);
+        const aw = width(ctx, amount, `600 16px ${MONO}`);
+        text(ctx, p.name, CX + GUTTER, y, { font: `600 16px ${DISPLAY}`, color: T.ink, max: CW - GUTTER - aw - 16 });
+        text(ctx, amount, CR, y, { font: `600 16px ${MONO}`, color: T.ink, align: 'right' });
+        p.items.forEach((it, j) => {
+          const iy = y + P_ROW + j * ITEM;
+          const label = it.sharedWith > 1 ? `${it.name} · 1/${it.sharedWith}` : it.name;
+          const iaw = width(ctx, bare(it.share), `400 12px ${MONO}`);
+          text(ctx, label, CX + GUTTER, iy, { font: `400 13px ${DISPLAY}`, color: T.inkSoft, max: CW - GUTTER - iaw - 16 });
+          text(ctx, bare(it.share), CR, iy, { font: `400 12px ${MONO}`, color: T.inkFaint, align: 'right' });
+        });
+      }
+      y += P_ROW + p.items.length * ITEM + (i < owers.length - 1 ? P_GAP : 0);
+    });
+
+    if (hasCharges) {
+      y += 22;
+      if (draw) {
+        ctx.beginPath(); ctx.strokeStyle = T.hairline; ctx.lineWidth = 1;
+        ctx.moveTo(CX, y - 13.5); ctx.lineTo(CR, y - 13.5); ctx.stroke();
+        const labels = charges.map((c) => c.type === 'amount'
+          ? `${bare(c.amount)} ${c.label.toLowerCase()}` : `${c.percent}% ${c.label.toLowerCase()}`).join(', ');
+        text(ctx, `Суммы включают ${labels}`, CX, y, { font: `400 12px ${DISPLAY}`, color: T.inkFaint, max: CW });
+      }
+      y += 4;
+    }
+    return y + 26;
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// OG 1200×630 — тот же язык, но постер: бумага слева, обещание справа
+// ─────────────────────────────────────────────────────────────────────────────
+const OGW = 1200, OGH = 630, OGX = 76, OGCW = 616, OGPAD = 40;
+const OCX = OGX + OGPAD, OCR = OGX + OGCW - OGPAD, RIGHT = 772;
+const OG_ROW_H = 60;
+let OGY = 52, OG_TEAR = 0, OG_ROW0 = 0;
+function ogLayout(cardH) { OGY = Math.round((OGH - cardH) / 2); OG_TEAR = OGY + 286; OG_ROW0 = OG_TEAR + 56; }
+
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+/** В SVG измерить текст нечем — режем по числу знаков, как и остальной бэкенд. */
+function trunc(v, max) { return v.length > max ? v.slice(0, max - 1).trimEnd() + '…' : v; }
+function plural(n, one, few, many) {
+  const m10 = n % 10, m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return one;
+  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few;
+  return many;
+}
+function tornPathSvg(x, y, w, h, r, amp, seed) {
+  const pts = tearPoints(x, w, amp, seed);
+  let d = `M${pts[0][0]} ${(y + pts[0][1]).toFixed(1)}`;
+  for (const [px, dy] of pts) d += ` L${px.toFixed(1)} ${(y + dy).toFixed(1)}`;
+  d += ` L${x + w} ${y + h - r} Q${x + w} ${y + h} ${x + w - r} ${y + h} L${x + r} ${y + h} Q${x} ${y + h} ${x} ${y + h - r} Z`;
+  return d;
+}
+
+/** Высота бумаги — от числа строк, как и на canvas-карточке. */
+function ogCardHeight(rowCount, hasExtra) {
+  const shown = Math.min(rowCount, 3);
+  return 286 + 56 + (shown - 1) * OG_ROW_H + 22 + 32 + (hasExtra ? 34 : 0);
+}
+
+function ogChrome(dateLabel, seed, cardH) {
+  let rules = '';
+  for (let y = 16.5; y < OGH; y += 30) rules += `<line x1="0" y1="${y}" x2="${OGW}" y2="${y}" stroke="#141828" stroke-opacity="0.05" stroke-width="1"/>`;
+  return `<defs>
+    <linearGradient id="au${seed}" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="${T.gold1}"/><stop offset="0.5" stop-color="${T.gold2}"/><stop offset="1" stop-color="${T.gold1}"/>
+    </linearGradient>
+    <filter id="sh${seed}" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="13" stdDeviation="16" flood-color="#111628" flood-opacity="0.17"/>
+    </filter>
+  </defs>
+  <rect width="${OGW}" height="${OGH}" fill="${T.ground}"/>${rules}
+  <path d="${tornPathSvg(OGX, OGY, OGCW, cardH, 24, 9, seed)}" fill="${T.paper}" filter="url(#sh${seed})"/>
+  <circle cx="${OCX + 15}" cy="${OGY + 48}" r="15" fill="${T.ink}"/>
+  <circle cx="${OCX + 15}" cy="${OGY + 48}" r="8.3" fill="none" stroke="url(#au${seed})" stroke-width="5.1"/>
+  <text x="${OCX + 44}" y="${OGY + 55}" font-family="Golos Text" font-size="18" font-weight="700" letter-spacing="2.6" fill="${T.goldText}">OURO FINANCE</text>
+  <text x="${OCR}" y="${OGY + 55}" text-anchor="end" font-family="IBM Plex Mono" font-size="18" fill="${T.inkFaint}">${esc(dateLabel)}</text>
+  <line x1="${OCX}" y1="${OGY + 78}" x2="${OCR}" y2="${OGY + 78}" stroke="${T.hairline}" stroke-width="2"/>`;
+}
+
+function ogTear(cardH) {
+  const y = OG_TEAR;
+  return `<circle cx="${OGX}" cy="${y}" r="17" fill="${T.ground}"/>
+  <circle cx="${OGX + OGCW}" cy="${y}" r="17" fill="${T.ground}"/>
+  <line x1="${OGX + 29}" y1="${y}" x2="${OGX + OGCW - 29}" y2="${y}" stroke="${T.perf}" stroke-width="4" stroke-dasharray="2 11" stroke-linecap="round"/>`;
+}
+
+/** Валюта — tspan внутри того же <text>: ширину суммы измерит рендерер, не мы. */
+function ogHero(subject, amount, currency, color, caption) {
+  return `<text x="${OCX}" y="${OGY + 124}" font-family="Golos Text" font-size="24" font-weight="600" fill="${T.ink}">${esc(subject)}</text>
+  <text x="${OCX}" y="${OGY + 194}" font-family="Golos Text" font-size="58" font-weight="800" letter-spacing="-1" fill="${color}">${esc(amount)}<tspan dx="14" font-size="26" font-weight="600" letter-spacing="0" fill="${T.inkSoft}">${esc(currency)}</tspan></text>
+  <text x="${OCX}" y="${OGY + 234}" font-family="Golos Text" font-size="22" fill="${T.inkSoft}">${esc(caption)}</text>`;
+}
+
+/** Постер выровнен по холсту, а не по бумаге: её высота гуляет от числа строк. */
+function ogPoster(l1, l2, sub, cta) {
+  return `<text x="${RIGHT}" y="212" font-family="Golos Text" font-size="60" font-weight="800" fill="${T.ink}" letter-spacing="-1.2">${esc(l1)}</text>
+  <text x="${RIGHT}" y="280" font-family="Golos Text" font-size="60" font-weight="800" fill="${T.ink}" letter-spacing="-1.2">${esc(l2)}</text>
+  <text x="${RIGHT}" y="336" font-family="Golos Text" font-size="23" fill="${T.inkSoft}">${esc(sub)}</text>
+  <rect x="${RIGHT}" y="378" width="296" height="70" rx="35" fill="${T.ink}"/>
+  <text x="${RIGHT + 148}" y="422" text-anchor="middle" font-family="Golos Text" font-size="24" font-weight="700" fill="#fff">${esc(cta)}</text>
+  <text x="${RIGHT}" y="500" font-family="IBM Plex Mono" font-size="18" fill="#8B93A3">${APP_URL}</text>`;
+}
+
+function ogRows(items) {
+  const visible = items.slice(0, 3);
+  let out = '';
+  visible.forEach((it, i) => {
+    const y = OG_ROW0 + i * OG_ROW_H;
+    out += `<rect x="${OCX}" y="${y - 21}" width="5" height="46" rx="2.5" fill="${it.color}"/>
+    <text x="${OCX + 26}" y="${y}" font-family="Golos Text" font-size="24" font-weight="500" fill="${T.ink}">${esc(trunc(it.title, it.amount.length > 9 ? 18 : 22))}</text>
+    <text x="${OCX + 26}" y="${y + 22}" font-family="Golos Text" font-size="17" fill="${T.inkFaint}">${esc(it.sub)}</text>
+    <text x="${OCR}" y="${y}" text-anchor="end" font-family="IBM Plex Mono" font-size="24" font-weight="600" fill="${T.ink}">${esc(it.amount)}</text>`;
+  });
+  const extra = items.length - visible.length;
+  if (extra > 0) out += `<text x="${OCX + 26}" y="${OG_ROW0 + visible.length * OG_ROW_H + 4}" font-family="Golos Text" font-size="20" fill="${T.inkFaint}">и ещё ${extra} ${plural(extra, 'долг', 'долга', 'долгов')}</text>`;
+  return out;
+}
+
+function buildDebtsOg(p) {
+  const pos = p.net >= 0;
+  const mutual = p.totalGiven > 0 && p.totalTaken > 0;
+  const caption = mutual
+    ? `вам должны ${bare(p.totalGiven)}  ·  вы должны ${bare(p.totalTaken)}`
+    : (pos ? 'должен вам' : 'вы должны');
+  const cardH = ogCardHeight(p.debts.length, p.debts.length > 3);
+  ogLayout(cardH);
+  return `<svg xmlns="http://www.w3.org/2000/svg" class="og" viewBox="0 0 ${OGW} ${OGH}">
+  ${ogChrome(dmy(p.snapshotAt), 831, cardH)}
+  ${ogHero(p.personName, `${pos ? '+' : '−'}${bare(Math.abs(p.net))}`, p.currency, pos ? T.givenText : T.takenText, caption)}
+  ${ogTear(cardH)}
+  ${ogRows(p.debts.map((d) => ({ color: d.direction === 'given' ? T.givenRail : T.takenRail, title: d.title,
+      sub: d.dueDate ? `до ${dmy(Date.parse(d.dueDate))}` : 'без срока',
+      amount: p.debts.some((x) => x.currency !== p.currency) ? money(d.remainingAmount, d.currency) : bare(d.remainingAmount) })))}
+  ${ogPoster('Сверка', 'по долгам', 'Все суммы — по ссылке', 'Открыть сверку')}
+</svg>`;
+}
+
+function buildReceiptOg(d) {
+  const owers = d.participants.filter((p) => !p.isMe && p.total > 0);
+  const back = owers.reduce((s, p) => s + p.total, 0);
+  const cardH = ogCardHeight(owers.length, owers.length > 3);
+  ogLayout(cardH);
+  return `<svg xmlns="http://www.w3.org/2000/svg" class="og" viewBox="0 0 ${OGW} ${OGH}">
+  ${ogChrome(dmy(d.date), 829, cardH)}
+  ${ogHero(d.storeName, bare(d.totalAmount), d.currency, T.ink, `вам вернут ${bare(back)} ${d.currency}`)}
+  ${ogTear(cardH)}
+  ${ogRows(owers.map((p) => ({ color: p.color, title: p.name,
+      sub: `${p.items.length} ${plural(p.items.length, 'позиция', 'позиции', 'позиций')}`, amount: bare(p.total) })))}
+  ${ogPoster('Счёт', 'разделён', 'Кто сколько должен — по ссылке', 'Открыть чек')}
+</svg>`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FIXTURES
+// ─────────────────────────────────────────────────────────────────────────────
+const debtsMutual = {
+  personName: 'Азамат Рахимов', currency: 'UZS', net: 1250000, totalGiven: 2100000, totalTaken: 850000,
+  snapshotAt: Date.parse('2026-08-31'),
+  debts: [
+    { title: 'Ремонт квартиры', direction: 'given', currency: 'UZS', totalAmount: 1500000, remainingAmount: 1350000, paidAmount: 150000, forgivenAmount: 0, dueDate: '2026-09-12' },
+    { title: 'Займ на машину',  direction: 'given', currency: 'UZS', totalAmount: 750000,  remainingAmount: 750000,  paidAmount: 0, forgivenAmount: 0, dueDate: null },
+    { title: 'Взял на билеты',  direction: 'taken', currency: 'UZS', totalAmount: 1000000, remainingAmount: 850000,  paidAmount: 100000, forgivenAmount: 50000, dueDate: '2026-09-05' },
+  ],
+};
+const debtsSimple = {
+  personName: 'Дилноза', currency: 'UZS', net: -420000, totalGiven: 0, totalTaken: 420000,
+  snapshotAt: Date.parse('2026-08-31'),
+  debts: [
+    { title: 'Занял до зарплаты', direction: 'taken', currency: 'UZS', totalAmount: 420000, remainingAmount: 420000, paidAmount: 0, forgivenAmount: 0, dueDate: '2026-09-10' },
+  ],
+};
+const receipt = {
+  storeName: 'Chorsu Bazaar', date: Date.parse('2026-08-29'), currency: 'UZS',
+  totalAmount: 486000, chargesAmount: 44200,
+  charges: [{ id: '1', label: 'Сервисный сбор', enabled: true, type: 'percent', percent: 10 }],
+  participants: [
+    { id: 'me', name: 'Вы', isMe: true, color: '#4F46E5', total: 156000, items: [] },
+    { id: 'a', name: 'Азамат', isMe: false, color: '#F59E0B', total: 198000, items: [
+      { name: 'Плов по-самаркандски', share: 64000, sharedWith: 1 },
+      { name: 'Шашлык из баранины', share: 78000, sharedWith: 1 },
+      { name: 'Ачик-чучук', share: 56000, sharedWith: 2 } ] },
+    { id: 'd', name: 'Дилноза', isMe: false, color: '#10B981', total: 132000, items: [
+      { name: 'Лагман', share: 76000, sharedWith: 1 },
+      { name: 'Ачик-чучук', share: 56000, sharedWith: 2 } ] },
+  ],
+};
+
+const debtsStress = {
+  personName: 'Абдусаматов Аброржон Шухратович', currency: 'UZS', net: -1830000, totalGiven: 1200000, totalTaken: 3030000,
+  snapshotAt: Date.parse('2026-08-31'),
+  debts: [
+    { title: 'Первый взнос за квартиру в Юнусабаде', direction: 'taken', currency: 'UZS', totalAmount: 2000000, remainingAmount: 1800000, paidAmount: 200000, forgivenAmount: 0, dueDate: '2026-12-01' },
+    { title: 'Стройматериалы', direction: 'taken', currency: 'USD', totalAmount: 100, remainingAmount: 100, paidAmount: 0, forgivenAmount: 0, dueDate: null },
+    { title: 'Одолжил на свадьбу', direction: 'given', currency: 'UZS', totalAmount: 1200000, remainingAmount: 1200000, paidAmount: 0, forgivenAmount: 0, dueDate: '2026-09-20' },
+    { title: 'Такси в аэропорт', direction: 'taken', currency: 'UZS', totalAmount: 130000, remainingAmount: 130000, paidAmount: 0, forgivenAmount: 0, dueDate: null },
+  ],
+};
+document.fonts.ready.then(() => {
+  render(document.getElementById('debtsStress'), debtsBody(debtsStress), 404);
+  render(document.getElementById('debts'), debtsBody(debtsMutual), 831);
+  render(document.getElementById('debtsSimple'), debtsBody(debtsSimple), 77);
+  render(document.getElementById('receipt'), receiptBody(receipt), 829);
+  document.getElementById('ogDebts').innerHTML = buildDebtsOg(debtsStress);
+  document.getElementById('ogReceipt').innerHTML = buildReceiptOg(receipt);
+  document.title = 'ready';
+});
+</script>

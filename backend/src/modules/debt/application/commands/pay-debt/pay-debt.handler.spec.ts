@@ -53,6 +53,8 @@ describe('PayDebtHandler', () => {
     let counter = 0;
     mockCommandBus.execute.mockImplementation(() => Promise.resolve({ id: `tx-${++counter}` }));
     mockRepository.save.mockImplementation((debt: Debt) => Promise.resolve(debt));
+    // Счёт долга существует — прощение ложится на него
+    mockManager.query.mockResolvedValue([{ id: 'account-debt' }]);
   });
 
   function createDebt(
@@ -216,6 +218,15 @@ describe('PayDebtHandler', () => {
       await handler.execute(command({ amount: 0, forgiveRemainder: true }));
 
       expect(txArg(0).accountId).toBe('account-debt');
+    });
+
+    it('удалённый счёт долга не роняет прощение — запись уходит на счёт платежа', async () => {
+      mockManager.query.mockResolvedValue([]);
+      mockRepository.findById.mockResolvedValue(createDebt({ accountId: 'account-gone' }));
+
+      await handler.execute(command({ amount: 0, forgiveRemainder: true }));
+
+      expect(txArg(0).accountId).toBe('account-1');
     });
   });
 

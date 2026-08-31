@@ -75,6 +75,28 @@ export function getDebtProgress(debt: Debt): number {
   return Math.min(100, Math.max(0, Math.round((paid / debt.total_amount) * 100)));
 }
 
+/**
+ * Что у долга можно править напрямую. Остатка, закрытия и прощённого здесь
+ * нет: их считает сервер по платежу, и клиенту эти поля писать нечем.
+ */
+export type DebtUpdate = Partial<
+  Pick<
+    Debt,
+    | 'name'
+    | 'total_amount'
+    | 'monthly_payment'
+    | 'next_payment_date'
+    | 'debt_type'
+    | 'person_name'
+    | 'account_id'
+    | 'transaction_id'
+    | 'source_transaction_id'
+    | 'description'
+    | 'is_private'
+    | 'created_at'
+  >
+>;
+
 // --- Paginated debts ---
 
 export interface DebtGroupResponse {

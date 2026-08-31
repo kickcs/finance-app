@@ -314,6 +314,35 @@ describe('Debt Aggregate', () => {
     });
   });
 
+  describe('changeTotalAmount', () => {
+    it('двигает остаток на ту же дельту — возвращённое остаётся возвращённым', () => {
+      const debt = Debt.create(defaultProps);
+      debt.makePayment(300);
+
+      debt.changeTotalAmount(1200);
+
+      expect(debt.totalAmountValue).toBe(1200);
+      expect(debt.remainingAmountValue).toBe(900);
+    });
+
+    it('уменьшение суммы ниже возвращённого не уводит остаток в минус', () => {
+      const debt = Debt.create(defaultProps);
+      debt.makePayment(800);
+
+      debt.changeTotalAmount(100);
+
+      expect(debt.remainingAmountValue).toBe(0);
+    });
+
+    it('по нетронутому долгу остаток равен новой сумме', () => {
+      const debt = Debt.create(defaultProps);
+
+      debt.changeTotalAmount(1500);
+
+      expect(debt.remainingAmountValue).toBe(1500);
+    });
+  });
+
   describe('setForgivenAmount', () => {
     it('should set forgiven amount', () => {
       const debt = Debt.create(defaultProps);

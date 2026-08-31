@@ -16,6 +16,8 @@ import { DEBT_CATEGORY_IDS } from '../../../../accounting/domain/constants/defau
 
 export interface PayDebtResultDto {
   debt: DebtResponseDto;
+  /** Запись самого платежа. Null, когда остаток только прощён. */
+  paymentTransactionId: string | null;
   /** Идентификаторы созданных записей — в порядке создания. */
   transactionIds: string[];
 }
@@ -76,6 +78,7 @@ export class PayDebtHandler implements ICommandHandler<PayDebtCommand> {
     const isGiven = debt.debtTypeValue === 'given';
     const currency = debt.currency;
     const transactionIds: string[] = [];
+    let paymentTransactionId: string | null = null;
     // Долг, заведённый без движения денег, возвращается такой же информационной
     // записью: иначе возврат создаст баланс, которого не создавала выдача.
     const hadBalanceEffect = !!debt.transactionId || !!debt.sourceTransactionId;
@@ -97,6 +100,7 @@ export class PayDebtHandler implements ICommandHandler<PayDebtCommand> {
           debtId: debt.id,
         });
         closeTransactionId = id;
+        paymentTransactionId = id;
         transactionIds.push(id);
       }
 
@@ -121,9 +125,7 @@ export class PayDebtHandler implements ICommandHandler<PayDebtCommand> {
       if (forgiveRemainder && remainderAfter > 0) {
         const id = await this.createTransaction(manager, {
           userId,
-          // `debts.account_id` живёт без внешнего ключа и может указывать на
-          // удалённый счёт — тогда запись ляжет на счёт платежа.
-          accountId: debt.accountId ?? accountId,
+          accountId: await this.forgivenessAccountId(manager, userId, debt.accountId, accountId),
           categoryId: DEBT_CATEGORY_IDS.FORGIVEN,
           amount: remainderAfter,
           currency,
@@ -146,7 +148,27 @@ export class PayDebtHandler implements ICommandHandler<PayDebtCommand> {
       await this.debtRepository.save(debt, manager);
     });
 
-    return { debt: DebtResponseMapper.toResponse(debt), transactionIds };
+    return { debt: DebtResponseMapper.toResponse(debt), paymentTransactionId, transactionIds };
+  }
+
+  /**
+   * Прощение хочется положить на счёт долга, ради точности истории. Но
+   * `debts.account_id` живёт без внешнего ключа и может указывать на удалённый
+   * счёт, а упавший внутри транзакции запрос уже не повторить — поэтому счёт
+   * проверяется заранее, и при промахе запись ложится на счёт платежа.
+   */
+  private async forgivenessAccountId(
+    manager: EntityManager,
+    userId: string,
+    preferred: string | null,
+    fallback: string,
+  ): Promise<string> {
+    if (!preferred || preferred === fallback) return fallback;
+    const rows = await manager.query<{ id: string }[]>(
+      'SELECT id FROM accounts WHERE id = $1 AND user_id = $2 LIMIT 1',
+      [preferred, userId],
+    );
+    return rows.length > 0 ? preferred : fallback;
   }
 
   private paymentDescription(debt: Debt, willClose: boolean): string {
