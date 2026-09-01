@@ -80,7 +80,7 @@ export function usePayDebt() {
         excessCategoryId: options?.excessCategoryId,
       });
 
-      applyDebtUpdate(queryClient, debt.id, result.debt);
+      if (!options?.bulk) applyDebtUpdate(queryClient, debt.id, result.debt);
       if (result.payment_transaction_id) {
         options?.onTransactionCreated?.(result.payment_transaction_id);
       }

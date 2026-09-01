@@ -1,12 +1,6 @@
 import { ref } from 'vue';
 import { usePayDebt } from './usePayDebt';
-import {
-  snapshotDebtCaches,
-  restoreDebtCaches,
-  applyDebtUpdate,
-  buildDebtPaymentPatch,
-  type DebtCacheSnapshot,
-} from '@/entities/debt';
+import { applyDebtUpdate, buildDebtPaymentPatch, debtQueryKeys } from '@/entities/debt';
 import { queryClient } from '@/shared/api/queryClient';
 import { invalidateDebtRelated } from '@/shared/api/invalidation';
 import { useToast } from '@/shared/ui';
@@ -55,8 +49,6 @@ export function useCloseAllDebts() {
 
     const sorted = sortDebtsByDateAsc(debts);
 
-    let snapshot: DebtCacheSnapshot | null = null;
-
     try {
       // Pre-compute (debt, allocatedAmount) pairs synchronously
       let budget = paymentAmount;
@@ -90,16 +82,9 @@ export function useCloseAllDebts() {
         });
       }
 
-      // Весь план применяется к кэшу разом: у отдельных платежей в пачке
-      // оптимистичная правка выключена, чтобы остатки не прыгали по одному.
-      snapshot = await snapshotDebtCaches(queryClient);
-      for (const plan of paymentPlan) {
-        applyDebtUpdate(
-          queryClient,
-          plan.debt.id,
-          buildDebtPaymentPatch(plan.debt, plan.amount, plan.forgive),
-        );
-      }
+      // Летящие запросы отменяем, чтобы ответ, посланный до платежей, не
+      // приземлился посреди пачки и не дёрнул список под шторкой.
+      await queryClient.cancelQueries({ queryKey: debtQueryKeys.all });
 
       // Execute payments sequentially (same account — parallel would cause balance race conditions)
       let firstCreatedTransactionId: string | null = null;
@@ -121,11 +106,25 @@ export function useCloseAllDebts() {
         progress.value++;
       }
 
+      // Кэши правятся один раз и только когда пачка отработала: у платежей
+      // внутри неё оптимистичная правка выключена. Применённый до цикла план
+      // убирал долги из кэша на всё время запросов, и открытая шторка вместе
+      // со списком за ней схлопывались в «Вы без долгов!».
+      for (const plan of paymentPlan) {
+        applyDebtUpdate(
+          queryClient,
+          plan.debt.id,
+          buildDebtPaymentPatch(plan.debt, plan.amount, plan.forgive),
+        );
+      }
+
       if (firstCreatedTransactionId) {
         options?.onTransactionCreated?.(firstCreatedTransactionId);
       }
 
-      await invalidateDebtRelated(queryClient, userId);
+      // Перезапрос не ждём: кэши уже в конечном состоянии, а ожидание держало
+      // бы на экране список, который вызывающий закрывает прямо сейчас.
+      invalidateDebtRelated(queryClient, userId).catch(() => {});
       if (!options?.skipSuccessToast) {
         toast({ title: 'Все долги закрыты', variant: 'success' });
       }
@@ -137,9 +136,8 @@ export function useCloseAllDebts() {
         title: options?.errorToastTitle ?? 'Не удалось закрыть все долги',
         variant: 'error',
       });
-      // Some payments may have succeeded — restore the snapshot, then refetch
-      // the actual partial result from the server.
-      if (snapshot) restoreDebtCaches(queryClient, snapshot);
+      // Часть платежей могла пройти, а оптимистичных правок до сюда не было —
+      // откатывать нечего, состояние спрашиваем у сервера.
       await invalidateDebtRelated(queryClient, userId).catch(() => {});
       return false;
     } finally {
