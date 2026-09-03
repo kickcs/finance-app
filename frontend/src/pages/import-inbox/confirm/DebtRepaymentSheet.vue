@@ -11,7 +11,11 @@ import { UIcon, IconBadge } from '@/shared/ui';
 import { useIsDesktop } from '@/shared/lib/composables/useIsDesktop';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { DEBT_DIRECTION_COLORS } from '@/entities/debt';
-import { debtsCountLabel, type RepaymentGroup } from '../model/debtRepayment';
+import {
+  debtsCountLabel,
+  repaymentDifferenceLabel,
+  type RepaymentGroup,
+} from '../model/debtRepayment';
 
 defineProps<{
   open: boolean;
@@ -101,6 +105,10 @@ const isDesktop = useIsDesktop();
                 <template v-else>
                   Остаток: {{ formatCurrency(group.totalRemaining, group.currency) }}
                 </template>
+              </p>
+              <!-- Сумма сошлась не копейка в копейку: говорим, куда денется разница. -->
+              <p v-if="repaymentDifferenceLabel(group)" class="text-xs text-primary">
+                {{ repaymentDifferenceLabel(group) }}
               </p>
             </div>
             <UIcon
