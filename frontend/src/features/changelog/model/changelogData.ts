@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.85';
+export const CURRENT_VERSION = '1.0.86';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,21 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.86',
+    date: '2026-09-03',
+    title: 'Погашение долга ловит округление',
+    items: [
+      {
+        type: 'improvement',
+        text: 'Долг узнаётся, даже если сумма перевода не сошлась копейка в копейку: человек скинул на тысячу больше или меньше — подсказка «похоже, это возврат долга» всё равно появится, и человек больше не пропадает из списка погашения.',
+      },
+      {
+        type: 'improvement',
+        text: 'В списке погашения видно, что будет с разницей: переплата запишется отдельным доходом или расходом, а мелкий остаток спишется и долг закроется полностью.',
+      },
+    ],
+  },
   {
     version: '1.0.85',
     date: '2026-08-31',
