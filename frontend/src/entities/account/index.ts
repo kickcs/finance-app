@@ -7,6 +7,7 @@ export type { AccountTypeFieldValues } from './model/types';
 // Model/Types
 export * from './model/types';
 export * from './model/account-types';
+export * from './model/creditCard';
 
 // API
 export * from './api';
