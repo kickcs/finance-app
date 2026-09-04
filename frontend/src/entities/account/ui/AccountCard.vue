@@ -4,6 +4,7 @@ import { UIcon } from '@/shared/ui';
 import { formatCurrency, COMPACT_FORMAT } from '@/shared/lib/format/currency';
 import { getCurrencyByCode } from '@/entities/currency';
 import { getAccountTypeLabel } from '../model/account-types';
+import { getCreditCardState, isCreditCard } from '../model/creditCard';
 import type { AccountWithBalances } from '../model/types';
 
 const props = withDefaults(
@@ -29,6 +30,14 @@ const formattedBalance = computed(() => {
   const b = balances[0];
   return formatCurrency(b.balance, b.currency, COMPACT_FORMAT);
 });
+
+// У кредитки правая колонка говорит про долг и доступный остаток, а не про
+// «баланс»: минус в списке счетов иначе читается как ошибка ввода.
+const isCard = computed(() => isCreditCard(props.account) && props.account.balances?.length === 1);
+const cardBalance = computed(() => props.account.balances?.[0] ?? null);
+const cardState = computed(() =>
+  cardBalance.value ? getCreditCardState(props.account, cardBalance.value.balance) : null,
+);
 </script>
 
 <template>
@@ -97,6 +106,36 @@ const formattedBalance = computed(() => {
           class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
         >
           +{{ account.balances.length - 2 }} ещё
+        </p>
+      </div>
+
+      <!-- Credit card -->
+      <div
+        v-else-if="isCard && cardState && cardBalance"
+        data-testid="account-card-credit"
+        class="space-y-0.5"
+      >
+        <p
+          class="font-semibold text-sm truncate"
+          :class="
+            cardState.debt > 0
+              ? 'text-danger'
+              : 'text-text-primary-light dark:text-text-primary-dark'
+          "
+        >
+          {{
+            formatCurrency(
+              cardState.debt > 0 ? -cardState.debt : cardBalance.balance,
+              cardBalance.currency,
+              COMPACT_FORMAT,
+            )
+          }}
+        </p>
+        <p
+          v-if="typeof cardState.available === 'number' && (cardState.limit ?? 0) > 0"
+          class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark truncate"
+        >
+          доступно {{ formatCurrency(cardState.available, cardBalance.currency, COMPACT_FORMAT) }}
         </p>
       </div>
 
