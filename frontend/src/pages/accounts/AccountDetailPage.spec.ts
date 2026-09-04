@@ -158,39 +158,42 @@ describe('AccountDetailPage', () => {
       );
     });
 
-    it('shows credit card specific info', async () => {
+    it('shows credit card summary instead of the plain balance block', async () => {
       const wrapper = await renderPage('acc-3');
-      expect(wrapper.text()).toContain('Кредитная карта');
+      expect(wrapper.find('[data-testid="credit-card-summary"]').exists()).toBe(true);
     });
 
-    it('shows credit limit', async () => {
-      const wrapper = await renderPage('acc-3');
-      expect(wrapper.text()).toContain('Лимит');
-    });
-
-    it('shows available balance', async () => {
-      const wrapper = await renderPage('acc-3');
-      expect(wrapper.text()).toContain('Доступно');
-    });
-
-    it('shows debt label when balance is negative', async () => {
+    it('shows debt as the hero when balance is negative', async () => {
       const wrapper = await renderPage('acc-3');
       expect(wrapper.text()).toContain('Задолженность');
+      expect(wrapper.text()).toContain('120 000');
     });
 
-    it('shows credit card parameters section', async () => {
+    it('shows available and limit as the two ends of the meter', async () => {
       const wrapper = await renderPage('acc-3');
-      expect(wrapper.text()).toContain('Параметры кредитной карты');
+      expect(wrapper.text()).toContain('доступно');
+      expect(wrapper.text()).toContain('380 000');
+      expect(wrapper.text()).toContain('лимит');
+      expect(wrapper.text()).toContain('500 000');
+    });
+
+    it('shows only the card parameters that are set', async () => {
+      const wrapper = await renderPage('acc-3');
       expect(wrapper.text()).toContain('Грейс-период');
       expect(wrapper.text()).toContain('55 дней');
       expect(wrapper.text()).toContain('День выписки');
       expect(wrapper.text()).toContain('15-е число');
+      expect(wrapper.text()).not.toContain('Мин. платёж');
+    });
+
+    it('drops the separate credit card parameters card', async () => {
+      const wrapper = await renderPage('acc-3');
+      expect(wrapper.text()).not.toContain('Параметры кредитной карты');
     });
 
     it('shows usage progress bar', async () => {
       const wrapper = await renderPage('acc-3');
-      const progressbar = wrapper.find('[role="progressbar"]');
-      expect(progressbar.exists()).toBe(true);
+      expect(wrapper.find('[role="progressbar"]').exists()).toBe(true);
     });
   });
 

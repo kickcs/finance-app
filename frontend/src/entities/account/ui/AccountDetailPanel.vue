@@ -2,9 +2,10 @@
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { ROUTE_NAMES } from '@/app/router/routeNames';
-import { UButton, UIcon, UCard, UProgressBar, EmptyState, USpinner } from '@/shared/ui';
+import { UButton, UIcon, UCard, EmptyState, USpinner } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { useAccounts, getAccountTypeLabel } from '@/entities/account';
+import CreditCardSummary from './CreditCardSummary.vue';
 import { DEBT_CATEGORY_IDS } from '@/entities/category';
 import {
   TransactionItem,
@@ -120,67 +121,12 @@ const groupedTransactions = useGroupedTransactions(accountTransactions, {
           </div>
         </div>
 
-        <!-- Credit Card Balances -->
+        <!-- Credit Card Summary -->
         <div
-          v-if="account.type === 'credit_card' && account.credit_limit != null"
-          class="pt-4 border-t border-border-light dark:border-border-dark space-y-4"
+          v-if="account.type === 'credit_card'"
+          class="pt-4 border-t border-border-light dark:border-border-dark"
         >
-          <div v-for="balance in account.balances" :key="balance.currency" class="space-y-3">
-            <div class="flex justify-between items-center">
-              <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
-                {{ balance.balance < 0 ? 'Задолженность' : 'Собственные средства' }}
-              </span>
-              <span
-                class="text-xl font-bold"
-                :class="
-                  balance.balance < 0
-                    ? 'text-danger'
-                    : 'text-text-primary-light dark:text-text-primary-dark'
-                "
-              >
-                {{ formatCurrency(balance.balance, balance.currency) }}
-              </span>
-            </div>
-
-            <div class="flex justify-between items-center">
-              <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
-                Доступно
-              </span>
-              <span class="text-sm font-semibold text-success">
-                {{ formatCurrency(account.credit_limit + balance.balance, balance.currency) }}
-              </span>
-            </div>
-
-            <div class="flex justify-between items-center">
-              <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
-                Лимит
-              </span>
-              <span
-                class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark"
-              >
-                {{ formatCurrency(account.credit_limit, balance.currency) }}
-              </span>
-            </div>
-
-            <!-- Progress bar -->
-            <div v-if="balance.balance < 0 && account.credit_limit > 0">
-              <UProgressBar
-                :value="Math.abs(balance.balance)"
-                :max="account.credit_limit"
-                :color="
-                  Math.abs(balance.balance) / account.credit_limit > 0.8 ? 'danger' : 'primary'
-                "
-                show-label
-                aria-label="Использование кредитного лимита"
-              >
-                <template #label>
-                  <span class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
-                    использовано
-                  </span>
-                </template>
-              </UProgressBar>
-            </div>
-          </div>
+          <CreditCardSummary :account="account" />
         </div>
 
         <!-- Regular Balances -->

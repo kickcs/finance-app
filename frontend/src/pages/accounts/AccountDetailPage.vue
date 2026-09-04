@@ -6,7 +6,12 @@ import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { UButton, UIcon, UCard, EmptyState, USpinner, NotFoundState } from '@/shared/ui';
 import { AppHeader } from '@/widgets/header';
 import { formatCurrency } from '@/shared/lib/format/currency';
-import { useAccounts, getAccountTypeLabel, type AccountWithBalances } from '@/entities/account';
+import {
+  useAccounts,
+  getAccountTypeLabel,
+  CreditCardSummary,
+  type AccountWithBalances,
+} from '@/entities/account';
 import { DEBT_CATEGORY_IDS } from '@/entities/category';
 import {
   VirtualGroupedTransactionList,
@@ -255,84 +260,12 @@ async function handleAdjustBalance(data: {
             </div>
           </div>
 
-          <!-- Credit Card Balances -->
+          <!-- Credit Card Summary -->
           <div
-            v-if="account.type === 'credit_card' && account.credit_limit != null"
-            class="mt-6 pt-6 border-t border-border-light dark:border-border-dark space-y-4"
+            v-if="account.type === 'credit_card'"
+            class="mt-6 pt-6 border-t border-border-light dark:border-border-dark"
           >
-            <div v-for="balance in account.balances" :key="balance.currency" class="space-y-3">
-              <!-- Balance row -->
-              <div class="flex justify-between items-center">
-                <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
-                  {{ balance.balance < 0 ? 'Задолженность' : 'Собственные средства' }}
-                </span>
-                <span
-                  class="text-xl font-bold"
-                  :class="
-                    balance.balance < 0
-                      ? 'text-danger'
-                      : 'text-text-primary-light dark:text-text-primary-dark'
-                  "
-                >
-                  {{ formatCurrency(balance.balance, balance.currency) }}
-                </span>
-              </div>
-
-              <!-- Available -->
-              <div class="flex justify-between items-center">
-                <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
-                  Доступно
-                </span>
-                <span class="text-sm font-semibold text-success">
-                  {{ formatCurrency(account.credit_limit + balance.balance, balance.currency) }}
-                </span>
-              </div>
-
-              <!-- Limit -->
-              <div class="flex justify-between items-center">
-                <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
-                  Лимит
-                </span>
-                <span
-                  class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark"
-                >
-                  {{ formatCurrency(account.credit_limit, balance.currency) }}
-                </span>
-              </div>
-
-              <!-- Progress bar -->
-              <div v-if="balance.balance < 0 && account.credit_limit > 0" class="space-y-1">
-                <div
-                  class="h-2 rounded-full bg-surface-light dark:bg-surface-dark overflow-hidden"
-                  role="progressbar"
-                  :aria-valuenow="
-                    Math.min(
-                      Math.round((Math.abs(balance.balance) / account.credit_limit) * 100),
-                      100,
-                    )
-                  "
-                  aria-valuemin="0"
-                  aria-valuemax="100"
-                  :aria-label="`Использовано ${Math.min(Math.round((Math.abs(balance.balance) / account.credit_limit) * 100), 100)}% кредитного лимита`"
-                >
-                  <div
-                    class="h-full rounded-full transition-all duration-300"
-                    :class="
-                      Math.abs(balance.balance) / account.credit_limit > 0.8
-                        ? 'bg-danger'
-                        : 'bg-primary'
-                    "
-                    :style="{
-                      width: `${Math.min((Math.abs(balance.balance) / account.credit_limit) * 100, 100)}%`,
-                    }"
-                  />
-                </div>
-                <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark text-right">
-                  {{ Math.round((Math.abs(balance.balance) / account.credit_limit) * 100) }}%
-                  использовано
-                </p>
-              </div>
-            </div>
+            <CreditCardSummary :account="account" />
           </div>
 
           <!-- Regular Balances -->
@@ -390,39 +323,6 @@ async function handleAdjustBalance(data: {
             >
               <UIcon name="delete" size="sm" />
             </UButton>
-          </div>
-        </UCard>
-
-        <!-- Type-Specific Info -->
-        <UCard
-          v-if="
-            account.type === 'credit_card' &&
-            (account.grace_period_days != null || account.billing_day != null)
-          "
-          class="p-5"
-        >
-          <h3
-            class="text-sm font-semibold text-text-secondary-light dark:text-text-secondary-dark mb-3"
-          >
-            Параметры кредитной карты
-          </h3>
-          <div class="space-y-2">
-            <div v-if="account.grace_period_days != null" class="flex justify-between">
-              <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
-                Грейс-период
-              </span>
-              <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
-                {{ account.grace_period_days }} дней
-              </span>
-            </div>
-            <div v-if="account.billing_day != null" class="flex justify-between">
-              <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
-                День выписки
-              </span>
-              <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
-                {{ account.billing_day }}-е число
-              </span>
-            </div>
           </div>
         </UCard>
 
