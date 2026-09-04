@@ -295,6 +295,17 @@ export function generateDemoData(): GeneratedDemoData {
         type: 'savings',
         balances: [{ currency: 'UZS', balance: roundToThousand(savingsBalance) }],
       },
+      {
+        name: 'Кредитная карта',
+        icon: 'credit_card',
+        color: '#f97316',
+        type: 'credit_card',
+        balances: [{ currency: 'UZS', balance: -2350000 }],
+        creditLimit: 10000000,
+        monthlyPayment: 500000,
+        gracePeriodDays: 55,
+        billingDay: 5,
+      },
     ],
     transactions,
     debts: [

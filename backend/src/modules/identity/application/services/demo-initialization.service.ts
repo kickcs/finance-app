@@ -228,6 +228,19 @@ export class DemoInitializationService {
         type: 'savings',
         balances: [{ currency: 'UZS', balance: savingsBalance }],
       },
+      {
+        name: this.t('demo.accounts.creditCard', lang),
+        icon: 'credit_card',
+        color: '#f97316',
+        type: 'credit_card',
+        balances: [{ currency: 'UZS', balance: -2350000 }],
+        typeFields: {
+          creditLimit: 10000000,
+          monthlyPayment: 500000,
+          gracePeriodDays: 55,
+          billingDay: 5,
+        },
+      },
     ];
 
     const savedAccounts: Account[] = [];

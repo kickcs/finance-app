@@ -8,12 +8,14 @@ import { DEBT_REPOSITORY } from '../../../debt/domain/repositories/debt.reposito
 import { PERSON_REPOSITORY } from '../../../person/domain/repositories/person.repository.interface';
 import { DomainEventPublisher } from '../../../../shared';
 import type { Profile } from '../../domain';
+import type { Account } from '../../../accounting/domain/aggregates/account';
 
 type AnyObject = Record<string, any>;
 
 const RU_TRANSLATIONS: Record<string, string | string[]> = {
   'demo.accounts.main': 'Основной',
   'demo.accounts.savings': 'Накопительный',
+  'demo.accounts.creditCard': 'Кредитная карта',
   'demo.contacts.ahmed': 'Ахмед',
   'demo.contacts.anna': 'Анна',
   'demo.contacts.kolya': 'Коля',
@@ -122,11 +124,24 @@ describe('DemoInitializationService', () => {
     mockEventPublisher.publishEventsFromMultiple.mockResolvedValue(undefined);
   });
 
-  it('should call i18n.translate for account names using demo.accounts.main and demo.accounts.savings', async () => {
+  it('should call i18n.translate for all three demo account names', async () => {
     await service.initializeDemoData(mockProfile);
 
     expect(mockI18n.translate).toHaveBeenCalledWith('demo.accounts.main', { lang: 'ru' });
     expect(mockI18n.translate).toHaveBeenCalledWith('demo.accounts.savings', { lang: 'ru' });
+    expect(mockI18n.translate).toHaveBeenCalledWith('demo.accounts.creditCard', { lang: 'ru' });
+  });
+
+  it('creates the demo credit card with its limit and payment fields', async () => {
+    await service.initializeDemoData(mockProfile);
+
+    const saved = mockAccountRepo.save.mock.calls.map(([a]: [Account]) => a);
+    const card = saved.find((a) => a.typeValue === 'credit_card');
+    expect(card).toBeDefined();
+    expect(card?.creditLimit).toBe(10_000_000);
+    expect(card?.monthlyPayment).toBe(500_000);
+    expect(card?.gracePeriodDays).toBe(55);
+    expect(card?.billingDay).toBe(5);
   });
 
   it('should use profile.language to resolve lang', async () => {

@@ -1,7 +1,8 @@
 {
   "accounts": {
     "main": "Main",
-    "savings": "Savings"
+    "savings": "Savings",
+    "creditCard": "Credit card"
   },
   "contacts": {
     "ahmed": "Ahmed",
