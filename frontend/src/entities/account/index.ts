@@ -2,6 +2,7 @@
 export { default as AccountCard } from './ui/AccountCard.vue';
 export { default as AccountDetailPanel } from './ui/AccountDetailPanel.vue';
 export { default as AccountTypeFields } from './ui/AccountTypeFields.vue';
+export { default as AccountTypeSelector } from './ui/AccountTypeSelector.vue';
 export type { AccountTypeFieldValues } from './model/types';
 
 // Model/Types

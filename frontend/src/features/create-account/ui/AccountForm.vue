@@ -2,14 +2,8 @@
 import { UInput, UButton, UColorPicker, UIconSelector } from '@/shared/ui';
 import CurrencyBalanceList from './CurrencyBalanceList.vue';
 import type { AccountFormData } from '../model/useCreateAccount';
-import {
-  VISIBLE_ACCOUNT_TYPES,
-  ACCOUNT_TYPE_LABELS,
-  AccountTypeFields,
-  ACCOUNT_ICONS,
-} from '@/entities/account';
+import { AccountTypeFields, AccountTypeSelector, ACCOUNT_ICONS } from '@/entities/account';
 import { ENTITY_COLORS } from '@/shared/config/colors';
-import type { AccountType } from '@/entities/account';
 
 const props = defineProps<{
   formData: AccountFormData;
@@ -54,23 +48,10 @@ function updateField<K extends keyof AccountFormData>(field: K, value: AccountFo
       <label class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">
         {{ $t('features.createAccount.typeLabel') }}
       </label>
-      <div class="grid grid-cols-2 gap-2" data-testid="account-type-selector">
-        <button
-          v-for="t in VISIBLE_ACCOUNT_TYPES"
-          :key="t"
-          type="button"
-          :data-testid="`account-type-${t}`"
-          :class="[
-            'px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 border',
-            formData.type === t
-              ? 'bg-primary text-white border-primary'
-              : 'bg-surface-light dark:bg-surface-dark text-text-secondary-light dark:text-text-secondary-dark border-border-light dark:border-border-dark hover:border-primary/50',
-          ]"
-          @click="updateField('type', t as AccountType)"
-        >
-          {{ ACCOUNT_TYPE_LABELS[t] }}
-        </button>
-      </div>
+      <AccountTypeSelector
+        :model-value="formData.type"
+        @update:model-value="updateField('type', $event)"
+      />
     </div>
 
     <!-- Type-specific Fields -->
