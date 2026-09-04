@@ -6,8 +6,13 @@ import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 import { useExchangeRates } from '@/shared/api';
 import { useHaptics } from '@/shared/lib/haptics';
-import { useAccounts, type AccountWithBalances } from '@/entities/account';
+import {
+  useAccounts,
+  sumCreditCardDebtByCurrency,
+  type AccountWithBalances,
+} from '@/entities/account';
 import { useEditAccount } from '@/features/edit-account';
+import { useAdjustBalance } from '@/features/adjust-balance';
 import { transactionsApi, transactionQueryKeys } from '@/entities/transaction';
 import type { Account } from '@/shared/api/database.types';
 
@@ -53,6 +58,18 @@ export function useAccountsPage(selectedAccountId: MaybeRefOrGetter<string | nul
     const balances = totalBalancesByCurrency.value;
     let total = 0;
     for (const [curr, amount] of Object.entries(balances)) {
+      total += convert(amount, curr);
+    }
+    return total;
+  });
+
+  // Долг по кредиткам считается отдельно от итога: в «Общем балансе» он уже
+  // вычтен (баланс карты отрицательный), а строка под ним объясняет, за счёт
+  // чего итог просел.
+  const creditCardDebt = computed(() => {
+    const byCurrency = sumCreditCardDebtByCurrency(accounts.value);
+    let total = 0;
+    for (const [curr, amount] of Object.entries(byCurrency)) {
       total += convert(amount, curr);
     }
     return total;
@@ -130,9 +147,12 @@ export function useAccountsPage(selectedAccountId: MaybeRefOrGetter<string | nul
     showDeleteAccountModal.value = true;
   }
 
-  async function handleUpdateAccount(updates: Partial<Account>) {
+  async function handleUpdateAccount(
+    updates: Partial<Account>,
+    debtByCurrency?: Record<string, number>,
+  ) {
     if (!selectedAccount.value) return false;
-    const success = await updateAccountFn(selectedAccount.value.id, updates);
+    const success = await updateAccountFn(selectedAccount.value.id, updates, { debtByCurrency });
     if (success) {
       showEditAccountModal.value = false;
     }
@@ -148,12 +168,39 @@ export function useAccountsPage(selectedAccountId: MaybeRefOrGetter<string | nul
     return success;
   }
 
+  // ─── Корректировка баланса ────────────────────────────────────────────
+  // Тост неудачной конвертации в кредитку отправляет пользователя именно сюда,
+  // поэтому кнопка нужна и на десктопе, а не только на экране счёта.
+  const showAdjustBalanceModal = ref(false);
+  const adjustBalanceCurrency = ref('');
+  const { adjustBalance, isAdjusting: isAdjustingBalance } = useAdjustBalance(() => userId.value);
+
+  function openAdjustBalance(balanceCurrency?: string) {
+    adjustBalanceCurrency.value =
+      balanceCurrency ?? selectedAccount.value?.balances?.[0]?.currency ?? currency.value;
+    showAdjustBalanceModal.value = true;
+  }
+
+  async function handleAdjustBalance(data: {
+    accountId: string;
+    targetBalance: number;
+    currency: string;
+    description: string;
+  }) {
+    const success = await adjustBalance(data);
+    if (success) {
+      showAdjustBalanceModal.value = false;
+    }
+    return success;
+  }
+
   return {
     userId,
     currency,
     accounts,
     isLoading,
     totalBalance,
+    creditCardDebt,
     totalBalancesByCurrency,
     localAccounts,
     handleAddAccount,
@@ -169,9 +216,14 @@ export function useAccountsPage(selectedAccountId: MaybeRefOrGetter<string | nul
     accountError,
     accountTransactionsCount,
     isLoadingTransactionsCount,
+    showAdjustBalanceModal,
+    adjustBalanceCurrency,
+    isAdjustingBalance,
     openEditModal,
     openDeleteModal,
+    openAdjustBalance,
     handleUpdateAccount,
     handleDeleteAccount,
+    handleAdjustBalance,
   };
 }

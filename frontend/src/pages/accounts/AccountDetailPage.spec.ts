@@ -24,6 +24,8 @@ vi.mock('@/app/router', () => ({
   resetOnboardingVerified: vi.fn(),
 }));
 
+vi.mock('vaul-vue', async () => (await import('@/test/stubs/vaul')).vaulStub);
+
 // ---------------------------------------------------------------------------
 
 const routes = [
@@ -158,39 +160,53 @@ describe('AccountDetailPage', () => {
       );
     });
 
-    it('shows credit card specific info', async () => {
+    it('shows credit card summary instead of the plain balance block', async () => {
       const wrapper = await renderPage('acc-3');
-      expect(wrapper.text()).toContain('Кредитная карта');
+      expect(wrapper.find('[data-testid="credit-card-summary"]').exists()).toBe(true);
     });
 
-    it('shows credit limit', async () => {
-      const wrapper = await renderPage('acc-3');
-      expect(wrapper.text()).toContain('Лимит');
-    });
-
-    it('shows available balance', async () => {
-      const wrapper = await renderPage('acc-3');
-      expect(wrapper.text()).toContain('Доступно');
-    });
-
-    it('shows debt label when balance is negative', async () => {
+    it('shows debt as the hero when balance is negative', async () => {
       const wrapper = await renderPage('acc-3');
       expect(wrapper.text()).toContain('Задолженность');
+      expect(wrapper.text()).toContain('120 000');
     });
 
-    it('shows credit card parameters section', async () => {
+    it('shows available and limit as the two ends of the meter', async () => {
       const wrapper = await renderPage('acc-3');
-      expect(wrapper.text()).toContain('Параметры кредитной карты');
+      expect(wrapper.text()).toContain('доступно');
+      expect(wrapper.text()).toContain('380 000');
+      expect(wrapper.text()).toContain('лимит');
+      expect(wrapper.text()).toContain('500 000');
+    });
+
+    it('shows only the card parameters that are set', async () => {
+      const wrapper = await renderPage('acc-3');
       expect(wrapper.text()).toContain('Грейс-период');
       expect(wrapper.text()).toContain('55 дней');
       expect(wrapper.text()).toContain('День выписки');
       expect(wrapper.text()).toContain('15-е число');
+      expect(wrapper.text()).not.toContain('Мин. платёж');
+    });
+
+    it('shows the minimum payment when the account has one', async () => {
+      server.use(
+        http.get('*/api/accounts', () =>
+          HttpResponse.json([{ ...mockCreditCardAccountResponse, monthlyPayment: 300000 }]),
+        ),
+      );
+      const wrapper = await renderPage('acc-3');
+      expect(wrapper.text()).toContain('Мин. платёж');
+      expect(wrapper.text()).toContain('300 000');
+    });
+
+    it('drops the separate credit card parameters card', async () => {
+      const wrapper = await renderPage('acc-3');
+      expect(wrapper.text()).not.toContain('Параметры кредитной карты');
     });
 
     it('shows usage progress bar', async () => {
       const wrapper = await renderPage('acc-3');
-      const progressbar = wrapper.find('[role="progressbar"]');
-      expect(progressbar.exists()).toBe(true);
+      expect(wrapper.find('[role="progressbar"]').exists()).toBe(true);
     });
   });
 
@@ -288,7 +304,7 @@ describe('AccountDetailPage', () => {
       expect(editBtn).toBeDefined();
       await editBtn!.trigger('click');
 
-      const editModal = wrapper.findComponent({ name: 'EditAccountModal' });
+      const editModal = wrapper.findComponent({ name: 'EditAccountDrawer' });
       expect(editModal.exists()).toBe(true);
       expect(editModal.props('modelValue')).toBe(true);
     });
@@ -406,7 +422,7 @@ describe('AccountDetailPage', () => {
       const editBtn = wrapper.findAll('button').find((b) => b.text().includes('Изменить'));
       await editBtn!.trigger('click');
 
-      const editModal = wrapper.findComponent({ name: 'EditAccountModal' });
+      const editModal = wrapper.findComponent({ name: 'EditAccountDrawer' });
       expect(editModal.props('modelValue')).toBe(true);
 
       // Emit confirm from modal
@@ -415,6 +431,41 @@ describe('AccountDetailPage', () => {
 
       expect(capturedPayload).not.toBeNull();
       expect(capturedPayload!.name).toBe('Обновлённый');
+    });
+
+    it('конвертация в кредитку: сначала PATCH, потом корректировка баланса', async () => {
+      const calls: string[] = [];
+      let adjustPayload: Record<string, unknown> | null = null;
+      server.use(
+        http.patch('*/api/accounts/:id', async ({ request }) => {
+          const body = (await request.json()) as Record<string, unknown>;
+          calls.push('patch');
+          return HttpResponse.json({ ...mockAccountResponse, ...body });
+        }),
+        http.post('*/api/transactions/adjust-balance', async ({ request }) => {
+          adjustPayload = (await request.json()) as Record<string, unknown>;
+          calls.push('adjust');
+          return HttpResponse.json(mockAccountTransactionResponse);
+        }),
+      );
+
+      const wrapper = await renderPage();
+
+      const editBtn = wrapper.findAll('button').find((b) => b.text().includes('Изменить'));
+      await editBtn!.trigger('click');
+
+      const editModal = wrapper.findComponent({ name: 'EditAccountDrawer' });
+      editModal.vm.$emit(
+        'confirm',
+        { type: 'credit_card', credit_limit: 10_000_000 },
+        { UZS: 200_000 },
+      );
+      await flushPromises();
+
+      expect(calls).toEqual(['patch', 'adjust']);
+      expect(adjustPayload).not.toBeNull();
+      expect(adjustPayload!.targetBalance).toBe(-200_000);
+      expect(adjustPayload!.currency).toBe('UZS');
     });
   });
 

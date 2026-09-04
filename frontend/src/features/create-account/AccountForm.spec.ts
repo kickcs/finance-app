@@ -86,9 +86,10 @@ describe('AccountForm', () => {
       await flushPromises();
       const typeSelector = currentWrapper.find('[data-testid="account-type-selector"]');
       expect(typeSelector.exists()).toBe(true);
-      // basic, savings, credit_card are visible
       expect(currentWrapper.find('[data-testid="account-type-basic"]').exists()).toBe(true);
       expect(currentWrapper.find('[data-testid="account-type-savings"]').exists()).toBe(true);
+      expect(currentWrapper.find('[data-testid="account-type-cash"]').exists()).toBe(true);
+      expect(currentWrapper.find('[data-testid="account-type-credit_card"]').exists()).toBe(true);
     });
 
     it('renders currency/balance section', async () => {

@@ -1,7 +1,8 @@
 {
   "accounts": {
     "main": "Основной",
-    "savings": "Накопительный"
+    "savings": "Накопительный",
+    "creditCard": "Кредитная карта"
   },
   "contacts": {
     "ahmed": "Ахмед",

@@ -120,13 +120,7 @@ const availableBalance = computed(() => {
       : accounts.value.filter((a) => a.type === 'basic');
 
   return filtered.reduce((sum, acc) => {
-    return (
-      sum +
-      acc.balances.reduce((bSum, b) => {
-        const bal = acc.type === 'credit_card' ? Math.max(0, b.balance) : b.balance;
-        return bSum + convertAmount(bal, b.currency);
-      }, 0)
-    );
+    return sum + acc.balances.reduce((bSum, b) => bSum + convertAmount(b.balance, b.currency), 0);
   }, 0);
 });
 

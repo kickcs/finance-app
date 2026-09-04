@@ -7,8 +7,7 @@ export const ACCOUNT_TYPES = [
   'deposit',
 ] as const;
 
-// TODO: re-enable all types after debugging
-export const VISIBLE_ACCOUNT_TYPES: AccountType[] = ['basic', 'savings', 'cash'];
+export const VISIBLE_ACCOUNT_TYPES: AccountType[] = ['basic', 'savings', 'cash', 'credit_card'];
 export type AccountType = (typeof ACCOUNT_TYPES)[number];
 
 export const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
@@ -18,6 +17,15 @@ export const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
   cash: 'Наличные',
   loan: 'Кредит',
   deposit: 'Вклад',
+};
+
+export const ACCOUNT_TYPE_ICONS: Record<AccountType, string> = {
+  basic: 'account_balance_wallet',
+  savings: 'savings',
+  credit_card: 'credit_card',
+  cash: 'payments',
+  loan: 'account_balance',
+  deposit: 'diamond',
 };
 
 export function getAccountTypeLabel(type: string): string {

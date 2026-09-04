@@ -3,8 +3,9 @@ import { computed, defineAsyncComponent } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { DesktopPage, DesktopColumns } from '@/shared/ui/desktop-page';
 import { UButton, UIcon, UCard, IconBadge, SectionHeader, Skeleton, EmptyState } from '@/shared/ui';
-import { AccountCard, AccountDetailPanel } from '@/entities/account';
-import { EditAccountModal, DeleteAccountModal } from '@/features/edit-account';
+import { AccountCard, AccountDetailPanel, CreditCardDebtLine } from '@/entities/account';
+import { EditAccountDrawer, DeleteAccountModal } from '@/features/edit-account';
+import { AdjustBalanceModal } from '@/features/adjust-balance';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import type { AccountWithBalances } from '@/entities/account';
 
@@ -28,6 +29,7 @@ const {
   accounts,
   isLoading,
   totalBalance,
+  creditCardDebt,
   localAccounts,
   handleDragStart,
   handleDragEnd,
@@ -39,11 +41,16 @@ const {
   accountError,
   accountTransactionsCount,
   isLoadingTransactionsCount,
+  showAdjustBalanceModal,
+  adjustBalanceCurrency,
+  isAdjustingBalance,
   handleAddAccount,
   openEditModal,
   openDeleteModal,
+  openAdjustBalance,
   handleUpdateAccount,
   handleDeleteAccount,
+  handleAdjustBalance,
 } = useAccountsPage(selectedId);
 
 function selectAccount(account: AccountWithBalances) {
@@ -86,6 +93,7 @@ async function onDeleteConfirm() {
           >
             {{ formatCurrency(totalBalance, currency) }}
           </p>
+          <CreditCardDebtLine v-if="!isLoading" :amount="creditCardDebt" :currency="currency" />
         </div>
         <IconBadge icon="account_balance_wallet" size="lg" color="#3b82f6" class="shrink-0" />
       </div>
@@ -161,14 +169,15 @@ async function onDeleteConfirm() {
           :account-id="selectedAccount.id"
           :user-id="userId"
           @edit="openEditModal"
+          @adjust="openAdjustBalance()"
           @delete="openDeleteModal"
         />
       </template>
     </DesktopColumns>
   </DesktopPage>
 
-  <!-- Edit Account Modal -->
-  <EditAccountModal
+  <!-- Edit Account Drawer -->
+  <EditAccountDrawer
     v-model="showEditAccountModal"
     :account="selectedAccount"
     :is-updating="isUpdatingAccount"
@@ -185,5 +194,14 @@ async function onDeleteConfirm() {
     :is-deleting="isDeletingAccount"
     :error="accountError"
     @confirm="onDeleteConfirm"
+  />
+
+  <!-- Adjust Balance Modal -->
+  <AdjustBalanceModal
+    v-model="showAdjustBalanceModal"
+    :account="selectedAccount"
+    :currency="adjustBalanceCurrency"
+    :is-loading="isAdjustingBalance"
+    @confirm="handleAdjustBalance"
   />
 </template>

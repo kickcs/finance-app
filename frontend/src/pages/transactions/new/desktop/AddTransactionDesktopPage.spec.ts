@@ -16,7 +16,7 @@ vi.mock('@/app/router', async (importOriginal) => ({
  * `UOverlay` в режиме `dialog` рендерит содержимое через `reka-ui`
  * `DialogPortal` — оно телепортируется в реальный `document.body`, а не
  * остаётся в поддереве `wrapper`. Поэтому, как и в `UOverlay.spec.ts` /
- * `EditAccountModal.spec.ts`, ищем узлы в `document.body`, а не через
+ * `EditAccountDrawer.spec.ts`, ищем узлы в `document.body`, а не через
  * `wrapper.find()` (тот не видит телепортированный контент вовсе). По той же
  * причине обязателен `unmount()` в `afterEach` — иначе телепортированные узлы
  * прошлого теста остаются в `document.body`, и следующий `querySelector`

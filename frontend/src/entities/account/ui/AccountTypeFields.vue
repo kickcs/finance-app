@@ -15,8 +15,14 @@ const emit = defineEmits<{
   ];
 }>();
 
+// Пустая строка — «не задано»; введённый 0 остаётся нулём, а не сбрасывается.
 function updateNumber(key: keyof AccountTypeFieldValues, value: string | number) {
-  emit('update:field', key, value ? Number(value) : null);
+  const parsed = value === '' ? NaN : Number(value);
+  emit('update:field', key, Number.isFinite(parsed) ? parsed : null);
+}
+
+function numStr(value: number | null | undefined): string {
+  return typeof value === 'number' ? String(value) : '';
 }
 
 function updateDate(key: keyof AccountTypeFieldValues, value: string | number) {
@@ -32,7 +38,8 @@ function updateBoolean(key: keyof AccountTypeFieldValues, value: boolean) {
   <!-- Credit Card Fields -->
   <template v-if="type === 'credit_card'">
     <UInput
-      :model-value="fields.creditLimit != null ? String(fields.creditLimit) : ''"
+      :model-value="numStr(fields.creditLimit)"
+      data-testid="credit-limit-input"
       label="Кредитный лимит"
       placeholder="0"
       type="number"
@@ -41,26 +48,38 @@ function updateBoolean(key: keyof AccountTypeFieldValues, value: boolean) {
     />
     <div class="grid grid-cols-2 gap-3">
       <UInput
-        :model-value="fields.gracePeriodDays != null ? String(fields.gracePeriodDays) : ''"
+        :model-value="numStr(fields.monthlyPayment)"
+        label="Минимальный платёж"
+        placeholder="0"
+        type="number"
+        variant="currency"
+        @update:model-value="updateNumber('monthlyPayment', $event)"
+      />
+      <UInput
+        :model-value="numStr(fields.gracePeriodDays)"
+        data-testid="grace-period-input"
         label="Грейс-период (дней)"
         placeholder="55"
         type="number"
         @update:model-value="updateNumber('gracePeriodDays', $event)"
       />
-      <UInput
-        :model-value="fields.billingDay != null ? String(fields.billingDay) : ''"
-        label="День выписки"
-        placeholder="1-31"
-        type="number"
-        @update:model-value="updateNumber('billingDay', $event)"
-      />
     </div>
+    <UInput
+      :model-value="numStr(fields.billingDay)"
+      data-testid="billing-day-input"
+      label="День выписки"
+      placeholder="1-31"
+      type="number"
+      min="1"
+      max="31"
+      @update:model-value="updateNumber('billingDay', $event)"
+    />
   </template>
 
   <!-- Loan Fields -->
   <template v-if="type === 'loan'">
     <UInput
-      :model-value="fields.totalAmount != null ? String(fields.totalAmount) : ''"
+      :model-value="numStr(fields.totalAmount)"
       label="Сумма кредита"
       placeholder="0"
       type="number"
@@ -69,14 +88,14 @@ function updateBoolean(key: keyof AccountTypeFieldValues, value: boolean) {
     />
     <div class="grid grid-cols-2 gap-3">
       <UInput
-        :model-value="fields.interestRate != null ? String(fields.interestRate) : ''"
+        :model-value="numStr(fields.interestRate)"
         label="Ставка (%)"
         placeholder="12.5"
         type="number"
         @update:model-value="updateNumber('interestRate', $event)"
       />
       <UInput
-        :model-value="fields.monthlyPayment != null ? String(fields.monthlyPayment) : ''"
+        :model-value="numStr(fields.monthlyPayment)"
         label="Ежемесячный платёж"
         placeholder="0"
         type="number"
@@ -103,7 +122,7 @@ function updateBoolean(key: keyof AccountTypeFieldValues, value: boolean) {
   <!-- Deposit Fields -->
   <template v-if="type === 'deposit'">
     <UInput
-      :model-value="fields.interestRate != null ? String(fields.interestRate) : ''"
+      :model-value="numStr(fields.interestRate)"
       label="Ставка (%)"
       placeholder="12.5"
       type="number"
