@@ -33,6 +33,7 @@ function updateBoolean(key: keyof AccountTypeFieldValues, value: boolean) {
   <template v-if="type === 'credit_card'">
     <UInput
       :model-value="fields.creditLimit != null ? String(fields.creditLimit) : ''"
+      data-testid="credit-limit-input"
       label="Кредитный лимит"
       placeholder="0"
       type="number"
@@ -41,20 +42,30 @@ function updateBoolean(key: keyof AccountTypeFieldValues, value: boolean) {
     />
     <div class="grid grid-cols-2 gap-3">
       <UInput
+        :model-value="fields.monthlyPayment != null ? String(fields.monthlyPayment) : ''"
+        label="Минимальный платёж"
+        placeholder="0"
+        type="number"
+        variant="currency"
+        @update:model-value="updateNumber('monthlyPayment', $event)"
+      />
+      <UInput
         :model-value="fields.gracePeriodDays != null ? String(fields.gracePeriodDays) : ''"
         label="Грейс-период (дней)"
         placeholder="55"
         type="number"
         @update:model-value="updateNumber('gracePeriodDays', $event)"
       />
-      <UInput
-        :model-value="fields.billingDay != null ? String(fields.billingDay) : ''"
-        label="День выписки"
-        placeholder="1-31"
-        type="number"
-        @update:model-value="updateNumber('billingDay', $event)"
-      />
     </div>
+    <UInput
+      :model-value="fields.billingDay != null ? String(fields.billingDay) : ''"
+      label="День выписки"
+      placeholder="1-31"
+      type="number"
+      min="1"
+      max="31"
+      @update:model-value="updateNumber('billingDay', $event)"
+    />
   </template>
 
   <!-- Loan Fields -->
