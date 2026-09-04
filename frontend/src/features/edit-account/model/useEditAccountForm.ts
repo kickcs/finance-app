@@ -74,6 +74,12 @@ function toUpdates(form: EditAccountFormData): Partial<Account> {
   };
 }
 
+/** Незаполненное поле — не ошибка: у типа они все необязательные. */
+function isIntegerInRange(value: number | null, min: number, max: number): boolean {
+  if (value === null) return true;
+  return Number.isInteger(value) && value >= min && value <= max;
+}
+
 export function useEditAccountForm(account: MaybeRefOrGetter<AccountWithBalances | null>) {
   const formData = ref<EditAccountFormData>(
     fromAccount(toValue(account)),
@@ -104,7 +110,9 @@ export function useEditAccountForm(account: MaybeRefOrGetter<AccountWithBalances
     debtTouched.value = false;
   }
 
-  watch(() => toValue(account), reset);
+  // Следим за id, а не за самим объектом: фоновый рефетч отдаёт тот же счёт
+  // новой ссылкой, и сброс по объекту стирал бы незаконченную правку.
+  watch(() => toValue(account)?.id, reset);
 
   // Смена типа обнуляет чужие поля — иначе в патч уедет ставка от вклада,
   // которую пользователь на кредитке уже не видит. Синхронно, а не в watch:
@@ -138,7 +146,16 @@ export function useEditAccountForm(account: MaybeRefOrGetter<AccountWithBalances
     return null;
   });
 
-  const isValid = computed(() => nameError.value === null);
+  // Зеркалит границы UpdateAccountDto: сервер отвечает 400, и без проверки на
+  // клиенте пользователь узнаёт об опечатке только из общего тоста.
+  const typeFieldsError = computed<string | null>(() => {
+    const { gracePeriodDays, billingDay } = formData.value;
+    if (!isIntegerInRange(gracePeriodDays, 1, 365)) return 'Грейс-период — целое число от 1 до 365';
+    if (!isIntegerInRange(billingDay, 1, 31)) return 'День выписки — целое число от 1 до 31';
+    return null;
+  });
+
+  const isValid = computed(() => nameError.value === null && typeFieldsError.value === null);
 
   const isDirty = computed(() => {
     const source = toValue(account);
@@ -172,6 +189,7 @@ export function useEditAccountForm(account: MaybeRefOrGetter<AccountWithBalances
     isValid,
     isDirty,
     nameError,
+    typeFieldsError,
     isConverting,
     updateField,
     setDebt,

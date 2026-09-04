@@ -198,6 +198,63 @@ describe('useEditAccountForm', () => {
     expect(get().isDirty.value).toBe(false);
   });
 
+  it('фоновый рефетч того же счёта не стирает правки', async () => {
+    const { wrapper, source, get } = renderForm(makeAccount());
+    currentWrapper = wrapper;
+    get().updateField('name', 'Черновик');
+    await nextTick();
+    // Тот же счёт, но новым объектом — так выглядит обновление кэша по рефетчу.
+    source.value = makeAccount();
+    await nextTick();
+    expect(get().formData.value.name).toBe('Черновик');
+  });
+
+  it('грейс-период принимает только целое от 1 до 365', async () => {
+    const { wrapper, get } = renderForm(makeAccount());
+    currentWrapper = wrapper;
+    get().updateField('type', 'credit_card');
+    get().updateField('gracePeriodDays', 0);
+    await nextTick();
+    expect(get().typeFieldsError.value).toBe('Грейс-период — целое число от 1 до 365');
+    expect(get().isValid.value).toBe(false);
+
+    get().updateField('gracePeriodDays', 366);
+    await nextTick();
+    expect(get().typeFieldsError.value).toBe('Грейс-период — целое число от 1 до 365');
+
+    get().updateField('gracePeriodDays', 55.5);
+    await nextTick();
+    expect(get().typeFieldsError.value).toBe('Грейс-период — целое число от 1 до 365');
+
+    get().updateField('gracePeriodDays', 55);
+    await nextTick();
+    expect(get().typeFieldsError.value).toBeNull();
+    expect(get().isValid.value).toBe(true);
+  });
+
+  it('день выписки принимает только целое от 1 до 31', async () => {
+    const { wrapper, get } = renderForm(makeAccount());
+    currentWrapper = wrapper;
+    get().updateField('type', 'credit_card');
+    get().updateField('billingDay', 32);
+    await nextTick();
+    expect(get().typeFieldsError.value).toBe('День выписки — целое число от 1 до 31');
+    expect(get().isValid.value).toBe(false);
+
+    get().updateField('billingDay', 5);
+    await nextTick();
+    expect(get().typeFieldsError.value).toBeNull();
+  });
+
+  it('пустые поля типа ошибкой не считаются', async () => {
+    const { wrapper, get } = renderForm(makeAccount());
+    currentWrapper = wrapper;
+    get().updateField('type', 'credit_card');
+    await nextTick();
+    expect(get().typeFieldsError.value).toBeNull();
+    expect(get().isValid.value).toBe(true);
+  });
+
   it('смена счёта перезаполняет форму', async () => {
     const { wrapper, source, get } = renderForm(makeAccount());
     currentWrapper = wrapper;

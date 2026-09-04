@@ -8,8 +8,23 @@ import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared
 import { useToast } from '@/shared/ui';
 
 const CONVERSION_DESCRIPTION = 'Перевод счёта в кредитную карту';
+
 // Зеркалит порог сервера: adjust-balance отвечает 400 на разницу меньше 0.01.
 const BALANCE_EPSILON = 0.01;
+
+/**
+ * Сообщение валидации из HttpError (`shared/api/http.ts`): ValidationPipe отдаёт
+ * `message` списком, обычные 400 — строкой. Без него «Не удалось обновить счёт»
+ * не объясняет, какое поле сервер не принял.
+ */
+function serverValidationMessage(e: unknown): string | undefined {
+  if (!e || typeof e !== 'object' || !('status' in e) || !('data' in e)) return undefined;
+  const httpError = e as { status: number; data?: { message?: string | string[] } };
+  if (httpError.status !== 400) return undefined;
+  const message = httpError.data?.message;
+  if (Array.isArray(message)) return message.join('. ') || undefined;
+  return message || undefined;
+}
 
 export function useEditAccount(userId: MaybeRefOrGetter<string | null>) {
   const { toast } = useToast();
@@ -39,7 +54,11 @@ export function useEditAccount(userId: MaybeRefOrGetter<string | null>) {
         await updateAccount(accountId, updates);
       } catch (e) {
         error.value = 'Не удалось обновить счёт';
-        toast({ title: 'Не удалось обновить счёт', variant: 'error' });
+        toast({
+          title: 'Не удалось обновить счёт',
+          description: serverValidationMessage(e),
+          variant: 'error',
+        });
         console.error('Failed to update account:', e);
         return false;
       }

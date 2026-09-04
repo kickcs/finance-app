@@ -6,6 +6,7 @@ import {
   AccountTypeFields,
   ACCOUNT_ICONS,
   getAccountTypeLabel,
+  type AccountTypeFieldValues,
 } from '@/entities/account';
 import { ENTITY_COLORS } from '@/shared/config/colors';
 import { formatCurrency, getCurrencySymbol } from '@/shared/lib/format/currency';
@@ -29,6 +30,7 @@ const {
   isValid,
   isDirty,
   nameError,
+  typeFieldsError,
   isConverting,
   updateField,
   setDebt,
@@ -128,8 +130,14 @@ function handleSubmit() {
       <AccountTypeFields
         :type="formData.type"
         :fields="formData"
-        @update:field="(key, value) => updateField(key as never, value as never)"
+        @update:field="
+          (key, value) => updateField(key as keyof AccountTypeFieldValues, value as never)
+        "
       />
+
+      <p v-if="typeFieldsError" data-testid="type-fields-error" class="text-xs text-danger">
+        {{ typeFieldsError }}
+      </p>
 
       <!-- Конвертация в кредитку -->
       <Transition
@@ -163,7 +171,7 @@ function handleSubmit() {
               :model-value="debtValue(balance.currency)"
               variant="currency"
               :suffix="getCurrencySymbol(balance.currency)"
-              :label="balances.length > 1 ? balance.currency : undefined"
+              :label="`На счёте ${formatCurrency(balance.balance, balance.currency)}`"
               placeholder="0"
               @update:model-value="setDebt(balance.currency, Number($event) || 0)"
             />

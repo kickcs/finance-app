@@ -432,6 +432,41 @@ describe('AccountDetailPage', () => {
       expect(capturedPayload).not.toBeNull();
       expect(capturedPayload!.name).toBe('Обновлённый');
     });
+
+    it('конвертация в кредитку: сначала PATCH, потом корректировка баланса', async () => {
+      const calls: string[] = [];
+      let adjustPayload: Record<string, unknown> | null = null;
+      server.use(
+        http.patch('*/api/accounts/:id', async ({ request }) => {
+          const body = (await request.json()) as Record<string, unknown>;
+          calls.push('patch');
+          return HttpResponse.json({ ...mockAccountResponse, ...body });
+        }),
+        http.post('*/api/transactions/adjust-balance', async ({ request }) => {
+          adjustPayload = (await request.json()) as Record<string, unknown>;
+          calls.push('adjust');
+          return HttpResponse.json(mockAccountTransactionResponse);
+        }),
+      );
+
+      const wrapper = await renderPage();
+
+      const editBtn = wrapper.findAll('button').find((b) => b.text().includes('Изменить'));
+      await editBtn!.trigger('click');
+
+      const editModal = wrapper.findComponent({ name: 'EditAccountDrawer' });
+      editModal.vm.$emit(
+        'confirm',
+        { type: 'credit_card', credit_limit: 10_000_000 },
+        { UZS: 200_000 },
+      );
+      await flushPromises();
+
+      expect(calls).toEqual(['patch', 'adjust']);
+      expect(adjustPayload).not.toBeNull();
+      expect(adjustPayload!.targetBalance).toBe(-200_000);
+      expect(adjustPayload!.currency).toBe('UZS');
+    });
   });
 
   // -----------------------------------------------------------------------

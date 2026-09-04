@@ -170,11 +170,53 @@ describe('EditAccountDrawer', () => {
     await flushPromises();
 
     const uzs = findInBody('[data-testid="debt-input-UZS"]')!;
+    expect(uzs.textContent).toContain(`На счёте ${formatCurrency(3_000_000, 'UZS')}`);
     expect(uzs.textContent).toContain(`Баланс станет ${formatCurrency(-7_000_000, 'UZS')}`);
 
     // USD не трогаем: долг ноль, а свои деньги на счёте обнулять не за что.
     const usd = findInBody('[data-testid="debt-input-USD"]')!;
+    expect(usd.textContent).toContain(`На счёте ${formatCurrency(500, 'USD')}`);
     expect(usd.textContent).toContain('Баланс не изменится');
+  });
+
+  it('грейс-период вне диапазона блокирует сохранение и объясняет почему', async () => {
+    currentWrapper = renderDrawer();
+    await flushPromises();
+    (findInBody('[data-testid="account-type-credit_card"]') as HTMLButtonElement).click();
+    await flushPromises();
+    await setBodyInputValue('[data-testid="grace-period-input"] input', '400');
+    await flushPromises();
+
+    const error = findInBody('[data-testid="type-fields-error"]');
+    expect(error).not.toBeNull();
+    expect(error!.textContent).toContain('Грейс-период — целое число от 1 до 365');
+    expect((findInBody('[data-testid="save-btn"]') as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('день выписки вне диапазона блокирует сохранение', async () => {
+    currentWrapper = renderDrawer();
+    await flushPromises();
+    (findInBody('[data-testid="account-type-credit_card"]') as HTMLButtonElement).click();
+    await flushPromises();
+    await setBodyInputValue('[data-testid="billing-day-input"] input', '32');
+    await flushPromises();
+
+    expect(findInBody('[data-testid="type-fields-error"]')!.textContent).toContain(
+      'День выписки — целое число от 1 до 31',
+    );
+    expect((findInBody('[data-testid="save-btn"]') as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('корректные поля типа ошибку не показывают', async () => {
+    currentWrapper = renderDrawer();
+    await flushPromises();
+    (findInBody('[data-testid="account-type-credit_card"]') as HTMLButtonElement).click();
+    await flushPromises();
+    await setBodyInputValue('[data-testid="grace-period-input"] input', '55');
+    await flushPromises();
+
+    expect(findInBody('[data-testid="type-fields-error"]')).toBeNull();
+    expect((findInBody('[data-testid="save-btn"]') as HTMLButtonElement).disabled).toBe(false);
   });
 
   it('без счёта форма не рисуется и в консоль ничего не падает', async () => {
