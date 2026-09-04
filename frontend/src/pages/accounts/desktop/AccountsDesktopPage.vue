@@ -28,6 +28,7 @@ const {
   accounts,
   isLoading,
   totalBalance,
+  creditCardDebt,
   localAccounts,
   handleDragStart,
   handleDragEnd,
@@ -85,6 +86,13 @@ async function onDeleteConfirm() {
             class="text-3xl font-bold text-text-primary-light dark:text-text-primary-dark tracking-tight"
           >
             {{ formatCurrency(totalBalance, currency) }}
+          </p>
+          <p
+            v-if="!isLoading && creditCardDebt > 0"
+            data-testid="credit-card-debt-line"
+            class="text-xs text-danger tabular-nums"
+          >
+            в т.ч. долг по картам −{{ formatCurrency(creditCardDebt, currency) }}
           </p>
         </div>
         <IconBadge icon="account_balance_wallet" size="lg" color="#3b82f6" class="shrink-0" />

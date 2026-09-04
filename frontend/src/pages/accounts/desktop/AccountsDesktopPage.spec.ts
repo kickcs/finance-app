@@ -3,6 +3,9 @@ import { flushPromises } from '@vue/test-utils';
 import { defineComponent, h } from 'vue';
 import { renderWithProviders, createTestRouter, mockUser } from '@/test/test-utils';
 import { setIsDesktopForTests } from '@/shared/lib/platform';
+import { server } from '@/test/mocks/server';
+import { http, HttpResponse } from 'msw';
+import { mockAccountResponse, mockCreditCardAccountResponse } from '@/test/mocks/handlers/accounts';
 import AccountsDesktopPage from './AccountsDesktopPage.vue';
 
 vi.mock('vaul-vue', () => import('@/test/stubs/vaul'));
@@ -61,5 +64,24 @@ describe('десктопные Счета', () => {
     await flushPromises();
 
     expect(router.currentRoute.value.query.id).toBeTruthy();
+  });
+
+  it('под общим балансом показывает долг по кредитным картам', async () => {
+    server.use(
+      http.get('*/api/accounts', () =>
+        HttpResponse.json([mockAccountResponse, mockCreditCardAccountResponse]),
+      ),
+    );
+    const { wrapper } = await mountPage();
+
+    const line = wrapper.find('[data-testid="credit-card-debt-line"]');
+    expect(line.exists()).toBe(true);
+    expect(line.text()).toContain('в т.ч. долг по картам');
+    expect(line.text()).toContain('120\u00A0000');
+  });
+
+  it('без долга по картам строку не показывает', async () => {
+    const { wrapper } = await mountPage();
+    expect(wrapper.find('[data-testid="credit-card-debt-line"]').exists()).toBe(false);
   });
 });

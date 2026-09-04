@@ -118,6 +118,44 @@ describe('AccountsPage', () => {
   });
 
   // -----------------------------------------------------------------------
+  // Долг по кредитным картам
+  // -----------------------------------------------------------------------
+  describe('credit card debt line', () => {
+    it('shows the card debt under the total balance', async () => {
+      server.use(
+        http.get('*/api/accounts', () =>
+          HttpResponse.json([mockAccountResponse, mockCreditCardAccountResponse]),
+        ),
+      );
+      const wrapper = await renderPage();
+
+      const line = wrapper.find('[data-testid="credit-card-debt-line"]');
+      expect(line.exists()).toBe(true);
+      expect(line.text()).toContain('в т.ч. долг по картам');
+      expect(line.text()).toContain('120\u00A0000');
+    });
+
+    it('hides the line when no card carries debt', async () => {
+      server.use(http.get('*/api/accounts', () => HttpResponse.json([mockAccountResponse])));
+      const wrapper = await renderPage();
+
+      expect(wrapper.find('[data-testid="credit-card-debt-line"]').exists()).toBe(false);
+    });
+
+    it('subtracts card debt from the total balance', async () => {
+      server.use(
+        http.get('*/api/accounts', () =>
+          HttpResponse.json([mockAccountResponse, mockCreditCardAccountResponse]),
+        ),
+      );
+      const wrapper = await renderPage();
+
+      // 50 000 (basic) + (−120 000) (кредитка) = −70 000
+      expect(wrapper.text()).toContain('70\u00A0000');
+    });
+  });
+
+  // -----------------------------------------------------------------------
   // Empty State
   // -----------------------------------------------------------------------
   describe('empty state', () => {

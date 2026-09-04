@@ -6,7 +6,11 @@ import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 import { useExchangeRates } from '@/shared/api';
 import { useHaptics } from '@/shared/lib/haptics';
-import { useAccounts, type AccountWithBalances } from '@/entities/account';
+import {
+  useAccounts,
+  sumCreditCardDebtByCurrency,
+  type AccountWithBalances,
+} from '@/entities/account';
 import { useEditAccount } from '@/features/edit-account';
 import { transactionsApi, transactionQueryKeys } from '@/entities/transaction';
 import type { Account } from '@/shared/api/database.types';
@@ -53,6 +57,18 @@ export function useAccountsPage(selectedAccountId: MaybeRefOrGetter<string | nul
     const balances = totalBalancesByCurrency.value;
     let total = 0;
     for (const [curr, amount] of Object.entries(balances)) {
+      total += convert(amount, curr);
+    }
+    return total;
+  });
+
+  // Долг по кредиткам считается отдельно от итога: в «Общем балансе» он уже
+  // вычтен (баланс карты отрицательный), а строка под ним объясняет, за счёт
+  // чего итог просел.
+  const creditCardDebt = computed(() => {
+    const byCurrency = sumCreditCardDebtByCurrency(accounts.value);
+    let total = 0;
+    for (const [curr, amount] of Object.entries(byCurrency)) {
       total += convert(amount, curr);
     }
     return total;
@@ -154,6 +170,7 @@ export function useAccountsPage(selectedAccountId: MaybeRefOrGetter<string | nul
     accounts,
     isLoading,
     totalBalance,
+    creditCardDebt,
     totalBalancesByCurrency,
     localAccounts,
     handleAddAccount,
