@@ -8,8 +8,8 @@ import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared
 import { useToast } from '@/shared/ui';
 
 const CONVERSION_DESCRIPTION = 'Перевод счёта в кредитную карту';
-// Копейки в целевом балансе не повод дёргать корректировку.
-const BALANCE_EPSILON = 0.001;
+// Зеркалит порог сервера: adjust-balance отвечает 400 на разницу меньше 0.01.
+const BALANCE_EPSILON = 0.01;
 
 export function useEditAccount(userId: MaybeRefOrGetter<string | null>) {
   const { toast } = useToast();
@@ -46,12 +46,20 @@ export function useEditAccount(userId: MaybeRefOrGetter<string | null>) {
 
       const debts = options?.debtByCurrency;
       if (debts && Object.keys(debts).length > 0) {
+        // Балансы из кэша — только эвристика пропуска: дельту сервер считает от
+        // своего состояния, промах кэша стоит лишнего вызова, а не ошибки.
         const current = getAccountById(accountId);
+        let attempted = false;
         try {
           for (const [currency, debt] of Object.entries(debts)) {
-            const target = -debt;
             const balance = current?.balances.find((b) => b.currency === currency)?.balance ?? 0;
-            if (Math.abs(target - balance) <= BALANCE_EPSILON) continue;
+            // Нулевой долг не повод обнулять свои деньги на счёте: валюту трогаем,
+            // только если долг положительный или баланс уже ушёл в минус.
+            const owed = Number.isFinite(debt) && debt > 0 ? debt : 0;
+            if (owed === 0 && balance >= 0) continue;
+            const target = owed === 0 ? 0 : -owed;
+            if (Math.abs(target - balance) < BALANCE_EPSILON) continue;
+            attempted = true;
             await transactionsApi.adjustBalance({
               accountId,
               targetBalance: target,
@@ -59,11 +67,6 @@ export function useEditAccount(userId: MaybeRefOrGetter<string | null>) {
               description: CONVERSION_DESCRIPTION,
             });
           }
-          const uid = toValue(userId) ?? '';
-          await Promise.all([
-            invalidateAccountRelated(queryClient, uid),
-            invalidateTransactionRelated(queryClient, uid),
-          ]);
         } catch (e) {
           console.error('Failed to adjust balance after conversion:', e);
           toast({
@@ -72,6 +75,16 @@ export function useEditAccount(userId: MaybeRefOrGetter<string | null>) {
             variant: 'warning',
           });
           return true;
+        } finally {
+          // Даже оборванная на полпути серия записей делает кэш устаревшим —
+          // иначе пользователь правит баланс, глядя на старую цифру.
+          if (attempted) {
+            const uid = toValue(userId) ?? '';
+            await Promise.all([
+              invalidateAccountRelated(queryClient, uid),
+              invalidateTransactionRelated(queryClient, uid),
+            ]);
+          }
         }
       }
 
