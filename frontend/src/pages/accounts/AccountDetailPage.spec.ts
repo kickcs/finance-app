@@ -186,6 +186,17 @@ describe('AccountDetailPage', () => {
       expect(wrapper.text()).not.toContain('Мин. платёж');
     });
 
+    it('shows the minimum payment when the account has one', async () => {
+      server.use(
+        http.get('*/api/accounts', () =>
+          HttpResponse.json([{ ...mockCreditCardAccountResponse, monthlyPayment: 300000 }]),
+        ),
+      );
+      const wrapper = await renderPage('acc-3');
+      expect(wrapper.text()).toContain('Мин. платёж');
+      expect(wrapper.text()).toContain('300 000');
+    });
+
     it('drops the separate credit card parameters card', async () => {
       const wrapper = await renderPage('acc-3');
       expect(wrapper.text()).not.toContain('Параметры кредитной карты');

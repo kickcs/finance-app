@@ -21,7 +21,9 @@ export function getCreditCardState(
     debt,
     ownFunds: Math.max(0, balance),
     limit,
-    available: typeof limit === 'number' ? limit + balance : null,
+    // Доступное зажато отрезком [0, лимит]: перерасход — это ноль доступного, а не
+    // отрицательный остаток, и свои деньги на карте лимит не увеличивают.
+    available: typeof limit === 'number' ? Math.min(limit, Math.max(0, limit + balance)) : null,
     utilization: hasLimit ? Math.min(1, debt / limit) : null,
   };
 }

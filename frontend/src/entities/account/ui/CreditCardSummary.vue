@@ -15,10 +15,13 @@ const primaryState = computed(() =>
 );
 const restBalances = computed(() => props.account.balances?.slice(1) ?? []);
 
+// Пустая карта не нуждается в подписи: «Долга нет» само себя объясняет.
 const heroLabel = computed(() => {
   const s = primaryState.value;
   if (!s) return 'Задолженность';
-  return s.ownFunds > 0 ? 'Свои средства' : 'Задолженность';
+  if (s.ownFunds > 0) return 'Свои средства';
+  if (s.debt > 0) return 'Задолженность';
+  return null;
 });
 
 const heroValue = computed(() => {
@@ -68,7 +71,7 @@ const params = computed(() => {
   <div v-if="primaryState" class="space-y-4" data-testid="credit-card-summary">
     <!-- Герой: одна крупная сумма на весь экран -->
     <div class="space-y-1">
-      <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
+      <p v-if="heroLabel" class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
         {{ heroLabel }}
       </p>
       <p :class="['text-2xl font-bold tabular-nums tracking-tight', heroClass]">
@@ -76,9 +79,10 @@ const params = computed(() => {
       </p>
     </div>
 
-    <!-- Метр использования лимита -->
-    <div v-if="showMeter" class="space-y-1.5">
+    <!-- Метр и концы дорожки: одна разметка на оба состояния, с долгом и без -->
+    <div v-if="hasLimit" class="space-y-1.5">
       <UProgressBar
+        v-if="showMeter"
         :value="primaryState.debt"
         :max="primaryState.limit ?? 0"
         :color="meterColor"
@@ -86,19 +90,11 @@ const params = computed(() => {
       />
       <div
         class="flex justify-between text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
+        data-testid="credit-card-track-ends"
       >
         <span>доступно {{ formatCurrency(primaryState.available ?? 0, primary!.currency) }}</span>
         <span>лимит {{ formatCurrency(primaryState.limit ?? 0, primary!.currency) }}</span>
       </div>
-    </div>
-
-    <!-- Лимит есть, долга нет: концы дорожки всё равно информативны -->
-    <div
-      v-else-if="hasLimit"
-      class="flex justify-between text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
-    >
-      <span>доступно {{ formatCurrency(primaryState.available ?? 0, primary!.currency) }}</span>
-      <span>лимит {{ formatCurrency(primaryState.limit ?? 0, primary!.currency) }}</span>
     </div>
 
     <p v-else class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">

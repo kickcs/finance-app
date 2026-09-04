@@ -64,6 +64,7 @@ describe('CreditCardSummary', () => {
     );
     await flushPromises();
     expect(currentWrapper.text()).toContain('Долга нет');
+    expect(currentWrapper.text()).not.toContain('Задолженность');
   });
 
   it('герой — свои средства при положительном балансе', async () => {
@@ -116,6 +117,43 @@ describe('CreditCardSummary', () => {
     );
     await flushPromises();
     expect(currentWrapper.html()).toContain('bg-danger');
+  });
+
+  it('при перерасходе доступно не уходит в минус', async () => {
+    currentWrapper = render(
+      makeCard({
+        credit_limit: 500_000,
+        balances: [
+          { id: 'b1', account_id: 'acc-1', currency: 'UZS', balance: -650_000, created_at: '' },
+        ],
+      } as Partial<AccountWithBalances>),
+    );
+    await flushPromises();
+    const ends = currentWrapper.findAll('[data-testid="credit-card-track-ends"] span');
+    expect(ends[0].text()).toBe('доступно 0 UZS');
+  });
+
+  it('свои средства на карте не делают доступное больше лимита', async () => {
+    currentWrapper = render(
+      makeCard({
+        credit_limit: 500_000,
+        balances: [
+          { id: 'b1', account_id: 'acc-1', currency: 'UZS', balance: 50_000, created_at: '' },
+        ],
+      } as Partial<AccountWithBalances>),
+    );
+    await flushPromises();
+    const ends = currentWrapper.findAll('[data-testid="credit-card-track-ends"] span');
+    expect(ends[0].text()).toBe('доступно 500 000 UZS');
+    expect(ends[1].text()).toBe('лимит 500 000 UZS');
+  });
+
+  it('показывает минимальный платёж, когда он задан', async () => {
+    currentWrapper = render(makeCard({ monthly_payment: 500_000 }));
+    await flushPromises();
+    const text = currentWrapper.text();
+    expect(text).toContain('Мин. платёж');
+    expect(text).toContain('500 000 UZS');
   });
 
   it('показывает только заданные параметры карты', async () => {

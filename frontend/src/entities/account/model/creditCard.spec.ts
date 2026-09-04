@@ -51,7 +51,14 @@ describe('getCreditCardState', () => {
 
   it('доступно = лимит + баланс', () => {
     expect(getCreditCardState({ credit_limit: 10_000_000 }, -2_350_000).available).toBe(7_650_000);
-    expect(getCreditCardState({ credit_limit: 10_000_000 }, 300_000).available).toBe(10_300_000);
+  });
+
+  it('при перерасходе доступно — ноль, а не отрицательное', () => {
+    expect(getCreditCardState({ credit_limit: 500_000 }, -650_000).available).toBe(0);
+  });
+
+  it('свои средства на карте доступное сверх лимита не раздувают', () => {
+    expect(getCreditCardState({ credit_limit: 500_000 }, 50_000).available).toBe(500_000);
   });
 
   it('утилизация — доля долга в лимите', () => {
