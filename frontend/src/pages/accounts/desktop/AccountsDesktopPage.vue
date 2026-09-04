@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { DesktopPage, DesktopColumns } from '@/shared/ui/desktop-page';
 import { UButton, UIcon, UCard, IconBadge, SectionHeader, Skeleton, EmptyState } from '@/shared/ui';
 import { AccountCard, AccountDetailPanel } from '@/entities/account';
-import { EditAccountModal, DeleteAccountModal } from '@/features/edit-account';
+import { EditAccountDrawer, DeleteAccountModal } from '@/features/edit-account';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import type { AccountWithBalances } from '@/entities/account';
 
@@ -175,8 +175,8 @@ async function onDeleteConfirm() {
     </DesktopColumns>
   </DesktopPage>
 
-  <!-- Edit Account Modal -->
-  <EditAccountModal
+  <!-- Edit Account Drawer -->
+  <EditAccountDrawer
     v-model="showEditAccountModal"
     :account="selectedAccount"
     :is-updating="isUpdatingAccount"

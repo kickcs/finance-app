@@ -146,9 +146,12 @@ export function useAccountsPage(selectedAccountId: MaybeRefOrGetter<string | nul
     showDeleteAccountModal.value = true;
   }
 
-  async function handleUpdateAccount(updates: Partial<Account>) {
+  async function handleUpdateAccount(
+    updates: Partial<Account>,
+    debtByCurrency?: Record<string, number>,
+  ) {
     if (!selectedAccount.value) return false;
-    const success = await updateAccountFn(selectedAccount.value.id, updates);
+    const success = await updateAccountFn(selectedAccount.value.id, updates, { debtByCurrency });
     if (success) {
       showEditAccountModal.value = false;
     }

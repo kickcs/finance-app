@@ -24,6 +24,8 @@ vi.mock('@/app/router', () => ({
   resetOnboardingVerified: vi.fn(),
 }));
 
+vi.mock('vaul-vue', async () => (await import('@/test/stubs/vaul')).vaulStub);
+
 // ---------------------------------------------------------------------------
 
 const routes = [
@@ -302,7 +304,7 @@ describe('AccountDetailPage', () => {
       expect(editBtn).toBeDefined();
       await editBtn!.trigger('click');
 
-      const editModal = wrapper.findComponent({ name: 'EditAccountModal' });
+      const editModal = wrapper.findComponent({ name: 'EditAccountDrawer' });
       expect(editModal.exists()).toBe(true);
       expect(editModal.props('modelValue')).toBe(true);
     });
@@ -420,7 +422,7 @@ describe('AccountDetailPage', () => {
       const editBtn = wrapper.findAll('button').find((b) => b.text().includes('Изменить'));
       await editBtn!.trigger('click');
 
-      const editModal = wrapper.findComponent({ name: 'EditAccountModal' });
+      const editModal = wrapper.findComponent({ name: 'EditAccountDrawer' });
       expect(editModal.props('modelValue')).toBe(true);
 
       // Emit confirm from modal

@@ -35,7 +35,7 @@ vi.mock('vaul-vue', async () => (await import('@/test/stubs/vaul')).vaulStub);
 
 // Обе ветки (vaul-стаб и настоящий reka-ui Dialog) телепортируют содержимое в
 // document.body, поэтому ищем его там, а не в дереве wrapper'а — тот же приём,
-// что и в остальных тестах на reka-ui модалки (см. EditAccountModal.spec.ts).
+// что и в остальных тестах на reka-ui модалки (см. EditAccountDrawer.spec.ts).
 // Стаб `teleport: true` здесь не подходит: реальный DialogPortal передаёт
 // детей как slots-объект, а не как «сырой» массив вершин, который ожидает
 // стаб-компонент vue-test-utils — с ним содержимое исчезает молча.

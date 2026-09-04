@@ -22,7 +22,7 @@ import {
   transactionQueryKeys,
 } from '@/entities/transaction';
 import { useQuery } from '@tanstack/vue-query';
-import { EditAccountModal, DeleteAccountModal, useEditAccount } from '@/features/edit-account';
+import { EditAccountDrawer, DeleteAccountModal, useEditAccount } from '@/features/edit-account';
 import {
   EditTransactionModal,
   DeleteTransactionModal,
@@ -118,9 +118,12 @@ function openDeleteModal() {
   showDeleteAccountModal.value = true;
 }
 
-async function handleUpdateAccount(updates: Partial<Account>) {
+async function handleUpdateAccount(
+  updates: Partial<Account>,
+  debtByCurrency?: Record<string, number>,
+) {
   if (!account.value) return;
-  const success = await updateAccountFn(account.value.id, updates);
+  const success = await updateAccountFn(account.value.id, updates, { debtByCurrency });
   if (success) {
     showEditAccountModal.value = false;
   }
@@ -475,8 +478,8 @@ async function handleAdjustBalance(data: {
       </div>
     </main>
 
-    <!-- Edit Account Modal -->
-    <EditAccountModal
+    <!-- Edit Account Drawer -->
+    <EditAccountDrawer
       v-model="showEditAccountModal"
       :account="account"
       :is-updating="isUpdatingAccount"
