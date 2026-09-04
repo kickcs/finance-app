@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.85';
+export const CURRENT_VERSION = '1.0.86';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,17 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.86',
+    date: '2026-09-04',
+    title: 'Кредитная карта',
+    items: [
+      {
+        type: 'feature',
+        text: 'Кредитная карта: лимит, долг и доступный остаток; обычный счёт можно превратить в кредитку; редактирование счёта — в шторке.',
+      },
+    ],
+  },
   {
     version: '1.0.85',
     date: '2026-08-31',
