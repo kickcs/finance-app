@@ -40,7 +40,7 @@ const heroClass = computed(() => {
   return 'text-text-primary-light dark:text-text-primary-dark';
 });
 
-const hasLimit = computed(() => (primaryState.value?.limit ?? 0) > 0);
+const hasLimit = computed(() => typeof primaryState.value?.available === 'number');
 const showMeter = computed(() => hasLimit.value && (primaryState.value?.debt ?? 0) > 0);
 const meterColor = computed(() =>
   (primaryState.value?.utilization ?? 0) > 0.8 ? 'danger' : 'primary',

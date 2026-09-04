@@ -132,7 +132,7 @@ const cardState = computed(() =>
           }}
         </p>
         <p
-          v-if="typeof cardState.available === 'number' && (cardState.limit ?? 0) > 0"
+          v-if="typeof cardState.available === 'number'"
           class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark truncate"
         >
           доступно {{ formatCurrency(cardState.available, cardBalance.currency, COMPACT_FORMAT) }}

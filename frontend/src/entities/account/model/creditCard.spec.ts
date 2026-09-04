@@ -79,8 +79,10 @@ describe('getCreditCardState', () => {
     expect(s.debt).toBe(500_000);
   });
 
-  it('нулевой лимит не даёт утилизацию', () => {
-    expect(getCreditCardState({ credit_limit: 0 }, -500_000).utilization).toBeNull();
+  it('нулевой лимит не даёт ни доступного, ни утилизации', () => {
+    const s = getCreditCardState({ credit_limit: 0 }, -500_000);
+    expect(s.available).toBeNull();
+    expect(s.utilization).toBeNull();
   });
 });
 
@@ -95,9 +97,11 @@ describe('isCreditCard', () => {
 });
 
 describe('suggestDebtOnConversion', () => {
-  it('баланс внутри [0, лимит) читается как доступный остаток', () => {
+  it('баланс внутри (0, лимит) читается как доступный остаток', () => {
     expect(suggestDebtOnConversion(3_000_000, 10_000_000)).toBe(7_000_000);
-    expect(suggestDebtOnConversion(0, 10_000_000)).toBe(10_000_000);
+  });
+  it('нулевой баланс не значит, что карта выбрана в ноль', () => {
+    expect(suggestDebtOnConversion(0, 10_000_000)).toBe(0);
   });
   it('баланс выше лимита — 0', () => {
     expect(suggestDebtOnConversion(12_000_000, 10_000_000)).toBe(0);

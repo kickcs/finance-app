@@ -22,8 +22,9 @@ export function getCreditCardState(
     ownFunds: Math.max(0, balance),
     limit,
     // Доступное зажато отрезком [0, лимит]: перерасход — это ноль доступного, а не
-    // отрицательный остаток, и свои деньги на карте лимит не увеличивают.
-    available: typeof limit === 'number' ? Math.min(limit, Math.max(0, limit + balance)) : null,
+    // отрицательный остаток, и свои деньги на карте лимит не увеличивают. Без
+    // лимита доступного нет вовсе — нулём его показывать нечестно.
+    available: hasLimit ? Math.min(limit, Math.max(0, limit + balance)) : null,
     utilization: hasLimit ? Math.min(1, debt / limit) : null,
   };
 }
@@ -35,10 +36,12 @@ export function isCreditCard(account: Pick<Account, 'type'>): boolean {
 /**
  * Предзаполнение долга при конвертации обычного счёта в кредитку: если на счёте
  * лежит сумма меньше лимита, вероятнее всего это доступный остаток по карте.
+ * Нулевой баланс из этой догадки исключён: «на счёте пусто» одинаково похоже и
+ * на выбранный лимит, и на карту без долга, а угадывать весь лимит — дороже.
  */
 export function suggestDebtOnConversion(balance: number, limit: number | null): number {
   if (typeof limit !== 'number' || limit <= 0) return 0;
-  if (balance < 0 || balance >= limit) return 0;
+  if (balance <= 0 || balance >= limit) return 0;
   return limit - balance;
 }
 

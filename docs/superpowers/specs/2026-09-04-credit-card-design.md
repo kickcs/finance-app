@@ -73,7 +73,7 @@ interface CreditCardState {
 }
 getCreditCardState(account: Pick<Account,'credit_limit'>, balance: number): CreditCardState
 isCreditCard(account: Pick<Account,'type'>): boolean
-/** Предзаполнение долга при конвертации: лимит − баланс, если 0 ≤ баланс < лимит, иначе 0. */
+/** Предзаполнение долга при конвертации: лимит − баланс, если 0 < баланс < лимит, иначе 0. */
 suggestDebtOnConversion(balance: number, limit: number | null): number
 /** Сумма долга по всем кредиткам, по валютам. */
 sumCreditCardDebtByCurrency(accounts: AccountWithBalances[]): Record<string, number>
