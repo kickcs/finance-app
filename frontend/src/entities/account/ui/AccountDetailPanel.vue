@@ -22,6 +22,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   edit: [];
+  adjust: [];
   delete: [];
 }>();
 
@@ -155,6 +156,15 @@ const groupedTransactions = useGroupedTransactions(accountTransactions, {
           <UButton variant="secondary" class="flex-1" @click="emit('edit')">
             <UIcon name="edit" size="sm" class="mr-1.5" />
             Редактировать
+          </UButton>
+          <UButton
+            variant="secondary"
+            class="flex-1"
+            data-testid="adjust-balance-btn"
+            @click="emit('adjust')"
+          >
+            <UIcon name="balance" size="sm" class="mr-1.5" />
+            Скорректировать баланс
           </UButton>
           <UButton
             variant="icon"

@@ -12,6 +12,7 @@ import {
   type AccountWithBalances,
 } from '@/entities/account';
 import { useEditAccount } from '@/features/edit-account';
+import { useAdjustBalance } from '@/features/adjust-balance';
 import { transactionsApi, transactionQueryKeys } from '@/entities/transaction';
 import type { Account } from '@/shared/api/database.types';
 
@@ -167,6 +168,32 @@ export function useAccountsPage(selectedAccountId: MaybeRefOrGetter<string | nul
     return success;
   }
 
+  // ─── Корректировка баланса ────────────────────────────────────────────
+  // Тост неудачной конвертации в кредитку отправляет пользователя именно сюда,
+  // поэтому кнопка нужна и на десктопе, а не только на экране счёта.
+  const showAdjustBalanceModal = ref(false);
+  const adjustBalanceCurrency = ref('');
+  const { adjustBalance, isAdjusting: isAdjustingBalance } = useAdjustBalance(() => userId.value);
+
+  function openAdjustBalance(balanceCurrency?: string) {
+    adjustBalanceCurrency.value =
+      balanceCurrency ?? selectedAccount.value?.balances?.[0]?.currency ?? currency.value;
+    showAdjustBalanceModal.value = true;
+  }
+
+  async function handleAdjustBalance(data: {
+    accountId: string;
+    targetBalance: number;
+    currency: string;
+    description: string;
+  }) {
+    const success = await adjustBalance(data);
+    if (success) {
+      showAdjustBalanceModal.value = false;
+    }
+    return success;
+  }
+
   return {
     userId,
     currency,
@@ -189,9 +216,14 @@ export function useAccountsPage(selectedAccountId: MaybeRefOrGetter<string | nul
     accountError,
     accountTransactionsCount,
     isLoadingTransactionsCount,
+    showAdjustBalanceModal,
+    adjustBalanceCurrency,
+    isAdjustingBalance,
     openEditModal,
     openDeleteModal,
+    openAdjustBalance,
     handleUpdateAccount,
     handleDeleteAccount,
+    handleAdjustBalance,
   };
 }

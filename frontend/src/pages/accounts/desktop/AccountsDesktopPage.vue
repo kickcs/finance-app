@@ -5,6 +5,7 @@ import { DesktopPage, DesktopColumns } from '@/shared/ui/desktop-page';
 import { UButton, UIcon, UCard, IconBadge, SectionHeader, Skeleton, EmptyState } from '@/shared/ui';
 import { AccountCard, AccountDetailPanel } from '@/entities/account';
 import { EditAccountDrawer, DeleteAccountModal } from '@/features/edit-account';
+import { AdjustBalanceModal } from '@/features/adjust-balance';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import type { AccountWithBalances } from '@/entities/account';
 
@@ -40,11 +41,16 @@ const {
   accountError,
   accountTransactionsCount,
   isLoadingTransactionsCount,
+  showAdjustBalanceModal,
+  adjustBalanceCurrency,
+  isAdjustingBalance,
   handleAddAccount,
   openEditModal,
   openDeleteModal,
+  openAdjustBalance,
   handleUpdateAccount,
   handleDeleteAccount,
+  handleAdjustBalance,
 } = useAccountsPage(selectedId);
 
 function selectAccount(account: AccountWithBalances) {
@@ -169,6 +175,7 @@ async function onDeleteConfirm() {
           :account-id="selectedAccount.id"
           :user-id="userId"
           @edit="openEditModal"
+          @adjust="openAdjustBalance()"
           @delete="openDeleteModal"
         />
       </template>
@@ -193,5 +200,14 @@ async function onDeleteConfirm() {
     :is-deleting="isDeletingAccount"
     :error="accountError"
     @confirm="onDeleteConfirm"
+  />
+
+  <!-- Adjust Balance Modal -->
+  <AdjustBalanceModal
+    v-model="showAdjustBalanceModal"
+    :account="selectedAccount"
+    :currency="adjustBalanceCurrency"
+    :is-loading="isAdjustingBalance"
+    @confirm="handleAdjustBalance"
   />
 </template>

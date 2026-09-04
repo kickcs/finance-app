@@ -24,7 +24,15 @@ const DraggableStub = defineComponent({
   },
 });
 
-afterEach(() => setIsDesktopForTests(null));
+let currentWrapper: ReturnType<typeof renderWithProviders> | null = null;
+
+afterEach(async () => {
+  setIsDesktopForTests(null);
+  currentWrapper?.unmount();
+  currentWrapper = null;
+  document.body.innerHTML = '';
+  await flushPromises();
+});
 
 async function mountPage(initialPath = '/accounts') {
   setIsDesktopForTests(true);
@@ -42,6 +50,7 @@ async function mountPage(initialPath = '/accounts') {
   // Карточки появляются после двух независимых асинхронных цепочек: запроса
   // счетов и резолва ленивого vuedraggable. Фиксированное число flushPromises
   // против них — гонка, поэтому ждём саму отрисовку.
+  currentWrapper = wrapper;
   await vi.waitFor(() => expect(wrapper.find('[data-testid="account-row"]').exists()).toBe(true));
   return { wrapper, router };
 }
@@ -83,5 +92,19 @@ describe('десктопные Счета', () => {
   it('без долга по картам строку не показывает', async () => {
     const { wrapper } = await mountPage();
     expect(wrapper.find('[data-testid="credit-card-debt-line"]').exists()).toBe(false);
+  });
+
+  // Тост о неудачной конвертации отправляет пользователя к этой кнопке, поэтому
+  // на десктопе она обязана быть — и открывать ту же модалку, что на мобиле.
+  it('коррекция баланса доступна из панели счёта', async () => {
+    const { wrapper } = await mountPage('/accounts?id=acc-1');
+
+    const btn = wrapper.findAll('button').find((b) => b.text().includes('Скорректировать баланс'));
+    expect(btn).toBeDefined();
+
+    await btn!.trigger('click');
+    await flushPromises();
+
+    expect(document.body.textContent).toContain('Коррекция баланса');
   });
 });
