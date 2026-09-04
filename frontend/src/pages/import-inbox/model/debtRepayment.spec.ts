@@ -2,7 +2,9 @@ import { describe, it, expect } from 'vitest';
 import type { Debt } from '@/shared/api/database.types';
 import {
   eligibleRepaymentGroupsForImport,
-  findExactRepaymentMatch,
+  findRepaymentMatch,
+  repaymentTolerance,
+  repaymentDifferenceLabel,
   debtsCountLabel,
 } from './debtRepayment';
 import type { ImportedTransaction } from '@/entities/imported-transaction';
@@ -10,7 +12,7 @@ import type { ImportedTransaction } from '@/entities/imported-transaction';
 type RepaymentImport = Pick<ImportedTransaction, 'type' | 'amount' | 'currency'>;
 
 function findMatch(debts: Debt[], item: RepaymentImport) {
-  return findExactRepaymentMatch(eligibleRepaymentGroupsForImport(debts, item), item);
+  return findRepaymentMatch(eligibleRepaymentGroupsForImport(debts, item), item);
 }
 
 function makeDebt(overrides: Partial<Debt>): Debt {
@@ -93,6 +95,46 @@ describe('eligibleRepaymentGroupsForImport', () => {
     expect(groups.map((g) => g.personName)).toEqual(['Бахтиёр']);
   });
 
+  it('остаток чуть меньше платежа (округлили вверх) — группа видна с переплатой', () => {
+    const debts = [
+      makeDebt({ id: 'd1', person_name: 'Нодыр', remaining_amount: 60_000 }),
+      makeDebt({ id: 'd2', person_name: 'Нодыр', remaining_amount: 179_000 }),
+    ];
+    const groups = eligibleRepaymentGroupsForImport(debts, {
+      type: 'income',
+      amount: 240_000,
+      currency: 'UZS',
+    });
+    expect(groups).toHaveLength(1);
+    expect(groups[0].totalRemaining).toBe(239_000);
+    expect(groups[0].difference).toBe(1_000);
+    expect(groups[0].isNearMatch).toBe(true);
+  });
+
+  it('переплата больше допуска — группа отсеивается', () => {
+    const debts = [makeDebt({ id: 'd1', person_name: 'Нодыр', remaining_amount: 150_000 })];
+    expect(
+      eligibleRepaymentGroupsForImport(debts, {
+        type: 'income',
+        amount: 240_000,
+        currency: 'UZS',
+      }),
+    ).toEqual([]);
+  });
+
+  it('близкие совпадения идут первыми', () => {
+    const debts = [
+      makeDebt({ id: 'd1', person_name: 'Бахтиёр', remaining_amount: 5_000_000 }),
+      makeDebt({ id: 'd2', person_name: 'Нодыр', remaining_amount: 239_000 }),
+    ];
+    const groups = eligibleRepaymentGroupsForImport(debts, {
+      type: 'income',
+      amount: 240_000,
+      currency: 'UZS',
+    });
+    expect(groups.map((g) => g.personName)).toEqual(['Нодыр', 'Бахтиёр']);
+  });
+
   it('закрытые долги игнорируются при суммировании группы', () => {
     const debts = [
       makeDebt({ id: 'd1', person_name: 'Алишер', remaining_amount: 100_000 }),
@@ -120,7 +162,7 @@ describe('eligibleRepaymentGroupsForImport', () => {
   });
 });
 
-describe('findExactRepaymentMatch', () => {
+describe('findRepaymentMatch', () => {
   it('единственная группа с суммарным остатком, равным сумме → матч', () => {
     const debts = [
       makeDebt({ id: 'd1', person_name: 'Алишер', remaining_amount: 100_000 }),
@@ -156,6 +198,75 @@ describe('findExactRepaymentMatch', () => {
   it('нет точного совпадения → null', () => {
     const debts = [makeDebt({ id: 'd1', remaining_amount: 150_000 })];
     expect(findMatch(debts, incomeImport)).toBeNull();
+  });
+
+  it('единственная группа с расхождением в пределах допуска → матч', () => {
+    const debts = [
+      makeDebt({ id: 'd1', person_name: 'Нодыр', remaining_amount: 60_000 }),
+      makeDebt({ id: 'd2', person_name: 'Нодыр', remaining_amount: 179_000 }),
+    ];
+    const match = findMatch(debts, { type: 'income', amount: 240_000, currency: 'UZS' });
+    expect(match?.personName).toBe('Нодыр');
+    expect(match?.difference).toBe(1_000);
+  });
+
+  it('остаток чуть больше платежа (округлили вниз) → тоже матч', () => {
+    const debts = [makeDebt({ id: 'd1', person_name: 'Нодыр', remaining_amount: 241_000 })];
+    const match = findMatch(debts, { type: 'income', amount: 240_000, currency: 'UZS' });
+    expect(match?.difference).toBe(-1_000);
+    expect(match?.isNearMatch).toBe(true);
+  });
+
+  it('две близкие группы, одна из них точная → матч на точную', () => {
+    const debts = [
+      makeDebt({ id: 'd1', person_name: 'Алишер', remaining_amount: 240_000 }),
+      makeDebt({ id: 'd2', person_name: 'Нодыр', remaining_amount: 239_000 }),
+    ];
+    const match = findMatch(debts, { type: 'income', amount: 240_000, currency: 'UZS' });
+    expect(match?.personName).toBe('Алишер');
+  });
+
+  it('две близкие группы без точной → null (неоднозначно)', () => {
+    const debts = [
+      makeDebt({ id: 'd1', person_name: 'Алишер', remaining_amount: 239_000 }),
+      makeDebt({ id: 'd2', person_name: 'Нодыр', remaining_amount: 241_000 }),
+    ];
+    expect(findMatch(debts, { type: 'income', amount: 240_000, currency: 'UZS' })).toBeNull();
+  });
+});
+
+describe('repaymentTolerance', () => {
+  it('валюта без копеек: пол — тысяча, потолок — десять тысяч', () => {
+    expect(repaymentTolerance(20_000, 'UZS')).toBe(1_000);
+    expect(repaymentTolerance(240_000, 'UZS')).toBe(4_800);
+    expect(repaymentTolerance(5_000_000, 'UZS')).toBe(10_000);
+  });
+
+  it('валюта с копейками: пол — единица, потолок — десять', () => {
+    expect(repaymentTolerance(10, 'USD')).toBe(1);
+    expect(repaymentTolerance(200, 'USD')).toBe(4);
+    expect(repaymentTolerance(100_000, 'USD')).toBe(10);
+  });
+});
+
+describe('repaymentDifferenceLabel', () => {
+  function group(difference: number, isNearMatch = true) {
+    return { difference, isNearMatch, currency: 'UZS' } as Parameters<
+      typeof repaymentDifferenceLabel
+    >[0];
+  }
+
+  it('переплата — отдельной записью', () => {
+    expect(repaymentDifferenceLabel(group(1_000))).toContain('Переплата');
+  });
+
+  it('недобор — остаток спишется', () => {
+    expect(repaymentDifferenceLabel(group(-1_000))).toContain('спишется');
+  });
+
+  it('ровная сумма и частичное погашение — без подписи', () => {
+    expect(repaymentDifferenceLabel(group(0))).toBeNull();
+    expect(repaymentDifferenceLabel(group(-500_000, false))).toBeNull();
   });
 });
 

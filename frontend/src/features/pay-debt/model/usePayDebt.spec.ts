@@ -316,7 +316,7 @@ describe('usePayDebt', () => {
       expect(toastMock).not.toHaveBeenCalled();
     });
 
-    it('всё равно применяет вернувшийся долг', async () => {
+    it('не правит остаток и по успешному ответу — иначе долги пропадали бы по одному', async () => {
       queryClient.setQueryData(debtQueryKeys.list(USER_ID), [givenDebt]);
       stubPayEndpoint(payResponse({ remainingAmount: 20000 }));
       const api = mountComposable();
@@ -324,7 +324,7 @@ describe('usePayDebt', () => {
       await api.payDebt(givenDebt, 10000, ACCOUNT_ID, USER_ID, { bulk: true });
 
       const cached = queryClient.getQueryData<Debt[]>(debtQueryKeys.list(USER_ID));
-      expect(cached?.[0].remaining_amount).toBe(20000);
+      expect(cached?.[0].remaining_amount).toBe(givenDebt.remaining_amount);
     });
   });
 });

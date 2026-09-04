@@ -10,6 +10,8 @@ import {
   mockSecondGivenDebtResponse,
   mockTakenDebtResponse,
 } from '@/test/mocks/handlers/debts';
+import { debtQueryKeys } from '@/entities/debt';
+import { queryClient } from '@/shared/api/queryClient';
 import type { Debt } from '@/shared/api/database.types';
 
 const { toastMock } = vi.hoisted(() => ({ toastMock: vi.fn() }));
@@ -117,6 +119,7 @@ describe('useCloseAllDebts', () => {
     vi.clearAllMocks();
     payments = [];
     stubPayments();
+    queryClient.clear();
   });
 
   afterEach(async () => {
@@ -168,6 +171,42 @@ describe('useCloseAllDebts', () => {
 
       expect(invalidateDebtRelated).toHaveBeenCalledTimes(1);
       expect(invalidateDebtRelated).toHaveBeenCalledWith(expect.anything(), USER_ID);
+    });
+
+    it('правит кэш только когда пачка отработала, а не до неё', async () => {
+      let releasePay!: () => void;
+      const gate = new Promise<void>((res) => {
+        releasePay = res;
+      });
+      server.use(
+        http.post('*/api/debts/:id/payments', async ({ params }) => {
+          await gate;
+          return HttpResponse.json({
+            debt: { ...mockGivenDebtResponse, id: params.id, isClosed: true, remainingAmount: 0 },
+            paymentTransactionId: 'tx-1',
+            transactionIds: ['tx-1'],
+          });
+        }),
+      );
+      queryClient.setQueryData(debtQueryKeys.list(USER_ID), [debt1, debt2]);
+      const c = mountComposable();
+
+      const promise = c.closeAllDebts([debt1, debt2], ACCOUNT_ID, USER_ID);
+      await flushPromises();
+
+      // Платежи ещё идут — экраны, читающие кэш, обязаны видеть оба долга
+      expect(queryClient.getQueryData<Debt[]>(debtQueryKeys.list(USER_ID))).toHaveLength(2);
+
+      releasePay();
+      await promise;
+      await flushPromises();
+
+      expect(queryClient.getQueryData<Debt[]>(debtQueryKeys.list(USER_ID))).toHaveLength(2);
+      expect(
+        queryClient
+          .getQueryData<Debt[]>(debtQueryKeys.list(USER_ID))
+          ?.every((d) => d.is_closed && d.remaining_amount === 0),
+      ).toBe(true);
     });
 
     it('знает общее число долгов до начала работы', async () => {

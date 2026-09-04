@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { flushPromises } from '@vue/test-utils';
 import { nextTick } from 'vue';
+import type { QueryClient } from '@tanstack/vue-query';
+import { queryClient as appQueryClient } from '@/shared/api/queryClient';
 import { renderWithProviders, mockUser, createTestRouter } from '@/test/test-utils';
 import { server } from '@/test/mocks/server';
 import { http, HttpResponse } from 'msw';
@@ -54,7 +56,7 @@ const routes = [
 
 let currentWrapper: ReturnType<typeof renderWithProviders> | null = null;
 
-async function renderPage(queryParams: Record<string, string> = {}) {
+async function renderPage(queryParams: Record<string, string> = {}, queryClient?: QueryClient) {
   const router = createTestRouter(routes);
   const query = new URLSearchParams(queryParams).toString();
   router.push(`/debts${query ? '?' + query : ''}`);
@@ -62,6 +64,7 @@ async function renderPage(queryParams: Record<string, string> = {}) {
 
   currentWrapper = renderWithProviders(DebtsListPage, {
     router,
+    queryClient,
     provideAuth: { user: mockUser },
   });
   // Allow all queries (debts, accounts, exchange-rates, profile) to settle.
@@ -82,6 +85,9 @@ describe('DebtsListPage', () => {
     server.resetHandlers();
     currentWrapper?.unmount();
     currentWrapper = null;
+    // Оптимистичные правки пишут в singleton-кэш приложения — один тест
+    // монтируется на нём, и остальным его состояние доставаться не должно.
+    appQueryClient.clear();
     await flushPromises();
   });
 
@@ -552,6 +558,61 @@ describe('DebtsListPage', () => {
       // Filter should be cleared (route no longer has person query)
       expect(router.currentRoute.value.query.person).toBeUndefined();
       // Clear filter btn should be gone
+      expect(wrapper.find('[data-testid="clear-filter-btn"]').exists()).toBe(false);
+    });
+
+    it('не схлопывает шторку и список, пока платежи в полёте', async () => {
+      // Оптимистичные правки идут в singleton-кэш приложения, а не в тестовый:
+      // на нём и проверяем, что экран не мигает.
+      appQueryClient.clear();
+      let releasePay!: () => void;
+      const gate = new Promise<void>((res) => {
+        releasePay = res;
+      });
+      server.use(
+        http.get('*/api/debts/paginated', () =>
+          HttpResponse.json(
+            buildPaginatedDebtsResponse([mockGivenDebtResponse, mockAlexeiTakenDebtResponse]),
+          ),
+        ),
+        http.post('*/api/debts/:id/payments', async ({ params, request }) => {
+          await gate;
+          const body = (await request.json()) as PayDebtBody;
+          const target =
+            [mockGivenDebtResponse, mockAlexeiTakenDebtResponse].find((d) => d.id === params.id) ??
+            mockGivenDebtResponse;
+          return HttpResponse.json(payDebtResult(target, body));
+        }),
+      );
+
+      const { wrapper } = await renderPage({ person: 'Алексей' }, appQueryClient);
+
+      await wrapper.find('[data-testid="close-all-btn"]').trigger('click');
+      await flushPromises();
+
+      const modal = wrapper.findComponent({ name: 'CloseAllDebtsDrawer' });
+      modal.vm.$emit('confirm', 'acc-1', { paymentAmount: 50000, forgiveRemainder: false });
+      await flushPromises();
+      await nextTick();
+
+      // Платежи ещё идут: список за шторкой остаётся на месте, «Вы без долгов!»
+      // мелькать не должен.
+      expect(modal.props('isClosing')).toBe(true);
+      expect(wrapper.find('[data-testid="empty-state"]').exists()).toBe(false);
+      expect(wrapper.text()).not.toContain('Вы без долгов!');
+
+      // И сама шторка продолжает описывать запущенную операцию: её список
+      // долгов не должен обнуляться под ней.
+      expect(modal.props('debts')).toHaveLength(2);
+      expect(document.body.querySelectorAll('[data-testid="close-all-debt-row"]')).toHaveLength(2);
+
+      releasePay();
+      await flushPromises();
+      await flushPromises();
+      await flushPromises();
+
+      // Когда пачка отработала — шторка закрылась, фильтр по человеку сброшен.
+      expect(modal.props('modelValue')).toBe(false);
       expect(wrapper.find('[data-testid="clear-filter-btn"]').exists()).toBe(false);
     });
   });

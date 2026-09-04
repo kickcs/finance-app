@@ -21,6 +21,7 @@ import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { navigateBackTo } from '@/app/router';
 import { ROUTE_NAMES } from '@/app/router/routeNames';
+import { CATEGORY_IDS } from '@/shared/config/categoryIds';
 import { formatDate, formatRelativeDate } from '@/shared/lib/format/date';
 import { Popover, PopoverTrigger, PopoverContent } from '@/shared/ui/primitives/popover';
 import { Calendar } from '@/shared/ui/primitives/calendar';
@@ -34,8 +35,9 @@ import { decideCategoryPrefill } from '../model/categoryPrefill';
 import { reviewRows } from '../model/reviewRows';
 import {
   eligibleRepaymentGroupsForImport,
-  findExactRepaymentMatch,
+  findRepaymentMatch,
   debtsCountLabel,
+  repaymentDifferenceLabel,
   type RepaymentGroup,
 } from '../model/debtRepayment';
 import {
@@ -136,7 +138,7 @@ const eligibleGroups = computed(() =>
 );
 const repaymentMatch = computed<RepaymentGroup | null>(() =>
   item.value && !repaymentSuggestionDismissed.value
-    ? findExactRepaymentMatch(eligibleGroups.value, item.value)
+    ? findRepaymentMatch(eligibleGroups.value, item.value)
     : null,
 );
 const repaymentMatchText = computed(() => {
@@ -146,9 +148,16 @@ const repaymentMatchText = computed(() => {
     match.debtType === 'given'
       ? `Похоже, это возврат долга от ${match.personName}`
       : `Похоже, это возврат вашего долга: ${match.personName}`;
-  if (match.debts.length <= 1) return base;
-  return `${base} (${debtsCountLabel(match.debts.length)})`;
+  const parts = [base];
+  if (match.debts.length > 1) parts.push(`(${debtsCountLabel(match.debts.length)})`);
+  const diff = repaymentDifferenceLabel(match);
+  return diff ? `${parts.join(' ')} · ${diff}` : parts.join(' ');
 });
+
+/** Куда записать переплату: возврат мне — доход-подарок, мой возврат — расход-подарок. */
+function excessCategoryId(group: RepaymentGroup): string {
+  return group.debtType === 'given' ? CATEGORY_IDS.GIFTS_INCOME : CATEGORY_IDS.GIFTS;
+}
 
 async function repayGroup(group: RepaymentGroup) {
   if (isClosing.value || isSubmitting.value) return;
@@ -170,6 +179,10 @@ async function repayGroup(group: RepaymentGroup) {
     let created: string | null = null;
     const ok = await closeAllDebts(group.debts, formData.value.accountId, userId.value, {
       paymentAmount: amount,
+      // Округлили вверх — разницу кладём отдельной записью «подарок»; округлили
+      // вниз — мелкий хвост прощаем, иначе на человеке висел бы долг в тысячу.
+      excessCategoryId: group.difference > 0 ? excessCategoryId(group) : undefined,
+      forgiveRemainder: group.isNearMatch && group.difference < 0,
       transactionDate: current.occurred_at ?? undefined,
       onTransactionCreated: (id) => {
         created = id;
