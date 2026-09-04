@@ -73,7 +73,7 @@ interface CreditCardState {
 }
 getCreditCardState(account: Pick<Account,'credit_limit'>, balance: number): CreditCardState
 isCreditCard(account: Pick<Account,'type'>): boolean
-/** Предзаполнение долга при конвертации: лимит − баланс, если 0 < баланс < лимит, иначе 0. */
+/** Предзаполнение долга при конвертации: −баланс при отрицательном балансе; лимит − баланс, если 0 < баланс < лимит; иначе 0. */
 suggestDebtOnConversion(balance: number, limit: number | null): number
 /** Сумма долга по всем кредиткам, по валютам. */
 sumCreditCardDebtByCurrency(accounts: AccountWithBalances[]): Record<string, number>
@@ -221,8 +221,8 @@ sumCreditCardDebtByCurrency(accounts: AccountWithBalances[]): Record<string, num
 ## 6. Тесты (vitest, jsdom)
 
 - `creditCard.spec.ts`: состояние (долг/свои/доступно/утилизация; без лимита;
-  лимит 0), `suggestDebtOnConversion` (баланс в [0,limit) → limit−balance;
-  отрицательный/выше лимита/без лимита → 0), сумма долгов по валютам.
+  лимит 0), `suggestDebtOnConversion` (отрицательный баланс → −balance; баланс в (0,limit) → limit−balance;
+  ноль/выше лимита/без лимита → 0), сумма долгов по валютам.
 - `AccountCard.spec.ts`: кредитка с долгом/без, «доступно» при лимите.
 - `CreditCardSummary.spec.ts`: герой «Долга нет» / долг / свои средства, метр
   только при лимите и долге, danger > 80 %, параметры — только заданные.

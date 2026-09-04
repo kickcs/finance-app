@@ -6,6 +6,7 @@ import {
   AccountTypeFields,
   ACCOUNT_ICONS,
   getAccountTypeLabel,
+  conversionTargetBalance,
   type AccountTypeFieldValues,
 } from '@/entities/account';
 import { ENTITY_COLORS } from '@/shared/config/colors';
@@ -54,17 +55,13 @@ const balances = computed(() => props.account?.balances ?? []);
 const previewName = computed(() => formData.value.name.trim() || 'Без названия');
 const previewIsPlaceholder = computed(() => formData.value.name.trim().length === 0);
 
-// Порог и правило пропуска зеркалят useEditAccount.update: валюту трогаем,
-// только если долг положительный или баланс уже ушёл в минус.
-const BALANCE_EPSILON = 0.01;
-
 /** Что станет с балансом этой валюты после сохранения. */
 function outcomeFor(balance: AccountBalance): string {
-  const debt = debtByCurrency.value[balance.currency] ?? 0;
-  const owed = Number.isFinite(debt) && debt > 0 ? debt : 0;
-  if (owed === 0 && balance.balance >= 0) return 'Баланс не изменится';
-  const target = owed === 0 ? 0 : -owed;
-  if (Math.abs(target - balance.balance) < BALANCE_EPSILON) return 'Баланс не изменится';
+  const target = conversionTargetBalance(
+    balance.balance,
+    debtByCurrency.value[balance.currency] ?? 0,
+  );
+  if (target === null) return 'Баланс не изменится';
   return `Баланс станет ${formatCurrency(target, balance.currency)}`;
 }
 

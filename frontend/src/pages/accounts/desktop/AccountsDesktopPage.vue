@@ -3,7 +3,7 @@ import { computed, defineAsyncComponent } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { DesktopPage, DesktopColumns } from '@/shared/ui/desktop-page';
 import { UButton, UIcon, UCard, IconBadge, SectionHeader, Skeleton, EmptyState } from '@/shared/ui';
-import { AccountCard, AccountDetailPanel } from '@/entities/account';
+import { AccountCard, AccountDetailPanel, CreditCardDebtLine } from '@/entities/account';
 import { EditAccountDrawer, DeleteAccountModal } from '@/features/edit-account';
 import { AdjustBalanceModal } from '@/features/adjust-balance';
 import { formatCurrency } from '@/shared/lib/format/currency';
@@ -93,13 +93,7 @@ async function onDeleteConfirm() {
           >
             {{ formatCurrency(totalBalance, currency) }}
           </p>
-          <p
-            v-if="!isLoading && creditCardDebt > 0"
-            data-testid="credit-card-debt-line"
-            class="text-xs text-danger tabular-nums"
-          >
-            в т.ч. долг по картам −{{ formatCurrency(creditCardDebt, currency) }}
-          </p>
+          <CreditCardDebtLine v-if="!isLoading" :amount="creditCardDebt" :currency="currency" />
         </div>
         <IconBadge icon="account_balance_wallet" size="lg" color="#3b82f6" class="shrink-0" />
       </div>

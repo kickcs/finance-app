@@ -14,30 +14,29 @@ const primaryState = computed(() =>
   primary.value ? getCreditCardState(props.account, primary.value.balance) : null,
 );
 const restBalances = computed(() => props.account.balances?.slice(1) ?? []);
+const currency = computed(() => primary.value?.currency ?? 'UZS');
+
+const NEUTRAL = 'text-text-primary-light dark:text-text-primary-dark';
 
 // Пустая карта не нуждается в подписи: «Долга нет» само себя объясняет.
-const heroLabel = computed(() => {
+const hero = computed(() => {
   const s = primaryState.value;
-  if (!s) return 'Задолженность';
-  if (s.ownFunds > 0) return 'Свои средства';
-  if (s.debt > 0) return 'Задолженность';
-  return null;
-});
-
-const heroValue = computed(() => {
-  const s = primaryState.value;
-  const currency = primary.value?.currency ?? 'UZS';
-  if (!s) return '—';
-  if (s.debt > 0) return formatCurrency(s.debt, currency);
-  if (s.ownFunds > 0) return formatCurrency(s.ownFunds, currency);
-  return 'Долга нет';
-});
-
-const heroClass = computed(() => {
-  const s = primaryState.value;
-  if (s && s.debt > 0) return 'text-danger';
-  if (s && s.ownFunds > 0) return 'text-success';
-  return 'text-text-primary-light dark:text-text-primary-dark';
+  if (!s) return { label: 'Задолженность', value: '—', class: NEUTRAL };
+  if (s.debt > 0) {
+    return {
+      label: 'Задолженность',
+      value: formatCurrency(s.debt, currency.value),
+      class: 'text-danger',
+    };
+  }
+  if (s.ownFunds > 0) {
+    return {
+      label: 'Свои средства',
+      value: formatCurrency(s.ownFunds, currency.value),
+      class: 'text-success',
+    };
+  }
+  return { label: null, value: 'Долга нет', class: NEUTRAL };
 });
 
 const hasLimit = computed(() => typeof primaryState.value?.available === 'number');
@@ -48,13 +47,12 @@ const meterColor = computed(() =>
 
 const params = computed(() => {
   const a = props.account;
-  const currency = primary.value?.currency ?? 'UZS';
   const rows: Array<{ key: string; label: string; value: string }> = [];
   if (typeof a.monthly_payment === 'number') {
     rows.push({
       key: 'payment',
       label: 'Мин. платёж',
-      value: formatCurrency(a.monthly_payment, currency),
+      value: formatCurrency(a.monthly_payment, currency.value),
     });
   }
   if (typeof a.grace_period_days === 'number') {
@@ -71,11 +69,11 @@ const params = computed(() => {
   <div v-if="primaryState" class="space-y-4" data-testid="credit-card-summary">
     <!-- Герой: одна крупная сумма на весь экран -->
     <div class="space-y-1">
-      <p v-if="heroLabel" class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
-        {{ heroLabel }}
+      <p v-if="hero.label" class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
+        {{ hero.label }}
       </p>
-      <p :class="['text-2xl font-bold tabular-nums tracking-tight', heroClass]">
-        {{ heroValue }}
+      <p :class="['text-2xl font-bold tabular-nums tracking-tight', hero.class]">
+        {{ hero.value }}
       </p>
     </div>
 
@@ -92,8 +90,8 @@ const params = computed(() => {
         class="flex justify-between text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
         data-testid="credit-card-track-ends"
       >
-        <span>доступно {{ formatCurrency(primaryState.available ?? 0, primary!.currency) }}</span>
-        <span>лимит {{ formatCurrency(primaryState.limit ?? 0, primary!.currency) }}</span>
+        <span>доступно {{ formatCurrency(primaryState.available ?? 0, currency) }}</span>
+        <span>лимит {{ formatCurrency(primaryState.limit ?? 0, currency) }}</span>
       </div>
     </div>
 

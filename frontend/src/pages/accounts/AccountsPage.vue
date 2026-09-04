@@ -5,7 +5,7 @@ import { useScroll } from '@vueuse/core';
 import { ROUTE_NAMES } from '@/app/router/routeNames';
 import { AppHeader } from '@/widgets/header';
 import { navigateBack } from '@/app/router';
-import { AccountCard, type AccountWithBalances } from '@/entities/account';
+import { AccountCard, CreditCardDebtLine, type AccountWithBalances } from '@/entities/account';
 import {
   UButton,
   UIcon,
@@ -123,13 +123,11 @@ function handleAccountClick(account: AccountWithBalances) {
                 >
                   {{ formatCurrency(totalBalance, currency) }}
                 </p>
-                <p
-                  v-if="!isLoading && creditCardDebt > 0"
-                  data-testid="credit-card-debt-line"
-                  class="text-xs text-danger tabular-nums"
-                >
-                  в т.ч. долг по картам −{{ formatCurrency(creditCardDebt, currency) }}
-                </p>
+                <CreditCardDebtLine
+                  v-if="!isLoading"
+                  :amount="creditCardDebt"
+                  :currency="currency"
+                />
               </div>
               <IconBadge icon="account_balance_wallet" size="lg" color="#3b82f6" class="shrink-0" />
             </div>

@@ -97,9 +97,13 @@ export function useEditAccountForm(account: MaybeRefOrGetter<AccountWithBalances
 
   function seedDebt() {
     const next: Record<string, number> = {};
+    // Лимит относится только к первой валюте; у остальных долг — лишь уже
+    // ушедший в минус баланс.
     balances.value.forEach((b, index) => {
-      next[b.currency] =
-        index === 0 ? suggestDebtOnConversion(b.balance, formData.value.creditLimit) : 0;
+      next[b.currency] = suggestDebtOnConversion(
+        b.balance,
+        index === 0 ? formData.value.creditLimit : null,
+      );
     });
     debtByCurrency.value = next;
   }

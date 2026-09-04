@@ -1,5 +1,5 @@
 import { ref, toValue, type MaybeRefOrGetter } from 'vue';
-import { useAccounts } from '@/entities/account';
+import { useAccounts, conversionTargetBalance } from '@/entities/account';
 import { transactionsApi } from '@/entities/transaction';
 import { useProfile } from '@/shared/api';
 import type { Account } from '@/shared/api/database.types';
@@ -9,14 +9,7 @@ import { useToast } from '@/shared/ui';
 
 const CONVERSION_DESCRIPTION = 'Перевод счёта в кредитную карту';
 
-// Зеркалит порог сервера: adjust-balance отвечает 400 на разницу меньше 0.01.
-const BALANCE_EPSILON = 0.01;
-
-/**
- * Сообщение валидации из HttpError (`shared/api/http.ts`): ValidationPipe отдаёт
- * `message` списком, обычные 400 — строкой. Без него «Не удалось обновить счёт»
- * не объясняет, какое поле сервер не принял.
- */
+// ValidationPipe отдаёт `message` списком, обычные 400 — строкой.
 function serverValidationMessage(e: unknown): string | undefined {
   if (!e || typeof e !== 'object' || !('status' in e) || !('data' in e)) return undefined;
   const httpError = e as { status: number; data?: { message?: string | string[] } };
@@ -35,12 +28,8 @@ export function useEditAccount(userId: MaybeRefOrGetter<string | null>) {
   const isDeleting = ref(false);
   const error = ref<string | null>(null);
 
-  /**
-   * Порядок «сначала PATCH, потом корректировка» намеренный: если упадёт второй
-   * шаг, у пользователя останется кредитка со старым балансом и кнопка
-   * «Скорректировать баланс» на экране. Обратный порядок оставил бы обычный
-   * счёт в минусе.
-   */
+  // Сначала PATCH, потом корректировка: при сбое второго шага остаётся кредитка
+  // со старым балансом и кнопкой «Скорректировать», а не обычный счёт в минусе.
   async function update(
     accountId: string,
     updates: Partial<Account>,
@@ -65,19 +54,14 @@ export function useEditAccount(userId: MaybeRefOrGetter<string | null>) {
 
       const debts = options?.debtByCurrency;
       if (debts && Object.keys(debts).length > 0) {
-        // Балансы из кэша — только эвристика пропуска: дельту сервер считает от
-        // своего состояния, промах кэша стоит лишнего вызова, а не ошибки.
+        // Балансы из кэша — только эвристика пропуска: дельту сервер считает сам.
         const current = getAccountById(accountId);
         let attempted = false;
         try {
           for (const [currency, debt] of Object.entries(debts)) {
             const balance = current?.balances.find((b) => b.currency === currency)?.balance ?? 0;
-            // Нулевой долг не повод обнулять свои деньги на счёте: валюту трогаем,
-            // только если долг положительный или баланс уже ушёл в минус.
-            const owed = Number.isFinite(debt) && debt > 0 ? debt : 0;
-            if (owed === 0 && balance >= 0) continue;
-            const target = owed === 0 ? 0 : -owed;
-            if (Math.abs(target - balance) < BALANCE_EPSILON) continue;
+            const target = conversionTargetBalance(balance, debt);
+            if (target === null) continue;
             attempted = true;
             await transactionsApi.adjustBalance({
               accountId,
@@ -95,8 +79,7 @@ export function useEditAccount(userId: MaybeRefOrGetter<string | null>) {
           });
           return true;
         } finally {
-          // Даже оборванная на полпути серия записей делает кэш устаревшим —
-          // иначе пользователь правит баланс, глядя на старую цифру.
+          // Даже оборванная на полпути серия записей делает кэш устаревшим.
           if (attempted) {
             const uid = toValue(userId) ?? '';
             await Promise.all([

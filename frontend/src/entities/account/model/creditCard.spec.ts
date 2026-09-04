@@ -3,6 +3,7 @@ import {
   getCreditCardState,
   isCreditCard,
   suggestDebtOnConversion,
+  conversionTargetBalance,
   sumCreditCardDebtByCurrency,
 } from './creditCard';
 import { VISIBLE_ACCOUNT_TYPES, ACCOUNT_TYPE_ICONS } from './account-types';
@@ -107,8 +108,9 @@ describe('suggestDebtOnConversion', () => {
     expect(suggestDebtOnConversion(12_000_000, 10_000_000)).toBe(0);
     expect(suggestDebtOnConversion(10_000_000, 10_000_000)).toBe(0);
   });
-  it('отрицательный баланс — 0', () => {
-    expect(suggestDebtOnConversion(-500_000, 10_000_000)).toBe(0);
+  it('отрицательный баланс — это уже долг, даже без лимита', () => {
+    expect(suggestDebtOnConversion(-500_000, 10_000_000)).toBe(500_000);
+    expect(suggestDebtOnConversion(-500_000, null)).toBe(500_000);
   });
   it('без лимита или при нулевом лимите — 0', () => {
     expect(suggestDebtOnConversion(3_000_000, null)).toBe(0);
@@ -168,5 +170,21 @@ describe('account-types', () => {
       loan: 'account_balance',
       deposit: 'diamond',
     });
+  });
+});
+
+describe('conversionTargetBalance', () => {
+  it('положительный долг выставляет минус', () => {
+    expect(conversionTargetBalance(3_000_000, 7_000_000)).toBe(-7_000_000);
+  });
+  it('нулевой долг при плюсе не трогает свои деньги', () => {
+    expect(conversionTargetBalance(3_000_000, 0)).toBeNull();
+  });
+  it('нулевой долг при минусе выводит в ноль', () => {
+    expect(conversionTargetBalance(-120_000, 0)).toBe(0);
+  });
+  it('уже совпадающий баланс — без корректировки', () => {
+    expect(conversionTargetBalance(-500_000, 500_000)).toBeNull();
+    expect(conversionTargetBalance(-500_000.004, 500_000)).toBeNull();
   });
 });
