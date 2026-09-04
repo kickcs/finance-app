@@ -2,6 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { flushPromises } from '@vue/test-utils';
 import { nextTick } from 'vue';
 import { renderWithProviders, mockUser } from '@/test/test-utils';
+import { formatCurrency } from '@/shared/lib/format/currency';
 import { server } from '@/test/mocks/server';
 import EditAccountDrawer from './ui/EditAccountDrawer.vue';
 import type { AccountWithBalances } from '@/shared/api/database.types';
@@ -151,5 +152,61 @@ describe('EditAccountDrawer', () => {
     expect(updates.type).toBe('credit_card');
     expect(updates.credit_limit).toBe(10_000_000);
     expect(debts).toEqual({ UZS: 7_000_000 });
+  });
+
+  it('строка исхода считается по каждой валюте отдельно', async () => {
+    currentWrapper = renderDrawer({
+      account: makeAccount({
+        balances: [
+          { id: 'b1', account_id: 'acc-1', currency: 'UZS', balance: 3_000_000, created_at: '' },
+          { id: 'b2', account_id: 'acc-1', currency: 'USD', balance: 500, created_at: '' },
+        ],
+      } as Partial<AccountWithBalances>),
+    });
+    await flushPromises();
+    (findInBody('[data-testid="account-type-credit_card"]') as HTMLButtonElement).click();
+    await flushPromises();
+    await setBodyInputValue('[data-testid="credit-limit-input"] input', '10000000');
+    await flushPromises();
+
+    const uzs = findInBody('[data-testid="debt-input-UZS"]')!;
+    expect(uzs.textContent).toContain(`Баланс станет ${formatCurrency(-7_000_000, 'UZS')}`);
+
+    // USD не трогаем: долг ноль, а свои деньги на счёте обнулять не за что.
+    const usd = findInBody('[data-testid="debt-input-USD"]')!;
+    expect(usd.textContent).toContain('Баланс не изменится');
+  });
+
+  it('без счёта форма не рисуется и в консоль ничего не падает', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    currentWrapper = renderDrawer({ account: null });
+    await flushPromises();
+
+    expect(findInBody('[data-testid="edit-account-form"]')).toBeNull();
+    expect(document.body.textContent).toContain('Редактировать счёт');
+    expect(warn).not.toHaveBeenCalled();
+    expect(error).not.toHaveBeenCalled();
+
+    warn.mockRestore();
+    error.mockRestore();
+  });
+
+  it('повторное открытие возвращает сохранённые значения', async () => {
+    currentWrapper = renderDrawer();
+    await flushPromises();
+    await setBodyInputValue('[data-testid="account-name-input"] input', 'Черновик');
+    await flushPromises();
+    expect(findInBody('[data-testid="account-preview"]')!.textContent).toContain('Черновик');
+
+    await currentWrapper.setProps({ modelValue: false });
+    await flushPromises();
+    await currentWrapper.setProps({ modelValue: true });
+    await flushPromises();
+
+    const name = findInBody('[data-testid="account-name-input"] input') as HTMLInputElement;
+    expect(name.value).toBe('Основной');
+    expect(findInBody('[data-testid="account-preview"]')!.textContent).toContain('Основной');
   });
 });

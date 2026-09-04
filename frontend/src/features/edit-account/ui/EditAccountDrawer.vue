@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, watch } from 'vue';
+import { computed, watch } from 'vue';
 import { UOverlay, UInput, UButton, UIconSelector, UColorPicker, IconBadge } from '@/shared/ui';
 import {
   AccountTypeSelector,
@@ -9,7 +9,7 @@ import {
 } from '@/entities/account';
 import { ENTITY_COLORS } from '@/shared/config/colors';
 import { formatCurrency, getCurrencySymbol } from '@/shared/lib/format/currency';
-import type { Account, AccountWithBalances } from '@/shared/api/database.types';
+import type { Account, AccountBalance, AccountWithBalances } from '@/shared/api/database.types';
 import { useEditAccountForm } from '../model/useEditAccountForm';
 
 const props = defineProps<{
@@ -41,30 +41,30 @@ const open = computed({
   set: (value: boolean) => emit('update:modelValue', value),
 });
 
+// Сброс на открытии, а не на закрытии: иначе поля успевают дёрнуться назад
+// прямо во время затухания шторки.
 watch(open, (isOpen) => {
-  if (!isOpen) nextTick(() => reset());
+  if (isOpen) reset();
 });
 
 const balances = computed(() => props.account?.balances ?? []);
-const primaryBalance = computed(() => balances.value[0] ?? null);
 
 const previewName = computed(() => formData.value.name.trim() || 'Без названия');
 const previewIsPlaceholder = computed(() => formData.value.name.trim().length === 0);
 
-const conversionHint = computed(() => {
-  const b = primaryBalance.value;
-  if (!b) return '';
-  return `На счёте ${formatCurrency(b.balance, b.currency)}. Если это доступный остаток по карте, долг = лимит − остаток.`;
-});
+// Порог и правило пропуска зеркалят useEditAccount.update: валюту трогаем,
+// только если долг положительный или баланс уже ушёл в минус.
+const BALANCE_EPSILON = 0.01;
 
-/** Что случится с балансом первой валюты после сохранения — только если цель отличается. */
-const conversionOutcome = computed(() => {
-  const b = primaryBalance.value;
-  if (!b) return null;
-  const target = -(debtByCurrency.value[b.currency] ?? 0);
-  if (Math.abs(target - b.balance) <= 0.001) return null;
-  return `Баланс станет ${formatCurrency(target, b.currency)}, разница запишется корректировкой`;
-});
+/** Что станет с балансом этой валюты после сохранения. */
+function outcomeFor(balance: AccountBalance): string {
+  const debt = debtByCurrency.value[balance.currency] ?? 0;
+  const owed = Number.isFinite(debt) && debt > 0 ? debt : 0;
+  if (owed === 0 && balance.balance >= 0) return 'Баланс не изменится';
+  const target = owed === 0 ? 0 : -owed;
+  if (Math.abs(target - balance.balance) < BALANCE_EPSILON) return 'Баланс не изменится';
+  return `Баланс станет ${formatCurrency(target, balance.currency)}`;
+}
 
 function debtValue(currency: string): string {
   const debt = debtByCurrency.value[currency];
@@ -143,35 +143,34 @@ function handleSubmit() {
           data-testid="conversion-block"
           class="space-y-3 rounded-xl border border-border-light dark:border-border-dark p-3"
         >
-          <p class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
-            Задолженность сейчас
-          </p>
+          <div>
+            <p class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
+              Задолженность сейчас
+            </p>
+            <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
+              Если на счёте лежит доступный остаток по карте, долг = лимит − остаток. Баланс
+              выставим корректирующей операцией.
+            </p>
+          </div>
 
           <div
             v-for="balance in balances"
             :key="balance.currency"
             :data-testid="`debt-input-${balance.currency}`"
+            class="space-y-1"
           >
             <UInput
               :model-value="debtValue(balance.currency)"
-              type="number"
               variant="currency"
               :suffix="getCurrencySymbol(balance.currency)"
               :label="balances.length > 1 ? balance.currency : undefined"
               placeholder="0"
               @update:model-value="setDebt(balance.currency, Number($event) || 0)"
             />
+            <p class="text-xs text-text-secondary-light dark:text-text-secondary-dark">
+              {{ outcomeFor(balance) }}
+            </p>
           </div>
-
-          <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
-            {{ conversionHint }}
-          </p>
-          <p
-            v-if="conversionOutcome"
-            class="text-xs text-text-secondary-light dark:text-text-secondary-dark"
-          >
-            {{ conversionOutcome }}
-          </p>
         </div>
       </Transition>
 
