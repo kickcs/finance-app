@@ -2,7 +2,6 @@ import { ref } from 'vue';
 import { useToast } from '@/shared/ui';
 import { useHaptics } from '@/shared/lib/haptics';
 import { formatCurrency } from '@/shared/lib/format/currency';
-import { formatCardNumber } from '@/shared/lib/format/cardNumber';
 import { formatLocalDate } from '@/shared/lib/format/date';
 import { toLocalISODate } from '@/shared/lib/date';
 import {
@@ -14,15 +13,10 @@ import {
 import { debtShareApi, type SharedDebtsPayload } from '@/entities/debt';
 import { ensureShareFonts } from '@/shared/lib/share/shareFonts';
 import { renderDebtsCardToCanvas } from './renderDebtsCard';
+import { buildNetLine, buildShareCaption } from './buildShareCaption';
 
 function buildShareText(payload: SharedDebtsPayload): string {
-  const isPositive = payload.net >= 0;
-  const net = formatCurrency(Math.abs(payload.net), payload.currency);
-  const lines = [
-    `${payload.personName} — ${isPositive ? `должен ${net}` : `вы должны ${net}`}`,
-    `на ${formatLocalDate(payload.snapshotAt)}`,
-    '',
-  ];
+  const lines = [buildNetLine(payload), `на ${formatLocalDate(payload.snapshotAt)}`, ''];
 
   for (const debt of payload.debts) {
     const remaining = formatCurrency(debt.remainingAmount, debt.currency);
@@ -37,7 +31,9 @@ function buildShareText(payload: SharedDebtsPayload): string {
   if (payload.debts.length === 0) lines.push('Открытых долгов нет');
 
   if (payload.cardNumber) {
-    lines.push('', `Карта для перевода: ${formatCardNumber(payload.cardNumber)}`);
+    // Сплошными цифрами — как и в подписи к картинке: с пробелами мессенджер уже
+    // не узнаёт в строке номер карты и не предлагает скопировать его одним нажатием
+    lines.push('', `Карта для перевода: ${payload.cardNumber}`);
   }
 
   lines.push('', `Сверено в Ouro Finance — ${APP_URL}`);
@@ -50,6 +46,16 @@ function buildFilename(payload: SharedDebtsPayload): string {
     toLocalISODate(new Date(payload.snapshotAt)),
     'debts',
   );
+}
+
+/** Буфер может быть закрыт (нет разрешения, не тот контекст) — это не повод ронять отправку. */
+async function copyQuietly(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function useDebtsShare() {
@@ -70,6 +76,11 @@ export function useDebtsShare() {
    * Картинка отдаётся через системный шеринг, а где его нет — скачивается.
    * `navigator.canShare` спрашиваем именно с файлом: браузеры умеют шарить
    * текст, но не файлы, и без проверки шаринг падал бы уже после рендера.
+   *
+   * Вместе с файлом уходит подпись — итог и карта: в чате они станут текстом,
+   * который копируется, а не цифрами на картинке. Подпись при файле берут не
+   * все платформы, поэтому её спрашиваем отдельным `canShare`, и там, где её не
+   * возьмут, кладём в буфер обмена — вставить в то же сообщение остаётся руками.
    */
   async function shareAsImage(payload: SharedDebtsPayload): Promise<void> {
     isSharing.value = true;
@@ -82,13 +93,25 @@ export function useDebtsShare() {
       const blob = await canvasToBlob(canvas);
       const filename = buildFilename(payload);
       const file = new File([blob], filename, { type: 'image/png' });
+      const caption = buildShareCaption(payload);
 
-      if (navigator.canShare?.({ files: [file] })) {
+      if (navigator.canShare?.({ files: [file], text: caption })) {
+        await navigator.share({ files: [file], text: caption });
+        trigger('success');
+      } else if (navigator.canShare?.({ files: [file] })) {
+        // Копируем до вызова шеринга: системный лист забирает фокус, и после
+        // него доступ к буферу браузер уже не даёт
+        const copied = await copyQuietly(caption);
         await navigator.share({ files: [file] });
         trigger('success');
+        if (copied) toast({ title: 'Текст скопирован — вставьте в сообщение' });
       } else {
         downloadBlob(blob, filename);
-        toast({ title: 'Изображение сохранено', variant: 'success' });
+        const copied = await copyQuietly(caption);
+        toast({
+          title: copied ? 'Изображение сохранено, текст скопирован' : 'Изображение сохранено',
+          variant: 'success',
+        });
       }
     } catch (error) {
       // Отмена системного шаринга — не ошибка
@@ -105,6 +128,7 @@ export function useDebtsShare() {
     }
   }
 
+  /** Сохранение — то же самое без системного шеринга: подпись отдаём через буфер. */
   async function saveAsImage(payload: SharedDebtsPayload): Promise<void> {
     isSharing.value = true;
     let canvas: HTMLCanvasElement | null = null;
@@ -113,7 +137,11 @@ export function useDebtsShare() {
       canvas = renderDebtsCardToCanvas(payload);
       const blob = await canvasToBlob(canvas);
       downloadBlob(blob, buildFilename(payload));
-      toast({ title: 'Изображение сохранено', variant: 'success' });
+      const copied = await copyQuietly(buildShareCaption(payload));
+      toast({
+        title: copied ? 'Изображение сохранено, текст скопирован' : 'Изображение сохранено',
+        variant: 'success',
+      });
     } catch (error) {
       console.error('Save debts image failed:', error);
       toast({ title: 'Не удалось сохранить', variant: 'error' });
@@ -207,5 +235,6 @@ export function useDebtsShare() {
     copyLink,
     shareLink,
     buildShareText,
+    buildShareCaption,
   };
 }

@@ -82,11 +82,11 @@ describe('useChangelog', () => {
       expect(latestEntry.value?.items.length).toBeGreaterThan(0);
     });
 
-    it('точка входа релиза — 1.0.89 с записью про карту в шаринге', () => {
-      expect(CURRENT_VERSION).toBe('1.0.89');
-      expect(CHANGELOG_ENTRIES[0].version).toBe('1.0.89');
+    it('точка входа релиза — 1.0.90 с записью про подпись к картинке', () => {
+      expect(CURRENT_VERSION).toBe('1.0.90');
+      expect(CHANGELOG_ENTRIES[0].version).toBe('1.0.90');
       expect(CHANGELOG_ENTRIES[0].date).toBe('2026-09-05');
-      expect(CHANGELOG_ENTRIES[0].items[0].type).toBe('feature');
+      expect(CHANGELOG_ENTRIES[0].items[0].type).toBe('improvement');
       expect(CHANGELOG_ENTRIES[0].items[0].text).toContain('карты');
     });
   });
