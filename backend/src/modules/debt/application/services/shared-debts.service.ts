@@ -31,6 +31,8 @@ export interface SharedDebtsPayload {
   ownerName: string | null;
   /** Момент снимка: по ссылке видны долги на эту дату, а не текущие. */
   snapshotAt: number;
+  /** Карта владельца для перевода — её показывают получателю ссылки. Может отсутствовать в старых снимках. */
+  cardNumber?: string | null;
   debts: SharedDebtEntry[];
 }
 

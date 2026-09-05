@@ -1,13 +1,17 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue';
 import { UOverlay } from '@/shared/ui/overlay';
-import { UButton, UIcon } from '@/shared/ui';
+import { UButton, UIcon, UInput, UToggle } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
+import { formatCardNumber } from '@/shared/lib/format/cardNumber';
+import { useCardNumberInput } from '@/shared/lib/hooks/useCardNumberInput';
+import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { pluralize } from '@/shared/lib/format/pluralize';
 import { useHaptics } from '@/shared/lib/haptics';
 import { cn } from '@/shared/lib/utils';
 import type { SharedDebtsPayload } from '@/entities/debt';
 import { useDebtsShare } from '../model/useDebtsShare';
+import { useShareCardNumber } from '../model/useShareCardNumber';
 
 /**
  * Шторка «поделиться долгами человека». Два способа отдать одно и то же:
@@ -41,6 +45,33 @@ const {
   shareLink,
 } = useDebtsShare();
 
+const { userId } = useCurrentUser();
+const {
+  savedCard,
+  attachedCard,
+  isAttached: isCardAttached,
+  isEditing: isEditingCard,
+  draft: cardDraft,
+  isDraftValid: isCardDraftValid,
+  isSaving: isSavingCard,
+  saveError: cardSaveError,
+  startEdit: startCardEdit,
+  cancelEdit: cancelCardEdit,
+  saveCard,
+  reset: resetCard,
+} = useShareCardNumber(userId);
+
+/**
+ * Снимок приходит готовым, но карту к нему прикладывает именно шторка: она
+ * одна знает, оставил её пользователь приложенной или снял перед отправкой.
+ */
+const sharedPayload = computed<SharedDebtsPayload | null>(() =>
+  props.payload ? { ...props.payload, cardNumber: attachedCard.value } : null,
+);
+
+/** В поле номер читается по четыре цифры, в модели лежит голыми. */
+const { view: cardDraftView, onInput: onCardDraftInput } = useCardNumberInput(cardDraft);
+
 const debtsCount = computed(() => props.payload?.debts.length ?? 0);
 const isPositive = computed(() => (props.payload?.net ?? 0) >= 0);
 
@@ -50,36 +81,45 @@ const canShareNatively = computed(() => typeof navigator !== 'undefined' && !!na
 watch(
   () => props.modelValue,
   (open) => {
-    if (open) resetLink();
+    if (open) {
+      resetLink();
+      resetCard();
+    }
   },
 );
+
+// Ссылка хранит снимок целиком: сняли или поменяли карту — старая ссылка
+// показывала бы уже не то, что на экране, поэтому её пересоздают
+watch(attachedCard, () => {
+  if (createdUrl.value) resetLink();
+});
 
 function setOpen(value: boolean) {
   emit('update:modelValue', value);
 }
 
 async function onShareImage() {
-  if (!props.payload) return;
+  if (!sharedPayload.value) return;
   trigger('selection');
-  await shareAsImage(props.payload);
+  await shareAsImage(sharedPayload.value);
 }
 
 async function onSaveImage() {
-  if (!props.payload) return;
+  if (!sharedPayload.value) return;
   trigger('selection');
-  await saveAsImage(props.payload);
+  await saveAsImage(sharedPayload.value);
 }
 
 async function onShareText() {
-  if (!props.payload) return;
+  if (!sharedPayload.value) return;
   trigger('selection');
-  await shareAsText(props.payload);
+  await shareAsText(sharedPayload.value);
 }
 
 async function onCreateLink() {
-  if (!props.payload) return;
+  if (!sharedPayload.value) return;
   trigger('selection');
-  await createLink(props.payload);
+  await createLink(sharedPayload.value);
 }
 
 async function onShareLink() {
@@ -134,6 +174,107 @@ async function onShareLink() {
           не попадёт ни в картинку, ни в ссылку
         </span>
       </p>
+
+      <!-- Куда переводить: карта живёт в профиле, но приложить её к этому
+           снимку — отдельное решение -->
+      <div class="space-y-2">
+        <div class="flex items-center justify-between gap-3">
+          <p
+            class="text-caption-sm font-semibold uppercase tracking-wider text-text-tertiary-light dark:text-text-tertiary-dark"
+          >
+            Карта для перевода
+          </p>
+          <UToggle
+            v-if="savedCard && !isEditingCard"
+            v-model="isCardAttached"
+            :disabled="isCreatingLink"
+            data-testid="share-debts-card-toggle"
+          />
+        </div>
+
+        <template v-if="isEditingCard">
+          <UInput
+            :model-value="cardDraftView"
+            type="tel"
+            icon="credit_card"
+            placeholder="0000 0000 0000 0000"
+            data-testid="share-debts-card-input"
+            @update:model-value="onCardDraftInput"
+          />
+          <div class="flex gap-2">
+            <UButton variant="ghost" full-width :disabled="isSavingCard" @click="cancelCardEdit">
+              Отмена
+            </UButton>
+            <UButton
+              variant="secondary"
+              full-width
+              :loading="isSavingCard"
+              :disabled="!isCardDraftValid"
+              data-testid="share-debts-card-save"
+              @click="saveCard"
+            >
+              Сохранить
+            </UButton>
+          </div>
+          <p class="text-caption text-text-tertiary-light dark:text-text-tertiary-dark">
+            Номер сохранится в профиле — в следующий раз подставим его сами
+          </p>
+        </template>
+
+        <template v-else-if="savedCard">
+          <div
+            :class="
+              cn(
+                'flex items-center gap-2 rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark px-3 py-3 transition-opacity',
+                !isCardAttached && 'opacity-45',
+              )
+            "
+          >
+            <UIcon
+              name="credit_card"
+              size="sm"
+              class="shrink-0 text-text-tertiary-light dark:text-text-tertiary-dark"
+            />
+            <p
+              class="flex-1 min-w-0 truncate text-body-sm font-semibold tabular-nums tracking-wide text-text-primary-light dark:text-text-primary-dark select-all"
+            >
+              {{ formatCardNumber(savedCard) }}
+            </p>
+            <button
+              type="button"
+              aria-label="Изменить номер карты"
+              class="w-9 h-9 rounded-lg bg-surface-light dark:bg-card-dark flex items-center justify-center text-text-secondary-light dark:text-text-secondary-dark active:scale-90 transition-transform shrink-0"
+              data-testid="share-debts-card-edit"
+              @click="startCardEdit"
+            >
+              <UIcon name="edit" size="sm" />
+            </button>
+          </div>
+          <p class="text-caption text-text-tertiary-light dark:text-text-tertiary-dark">
+            {{
+              isCardAttached
+                ? 'Номер увидит каждый, у кого есть картинка или ссылка'
+                : 'Карта не попадёт ни в картинку, ни в ссылку'
+            }}
+          </p>
+        </template>
+
+        <UButton
+          v-else
+          variant="ghost"
+          full-width
+          data-testid="share-debts-card-add"
+          @click="startCardEdit"
+        >
+          <UIcon name="add" size="sm" />
+          Добавить карту
+        </UButton>
+
+        <p v-if="cardSaveError" class="flex items-center gap-2 text-body-sm text-danger">
+          <UIcon name="error" size="sm" class="shrink-0" />
+          {{ cardSaveError }}
+        </p>
+      </div>
 
       <!-- Картинкой -->
       <div class="space-y-2">

@@ -14,6 +14,7 @@ import {
   text,
   type CardBody,
 } from '@/shared/lib/share/shareCard';
+import { formatCardNumber } from '@/shared/lib/format/cardNumber';
 import type { SharedDebtsPayload } from '@/entities/debt';
 
 const ROW_SUB = 20;
@@ -43,10 +44,55 @@ export function buildReconciliation(payload: SharedDebtsPayload): {
   };
 }
 
+/**
+ * Подвал с картой: получателю мало знать сумму — ему нужно, куда вернуть.
+ * Отделён волосяной линией, а не отрывом: отрыв в карточке один и делит корешок
+ * со списком, второй читался бы как ещё один документ.
+ */
+function cardSection(
+  ctx: CanvasRenderingContext2D,
+  draw: boolean,
+  bottom: number,
+  cardNumber: string,
+): number {
+  const { CX, CR, CW } = CARD;
+
+  const lineY = bottom + 4;
+  const captionY = lineY + 20;
+  const numberY = captionY + 23;
+
+  if (draw) {
+    ctx.beginPath();
+    ctx.strokeStyle = SHARE_COLORS.hairline;
+    ctx.lineWidth = 1;
+    ctx.moveTo(CX, lineY - 0.5);
+    ctx.lineTo(CR, lineY - 0.5);
+    ctx.stroke();
+
+    text(ctx, 'КАРТА ДЛЯ ПЕРЕВОДА', CX, captionY, {
+      font: `600 10px ${DISPLAY}`,
+      color: SHARE_COLORS.inkFaint,
+      track: 1.4,
+    });
+    text(ctx, formatCardNumber(cardNumber), CX, numberY, {
+      font: `600 16px ${MONO}`,
+      color: SHARE_COLORS.ink,
+      track: 0.6,
+      max: CW,
+    });
+  }
+
+  return numberY + 20;
+}
+
 function debtsBody(payload: SharedDebtsPayload): CardBody {
   const { CX, CR, CW, GUTTER } = CARD;
   const mixed = usesMixedCurrency(payload);
   const positive = payload.net >= 0;
+
+  /** Низ листа: карта, если её приложили, иначе — конец списка. */
+  const finish = (ctx: CanvasRenderingContext2D, draw: boolean, bottom: number): number =>
+    payload.cardNumber ? cardSection(ctx, draw, bottom, payload.cardNumber) : bottom;
 
   return (ctx, draw) => {
     let y = eyebrow(ctx, draw, shortDate(payload.snapshotAt));
@@ -103,7 +149,7 @@ function debtsBody(payload: SharedDebtsPayload): CardBody {
           color: SHARE_COLORS.inkFaint,
         });
       }
-      return y + 24;
+      return finish(ctx, draw, y + 24);
     }
 
     payload.debts.forEach((debt, index) => {
@@ -152,7 +198,7 @@ function debtsBody(payload: SharedDebtsPayload): CardBody {
       y += ROW_SUB + (index < payload.debts.length - 1 ? ROW_GAP : 0);
     });
 
-    return y + 26;
+    return finish(ctx, draw, y + 26);
   };
 }
 

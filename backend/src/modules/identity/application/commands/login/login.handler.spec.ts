@@ -61,6 +61,7 @@ describe('LoginHandler', () => {
       timezone: 'Asia/Tashkent',
       notificationHour: 12,
       createdAt: new Date(),
+      paymentCardNumber: null,
     });
   }
 
@@ -118,6 +119,7 @@ describe('LoginHandler', () => {
       timezone: 'Asia/Tashkent',
       notificationHour: 12,
       createdAt: new Date(),
+      paymentCardNumber: null,
     });
     mockRepository.findByEmail.mockResolvedValue(profile);
 

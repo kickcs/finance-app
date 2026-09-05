@@ -2,6 +2,7 @@ import { ref } from 'vue';
 import { useToast } from '@/shared/ui';
 import { useHaptics } from '@/shared/lib/haptics';
 import { formatCurrency } from '@/shared/lib/format/currency';
+import { formatCardNumber } from '@/shared/lib/format/cardNumber';
 import { formatLocalDate } from '@/shared/lib/format/date';
 import { toLocalISODate } from '@/shared/lib/date';
 import {
@@ -34,6 +35,10 @@ function buildShareText(payload: SharedDebtsPayload): string {
   }
 
   if (payload.debts.length === 0) lines.push('Открытых долгов нет');
+
+  if (payload.cardNumber) {
+    lines.push('', `Карта для перевода: ${formatCardNumber(payload.cardNumber)}`);
+  }
 
   lines.push('', `Сверено в Ouro Finance — ${APP_URL}`);
   return lines.join('\n');

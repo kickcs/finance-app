@@ -49,6 +49,7 @@ export class UpdateProfileHandler implements ICommandHandler<UpdateProfileComman
       financialMonthStartDay: profile.financialMonthStartDay,
       timezone: profile.timezone,
       notificationHour: profile.notificationHour,
+      paymentCardNumber: profile.paymentCardNumber,
       createdAt: profile.createdAt,
     };
   }

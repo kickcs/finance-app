@@ -39,6 +39,8 @@ export interface ProfileProps {
   financialMonthStartDay: number;
   timezone: string;
   notificationHour: number;
+  /** Номер карты для переводов — только цифры, попадает в шаринг долгов. */
+  paymentCardNumber: string | null;
   createdAt: Date;
 }
 
@@ -63,6 +65,7 @@ export class Profile extends AggregateRoot<string> {
   private _financialMonthStartDay: number;
   private _timezone: string;
   private _notificationHour: number;
+  private _paymentCardNumber: string | null;
   private _createdAt: Date;
 
   private constructor(props: ProfileProps) {
@@ -83,6 +86,7 @@ export class Profile extends AggregateRoot<string> {
     this._financialMonthStartDay = props.financialMonthStartDay;
     this._timezone = props.timezone;
     this._notificationHour = props.notificationHour;
+    this._paymentCardNumber = props.paymentCardNumber;
     this._createdAt = props.createdAt;
   }
 
@@ -115,6 +119,7 @@ export class Profile extends AggregateRoot<string> {
       financialMonthStartDay: 1,
       timezone: 'Asia/Tashkent',
       notificationHour: DEFAULT_NOTIFICATION_HOUR,
+      paymentCardNumber: null,
       createdAt: new Date(),
     });
 
@@ -147,6 +152,7 @@ export class Profile extends AggregateRoot<string> {
       financialMonthStartDay: 1,
       timezone: 'Asia/Tashkent',
       notificationHour: DEFAULT_NOTIFICATION_HOUR,
+      paymentCardNumber: null,
       createdAt: new Date(),
     });
 
@@ -231,6 +237,10 @@ export class Profile extends AggregateRoot<string> {
     return this._notificationHour;
   }
 
+  get paymentCardNumber(): string | null {
+    return this._paymentCardNumber;
+  }
+
   get createdAt(): Date {
     return this._createdAt;
   }
@@ -240,6 +250,23 @@ export class Profile extends AggregateRoot<string> {
       throw new Error('notificationHour must be an integer between 0 and 23');
     }
     this._notificationHour = hour;
+  }
+
+  /**
+   * Карта хранится голыми цифрами: пробелы и дефисы — дело показа, а на входе
+   * они приходят по-разному и ломали бы сравнение с уже сохранённым номером.
+   */
+  setPaymentCardNumber(value: string | null): void {
+    if (value === null || value.trim() === '') {
+      this._paymentCardNumber = null;
+      return;
+    }
+
+    const digits = value.replace(/\D/g, '');
+    if (!/^\d{12,19}$/.test(digits)) {
+      throw new Error('paymentCardNumber must contain between 12 and 19 digits');
+    }
+    this._paymentCardNumber = digits;
   }
 
   // Behaviors
@@ -255,6 +282,7 @@ export class Profile extends AggregateRoot<string> {
     financialMonthStartDay?: number;
     timezone?: string;
     notificationHour?: number;
+    paymentCardNumber?: string | null;
   }): void {
     const changes: Record<string, unknown> = {};
 
@@ -311,6 +339,15 @@ export class Profile extends AggregateRoot<string> {
     if (data.notificationHour !== undefined) {
       this.setNotificationHour(data.notificationHour);
       changes.notificationHour = data.notificationHour;
+    }
+
+    if (data.paymentCardNumber !== undefined) {
+      this.setPaymentCardNumber(data.paymentCardNumber);
+      // В событие уходит только хвост номера: подписчики видят факт смены карты,
+      // а сам номер незачем разносить по шине и логам.
+      changes.paymentCardNumber = this._paymentCardNumber
+        ? `••${this._paymentCardNumber.slice(-4)}`
+        : null;
     }
 
     if (Object.keys(changes).length > 0) {
