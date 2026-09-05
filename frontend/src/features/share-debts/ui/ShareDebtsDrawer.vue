@@ -303,6 +303,16 @@ async function onShareLink() {
           <UIcon name="content_copy" size="sm" />
           Скопировать текстом
         </UButton>
+        <p
+          v-if="attachedCard"
+          class="text-caption text-text-tertiary-light dark:text-text-tertiary-dark"
+        >
+          {{
+            canShareNatively
+              ? 'Рядом с картинкой уйдут текстом итог и карта — в чате их можно скопировать'
+              : 'Итог и карта текстом лягут в буфер обмена — вставьте их рядом с картинкой'
+          }}
+        </p>
       </div>
 
       <!-- Ссылкой -->

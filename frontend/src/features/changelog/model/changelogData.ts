@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.89';
+export const CURRENT_VERSION = '1.0.90';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,21 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.90',
+    date: '2026-09-05',
+    title: 'Карта и сумма текстом рядом с картинкой',
+    items: [
+      {
+        type: 'improvement',
+        text: 'Когда отправляете долги картинкой, вместе с ней уходит короткий текст — итог и номер карты. В чате их можно скопировать, а не перебивать с картинки руками: Telegram сам подсвечивает номер карты и предлагает скопировать его одним нажатием.',
+      },
+      {
+        type: 'improvement',
+        text: 'Если приложение отправляет картинку без подписи или вы её сохраняете, этот текст кладётся в буфер обмена — остаётся вставить его в сообщение.',
+      },
+    ],
+  },
   {
     version: '1.0.89',
     date: '2026-09-05',
