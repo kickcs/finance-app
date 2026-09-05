@@ -82,12 +82,12 @@ describe('useChangelog', () => {
       expect(latestEntry.value?.items.length).toBeGreaterThan(0);
     });
 
-    it('точка входа релиза — 1.0.87 с записью про кредитную карту', () => {
-      expect(CURRENT_VERSION).toBe('1.0.87');
-      expect(CHANGELOG_ENTRIES[0].version).toBe('1.0.87');
-      expect(CHANGELOG_ENTRIES[0].date).toBe('2026-09-04');
-      expect(CHANGELOG_ENTRIES[0].items[0].type).toBe('feature');
-      expect(CHANGELOG_ENTRIES[0].items[0].text).toContain('Кредитная карта');
+    it('точка входа релиза — 1.0.88 с записью про отрисовку долгов', () => {
+      expect(CURRENT_VERSION).toBe('1.0.88');
+      expect(CHANGELOG_ENTRIES[0].version).toBe('1.0.88');
+      expect(CHANGELOG_ENTRIES[0].date).toBe('2026-09-05');
+      expect(CHANGELOG_ENTRIES[0].items[0].type).toBe('fix');
+      expect(CHANGELOG_ENTRIES[0].items[0].text).toContain('Долги');
     });
   });
 

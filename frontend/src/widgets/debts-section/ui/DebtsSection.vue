@@ -66,7 +66,14 @@ function handleViewAll() {
   emit('view-all');
 }
 
-const { convert } = useExchangeRates(computed(() => props.currency));
+const { convert, isReady: ratesReady } = useExchangeRates(computed(() => props.currency));
+
+/**
+ * Без курсов пересчёт возвращает сумму как есть, и долг в долларах встаёт в
+ * строку числом сумов, чтобы через мгновение вырасти в разы. Скелетон здесь
+ * уже есть — держим его до курсов.
+ */
+const isLoading = computed(() => props.loading || !ratesReady.value);
 
 const debtsByPerson = computed<DebtByPerson[]>(() => groupDebtsByPerson(props.debts, convert));
 const debtsByType = computed(() => bucketDebtsByType(debtsByPerson.value));
@@ -86,7 +93,7 @@ const overdueCount = computed(() => countOverdueDebts(props.debts));
     <!-- Header -->
     <SectionHeader
       title="Долги"
-      :count="debtsByPerson.length"
+      :count="isLoading ? undefined : debtsByPerson.length"
       show-view-all
       @add-click="handleAddClick"
       @view-all="handleViewAll"
@@ -100,7 +107,7 @@ const overdueCount = computed(() => countOverdueDebts(props.debts));
 
     <!-- Tabs -->
     <UTabs
-      v-if="debtsByPerson.length > 0 && !loading"
+      v-if="debtsByPerson.length > 0 && !isLoading"
       :model-value="activeTab"
       :items="debtTabs"
       size="sm"
@@ -108,7 +115,7 @@ const overdueCount = computed(() => countOverdueDebts(props.debts));
     />
 
     <!-- Loading state -->
-    <div v-if="loading" class="space-y-2">
+    <div v-if="isLoading" class="space-y-2">
       <DebtCardSkeleton v-for="i in 2" :key="i" />
     </div>
 
@@ -181,7 +188,7 @@ const overdueCount = computed(() => countOverdueDebts(props.debts));
 
     <!-- Truncation indicator -->
     <p
-      v-if="filteredDebts.length > 0 && hiddenCount > 0 && !loading"
+      v-if="filteredDebts.length > 0 && hiddenCount > 0 && !isLoading"
       class="text-xs text-center text-text-tertiary-light dark:text-text-tertiary-dark pt-1"
     >
       и ещё {{ hiddenCount }} {{ pluralize(hiddenCount, 'долг', 'долга', 'долгов') }}
@@ -189,7 +196,7 @@ const overdueCount = computed(() => countOverdueDebts(props.debts));
 
     <!-- Empty state for current tab (no debts of this type, but other type exists) -->
     <EmptyState
-      v-if="filteredDebts.length === 0 && debtsByPerson.length > 0 && !loading"
+      v-if="filteredDebts.length === 0 && debtsByPerson.length > 0 && !isLoading"
       variant="inline"
       :icon="activeTab === 'given' ? 'arrow_upward' : 'arrow_downward'"
       :title="activeTab === 'given' ? 'Нет долгов «вам должны»' : 'Нет долгов «вы должны»'"
@@ -198,7 +205,7 @@ const overdueCount = computed(() => countOverdueDebts(props.debts));
 
     <!-- Empty state — no debts at all -->
     <EmptyState
-      v-else-if="debtsByPerson.length === 0 && !loading"
+      v-else-if="debtsByPerson.length === 0 && !isLoading"
       variant="inline"
       icon="check_circle"
       title="Вы без долгов!"

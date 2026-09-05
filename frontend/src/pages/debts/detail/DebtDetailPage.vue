@@ -16,12 +16,19 @@ const route = useRoute();
 const { userId } = useCurrentUser();
 
 const debtId = computed(() => route.params.id as string);
-const { debts, isLoading } = useDebts(userId);
+const { debts, isLoading, isFetching } = useDebts(userId);
 const debt = computed<Debt | null>(() => debts.value.find((d) => d.id === debtId.value) ?? null);
+
+/**
+ * «Долг не найден» — ответ, а не пауза. Список долгов лежит в кэше и обновляется
+ * фоном, поэтому только что созданный долг в нём сначала отсутствует: без этой
+ * проверки экран открывался пустой заглушкой и через мгновение подменял её.
+ */
+const isResolving = computed(() => isLoading.value || (!debt.value && isFetching.value));
 
 const { title, openEdit, openActions } = useDebtDetail({
   debt,
-  isLoading,
+  isLoading: isResolving,
   // Долг закрылся или удалён — смотреть больше нечего. Фильтр списка приезжает
   // в адресе вместе с переходом сюда и уходит обратно тем же путём, поэтому
   // человек возвращается к тому же списку, из которого пришёл.

@@ -1,6 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { flushPromises } from '@vue/test-utils';
-import { renderWithProviders, mockUser, createTestRouter } from '@/test/test-utils';
+import {
+  renderWithProviders,
+  mockUser,
+  createTestRouter,
+  createTestQueryClient,
+} from '@/test/test-utils';
+import { debtQueryKeys } from '@/entities/debt';
 import { server } from '@/test/mocks/server';
 import { http, HttpResponse } from 'msw';
 import DebtDetailPage from './DebtDetailPage.vue';
@@ -119,6 +125,44 @@ describe('DebtDetailPage', () => {
 
       expect(wrapper.find('[data-testid="not-found"]').exists()).toBe(true);
       expect(wrapper.text()).toContain('Долг не найден');
+    });
+
+    it('не показывает «Долг не найден», пока обновляется кэш без этого долга', async () => {
+      // Кэш от прошлого визита долга ещё не знает, и список едет фоном —
+      // заглушка «не найден» здесь была бы ответом раньше вопроса.
+      let releaseDebts!: () => void;
+      server.use(
+        http.get('*/api/debts', async () => {
+          await new Promise<void>((res) => {
+            releaseDebts = res;
+          });
+          return HttpResponse.json([mockGivenDebtResponse]);
+        }),
+      );
+
+      const queryClient = createTestQueryClient();
+      queryClient.setQueryData(debtQueryKeys.list(mockUser.id), []);
+
+      const router = createTestRouter(routes);
+      router.push(`/debts/${mockGivenDebtResponse.id}`);
+      await router.isReady();
+
+      currentWrapper = renderWithProviders(DebtDetailPage, {
+        router,
+        queryClient,
+        provideAuth: { user: mockUser },
+      });
+      await flushPromises();
+
+      expect(currentWrapper.find('[data-testid="not-found"]').exists()).toBe(false);
+      expect(currentWrapper.find('[data-testid="debt-loading"]').exists()).toBe(true);
+
+      releaseDebts();
+      await flushPromises();
+      await flushPromises();
+
+      expect(currentWrapper.find('[data-testid="not-found"]').exists()).toBe(false);
+      expect(currentWrapper.text()).toContain('Алексей');
     });
 
     it('shows debt person name in header', async () => {

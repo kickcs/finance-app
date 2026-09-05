@@ -1,5 +1,5 @@
 import { computed, toValue, type MaybeRefOrGetter } from 'vue';
-import { useInfiniteQuery, keepPreviousData } from '@tanstack/vue-query';
+import { useInfiniteQuery } from '@tanstack/vue-query';
 import { debtQueryKeys } from './queryKeys';
 import { debtsApi } from './debtsApi';
 import type { DebtsFilters, DebtsPaginatedCursor, PaginatedDebtsResult } from '../model/types';
@@ -45,7 +45,10 @@ export function useInfiniteDebts(
     getNextPageParam: (lastPage) =>
       lastPage.hasMore && lastPage.nextCursor ? lastPage.nextCursor : undefined,
     enabled: computed(() => !!toValue(userId)),
-    placeholderData: keepPreviousData,
+    // Прошлый ответ под новый фильтр не подставляем: вкладка «Закрытые» и
+    // фильтр по человеку меняют ключ, и чужие строки успевали лечь под новый
+    // заголовок со своим счётчиком. Возврат на уже виденный фильтр рисуется
+    // мгновенно и без этого — из кэша по его ключу.
   });
 
   const groups = computed(() => data.value?.pages.flatMap((page) => page.groups) ?? []);

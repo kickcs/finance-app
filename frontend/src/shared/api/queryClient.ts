@@ -10,8 +10,12 @@ const MAX_AGE = 1000 * 60 * 60 * 24; // 24 hours
 /**
  * Query key prefixes that should be persisted to localStorage.
  * Only critical dashboard data — keeps storage small and restore fast.
+ *
+ * Курсы валют лежат здесь не ради скорости: до их ответа пересчёт возвращает
+ * сумму как есть, и мультивалютные итоги успевают отрисоваться чужим числом.
+ * Объект крошечный, а живёт он сутки и без персиста.
  */
-const PERSISTED_KEY_PREFIXES = ['accounts', 'profile', 'categories'];
+const PERSISTED_KEY_PREFIXES = ['accounts', 'profile', 'categories', 'exchangeRates'];
 
 /** Check if a query key should be persisted */
 function shouldPersistQuery(queryKey: readonly unknown[]): boolean {

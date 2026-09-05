@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.87';
+export const CURRENT_VERSION = '1.0.88';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,25 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.88',
+    date: '2026-09-05',
+    title: 'Долги открываются без мельтешения',
+    items: [
+      {
+        type: 'fix',
+        text: 'Долги больше не показывают чужие данные в первый момент: при переключении на «Закрытые» и при выборе человека вместо старого списка теперь каркас, а суммы в других валютах сразу появляются пересчитанными, а не прыгают.',
+      },
+      {
+        type: 'fix',
+        text: 'Экран долга больше не мигает надписью «Долг не найден» перед тем, как показать сам долг.',
+      },
+      {
+        type: 'improvement',
+        text: 'На странице «Люди» суммы долгов появляются вместе со списком, а не проступают следом.',
+      },
+    ],
+  },
   {
     version: '1.0.87',
     date: '2026-09-04',

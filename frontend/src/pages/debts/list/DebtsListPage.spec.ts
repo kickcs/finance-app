@@ -778,4 +778,107 @@ describe('DebtsListPage', () => {
       expect(wrapper.findComponent({ name: 'DebtDetailPanel' }).exists()).toBe(false);
     });
   });
+  // -----------------------------------------------------------------------
+  // Первичная отрисовка
+  // -----------------------------------------------------------------------
+  describe('первичная отрисовка', () => {
+    it('под вкладкой «Закрытые» не оставляет долги активной вкладки', async () => {
+      let releaseClosed!: () => void;
+      server.use(
+        http.get('*/api/debts/paginated', async ({ request }) => {
+          const status = new URL(request.url).searchParams.get('status');
+          if (status === 'closed') {
+            await new Promise<void>((res) => {
+              releaseClosed = res;
+            });
+            return HttpResponse.json(buildPaginatedDebtsResponse([mockClosedDebtResponse]));
+          }
+          return HttpResponse.json(buildPaginatedDebtsResponse([mockGivenDebtResponse]));
+        }),
+      );
+      const { wrapper } = await renderPage();
+      expect(wrapper.findAll('[data-testid="person-debt-row"]')).toHaveLength(1);
+
+      wrapper.findComponent({ name: 'UTabs' }).vm.$emit('update:modelValue', 'closed');
+      await nextTick();
+      await flushPromises();
+
+      // Ответ по закрытым ещё в пути: на экране каркас, а не строки прошлого фильтра
+      expect(wrapper.find('[data-testid="debt-loading"]').exists()).toBe(true);
+      expect(wrapper.findAll('[data-testid="person-debt-row"]')).toHaveLength(0);
+      expect(wrapper.findAllComponents({ name: 'DebtCard' })).toHaveLength(0);
+
+      releaseClosed();
+      await flushPromises();
+      await flushPromises();
+      expect(wrapper.text()).toContain('Погашенные долги');
+    });
+
+    it('под фильтром по человеку не оставляет долги остальных', async () => {
+      let releaseFiltered!: () => void;
+      server.use(
+        http.get('*/api/debts/paginated', async ({ request }) => {
+          const personName = new URL(request.url).searchParams.get('personName');
+          if (personName) {
+            await new Promise<void>((res) => {
+              releaseFiltered = res;
+            });
+            return HttpResponse.json(
+              buildPaginatedDebtsResponse([mockGivenDebtResponse, mockSecondGivenDebtResponse]),
+            );
+          }
+          return HttpResponse.json(
+            buildPaginatedDebtsResponse([
+              mockGivenDebtResponse,
+              mockSecondGivenDebtResponse,
+              mockTakenDebtResponse,
+            ]),
+          );
+        }),
+      );
+      const { wrapper } = await renderPage();
+      expect(wrapper.text()).toContain('Мария');
+
+      // У Алексея два долга — тап уводит в фильтр по нему, а не сразу в долг
+      const alexei = wrapper
+        .findAll('[data-testid="person-debt-row"]')
+        .find((row) => row.text().includes('Алексей'));
+      await alexei!.trigger('click');
+      await nextTick();
+      await flushPromises();
+
+      expect(wrapper.find('[data-testid="debt-loading"]').exists()).toBe(true);
+      expect(wrapper.text()).not.toContain('Мария');
+
+      releaseFiltered();
+      await flushPromises();
+      await flushPromises();
+      expect(wrapper.findAllComponents({ name: 'DebtCard' })).toHaveLength(2);
+    });
+
+    it('не показывает итоги, пока не приехали курсы', async () => {
+      let releaseRates!: () => void;
+      server.use(
+        http.get('*/api/debts/paginated', () =>
+          HttpResponse.json(buildPaginatedDebtsResponse([mockGivenDebtResponse])),
+        ),
+        http.get('*/api/exchange-rates/batch', async () => {
+          await new Promise<void>((res) => {
+            releaseRates = res;
+          });
+          return HttpResponse.json({ baseCurrency: 'UZS', rates: {} });
+        }),
+      );
+      const { wrapper } = await renderPage();
+
+      // Долги уже пришли, но пересчёт без курсов врёт — сводки на экране нет
+      expect(wrapper.find('[data-testid="debt-loading"]').exists()).toBe(true);
+      expect(wrapper.find('[data-testid="debts-summary"]').exists()).toBe(false);
+
+      releaseRates();
+      await flushPromises();
+      await flushPromises();
+      expect(wrapper.find('[data-testid="debts-summary"]').exists()).toBe(true);
+    });
+  });
 });

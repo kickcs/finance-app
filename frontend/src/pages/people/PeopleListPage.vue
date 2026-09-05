@@ -28,10 +28,24 @@ const { trigger } = useHaptics();
 
 const { userId } = useCurrentUser();
 const { currency } = useUserCurrency();
-const { people, isLoading, createPerson, updatePerson, deletePerson } = usePeople(userId);
-const { debts } = useDebts(userId, { status: 'active' });
-const { convert } = useExchangeRates(currency);
+const {
+  people,
+  isLoading: peopleLoading,
+  createPerson,
+  updatePerson,
+  deletePerson,
+} = usePeople(userId);
+const { debts, isLoading: debtsLoading } = useDebts(userId, { status: 'active' });
+const { convert, isReady: ratesReady } = useExchangeRates(currency);
 const { toast } = useToast();
+
+/**
+ * Долги — половина каждой строки и вся вторая половина сводки сверху. Пока их
+ * (и курсов для пересчёта) нет, список честнее держать под скелетоном: иначе
+ * «12 контактов» на глазах превращается в «12 контактов · вам должны …», а в
+ * строках проступают суммы.
+ */
+const isLoading = computed(() => peopleLoading.value || debtsLoading.value || !ratesReady.value);
 
 const query = ref('');
 const editingPerson = ref<Person | null>(null);
