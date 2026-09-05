@@ -6,6 +6,7 @@ const STALE_TIME = 24 * 60 * 60 * 1000; // 1 day
 
 export function useExchangeRates(baseCurrency: MaybeRefOrGetter<string>) {
   const queryKey = computed(() => ['exchangeRates', toValue(baseCurrency)]);
+  const isEnabled = computed(() => !!toValue(baseCurrency));
 
   const {
     data: rates,
@@ -17,8 +18,17 @@ export function useExchangeRates(baseCurrency: MaybeRefOrGetter<string>) {
     queryFn: () => exchangeRatesApi.getRates(toValue(baseCurrency)),
     staleTime: STALE_TIME,
     gcTime: STALE_TIME,
-    enabled: computed(() => !!toValue(baseCurrency)),
+    enabled: isEnabled,
   });
+
+  /**
+   * Курсы уже можно применять. До этого `convert` отдаёт сумму как есть, так
+   * что экран, нарисовавший её раньше времени, показывает доллары числом сумов
+   * и молча подменяет его через мгновение — ждать честнее. Ошибка флаг
+   * поднимает: ответа не будет, а пересчёт без курсов — единственное, что
+   * осталось.
+   */
+  const isReady = computed(() => !isEnabled.value || !!rates.value || !!error.value);
 
   /**
    * Convert amount from a currency to base currency
@@ -83,6 +93,7 @@ export function useExchangeRates(baseCurrency: MaybeRefOrGetter<string>) {
   return {
     rates,
     isLoading,
+    isReady,
     error,
     refetch,
     convert,

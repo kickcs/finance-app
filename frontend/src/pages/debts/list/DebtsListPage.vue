@@ -2,7 +2,13 @@
 import { computed, ref } from 'vue';
 import { useIntersectionObserver, useScroll } from '@vueuse/core';
 import { AppHeader } from '@/widgets/header';
-import { DebtCard, DebtsSummaryCard, PersonDebtRow, MutualDebtCard } from '@/entities/debt';
+import {
+  DebtCard,
+  DebtCardSkeleton,
+  DebtsSummaryCard,
+  PersonDebtRow,
+  MutualDebtCard,
+} from '@/entities/debt';
 import { OffsetDebtsModal } from '@/features/offset-debts';
 import { CloseAllDebtsDrawer } from '@/features/pay-debt';
 import { ShareDebtsDrawer } from '@/features/share-debts';
@@ -187,21 +193,26 @@ useIntersectionObserver(
             </div>
 
             <div class="pt-4 space-y-5">
-              <!-- Loading Skeleton -->
+              <!-- Каркас повторяет ту раскладку, что придёт: под фильтром по
+                   человеку это карточки долгов, без фильтра — общая плита со
+                   строками людей. Иначе содержимое встаёт не туда, куда
+                   готовился глаз. -->
               <template v-if="isLoading">
-                <template v-if="statusFilter === 'active'">
-                  <div data-testid="debt-loading" class="space-y-5">
-                    <Skeleton class="h-40 rounded-2xl" />
-                    <div class="space-y-3">
-                      <Skeleton class="h-6 w-32" />
-                      <Skeleton class="h-[212px] rounded-2xl" />
+                <div v-if="statusFilter === 'active'" data-testid="debt-loading" class="space-y-5">
+                  <Skeleton class="h-40 rounded-2xl" />
+                  <div class="space-y-3">
+                    <Skeleton class="h-6 w-32" />
+                    <div v-if="personFilter" class="space-y-2">
+                      <DebtCardSkeleton v-for="i in 3" :key="i" />
                     </div>
+                    <Skeleton v-else class="h-[212px] rounded-2xl" />
                   </div>
-                </template>
-                <div v-else class="space-y-3">
+                </div>
+                <div v-else data-testid="debt-loading" class="space-y-3">
                   <Skeleton class="h-6 w-40" />
-                  <Skeleton class="h-16 rounded-xl" />
-                  <Skeleton class="h-16 rounded-xl" />
+                  <div class="space-y-1.5">
+                    <DebtCardSkeleton v-for="i in 3" :key="i" />
+                  </div>
                 </div>
               </template>
 

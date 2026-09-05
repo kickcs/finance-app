@@ -38,7 +38,7 @@ export function useDebtsPage() {
   const isDesktop = useIsDesktop();
   const { userId } = useCurrentUser();
   const { currency } = useUserCurrency();
-  const { convert } = useExchangeRates(currency);
+  const { convert, isReady: ratesReady } = useExchangeRates(currency);
   const { profile } = useProfile(userId);
   const { accounts } = useAccounts(userId);
 
@@ -67,12 +67,19 @@ export function useDebtsPage() {
     groups,
     totalDebtsCount,
     totalSummary,
-    isLoading,
+    isLoading: debtsLoading,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
     refetch,
   } = useInfiniteDebts(userId, serverFilters);
+
+  /**
+   * Курсы — часть данных списка, а не украшение: сводка и нетто по людям без
+   * них считаются как будто все долги в валюте пользователя, и доллары
+   * мелькают числом сумов. Ждём их так же, как самих долгов.
+   */
+  const isLoading = computed(() => debtsLoading.value || !ratesReady.value);
 
   const allDebtsFromGroups = computed(() => groups.value.flatMap((g) => g.debts));
 
@@ -185,18 +192,32 @@ export function useDebtsPage() {
   const lookupUserId = computed(() =>
     selectedDebtId.value && !debtFromGroups.value ? userId.value : null,
   );
-  const { debts: lookupDebts } = useDebts(lookupUserId);
+  const { debts: lookupDebts, isPending: lookupPending } = useDebts(lookupUserId);
 
   const selectedDebt = computed<Debt | null>(
     () =>
       debtFromGroups.value ?? lookupDebts.value.find((d) => d.id === selectedDebtId.value) ?? null,
   );
 
+  /**
+   * Панель открывается и по адресу, когда лента ещё едет, а долг может лежать
+   * за курсором — тогда за ним уходит плоский запрос. Пока хоть один из них не
+   * ответил, «Долг не найден» был бы враньём.
+   */
+  const isDetailLoading = computed(() => {
+    if (!selectedDebtId.value || selectedDebt.value) return false;
+    return debtsLoading.value || lookupPending.value;
+  });
+
   function closeDetail() {
     selectedDebtId.value = null;
   }
 
-  const detail = useDebtDetail({ debt: selectedDebt, onGone: closeDetail });
+  const detail = useDebtDetail({
+    debt: selectedDebt,
+    isLoading: isDetailLoading,
+    onGone: closeDetail,
+  });
 
   // --- Навигация ---
   function goBack() {

@@ -22,7 +22,7 @@ export function useDebts(userId: MaybeRefOrGetter<string | null>, options: UseDe
     return uid ? debtQueryKeys.list(uid, status) : debtQueryKeys.all;
   });
 
-  const { data, isLoading, error, refetch } = useQuery({
+  const { data, isLoading, isFetching, isPending, error, refetch } = useQuery({
     queryKey,
     queryFn: () => {
       const uid = toValue(userId);
@@ -35,5 +35,16 @@ export function useDebts(userId: MaybeRefOrGetter<string | null>, options: UseDe
   const debts = computed(() => data.value ?? []);
   const { createDebt, updateDebt, deleteDebt } = useDebtMutations(userId);
 
-  return { debts, isLoading, error, createDebt, updateDebt, deleteDebt, refetch };
+  return {
+    debts,
+    isLoading,
+    isFetching,
+    /** Ответа по этому ключу ещё не было — в том числе пока запрос выключен. */
+    isPending,
+    error,
+    createDebt,
+    updateDebt,
+    deleteDebt,
+    refetch,
+  };
 }
