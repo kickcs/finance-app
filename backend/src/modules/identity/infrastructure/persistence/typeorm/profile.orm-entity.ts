@@ -63,4 +63,7 @@ export class ProfileOrmEntity {
 
   @Column({ name: 'notification_hour', type: 'smallint', default: 12 })
   notificationHour: number;
+
+  @Column({ name: 'payment_card_number', type: 'varchar', length: 19, nullable: true })
+  paymentCardNumber: string | null;
 }

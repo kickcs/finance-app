@@ -105,6 +105,31 @@ describe('renderDebtsCardToCanvas', () => {
     );
   });
 
+  it('приложенная карта печатается в подвале по четыре цифры', () => {
+    stub = stubCanvas2d();
+    renderDebtsCardToCanvas(payload({ cardNumber: '8600123456789012' }));
+    const drawn = stub.calls.map((call) => call.text);
+    expect(drawn).toContain('КАРТА ДЛЯ ПЕРЕВОДА');
+    expect(drawn).toContain('8600 1234 5678 9012');
+  });
+
+  it('карта печатается и когда открытых долгов нет', () => {
+    stub = stubCanvas2d();
+    renderDebtsCardToCanvas(payload({ debts: [], cardNumber: '8600123456789012' }));
+    expect(stub.calls.map((call) => call.text)).toContain('8600 1234 5678 9012');
+  });
+
+  it('без карты подвала нет и лист ниже не становится', () => {
+    stub = stubCanvas2d();
+    const withoutCard = renderDebtsCardToCanvas(payload()).height;
+    stub.restore();
+
+    stub = stubCanvas2d();
+    const withCard = renderDebtsCardToCanvas(payload({ cardNumber: '8600123456789012' })).height;
+    expect(stub.calls.map((call) => call.text)).toContain('КАРТА ДЛЯ ПЕРЕВОДА');
+    expect(withCard).toBeGreaterThan(withoutCard);
+  });
+
   it('валюта в строке появляется только при смешанных валютах', () => {
     stub = stubCanvas2d();
     renderDebtsCardToCanvas(payload());

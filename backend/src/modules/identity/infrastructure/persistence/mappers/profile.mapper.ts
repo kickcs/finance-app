@@ -29,6 +29,7 @@ export class ProfileMapper {
       financialMonthStartDay: ormEntity.financialMonthStartDay,
       timezone: ormEntity.timezone,
       notificationHour: ormEntity.notificationHour,
+      paymentCardNumber: ormEntity.paymentCardNumber,
       createdAt: ormEntity.createdAt,
     });
   }
@@ -56,6 +57,7 @@ export class ProfileMapper {
     ormEntity.financialMonthStartDay = domainEntity.financialMonthStartDay;
     ormEntity.timezone = domainEntity.timezone;
     ormEntity.notificationHour = domainEntity.notificationHour;
+    ormEntity.paymentCardNumber = domainEntity.paymentCardNumber;
     ormEntity.createdAt = domainEntity.createdAt;
 
     return ormEntity;

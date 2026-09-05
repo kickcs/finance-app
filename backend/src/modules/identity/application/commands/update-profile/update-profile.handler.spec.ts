@@ -54,6 +54,7 @@ describe('UpdateProfileHandler', () => {
       timezone: 'Asia/Tashkent',
       notificationHour: 12,
       createdAt: new Date('2024-01-01'),
+      paymentCardNumber: null,
     });
   }
 
@@ -175,6 +176,7 @@ describe('UpdateProfileHandler', () => {
       financialMonthStartDay: 1,
       timezone: 'Asia/Tashkent',
       notificationHour: 12,
+      paymentCardNumber: null,
       createdAt: new Date('2024-01-01'),
     });
   });

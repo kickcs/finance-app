@@ -58,6 +58,7 @@ describe('RefreshHandler', () => {
       timezone: 'Asia/Tashkent',
       notificationHour: 12,
       createdAt: new Date(),
+      paymentCardNumber: null,
     });
   }
 

@@ -16,6 +16,8 @@ export interface ProfileResponse {
   financialMonthStartDay: number;
   timezone: string;
   notificationHour: number;
+  /** Карта для переводов — только цифры; показывается в шаринге долгов. */
+  paymentCardNumber: string | null;
   createdAt: Date;
 }
 

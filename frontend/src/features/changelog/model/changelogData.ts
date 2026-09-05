@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.88';
+export const CURRENT_VERSION = '1.0.89';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,25 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.89',
+    date: '2026-09-05',
+    title: 'Карта для перевода в шаринге долгов',
+    items: [
+      {
+        type: 'feature',
+        text: 'Теперь к долгам можно приложить номер вашей карты — он появится и на картинке, и в тексте, и на странице по ссылке, чтобы человеку было куда вернуть деньги.',
+      },
+      {
+        type: 'feature',
+        text: 'Номер задаётся один раз в профиле («Редактирование профиля» → «Карта для переводов») и дальше подставляется сам. Поменять или добавить его можно прямо в шторке «Поделиться», а переключателем — не прикладывать карту к этому снимку.',
+      },
+      {
+        type: 'improvement',
+        text: 'На странице сверки номер карты копируется одним тапом.',
+      },
+    ],
+  },
   {
     version: '1.0.88',
     date: '2026-09-05',
