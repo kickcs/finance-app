@@ -19,6 +19,8 @@ export interface PayDebtOptions {
   settleWithWork?: boolean;
   /** Что отработано — заметка в описание записи. */
   workNote?: string;
+  /** Категория работы: с ней отработка пишется парой и видна в аналитике. */
+  workCategoryId?: string;
   /** ISO-дата создаваемых записей (по умолчанию — сейчас). Для импорта — occurred_at. */
   transactionDate?: string;
   /** Отдаёт id записи платежа (нужен confirm'у импорта). */
@@ -90,6 +92,7 @@ export function usePayDebt() {
         excessCategoryId: options?.excessCategoryId,
         settleWithWork: options?.settleWithWork,
         workNote: options?.workNote,
+        workCategoryId: options?.workCategoryId,
       });
 
       if (!options?.bulk) applyDebtUpdate(queryClient, debt.id, result.debt);

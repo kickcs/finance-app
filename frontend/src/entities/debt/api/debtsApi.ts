@@ -70,6 +70,8 @@ export interface PayDebtPayload {
   settleWithWork?: boolean;
   /** Что отработано — короткая заметка в описание записи. */
   workNote?: string;
+  /** Категория работы: с ней отработка пишется парой и видна в аналитике. */
+  workCategoryId?: string;
 }
 
 export interface PayDebtResult {
@@ -251,6 +253,7 @@ export const debtsApi = {
       excessCategoryId: payload.excessCategoryId,
       settleWithWork: payload.settleWithWork ?? false,
       workNote: payload.workNote,
+      workCategoryId: payload.workCategoryId,
     });
     return {
       debt: transformDebt(data.debt),

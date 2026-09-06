@@ -12,6 +12,8 @@ export interface DebtPaymentSubmit {
   settleWithWork?: boolean;
   /** Что отработано — короткая заметка в описание записи. */
   workNote?: string;
+  /** Категория работы: с ней отработка видна в аналитике. */
+  workCategoryId?: string;
 }
 
 /**
@@ -73,6 +75,7 @@ export function useDebtPaymentFlow(options: {
       excessCategoryId: payload.excessCategoryId,
       settleWithWork: payload.settleWithWork,
       workNote: payload.workNote,
+      workCategoryId: payload.workCategoryId,
     });
 
     if (success) {

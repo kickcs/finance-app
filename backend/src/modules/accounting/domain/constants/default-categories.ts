@@ -197,7 +197,8 @@ export const INFORMATIONAL_ONLY_CATEGORY_IDS: readonly string[] = [
   DEBT_CATEGORY_IDS.WORKED_OFF,
 ];
 
-export const ALL_DEBT_CATEGORY_IDS = Object.values(DEBT_CATEGORY_IDS);
+/** Типизируется как `string[]`, а не union: с ним сверяют произвольные категории. */
+export const ALL_DEBT_CATEGORY_IDS: readonly string[] = Object.values(DEBT_CATEGORY_IDS);
 
 /**
  * Комиссия за перевод — всегда отдельный расход, а не часть суммы операции.

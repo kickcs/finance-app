@@ -135,6 +135,7 @@ export class DebtsController {
         dto.excessCategoryId,
         dto.settleWithWork ?? false,
         dto.workNote,
+        dto.workCategoryId,
       ),
     );
   }

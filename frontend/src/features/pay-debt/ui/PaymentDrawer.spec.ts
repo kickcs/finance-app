@@ -185,6 +185,42 @@ describe('PaymentDrawer', () => {
       expect(amountOf(w)).toBe(800);
     });
 
+    // Категория переводит отработку из «просто отметки» в пару записей,
+    // которую видно в аналитике, — поэтому она уходит наружу отдельным полем.
+    it('без категории отдаёт отработку как отметку', async () => {
+      const w = mountDrawer(openDebt);
+      await open(w);
+      await w.get('[data-testid="work-off-open"]').trigger('click');
+      await submit(w).trigger('click');
+
+      const payload = w.emitted('confirm')?.[0][0] as Record<string, unknown>;
+      expect(payload.settleWithWork).toBe(true);
+      expect(payload.workCategoryId).toBeUndefined();
+    });
+
+    it('«учесть работу тратой» прикладывает категорию', async () => {
+      const w = mountDrawer(openDebt);
+      await open(w);
+      await w.get('[data-testid="work-off-open"]').trigger('click');
+      await w.get('[data-testid="work-off-accounting"] [role="switch"]').trigger('click');
+      await submit(w).trigger('click');
+
+      const payload = w.emitted('confirm')?.[0][0] as Record<string, unknown>;
+      expect(payload.workCategoryId).toBeTruthy();
+    });
+
+    it('возврат к деньгам стирает и категорию работы', async () => {
+      const w = mountDrawer(openDebt);
+      await open(w);
+      await w.get('[data-testid="work-off-open"]').trigger('click');
+      await w.get('[data-testid="work-off-accounting"] [role="switch"]').trigger('click');
+      await w.get('[data-testid="work-off-close"]').trigger('click');
+      await submit(w).trigger('click');
+
+      const payload = w.emitted('confirm')?.[0][0] as Record<string, unknown>;
+      expect(payload.workCategoryId).toBeUndefined();
+    });
+
     it('возврат к деньгам возвращает выбор счёта и стирает заметку', async () => {
       const w = mountDrawer(openDebt);
       await open(w);

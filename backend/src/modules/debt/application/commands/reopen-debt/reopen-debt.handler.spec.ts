@@ -82,16 +82,18 @@ describe('ReopenDebtHandler', () => {
 
   /**
    * Порядок запросов: транзакция закрытия (чтобы отличить зачёт), записи
-   * прощения, сумма уцелевших возвратов.
+   * прощения, парные ноги отработки, сумма уцелевших возвратов.
    */
   function mockQueries(
     forgivenRows: { id: string }[],
     paid: number,
     closeCategoryId: string = DEBT_CATEGORY_IDS.RETURN_TO_ME,
+    workRows: { id: string }[] = [],
   ) {
     mockDataSource.query
       .mockResolvedValueOnce([{ id: 'tx-close-1', category_id: closeCategoryId, date: CLOSE_DATE }])
       .mockResolvedValueOnce(forgivenRows)
+      .mockResolvedValueOnce(workRows)
       .mockResolvedValueOnce([{ paid: String(paid) }]);
   }
 
@@ -126,6 +128,24 @@ describe('ReopenDebtHandler', () => {
     // 600 уже возвращено платежами до закрытия — остаток только прощённая часть
     expect(result.remainingAmount).toBe(400);
     expect(result.forgivenAmount).toBe(0);
+  });
+
+  // Отработка с категорией — пара записей на ноль по балансу. Снять только
+  // возврат нельзя: на счёте осталась бы дыра на сумму траты по категории.
+  it('снимает вместе с возвратом парную трату по категории (отработка)', async () => {
+    const debt = createClosedDebt();
+    mockRepository.findById.mockResolvedValue(debt);
+    mockQueries([], 0, DEBT_CATEGORY_IDS.RETURN_TO_ME, [{ id: 'tx-work-1' }]);
+
+    await handler.execute(new ReopenDebtCommand('debt-1', 'user-1'));
+
+    expect(mockCommandBus.execute).toHaveBeenCalledWith(
+      new DeleteTransactionCommand('tx-close-1', 'user-1', true),
+    );
+    expect(mockCommandBus.execute).toHaveBeenCalledWith(
+      new DeleteTransactionCommand('tx-work-1', 'user-1', true),
+    );
+    expect(mockCommandBus.execute).toHaveBeenCalledTimes(2);
   });
 
   it('does not delete the same transaction twice when the closing record is the forgiveness one', async () => {
