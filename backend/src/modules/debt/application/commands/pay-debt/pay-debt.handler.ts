@@ -12,7 +12,10 @@ import { Debt } from '../../../domain/aggregates/debt';
 import { IDebtRepository, DEBT_REPOSITORY } from '../../../domain/repositories';
 import { DebtResponseMapper, type DebtResponseDto } from '../../mappers/debt-response.mapper';
 import { CreateTransactionCommand } from '../../../../accounting/application/commands/create-transaction/create-transaction.command';
-import { DEBT_CATEGORY_IDS } from '../../../../accounting/domain/constants/default-categories';
+import {
+  DEBT_CATEGORY_IDS,
+  ALL_DEBT_CATEGORY_IDS,
+} from '../../../../accounting/domain/constants/default-categories';
 
 export interface PayDebtResultDto {
   debt: DebtResponseDto;
@@ -67,6 +70,7 @@ export class PayDebtHandler implements ICommandHandler<PayDebtCommand> {
       excessCategoryId,
       settleWithWork,
       workNote,
+      workCategoryId,
     } = command;
 
     const debt = await this.debtRepository.findById(debtId);
@@ -89,6 +93,11 @@ export class PayDebtHandler implements ICommandHandler<PayDebtCommand> {
     if (settleWithWork && excess > 0) {
       throw new BadRequestException('Отработка не может превышать остаток долга');
     }
+    // Категория работы — обычная категория пользователя. Долговая на её месте
+    // сломала бы аналитику: возврат посчитался бы дважды.
+    if (workCategoryId && ALL_DEBT_CATEGORY_IDS.includes(workCategoryId)) {
+      throw new BadRequestException('Некорректная категория работы');
+    }
 
     const actualPayment = round2(Math.min(amount, remaining));
     const remainderAfter = round2(remaining - actualPayment);
@@ -106,14 +115,48 @@ export class PayDebtHandler implements ICommandHandler<PayDebtCommand> {
       let closeTransactionId: string | undefined;
 
       if (actualPayment > 0) {
+        // Отработка ложится на счёт долга — как и прощение: денег она не
+        // двигает (или двигает в ноль), но должна лежать на живом счёте.
+        const workAccountId = settleWithWork
+          ? await this.markerAccountId(manager, userId, debt.accountId, accountId)
+          : accountId;
+
+        /**
+         * Отработка с категорией — пара записей, дающая по балансу ноль: трата
+         * по выбранной категории (работу вы «купили») и обычный возврат долга.
+         * Так работа видна в аналитике тратой, а долг гасится теми же
+         * возвратами, что и деньгами: сумма уходит из «Невозвращённых долгов»
+         * в выбранную категорию, а не исчезает из отчёта.
+         *
+         * Обе ноги живут и снимаются только вместе — одна оставила бы на счёте
+         * дыру на свою сумму. Связаны они долгом и общей отметкой времени:
+         * `debt_id` с недолговой категорией бывает только у ноги работы.
+         */
+        if (settleWithWork && workCategoryId) {
+          transactionIds.push(
+            await this.createTransaction(manager, {
+              userId,
+              accountId: workAccountId,
+              categoryId: workCategoryId,
+              amount: actualPayment,
+              currency,
+              type: isGiven ? 'expense' : 'income',
+              date,
+              description: this.workDescription(debt, workNote),
+              isDebtRelated: false,
+              debtId: debt.id,
+            }),
+          );
+        }
+
+        // Отработка без категории — не движение денег, а отметка: баланс счёта
+        // она не трогает и в аналитику не попадает, как взаимозачёт и прощение.
+        const asMarker = settleWithWork && !workCategoryId;
+
         const id = await this.createTransaction(manager, {
           userId,
-          // Отметка отработки ложится на счёт долга — как и прощение: денег она
-          // не двигает, но должна лежать на существующем счёте.
-          accountId: settleWithWork
-            ? await this.markerAccountId(manager, userId, debt.accountId, accountId)
-            : accountId,
-          categoryId: settleWithWork
+          accountId: workAccountId,
+          categoryId: asMarker
             ? DEBT_CATEGORY_IDS.WORKED_OFF
             : isGiven
               ? DEBT_CATEGORY_IDS.RETURN_TO_ME
@@ -122,14 +165,12 @@ export class PayDebtHandler implements ICommandHandler<PayDebtCommand> {
           currency,
           type: isGiven ? 'income' : 'expense',
           date,
-          description: settleWithWork
+          description: asMarker
             ? this.workDescription(debt, workNote)
             : this.paymentDescription(debt, willClose),
-          // Отработка — не движение денег, а отметка: баланс счёта она не
-          // трогает и в аналитику не попадает, как взаимозачёт и прощение.
-          isDebtRelated: settleWithWork ? false : hadBalanceEffect,
+          isDebtRelated: asMarker ? false : hadBalanceEffect,
           debtId: debt.id,
-          isInformational: settleWithWork,
+          isInformational: asMarker,
         });
         closeTransactionId = id;
         paymentTransactionId = id;

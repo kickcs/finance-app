@@ -11,6 +11,8 @@ export function useDebtPaymentForm(options: {
   /** Долг закрывают работой, а не деньгами. */
   const settleWithWork = ref(false);
   const workNote = ref('');
+  /** Категория работы: с ней отработка попадает в аналитику, без неё — только отметка. */
+  const workCategoryId = ref<string | null>(null);
 
   const isOverpayment = computed(() => paymentAmount.value > toValue(options.remainingAmount));
   const excess = computed(() =>
@@ -31,7 +33,10 @@ export function useDebtPaymentForm(options: {
    */
   watch([settleWithWork, isOverpayment], ([byWork, over]) => {
     if (byWork && over) paymentAmount.value = toValue(options.remainingAmount);
-    if (!byWork) workNote.value = '';
+    if (!byWork) {
+      workNote.value = '';
+      workCategoryId.value = null;
+    }
   });
 
   function reset(amount?: number) {
@@ -39,6 +44,7 @@ export function useDebtPaymentForm(options: {
     forgiveRemainder.value = false;
     settleWithWork.value = false;
     workNote.value = '';
+    workCategoryId.value = null;
     excessCategoryId.value =
       toValue(options.debtType) === 'given' ? CATEGORY_IDS.GIFTS_INCOME : CATEGORY_IDS.GIFTS;
   }
@@ -49,6 +55,7 @@ export function useDebtPaymentForm(options: {
     excessCategoryId,
     settleWithWork,
     workNote,
+    workCategoryId,
     isOverpayment,
     excess,
     remainder,

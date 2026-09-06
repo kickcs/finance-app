@@ -37,6 +37,7 @@ export {
   type MutualPosition,
 } from './lib/foldDebtsIntoPeople';
 export { findClosingRecords, debtHasClosingRecords } from './lib/findClosingRecords';
+export { foldWorkOffRecords, type DebtPaymentRecord } from './lib/foldWorkOffRecords';
 
 // API
 export * from './api';

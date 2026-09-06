@@ -3,9 +3,9 @@ import { computed } from 'vue';
 import { Skeleton } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { formatDate } from '@/shared/lib/format/date';
-import { CATEGORY_IDS } from '@/shared/config/categoryIds';
 import type { Debt, Transaction } from '@/shared/api/database.types';
 import { DEBT_DIRECTION_COLORS } from '../model/types';
+import { foldWorkOffRecords } from '../lib/foldWorkOffRecords';
 
 const props = defineProps<{
   debt: Debt;
@@ -16,25 +16,12 @@ const props = defineProps<{
 const debtColor = computed(() => DEBT_DIRECTION_COLORS[props.debt.debt_type]);
 
 /**
- * Лента гашения: обычные платежи и отработки в одном хронологическом ряду.
- * Отработка — информационная запись, поэтому в общий фильтр «не отметка» она не
- * попадает, но для истории долга это такое же событие гашения, как платёж.
+ * Лента гашения: платежи деньгами и отработки в одном хронологическом ряду.
  * Создание долга и прощение стоят своими узлами выше и ниже.
  */
-const paymentTransactions = computed(() => {
-  const records = props.transactions.filter(
-    (t) =>
-      t.id !== props.debt.transaction_id &&
-      (!t.is_informational || t.category_id === CATEGORY_IDS.DEBT_WORKED_OFF),
-  );
-  return records
-    .map((t) => ({ tx: t, byWork: t.category_id === CATEGORY_IDS.DEBT_WORKED_OFF }))
-    .sort(
-      (a, b) =>
-        new Date(a.tx.date || a.tx.created_at).getTime() -
-        new Date(b.tx.date || b.tx.created_at).getTime(),
-    );
-});
+const paymentRecords = computed(() =>
+  foldWorkOffRecords(props.transactions, props.debt.transaction_id),
+);
 </script>
 
 <template>
@@ -76,7 +63,7 @@ const paymentTransactions = computed(() => {
       </div>
 
       <!-- Empty state when no payments yet -->
-      <div v-if="paymentTransactions.length === 0 && !debt.is_closed" class="relative mb-4">
+      <div v-if="paymentRecords.length === 0 && !debt.is_closed" class="relative mb-4">
         <div
           class="absolute -left-5 top-0.5 w-2.5 h-2.5 rounded-full bg-border-light dark:bg-border-dark border-2 border-card-light dark:border-card-dark shadow-[0_0_0_2px] shadow-border-light dark:shadow-border-dark"
         />
@@ -86,7 +73,7 @@ const paymentTransactions = computed(() => {
       </div>
 
       <!-- Payment nodes -->
-      <div v-for="{ tx, byWork } in paymentTransactions" :key="tx.id" class="relative mb-4">
+      <div v-for="{ transaction: tx, byWork } in paymentRecords" :key="tx.id" class="relative mb-4">
         <div
           class="absolute -left-5 top-0.5 w-2.5 h-2.5 rounded-full border-2 border-card-light dark:border-card-dark shadow-[0_0_0_2px] shadow-border-light dark:shadow-border-dark"
           :class="byWork ? 'bg-primary' : 'bg-success'"

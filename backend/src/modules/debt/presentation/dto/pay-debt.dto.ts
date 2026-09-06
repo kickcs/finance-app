@@ -42,4 +42,9 @@ export class PayDebtDto {
   @IsString()
   @MaxLength(200)
   workNote?: string;
+
+  /** Категория работы: с ней отработка попадает в аналитику тратой/доходом. */
+  @IsOptional()
+  @IsString()
+  workCategoryId?: string;
 }

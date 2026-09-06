@@ -13,5 +13,11 @@ export class PayDebtCommand {
     public readonly settleWithWork: boolean = false,
     /** Что именно отработано — попадает в описание отметки. */
     public readonly workNote?: string,
+    /**
+     * Категория работы. С ней отработка пишется парой «трата по категории +
+     * возврат долга» (по балансу ноль) и видна в аналитике; без неё остаётся
+     * одной информационной отметкой.
+     */
+    public readonly workCategoryId?: string,
   ) {}
 }

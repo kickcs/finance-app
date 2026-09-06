@@ -95,6 +95,7 @@ describe('PayDebtHandler', () => {
       overrides.excessCategoryId,
       overrides.settleWithWork ?? false,
       overrides.workNote,
+      overrides.workCategoryId,
     );
   }
 
@@ -288,6 +289,81 @@ describe('PayDebtHandler', () => {
       await expect(
         handler.execute(
           command({ amount: 1200, settleWithWork: true, excessCategoryId: 'cat-bonus' }),
+        ),
+      ).rejects.toThrow(BadRequestException);
+      expect(mockCommandBus.execute).not.toHaveBeenCalled();
+    });
+
+    it('с категорией пишет пару записей: трату по категории и возврат долга', async () => {
+      mockRepository.findById.mockResolvedValue(createDebt({ debtType: 'given' }));
+
+      const result = await handler.execute(
+        command({ amount: 300, settleWithWork: true, workCategoryId: 'repair' }),
+      );
+
+      const work = txArg(0);
+      expect(work.categoryId).toBe('repair');
+      expect(work.type).toBe('expense');
+      expect(work.amount).toBe(300);
+      expect(work.isInformational).toBe(false);
+      expect(work.debtId).toBe('debt-1');
+
+      const back = txArg(1);
+      expect(back.categoryId).toBe(DEBT_CATEGORY_IDS.RETURN_TO_ME);
+      expect(back.type).toBe('income');
+      expect(back.amount).toBe(300);
+      expect(back.isInformational).toBe(false);
+
+      // Пара даёт по балансу ноль, а долг гаснет обычным возвратом
+      expect(result.debt.remainingAmount).toBe(700);
+      expect(result.transactionIds).toEqual(['tx-1', 'tx-2']);
+    });
+
+    it('по взятому долгу пара зеркальная: доход за работу и возврат расходом', async () => {
+      mockRepository.findById.mockResolvedValue(createDebt({ debtType: 'taken' }));
+
+      await handler.execute(
+        command({ amount: 300, settleWithWork: true, workCategoryId: 'freelance' }),
+      );
+
+      expect(txArg(0).type).toBe('income');
+      expect(txArg(0).categoryId).toBe('freelance');
+      expect(txArg(1).type).toBe('expense');
+      expect(txArg(1).categoryId).toBe(DEBT_CATEGORY_IDS.RETURN_FROM_ME);
+    });
+
+    it('обе ноги пары ложатся на один счёт — иначе ноль по балансу разъедется', async () => {
+      mockRepository.findById.mockResolvedValue(createDebt({ accountId: 'account-debt' }));
+
+      await handler.execute(
+        command({ amount: 300, settleWithWork: true, workCategoryId: 'repair' }),
+      );
+
+      expect(txArg(0).accountId).toBe('account-debt');
+      expect(txArg(1).accountId).toBe('account-debt');
+    });
+
+    it('закрытие парой ссылается на возврат, а не на трату', async () => {
+      mockRepository.findById.mockResolvedValue(createDebt());
+
+      const result = await handler.execute(
+        command({ amount: 1000, settleWithWork: true, workCategoryId: 'repair' }),
+      );
+
+      expect(result.debt.isClosed).toBe(true);
+      expect(result.debt.closeTransactionId).toBe('tx-2');
+    });
+
+    it('долговую категорию работой не выбрать — возврат посчитался бы дважды', async () => {
+      mockRepository.findById.mockResolvedValue(createDebt());
+
+      await expect(
+        handler.execute(
+          command({
+            amount: 300,
+            settleWithWork: true,
+            workCategoryId: DEBT_CATEGORY_IDS.RETURN_TO_ME,
+          }),
         ),
       ).rejects.toThrow(BadRequestException);
       expect(mockCommandBus.execute).not.toHaveBeenCalled();
