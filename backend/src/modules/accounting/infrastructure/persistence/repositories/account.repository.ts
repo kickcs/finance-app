@@ -37,8 +37,9 @@ export class AccountRepository implements IAccountRepository {
     return ormEntities.map((entity) => AccountMapper.toDomain(entity));
   }
 
-  async findByIdWithBalances(id: string): Promise<Account | null> {
-    const ormEntity = await this.ormRepository.findOne({
+  async findByIdWithBalances(id: string, manager?: EntityManager): Promise<Account | null> {
+    const repo = manager ? manager.getRepository(AccountOrmEntity) : this.ormRepository;
+    const ormEntity = await repo.findOne({
       where: { id },
       relations: ['balances'],
     });
