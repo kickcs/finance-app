@@ -166,10 +166,11 @@ function confirm() {
       />
 
       <!-- При отработке деньги не двигаются, выбирать счёт нечему: отметка
-           ложится на счёт долга сама -->
+           ложится на счёт долга сама. Но счёт ей всё же нужен — если его нет,
+           выбор возвращается, иначе кнопка молча заблокирована без причины -->
       <div class="space-y-2">
         <AccountSelector
-          v-if="!settleWithWork"
+          v-if="!settleWithWork || !selectedAccountId"
           :accounts="accounts"
           :selected-id="selectedAccountId"
           :label="debtDirection === 'given' ? 'Куда зачислить' : 'С какого счёта списать'"

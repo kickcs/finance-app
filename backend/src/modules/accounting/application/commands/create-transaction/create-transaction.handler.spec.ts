@@ -1,6 +1,6 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { DataSource, type EntityManager } from 'typeorm';
 import { CreateTransactionHandler } from './create-transaction.handler';
 import { CreateTransactionCommand } from './create-transaction.command';
 import { TRANSACTION_REPOSITORY } from '../../../domain/repositories/transaction.repository.interface';
@@ -427,6 +427,39 @@ describe('CreateTransactionHandler', () => {
       );
 
       await expect(handler.execute(command)).rejects.toThrow(ForbiddenException);
+    });
+  });
+
+  // Две записи, созданные одним вызовом на один счёт (нога отработки и возврат
+  // долга, платёж и переплата), живут в одной транзакции БД. Прочитав счёт
+  // мимо неё, вторая увидела бы баланс до первой и затёрла бы её сохранение.
+  describe('чужая транзакция', () => {
+    it('читает счёт менеджером переданной транзакции', async () => {
+      const account = createMockAccount('acc-1', 'user-1', [{ currency: 'USD', balance: 1000 }]);
+      mockAccountRepository.findByIdWithBalances.mockResolvedValue(account);
+      const manager = { getRepository: jest.fn() } as unknown as EntityManager;
+
+      const command = new CreateTransactionCommand(
+        'user-1',
+        'acc-1',
+        'cat-1',
+        100,
+        'USD',
+        'expense',
+        now,
+        'Test',
+        false,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        manager,
+      );
+
+      await handler.execute(command);
+
+      expect(mockAccountRepository.findByIdWithBalances).toHaveBeenCalledWith('acc-1', manager);
     });
   });
 

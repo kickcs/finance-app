@@ -9,7 +9,12 @@ export const ACCOUNT_REPOSITORY = Symbol('ACCOUNT_REPOSITORY');
 export interface IAccountRepository {
   findById(id: string): Promise<Account | null>;
   findByUserId(userId: string): Promise<Account[]>;
-  findByIdWithBalances(id: string): Promise<Account | null>;
+  /**
+   * Pass `manager` to read inside an open DB transaction: without it the read
+   * goes through another connection and misses writes the same transaction has
+   * already made — a second save would then overwrite the first.
+   */
+  findByIdWithBalances(id: string, manager?: EntityManager): Promise<Account | null>;
   findAllWithBalances(userId: string): Promise<Account[]>;
   /** Pass `manager` to participate in an open DB transaction. */
   save(account: Account, manager?: EntityManager): Promise<Account>;
