@@ -66,6 +66,10 @@ export interface PayDebtPayload {
   forgiveRemainder?: boolean;
   /** Обязательна, если сумма больше остатка. */
   excessCategoryId?: string;
+  /** Долг гасится работой: запись информационная, деньги по счетам не идут. */
+  settleWithWork?: boolean;
+  /** Что отработано — короткая заметка в описание записи. */
+  workNote?: string;
 }
 
 export interface PayDebtResult {
@@ -245,6 +249,8 @@ export const debtsApi = {
       date: payload.date,
       forgiveRemainder: payload.forgiveRemainder ?? false,
       excessCategoryId: payload.excessCategoryId,
+      settleWithWork: payload.settleWithWork ?? false,
+      workNote: payload.workNote,
     });
     return {
       debt: transformDebt(data.debt),

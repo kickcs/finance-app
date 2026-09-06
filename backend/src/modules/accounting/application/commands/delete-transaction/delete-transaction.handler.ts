@@ -47,6 +47,15 @@ export class DeleteTransactionHandler implements ICommandHandler<DeleteTransacti
       );
     }
 
+    // Отработка гасит долг, ничего не двигая по счетам: удалив её из ленты,
+    // пользователь уменьшил бы долг «просто так». Снимается она отменой
+    // закрытия — оттуда команда приходит с `skipDebtCheck`.
+    if (transaction.categoryId === DEBT_CATEGORY_IDS.WORKED_OFF && !command.skipDebtCheck) {
+      throw new BadRequestException(
+        'Запись об отработке нельзя удалить — отмените закрытие со стороны долга.',
+      );
+    }
+
     // Prevent deletion if transaction is linked to open debts (as source or direct transaction)
     if (!command.skipDebtCheck) {
       const hasOpenDebts = await this.debtRepository.hasOpenDebtsForTransaction(command.id);
@@ -66,9 +75,12 @@ export class DeleteTransactionHandler implements ICommandHandler<DeleteTransacti
     // If this is the forgiveness info-tx attached to a closed debt, reverse the
     // forgiveness on the debt side too — otherwise debts.close_transaction_id
     // dangles (no FK) and the debt remains is_closed=true with no way to undo.
-    const linkedClosedDebt = transaction.isInformational
-      ? await this.debtRepository.findByCloseTransactionId(command.id)
-      : null;
+    // Только прощение: остаток восстанавливается из `forgiven_amount`, которого
+    // у отработки нет — её отмена пересчитывает остаток на стороне долга.
+    const linkedClosedDebt =
+      transaction.isInformational && transaction.categoryId === DEBT_CATEGORY_IDS.FORGIVEN
+        ? await this.debtRepository.findByCloseTransactionId(command.id)
+        : null;
 
     // Mark transaction as deleted (raises event)
     transaction.markDeleted();

@@ -184,6 +184,7 @@ export const DEBT_CATEGORY_IDS = {
   RETURN_FROM_ME: 'debt_return_from_me',
   FORGIVEN: 'debt_forgiven',
   OFFSET: 'debt_offset',
+  WORKED_OFF: 'debt_worked_off',
 } as const;
 
 /**
@@ -193,6 +194,7 @@ export const DEBT_CATEGORY_IDS = {
 export const INFORMATIONAL_ONLY_CATEGORY_IDS: readonly string[] = [
   DEBT_CATEGORY_IDS.FORGIVEN,
   DEBT_CATEGORY_IDS.OFFSET,
+  DEBT_CATEGORY_IDS.WORKED_OFF,
 ];
 
 export const ALL_DEBT_CATEGORY_IDS = Object.values(DEBT_CATEGORY_IDS);

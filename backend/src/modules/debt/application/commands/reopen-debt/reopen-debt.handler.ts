@@ -74,17 +74,19 @@ export class ReopenDebtHandler implements ICommandHandler<ReopenDebtCommand> {
       }
     }
 
-    // Остаток считаем по уцелевшим возвратам и зачётам, а не вычитанием суммы
-    // закрытия: так частичные платежи, сделанные до закрытия, переживают отмену.
+    // Остаток считаем по уцелевшим возвратам, зачётам и отработкам, а не
+    // вычитанием суммы закрытия: так частичные платежи, сделанные до закрытия,
+    // переживают отмену.
     const paidRows: { paid: string }[] = await this.dataSource.query(
       `SELECT COALESCE(SUM(amount), 0) AS paid FROM transactions
        WHERE debt_id = $1
-         AND ((is_informational = false AND category_id IN ($2, $3)) OR category_id = $4)`,
+         AND ((is_informational = false AND category_id IN ($2, $3)) OR category_id IN ($4, $5))`,
       [
         command.id,
         DEBT_CATEGORY_IDS.RETURN_TO_ME,
         DEBT_CATEGORY_IDS.RETURN_FROM_ME,
         DEBT_CATEGORY_IDS.OFFSET,
+        DEBT_CATEGORY_IDS.WORKED_OFF,
       ],
     );
     const paid = Number(paidRows[0]?.paid ?? 0);
