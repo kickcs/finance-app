@@ -8,6 +8,10 @@ export interface DebtPaymentSubmit {
   accountId: string;
   forgiveRemainder?: boolean;
   excessCategoryId?: string;
+  /** Долг гасится работой: запись информационная, деньги по счетам не идут. */
+  settleWithWork?: boolean;
+  /** Что отработано — короткая заметка в описание записи. */
+  workNote?: string;
 }
 
 /**
@@ -67,6 +71,8 @@ export function useDebtPaymentFlow(options: {
     const success = await payDebt(debt, payload.amount, payload.accountId, userId, {
       forgiveRemainder: payload.forgiveRemainder,
       excessCategoryId: payload.excessCategoryId,
+      settleWithWork: payload.settleWithWork,
+      workNote: payload.workNote,
     });
 
     if (success) {

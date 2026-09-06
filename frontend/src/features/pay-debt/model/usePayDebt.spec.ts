@@ -171,7 +171,32 @@ describe('usePayDebt', () => {
         accountId: ACCOUNT_ID,
         date: '2026-08-01T10:00:00.000Z',
         forgiveRemainder: false,
+        settleWithWork: false,
       });
+    });
+
+    it('переносит отработку с заметкой о работе', async () => {
+      stubPayEndpoint(payResponse({ remainingAmount: 20000 }));
+      const api = mountComposable();
+
+      await api.payDebt(givenDebt, 10000, ACCOUNT_ID, USER_ID, {
+        settleWithWork: true,
+        workNote: 'ремонт машины',
+      });
+
+      expect(lastBody?.settleWithWork).toBe(true);
+      expect(lastBody?.workNote).toBe('ремонт машины');
+    });
+
+    it('отработка больше остатка до сервера не доходит', async () => {
+      stubPayEndpoint(payResponse({ remainingAmount: 0 }));
+      const api = mountComposable();
+
+      expect(
+        await api.payDebt(givenDebt, 999999, ACCOUNT_ID, USER_ID, { settleWithWork: true }),
+      ).toBe(false);
+      expect(api.error.value).toBe('Отработка не может превышать остаток долга');
+      expect(lastBody).toBeNull();
     });
 
     it('переносит категорию переплаты', async () => {

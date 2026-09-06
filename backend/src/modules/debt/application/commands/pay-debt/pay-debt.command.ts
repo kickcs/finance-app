@@ -9,5 +9,9 @@ export class PayDebtCommand {
     public readonly forgiveRemainder: boolean = false,
     /** Куда отнести переплату — обязательна, если сумма больше остатка. */
     public readonly excessCategoryId?: string,
+    /** Долг гасится работой, а не деньгами: платёж становится отметкой отработки. */
+    public readonly settleWithWork: boolean = false,
+    /** Что именно отработано — попадает в описание отметки. */
+    public readonly workNote?: string,
   ) {}
 }

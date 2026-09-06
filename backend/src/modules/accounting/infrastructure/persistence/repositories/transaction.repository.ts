@@ -538,7 +538,8 @@ export class TransactionRepository implements ITransactionRepository {
           continue;
         case DEBT_CATEGORY_IDS.FORGIVEN:
         case DEBT_CATEGORY_IDS.OFFSET:
-          // Прощение и взаимозачёт живут в ленте только как отметки. Информационные
+        case DEBT_CATEGORY_IDS.WORKED_OFF:
+          // Прощение, взаимозачёт и отработка живут в ленте только как отметки. Информационные
           // строки отсеиваются выше (createBaseQuery); если такая строка почему-то
           // оказалась обычной, она всё равно не трата и не доход — выкидываем.
           continue;
