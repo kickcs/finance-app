@@ -14,8 +14,8 @@ const accounts = [{ id: 'acc-1', name: 'Карта' }] as unknown as AccountWith
  */
 const OverlayStub = {
   name: 'UOverlay',
-  props: ['modelValue', 'title', 'desktop', 'maxHeight'],
-  template: '<div><slot /><slot name="footer" /></div>',
+  props: ['modelValue', 'title', 'desktop', 'maxHeight', 'fill'],
+  template: '<div><slot name="action" /><slot /><slot name="footer" /></div>',
 };
 
 const globalOptions = {

@@ -140,8 +140,20 @@ watch(
     :model-value="open"
     :title="`Разделить ${formatCurrency(totalAmount, currency)}`"
     desktop="dialog"
+    fill
     @update:model-value="emit('update:open', $event)"
   >
+    <template #action>
+      <UButton
+        variant="primary"
+        size="sm"
+        :disabled="!canApply"
+        @click="$emit('update:open', false)"
+      >
+        Применить
+      </UButton>
+    </template>
+
     <!-- Люди — чипами по частоте: выбранные подсвечены, повторный тап
          снимает. Отдельный инпут и отдельный ряд «быстрых контактов»
          делали одно и то же в двух местах. -->
@@ -349,19 +361,6 @@ watch(
         </p>
       </div>
     </Transition>
-
-    <template #footer>
-      <UButton
-        type="button"
-        variant="primary"
-        size="lg"
-        full-width
-        :disabled="!canApply"
-        @click="$emit('update:open', false)"
-      >
-        Применить
-      </UButton>
-    </template>
   </UOverlay>
 </template>
 

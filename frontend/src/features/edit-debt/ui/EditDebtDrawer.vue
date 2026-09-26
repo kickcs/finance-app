@@ -65,7 +65,20 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <UOverlay ref="overlayRef" v-model="open" title="Редактировать долг">
+  <UOverlay ref="overlayRef" v-model="open" title="Редактировать долг" fill>
+    <template #action>
+      <UButton
+        type="button"
+        variant="primary"
+        size="sm"
+        :loading="isSubmitting"
+        :disabled="!isValid || !isDirty"
+        @click="handleSubmit"
+      >
+        Сохранить
+      </UButton>
+    </template>
+
     <div class="space-y-5">
       <div class="flex w-full flex-col gap-1.5">
         <span
@@ -172,19 +185,5 @@ async function handleSubmit() {
         @update:model-value="updateField('is_private', $event)"
       />
     </div>
-
-    <template #footer>
-      <UButton
-        type="button"
-        variant="primary"
-        size="xl"
-        full-width
-        :loading="isSubmitting"
-        :disabled="!isValid || !isDirty"
-        @click="handleSubmit"
-      >
-        Сохранить
-      </UButton>
-    </template>
   </UOverlay>
 </template>

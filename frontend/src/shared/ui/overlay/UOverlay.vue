@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue';
+import { computed, ref } from 'vue';
 import {
   DrawerRoot,
   DrawerPortal,
@@ -18,15 +18,14 @@ import {
   DialogDescription,
 } from 'reka-ui';
 import { useIsDesktop } from '@/shared/lib/platform/useIsDesktop';
-import { useDrawerKeyboard } from '@/shared/lib/composables';
 import { cn } from '@/shared/lib/utils';
 import OverlayHeader from './OverlayHeader.vue';
 
 /**
  * Единая обвязка «нижняя шторка на мобиле / правая панель или диалог на
  * десктопе». Раньше эта разводка — direction, оверлей, тернарник классов,
- * ручка, клавиатурный хак — была продублирована в 13 файлах с разъехавшимися
- * высотами (70/80/85/90dvh). Теперь она в одном месте.
+ * ручка — была продублирована в 13 файлах с разъехавшимися высотами
+ * (70/80/85/90dvh). Теперь она в одном месте.
  */
 const props = withDefaults(
   defineProps<{
@@ -34,8 +33,14 @@ const props = withDefaults(
     title?: string;
     desktop?: 'panel' | 'dialog';
     maxHeight?: string;
+    /**
+     * Шторка для текстового ввода: высота фиксирована (top/bottom), не зависит
+     * от контента и клавиатуры — вместо геометрии, которая гонится за
+     * visualViewport на каждое нажатие (см. удалённый useDrawerKeyboard).
+     */
+    fill?: boolean;
   }>(),
-  { title: undefined, desktop: 'panel', maxHeight: '85dvh' },
+  { title: undefined, desktop: 'panel', maxHeight: '85dvh', fill: false },
 );
 
 const emit = defineEmits<{ 'update:modelValue': [boolean] }>();
@@ -48,35 +53,7 @@ const open = computed({
   set: (value: boolean) => emit('update:modelValue', value),
 });
 
-// Клавиатурный хак мутирует style в обход реактивности Vue (иначе
-// перерисовка при появлении клавиатуры забирает фокус у инпута внутри
-// шторки) — подключается только в мобильной ветке, на десктопе экранной
-// клавиатуры нет. Раньше каждый потребитель тянул это к себе руками.
 const drawerContentRef = ref<{ $el?: HTMLElement } | null>(null);
-const footerRef = ref<HTMLDivElement | null>(null);
-const scrollContainerRef = ref<HTMLDivElement | null>(null);
-const { setupKeyboardListener, cleanupKeyboardListener } = useDrawerKeyboard(
-  drawerContentRef,
-  footerRef,
-  scrollContainerRef,
-);
-
-// `immediate` обязателен: часть шторок монтируется уже открытой (родитель
-// рендерит их по v-if вместе с v-model=true), и без первого прогона хак
-// клавиатуры у них не включался бы вовсе.
-watch(
-  () => open.value,
-  async (isOpen) => {
-    if (isDesktop.value) return;
-    if (isOpen) {
-      await nextTick();
-      if (open.value) setupKeyboardListener();
-    } else {
-      cleanupKeyboardListener();
-    }
-  },
-  { immediate: true },
-);
 
 // Содержимое отдаётся наружу ради порталов: календарь в портале на body тап по
 // себе отдаёт шторке как клик снаружи, и она закрывается вместе с выбором даты.
@@ -113,7 +90,9 @@ const SURFACE_CLASS = 'flex flex-col bg-card-light dark:bg-card-dark';
           )
         "
       >
-        <OverlayHeader :title="title" :title-as="DialogTitle" @close="open = false" />
+        <OverlayHeader :title="title" :title-as="DialogTitle" @close="open = false">
+          <template #action><slot name="action" /></template>
+        </OverlayHeader>
         <!-- sr-only: DialogContentImpl требует Description, иначе aria-describedby
              ссылается в никуда и в консоль падает предупреждение reka-ui -->
         <DialogDescription class="sr-only">{{ title ?? 'Диалоговое окно' }}</DialogDescription>
@@ -128,23 +107,24 @@ const SURFACE_CLASS = 'flex flex-col bg-card-light dark:bg-card-dark';
     <DrawerPortal>
       <DrawerOverlay :class="OVERLAY_CLASS" />
       <!--
-        Предел высоты приходит через CSS-переменную, а не напрямую в
-        style.maxHeight: useDrawerKeyboard.onResize() безусловно пишет
-        drawerEl.style.maxHeight = '' при каждом вызове (в т.ч. сразу при
-        открытии, если клавиатура скрыта), а Vue не переприменяет инлайн-стиль
-        заново, пока сам проп не изменился — предел исчезал бы после первого
-        же открытия. --overlay-max-h хук не трогает, поэтому класс
-        max-h-[var(--overlay-max-h)] всегда остаётся источником истины, а
-        клавиатурный хак по-прежнему может временно переопределить
-        max-height инлайн-стилем поверх него.
+        fill: top и bottom зафиксированы (высота не зависит ни от контента, ни
+        от клавиатуры — раньше этим ведала геометрия из useDrawerKeyboard, она
+        удалена вместе с хуком). Иначе предел высоты приходит через
+        CSS-переменную --overlay-max-h, а не напрямую в style.maxHeight, чтобы
+        класс max-h-[var(--overlay-max-h)] был единственным источником истины.
       -->
       <DrawerContent
         ref="drawerContentRef"
         data-testid="overlay-sheet"
-        :style="{ '--overlay-max-h': maxHeight }"
+        :style="
+          fill
+            ? { top: 'calc(var(--safe-area-inset-top) + 0.5rem)' }
+            : { '--overlay-max-h': maxHeight }
+        "
         :class="
           cn(
-            'fixed inset-x-0 bottom-0 z-50 rounded-t-2xl max-h-[var(--overlay-max-h)]',
+            'fixed inset-x-0 bottom-0 z-50 rounded-t-2xl',
+            !fill && 'max-h-[var(--overlay-max-h)]',
             SURFACE_CLASS,
           )
         "
@@ -154,7 +134,9 @@ const SURFACE_CLASS = 'flex flex-col bg-card-light dark:bg-card-dark';
         <DrawerHandle
           class="mx-auto mt-3 h-1 w-10 shrink-0 rounded-full bg-border-light dark:bg-border-dark"
         />
-        <OverlayHeader :title="title" :title-as="DrawerTitle" @close="open = false" />
+        <OverlayHeader :title="title" :title-as="DrawerTitle" @close="open = false">
+          <template #action><slot name="action" /></template>
+        </OverlayHeader>
         <!-- sr-only: DrawerContent рендерит тот же reka-ui DialogContentImpl,
              что и десктопный DialogContent, — то же требование Description -->
         <DrawerDescription class="sr-only">{{ title ?? 'Диалоговое окно' }}</DrawerDescription>
@@ -162,7 +144,6 @@ const SURFACE_CLASS = 'flex flex-col bg-card-light dark:bg-card-dark';
              отступ под жестовую полосу нужен ему, иначе последняя строка
              списка уходит под home indicator. -->
         <div
-          ref="scrollContainerRef"
           :class="cn(BODY_CLASS, !$slots.footer && 'pb-[max(env(safe-area-inset-bottom),1rem)]')"
           data-vaul-no-drag
         >
@@ -173,7 +154,6 @@ const SURFACE_CLASS = 'flex flex-col bg-card-light dark:bg-card-dark';
              прилипала бы вплотную к нижнему краю шторки. -->
         <div
           v-if="$slots.footer"
-          ref="footerRef"
           class="shrink-0 border-t border-border-light dark:border-border-dark px-5 pt-4 pb-[max(env(safe-area-inset-bottom),0.75rem)]"
         >
           <slot name="footer" />

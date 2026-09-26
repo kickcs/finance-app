@@ -16,8 +16,8 @@ const accounts = [
  */
 const OverlayStub = {
   name: 'UOverlay',
-  props: ['modelValue', 'title', 'desktop', 'maxHeight'],
-  template: '<div><slot /><slot name="footer" /></div>',
+  props: ['modelValue', 'title', 'desktop', 'maxHeight', 'fill'],
+  template: '<div><slot name="action" /><slot /><slot name="footer" /></div>',
 };
 
 function mountDrawer(debt: Debt | null, extraProps: Record<string, unknown> = {}) {

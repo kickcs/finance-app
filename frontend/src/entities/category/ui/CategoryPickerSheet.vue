@@ -70,6 +70,7 @@ function toManageCategories() {
     :model-value="open"
     title="Категория"
     desktop="dialog"
+    fill
     @update:model-value="emit('update:open', $event)"
   >
     <!-- Поиск: sticky над сеткой, чтобы не уезжал при скролле длинного списка -->

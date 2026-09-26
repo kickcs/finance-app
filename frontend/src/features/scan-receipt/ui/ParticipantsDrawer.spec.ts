@@ -18,8 +18,8 @@ vi.mock('@/entities/person', () => ({
 // Шторка целиком приезжает из UOverlay через порталы vaul/reka — здесь важно
 // только её содержимое, поэтому обвязку заменяем на голые слоты.
 const OverlayStub = {
-  props: ['modelValue', 'title', 'desktop'],
-  template: '<div><slot /><slot name="footer" /></div>',
+  props: ['modelValue', 'title', 'desktop', 'fill'],
+  template: '<div><slot name="action" /><slot /><slot name="footer" /></div>',
 };
 
 function participant(name: string, over: Partial<Participant> = {}): Participant {

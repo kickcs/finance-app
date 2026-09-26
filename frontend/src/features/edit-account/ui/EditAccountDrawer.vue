@@ -77,7 +77,20 @@ function handleSubmit() {
 </script>
 
 <template>
-  <UOverlay v-model="open" title="Редактировать счёт" desktop="panel">
+  <UOverlay v-model="open" title="Редактировать счёт" desktop="panel" fill>
+    <template #action>
+      <UButton
+        data-testid="save-btn"
+        variant="primary"
+        size="sm"
+        :loading="isUpdating"
+        :disabled="!isValid || !isDirty"
+        @click="handleSubmit"
+      >
+        Сохранить
+      </UButton>
+    </template>
+
     <div v-if="account" class="space-y-5" data-testid="edit-account-form">
       <!-- Живой предпросмотр: цвет и иконка видны в контексте строки счёта -->
       <div
@@ -194,19 +207,5 @@ function handleSubmit() {
         @update:model-value="updateField('color', $event)"
       />
     </div>
-
-    <template #footer>
-      <UButton
-        data-testid="save-btn"
-        variant="primary"
-        size="xl"
-        full-width
-        :loading="isUpdating"
-        :disabled="!isValid || !isDirty"
-        @click="handleSubmit"
-      >
-        Сохранить
-      </UButton>
-    </template>
   </UOverlay>
 </template>

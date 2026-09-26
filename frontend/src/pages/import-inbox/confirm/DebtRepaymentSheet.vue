@@ -87,35 +87,35 @@ const isDesktop = useIsDesktop();
             v-for="group in groups"
             :key="`${group.personName}_${group.debtType}`"
             type="button"
-            class="w-full flex items-center gap-3 px-2 py-2.5 rounded-xl hover:bg-surface-light dark:hover:bg-surface-dark transition-colors text-left"
+            class="w-full flex flex-col gap-0.5 px-2 py-2.5 rounded-xl hover:bg-surface-light dark:hover:bg-surface-dark transition-colors text-left"
             @click="emit('select', group)"
           >
-            <IconBadge icon="handshake" :color="DEBT_DIRECTION_COLORS[group.debtType]" />
-            <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-3">
+              <IconBadge icon="handshake" :color="DEBT_DIRECTION_COLORS[group.debtType]" />
+              <div class="flex-1 min-w-0">
+                <p
+                  class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark truncate"
+                >
+                  {{ group.personName }}
+                </p>
+                <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
+                  {{ group.debts.length > 1 ? debtsCountLabel(group.debts.length) : 'Остаток' }}
+                </p>
+              </div>
               <p
-                class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark truncate"
+                class="text-sm font-semibold tabular-nums text-text-primary-light dark:text-text-primary-dark shrink-0"
               >
-                {{ group.personName }}
-              </p>
-              <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
-                <template v-if="group.debts.length > 1">
-                  {{ debtsCountLabel(group.debts.length) }} · остаток
-                  {{ formatCurrency(group.totalRemaining, group.currency) }}
-                </template>
-                <template v-else>
-                  Остаток: {{ formatCurrency(group.totalRemaining, group.currency) }}
-                </template>
-              </p>
-              <!-- Сумма сошлась не копейка в копейку: говорим, куда денется разница. -->
-              <p v-if="repaymentDifferenceLabel(group)" class="text-xs text-primary">
-                {{ repaymentDifferenceLabel(group) }}
+                {{ formatCurrency(group.totalRemaining, group.currency) }}
               </p>
             </div>
-            <UIcon
-              name="chevron_right"
-              size="sm"
-              class="text-text-tertiary-light dark:text-text-tertiary-dark shrink-0"
-            />
+            <!-- Сумма сошлась не копейка в копейку: говорим, куда денется разница, цветом направления долга. -->
+            <p
+              v-if="repaymentDifferenceLabel(group)"
+              class="pl-12 text-xs"
+              :class="group.debtType === 'given' ? 'text-debt-given' : 'text-debt-received'"
+            >
+              {{ repaymentDifferenceLabel(group) }}
+            </p>
           </button>
         </div>
       </DrawerContent>
