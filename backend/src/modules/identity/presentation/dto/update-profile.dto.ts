@@ -1,6 +1,7 @@
 import {
   IsString,
   IsOptional,
+  Matches,
   IsBoolean,
   IsUUID,
   IsArray,
@@ -78,4 +79,10 @@ export class UpdateProfileDto {
   @Min(0)
   @Max(23)
   notificationHour?: number;
+
+  /** Только цифры: форматирование — дело клиента, здесь хранится голый номер. `null` очищает карту. */
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d{12,19}$/, { message: 'paymentCardNumber must contain between 12 and 19 digits' })
+  paymentCardNumber?: string | null;
 }

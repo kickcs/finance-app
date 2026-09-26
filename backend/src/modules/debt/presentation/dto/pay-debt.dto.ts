@@ -7,6 +7,7 @@ import {
   IsString,
   Min,
   Max,
+  MaxLength,
 } from 'class-validator';
 
 export class PayDebtDto {
@@ -30,4 +31,20 @@ export class PayDebtDto {
   @IsOptional()
   @IsString()
   excessCategoryId?: string;
+
+  /** Отработка: долг гасится работой, деньги по счетам не двигаются. */
+  @IsOptional()
+  @IsBoolean()
+  settleWithWork?: boolean;
+
+  /** Что отработано — короткая заметка в описание отметки. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  workNote?: string;
+
+  /** Категория работы: с ней отработка попадает в аналитику тратой/доходом. */
+  @IsOptional()
+  @IsString()
+  workCategoryId?: string;
 }

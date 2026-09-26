@@ -120,6 +120,8 @@ describe('PaymentDrawer', () => {
         accountId: 'acc-2',
         forgiveRemainder: false,
         excessCategoryId: undefined,
+        settleWithWork: false,
+        workNote: undefined,
       });
     });
 
@@ -142,6 +144,95 @@ describe('PaymentDrawer', () => {
       expect(submit(w).attributes('disabled')).toBeDefined();
       await submit(w).trigger('click');
       expect(w.emitted('confirm')).toBeUndefined();
+    });
+  });
+
+  describe('отработка', () => {
+    it('прячет выбор счёта: деньги по счетам не двигаются', async () => {
+      const w = mountDrawer(openDebt);
+      await open(w);
+      expect(w.findComponent({ name: 'AccountSelector' }).exists()).toBe(true);
+
+      await w.get('[data-testid="work-off-open"]').trigger('click');
+
+      expect(w.find('[data-testid="work-off-field"]').exists()).toBe(true);
+      expect(w.findComponent({ name: 'AccountSelector' }).exists()).toBe(false);
+      expect(submit(w).text()).toBe('Закрыть отработкой');
+    });
+
+    it('отдаёт наружу отметку и заметку о работе', async () => {
+      const w = mountDrawer(openDebt);
+      await open(w);
+      await w.get('[data-testid="work-off-open"]').trigger('click');
+      await w.get('[data-testid="work-off-field"] input').setValue('ремонт машины');
+      await submit(w).trigger('click');
+
+      const payload = w.emitted('confirm')?.[0][0] as Record<string, unknown>;
+      expect(payload.settleWithWork).toBe(true);
+      expect(payload.workNote).toBe('ремонт машины');
+      // Счёт из долга уходит и при отработке: отметке всё равно нужен счёт
+      expect(payload.accountId).toBe('acc-2');
+    });
+
+    // Отработать больше остатка нечего — сервер такой платёж отклоняет,
+    // поэтому сумма подрезается прямо в форме.
+    it('подрезает сумму до остатка', async () => {
+      const w = mountDrawer(openDebt);
+      await open(w);
+      await w.get('[data-testid="payment-amount-input"]').setValue(1500);
+      await w.get('[data-testid="work-off-open"]').trigger('click');
+
+      expect(amountOf(w)).toBe(800);
+    });
+
+    // Категория переводит отработку из «просто отметки» в пару записей,
+    // которую видно в аналитике, — поэтому она уходит наружу отдельным полем.
+    it('без категории отдаёт отработку как отметку', async () => {
+      const w = mountDrawer(openDebt);
+      await open(w);
+      await w.get('[data-testid="work-off-open"]').trigger('click');
+      await submit(w).trigger('click');
+
+      const payload = w.emitted('confirm')?.[0][0] as Record<string, unknown>;
+      expect(payload.settleWithWork).toBe(true);
+      expect(payload.workCategoryId).toBeUndefined();
+    });
+
+    it('«учесть работу тратой» прикладывает категорию', async () => {
+      const w = mountDrawer(openDebt);
+      await open(w);
+      await w.get('[data-testid="work-off-open"]').trigger('click');
+      await w.get('[data-testid="work-off-accounting"] [role="switch"]').trigger('click');
+      await submit(w).trigger('click');
+
+      const payload = w.emitted('confirm')?.[0][0] as Record<string, unknown>;
+      expect(payload.workCategoryId).toBeTruthy();
+    });
+
+    it('возврат к деньгам стирает и категорию работы', async () => {
+      const w = mountDrawer(openDebt);
+      await open(w);
+      await w.get('[data-testid="work-off-open"]').trigger('click');
+      await w.get('[data-testid="work-off-accounting"] [role="switch"]').trigger('click');
+      await w.get('[data-testid="work-off-close"]').trigger('click');
+      await submit(w).trigger('click');
+
+      const payload = w.emitted('confirm')?.[0][0] as Record<string, unknown>;
+      expect(payload.workCategoryId).toBeUndefined();
+    });
+
+    it('возврат к деньгам возвращает выбор счёта и стирает заметку', async () => {
+      const w = mountDrawer(openDebt);
+      await open(w);
+      await w.get('[data-testid="work-off-open"]').trigger('click');
+      await w.get('[data-testid="work-off-field"] input').setValue('ремонт машины');
+      await w.get('[data-testid="work-off-close"]').trigger('click');
+      await submit(w).trigger('click');
+
+      const payload = w.emitted('confirm')?.[0][0] as Record<string, unknown>;
+      expect(payload.settleWithWork).toBe(false);
+      expect(payload.workNote).toBeUndefined();
+      expect(w.findComponent({ name: 'AccountSelector' }).exists()).toBe(true);
     });
   });
 

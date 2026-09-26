@@ -13,7 +13,10 @@ import {
 import { IDebtRepository, DEBT_REPOSITORY } from '../../../../debt/domain/repositories';
 import { DomainEventPublisher } from '../../../../../shared';
 import { BalanceCalculationService, TransferDomainService } from '../../../domain/services';
-import { DEBT_CATEGORY_IDS } from '../../../domain/constants/default-categories';
+import {
+  DEBT_CATEGORY_IDS,
+  ALL_DEBT_CATEGORY_IDS,
+} from '../../../domain/constants/default-categories';
 
 @CommandHandler(DeleteTransactionCommand)
 export class DeleteTransactionHandler implements ICommandHandler<DeleteTransactionCommand> {
@@ -27,6 +30,22 @@ export class DeleteTransactionHandler implements ICommandHandler<DeleteTransacti
     private readonly eventPublisher: DomainEventPublisher,
     private readonly dataSource: DataSource,
   ) {}
+
+  /**
+   * Есть ли у возврата парная нога работы: та же дата, тот же долг, недолговая
+   * категория. Отдельного поля-связки у транзакций нет, но `debt_id` с
+   * недолговой категорией ставит только отработка.
+   */
+  private async hasWorkLeg(transaction: { debtId: string | null; date: Date }): Promise<boolean> {
+    const rows: { id: string }[] = await this.dataSource.query(
+      `SELECT id FROM transactions
+       WHERE debt_id = $1 AND date = $2 AND is_informational = false
+         AND category_id <> ALL($3::text[])
+       LIMIT 1`,
+      [transaction.debtId, transaction.date, ALL_DEBT_CATEGORY_IDS],
+    );
+    return rows.length > 0;
+  }
 
   async execute(command: DeleteTransactionCommand): Promise<void> {
     const transaction = await this.transactionRepository.findById(command.id);
@@ -45,6 +64,33 @@ export class DeleteTransactionHandler implements ICommandHandler<DeleteTransacti
       throw new BadRequestException(
         'Запись о взаимозачёте нельзя удалить — отмените зачёт со стороны долга.',
       );
+    }
+
+    // Отработка гасит долг, ничего не двигая по счетам: удалив её из ленты,
+    // пользователь уменьшил бы долг «просто так». Снимается она отменой
+    // закрытия — оттуда команда приходит с `skipDebtCheck`.
+    if (transaction.categoryId === DEBT_CATEGORY_IDS.WORKED_OFF && !command.skipDebtCheck) {
+      throw new BadRequestException(
+        'Запись об отработке нельзя удалить — отмените закрытие со стороны долга.',
+      );
+    }
+
+    // Отработка, зачтённая по категории, — пара записей на ноль по балансу:
+    // трата по категории и возврат долга. Удалив одну ногу, пользователь
+    // оставил бы на счёте дыру на её сумму, поэтому пара снимается только со
+    // стороны долга — оттуда команда приходит с `skipDebtCheck`.
+    if (!command.skipDebtCheck && transaction.debtId) {
+      const isWorkLeg =
+        !transaction.isInformational && !ALL_DEBT_CATEGORY_IDS.includes(transaction.categoryId);
+      const isReturnLeg =
+        transaction.categoryId === DEBT_CATEGORY_IDS.RETURN_TO_ME ||
+        transaction.categoryId === DEBT_CATEGORY_IDS.RETURN_FROM_ME;
+
+      if (isWorkLeg || (isReturnLeg && (await this.hasWorkLeg(transaction)))) {
+        throw new BadRequestException(
+          'Запись об отработке нельзя удалить по отдельности — снимите её со стороны долга.',
+        );
+      }
     }
 
     // Prevent deletion if transaction is linked to open debts (as source or direct transaction)
@@ -66,9 +112,12 @@ export class DeleteTransactionHandler implements ICommandHandler<DeleteTransacti
     // If this is the forgiveness info-tx attached to a closed debt, reverse the
     // forgiveness on the debt side too — otherwise debts.close_transaction_id
     // dangles (no FK) and the debt remains is_closed=true with no way to undo.
-    const linkedClosedDebt = transaction.isInformational
-      ? await this.debtRepository.findByCloseTransactionId(command.id)
-      : null;
+    // Только прощение: остаток восстанавливается из `forgiven_amount`, которого
+    // у отработки нет — её отмена пересчитывает остаток на стороне долга.
+    const linkedClosedDebt =
+      transaction.isInformational && transaction.categoryId === DEBT_CATEGORY_IDS.FORGIVEN
+        ? await this.debtRepository.findByCloseTransactionId(command.id)
+        : null;
 
     // Mark transaction as deleted (raises event)
     transaction.markDeleted();

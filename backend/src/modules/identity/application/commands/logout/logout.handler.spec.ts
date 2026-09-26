@@ -44,6 +44,7 @@ describe('LogoutHandler', () => {
       timezone: 'Asia/Tashkent',
       notificationHour: 12,
       createdAt: new Date(),
+      paymentCardNumber: null,
     });
     mockRepository.findById.mockResolvedValue(profile);
     mockRepository.save.mockImplementation((p) => Promise.resolve(p));

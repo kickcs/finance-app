@@ -49,6 +49,7 @@ describe('GetProfileHandler', () => {
       timezone: 'Asia/Tashkent',
       notificationHour: 12,
       createdAt: new Date('2024-01-15'),
+      paymentCardNumber: null,
     });
     mockRepository.findById.mockResolvedValue(profile);
 
@@ -75,6 +76,7 @@ describe('GetProfileHandler', () => {
       financialMonthStartDay: 1,
       timezone: 'Asia/Tashkent',
       notificationHour: 12,
+      paymentCardNumber: null,
       createdAt: new Date('2024-01-15'),
     });
     expect(mockRepository.findById).toHaveBeenCalledWith('user-1');
@@ -109,6 +111,7 @@ describe('GetProfileHandler', () => {
       timezone: 'Asia/Tashkent',
       notificationHour: 12,
       createdAt: new Date('2024-12-31'),
+      paymentCardNumber: null,
     });
     mockRepository.findById.mockResolvedValue(profile);
 

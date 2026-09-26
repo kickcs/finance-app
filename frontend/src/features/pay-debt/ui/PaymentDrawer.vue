@@ -7,6 +7,7 @@ import {
   DebtProgressMeter,
   DebtPaymentFields,
   DebtAmountHeadline,
+  WorkOffField,
   useDebtPaymentForm,
   getDebtSplit,
 } from '@/entities/debt';
@@ -51,6 +52,9 @@ const {
   paymentAmount,
   forgiveRemainder,
   excessCategoryId,
+  settleWithWork,
+  workNote,
+  workCategoryId,
   isOverpayment,
   excess,
   remainder,
@@ -75,6 +79,9 @@ watch(
       paymentAmount.value = props.draft.amount;
       selectedAccountId.value = props.draft.accountId;
       forgiveRemainder.value = props.draft.forgiveRemainder ?? false;
+      settleWithWork.value = props.draft.settleWithWork ?? false;
+      workNote.value = props.draft.workNote ?? '';
+      workCategoryId.value = props.draft.workCategoryId ?? null;
       if (props.draft.excessCategoryId) excessCategoryId.value = props.draft.excessCategoryId;
     } else {
       selectedAccountId.value = props.debt.account_id ?? props.accounts[0]?.id ?? null;
@@ -102,6 +109,9 @@ const forgivenAfter = computed(() => {
 
 const confirmLabel = computed(() => {
   if (forgiveRemainder.value && paymentAmount.value === 0) return 'Простить долг';
+  if (settleWithWork.value) {
+    return paymentAmount.value >= remaining.value ? 'Закрыть отработкой' : 'Засчитать отработку';
+  }
   if (paymentAmount.value >= remaining.value) return 'Закрыть долг';
   return `Внести ${formatCurrency(paymentAmount.value, debtCurrency.value, { showSymbol: false })}`;
 });
@@ -114,6 +124,9 @@ function confirm() {
     accountId: selectedAccountId.value,
     forgiveRemainder: forgiveRemainder.value,
     excessCategoryId: isOverpayment.value ? excessCategoryId.value : undefined,
+    settleWithWork: settleWithWork.value,
+    workNote: settleWithWork.value ? workNote.value.trim() || undefined : undefined,
+    workCategoryId: settleWithWork.value ? (workCategoryId.value ?? undefined) : undefined,
   });
 }
 </script>
@@ -165,8 +178,12 @@ function confirm() {
         :hidden="debt.is_private"
       />
 
+      <!-- При отработке деньги не двигаются, выбирать счёт нечему: отметка
+           ложится на счёт долга сама. Но счёт ей всё же нужен — если его нет,
+           выбор возвращается, иначе кнопка молча заблокирована без причины -->
       <div class="space-y-2">
         <AccountSelector
+          v-if="!settleWithWork || !selectedAccountId"
           :accounts="accounts"
           :selected-id="selectedAccountId"
           :label="debtDirection === 'given' ? 'Куда зачислить' : 'С какого счёта списать'"
@@ -188,6 +205,13 @@ function confirm() {
         :remainder="remainder"
         :remaining="remaining"
         :currency="debtCurrency"
+        :direction="debtDirection"
+      />
+
+      <WorkOffField
+        v-model="settleWithWork"
+        v-model:note="workNote"
+        v-model:category-id="workCategoryId"
         :direction="debtDirection"
       />
     </div>

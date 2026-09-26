@@ -42,6 +42,7 @@ export class GetProfileHandler implements IQueryHandler<GetProfileQuery> {
       financialMonthStartDay: profile.financialMonthStartDay,
       timezone: profile.timezone,
       notificationHour: profile.notificationHour,
+      paymentCardNumber: profile.paymentCardNumber,
       createdAt: profile.createdAt,
     };
   }

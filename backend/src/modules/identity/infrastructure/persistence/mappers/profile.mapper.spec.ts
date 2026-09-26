@@ -93,6 +93,7 @@ describe('ProfileMapper', () => {
         timezone: 'Asia/Tashkent',
         notificationHour: 12,
         createdAt: new Date('2024-01-01'),
+        paymentCardNumber: null,
       });
 
       const orm = ProfileMapper.toOrm(profile);

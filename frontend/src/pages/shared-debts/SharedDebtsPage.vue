@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
+import { useTimeoutFn } from '@vueuse/core';
 import { UButton, UIcon, Skeleton } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
+import { formatCardNumber } from '@/shared/lib/format/cardNumber';
 import { formatDate, formatLocalDate } from '@/shared/lib/format/date';
 import { pluralize } from '@/shared/lib/format/pluralize';
 import { cn } from '@/shared/lib/utils';
@@ -42,6 +44,26 @@ async function load() {
 }
 
 onMounted(load);
+
+// Карта для перевода — то, ради чего страницу и открывают вторым заходом,
+// поэтому номер копируется одним тапом, без выделения пальцем по цифрам
+const isCardCopied = ref(false);
+const { start: scheduleCopyReset } = useTimeoutFn(() => {
+  isCardCopied.value = false;
+}, 2000);
+
+async function copyCard() {
+  const cardNumber = shared.value?.cardNumber;
+  if (!cardNumber) return;
+  try {
+    await navigator.clipboard.writeText(cardNumber);
+    isCardCopied.value = true;
+    scheduleCopyReset();
+  } catch {
+    // Буфер недоступен (нет разрешения, http) — номер и так на экране,
+    // его можно выделить руками
+  }
+}
 
 /**
  * Прощённое называем отдельной частью: без него «отдано 20 000 из 50 000»
@@ -190,6 +212,34 @@ function debtMeta(debt: SharedDebts['debts'][number]): string {
                 {{ formatCurrency(shared.totalTaken, shared.currency) }}
               </p>
             </div>
+          </div>
+        </div>
+
+        <!-- Куда переводить -->
+        <div
+          v-if="shared.cardNumber"
+          class="rounded-2xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark px-4 py-3.5"
+        >
+          <p
+            class="text-caption-sm font-semibold uppercase tracking-wider text-text-tertiary-light dark:text-text-tertiary-dark"
+          >
+            Карта для перевода
+          </p>
+          <div class="mt-1.5 flex items-center gap-2">
+            <p
+              class="flex-1 min-w-0 truncate text-h3 font-bold tabular-nums tracking-wide text-text-primary-light dark:text-text-primary-dark select-all"
+            >
+              {{ formatCardNumber(shared.cardNumber) }}
+            </p>
+            <button
+              type="button"
+              :aria-label="isCardCopied ? 'Номер карты скопирован' : 'Копировать номер карты'"
+              class="w-10 h-10 shrink-0 rounded-xl bg-primary/10 flex items-center justify-center text-primary active:scale-90 transition-transform"
+              data-testid="shared-debts-copy-card"
+              @click="copyCard"
+            >
+              <UIcon :name="isCardCopied ? 'check' : 'content_copy'" size="sm" />
+            </button>
           </div>
         </div>
 

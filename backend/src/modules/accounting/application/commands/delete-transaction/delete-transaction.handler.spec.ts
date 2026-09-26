@@ -63,6 +63,7 @@ describe('DeleteTransactionHandler', () => {
 
   const mockDataSource = {
     transaction: jest.fn((cb: () => Promise<void>) => cb()),
+    query: jest.fn(),
   };
 
   const now = new Date('2026-03-20T12:00:00Z');
@@ -86,6 +87,103 @@ describe('DeleteTransactionHandler', () => {
     mockAccountRepository.save.mockImplementation((a) => Promise.resolve(a));
     mockTransactionRepository.delete.mockResolvedValue(undefined);
     mockDebtRepository.hasOpenDebtsForTransaction.mockResolvedValue(false);
+    mockDataSource.query.mockResolvedValue([]);
+  });
+
+  // Отработка с категорией — пара записей на ноль по балансу: трата по
+  // категории и возврат долга. В одиночку любая её нога оставит на счёте дыру.
+  describe('отработка парой', () => {
+    it('трату по категории, привязанную к долгу, по отдельности не удалить', async () => {
+      const tx = Transaction.createExpense(
+        'tx-work',
+        'user-1',
+        'acc-1',
+        'repair',
+        300,
+        'USD',
+        now,
+        'Отработка долга: Тимур',
+        false,
+        'debt-1',
+      );
+      mockTransactionRepository.findById.mockResolvedValue(tx);
+
+      await expect(
+        handler.execute(new DeleteTransactionCommand('tx-work', 'user-1')),
+      ).rejects.toThrow(BadRequestException);
+      expect(mockTransactionRepository.delete).not.toHaveBeenCalled();
+    });
+
+    it('возврат с парной ногой тоже не удалить', async () => {
+      const tx = Transaction.createIncome(
+        'tx-return',
+        'user-1',
+        'acc-1',
+        'debt_return_to_me',
+        300,
+        'USD',
+        now,
+        'Закрытие долга: Тимур',
+        true,
+        'debt-1',
+      );
+      mockTransactionRepository.findById.mockResolvedValue(tx);
+      mockDataSource.query.mockResolvedValue([{ id: 'tx-work' }]);
+
+      await expect(
+        handler.execute(new DeleteTransactionCommand('tx-return', 'user-1')),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('обычный возврат без пары удаляется как раньше', async () => {
+      const tx = Transaction.createIncome(
+        'tx-return',
+        'user-1',
+        'acc-1',
+        'debt_return_to_me',
+        300,
+        'USD',
+        now,
+        'Закрытие долга: Тимур',
+        true,
+        'debt-1',
+      );
+      mockTransactionRepository.findById.mockResolvedValue(tx);
+      const account = Account.create('acc-1', 'user-1', 'Test', 'wallet', '#000', 'basic', 0, [
+        { currency: 'USD', balance: 1000 },
+      ]);
+      mockAccountRepository.findByIdWithBalances.mockResolvedValue(account);
+
+      await handler.execute(new DeleteTransactionCommand('tx-return', 'user-1'));
+
+      expect(mockTransactionRepository.delete).toHaveBeenCalledWith('tx-return', undefined);
+    });
+
+    // Отмена закрытия снимает пару целиком — там проверка не мешает
+    it('со стороны долга (skipDebtCheck) нога отработки удаляется', async () => {
+      const tx = Transaction.createExpense(
+        'tx-work',
+        'user-1',
+        'acc-1',
+        'repair',
+        300,
+        'USD',
+        now,
+        'Отработка долга: Тимур',
+        false,
+        'debt-1',
+      );
+      mockTransactionRepository.findById.mockResolvedValue(tx);
+      const account = Account.create('acc-1', 'user-1', 'Test', 'wallet', '#000', 'basic', 0, [
+        { currency: 'USD', balance: 700 },
+      ]);
+      mockAccountRepository.findByIdWithBalances.mockResolvedValue(account);
+
+      await handler.execute(new DeleteTransactionCommand('tx-work', 'user-1', true));
+
+      expect(mockTransactionRepository.delete).toHaveBeenCalledWith('tx-work', undefined);
+      expect(account.getTotalBalance('USD')).toBe(1000);
+    });
   });
 
   describe('delete expense', () => {

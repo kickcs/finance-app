@@ -25,6 +25,8 @@ export interface SharedDebtsPayload {
   totalTaken: number;
   ownerName: string | null;
   snapshotAt: number;
+  /** Карта владельца для перевода — голые цифры; в старых снимках её нет. */
+  cardNumber?: string | null;
   debts: SharedDebtEntry[];
 }
 

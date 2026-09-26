@@ -6,7 +6,10 @@ import { Debt } from '../../../domain/aggregates/debt';
 import { IDebtRepository, DEBT_REPOSITORY } from '../../../domain/repositories';
 import { DebtResponseMapper, type DebtResponseDto } from '../../mappers/debt-response.mapper';
 import { DeleteTransactionCommand } from '../../../../accounting/application/commands/delete-transaction/delete-transaction.command';
-import { DEBT_CATEGORY_IDS } from '../../../../accounting/domain/constants/default-categories';
+import {
+  DEBT_CATEGORY_IDS,
+  ALL_DEBT_CATEGORY_IDS,
+} from '../../../../accounting/domain/constants/default-categories';
 
 interface CloseTransactionRow {
   id: string;
@@ -60,6 +63,20 @@ export class ReopenDebtHandler implements ICommandHandler<ReopenDebtCommand> {
     );
     for (const row of forgivenRows) closingTransactionIds.add(row.id);
 
+    // Отработка, зачтённая по категории, — пара записей на ноль по балансу:
+    // трата по категории и возврат долга с одной отметкой времени. Снять
+    // только возврат нельзя — на счёте осталась бы дыра на сумму траты.
+    // Недолговая категория при заполненном `debt_id` бывает только у неё.
+    if (closeTransaction) {
+      const workRows: { id: string }[] = await this.dataSource.query(
+        `SELECT id FROM transactions
+         WHERE debt_id = $1 AND date = $2 AND is_informational = false
+           AND category_id <> ALL($3::text[])`,
+        [command.id, closeTransaction.date, ALL_DEBT_CATEGORY_IDS],
+      );
+      for (const row of workRows) closingTransactionIds.add(row.id);
+    }
+
     // Сначала транзакции, потом сам долг: если оборвётся посередине, долг
     // останется закрытым и повторная отмена доведёт дело до конца. В обратном
     // порядке остался бы открытый долг и фантомный доход на счёте.
@@ -74,17 +91,19 @@ export class ReopenDebtHandler implements ICommandHandler<ReopenDebtCommand> {
       }
     }
 
-    // Остаток считаем по уцелевшим возвратам и зачётам, а не вычитанием суммы
-    // закрытия: так частичные платежи, сделанные до закрытия, переживают отмену.
+    // Остаток считаем по уцелевшим возвратам, зачётам и отработкам, а не
+    // вычитанием суммы закрытия: так частичные платежи, сделанные до закрытия,
+    // переживают отмену.
     const paidRows: { paid: string }[] = await this.dataSource.query(
       `SELECT COALESCE(SUM(amount), 0) AS paid FROM transactions
        WHERE debt_id = $1
-         AND ((is_informational = false AND category_id IN ($2, $3)) OR category_id = $4)`,
+         AND ((is_informational = false AND category_id IN ($2, $3)) OR category_id IN ($4, $5))`,
       [
         command.id,
         DEBT_CATEGORY_IDS.RETURN_TO_ME,
         DEBT_CATEGORY_IDS.RETURN_FROM_ME,
         DEBT_CATEGORY_IDS.OFFSET,
+        DEBT_CATEGORY_IDS.WORKED_OFF,
       ],
     );
     const paid = Number(paidRows[0]?.paid ?? 0);

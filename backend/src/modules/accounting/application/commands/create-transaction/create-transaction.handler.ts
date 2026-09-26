@@ -88,8 +88,11 @@ export class CreateTransactionHandler implements ICommandHandler<CreateTransacti
       }
     }
 
-    // Get source account
-    const account = await this.accountRepository.findByIdWithBalances(accountId);
+    // Get source account. Внутри чужой транзакции читаем её же менеджером:
+    // иначе две записи, созданные одним вызовом на один счёт (нога отработки и
+    // возврат, платёж и переплата), обе прочитают баланс до транзакции, и
+    // второе сохранение затрёт первое — счёт уедет на сумму одной из них.
+    const account = await this.accountRepository.findByIdWithBalances(accountId, outerManager);
     if (!account) {
       throw new NotFoundException('Account not found');
     }
@@ -121,7 +124,7 @@ export class CreateTransactionHandler implements ICommandHandler<CreateTransacti
 
       const toAccount = isIntraAccount
         ? account
-        : await this.accountRepository.findByIdWithBalances(toAccountId);
+        : await this.accountRepository.findByIdWithBalances(toAccountId, outerManager);
       if (!toAccount) {
         throw new NotFoundException('Destination account not found');
       }

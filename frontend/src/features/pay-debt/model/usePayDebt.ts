@@ -15,6 +15,12 @@ import type { Debt } from '@/shared/api/database.types';
 export interface PayDebtOptions {
   forgiveRemainder?: boolean;
   excessCategoryId?: string;
+  /** Отработка: долг гасится работой, а не деньгами. */
+  settleWithWork?: boolean;
+  /** Что отработано — заметка в описание записи. */
+  workNote?: string;
+  /** Категория работы: с ней отработка пишется парой и видна в аналитике. */
+  workCategoryId?: string;
   /** ISO-дата создаваемых записей (по умолчанию — сейчас). Для импорта — occurred_at. */
   transactionDate?: string;
   /** Отдаёт id записи платежа (нужен confirm'у импорта). */
@@ -52,6 +58,12 @@ export function usePayDebt() {
       error.value = 'Некорректная сумма платежа';
       return false;
     }
+    // Отработать больше остатка нечего: лишний труд записывать некуда, и
+    // категорией переплаты — в отличие от денег — это не спасти.
+    if (options?.settleWithWork && paymentAmount > debt.remaining_amount) {
+      error.value = 'Отработка не может превышать остаток долга';
+      return false;
+    }
     if (paymentAmount > debt.remaining_amount && !options?.excessCategoryId) {
       error.value = 'Выберите категорию для переплаты';
       return false;
@@ -78,6 +90,9 @@ export function usePayDebt() {
         date: options?.transactionDate,
         forgiveRemainder: options?.forgiveRemainder,
         excessCategoryId: options?.excessCategoryId,
+        settleWithWork: options?.settleWithWork,
+        workNote: options?.workNote,
+        workCategoryId: options?.workCategoryId,
       });
 
       if (!options?.bulk) applyDebtUpdate(queryClient, debt.id, result.debt);
@@ -87,7 +102,10 @@ export function usePayDebt() {
 
       if (!options?.bulk) {
         await invalidateDebtRelated(queryClient, userId);
-        toast({ title: 'Платёж проведён', variant: 'success' });
+        toast({
+          title: options?.settleWithWork ? 'Отработка засчитана' : 'Платёж проведён',
+          variant: 'success',
+        });
       }
       return true;
     } catch (e) {
@@ -104,8 +122,10 @@ export function usePayDebt() {
       // а не делаем вид, что платежа не было.
       await invalidateDebtRelated(queryClient, userId).catch(() => {});
       console.error('Failed to pay debt:', e);
-      error.value = 'Не удалось внести платёж';
-      if (!options?.bulk) toast({ title: 'Не удалось внести платёж', variant: 'error' });
+      error.value = options?.settleWithWork
+        ? 'Не удалось засчитать отработку'
+        : 'Не удалось внести платёж';
+      if (!options?.bulk) toast({ title: error.value, variant: 'error' });
       return false;
     } finally {
       isPaying.value = false;

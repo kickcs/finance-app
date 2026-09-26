@@ -104,6 +104,7 @@ describe('Profile Entity', () => {
         timezone: 'Asia/Tashkent',
         notificationHour: 12,
         createdAt: new Date('2024-01-01'),
+        paymentCardNumber: null,
       });
 
       expect(profile.id).toBe('id-3');
@@ -191,6 +192,59 @@ describe('Profile Entity', () => {
       profile.updateProfile({});
 
       expect(profile.domainEvents).toHaveLength(0);
+    });
+  });
+
+  describe('paymentCardNumber', () => {
+    let profile: Profile;
+
+    beforeEach(() => {
+      const email = Email.create('user@test.com');
+      profile = Profile.createRegistered('id-1', email, 'John', 'hashed-pw');
+      profile.clearDomainEvents();
+    });
+
+    it('should start without a card', () => {
+      expect(profile.paymentCardNumber).toBeNull();
+    });
+
+    it('should strip spaces and dashes from the card number', () => {
+      profile.updateProfile({ paymentCardNumber: '8600 1234-5678 9012' });
+
+      expect(profile.paymentCardNumber).toBe('8600123456789012');
+    });
+
+    it('should clear the card number when null is passed', () => {
+      profile.updateProfile({ paymentCardNumber: '8600123456789012' });
+      profile.updateProfile({ paymentCardNumber: null });
+
+      expect(profile.paymentCardNumber).toBeNull();
+    });
+
+    it('should treat an empty string as clearing the card number', () => {
+      profile.updateProfile({ paymentCardNumber: '8600123456789012' });
+      profile.updateProfile({ paymentCardNumber: '   ' });
+
+      expect(profile.paymentCardNumber).toBeNull();
+    });
+
+    it('should reject a card number shorter than 12 digits', () => {
+      expect(() => {
+        profile.updateProfile({ paymentCardNumber: '12345678901' });
+      }).toThrow();
+    });
+
+    it('should reject a card number longer than 19 digits', () => {
+      expect(() => {
+        profile.updateProfile({ paymentCardNumber: '1'.repeat(20) });
+      }).toThrow();
+    });
+
+    it('should keep the full number out of the domain event', () => {
+      profile.updateProfile({ paymentCardNumber: '8600123456789012' });
+
+      const event = profile.domainEvents[0] as ProfileUpdatedEvent;
+      expect(event.changes).toEqual({ paymentCardNumber: '••9012' });
     });
   });
 

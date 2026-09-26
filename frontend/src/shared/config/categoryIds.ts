@@ -6,6 +6,7 @@ export const CATEGORY_IDS = {
   DEBT_RETURN_FROM_ME: 'debt_return_from_me',
   DEBT_FORGIVEN: 'debt_forgiven',
   DEBT_OFFSET: 'debt_offset',
+  DEBT_WORKED_OFF: 'debt_worked_off',
   GIFTS: 'gifts',
   GIFTS_INCOME: 'gifts_income',
   TRANSFER: 'transfer',

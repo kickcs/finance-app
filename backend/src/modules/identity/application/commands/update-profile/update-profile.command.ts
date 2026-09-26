@@ -15,6 +15,7 @@ export class UpdateProfileCommand {
       financialMonthStartDay?: number;
       timezone?: string;
       notificationHour?: number;
+      paymentCardNumber?: string | null;
     },
   ) {}
 }

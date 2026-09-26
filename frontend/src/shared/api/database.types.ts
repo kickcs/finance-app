@@ -36,6 +36,7 @@ export type Database = {
           quick_actions_hint_dismissed: boolean;
           financial_month_start_day: number;
           notification_hour: number;
+          payment_card_number: string | null;
         };
         Insert: {
           id: string;
@@ -53,6 +54,7 @@ export type Database = {
           quick_actions_hint_dismissed?: boolean;
           financial_month_start_day?: number;
           notification_hour?: number;
+          payment_card_number?: string | null;
         };
         Update: {
           id?: string;
@@ -70,6 +72,7 @@ export type Database = {
           quick_actions_hint_dismissed?: boolean;
           financial_month_start_day?: number;
           notification_hour?: number;
+          payment_card_number?: string | null;
         };
         Relationships: [];
       };

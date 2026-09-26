@@ -13,6 +13,7 @@ export const mockProfileResponse = {
   dashboardSettings: null,
   quickActionsHidden: false,
   quickActionsHintDismissed: false,
+  paymentCardNumber: null,
 };
 
 export const profileHandlers = [

@@ -141,6 +141,7 @@ export const DEBT_CATEGORY_IDS = new Set([
   'debt_return_from_me',
   'debt_forgiven',
   'debt_offset',
+  'debt_worked_off',
 ]);
 
 export const DEBT_CATEGORIES: Category[] = [
@@ -184,6 +185,13 @@ export const DEBT_CATEGORIES: Category[] = [
     name: 'Взаимозачёт',
     icon: 'compare_arrows',
     color: '#6366f1',
+    type: 'expense',
+  },
+  {
+    id: 'debt_worked_off',
+    name: 'Отработка долга',
+    icon: 'handyman',
+    color: '#0ea5e9',
     type: 'expense',
   },
 ];

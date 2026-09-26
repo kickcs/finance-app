@@ -133,6 +133,9 @@ export class DebtsController {
         dto.date ? new Date(dto.date) : new Date(),
         dto.forgiveRemainder ?? false,
         dto.excessCategoryId,
+        dto.settleWithWork ?? false,
+        dto.workNote,
+        dto.workCategoryId,
       ),
     );
   }

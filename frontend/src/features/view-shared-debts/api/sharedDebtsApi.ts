@@ -20,6 +20,8 @@ export interface SharedDebts {
   totalTaken: number;
   ownerName: string | null;
   snapshotAt: number;
+  /** Карта для перевода — голые цифры. Снимки до появления карты её не содержат. */
+  cardNumber?: string | null;
   debts: SharedDebtEntry[];
 }
 

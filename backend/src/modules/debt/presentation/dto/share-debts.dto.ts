@@ -7,6 +7,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Matches,
   MaxLength,
   ValidateNested,
 } from 'class-validator';
@@ -70,6 +71,12 @@ export class ShareDebtsDto {
 
   @IsInt()
   snapshotAt: number;
+
+  /** Карта получателя перевода — только цифры, как и в профиле. */
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d{12,19}$/, { message: 'cardNumber must contain between 12 and 19 digits' })
+  cardNumber?: string | null;
 
   @IsArray()
   @ArrayMaxSize(200)

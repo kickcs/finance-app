@@ -14,6 +14,7 @@ export { default as DebtActionsSheet } from './ui/DebtActionsSheet.vue';
 export { default as DueDateField } from './ui/DueDateField.vue';
 export { default as DebtDirectionPill } from './ui/DebtDirectionPill.vue';
 export { default as MutualDebtCard } from './ui/MutualDebtCard.vue';
+export { default as WorkOffField } from './ui/WorkOffField.vue';
 
 // Model/Types
 export * from './model/types';
@@ -36,6 +37,7 @@ export {
   type MutualPosition,
 } from './lib/foldDebtsIntoPeople';
 export { findClosingRecords, debtHasClosingRecords } from './lib/findClosingRecords';
+export { foldWorkOffRecords, type DebtPaymentRecord } from './lib/foldWorkOffRecords';
 
 // API
 export * from './api';

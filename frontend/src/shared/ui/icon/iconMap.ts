@@ -135,6 +135,7 @@ import {
   Wifi,
   Wine,
   Wrench,
+  Hammer,
   X,
   Zap,
 } from 'lucide-vue-next';
@@ -278,6 +279,7 @@ export const iconMap: Record<string, Component> = {
   workspace_premium: Crown,
   wifi: Wifi,
   work: Briefcase,
+  handyman: Hammer,
 
   // Service subscription presets
   netflix: Clapperboard,

@@ -3,3 +3,4 @@ export { useDebtsShare } from './model/useDebtsShare';
 export { useDebtShare } from './model/useDebtShare';
 export { buildSharePayload, selectShareableDebts } from './model/buildSharePayload';
 export { renderDebtsCardToCanvas } from './model/renderDebtsCard';
+export { buildShareCaption } from './model/buildShareCaption';

@@ -130,6 +130,85 @@ describe('useEditProfile', () => {
     });
   });
 
+  // ── карта для переводов ──────────────────────────────────────────────────
+
+  describe('карта для переводов', () => {
+    it('подставляет сохранённый номер в форму', async () => {
+      server.use(
+        http.post('*/api/profiles/get-or-create', () =>
+          HttpResponse.json({ ...mockProfileResponse, paymentCardNumber: '8600123456789012' }),
+        ),
+        http.get('*/api/profiles/me', () =>
+          HttpResponse.json({ ...mockProfileResponse, paymentCardNumber: '8600123456789012' }),
+        ),
+      );
+
+      const c = mountComposable();
+      await flushPromises();
+
+      c.initForm();
+
+      expect(c.formData.value.cardNumber).toBe('8600123456789012');
+    });
+
+    it('пустое поле — валидная форма: карта необязательна', () => {
+      const c = mountComposable();
+      c.updateField('name', 'Иван');
+
+      expect(c.isCardValid.value).toBe(true);
+      expect(c.isValid.value).toBe(true);
+    });
+
+    it('обрывок номера не даёт сохранить профиль', () => {
+      const c = mountComposable();
+      c.updateField('name', 'Иван');
+      c.updateField('cardNumber', '86001234');
+
+      expect(c.isCardValid.value).toBe(false);
+      expect(c.isValid.value).toBe(false);
+    });
+
+    it('в профиль уходят голые цифры', async () => {
+      let patchBody: Record<string, unknown> | null = null;
+      server.use(
+        http.patch('*/api/profiles/me', async ({ request }) => {
+          patchBody = (await request.json()) as Record<string, unknown>;
+          return HttpResponse.json({ ...mockProfileResponse, ...patchBody });
+        }),
+      );
+
+      const c = mountComposable();
+      c.updateField('name', 'Иван');
+      c.updateField('cardNumber', '8600 1234 5678 9012');
+
+      await c.saveProfile();
+      await flushPromises();
+
+      expect((patchBody as Record<string, unknown> | null)?.paymentCardNumber).toBe(
+        '8600123456789012',
+      );
+    });
+
+    it('очищенное поле стирает карту в профиле', async () => {
+      let patchBody: Record<string, unknown> | null = null;
+      server.use(
+        http.patch('*/api/profiles/me', async ({ request }) => {
+          patchBody = (await request.json()) as Record<string, unknown>;
+          return HttpResponse.json({ ...mockProfileResponse, ...patchBody });
+        }),
+      );
+
+      const c = mountComposable();
+      c.updateField('name', 'Иван');
+      c.updateField('cardNumber', '');
+
+      await c.saveProfile();
+      await flushPromises();
+
+      expect((patchBody as Record<string, unknown> | null)?.paymentCardNumber).toBeNull();
+    });
+  });
+
   // ── updateField ──────────────────────────────────────────────────────────
 
   describe('updateField', () => {

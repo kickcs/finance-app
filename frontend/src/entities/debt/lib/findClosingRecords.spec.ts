@@ -38,6 +38,22 @@ describe('findClosingRecords', () => {
 
     expect(findClosingRecords(debt, [pay, forgiven])).toEqual([pay, forgiven]);
   });
+
+  // Закрытие отработкой с категорией — пара записей на ноль по балансу с одной
+  // отметкой времени. Сервер снимает обе, значит в списке должны быть обе.
+  it('also finds the work leg paired with the closing return', () => {
+    const date = '2026-09-01T10:00:00.000Z';
+    const debt = makeDebt({ close_transaction_id: 'tx-return' });
+    const back = makeTx({ id: 'tx-return', date });
+    const work = makeTx({ id: 'tx-work', category_id: 'repair', date });
+    const other = makeTx({
+      id: 'tx-other',
+      category_id: 'repair',
+      date: '2026-08-01T10:00:00.000Z',
+    });
+
+    expect(findClosingRecords(debt, [back, work, other])).toEqual([back, work]);
+  });
 });
 
 describe('debtHasClosingRecords', () => {
