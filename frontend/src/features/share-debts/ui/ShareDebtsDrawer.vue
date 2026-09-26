@@ -133,6 +133,7 @@ async function onShareLink() {
     :model-value="modelValue"
     title="Поделиться долгами"
     desktop="dialog"
+    fill
     @update:model-value="setOpen"
   >
     <div v-if="payload" data-testid="share-debts-drawer" class="space-y-5">
