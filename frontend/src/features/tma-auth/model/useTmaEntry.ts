@@ -1,6 +1,7 @@
 import { onMounted, ref, shallowRef } from 'vue';
 import { useRouter } from 'vue-router';
 import { loadTelegramWebApp, type TelegramWebApp } from '@/shared/lib/telegram/loadTelegramWebApp';
+import { setupTelegramShell } from '@/shared/lib/telegram/setupTelegramShell';
 import { useAuth, waitForAuth } from '@/shared/api/composables/useAuth';
 import { HttpError } from '@/shared/api/http';
 import { useTheme } from '@/features/toggle-theme';
@@ -60,6 +61,10 @@ export function useTmaEntry() {
     wa.ready();
     wa.expand();
     setTheme(wa.colorScheme);
+    // Не снимаем подписку при уходе со страницы: /tma — вход в SPA, а не
+    // отдельный документ, и полноэкранный режим/цвета хрома должны жить
+    // весь сеанс мини-аппы, а не только пока смонтирован этот компонент.
+    setupTelegramShell(wa, wa.colorScheme);
 
     try {
       const res = await importedTransactionsApi.tmaAuth(wa.initData);

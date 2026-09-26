@@ -92,6 +92,7 @@ function handleSearchEnter() {
     :model-value="open"
     title="Люди"
     desktop="dialog"
+    fill
     @update:model-value="emit('update:open', $event)"
   >
     <!-- Поиск: sticky над списком, чтобы не уезжал при скролле -->

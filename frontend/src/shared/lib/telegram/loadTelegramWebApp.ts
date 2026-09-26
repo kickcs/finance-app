@@ -8,6 +8,11 @@ export interface TelegramWebApp {
   /** Сырая строка initData для серверной валидации; пустая вне Telegram */
   initData: string;
   colorScheme: 'light' | 'dark';
+  /** Версия Bot API клиента, напр. "8.0" — сверяется через isVersionAtLeast */
+  version: string;
+  platform: 'ios' | 'android' | 'tdesktop' | 'weba' | 'webk' | 'macos' | 'unknown' | string;
+  /** Развёрнута ли мини-апа в полноэкранном режиме (Bot API 8.0) */
+  isFullscreen: boolean;
   BackButton: {
     isVisible: boolean;
     show(): void;
@@ -18,6 +23,14 @@ export interface TelegramWebApp {
   ready(): void;
   expand(): void;
   openLink(url: string): void;
+  isVersionAtLeast(version: string): boolean;
+  requestFullscreen(): void;
+  disableVerticalSwipes(): void;
+  setHeaderColor(color: string): void;
+  setBackgroundColor(color: string): void;
+  setBottomBarColor?(color: string): void;
+  onEvent(eventType: string, callback: () => void): void;
+  offEvent(eventType: string, callback: () => void): void;
 }
 
 declare global {

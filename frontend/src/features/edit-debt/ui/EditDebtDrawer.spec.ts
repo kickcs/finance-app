@@ -19,8 +19,8 @@ vi.mock('@/shared/api/invalidation', () => ({
  */
 const OverlayStub = {
   name: 'UOverlay',
-  props: ['modelValue', 'title', 'desktop', 'maxHeight'],
-  template: '<div><slot /><slot name="footer" /></div>',
+  props: ['modelValue', 'title', 'desktop', 'maxHeight', 'fill'],
+  template: '<div><slot name="action" /><slot /><slot name="footer" /></div>',
 };
 
 function makeDebt(overrides: Partial<Debt> = {}): Debt {

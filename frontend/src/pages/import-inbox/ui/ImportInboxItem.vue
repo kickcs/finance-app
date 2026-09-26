@@ -2,8 +2,9 @@
 import { computed } from 'vue';
 import { UIcon } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
-import { formatRelativeDate } from '@/shared/lib/format/date';
+import { formatDate } from '@/shared/lib/format/date';
 import type { ImportedTransaction } from '@/entities/imported-transaction';
+import { cleanMerchantName } from '../model/inboxGrouping';
 
 const props = defineProps<{
   item: ImportedTransaction;
@@ -31,39 +32,43 @@ const visual = computed(() => {
   };
 });
 
-/** Primary label: merchant when present, otherwise a sensible fallback per type. */
+/** Заголовок — очищенный от города мерчант, иначе сенсиблфолбэк по типу. */
 const title = computed(() => {
-  if (props.item.merchant) return props.item.merchant;
+  const cleaned = cleanMerchantName(props.item.merchant);
+  if (cleaned) return cleaned;
   return isIncome.value ? 'Пополнение' : 'Списание';
 });
 
-/** Signed, colored amount string. Null amount → «Сумма неизвестна». */
+/** День уже виден в заголовке группы — здесь только время. */
+const time = computed(() =>
+  formatDate(props.item.occurred_at ?? props.item.created_at, { format: 'time' }),
+);
+
+/** Signed, colored amount + currency shown separately (smaller, tertiary). */
 const amount = computed(() => {
   const { amount: value, currency } = props.item;
 
   if (value === null) {
     return {
       text: 'Сумма неизвестна',
+      currency: '',
       class: 'text-text-tertiary-light dark:text-text-tertiary-dark',
     };
   }
 
-  const signed = isIncome.value ? value : -Math.abs(value);
+  const sign = isIncome.value ? '+' : '−';
   return {
-    text: formatCurrency(signed, currency, { showSign: true }),
+    text: `${sign}${formatCurrency(Math.abs(value), currency, { showSymbol: false })}`,
+    currency,
     class: isIncome.value ? 'text-success' : 'text-text-primary-light dark:text-text-primary-dark',
   };
 });
-
-const relativeDate = computed(() =>
-  props.item.occurred_at ? formatRelativeDate(new Date(props.item.occurred_at)) : '',
-);
 </script>
 
 <template>
   <button
     type="button"
-    class="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors active:bg-surface-light dark:active:bg-surface-dark"
+    class="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors active:bg-surface-light dark:active:bg-surface-dark focus-ring"
     @click="$emit('click')"
   >
     <!-- Type icon -->
@@ -81,18 +86,9 @@ const relativeDate = computed(() =>
       <div
         class="mt-0.5 flex items-center gap-1.5 text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
       >
-        <span class="flex items-center gap-1 truncate">
-          <UIcon
-            name="credit_card"
-            size="sm"
-            class="shrink-0 text-text-tertiary-light dark:text-text-tertiary-dark"
-          />
-          {{ item.card_mask }}
-        </span>
-        <template v-if="relativeDate">
-          <span aria-hidden="true">·</span>
-          <span class="shrink-0">{{ relativeDate }}</span>
-        </template>
+        <span class="shrink-0">{{ item.card_mask }}</span>
+        <span aria-hidden="true">·</span>
+        <span class="shrink-0">{{ time }}</span>
       </div>
     </div>
 
@@ -101,12 +97,12 @@ const relativeDate = computed(() =>
       <p :class="['text-sm font-semibold tabular-nums', amount.class]">
         {{ amount.text }}
       </p>
+      <p
+        v-if="amount.currency"
+        class="mt-0.5 text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
+      >
+        {{ amount.currency }}
+      </p>
     </div>
-
-    <UIcon
-      name="chevron_right"
-      size="sm"
-      class="shrink-0 text-text-tertiary-light dark:text-text-tertiary-dark"
-    />
   </button>
 </template>

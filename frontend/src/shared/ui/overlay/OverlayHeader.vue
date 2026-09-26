@@ -14,16 +14,18 @@ defineEmits<{ close: [] }>();
 
 <template>
   <div
-    v-if="title || $slots.default"
+    v-if="title || $slots.action"
     class="shrink-0 flex items-center justify-between gap-3 px-5 py-4 border-b border-border-light dark:border-border-dark"
   >
     <component
       :is="titleAs"
-      class="text-body-lg font-semibold text-text-primary-light dark:text-text-primary-dark truncate"
+      class="flex-1 min-w-0 text-body-lg font-semibold text-text-primary-light dark:text-text-primary-dark truncate"
     >
       {{ title }}
     </component>
-    <slot />
+    <!-- Основное действие fill-шторки: клавиатура закрывает футер, поэтому
+         кнопка живёт в шапке, где она всегда видна. -->
+    <slot name="action" />
     <button
       type="button"
       data-testid="overlay-close"

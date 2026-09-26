@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.88';
+export const CURRENT_VERSION = '1.0.89';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,25 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.89',
+    date: '2026-09-27',
+    title: 'Разбор операций в Telegram',
+    items: [
+      {
+        type: 'fix',
+        text: 'Возврат долга узнаётся, даже если его округлили: два долга на 146 880 сум, возвращённые ровными 150 000, теперь предлагаются к закрытию.',
+      },
+      {
+        type: 'fix',
+        text: 'В Telegram приложение открывается на весь экран, а шторки с полями ввода больше не прыгают, пока вы печатаете.',
+      },
+      {
+        type: 'improvement',
+        text: 'Новый вид операций на подтверждение: список разбит по дням, названия магазинов без мусора, а подсказка о возврате долга стала заметной карточкой с одной кнопкой.',
+      },
+    ],
+  },
   {
     version: '1.0.88',
     date: '2026-09-05',

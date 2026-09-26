@@ -6,10 +6,11 @@ import { navigateBack } from '@/app/router';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useProfile } from '@/shared/api/composables/useProfile';
 import { AppHeader } from '@/widgets/header';
-import { EmptyState, SkeletonListItem, UIcon } from '@/shared/ui';
+import { EmptyState, SkeletonListItem, UIcon, UBadge } from '@/shared/ui';
 import { useImportedTransactions } from '@/entities/imported-transaction';
 import { useAccounts } from '@/entities/account';
 import { useInboxSortOrder } from './model/useInboxSortOrder';
+import { groupInboxItemsByDay } from './model/inboxGrouping';
 import ImportInboxItem from './ui/ImportInboxItem.vue';
 import AccountBalancesStrip from './ui/AccountBalancesStrip.vue';
 
@@ -25,6 +26,7 @@ const hiddenAccountIds = computed<Set<string>>(
 const { sortOrder, toggle: toggleSortOrder, sortItems } = useInboxSortOrder();
 
 const sortedItems = computed(() => sortItems(items.value));
+const groupedItems = computed(() => groupInboxItemsByDay(sortedItems.value));
 
 function openConfirm(id: string) {
   router.push({ name: ROUTE_NAMES.IMPORT_CONFIRM, params: { id } });
@@ -35,7 +37,15 @@ function openConfirm(id: string) {
   <div
     class="h-full flex flex-col relative bg-background-light dark:bg-background-dark pb-28 lg:pb-8 overflow-y-auto"
   >
-    <AppHeader title="На подтверждение" show-back @back="navigateBack">
+    <AppHeader show-back @back="navigateBack">
+      <template #left>
+        <h1 class="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark">
+          На подтверждение
+        </h1>
+        <UBadge v-if="items.length > 0" variant="primary" size="xs" shape="pill">
+          {{ items.length }}
+        </UBadge>
+      </template>
       <template #actions>
         <button
           v-if="items.length > 1"
@@ -43,11 +53,10 @@ function openConfirm(id: string) {
           :aria-label="
             sortOrder === 'newest' ? 'Показать сначала старые' : 'Показать сначала новые'
           "
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-text-secondary-light dark:text-text-secondary-dark active:scale-95 transition-all cursor-pointer"
+          class="flex items-center justify-center w-8 h-8 rounded-full bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-text-secondary-light dark:text-text-secondary-dark active:scale-95 transition-all cursor-pointer"
           @click="toggleSortOrder"
         >
           <UIcon name="swap_vert" size="sm" />
-          {{ sortOrder === 'newest' ? 'Сначала новые' : 'Сначала старые' }}
         </button>
       </template>
     </AppHeader>
@@ -75,20 +84,26 @@ function openConfirm(id: string) {
         v-else-if="items.length === 0"
         icon="inbox"
         title="Нет импортов на подтверждение"
-        description="Перешлите сообщение от банка боту в Telegram — операции появятся здесь для проверки и подтверждения."
+        description="Перешлите сообщение от банка боту в Telegram — операция появится здесь для проверки."
       />
 
-      <!-- List -->
-      <div
-        v-else
-        class="rounded-2xl bg-surface-light/50 dark:bg-surface-dark/50 divide-y divide-border-light dark:divide-border-dark overflow-hidden"
-      >
-        <ImportInboxItem
-          v-for="item in sortedItems"
-          :key="item.id"
-          :item="item"
-          @click="openConfirm(item.id)"
-        />
+      <!-- List, grouped by calendar day -->
+      <div v-else class="space-y-4">
+        <section v-for="group in groupedItems" :key="group.label" class="space-y-1.5">
+          <p class="px-1 text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
+            {{ group.label }}
+          </p>
+          <div
+            class="rounded-2xl bg-surface-light/50 dark:bg-surface-dark/50 divide-y divide-border-light dark:divide-border-dark overflow-hidden"
+          >
+            <ImportInboxItem
+              v-for="item in group.items"
+              :key="item.id"
+              :item="item"
+              @click="openConfirm(item.id)"
+            />
+          </div>
+        </section>
       </div>
     </main>
   </div>

@@ -311,8 +311,20 @@ async function saveToContacts(row: PersonRow) {
     :model-value="open"
     title="Участники"
     desktop="panel"
+    fill
     @update:model-value="emit('update:open', $event)"
   >
+    <template #action>
+      <UButton
+        variant="primary"
+        size="sm"
+        data-testid="participants-done"
+        @click="emit('update:open', false)"
+      >
+        {{ doneLabel }}
+      </UButton>
+    </template>
+
     <!-- Поиск липнет к верху: список длинный, а искать приходится в нём же -->
     <div
       class="sticky -top-4 -mx-5 -mt-4 z-10 bg-card-light dark:bg-card-dark px-5 pt-4 pb-3 space-y-2"
@@ -520,18 +532,6 @@ async function saveToContacts(row: PersonRow) {
         {{ isLoading ? 'Загружаем контакты…' : 'Никого не нашлось' }}
       </p>
     </div>
-
-    <template #footer>
-      <UButton
-        variant="primary"
-        size="lg"
-        full-width
-        data-testid="participants-done"
-        @click="emit('update:open', false)"
-      >
-        {{ doneLabel }}
-      </UButton>
-    </template>
   </UOverlay>
 </template>
 

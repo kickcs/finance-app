@@ -217,6 +217,16 @@ describe('findRepaymentMatch', () => {
     expect(match?.isNearMatch).toBe(true);
   });
 
+  it('два долга, округлённые вверх до ровной суммы (146 880 → 150 000) → матч', () => {
+    const debts = [
+      makeDebt({ id: 'd1', person_name: 'Умид', remaining_amount: 51_880 }),
+      makeDebt({ id: 'd2', person_name: 'Умид', remaining_amount: 95_000 }),
+    ];
+    const match = findMatch(debts, { type: 'income', amount: 150_000, currency: 'UZS' });
+    expect(match?.personName).toBe('Умид');
+    expect(match?.difference).toBe(3_120);
+  });
+
   it('две близкие группы, одна из них точная → матч на точную', () => {
     const debts = [
       makeDebt({ id: 'd1', person_name: 'Алишер', remaining_amount: 240_000 }),
@@ -238,13 +248,14 @@ describe('findRepaymentMatch', () => {
 describe('repaymentTolerance', () => {
   it('валюта без копеек: пол — тысяча, потолок — десять тысяч', () => {
     expect(repaymentTolerance(20_000, 'UZS')).toBe(1_000);
-    expect(repaymentTolerance(240_000, 'UZS')).toBe(4_800);
+    expect(repaymentTolerance(150_000, 'UZS')).toBe(7_500);
+    expect(repaymentTolerance(240_000, 'UZS')).toBe(10_000);
     expect(repaymentTolerance(5_000_000, 'UZS')).toBe(10_000);
   });
 
   it('валюта с копейками: пол — единица, потолок — десять', () => {
     expect(repaymentTolerance(10, 'USD')).toBe(1);
-    expect(repaymentTolerance(200, 'USD')).toBe(4);
+    expect(repaymentTolerance(100, 'USD')).toBe(5);
     expect(repaymentTolerance(100_000, 'USD')).toBe(10);
   });
 });

@@ -227,8 +227,22 @@ function confirm() {
     :model-value="modelValue"
     title="Закрыть долги"
     desktop="panel"
+    fill
     @update:model-value="setOpen"
   >
+    <template #action>
+      <UButton
+        variant="primary"
+        size="sm"
+        data-testid="close-all-submit"
+        :loading="isClosing"
+        :disabled="!isValid || isClosing"
+        @click="confirm"
+      >
+        {{ confirmLabel }}
+      </UButton>
+    </template>
+
     <div data-testid="close-all-drawer" class="space-y-5">
       <!-- Кто и сколько долгов -->
       <div class="flex items-center justify-center gap-2">
@@ -386,22 +400,10 @@ function confirm() {
       </DebtPaymentFields>
     </div>
 
-    <template #footer>
-      <div class="space-y-2">
-        <!-- Платежи проводятся по одному, поэтому прогресс — это реальные
-             проведённые транзакции, а не анимация ожидания. -->
-        <UProgressBar v-if="isClosing" :value="progressPercent" color="primary" size="sm" />
-        <UButton
-          variant="primary"
-          full-width
-          data-testid="close-all-submit"
-          :loading="isClosing"
-          :disabled="!isValid || isClosing"
-          @click="confirm"
-        >
-          {{ confirmLabel }}
-        </UButton>
-      </div>
+    <template v-if="isClosing" #footer>
+      <!-- Платежи проводятся по одному, поэтому прогресс — это реальные
+           проведённые транзакции, а не анимация ожидания. -->
+      <UProgressBar :value="progressPercent" color="primary" size="sm" />
     </template>
   </UOverlay>
 </template>

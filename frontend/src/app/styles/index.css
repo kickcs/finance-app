@@ -35,6 +35,16 @@
   --safe-area-inset-right: env(safe-area-inset-right, 0px);
 }
 
+/* Telegram-полноэкран: свои close/«…» кнопки поверх контента, отступ под них
+   приходит через переменные Telegram-скрипта поверх обычного notch-инсета
+   (см. setupTelegramShell.ts). Класс переключается по wa.isFullscreen. */
+html.tma-fullscreen {
+  --safe-area-inset-top: calc(
+    max(env(safe-area-inset-top, 0px), var(--tg-safe-area-inset-top, 0px)) +
+      var(--tg-content-safe-area-inset-top, 0px)
+  );
+}
+
 .dark {
   --background: 9 9 11;
   --foreground: 250 250 250;
@@ -527,7 +537,7 @@ h6 {
 }
 
 .safe-area-inset-top {
-  padding-top: env(safe-area-inset-top, 0px);
+  padding-top: var(--safe-area-inset-top);
 }
 
 /* Section transition animations - subtle */

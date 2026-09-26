@@ -324,7 +324,7 @@ describe('PeopleListPage', () => {
 
       await openEditSheet(wrapper);
 
-      const sheet = findInBody('[data-testid="person-edit-sheet"]');
+      const sheet = findInBody('[data-testid="overlay-sheet"]');
       expect(sheet).not.toBeNull();
       expect((sheet!.querySelector('input') as HTMLInputElement).value).toBe('Алексей');
     });
@@ -342,7 +342,7 @@ describe('PeopleListPage', () => {
       const wrapper = await renderPage();
       await openEditSheet(wrapper);
 
-      const sheet = findInBody('[data-testid="person-edit-sheet"]')!;
+      const sheet = findInBody('[data-testid="overlay-sheet"]')!;
       await setInputValue(sheet.querySelector('input') as HTMLInputElement, 'Алексей Петров');
       (sheet.querySelector('[data-testid="save-person-btn"]') as HTMLElement).click();
       await flushPromises();
@@ -378,7 +378,7 @@ describe('PeopleListPage', () => {
       const wrapper = await renderPage();
       await openEditSheet(wrapper);
 
-      const sheet = findInBody('[data-testid="person-edit-sheet"]')!;
+      const sheet = findInBody('[data-testid="overlay-sheet"]')!;
       await setInputValue(sheet.querySelector('input') as HTMLInputElement, '   ');
 
       const saveBtn = sheet.querySelector('[data-testid="save-person-btn"]') as HTMLButtonElement;
@@ -416,7 +416,7 @@ describe('PeopleListPage', () => {
       const wrapper = await renderPage();
       await openEditSheet(wrapper);
 
-      const sheet = findInBody('[data-testid="person-edit-sheet"]')!;
+      const sheet = findInBody('[data-testid="overlay-sheet"]')!;
       (sheet.querySelector('[data-testid="delete-person-btn"]') as HTMLElement).click();
       await flushPromises();
       await nextTick();
@@ -504,13 +504,13 @@ describe('PeopleListPage', () => {
       const wrapper = await renderPage();
       await openEditSheet(wrapper);
 
-      const sheet = findInBody('[data-testid="person-edit-sheet"]')!;
+      const sheet = findInBody('[data-testid="overlay-sheet"]')!;
       await setInputValue(sheet.querySelector('input') as HTMLInputElement, 'Новое имя');
       (sheet.querySelector('[data-testid="save-person-btn"]') as HTMLElement).click();
       await flushPromises();
       await flushPromises();
 
-      expect(findInBody('[data-testid="person-edit-sheet"]')).not.toBeNull();
+      expect(findInBody('[data-testid="overlay-sheet"]')).not.toBeNull();
     });
   });
 });

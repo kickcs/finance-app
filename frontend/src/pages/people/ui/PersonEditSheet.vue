@@ -1,15 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
-import {
-  DrawerRoot,
-  DrawerPortal,
-  DrawerOverlay,
-  DrawerContent,
-  DrawerHandle,
-  DrawerTitle,
-} from 'vaul-vue';
-import { UButton, UIcon, UInput, UColorPicker, InitialAvatar } from '@/shared/ui';
-import { useIsDesktop } from '@/shared/lib/composables/useIsDesktop';
+import { UOverlay } from '@/shared/ui/overlay';
+import { UButton, UIcon, UInput, UColorPicker } from '@/shared/ui';
 import { ENTITY_COLORS } from '@/shared/config/colors';
 import { formatCurrency, COMPACT_FORMAT } from '@/shared/lib/format/currency';
 import { pluralize } from '@/shared/lib/format/pluralize';
@@ -30,8 +22,6 @@ const emit = defineEmits<{
   delete: [];
 }>();
 
-const isDesktop = useIsDesktop();
-
 const name = ref('');
 const color = ref<string>(ENTITY_COLORS[0]);
 
@@ -48,6 +38,7 @@ watch(
   { immediate: true },
 );
 
+const title = computed(() => props.person?.name || 'Контакт');
 const canSave = computed(() => name.value.trim().length > 0);
 
 const debtLabel = computed(() => {
@@ -66,97 +57,74 @@ function handleSave() {
 </script>
 
 <template>
-  <DrawerRoot
-    :open="open"
-    :direction="isDesktop ? 'right' : 'bottom'"
-    @update:open="emit('update:open', $event)"
+  <UOverlay
+    :model-value="open"
+    :title="title"
+    fill
+    @update:model-value="emit('update:open', $event)"
   >
-    <DrawerPortal>
-      <DrawerOverlay class="fixed inset-0 z-50 bg-black/40" />
-      <DrawerContent
-        data-testid="person-edit-sheet"
-        class="fixed z-50 flex flex-col bg-card-light dark:bg-card-dark"
-        :class="
-          isDesktop
-            ? 'top-0 right-0 bottom-0 w-[420px] rounded-l-2xl border-l border-border-light dark:border-border-dark'
-            : 'bottom-0 left-0 right-0 max-h-[85dvh] rounded-t-2xl border-t border-border-light dark:border-border-dark'
-        "
+    <template #action>
+      <UButton
+        data-testid="save-person-btn"
+        variant="primary"
+        size="sm"
+        :loading="saving"
+        :disabled="!canSave"
+        @click="handleSave"
       >
-        <div v-if="!isDesktop" class="flex justify-center pt-3 pb-1">
-          <DrawerHandle class="w-10 h-1 rounded-full bg-border-light dark:bg-border-dark" />
-        </div>
+        Сохранить
+      </UButton>
+    </template>
 
-        <div class="px-5 pb-3 flex items-center gap-3" :class="{ 'pt-4': isDesktop }">
-          <InitialAvatar :name="name || '?'" :color="color" size="md" class="shrink-0" />
-          <DrawerTitle
-            class="text-base font-semibold text-text-primary-light dark:text-text-primary-dark truncate"
-          >
-            {{ person?.name || 'Контакт' }}
-          </DrawerTitle>
-        </div>
+    <div class="space-y-4">
+      <UInput
+        v-model="name"
+        data-testid="person-name-input"
+        label="Имя"
+        placeholder="Например: Аня, Коля…"
+        @keydown="(e: KeyboardEvent) => e.key === 'Enter' && handleSave()"
+      />
 
-        <div class="px-5 pb-4 space-y-4 overflow-y-auto">
-          <UInput
-            v-model="name"
-            data-testid="person-name-input"
-            label="Имя"
-            placeholder="Например: Аня, Коля…"
-            @keydown="(e: KeyboardEvent) => e.key === 'Enter' && handleSave()"
-          />
+      <UColorPicker v-model="color" :colors="ENTITY_COLORS" label="Цвет аватара" />
 
-          <UColorPicker v-model="color" :colors="ENTITY_COLORS" label="Цвет аватара" />
-
-          <RouterLink
-            v-if="debtLabel"
-            to="/debts"
-            data-testid="person-debts-link"
-            class="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-surface-light dark:bg-surface-dark transition-colors"
-          >
-            <span
-              class="flex-1 min-w-0 text-body-sm text-text-secondary-light dark:text-text-secondary-dark truncate"
-            >
-              {{ debtLabel.count }} · {{ debtLabel.direction }}
-            </span>
-            <span
-              class="shrink-0 text-body-sm font-semibold tabular-nums"
-              :class="debtLabel.positive ? 'text-success' : 'text-danger'"
-            >
-              {{ debtLabel.sum }}
-            </span>
-            <UIcon
-              name="chevron_right"
-              size="sm"
-              class="shrink-0 text-text-tertiary-light dark:text-text-tertiary-dark"
-            />
-          </RouterLink>
-        </div>
-
-        <div
-          class="px-5 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] flex gap-2 border-t border-border-light dark:border-border-dark"
+      <RouterLink
+        v-if="debtLabel"
+        to="/debts"
+        data-testid="person-debts-link"
+        class="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-surface-light dark:bg-surface-dark transition-colors"
+      >
+        <span
+          class="flex-1 min-w-0 text-body-sm text-text-secondary-light dark:text-text-secondary-dark truncate"
         >
-          <UButton
-            data-testid="delete-person-btn"
-            variant="secondary"
-            size="lg"
-            class="shrink-0 text-danger"
-            aria-label="Удалить контакт"
-            @click="emit('delete')"
-          >
-            <UIcon name="delete" size="sm" />
-          </UButton>
-          <UButton
-            data-testid="save-person-btn"
-            variant="primary"
-            size="lg"
-            class="flex-1"
-            :loading="saving"
-            :disabled="!canSave"
-            @click="handleSave"
-          >
-            Сохранить
-          </UButton>
-        </div>
-      </DrawerContent>
-    </DrawerPortal>
-  </DrawerRoot>
+          {{ debtLabel.count }} · {{ debtLabel.direction }}
+        </span>
+        <span
+          class="shrink-0 text-body-sm font-semibold tabular-nums"
+          :class="debtLabel.positive ? 'text-success' : 'text-danger'"
+        >
+          {{ debtLabel.sum }}
+        </span>
+        <UIcon
+          name="chevron_right"
+          size="sm"
+          class="shrink-0 text-text-tertiary-light dark:text-text-tertiary-dark"
+        />
+      </RouterLink>
+    </div>
+
+    <template #footer>
+      <UButton
+        data-testid="delete-person-btn"
+        variant="secondary"
+        size="lg"
+        full-width
+        class="text-danger"
+        aria-label="Удалить контакт"
+        @click="emit('delete')"
+      >
+        <UIcon name="delete" size="sm" />
+        Удалить контакт
+      </UButton>
+    </template>
+  </UOverlay>
 </template>

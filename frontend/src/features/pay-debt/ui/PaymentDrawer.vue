@@ -123,8 +123,21 @@ function confirm() {
     :model-value="modelValue"
     title="Внести платёж"
     desktop="panel"
+    fill
     @update:model-value="emit('update:modelValue', $event)"
   >
+    <template #action>
+      <UButton
+        variant="primary"
+        size="sm"
+        data-testid="payment-drawer-submit"
+        :disabled="!isValid"
+        @click="confirm"
+      >
+        {{ confirmLabel }}
+      </UButton>
+    </template>
+
     <div v-if="debt" data-testid="payment-drawer" class="space-y-5">
       <!--
         Сумма-героем: скрытый input поверх нарисованной строки. Раскладка общая
@@ -178,17 +191,5 @@ function confirm() {
         :direction="debtDirection"
       />
     </div>
-
-    <template #footer>
-      <UButton
-        variant="primary"
-        full-width
-        data-testid="payment-drawer-submit"
-        :disabled="!isValid"
-        @click="confirm"
-      >
-        {{ confirmLabel }}
-      </UButton>
-    </template>
   </UOverlay>
 </template>

@@ -1,7 +1,14 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, ref, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import { UButton, UIcon, NotFoundState, ConfirmDeleteModal, useToast } from '@/shared/ui';
+import {
+  UButton,
+  UIcon,
+  IconBadge,
+  NotFoundState,
+  ConfirmDeleteModal,
+  useToast,
+} from '@/shared/ui';
 import { AppHeader } from '@/widgets/header';
 import {
   useTransactionForm,
@@ -13,7 +20,7 @@ import {
 import { useSplitExpense } from '@/features/split-expense';
 import { useAccounts, AccountPickerSheet } from '@/entities/account';
 import { useCategories, CategoryPickerSheet } from '@/entities/category';
-import { useDebts } from '@/entities/debt';
+import { useDebts, DEBT_DIRECTION_COLORS } from '@/entities/debt';
 import { useCloseAllDebts } from '@/features/pay-debt';
 import { useHashtags } from '@/entities/transaction';
 import { usePeople } from '@/entities/person';
@@ -23,6 +30,7 @@ import { navigateBackTo } from '@/app/router';
 import { ROUTE_NAMES } from '@/app/router/routeNames';
 import { CATEGORY_IDS } from '@/shared/config/categoryIds';
 import { formatDate, formatRelativeDate } from '@/shared/lib/format/date';
+import { formatCurrency } from '@/shared/lib/format/currency';
 import { Popover, PopoverTrigger, PopoverContent } from '@/shared/ui/primitives/popover';
 import { Calendar } from '@/shared/ui/primitives/calendar';
 import { CalendarDate, type DateValue } from '@internationalized/date';
@@ -31,6 +39,7 @@ import { useImportedTransactions, type ImportedTransaction } from '@/entities/im
 import { queryClient } from '@/shared/api/queryClient';
 import { invalidateDebtRelated } from '@/shared/api/invalidation';
 import { useInboxSortOrder } from '../model/useInboxSortOrder';
+import { cleanMerchantName } from '../model/inboxGrouping';
 import { decideCategoryPrefill } from '../model/categoryPrefill';
 import { reviewRows } from '../model/reviewRows';
 import {
@@ -141,18 +150,18 @@ const repaymentMatch = computed<RepaymentGroup | null>(() =>
     ? findRepaymentMatch(eligibleGroups.value, item.value)
     : null,
 );
-const repaymentMatchText = computed(() => {
+/** «Умид — 2 долга на 146 880 UZS» — вторая строка баннера-подсказки. */
+const repaymentMatchSummary = computed(() => {
   const match = repaymentMatch.value;
   if (!match) return '';
-  const base =
-    match.debtType === 'given'
-      ? `Похоже, это возврат долга от ${match.personName}`
-      : `Похоже, это возврат вашего долга: ${match.personName}`;
-  const parts = [base];
-  if (match.debts.length > 1) parts.push(`(${debtsCountLabel(match.debts.length)})`);
-  const diff = repaymentDifferenceLabel(match);
-  return diff ? `${parts.join(' ')} · ${diff}` : parts.join(' ');
+  return `${match.personName} — ${debtsCountLabel(match.debts.length)} на ${formatCurrency(match.totalRemaining, match.currency)}`;
 });
+/** Цвет банера-подсказки по направлению долга: given — amber, taken — purple. */
+const repaymentColorClass = computed(() =>
+  repaymentMatch.value?.debtType === 'given'
+    ? { bg: 'bg-debt-given-light border-debt-given/30', text: 'text-debt-given' }
+    : { bg: 'bg-debt-received-light border-debt-received/30', text: 'text-debt-received' },
+);
 
 /** Куда записать переплату: возврат мне — доход-подарок, мой возврат — расход-подарок. */
 function excessCategoryId(group: RepaymentGroup): string {
@@ -405,11 +414,34 @@ const needsManualAmount = computed(() => item.value?.amount === null);
 const relativeDate = computed(() =>
   item.value?.occurred_at ? formatRelativeDate(new Date(item.value.occurred_at)) : '',
 );
-const provenanceTitle = computed(() => item.value?.merchant || 'Операция по карте');
+const heroTime = computed(() =>
+  item.value?.occurred_at ? formatDate(item.value.occurred_at, { format: 'time' }) : '',
+);
+/** «Сегодня, 19:19» в шапке хиро-карточки — справа от чипа типа операции. */
+const heroDateTime = computed(() => {
+  if (!relativeDate.value) return heroTime.value;
+  if (!heroTime.value) return relativeDate.value;
+  return `${relativeDate.value}, ${heroTime.value}`;
+});
+/** «ZOOMRAD P2P UZ2HU · *1951» — очищенный от города мерчант + маска карты. */
+const sourceLine = computed(() => {
+  if (!item.value) return '';
+  const title = cleanMerchantName(item.value.merchant) || 'Операция по карте';
+  return item.value.card_mask ? `${title} · ${item.value.card_mask}` : title;
+});
 
 // --- Navigation between pending imports --------------------------------------
 // The next import follows the user's chosen review order (same as the inbox list).
 const { sortItems } = useInboxSortOrder();
+
+/** «2 из 5» — позиция текущего импорта в очереди на подтверждение. */
+const positionLabel = computed(() => {
+  if (!item.value) return '';
+  const ordered = sortItems(items.value);
+  const index = ordered.findIndex((i) => i.id === item.value!.id);
+  if (index === -1 || ordered.length === 0) return '';
+  return `${index + 1} из ${ordered.length}`;
+});
 
 function computeNext(): ImportedTransaction | null {
   const ordered = sortItems(items.value);
@@ -611,14 +643,31 @@ function toScanReceipt() {
   <div class="h-full flex flex-col min-w-0 relative">
     <!-- Mobile Header -->
     <div class="md:hidden shrink-0">
-      <AppHeader title="Подтверждение" show-back blur @back="goToInbox" />
+      <AppHeader title="Подтверждение" show-back blur @back="goToInbox">
+        <template #actions>
+          <span
+            v-if="positionLabel"
+            class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
+          >
+            {{ positionLabel }}
+          </span>
+        </template>
+      </AppHeader>
     </div>
 
     <!-- Desktop Header -->
     <div class="hidden md:flex items-center justify-between px-8 py-6 shrink-0">
-      <h1 class="text-2xl font-bold text-text-primary-light dark:text-text-primary-dark">
-        Подтверждение импорта
-      </h1>
+      <div class="flex items-center gap-2">
+        <h1 class="text-2xl font-bold text-text-primary-light dark:text-text-primary-dark">
+          Подтверждение импорта
+        </h1>
+        <span
+          v-if="positionLabel"
+          class="text-sm text-text-tertiary-light dark:text-text-tertiary-dark"
+        >
+          {{ positionLabel }}
+        </span>
+      </div>
       <button
         type="button"
         aria-label="Закрыть"
@@ -644,44 +693,11 @@ function toScanReceipt() {
         v-else-if="item"
         class="md:max-w-xl md:mx-auto md:bg-card-light md:dark:bg-card-dark md:rounded-3xl md:shadow-sm md:border md:border-border-light md:dark:border-border-dark md:p-6 md:mt-2 space-y-3"
       >
-        <!-- Хиро-зона: происхождение + сумма + тип -->
+        <!-- Хиро-зона: тип + дата, сумма, происхождение -->
         <section
           class="rounded-2xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3.5 pt-2.5 pb-3 animate-fadeInUp"
         >
-          <div
-            class="flex items-center justify-center gap-1.5 text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
-          >
-            <span
-              class="truncate font-medium text-text-secondary-light dark:text-text-secondary-dark"
-            >
-              {{ provenanceTitle }}
-            </span>
-            <span aria-hidden="true">·</span>
-            <span class="shrink-0">{{ item.card_mask }}</span>
-            <template v-if="relativeDate">
-              <span aria-hidden="true">·</span>
-              <span class="shrink-0">{{ relativeDate }}</span>
-            </template>
-            <span aria-hidden="true">·</span>
-            <span class="shrink-0 text-primary font-medium">Telegram</span>
-          </div>
-
-          <HeroAmount
-            v-if="!rows.transferPanel"
-            class="mt-1"
-            :amount="formData.amount"
-            :currency="formData.currency"
-            :currency-symbol="currencySymbol"
-            :available-currencies="availableCurrencies"
-            :is-multi-currency="isMultiCurrency"
-            :show-insufficient-funds="!hasSufficientFunds"
-            :current-balance="selectedAccount ? currentBalance : undefined"
-            :autofocus="needsManualAmount"
-            @update:amount="updateField('amount', $event)"
-            @update:currency="updateField('currency', $event)"
-          />
-
-          <div class="flex justify-center" :class="rows.transferPanel ? 'mt-2' : ''">
+          <div class="flex items-center justify-between gap-2">
             <button
               type="button"
               class="flex items-center gap-1 px-2.5 py-1 rounded-lg text-sm font-medium bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark hover:bg-primary-light transition-colors"
@@ -694,7 +710,35 @@ function toScanReceipt() {
                 class="text-text-tertiary-light dark:text-text-tertiary-dark"
               />
             </button>
+            <span
+              v-if="heroDateTime"
+              class="shrink-0 text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
+            >
+              {{ heroDateTime }}
+            </span>
           </div>
+
+          <HeroAmount
+            v-if="!rows.transferPanel"
+            class="mt-2"
+            :amount="formData.amount"
+            :currency="formData.currency"
+            :currency-symbol="currencySymbol"
+            :available-currencies="availableCurrencies"
+            :is-multi-currency="isMultiCurrency"
+            :show-insufficient-funds="!hasSufficientFunds"
+            :current-balance="selectedAccount ? currentBalance : undefined"
+            :autofocus="needsManualAmount"
+            @update:amount="updateField('amount', $event)"
+            @update:currency="updateField('currency', $event)"
+          />
+
+          <p
+            v-if="sourceLine"
+            class="mt-1 text-center text-xs text-text-tertiary-light dark:text-text-tertiary-dark leading-snug"
+          >
+            {{ sourceLine }}
+          </p>
 
           <!-- Amount the bank didn't spell out -->
           <div
@@ -706,32 +750,52 @@ function toScanReceipt() {
           </div>
         </section>
 
-        <!-- Автоподсказка: сумма точно совпадает с остатком долгов одного человека -->
+        <!-- Автоподсказка: сумма точно совпадает с остатком долгов одного человека.
+             Единственный яркий элемент экрана — оттенок по направлению долга (не primary). -->
         <section
           v-if="repaymentMatch"
-          class="rounded-2xl border border-primary/30 bg-primary-light flex items-center gap-3 px-3.5 py-2.5 animate-fadeInUp"
+          class="rounded-2xl border px-3.5 py-3 space-y-2.5 animate-fadeInUp"
+          :class="repaymentColorClass.bg"
         >
-          <UIcon name="handshake" size="sm" class="text-primary shrink-0" />
-          <p
-            class="flex-1 text-sm text-text-primary-light dark:text-text-primary-dark leading-snug"
-          >
-            {{ repaymentMatchText }}
-          </p>
+          <div class="flex items-start gap-2.5">
+            <IconBadge
+              icon="handshake"
+              :color="DEBT_DIRECTION_COLORS[repaymentMatch.debtType]"
+              size="sm"
+            />
+            <div class="flex-1 min-w-0 pt-0.5">
+              <p class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark">
+                Похоже на возврат долга
+              </p>
+              <p class="mt-0.5 text-sm text-text-secondary-light dark:text-text-secondary-dark">
+                {{ repaymentMatchSummary }}
+              </p>
+              <p
+                v-if="repaymentDifferenceLabel(repaymentMatch)"
+                class="mt-0.5 text-sm"
+                :class="repaymentColorClass.text"
+              >
+                {{ repaymentDifferenceLabel(repaymentMatch) }}
+              </p>
+            </div>
+            <button
+              type="button"
+              aria-label="Скрыть подсказку"
+              class="w-7 h-7 rounded-lg flex items-center justify-center text-text-tertiary-light dark:text-text-tertiary-dark hover:bg-card-light dark:hover:bg-card-dark transition-colors shrink-0"
+              @click="repaymentSuggestionDismissed = true"
+            >
+              <UIcon name="close" size="xs" />
+            </button>
+          </div>
           <UButton
-            size="sm"
+            variant="primary"
+            size="md"
+            full-width
             :disabled="isClosing || isSubmitting"
             @click="repayGroup(repaymentMatch)"
           >
-            Применить
+            Провести как возврат
           </UButton>
-          <button
-            type="button"
-            aria-label="Скрыть подсказку"
-            class="w-7 h-7 rounded-lg flex items-center justify-center text-text-tertiary-light dark:text-text-tertiary-dark hover:bg-surface-light dark:hover:bg-surface-dark transition-colors shrink-0"
-            @click="repaymentSuggestionDismissed = true"
-          >
-            <UIcon name="close" size="xs" />
-          </button>
         </section>
 
         <!-- TransferPanel вместо чеклиста счёта/категории (только для перевода) -->

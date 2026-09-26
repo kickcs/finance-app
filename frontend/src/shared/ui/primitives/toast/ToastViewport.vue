@@ -20,7 +20,7 @@ const delegatedProps = computed(() => {
 // top: стек растёт вниз от верхнего края, отступ под safe-area (шапка Telegram).
 const positionClasses = computed(() =>
   props.position === 'top'
-    ? 'top-0 flex-col pt-[calc(env(safe-area-inset-top,0px)+16px)]'
+    ? 'top-0 flex-col pt-[calc(var(--safe-area-inset-top)+16px)]'
     : 'bottom-0 flex-col-reverse pb-[calc(env(safe-area-inset-bottom,0px)+88px)]',
 );
 </script>
