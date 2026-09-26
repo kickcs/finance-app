@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { setupTelegramShell } from './setupTelegramShell';
+import { setupTelegramShell, restoreTelegramShell } from './setupTelegramShell';
 import type { TelegramWebApp } from './loadTelegramWebApp';
 
 /** Мини-заглушка `Telegram.WebApp`: только то, что трогает setupTelegramShell. */
@@ -113,5 +113,38 @@ describe('setupTelegramShell', () => {
       ([event]) => event === 'fullscreenChanged',
     )!;
     expect(wa.offEvent).toHaveBeenCalledWith('fullscreenChanged', handler);
+  });
+});
+
+describe('повторная настройка и перезагрузка внутри Telegram', () => {
+  afterEach(() => {
+    sessionStorage.clear();
+    delete window.Telegram;
+  });
+
+  it('второй вызов с тем же WebApp не вешает второй обработчик fullscreenChanged', () => {
+    const wa = fakeWebApp();
+    setupTelegramShell(wa, 'dark');
+    setupTelegramShell(wa, 'dark');
+
+    expect(wa.onEvent).toHaveBeenCalledOnce();
+  });
+
+  it('после перезагрузки на любой странице шелл восстанавливается по метке сессии', async () => {
+    setupTelegramShell(fakeWebApp(), 'dark');
+    const reloaded = fakeWebApp({ initData: 'query_id=1', isFullscreen: true });
+    window.Telegram = { WebApp: reloaded };
+    document.documentElement.classList.remove('tma-fullscreen');
+
+    await restoreTelegramShell();
+
+    expect(reloaded.onEvent).toHaveBeenCalledWith('fullscreenChanged', expect.any(Function));
+    expect(document.documentElement.classList.contains('tma-fullscreen')).toBe(true);
+  });
+
+  it('вне TMA-сессии SDK Telegram не грузится', async () => {
+    await restoreTelegramShell();
+
+    expect(document.head.querySelector('script[src*="telegram-web-app"]')).toBeNull();
   });
 });

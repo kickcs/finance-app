@@ -5,12 +5,14 @@ import App from './app/App.vue';
 import { handleStaleChunks } from './app/plugins/handleStaleChunks';
 import { router } from './app/router';
 import { watchPlatformSwitch } from './shared/lib/platform/platformPage';
+import { restoreTelegramShell } from './shared/lib/telegram/setupTelegramShell';
 import { queryClient } from './shared/api/queryClient';
 import { i18n } from './shared/i18n';
 import './app/styles/fonts.css';
 import './app/styles/index.css';
 
 handleStaleChunks();
+void restoreTelegramShell();
 
 // Живёт здесь, а не в router/index.ts: подписка перезагружает страницу, и в
 // тестах, которые подменяют платформу, это ронял бы прогон.

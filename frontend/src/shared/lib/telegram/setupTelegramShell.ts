@@ -1,10 +1,17 @@
-import type { TelegramWebApp } from './loadTelegramWebApp';
+import { loadTelegramWebApp, type TelegramWebApp } from './loadTelegramWebApp';
 
 // Совпадает с --color-background-dark/--color-background-light в
 // app/styles/index.css — шапка/фон/нижняя панель Telegram красятся под фон
 // приложения, а не остаются дефолтным telegram-синим.
 const BACKGROUND_DARK = '#09090b';
 const BACKGROUND_LIGHT = '#f2f2f8';
+
+// Метка «вкладка открыта как мини-апа»: sessionStorage переживает перезагрузку
+// webview, а SDK после неё сам не грузится — он подключается только на /tma.
+const TMA_SESSION_KEY = 'tma-session';
+
+// Повторный вызов (кнопка «Повторить» на /tma) не должен дублировать подписку.
+const configured = new WeakSet<TelegramWebApp>();
 
 /** Полноэкранный режим (Bot API 8.0) есть только у мобильных клиентов — у
  * десктопа/веба своя оконная модель, им достаточно обычного expand(). */
@@ -29,6 +36,10 @@ function applyFullscreenClass(isFullscreen: boolean): void {
  * Возвращает cleanup, снимающий подписку на fullscreenChanged.
  */
 export function setupTelegramShell(wa: TelegramWebApp, colorScheme: 'light' | 'dark'): () => void {
+  sessionStorage.setItem(TMA_SESSION_KEY, '1');
+  if (configured.has(wa)) return () => {};
+  configured.add(wa);
+
   if (shouldRequestFullscreen(wa)) wa.requestFullscreen();
 
   // 7.7 — версия, с которой клиент вообще умеет disableVerticalSwipes.
@@ -47,5 +58,21 @@ export function setupTelegramShell(wa: TelegramWebApp, colorScheme: 'light' | 'd
   const onFullscreenChanged = () => applyFullscreenClass(wa.isFullscreen);
   wa.onEvent('fullscreenChanged', onFullscreenChanged);
 
-  return () => wa.offEvent('fullscreenChanged', onFullscreenChanged);
+  return () => {
+    wa.offEvent('fullscreenChanged', onFullscreenChanged);
+    configured.delete(wa);
+  };
+}
+
+/**
+ * Перезагрузка внутри мини-апы (обновление PWA, спасение от устаревшего чанка)
+ * открывает не /tma, а текущую страницу — шелл поднимается здесь заново, иначе
+ * шапка уезжает под кнопки Telegram.
+ */
+export async function restoreTelegramShell(): Promise<void> {
+  if (!sessionStorage.getItem(TMA_SESSION_KEY)) return;
+  const wa = await loadTelegramWebApp();
+  if (!wa?.initData) return;
+  wa.ready();
+  setupTelegramShell(wa, wa.colorScheme);
 }
