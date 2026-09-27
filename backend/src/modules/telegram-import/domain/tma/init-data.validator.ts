@@ -5,7 +5,7 @@ export interface TmaInitData {
   telegramUsername: string | null;
 }
 
-export const INIT_DATA_MAX_AGE_SECONDS = 3600;
+const INIT_DATA_MAX_AGE_SECONDS = 3600;
 
 /**
  * Валидация initData Telegram Mini App по алгоритму из

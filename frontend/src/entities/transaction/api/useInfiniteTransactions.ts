@@ -1,5 +1,5 @@
 import { computed, toValue, type MaybeRefOrGetter } from 'vue';
-import { useInfiniteQuery, useQueryClient, keepPreviousData } from '@tanstack/vue-query';
+import { useInfiniteQuery, keepPreviousData } from '@tanstack/vue-query';
 import { transactionQueryKeys } from './queryKeys';
 import {
   transactionsApi,
@@ -15,8 +15,6 @@ export function useInfiniteTransactions(
   userId: MaybeRefOrGetter<string | null>,
   filters?: MaybeRefOrGetter<TransactionFilters | undefined>,
 ) {
-  const queryClient = useQueryClient();
-
   const queryKey = computed(() => {
     const uid = toValue(userId);
     const f = toValue(filters);
@@ -52,46 +50,6 @@ export function useInfiniteTransactions(
 
   const totalCount = computed(() => transactions.value.length);
 
-  // Prepend new transaction to the first page (for realtime updates)
-  function prependTransaction(newTransaction: Transaction) {
-    queryClient.setQueryData(queryKey.value, (old: typeof data.value) => {
-      if (!old || old.pages.length === 0) return old;
-
-      const newPages = [...old.pages];
-      newPages[0] = {
-        ...newPages[0],
-        data: [newTransaction, ...newPages[0].data],
-      };
-      return { ...old, pages: newPages };
-    });
-  }
-
-  // Remove transaction from cache
-  function removeTransaction(transactionId: string) {
-    queryClient.setQueryData(queryKey.value, (old: typeof data.value) => {
-      if (!old) return old;
-
-      const newPages = old.pages.map((page) => ({
-        ...page,
-        data: page.data.filter((t) => t.id !== transactionId),
-      }));
-      return { ...old, pages: newPages };
-    });
-  }
-
-  // Update transaction in cache
-  function updateTransaction(updatedTransaction: Transaction) {
-    queryClient.setQueryData(queryKey.value, (old: typeof data.value) => {
-      if (!old) return old;
-
-      const newPages = old.pages.map((page) => ({
-        ...page,
-        data: page.data.map((t) => (t.id === updatedTransaction.id ? updatedTransaction : t)),
-      }));
-      return { ...old, pages: newPages };
-    });
-  }
-
   return {
     transactions,
     totalCount,
@@ -102,9 +60,5 @@ export function useInfiniteTransactions(
     isFetchingNextPage: computed(() => isFetchingNextPage.value),
     isFetching: computed(() => isFetching.value),
     refetch,
-    // Cache manipulation helpers
-    prependTransaction,
-    removeTransaction,
-    updateTransaction,
   };
 }

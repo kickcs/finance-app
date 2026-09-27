@@ -1,5 +1,5 @@
-export type ImportedTransactionType = 'expense' | 'income' | 'reversal' | 'unparsed';
-export type ImportedTransactionStatus = 'pending' | 'confirmed' | 'dismissed';
+type ImportedTransactionType = 'expense' | 'income' | 'reversal' | 'unparsed';
+type ImportedTransactionStatus = 'pending' | 'confirmed' | 'dismissed';
 
 export interface TelegramLink {
   id: string;

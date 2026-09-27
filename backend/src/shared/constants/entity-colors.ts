@@ -2,7 +2,7 @@
  * Shared color palette for entities (accounts, people, etc.)
  * Keep in sync with frontend/src/shared/config/colors.ts
  */
-export const ENTITY_COLORS = [
+const ENTITY_COLORS = [
   '#3b82f6', // Blue
   '#10b981', // Green
   '#f43f5e', // Rose

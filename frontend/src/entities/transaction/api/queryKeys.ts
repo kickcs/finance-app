@@ -5,9 +5,6 @@ import { cleanUndefined } from '@/shared/lib/utils';
 export const transactionQueryKeys = {
   all: ['transactions'] as const,
   list: (userId: string) => [...transactionQueryKeys.all, 'list', userId] as const,
-  byAccount: (accountId: string) => [...transactionQueryKeys.all, 'byAccount', accountId] as const,
-  byDateRange: (userId: string, startDate: string, endDate: string) =>
-    [...transactionQueryKeys.all, 'dateRange', userId, startDate, endDate] as const,
 
   // Infinite query keys - strip undefined/empty values for stable serialization
   infinitePrefix: () => [...transactionQueryKeys.all, 'infinite'] as const,
