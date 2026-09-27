@@ -1,5 +1,12 @@
 import { ref, type MaybeRefOrGetter, toValue } from 'vue';
-import { transactionsApi } from '@/entities/transaction';
+import {
+  transactionsApi,
+  transactionQueryKeys,
+  snapshotTransactionCaches,
+  restoreTransactionCaches,
+  patchTransactionInCaches,
+  removeTransactionFromCaches,
+} from '@/entities/transaction';
 import { debtsApi } from '@/entities/debt';
 import { queryClient } from '@/shared/api/queryClient';
 import { invalidateDebtRelated } from '@/shared/api/invalidation';
@@ -35,6 +42,20 @@ export function useEditTransaction(userId: MaybeRefOrGetter<string | null>) {
     isUpdating.value = true;
     error.value = null;
 
+    const uid = toValue(userId) ?? '';
+    // Optimistic: patch every cache holding this transaction (description/category
+    // are client-known; amount/account_id also patched here for instant feedback,
+    // but balances themselves are never touched — only invalidation refreshes those.
+    // Иначе ответ уже летящего рефетча затрёт оптимистичную правку.
+    await queryClient.cancelQueries({ queryKey: transactionQueryKeys.all });
+    const snapshot = snapshotTransactionCaches(queryClient, uid);
+    // Строка расхода показывает net_amount, а не amount — без него правка суммы не видна до рефетча.
+    const netPatch =
+      updates.amount !== undefined
+        ? { net_amount: updates.amount - (transaction.returned_amount ?? 0) }
+        : {};
+    patchTransactionInCaches(queryClient, uid, transaction.id, { ...updates, ...netPatch });
+
     try {
       // Update transaction
       // Note: Backend should handle balance recalculation in production
@@ -42,11 +63,14 @@ export function useEditTransaction(userId: MaybeRefOrGetter<string | null>) {
       await transactionsApi.update(transaction.id, updates);
 
       // invalidateDebtRelated covers debts + transactions + accounts
-      await invalidateDebtRelated(queryClient, toValue(userId) ?? '');
+      await invalidateDebtRelated(queryClient, uid);
 
       toast({ title: 'Транзакция обновлена', variant: 'success' });
       return true;
     } catch (e) {
+      restoreTransactionCaches(queryClient, snapshot);
+      // Отменённые выше загрузки сами не возобновятся.
+      void queryClient.invalidateQueries({ queryKey: transactionQueryKeys.all });
       error.value = 'Не удалось обновить транзакцию';
       toast({ title: 'Не удалось обновить транзакцию', variant: 'error' });
       console.error('Failed to update transaction:', e);
@@ -84,17 +108,27 @@ export function useEditTransaction(userId: MaybeRefOrGetter<string | null>) {
       // Ignore check error, continue with deletion
     }
 
+    const uid = toValue(userId) ?? '';
+    // Optimistic removal from every list; balance is only ever corrected via invalidation below.
+    // Иначе ответ уже летящего рефетча затрёт оптимистичную правку.
+    await queryClient.cancelQueries({ queryKey: transactionQueryKeys.all });
+    const snapshot = snapshotTransactionCaches(queryClient, uid);
+    removeTransactionFromCaches(queryClient, uid, transaction.id);
+
     try {
       // Delete transaction
       // Note: Backend automatically reverses account balance when deleting
       await transactionsApi.delete(transaction.id);
 
       // invalidateDebtRelated covers debts + transactions + accounts
-      await invalidateDebtRelated(queryClient, toValue(userId) ?? '');
+      await invalidateDebtRelated(queryClient, uid);
 
       toast({ title: 'Транзакция удалена', variant: 'success' });
       return true;
     } catch (e: unknown) {
+      restoreTransactionCaches(queryClient, snapshot);
+      // Отменённые выше загрузки сами не возобновятся.
+      void queryClient.invalidateQueries({ queryKey: transactionQueryKeys.all });
       // Show backend error message for debt-related rejections (HttpError from http.ts)
       if (e && typeof e === 'object' && 'status' in e && 'data' in e) {
         const httpError = e as { status: number; data?: { message?: string } };

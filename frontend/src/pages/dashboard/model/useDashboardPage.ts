@@ -9,12 +9,14 @@ import {
 } from '@/shared/api/invalidation';
 import { debtQueryKeys } from '@/entities/debt';
 import { budgetQueryKeys } from '@/entities/budget';
+import { quickActionQueryKeys } from '@/entities/quick-action';
 import { usePwaInstall } from '@/features/install-pwa';
 import { usePwaUpdateToast } from '@/shared/lib/composables/usePwaUpdate';
 import { useFeatureHints } from '@/features/feature-hints';
 import { getGreeting } from '@/shared/lib/format/greeting';
 import { useFinancialPeriod } from '@/shared/lib/hooks/useFinancialPeriod';
 import { useHaptics } from '@/shared/lib/haptics';
+import { useToast } from '@/shared/ui';
 
 import { useDashboardData } from './useDashboardData';
 import { useDashboardQuickActions } from './useDashboardQuickActions';
@@ -112,28 +114,42 @@ export function useDashboardPage() {
       queryClient.invalidateQueries({ queryKey: debtQueryKeys.all }),
       queryClient.invalidateQueries({ queryKey: budgetQueryKeys.all }),
       invalidateSubscriptionRelated(queryClient, uid),
+      // Быстрые действия рендерятся прямо на дашборде — потянуть-обновить
+      // должен подхватывать и их, иначе правки с другого устройства не видны.
+      queryClient.invalidateQueries({ queryKey: quickActionQueryKeys.all }),
     ]);
   }
 
   // Переопределения бюджета хранятся по ФИНАНСОВОМУ месяцу — тому же, который
   // бэкенд резолвит для GET /budgets/current. Календарный месяц записал бы
   // переопределение не в тот период, что показан на дашборде.
+  const { toast } = useToast();
   const { currentPeriod: financialPeriod } = useFinancialPeriod();
 
+  // Шторка закрывается сразу: лимит уже лёг в кэш оптимистично, а сброс
+  // к дефолту досчитывает сервер — ждать его с открытой шторкой незачем.
   async function handleBudgetSave(amount: number) {
-    if (data.budget.value?.budget?.isDefault === false) {
-      const { year, month } = financialPeriod.value;
-      await data.setBudgetOverride(year, month, amount);
-    } else {
-      await data.setBudgetDefault(amount);
-    }
     showBudgetSheet.value = false;
+    try {
+      if (data.budget.value?.budget?.isDefault === false) {
+        const { year, month } = financialPeriod.value;
+        await data.setBudgetOverride(year, month, amount);
+      } else {
+        await data.setBudgetDefault(amount);
+      }
+    } catch {
+      toast({ title: 'Не удалось сохранить бюджет', variant: 'error' });
+    }
   }
 
   async function handleBudgetReset() {
-    const { year, month } = financialPeriod.value;
-    await data.removeBudgetOverride(year, month);
     showBudgetSheet.value = false;
+    try {
+      const { year, month } = financialPeriod.value;
+      await data.removeBudgetOverride(year, month);
+    } catch {
+      toast({ title: 'Не удалось сбросить бюджет', variant: 'error' });
+    }
   }
 
   function toggleHidden() {

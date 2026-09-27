@@ -5,7 +5,7 @@ import { ROUTE_NAMES } from '@/app/router/routeNames';
 import { UButton, UIcon } from '@/shared/ui';
 import { AppHeader } from '@/widgets/header';
 import { useDebts, type Debt } from '@/entities/debt';
-import { navigateBack } from '@/app/router';
+import { goBackOr } from '@/app/router';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useDebtDetail } from '../model/useDebtDetail';
 import DebtDetailBody from './DebtDetailBody.vue';
@@ -35,8 +35,9 @@ const { title, openEdit, openActions } = useDebtDetail({
   onGone: () => router.replace({ name: ROUTE_NAMES.DEBTS_LIST, query: route.query }),
 });
 
+// Долг можно открыть напрямую (уведомление, ссылка) — тогда истории нет.
 function goBack() {
-  navigateBack();
+  goBackOr({ name: ROUTE_NAMES.DEBTS_LIST });
 }
 </script>
 

@@ -5,7 +5,7 @@ import { UButton, UIcon } from '@/shared/ui';
 import { Skeleton } from '@/shared/ui/primitives/skeleton';
 import { AppHeader } from '@/widgets/header';
 import { TransactionForm } from '@/features/add-transaction';
-import { navigateBack, navigateBackTo, isPageTransitioning } from '@/app/router';
+import { goBackOr, isPageTransitioning } from '@/app/router';
 import { ROUTE_NAMES } from '@/app/router/routeNames';
 import { useAddTransactionPage } from './model/useAddTransactionPage';
 
@@ -31,13 +31,7 @@ watch(isPageTransitioning, (transitioning) => !transitioning && (isReady.value =
  * делает» больше нечем спасти. Уходим на дашборд.
  */
 function goBack() {
-  if (window.history.state?.back) {
-    navigateBack();
-  } else {
-    // `navigateBackTo` — тот же replace, но с анимацией «назад»; голый
-    // `router.replace` уехал бы вперёд.
-    navigateBackTo({ name: ROUTE_NAMES.DASHBOARD });
-  }
+  goBackOr({ name: ROUTE_NAMES.DASHBOARD });
 }
 
 const {

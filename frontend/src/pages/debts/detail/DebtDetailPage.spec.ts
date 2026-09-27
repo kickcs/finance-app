@@ -20,11 +20,11 @@ import { mockAccountResponse } from '@/test/mocks/handlers/accounts';
 import { formatCurrency } from '@/shared/lib/format/currency';
 
 // Mock app router — vi.hoisted runs before vi.mock hoisting
-const { navigateBackMock } = vi.hoisted(() => ({
-  navigateBackMock: vi.fn(),
+const { goBackOrMock } = vi.hoisted(() => ({
+  goBackOrMock: vi.fn(),
 }));
 vi.mock('@/app/router', () => ({
-  navigateBack: navigateBackMock,
+  goBackOr: goBackOrMock,
   transitionName: { value: 'fade' },
   resetOnboardingVerified: vi.fn(),
 }));
@@ -750,7 +750,7 @@ describe('DebtDetailPage', () => {
       header.vm.$emit('back');
       await flushPromises();
 
-      expect(navigateBackMock).toHaveBeenCalled();
+      expect(goBackOrMock).toHaveBeenCalled();
     });
   });
   // -----------------------------------------------------------------------

@@ -31,6 +31,7 @@ export function useEditSubscription(
   });
 
   const isSubmitting = ref(false);
+  const isTogglingPause = ref(false);
   const error = ref<string | null>(null);
 
   // Fetch subscription detail
@@ -49,29 +50,46 @@ export function useEditSubscription(
     enabled: computed(() => !!toValue(subscriptionId)),
   });
 
-  // Populate form when subscription loads
+  // Фоновый рефетч (восстановленный кэш, возврат в приложение) отдаёт подписку
+  // новой ссылкой: перезаливаем форму, только если пользователь её ещё не правил,
+  // иначе затёрли бы несохранённые правки, а без перезаливки — сохранили бы устаревшие поля.
+  let loadedForId: string | null = null;
+  let populatedSnapshot = '';
   watch(
     subscription,
     (sub) => {
-      if (sub) {
-        formData.value = {
-          name: sub.name,
-          description: sub.description ?? undefined,
-          amount: sub.amount,
-          currency: sub.currency,
-          account_id: sub.account_id ?? undefined,
-          icon: sub.icon,
-          color: sub.color,
-          frequency: sub.frequency,
-          frequency_days: sub.frequency_days ?? undefined,
-          billing_date: sub.billing_date,
-          notify_days_before: sub.notify_days_before,
-          category_id: sub.category_id,
-          auto_charge: sub.auto_charge,
-        };
-      }
+      const id = toValue(subscriptionId);
+      if (!sub) return;
+      const untouched = JSON.stringify(formData.value) === populatedSnapshot;
+      if (loadedForId === id && !untouched) return;
+      loadedForId = id;
+      formData.value = {
+        name: sub.name,
+        description: sub.description ?? undefined,
+        amount: sub.amount,
+        currency: sub.currency,
+        account_id: sub.account_id ?? undefined,
+        icon: sub.icon,
+        color: sub.color,
+        frequency: sub.frequency,
+        frequency_days: sub.frequency_days ?? undefined,
+        billing_date: sub.billing_date,
+        notify_days_before: sub.notify_days_before,
+        category_id: sub.category_id,
+        auto_charge: sub.auto_charge,
+      };
+      populatedSnapshot = JSON.stringify(formData.value);
     },
     { immediate: true },
+  );
+
+  // Возобновление переносит дату списания на сервере — без этого «Сохранить»
+  // отправил бы обратно старую дату из формы.
+  watch(
+    () => subscription.value?.billing_date,
+    (date, prev) => {
+      if (date && prev && date !== prev) formData.value.billing_date = date;
+    },
   );
 
   const isValid = computed(() => {
@@ -137,8 +155,9 @@ export function useEditSubscription(
 
   async function togglePause(): Promise<boolean> {
     const id = toValue(subscriptionId);
-    if (!id) return false;
+    if (!id || isTogglingPause.value) return false;
 
+    isTogglingPause.value = true;
     try {
       if (isPaused.value) {
         await resumeSubscription(id);
@@ -164,6 +183,8 @@ export function useEditSubscription(
         duration: 4000,
       });
       return false;
+    } finally {
+      isTogglingPause.value = false;
     }
   }
 
@@ -203,6 +224,7 @@ export function useEditSubscription(
     isLoading,
     isValid,
     isSubmitting,
+    isTogglingPause,
     isPaused,
     error,
     saveSubscription,

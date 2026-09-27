@@ -5,7 +5,11 @@ import { useQuickActions, type QuickAction } from '@/features/configure-quick-ac
 import { useKeyboardTrigger } from '@/shared/lib/composables';
 import { useHaptics } from '@/shared/lib/haptics';
 import { useToast } from '@/shared/ui';
-import { transactionsApi } from '@/entities/transaction';
+import {
+  transactionsApi,
+  prependTransactionToRecent,
+  removeTransactionFromCaches,
+} from '@/entities/transaction';
 import { useAccounts } from '@/entities/account';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
@@ -42,6 +46,13 @@ export function useDashboardQuickActions(
         // day for non-UTC users.
         date: new Date().toISOString(),
       }),
+    // Balance is server-computed (pessimistic), but the created transaction itself
+    // is known once the response lands — show it immediately instead of waiting
+    // for the settle-time invalidation to refetch.
+    onSuccess: (created) => {
+      const uid = toValue(userId);
+      if (uid) prependTransactionToRecent(queryClient, uid, created);
+    },
     onSettled: () => {
       const uid = toValue(userId);
       if (!uid) return;
@@ -124,6 +135,7 @@ export function useDashboardQuickActions(
             onUndo: async () => {
               const uid = toValue(userId);
               if (!uid) return;
+              removeTransactionFromCaches(queryClient, uid, created.id);
               try {
                 await transactionsApi.delete(created.id);
                 await Promise.all([
@@ -132,6 +144,8 @@ export function useDashboardQuickActions(
                 ]);
               } catch (e) {
                 console.error('Failed to undo quick action transaction:', e);
+                // Undo failed server-side — resync so the optimistically removed row comes back.
+                await invalidateTransactionRelated(queryClient, uid);
                 toast({
                   title: 'Ошибка отмены',
                   description: 'Не удалось отменить транзакцию',

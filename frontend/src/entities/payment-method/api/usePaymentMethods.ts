@@ -30,6 +30,32 @@ export function usePaymentMethods(userId: MaybeRefOrGetter<string | null>) {
       if (!uid) throw new Error('User not authenticated');
       return paymentMethodApi.create(method);
     },
+    onMutate: async (method) => {
+      const uid = toValue(userId);
+      if (!uid) return;
+
+      await queryClient.cancelQueries({ queryKey: queryKey.value });
+      const previous = queryClient.getQueryData<PaymentMethod[]>(queryKey.value);
+
+      const optimistic: PaymentMethod = {
+        id: `temp-${Date.now()}`,
+        user_id: uid,
+        label: method.label,
+        value: method.value,
+        created_at: new Date().toISOString(),
+      };
+
+      queryClient.setQueryData<PaymentMethod[]>(queryKey.value, (old) => [
+        ...(old ?? []),
+        optimistic,
+      ]);
+      return { previous };
+    },
+    onError: (_err, _method, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(queryKey.value, context.previous);
+      }
+    },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKey.value });
     },

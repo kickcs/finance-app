@@ -1,26 +1,29 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { CurrencyList } from '@/widgets/currency-list';
 import { UButton, UIcon, UCard, SectionHeader } from '@/shared/ui';
 import { AppHeader } from '@/widgets/header';
-import {
-  getCurrencyByCode,
-  CURRENCIES,
-  DEFAULT_CURRENCY,
-  type Currency,
-} from '@/entities/currency';
+import { getCurrencyByCode, CURRENCIES, type Currency } from '@/entities/currency';
 import { navigateBack } from '@/app/router';
 import { useProfile, useAuth } from '@/shared/api';
+import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 import { STORAGE_KEYS } from '@/shared/config/storageKeys';
 
 const { user } = useAuth();
 const { setCurrency: saveCurrency } = useProfile(computed(() => user.value?.id ?? null));
 
-// Get current currency from localStorage
-const currentCurrencyCode = computed(
-  () => localStorage.getItem(STORAGE_KEYS.SELECTED_CURRENCY) || DEFAULT_CURRENCY,
-);
+// Профиль — источник правды, localStorage внутри хука лишь фолбэк на время
+// его загрузки: раньше страница читала localStorage напрямую и показывала
+// неверную «текущую» валюту, если профиль ещё не успел её туда записать.
+const { currency: currentCurrencyCode } = useUserCurrency();
 const selectedCurrency = ref<Currency | null>(getCurrencyByCode(currentCurrencyCode.value) ?? null);
+const hasUserSelected = ref(false);
+
+watch(currentCurrencyCode, (code) => {
+  if (!hasUserSelected.value) {
+    selectedCurrency.value = getCurrencyByCode(code) ?? null;
+  }
+});
 
 // Get account currencies from localStorage
 const initialAccountCurrencies = JSON.parse(
@@ -38,6 +41,7 @@ const hasChanges = computed(() => {
 });
 
 function handleSelect(currency: Currency) {
+  hasUserSelected.value = true;
   selectedCurrency.value = currency;
 }
 

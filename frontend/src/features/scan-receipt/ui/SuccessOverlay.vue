@@ -190,7 +190,7 @@ function formatChargeBadge(charge: ReceiptCharge): string {
             variant="primary"
             size="xl"
             full-width
-            @click="router.push({ name: props.doneRoute })"
+            @click="router.replace({ name: props.doneRoute })"
           >
             {{ props.doneLabel }}
           </UButton>

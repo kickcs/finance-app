@@ -35,6 +35,9 @@ export function useImportedTransactions(userId: MaybeRefOrGetter<string | null>)
     );
   };
 
+  // Итог confirm/dismiss клиент знает заранее — элемент просто уходит из
+  // инбокса, поэтому убираем его сразу (onMutate) и откатываем при ошибке,
+  // не дожидаясь ответа сервера.
   const confirmMutation = useMutation({
     mutationFn: ({
       id,
@@ -43,8 +46,13 @@ export function useImportedTransactions(userId: MaybeRefOrGetter<string | null>)
       id: string;
       payload: { transactionId: string; accountId: string; toAccountId?: string };
     }) => importedTransactionsApi.confirm(id, payload),
-    onSuccess: (res, { id }) => {
+    onMutate: async ({ id }) => {
+      await queryClient.cancelQueries({ queryKey: queryKey.value });
+      const previous = queryClient.getQueryData(queryKey.value);
       removeFromInbox(id);
+      return { previous };
+    },
+    onSuccess: (res) => {
       // Сервер мог авто-подтвердить встречную ногу перевода — убираем и её.
       if (res.counterpartId) removeFromInbox(res.counterpartId);
       // confirm мог обновить маппинг карта→счёт — точечно освежаем только его.
@@ -52,11 +60,22 @@ export function useImportedTransactions(userId: MaybeRefOrGetter<string | null>)
         queryKey: importedTransactionQueryKeys.cards(toValue(userId) ?? ''),
       });
     },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData(queryKey.value, context.previous);
+    },
   });
 
   const dismissMutation = useMutation({
     mutationFn: (id: string) => importedTransactionsApi.dismiss(id),
-    onSuccess: (_res, id) => removeFromInbox(id),
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: queryKey.value });
+      const previous = queryClient.getQueryData(queryKey.value);
+      removeFromInbox(id);
+      return { previous };
+    },
+    onError: (_err, _id, context) => {
+      if (context?.previous) queryClient.setQueryData(queryKey.value, context.previous);
+    },
   });
 
   return {

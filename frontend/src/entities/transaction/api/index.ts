@@ -8,7 +8,6 @@ export {
   type CategoryBreakdown,
   type Hashtag,
 } from './transactionsApi';
-export { useTransactions } from './useTransactions';
 export { useInfiniteTransactions } from './useInfiniteTransactions';
 export { useInfiniteAccountTransactions } from './useInfiniteAccountTransactions';
 export { useAnalyticsStats } from './useAnalyticsStats';
@@ -18,3 +17,10 @@ export { useHashtags } from './useHashtags';
 export { useDailyStats } from './useDailyStats';
 export type { DailyStatsEntry, DailyStatsOptions } from './transactionsApi';
 export { transactionQueryKeys, type TransactionQueryKeys } from './queryKeys';
+export {
+  snapshotTransactionCaches,
+  restoreTransactionCaches,
+  patchTransactionInCaches,
+  removeTransactionFromCaches,
+  prependTransactionToRecent,
+} from './transactionCache';

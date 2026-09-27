@@ -11,13 +11,11 @@ import { mockTransactionResponse } from '@/test/mocks/handlers/transactions';
 import { buildMockDebtResponse } from '@/test/mocks/handlers/debts';
 
 // Mock app router — vi.hoisted runs before vi.mock hoisting
-const { navigateBackMock, navigateBackToMock } = vi.hoisted(() => ({
-  navigateBackMock: vi.fn(),
-  navigateBackToMock: vi.fn(),
+const { goBackOrMock } = vi.hoisted(() => ({
+  goBackOrMock: vi.fn(),
 }));
 vi.mock('@/app/router', () => ({
-  navigateBack: navigateBackMock,
-  navigateBackTo: navigateBackToMock,
+  goBackOr: goBackOrMock,
   transitionName: { value: 'fade' },
   // Переход считаем завершённым: форма должна быть отрисована целиком, включая
   // хвост, который на живом экране дорисовывается после слайда.
@@ -344,7 +342,7 @@ describe('AddTransactionPage', () => {
       await wrapper.find('form').trigger('submit');
       await flushPromises();
 
-      expect(navigateBackMock).toHaveBeenCalled();
+      expect(goBackOrMock).toHaveBeenCalled();
     });
 
     it('sends income transaction with correct type', async () => {
@@ -496,7 +494,7 @@ describe('AddTransactionPage', () => {
       expect(debtPayloads[0].personName).toBe('Алексей');
       expect(debtPayloads[1].totalAmount).toBe(10000);
       expect(debtPayloads[1].personName).toBe('Мария');
-      expect(navigateBackMock).toHaveBeenCalled();
+      expect(goBackOrMock).toHaveBeenCalled();
     });
 
     it('equal split: 3 participants + included, remainder goes to user', async () => {
@@ -705,7 +703,7 @@ describe('AddTransactionPage', () => {
 
       // 0 participants → treated as "no split" → no validation error, submits normally
       expect(wrapper.find('[data-testid="validation-error"]').exists()).toBe(false);
-      expect(navigateBackMock).toHaveBeenCalled();
+      expect(goBackOrMock).toHaveBeenCalled();
     });
 
     // ------- Debt payload structure -------
@@ -776,7 +774,7 @@ describe('AddTransactionPage', () => {
       await flushPromises();
 
       expect(deletedTxIds).toContain('tx-split-1');
-      expect(navigateBackMock).not.toHaveBeenCalled();
+      expect(goBackOrMock).not.toHaveBeenCalled();
       expect(wrapper.text()).toContain('Не удалось создать долги');
       consoleSpy.mockRestore();
     });
@@ -811,7 +809,7 @@ describe('AddTransactionPage', () => {
       await flushPromises();
 
       expect(deletedTxIds).toContain('tx-split-1');
-      expect(navigateBackMock).not.toHaveBeenCalled();
+      expect(goBackOrMock).not.toHaveBeenCalled();
       consoleSpy.mockRestore();
     });
 
@@ -834,7 +832,7 @@ describe('AddTransactionPage', () => {
       await flushPromises();
 
       expect(wrapper.find('[data-testid="validation-error"]').exists()).toBe(true);
-      expect(navigateBackMock).not.toHaveBeenCalled();
+      expect(goBackOrMock).not.toHaveBeenCalled();
     });
 
     it('validation error: underspending (custom amounts below total)', async () => {
@@ -856,7 +854,7 @@ describe('AddTransactionPage', () => {
       await flushPromises();
 
       expect(wrapper.find('[data-testid="validation-error"]').exists()).toBe(true);
-      expect(navigateBackMock).not.toHaveBeenCalled();
+      expect(goBackOrMock).not.toHaveBeenCalled();
     });
 
     it('add then remove all participants → submits as regular transaction', async () => {
@@ -881,7 +879,7 @@ describe('AddTransactionPage', () => {
 
       // 0 participants after removal → treated as "no split" → no validation error
       expect(wrapper.find('[data-testid="validation-error"]').exists()).toBe(false);
-      expect(navigateBackMock).toHaveBeenCalled();
+      expect(goBackOrMock).toHaveBeenCalled();
     });
   });
 
@@ -1052,7 +1050,7 @@ describe('AddTransactionPage', () => {
       await wrapper.find('form').trigger('submit');
       await flushPromises();
 
-      expect(navigateBackMock).toHaveBeenCalled();
+      expect(goBackOrMock).toHaveBeenCalled();
     });
   });
 
@@ -1220,7 +1218,7 @@ describe('AddTransactionPage', () => {
       expect(back).toBeDefined();
 
       await back!.trigger('click');
-      expect(navigateBackMock).toHaveBeenCalled();
+      expect(goBackOrMock).toHaveBeenCalled();
     });
   });
 

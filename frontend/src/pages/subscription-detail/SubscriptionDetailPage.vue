@@ -6,7 +6,7 @@ import { AppHeader } from '@/widgets/header';
 import { SubscriptionForm, useCreateSubscription } from '@/features/create-subscription';
 import { EditSubscriptionForm } from '@/features/edit-subscription';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
-import { navigateBack } from '@/app/router';
+import { goBackOr } from '@/app/router';
 import { useHaptics } from '@/shared/lib/haptics';
 import type { RecurringSubscriptionInsert } from '@/entities/recurring-subscription';
 
@@ -43,8 +43,9 @@ function handleDeleted() {
   router.replace({ name: ROUTE_NAMES.SUBSCRIPTIONS_LIST });
 }
 
+// Подписку можно открыть напрямую (уведомление о списании, ссылка) — тогда истории нет.
 function goBack() {
-  navigateBack();
+  goBackOr({ name: ROUTE_NAMES.SUBSCRIPTIONS_LIST });
 }
 </script>
 

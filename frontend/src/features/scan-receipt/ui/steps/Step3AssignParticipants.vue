@@ -42,11 +42,13 @@ const activeParticipantId = ref<string | null>(
 const manageOpen = ref(false);
 const showUnassignedOnly = ref(false);
 
+// participants.value.push(...) мутирует массив на месте — watch по ссылке
+// на сам массив на это не сработает, нужен .length как источник.
 watch(
-  () => props.participants,
-  (newVal) => {
-    if (!activeParticipantId.value && newVal.length > 0) {
-      activeParticipantId.value = newVal[0].id;
+  () => props.participants.length,
+  (len) => {
+    if (!activeParticipantId.value && len > 0) {
+      activeParticipantId.value = props.participants[0].id;
     }
   },
 );

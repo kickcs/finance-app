@@ -1,8 +1,8 @@
 import { ref, computed, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { ACCOUNT_ICONS } from '@/entities/account';
+import { ACCOUNT_ICONS, accountQueryKeys } from '@/entities/account';
 import { ENTITY_COLORS } from '@/shared/config/colors';
-import type { AccountType } from '@/entities/account';
+import type { AccountType, AccountWithBalances } from '@/entities/account';
 import { accountsApi } from '@/entities/account';
 import { queryClient } from '@/shared/api/queryClient';
 import { invalidateAccountRelated } from '@/shared/api/invalidation';
@@ -128,27 +128,57 @@ export function useCreateAccount() {
             }))
           : fd.balances;
 
-      const account = await accountsApi.createWithBalances(
-        {
-          user_id: userId,
-          name: fd.name.trim(),
-          icon: fd.icon,
-          color: fd.color,
-          type: fd.type,
-          credit_limit: fd.creditLimit,
-          grace_period_days: fd.gracePeriodDays,
-          billing_day: fd.billingDay,
-          total_amount: fd.totalAmount,
-          interest_rate: fd.interestRate,
-          monthly_payment: fd.monthlyPayment,
-          start_date: fd.startDate,
-          end_date: fd.endDate,
-          maturity_date: fd.maturityDate,
-          is_replenishable: fd.isReplenishable,
-          is_withdrawable: fd.isWithdrawable,
-        },
-        balances,
-      );
+      const accountInsert = {
+        user_id: userId,
+        name: fd.name.trim(),
+        icon: fd.icon,
+        color: fd.color,
+        type: fd.type,
+        credit_limit: fd.creditLimit,
+        grace_period_days: fd.gracePeriodDays,
+        billing_day: fd.billingDay,
+        total_amount: fd.totalAmount,
+        interest_rate: fd.interestRate,
+        monthly_payment: fd.monthlyPayment,
+        start_date: fd.startDate,
+        end_date: fd.endDate,
+        maturity_date: fd.maturityDate,
+        is_replenishable: fd.isReplenishable,
+        is_withdrawable: fd.isWithdrawable,
+      };
+
+      // Optimistic: initial balances are user-entered, not server-computed
+      // money math, so the new account can appear before the request settles.
+      const listKey = accountQueryKeys.list(userId);
+      const previousAccounts = queryClient.getQueryData<AccountWithBalances[]>(listKey);
+      const now = new Date().toISOString();
+      const optimisticAccount: AccountWithBalances = {
+        ...accountInsert,
+        id: `temp-${Date.now()}`,
+        created_at: now,
+        order: (previousAccounts?.length ?? 0) + 1,
+        balances: balances.map((b, i) => ({
+          id: `temp-balance-${i}`,
+          account_id: 'temp',
+          currency: b.currency,
+          balance: b.balance,
+          created_at: now,
+        })),
+      };
+      queryClient.setQueryData<AccountWithBalances[]>(listKey, (old) => [
+        ...(old ?? []),
+        optimisticAccount,
+      ]);
+
+      let account;
+      try {
+        account = await accountsApi.createWithBalances(accountInsert, balances);
+      } catch (e) {
+        // setQueryData(undefined) is a no-op, so an uncached list must be refetched instead.
+        if (previousAccounts) queryClient.setQueryData(listKey, previousAccounts);
+        else void queryClient.invalidateQueries({ queryKey: listKey, exact: true });
+        throw e;
+      }
 
       // Invalidate accounts + balances cache so Dashboard and other pages refresh
       await invalidateAccountRelated(queryClient, userId);

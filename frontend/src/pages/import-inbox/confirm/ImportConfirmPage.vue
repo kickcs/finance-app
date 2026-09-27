@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, defineAsyncComponent, ref, watch } from 'vue';
+import { computed, defineAsyncComponent, ref, shallowRef, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import {
   UButton,
@@ -80,8 +80,13 @@ const { currency: userCurrency } = useUserCurrency();
 const { items, isLoading, confirmImported, dismissImported } = useImportedTransactions(userId);
 
 // The inbox only ever returns pending items, so a plain find is enough.
+// confirm/dismiss убирают импорт из кэша до ответа сервера — держим его на экране
+// до перехода, иначе на время запроса мелькает «Импорт не найден».
+const leavingItem = shallowRef<ImportedTransaction | null>(null);
 const item = computed<ImportedTransaction | null>(
-  () => items.value.find((i) => i.id === route.params.id) ?? null,
+  () =>
+    items.value.find((i) => i.id === route.params.id) ??
+    (leavingItem.value?.id === route.params.id ? leavingItem.value : null),
 );
 
 const { formData, isValid, setType, updateField, resetForm } = useTransactionForm();
@@ -205,12 +210,14 @@ async function repayGroup(group: RepaymentGroup) {
     repaymentTransactionId.value = created;
   }
 
+  leavingItem.value = current;
   try {
     await confirmImported(current.id, {
       transactionId,
       accountId: formData.value.accountId,
     });
   } catch {
+    leavingItem.value = null;
     toast({
       title: 'Платёж проведён',
       description: 'Но не удалось отметить импорт подтверждённым. Проверьте инбокс.',
@@ -531,7 +538,6 @@ async function handleSubmit() {
         validationError.value = 'Не удалось создать долг';
         return;
       }
-      invalidateDebtRelated(queryClient, userId.value).catch(console.error);
     } else {
       transactionId = await submitAndWait(userId.value, formData.value);
       if (!transactionId) return; // error already shown by the mutation
@@ -560,6 +566,9 @@ async function handleSubmit() {
     }
   }
 
+  // После комиссии: иначе её транзакция и списание со счёта не попадут в кэш.
+  if (isDebt) invalidateDebtRelated(queryClient, userId.value).catch(console.error);
+
   // Split debts: create only once. On a retry where the transaction already
   // existed, the debts may have been created too — skip to avoid duplicates.
   if (isSplit && !splitDebtsCreated.value) {
@@ -584,6 +593,7 @@ async function handleSubmit() {
     splitDebtsCreated.value = true;
   }
 
+  leavingItem.value = current;
   try {
     await confirmImported(current.id, {
       transactionId,
@@ -592,6 +602,7 @@ async function handleSubmit() {
         formData.value.type === 'transfer' ? (formData.value.toAccountId ?? undefined) : undefined,
     });
   } catch {
+    leavingItem.value = null;
     // Transaction (and split debts) already created; only the confirm failed.
     // Keep createdTransactionId/splitDebtsCreated set so a retry resumes here
     // without duplicating anything.
@@ -619,7 +630,13 @@ async function handleDismiss() {
   showDismissConfirm.value = false;
   if (!current) return;
   const next = computeNext();
-  await dismissImported(current.id);
+  leavingItem.value = current;
+  try {
+    await dismissImported(current.id);
+  } catch (e) {
+    leavingItem.value = null;
+    throw e;
+  }
   goTo(next);
 }
 
