@@ -88,7 +88,6 @@ export function useDebtForm() {
     },
 
     onSuccess: (_, userId) => {
-      invalidateDebtRelated(queryClient, userId).catch(console.error);
       const { debt_type, person_name } = fields.value;
       toast({
         title: 'Долг создан',
@@ -100,6 +99,8 @@ export function useDebtForm() {
         duration: 2500,
       });
       resetForm();
+      // Возвращаем промис: mutateAsync дождётся кэша, и экран долгов откроется уже с новым долгом.
+      return invalidateDebtRelated(queryClient, userId).catch(console.error);
     },
 
     onError: () => {

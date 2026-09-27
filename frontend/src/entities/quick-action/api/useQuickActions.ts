@@ -45,6 +45,32 @@ export function useQuickActions(userId: MaybeRefOrGetter<string | null>) {
       label: string;
       amount?: number | null;
     }) => quickActionApi.create(params),
+    onMutate: async (params) => {
+      await queryClient.cancelQueries({ queryKey: queryKey.value });
+      const previous = queryClient.getQueryData<QuickAction[]>(queryKey.value);
+
+      const now = new Date().toISOString();
+      const optimistic: QuickAction = {
+        id: `temp-${Date.now()}`,
+        user_id: toValue(userId) ?? '',
+        category_id: params.categoryId,
+        account_id: params.accountId,
+        label: params.label,
+        amount: params.amount ?? null,
+        position: previous?.length ?? 0,
+        created_at: now,
+        updated_at: now,
+      };
+
+      queryClient.setQueryData<QuickAction[]>(queryKey.value, (old) => [
+        ...(old ?? []),
+        optimistic,
+      ]);
+      return { previous };
+    },
+    onError: (_err, _params, context) => {
+      if (context?.previous) queryClient.setQueryData(queryKey.value, context.previous);
+    },
     onSettled: () => queryClient.invalidateQueries({ queryKey: queryKey.value }),
   });
 

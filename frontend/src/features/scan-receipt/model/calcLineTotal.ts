@@ -10,11 +10,6 @@ export function calcLineTotal(
   return item.qty * item.unitPrice;
 }
 
-/** Sum of enabled percentage charges (for participant share rounding) */
-export function getTotalChargePercent(charges: ReceiptCharge[]): number {
-  return charges.reduce((sum, c) => (c.enabled && c.type === 'percent' ? sum + c.percent : sum), 0);
-}
-
 /** Preview amounts for splitting an item by quantity. Returns [firstAmount, secondAmount]. */
 export function calcSplitAmounts(
   item: Pick<ReceiptItem, 'qty' | 'unitPrice' | 'ocrTotalPrice'>,

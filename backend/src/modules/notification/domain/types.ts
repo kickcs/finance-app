@@ -5,8 +5,6 @@ export type NotificationType =
   | 'auto_charge'
   | 'test';
 
-export const DEFAULT_NOTIFICATION_HOUR = 12;
-
 export function buildDedupKey(
   type: Exclude<NotificationType, 'test'>,
   subscriptionId: string,

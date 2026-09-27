@@ -193,6 +193,13 @@ export function useAuth() {
 
   /** Программная установка сессии (используется TMA-входом): токен + user как после login */
   function applySession(accessToken: string, sessionUser: User) {
+    // Вход поверх чужой сессии (TMA-вебвью мимо signOut) не должен показывать её кэш.
+    const previousToken = getAccessToken();
+    const previousUserId = previousToken ? decodeJwtPayload(previousToken)?.sub : undefined;
+    if (previousUserId && previousUserId !== sessionUser.id) {
+      queryClient.clear();
+      clearPersistedCache();
+    }
     setTokens(accessToken);
     user.value = sessionUser;
   }

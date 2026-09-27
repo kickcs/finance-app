@@ -30,7 +30,7 @@ import {
 } from '@/features/edit-transaction';
 import { AdjustBalanceModal, useAdjustBalance } from '@/features/adjust-balance';
 import type { Account } from '@/shared/api/database.types';
-import { navigateBack } from '@/app/router';
+import { goBackOr } from '@/app/router';
 import { useProfile } from '@/shared/api';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 
@@ -153,8 +153,10 @@ const {
   closeEditModal: closeEditTransactionModal,
 } = useTransactionEditFlow(userId);
 
+// Экран открывают и напрямую (push-уведомление, ссылка) — тогда истории нет,
+// и просто «назад» уводил бы в никуда.
 function goBack() {
-  navigateBack();
+  goBackOr({ name: ROUTE_NAMES.ACCOUNTS });
 }
 
 // Set as default account

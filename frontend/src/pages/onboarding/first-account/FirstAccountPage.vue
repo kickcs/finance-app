@@ -6,7 +6,7 @@ import { UButton, UIcon } from '@/shared/ui';
 import { AccountForm, useCreateAccount } from '@/features/create-account';
 import { queryClient, profileQueryKeys } from '@/shared/api';
 import { profileApi } from '@/shared/api/services/profileApi';
-import { navigateBack } from '@/app/router';
+import { navigateBack, goBackOr } from '@/app/router';
 import { STORAGE_KEYS } from '@/shared/config/storageKeys';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 
@@ -63,9 +63,14 @@ async function handleSubmit() {
       await queryClient.invalidateQueries({
         queryKey: profileQueryKeys.detail(userId),
       });
-    }
 
-    router.push({ name: ROUTE_NAMES.DASHBOARD });
+      // replace, не push: иначе «назад» с дашборда возвращает на форму онбординга
+      router.replace({ name: ROUTE_NAMES.DASHBOARD });
+    } else {
+      // Вне онбординга это обычное создание счёта со страницы «Счета» —
+      // возвращаем туда же, а не на дашборд, куда пользователь не переходил
+      goBackOr({ name: ROUTE_NAMES.ACCOUNTS });
+    }
   }
 }
 

@@ -2,9 +2,9 @@ import { ref, computed, toValue, type MaybeRefOrGetter } from 'vue';
 import { useMutation, useQueryClient } from '@tanstack/vue-query';
 import {
   recurringSubscriptionApi,
-  recurringSubscriptionQueryKeys,
   type RecurringSubscriptionInsert,
 } from '@/entities/recurring-subscription';
+import { invalidateSubscriptionRelated } from '@/shared/api/invalidation';
 import { useToast } from '@/shared/ui';
 import { getTodayISO } from '@/shared/lib/date';
 import { DEFAULT_CURRENCY } from '@/entities/currency';
@@ -44,11 +44,9 @@ export function useCreateSubscription(userId: MaybeRefOrGetter<string | null>) {
   const mutation = useMutation({
     mutationFn: (data: SubscriptionFormData) => recurringSubscriptionApi.create(data),
     onSuccess: () => {
-      if (toValue(userId)) {
-        queryClient.invalidateQueries({
-          queryKey: recurringSubscriptionQueryKeys.all,
-        });
-      }
+      const uid = toValue(userId);
+      // Тот же контракт, что у остальных мутаций подписок: автосписание трогает счёт и транзакции.
+      if (uid) invalidateSubscriptionRelated(queryClient, uid).catch(console.error);
       toast({
         title: 'Подписка создана',
         description: `${formData.value.name} добавлена`,

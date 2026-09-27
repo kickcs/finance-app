@@ -138,7 +138,7 @@ export const INCOME_CATEGORIES: DefaultCategory[] = [
   },
 ];
 
-export const DEBT_CATEGORIES: DefaultCategory[] = [
+const DEBT_CATEGORIES: DefaultCategory[] = [
   {
     id: 'debt_given',
     name: 'Дал в долг',
@@ -169,7 +169,7 @@ export const DEBT_CATEGORIES: DefaultCategory[] = [
   },
 ];
 
-export const TRANSFER_CATEGORY: DefaultCategory = {
+const TRANSFER_CATEGORY: DefaultCategory = {
   id: 'transfer',
   name: 'Перевод',
   icon: 'swap_horiz',
@@ -215,7 +215,7 @@ export const FEE_DESCRIPTION = 'Комиссия за перевод';
  */
 export const UNRETURNED_DEBT_CATEGORY_ID = '__unreturned_debt__';
 
-export const ADJUSTMENT_CATEGORY: DefaultCategory = {
+const ADJUSTMENT_CATEGORY: DefaultCategory = {
   id: 'balance_adjustment',
   name: 'Коррекция баланса',
   icon: 'balance',
@@ -223,7 +223,7 @@ export const ADJUSTMENT_CATEGORY: DefaultCategory = {
   type: 'adjustment',
 };
 
-export const ALL_DEFAULT_CATEGORIES: DefaultCategory[] = [
+const ALL_DEFAULT_CATEGORIES: DefaultCategory[] = [
   ...EXPENSE_CATEGORIES,
   ...INCOME_CATEGORIES,
   ...DEBT_CATEGORIES,
@@ -232,7 +232,7 @@ export const ALL_DEFAULT_CATEGORIES: DefaultCategory[] = [
 ];
 
 // Map for quick lookup by ID
-export const DEFAULT_CATEGORIES_MAP = new Map<string, DefaultCategory>(
+const DEFAULT_CATEGORIES_MAP = new Map<string, DefaultCategory>(
   ALL_DEFAULT_CATEGORIES.map((cat) => [cat.id, cat]),
 );
 

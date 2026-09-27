@@ -18,7 +18,7 @@ export function subtractDaysISO(dateStr: string, days: number): string {
  * platform's tz database via `Intl.DateTimeFormat` rather than doing manual
  * offset math.
  */
-export function formatDateInTz(date: Date, timezone: string): string {
+function formatDateInTz(date: Date, timezone: string): string {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: timezone,
     year: 'numeric',

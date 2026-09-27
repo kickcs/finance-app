@@ -528,6 +528,21 @@ export function navigateBackTo(to: RouteLocationRaw) {
   router.replace(to);
 }
 
+/**
+ * Возврат с фолбэком: страницы, до которых можно дойти без истории (deep link,
+ * push-уведомление, TMA-старт через `replace`), не могут просто звать
+ * `router.back()` — он молча ничего не делает, и пользователь застревает.
+ * `history.state.back` — признак, который сам расставляет vue-router на
+ * каждой записи истории.
+ */
+export function goBackOr(fallback: RouteLocationRaw) {
+  if (window.history.state?.back) {
+    navigateBack();
+  } else {
+    navigateBackTo(fallback);
+  }
+}
+
 // Prefetch pages after router is ready
 router.isReady().then(() => {
   prefetchPages();

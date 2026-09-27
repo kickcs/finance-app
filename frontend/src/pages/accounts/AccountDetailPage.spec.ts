@@ -15,11 +15,11 @@ import { mockAccountTransactionResponse } from '@/test/mocks/handlers/transactio
 import { mockProfileResponse } from '@/test/mocks/handlers/profiles';
 
 // Mock app router
-const { navigateBackMock } = vi.hoisted(() => ({
-  navigateBackMock: vi.fn(),
+const { goBackOrMock } = vi.hoisted(() => ({
+  goBackOrMock: vi.fn(),
 }));
 vi.mock('@/app/router', () => ({
-  navigateBack: navigateBackMock,
+  goBackOr: goBackOrMock,
   transitionName: { value: 'fade' },
   resetOnboardingVerified: vi.fn(),
 }));
@@ -289,7 +289,7 @@ describe('AccountDetailPage', () => {
       const backBtn = wrapper.find('button[aria-label="Назад"]');
       expect(backBtn.exists()).toBe(true);
       await backBtn.trigger('click');
-      expect(navigateBackMock).toHaveBeenCalled();
+      expect(goBackOrMock).toHaveBeenCalled();
     });
   });
 

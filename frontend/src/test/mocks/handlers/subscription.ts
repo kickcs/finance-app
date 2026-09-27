@@ -9,15 +9,6 @@ export const mockSubscriptionStatusResponse = {
   cancelAtPeriodEnd: false,
 };
 
-export const mockPremiumSubscriptionResponse = {
-  plan: 'premium_monthly',
-  status: 'active',
-  isPremium: true,
-  trialEnd: null,
-  currentPeriodEnd: '2026-04-16T00:00:00.000Z',
-  cancelAtPeriodEnd: false,
-};
-
 export const subscriptionHandlers = [
   http.get('*/api/subscription/status', () => {
     return HttpResponse.json(mockSubscriptionStatusResponse);

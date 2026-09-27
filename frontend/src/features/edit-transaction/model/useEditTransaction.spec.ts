@@ -7,6 +7,8 @@ import { http, HttpResponse } from 'msw';
 import { useEditTransaction } from './useEditTransaction';
 import { mockTransactionResponse } from '@/test/mocks/handlers/transactions';
 import { mockGivenDebtResponse } from '@/test/mocks/handlers/debts';
+import { queryClient } from '@/shared/api/queryClient';
+import { transactionQueryKeys } from '@/entities/transaction';
 import type { Transaction } from '@/shared/api/database.types';
 
 // ── Mocks ──────────────────────────────────────────────────────────────────
@@ -233,6 +235,35 @@ describe('useEditTransaction', () => {
       expect(c.isUpdating.value).toBe(false);
       consoleSpy.mockRestore();
     });
+
+    it('patches the cached transaction list optimistically', async () => {
+      const tx = makeTransaction({ id: 'tx-list' });
+      queryClient.setQueryData(transactionQueryKeys.list(USER_ID), [tx]);
+
+      const c = mountComposable();
+      await c.update(tx, { description: 'New description' });
+
+      const cached = queryClient.getQueryData<Transaction[]>(transactionQueryKeys.list(USER_ID));
+      expect(cached?.[0].description).toBe('New description');
+    });
+
+    it('rolls back the cached list on API failure', async () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      server.use(
+        http.patch('*/api/transactions/:id', () =>
+          HttpResponse.json({ message: 'Error' }, { status: 500 }),
+        ),
+      );
+      const tx = makeTransaction({ id: 'tx-rollback', description: 'Original' });
+      queryClient.setQueryData(transactionQueryKeys.list(USER_ID), [tx]);
+
+      const c = mountComposable();
+      await c.update(tx, { description: 'Broken update' });
+
+      const cached = queryClient.getQueryData<Transaction[]>(transactionQueryKeys.list(USER_ID));
+      expect(cached?.[0].description).toBe('Original');
+      consoleSpy.mockRestore();
+    });
   });
 
   // ── remove ───────────────────────────────────────────────────────────────
@@ -417,6 +448,35 @@ describe('useEditTransaction', () => {
       await flushPromises();
 
       expect(c.isDeleting.value).toBe(false);
+      consoleSpy.mockRestore();
+    });
+
+    it('removes the transaction from the cached list optimistically', async () => {
+      const tx = makeTransaction({ id: 'tx-to-remove' });
+      queryClient.setQueryData(transactionQueryKeys.list(USER_ID), [tx]);
+
+      const c = mountComposable();
+      await c.remove(tx);
+
+      const cached = queryClient.getQueryData<Transaction[]>(transactionQueryKeys.list(USER_ID));
+      expect(cached).toEqual([]);
+    });
+
+    it('restores the cached list when deletion fails server-side', async () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      server.use(
+        http.delete('*/api/transactions/:id', () =>
+          HttpResponse.json({ message: 'Error' }, { status: 500 }),
+        ),
+      );
+      const tx = makeTransaction({ id: 'tx-keep' });
+      queryClient.setQueryData(transactionQueryKeys.list(USER_ID), [tx]);
+
+      const c = mountComposable();
+      await c.remove(tx);
+
+      const cached = queryClient.getQueryData<Transaction[]>(transactionQueryKeys.list(USER_ID));
+      expect(cached?.map((t) => t.id)).toContain('tx-keep');
       consoleSpy.mockRestore();
     });
   });

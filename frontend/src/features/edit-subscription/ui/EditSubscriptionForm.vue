@@ -25,6 +25,7 @@ const {
   formData,
   isLoading,
   isSubmitting,
+  isTogglingPause,
   isPaused,
   error,
   saveSubscription,
@@ -76,7 +77,13 @@ async function handleDelete() {
 
     <!-- Action buttons -->
     <div class="flex gap-3">
-      <UButton variant="secondary" size="lg" full-width @click="handleTogglePause">
+      <UButton
+        variant="secondary"
+        size="lg"
+        full-width
+        :disabled="isTogglingPause"
+        @click="handleTogglePause"
+      >
         <UIcon :name="isPaused ? 'play_arrow' : 'pause'" size="sm" />
         {{ isPaused ? 'Возобновить' : 'Приостановить' }}
       </UButton>

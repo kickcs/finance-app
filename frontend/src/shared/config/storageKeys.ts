@@ -58,4 +58,7 @@ export const STORAGE_KEYS = {
 
   /** Import inbox review order: 'newest' | 'oldest' first */
   IMPORT_INBOX_SORT_ORDER: 'import_inbox_sort_order',
+
+  /** History filters (type/account/category), kept for the session */
+  HISTORY_FILTERS: 'history_filters',
 } as const;

@@ -7,16 +7,10 @@ export function trigger(input?: HapticInput, options?: TriggerOptions) {
   engine.trigger(input, options);
 }
 
-export function cancel() {
-  engine.cancel();
-}
-
-export const isSupported = WebHaptics.isSupported;
-
 /**
  * Vue composable wrapper — returns the same singleton trigger.
  * Safe to call anywhere (no lifecycle hooks registered).
  */
 export function useHaptics() {
-  return { trigger, cancel, isSupported };
+  return { trigger };
 }

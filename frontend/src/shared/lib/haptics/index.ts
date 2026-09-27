@@ -1,1 +1,1 @@
-export { useHaptics, trigger, cancel, isSupported } from './haptics';
+export { useHaptics, trigger } from './haptics';

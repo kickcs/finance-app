@@ -1,4 +1,6 @@
-import { ref, computed, type MaybeRefOrGetter, toValue } from 'vue';
+import { computed, type MaybeRefOrGetter, toValue } from 'vue';
+import { useSessionStorage } from '@vueuse/core';
+import { STORAGE_KEYS } from '@/shared/config/storageKeys';
 import {
   ALL_CATEGORIES,
   EXPENSE_CATEGORIES,
@@ -20,9 +22,24 @@ export const TYPE_FILTER_ITEMS = [
 ];
 
 export function useHistoryFilters(userId: MaybeRefOrGetter<string | null>) {
-  const activeTypeFilter = ref<TypeFilter>('all');
-  const selectedAccountId = ref<string | null>(null);
-  const selectedCategoryId = ref<string | null>(null);
+  // Фильтры переживают уход со страницы до конца сессии; новый запуск начинает с «Все».
+  const stored = useSessionStorage(STORAGE_KEYS.HISTORY_FILTERS, {
+    type: 'all' as TypeFilter,
+    accountId: null as string | null,
+    categoryId: null as string | null,
+  });
+  const activeTypeFilter = computed({
+    get: () => stored.value.type,
+    set: (type: TypeFilter) => (stored.value = { ...stored.value, type }),
+  });
+  const selectedAccountId = computed({
+    get: () => stored.value.accountId,
+    set: (accountId: string | null) => (stored.value = { ...stored.value, accountId }),
+  });
+  const selectedCategoryId = computed({
+    get: () => stored.value.categoryId,
+    set: (categoryId: string | null) => (stored.value = { ...stored.value, categoryId }),
+  });
 
   const activeFiltersCount = computed(() => {
     let count = 0;

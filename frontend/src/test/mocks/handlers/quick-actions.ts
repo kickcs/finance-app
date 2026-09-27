@@ -11,14 +11,6 @@ export const mockQuickActionResponse = {
   updatedAt: '2025-01-01T00:00:00.000Z',
 };
 
-export const mockSecondQuickActionResponse = {
-  ...mockQuickActionResponse,
-  id: 'qa-2',
-  categoryId: 'cat-transport',
-  label: 'Транспорт',
-  position: 1,
-};
-
 export const quickActionHandlers = [
   http.get('*/api/quick-actions', () => {
     return HttpResponse.json([]);

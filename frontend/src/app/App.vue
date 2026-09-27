@@ -8,6 +8,7 @@ import { useLocale } from '@/shared/i18n/useLocale';
 import type { AppLocale } from '@/shared/i18n';
 import { initializeAuth, useAuth } from '@/shared/api/composables/useAuth';
 import { useProfile } from '@/shared/api/composables/useProfile';
+import { useRefreshOnResume } from '@/shared/api/composables/useRefreshOnResume';
 import { transitionName } from '@/app/router';
 import { useCategories } from '@/entities/category/api/useCategories';
 import { ToastProvider, Toaster } from '@/shared/ui/primitives/toast';
@@ -45,6 +46,9 @@ const router = useRouter();
 // Auth state
 const { user, isAuthenticated } = useAuth();
 const isAppReady = ref(false);
+
+// Правки из Telegram Mini App подтягиваются, когда пользователь возвращается в приложение
+useRefreshOnResume(isAuthenticated);
 
 if ('serviceWorker' in navigator) {
   useEventListener(navigator.serviceWorker, 'message', (event: MessageEvent) => {

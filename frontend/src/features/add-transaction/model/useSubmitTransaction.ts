@@ -49,12 +49,15 @@ interface OptimisticSnapshots {
   listKey: readonly unknown[];
   accountsKey: readonly unknown[];
   monthlyStatsKey: readonly unknown[];
-  infinitePrefix: readonly unknown[];
+  infiniteByAccountKeys: readonly (readonly unknown[])[];
   previousRecent: Transaction[] | undefined;
   previousList: Transaction[] | undefined;
   previousAccounts: AccountWithBalances[] | undefined;
   previousMonthlyStats: MonthlyStats | undefined;
-  previousInfinite: [readonly unknown[], InfiniteData<PaginatedResult<Transaction>> | undefined][];
+  previousInfiniteByAccount: (readonly [
+    readonly unknown[],
+    InfiniteData<PaginatedResult<Transaction>> | undefined,
+  ])[];
 }
 
 function buildApiPayload(userId: string, formData: TransactionFormData) {
@@ -86,7 +89,17 @@ function buildApiPayload(userId: string, formData: TransactionFormData) {
 }
 
 function getCacheKeys(userId: string, formData: TransactionFormData) {
+  assertNonDebt(formData);
+  const isTransfer = formData.type === 'transfer';
   const txDate = new Date(formData.date);
+  // Только счета, реально затронутые операцией: блайндовая вставка во все
+  // infinite-запросы утекает в чужие счета/отфильтрованные списки (история по
+  // категории и т.п.) — их подхватит invalidation в onSettled.
+  const accountIds = [
+    formData.accountId,
+    ...(isTransfer && formData.toAccountId ? [formData.toAccountId] : []),
+  ].filter((id): id is string => !!id);
+
   return {
     recentKey: transactionQueryKeys.recent(userId),
     listKey: transactionQueryKeys.list(userId),
@@ -96,7 +109,7 @@ function getCacheKeys(userId: string, formData: TransactionFormData) {
       txDate.getFullYear(),
       txDate.getMonth() + 1,
     ),
-    infinitePrefix: transactionQueryKeys.infinitePrefix(),
+    infiniteByAccountKeys: accountIds.map((id) => transactionQueryKeys.infiniteByAccount(id)),
   };
 }
 
@@ -104,7 +117,7 @@ async function cancelRelatedQueries(
   queryClient: QueryClient,
   keys: Pick<
     OptimisticSnapshots,
-    'recentKey' | 'listKey' | 'accountsKey' | 'monthlyStatsKey' | 'infinitePrefix'
+    'recentKey' | 'listKey' | 'accountsKey' | 'monthlyStatsKey' | 'infiniteByAccountKeys'
   >,
 ) {
   await Promise.all([
@@ -112,7 +125,7 @@ async function cancelRelatedQueries(
     queryClient.cancelQueries({ queryKey: keys.listKey }),
     queryClient.cancelQueries({ queryKey: keys.accountsKey }),
     queryClient.cancelQueries({ queryKey: keys.monthlyStatsKey }),
-    queryClient.cancelQueries({ queryKey: keys.infinitePrefix }),
+    ...keys.infiniteByAccountKeys.map((key) => queryClient.cancelQueries({ queryKey: key })),
   ]);
 }
 
@@ -147,9 +160,10 @@ function snapshotAndApplyOptimistic(
   const previousList = queryClient.getQueryData<Transaction[]>(keys.listKey);
   const previousAccounts = queryClient.getQueryData<AccountWithBalances[]>(keys.accountsKey);
   const previousMonthlyStats = queryClient.getQueryData<MonthlyStats>(keys.monthlyStatsKey);
-  const previousInfinite = queryClient.getQueriesData<InfiniteData<PaginatedResult<Transaction>>>({
-    queryKey: keys.infinitePrefix,
-  });
+  const previousInfiniteByAccount = keys.infiniteByAccountKeys.map(
+    (key) =>
+      [key, queryClient.getQueryData<InfiniteData<PaginatedResult<Transaction>>>(key)] as const,
+  );
 
   // Apply optimistic updates (all sync)
 
@@ -162,10 +176,11 @@ function snapshotAndApplyOptimistic(
   // 2. Prepend to list
   queryClient.setQueryData<Transaction[]>(keys.listKey, (old) => [optimisticTx, ...(old ?? [])]);
 
-  // 3. Prepend to all infinite queries
-  queryClient.setQueriesData<InfiniteData<PaginatedResult<Transaction>> | undefined>(
-    { queryKey: keys.infinitePrefix },
-    (old) => {
+  // 3. Prepend to the affected account(s) infinite lists only — a blind
+  // prepend into every infinite query also leaks into unrelated accounts and
+  // filtered history views (category/search), which invalidation handles.
+  for (const key of keys.infiniteByAccountKeys) {
+    queryClient.setQueryData<InfiniteData<PaginatedResult<Transaction>> | undefined>(key, (old) => {
       if (!old || old.pages.length === 0) return old;
       const newPages = [...old.pages];
       newPages[0] = {
@@ -173,8 +188,8 @@ function snapshotAndApplyOptimistic(
         data: [optimisticTx, ...newPages[0].data],
       };
       return { ...old, pages: newPages };
-    },
-  );
+    });
+  }
 
   // 4. Update account balance
   if (previousAccounts) {
@@ -248,7 +263,7 @@ function snapshotAndApplyOptimistic(
     previousList,
     previousAccounts,
     previousMonthlyStats,
-    previousInfinite,
+    previousInfiniteByAccount,
   };
 }
 
@@ -265,7 +280,7 @@ function rollbackFromSnapshots(queryClient: QueryClient, snapshots: OptimisticSn
   if (snapshots.previousMonthlyStats !== undefined) {
     queryClient.setQueryData(snapshots.monthlyStatsKey, snapshots.previousMonthlyStats);
   }
-  for (const [key, data] of snapshots.previousInfinite) {
+  for (const [key, data] of snapshots.previousInfiniteByAccount) {
     queryClient.setQueryData(key, data);
   }
 }

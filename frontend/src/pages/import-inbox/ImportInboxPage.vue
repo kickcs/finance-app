@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { ROUTE_NAMES } from '@/app/router/routeNames';
-import { navigateBack } from '@/app/router';
+import { goBackOr } from '@/app/router';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useProfile } from '@/shared/api/composables/useProfile';
 import { AppHeader } from '@/widgets/header';
@@ -31,13 +31,19 @@ const groupedItems = computed(() => groupInboxItemsByDay(sortedItems.value));
 function openConfirm(id: string) {
   router.push({ name: ROUTE_NAMES.IMPORT_CONFIRM, params: { id } });
 }
+
+// Инбокс — это ещё и точка входа TMA (заходят сюда через `replace` без
+// истории) и адрес push-уведомлений о новых импортах — тогда «назад» уводить некуда.
+function goBack() {
+  goBackOr({ name: ROUTE_NAMES.DASHBOARD });
+}
 </script>
 
 <template>
   <div
     class="h-full flex flex-col relative bg-background-light dark:bg-background-dark pb-28 lg:pb-8 overflow-y-auto"
   >
-    <AppHeader show-back @back="navigateBack">
+    <AppHeader show-back @back="goBack">
       <template #left>
         <h1 class="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark">
           На подтверждение

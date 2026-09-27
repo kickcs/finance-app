@@ -116,6 +116,45 @@ describe('useImportedTransactions', () => {
     expect(result.items.value).toHaveLength(0);
   });
 
+  it('dismiss убирает элемент из кэша сразу, не дожидаясь ответа сервера', async () => {
+    let resolveDismiss!: () => void;
+    const dismissPending = new Promise<void>((resolve) => {
+      resolveDismiss = resolve;
+    });
+    server.use(
+      http.get('*/api/telegram-import/inbox', () => HttpResponse.json(INBOX_RESPONSE)),
+      http.post('*/api/telegram-import/inbox/imp-1/dismiss', async () => {
+        await dismissPending;
+        return HttpResponse.json({ success: true });
+      }),
+    );
+    const result = mountComposable();
+    await flushPromises();
+
+    const call = result.dismissImported('imp-1');
+    await flushPromises();
+    // Ответ сервера ещё не пришёл, а элемент уже убран.
+    expect(result.items.value).toHaveLength(0);
+
+    resolveDismiss();
+    await call;
+  });
+
+  it('dismiss откатывает кэш при ошибке сервера', async () => {
+    server.use(
+      http.get('*/api/telegram-import/inbox', () => HttpResponse.json(INBOX_RESPONSE)),
+      http.post('*/api/telegram-import/inbox/imp-1/dismiss', () =>
+        HttpResponse.json({ error: 'fail' }, { status: 500 }),
+      ),
+    );
+    const result = mountComposable();
+    await flushPromises();
+
+    await expect(result.dismissImported('imp-1')).rejects.toThrow();
+    await flushPromises();
+    expect(result.items.value).toHaveLength(1);
+  });
+
   it('confirm с counterpartId удаляет из кэша обе ноги перевода', async () => {
     const second = {
       ...INBOX_RESPONSE.items[0],
