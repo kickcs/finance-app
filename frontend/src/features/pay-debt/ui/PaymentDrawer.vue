@@ -9,6 +9,7 @@ import {
   DebtAmountHeadline,
   WorkOffField,
   useDebtPaymentForm,
+  useDebtCategoryOptions,
   getDebtSplit,
 } from '@/entities/debt';
 import { useHaptics } from '@/shared/lib/haptics';
@@ -48,6 +49,8 @@ const debtDirection = computed<'given' | 'taken'>(() =>
 );
 const remaining = computed(() => props.debt?.remaining_amount ?? 0);
 
+const { excessCategories, workCategories } = useDebtCategoryOptions(debtDirection);
+
 const {
   paymentAmount,
   forgiveRemainder,
@@ -62,6 +65,7 @@ const {
 } = useDebtPaymentForm({
   remainingAmount: remaining,
   debtType: debtDirection,
+  excessCategories,
 });
 
 /**
@@ -200,6 +204,7 @@ function confirm() {
         v-model:amount="paymentAmount"
         v-model:forgive-remainder="forgiveRemainder"
         v-model:excess-category-id="excessCategoryId"
+        :excess-categories="excessCategories"
         :is-overpayment="isOverpayment"
         :excess="excess"
         :remainder="remainder"
@@ -213,6 +218,7 @@ function confirm() {
         v-model:note="workNote"
         v-model:category-id="workCategoryId"
         :direction="debtDirection"
+        :categories="workCategories"
       />
     </div>
   </UOverlay>

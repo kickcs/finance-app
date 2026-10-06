@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { mount } from '@vue/test-utils';
+import { ref } from 'vue';
+import { VueQueryPlugin } from '@tanstack/vue-query';
+import { createTestQueryClient } from '@/test/test-utils';
+import { categoryQueryKeys } from '@/entities/category';
 import PaymentDrawer from './PaymentDrawer.vue';
 import { makeDebt } from '@/test/fixtures/debt';
 import type { Debt } from '@/shared/api/database.types';
@@ -20,10 +24,41 @@ const OverlayStub = {
   template: '<div><slot name="action" /><slot /><slot name="footer" /></div>',
 };
 
+// Категории пользователя: шторка выбирает работу и переплату из них, а не из встроенных.
+const userCategories = [
+  {
+    id: 'u-repair',
+    user_id: 'user-1',
+    name: 'Ремонт',
+    icon: 'build',
+    color: '#000',
+    type: 'expense',
+    sort_order: 0,
+    is_frequent: true,
+    created_at: '',
+  },
+  {
+    id: 'u-gifts',
+    user_id: 'user-1',
+    name: 'Подарки',
+    icon: 'redeem',
+    color: '#000',
+    type: 'income',
+    sort_order: 0,
+    is_frequent: true,
+    created_at: '',
+  },
+];
+
 function mountDrawer(debt: Debt | null, extraProps: Record<string, unknown> = {}) {
+  const queryClient = createTestQueryClient();
+  queryClient.setQueryDefaults(categoryQueryKeys.all, { staleTime: Infinity });
+  queryClient.setQueryData(categoryQueryKeys.list('user-1'), userCategories);
   return mount(PaymentDrawer, {
     props: { modelValue: true, debt, accounts, ...extraProps },
     global: {
+      plugins: [[VueQueryPlugin, { queryClient }]],
+      provide: { user: ref({ id: 'user-1' }) },
       stubs: {
         UOverlay: OverlayStub,
         AccountSelector: true,
@@ -133,7 +168,7 @@ describe('PaymentDrawer', () => {
 
       const payload = w.emitted('confirm')?.[0][0] as Record<string, unknown>;
       expect(payload.amount).toBe(1500);
-      expect(payload.excessCategoryId).toBeTruthy();
+      expect(payload.excessCategoryId).toBe('u-gifts');
     });
 
     it('нулевой платёж без прощения подтвердить нельзя', async () => {
@@ -206,7 +241,7 @@ describe('PaymentDrawer', () => {
       await submit(w).trigger('click');
 
       const payload = w.emitted('confirm')?.[0][0] as Record<string, unknown>;
-      expect(payload.workCategoryId).toBeTruthy();
+      expect(payload.workCategoryId).toBe('u-repair');
     });
 
     it('возврат к деньгам стирает и категорию работы', async () => {

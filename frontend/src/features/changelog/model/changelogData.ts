@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.91';
+export const CURRENT_VERSION = '1.0.92';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,21 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.92',
+    date: '2026-10-06',
+    title: 'Категории',
+    items: [
+      {
+        type: 'fix',
+        text: 'Переплата по долгу и отработка долга записываются в ваши категории. Раньше они попадали в стандартные категории, которых нет в вашем списке.',
+      },
+      {
+        type: 'improvement',
+        text: 'Новые иконки категорий: ИИ-сервисы, хостинг, поиск работы, интернет, стрижка, аптека, такси, автобус, билеты, настолки и другие.',
+      },
+    ],
+  },
   {
     version: '1.0.91',
     date: '2026-09-27',
