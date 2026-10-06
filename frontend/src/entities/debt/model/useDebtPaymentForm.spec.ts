@@ -2,10 +2,13 @@ import { describe, it, expect } from 'vitest';
 import { ref, nextTick } from 'vue';
 import { useDebtPaymentForm } from './useDebtPaymentForm';
 import { CATEGORY_IDS } from '@/shared/config/categoryIds';
+import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, type Category } from '@/entities/category';
 
 function setup(remaining = 1000, debtType: 'given' | 'taken' = 'given') {
   const remainingAmount = ref(remaining);
-  const form = useDebtPaymentForm({ remainingAmount, debtType });
+  // Встроенные списки — как у демо-пользователя: дефолт находится по встроенному id.
+  const excessCategories = debtType === 'given' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+  const form = useDebtPaymentForm({ remainingAmount, debtType, excessCategories });
   return { ...form, remainingAmount };
 }
 
@@ -77,5 +80,24 @@ describe('useDebtPaymentForm', () => {
     const taken = setup(1000, 'taken');
     taken.reset();
     expect(taken.excessCategoryId.value).toBe(CATEGORY_IDS.GIFTS);
+  });
+
+  // Встроенного `gifts_income` у реального пользователя нет: переплата уходила
+  // в категорию, которой нет в его списке.
+  it('дефолт переплаты — категория пользователя, даже если она пришла позже', async () => {
+    const categories = ref<Category[]>([]);
+    const f = useDebtPaymentForm({
+      remainingAmount: ref(1000),
+      debtType: 'given',
+      excessCategories: categories,
+    });
+
+    categories.value = [
+      { id: 'u-salary', name: 'Зарплата', icon: 'payments', color: '#000', type: 'income' },
+      { id: 'u-gifts', name: 'Подарки', icon: 'redeem', color: '#000', type: 'income' },
+    ];
+    await nextTick();
+
+    expect(f.excessCategoryId.value).toBe('u-gifts');
   });
 });

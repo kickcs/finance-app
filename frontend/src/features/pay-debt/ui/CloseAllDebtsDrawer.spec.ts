@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { mount } from '@vue/test-utils';
+import { VueQueryPlugin } from '@tanstack/vue-query';
+import { createTestQueryClient } from '@/test/test-utils';
 import CloseAllDebtsDrawer from './CloseAllDebtsDrawer.vue';
 import type { Debt } from '@/shared/api/database.types';
 import { makeDebt } from '@/test/fixtures/debt';
@@ -30,7 +32,10 @@ const globalOptions = {
 function mountDrawer(debts: Debt[], extraProps: Record<string, unknown> = {}) {
   return mount(CloseAllDebtsDrawer, {
     props: { modelValue: true, debts, personName: 'Алексей', accounts, ...extraProps },
-    global: globalOptions,
+    global: {
+      ...globalOptions,
+      plugins: [[VueQueryPlugin, { queryClient: createTestQueryClient() }]],
+    },
   });
 }
 

@@ -27,6 +27,11 @@ export {
   type DebtFormModelOptions,
 } from './model/useDebtFormModel';
 export { useDebtPaymentForm } from './model/useDebtPaymentForm';
+export {
+  useDebtCategoryOptions,
+  excessCategoriesFor,
+  defaultExcessCategoryId,
+} from './model/debtCategories';
 
 // Lib
 export * from './lib/groupDebtsByPerson';

@@ -20,7 +20,12 @@ import {
 import { useSplitExpense } from '@/features/split-expense';
 import { useAccounts, AccountPickerSheet } from '@/entities/account';
 import { useCategories, CategoryPickerSheet } from '@/entities/category';
-import { useDebts, DEBT_DIRECTION_COLORS } from '@/entities/debt';
+import {
+  useDebts,
+  DEBT_DIRECTION_COLORS,
+  excessCategoriesFor,
+  defaultExcessCategoryId,
+} from '@/entities/debt';
 import { useCloseAllDebts } from '@/features/pay-debt';
 import { useHashtags } from '@/entities/transaction';
 import { usePeople } from '@/entities/person';
@@ -28,7 +33,6 @@ import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { navigateBackTo } from '@/app/router';
 import { ROUTE_NAMES } from '@/app/router/routeNames';
-import { CATEGORY_IDS } from '@/shared/config/categoryIds';
 import { formatDate, formatRelativeDate } from '@/shared/lib/format/date';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { Popover, PopoverTrigger, PopoverContent } from '@/shared/ui/primitives/popover';
@@ -170,7 +174,11 @@ const repaymentColorClass = computed(() =>
 
 /** Куда записать переплату: возврат мне — доход-подарок, мой возврат — расход-подарок. */
 function excessCategoryId(group: RepaymentGroup): string {
-  return group.debtType === 'given' ? CATEGORY_IDS.GIFTS_INCOME : CATEGORY_IDS.GIFTS;
+  const categories = excessCategoriesFor(group.debtType, {
+    income: incomeCategories.value,
+    expense: expenseCategories.value,
+  });
+  return defaultExcessCategoryId(group.debtType, categories);
 }
 
 async function repayGroup(group: RepaymentGroup) {
