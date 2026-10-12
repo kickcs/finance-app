@@ -895,6 +895,61 @@ describe('useSubmitStep via useReceiptWizard — handleSubmit', () => {
     expect(wizard.isSuccess.value).toBe(true);
   });
 
+  it('handleSubmit с двумя счетами: первая часть в amount, вторая — в secondPart', async () => {
+    let txBody: any = null;
+
+    server.use(
+      http.post('*/api/receipts/scan', () =>
+        HttpResponse.json(makeOcrResponse({ serviceChargePercent: null })),
+      ),
+      http.post('*/api/transactions', async ({ request }) => {
+        txBody = await request.json();
+        return HttpResponse.json({
+          id: 'tx-receipt-1',
+          userId: USER_ID,
+          accountId: 'acc-1',
+          categoryId: 'cat-groceries',
+          amount: 13000,
+          currency: 'UZS',
+          type: 'expense',
+          description: null,
+          date: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
+          isDebtRelated: false,
+          returnedAmount: 0,
+          netAmount: 13000,
+          hasDebtReturns: false,
+        });
+      }),
+    );
+
+    const wizard = mountComposable(() => useReceiptWizard(() => USER_ID));
+    wizard.addFile(new File(['data'], 'r.jpg', { type: 'image/jpeg' }));
+    wizard.scanReceipt();
+    await flushPromises();
+
+    wizard.formData.value.accountId = 'acc-1';
+    wizard.formData.value.categoryId = 'cat-groceries';
+    wizard.formData.value.createDebts = false;
+    wizard.formData.value.secondPart = { accountId: 'acc-2', amount: 5000 };
+
+    await wizard.handleSubmit();
+    await flushPromises();
+
+    expect(txBody.amount).toBe(13000);
+    expect(txBody.secondPart).toEqual({ accountId: 'acc-2', amount: 5000 });
+    expect(wizard.isSuccess.value).toBe(true);
+  });
+
+  it('isFormValid ложен, пока у второй части нет счёта', () => {
+    const wizard = mountComposable(() => useReceiptWizard(() => USER_ID));
+    wizard.formData.value.accountId = 'acc-1';
+    wizard.formData.value.categoryId = 'cat-groceries';
+    wizard.formData.value.secondPart = { accountId: null, amount: 5000 };
+
+    expect(wizard.isFormValid.value).toBe(false);
+  });
+
   it('handleSubmit creates debts for non-me participants when createDebts=true', async () => {
     const debtBodies: any[] = [];
 

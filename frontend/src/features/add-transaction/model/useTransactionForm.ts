@@ -1,6 +1,7 @@
 import { ref, computed } from 'vue';
 import { CATEGORY_IDS } from '@/entities/category';
 import { DEFAULT_CURRENCY } from '@/entities/currency';
+import { validateSecondPart, type SecondPart } from '@/features/payment-group/model/paymentParts';
 
 /** Порядок типов задаёт порядок сегментов на плите. */
 export const TRANSACTION_TYPES = ['expense', 'income', 'transfer', 'debt'] as const;
@@ -20,6 +21,8 @@ export interface TransactionFormData {
   toCurrency: string | null;
   feeAmount: number;
   feeType: 'fixed' | 'percent';
+  /** Вторая часть оплаты (только расход/доход). `amount` выше при этом — итог операции. */
+  secondPart: SecondPart | null;
 }
 
 const DEFAULT_FORM_DATA: Omit<TransactionFormData, 'date'> = {
@@ -34,6 +37,7 @@ const DEFAULT_FORM_DATA: Omit<TransactionFormData, 'date'> = {
   toCurrency: null,
   feeAmount: 0,
   feeType: 'fixed',
+  secondPart: null,
 };
 
 export function useTransactionForm() {
@@ -41,6 +45,16 @@ export function useTransactionForm() {
     ...DEFAULT_FORM_DATA,
     date: Date.now(),
   });
+
+  const secondPartError = computed(() =>
+    formData.value.secondPart
+      ? validateSecondPart({
+          total: formData.value.amount,
+          primaryAccountId: formData.value.accountId,
+          secondPart: formData.value.secondPart,
+        })
+      : null,
+  );
 
   const isValid = computed(() => {
     const base =
@@ -60,7 +74,7 @@ export function useTransactionForm() {
       );
     }
 
-    return base && formData.value.categoryId !== '';
+    return base && formData.value.categoryId !== '' && secondPartError.value === null;
   });
 
   function updateField<K extends keyof TransactionFormData>(
@@ -73,6 +87,8 @@ export function useTransactionForm() {
   function setType(type: TransactionType) {
     formData.value.type = type;
     formData.value.categoryId = type === 'transfer' ? CATEGORY_IDS.TRANSFER : '';
+    // Оплата с двух счетов — только для расхода и дохода.
+    if (type === 'transfer' || type === 'debt') formData.value.secondPart = null;
     if (type !== 'transfer') {
       formData.value.toAccountId = null;
       formData.value.toAmount = null;
@@ -100,6 +116,7 @@ export function useTransactionForm() {
   return {
     formData,
     isValid,
+    secondPartError,
     updateField,
     setType,
     setTransferTarget,

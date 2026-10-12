@@ -1,6 +1,10 @@
 import { type Transaction } from '../../domain/aggregates/transaction';
 
-export function toTransactionResponse(transaction: Transaction) {
+/** `paymentSibling` — вторая часть операции, оплаченной с двух счетов. */
+export function toTransactionResponse(
+  transaction: Transaction,
+  paymentSibling: Transaction | null = null,
+) {
   return {
     id: transaction.id,
     userId: transaction.userId,
@@ -17,6 +21,14 @@ export function toTransactionResponse(transaction: Transaction) {
     toAccountId: transaction.toAccountId,
     toAmount: transaction.toAmountValue,
     toCurrency: transaction.toCurrency,
+    paymentGroupId: transaction.paymentGroupId,
+    paymentSibling: paymentSibling
+      ? {
+          id: paymentSibling.id,
+          accountId: paymentSibling.accountId,
+          amount: paymentSibling.amountValue,
+        }
+      : null,
     createdAt: transaction.createdAt,
   };
 }

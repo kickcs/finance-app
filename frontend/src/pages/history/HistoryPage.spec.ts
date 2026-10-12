@@ -583,6 +583,8 @@ describe('HistoryPage', () => {
         returned_amount: 0,
         net_amount: 25000,
         has_debt_returns: false,
+        payment_group_id: null,
+        payment_sibling: null,
       });
       await flushPromises();
       await flushPromises();

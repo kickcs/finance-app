@@ -284,6 +284,96 @@ describe('Transaction Aggregate', () => {
     });
   });
 
+  // Оплата с двух счетов: две обычные записи с общим paymentGroupId.
+  describe('payment group', () => {
+    it('расход входит в группу и выходит из неё', () => {
+      const tx = Transaction.createExpense('tx-1', 'user-1', 'acc-1', 'food', 60, 'UZS', now);
+      expect(tx.paymentGroupId).toBeNull();
+
+      tx.joinPaymentGroup('group-1');
+      expect(tx.paymentGroupId).toBe('group-1');
+
+      tx.leavePaymentGroup();
+      expect(tx.paymentGroupId).toBeNull();
+    });
+
+    it('вторая часть повторяет операцию на другом счёте', () => {
+      const tx = Transaction.createIncome(
+        'tx-1',
+        'user-1',
+        'acc-1',
+        'salary',
+        60,
+        'UZS',
+        now,
+        'ЗП',
+      );
+
+      const sibling = tx.createPaymentSibling('tx-2', 'acc-2', 40, 'group-1');
+
+      expect(sibling.id).toBe('tx-2');
+      expect(sibling.accountId).toBe('acc-2');
+      expect(sibling.amountValue).toBe(40);
+      expect(sibling.typeValue).toBe('income');
+      expect(sibling.categoryId).toBe('salary');
+      expect(sibling.description).toBe('ЗП');
+      expect(sibling.date).toBe(now);
+      expect(sibling.currency).toBe('UZS');
+      expect(sibling.paymentGroupId).toBe('group-1');
+      expect(tx.paymentGroupId).toBe('group-1');
+    });
+
+    it('вторая часть на тот же счёт запрещена', () => {
+      const tx = Transaction.createExpense('tx-1', 'user-1', 'acc-1', 'food', 60, 'UZS', now);
+      expect(() => tx.createPaymentSibling('tx-2', 'acc-1', 40, 'group-1')).toThrow();
+      expect(tx.paymentGroupId).toBeNull();
+    });
+
+    it('долговая запись в группу не входит', () => {
+      const tx = Transaction.createExpense(
+        'tx-1',
+        'user-1',
+        'acc-1',
+        'debt_given',
+        60,
+        'UZS',
+        now,
+        undefined,
+        true,
+        'debt-1',
+      );
+      expect(() => {
+        tx.joinPaymentGroup('group-1');
+      }).toThrow();
+    });
+
+    it('перевод в группу не входит', () => {
+      const tx = Transaction.createTransfer(
+        'tx-1',
+        'user-1',
+        'acc-1',
+        'acc-2',
+        'transfer',
+        60,
+        'UZS',
+        60,
+        'UZS',
+        now,
+      );
+      expect(() => {
+        tx.joinPaymentGroup('group-1');
+      }).toThrow();
+    });
+
+    it('часть группы нельзя превратить в перевод', () => {
+      const tx = Transaction.createExpense('tx-1', 'user-1', 'acc-1', 'food', 60, 'UZS', now);
+      tx.joinPaymentGroup('group-1');
+      expect(() => {
+        tx.update({ type: 'transfer' });
+      }).toThrow();
+    });
+  });
+
   describe('reconstitute', () => {
     it('should reconstitute from props', () => {
       const tx = Transaction.reconstitute({
@@ -300,9 +390,11 @@ describe('Transaction Aggregate', () => {
         debtId: null,
         toAccountId: null,
         toAmount: null,
+        paymentGroupId: 'group-1',
         createdAt: now,
       });
       expect(tx.id).toBe('tx-1');
+      expect(tx.paymentGroupId).toBe('group-1');
       expect(tx.amountValue).toBe(100);
       expect(tx.domainEvents).toHaveLength(0);
     });

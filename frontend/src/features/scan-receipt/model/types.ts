@@ -1,3 +1,5 @@
+import type { SecondPart } from '@/features/payment-group/model/paymentParts';
+
 export interface ReceiptItem {
   id: string;
   name: string;
@@ -43,6 +45,8 @@ export interface ScanReceiptFormData {
   date: number;
   createDebts: boolean;
   currency: string;
+  /** Часть чека, оплаченная со второго счёта. */
+  secondPart: SecondPart | null;
 }
 
 interface ReceiptChargeBase {

@@ -1,5 +1,6 @@
 import { ref, type MaybeRefOrGetter } from 'vue';
 import type { Transaction } from '@/shared/api/database.types';
+import type { TransactionUpdates } from '@/entities/transaction';
 import { useTransactionSelection } from './useTransactionSelection';
 import { useEditTransaction } from './useEditTransaction';
 
@@ -21,7 +22,7 @@ export function useTransactionEditFlow(userId: MaybeRefOrGetter<string | null>) 
     remove: removeTransactionFn,
   } = useEditTransaction(userId);
 
-  async function saveTransaction(updates: Partial<Transaction>): Promise<boolean> {
+  async function saveTransaction(updates: TransactionUpdates): Promise<boolean> {
     if (!selectedTransaction.value) return false;
     return updateTransactionFn(selectedTransaction.value, updates);
   }

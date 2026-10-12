@@ -530,6 +530,7 @@ async function handleRefresh() {
           :currency="currency"
           :account-name="getAccountName(selectedDetailTransaction.account_id)"
           :to-account-name="getAccountName(selectedDetailTransaction.to_account_id ?? null)"
+          :accounts="accounts"
           @edit="handleDetailEdit"
           @delete="handleDetailDelete"
         />
@@ -567,6 +568,7 @@ async function handleRefresh() {
     <DeleteTransactionModal
       v-model="showDeleteModal"
       :transaction="selectedTransaction"
+      :accounts="accounts"
       :currency="currency"
       :is-deleting="isDeleting"
       @confirm="handleDeleteTransactionAndClear"

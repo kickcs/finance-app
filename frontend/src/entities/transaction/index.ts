@@ -4,6 +4,8 @@ export { default as TransactionItemSkeleton } from './ui/TransactionItemSkeleton
 export { default as TransactionGroupSkeleton } from './ui/TransactionGroupSkeleton.vue';
 export { default as VirtualGroupedTransactionList } from './ui/VirtualGroupedTransactionList.vue';
 export { default as TransactionDetailPanel } from './ui/TransactionDetailPanel.vue';
+export { default as PaymentPartsSummary } from './ui/PaymentPartsSummary.vue';
+export { default as PaymentSplitBar } from './ui/PaymentSplitBar.vue';
 
 // Model/Types
 export * from './model/types';
@@ -11,6 +13,9 @@ export * from './model/types';
 // Composables
 export { useGroupedTransactions } from './model/useGroupedTransactions';
 export type { UseGroupedTransactionsOptions } from './model/useGroupedTransactions';
+
+// Lib
+export { buildPaymentSiblingRow, paymentGroupIds } from './lib/paymentGroup';
 
 // API
 export * from './api';

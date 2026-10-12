@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.91';
+export const CURRENT_VERSION = '1.0.92';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,25 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.92',
+    date: '2026-10-12',
+    title: 'Оплата с двух счетов',
+    items: [
+      {
+        type: 'feature',
+        text: 'Одну покупку можно оплатить с двух счетов: например, часть картой, часть наличными. Нажмите «+ второй счёт» рядом с выбором счёта — каждый счёт спишется на свою часть.',
+      },
+      {
+        type: 'feature',
+        text: 'Если на карте не хватает денег, рядом с предупреждением появится «Доплатить с другого счёта».',
+      },
+      {
+        type: 'feature',
+        text: 'Второй счёт можно добавить и в доходе, при скане чека, при разборе операции из Telegram и при редактировании. В истории обе части видны отдельно с пометкой «часть из …».',
+      },
+    ],
+  },
   {
     version: '1.0.91',
     date: '2026-09-27',

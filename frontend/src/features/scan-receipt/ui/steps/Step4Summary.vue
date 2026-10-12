@@ -501,6 +501,7 @@ const shareActions = computed(() => [
         :accounts="accounts"
         :categories="categories"
         :hide-category="!!selectedPayer"
+        :total="totalAmount"
         @update:form-data="$emit('update:formData', $event)"
       />
 

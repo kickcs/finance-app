@@ -10,6 +10,8 @@ const props = defineProps<{
   transaction: Transaction | null;
   currency: string;
   isDeleting?: boolean;
+  /** Нужны, чтобы назвать оба счёта операции, оплаченной с двух. */
+  accounts?: { id: string; name: string }[];
 }>();
 
 const emit = defineEmits<{
@@ -23,14 +25,29 @@ const category = computed(() => {
   return getCategoryById(props.transaction.category_id);
 });
 
+// Удаление любой части уносит обе — показываем итог операции, а не сумму строки.
+const totalAmount = computed(() => {
+  const tx = props.transaction;
+  if (!tx) return 0;
+  const sibling = tx.payment_sibling;
+  return sibling ? Math.round((tx.amount + sibling.amount) * 100) / 100 : tx.amount;
+});
+
 const formattedAmount = computed(() => {
   if (!props.transaction) return '';
   const prefix = props.transaction.type === 'income' ? '+' : '-';
-  return `${prefix}${formatCurrency(props.transaction.amount, props.currency)}`;
+  return `${prefix}${formatCurrency(totalAmount.value, props.currency)}`;
 });
 
 const warningText = computed(() => {
   if (!props.transaction) return '';
+  const sibling = props.transaction.payment_sibling;
+  if (sibling) {
+    const currency = props.transaction.currency || props.currency;
+    const part = (accountId: string, amount: number) =>
+      `${props.accounts?.find((a) => a.id === accountId)?.name ?? 'Счёт'} ${formatCurrency(amount, currency, { showSymbol: false })}`;
+    return `Удалится вся операция: ${part(props.transaction.account_id, props.transaction.amount)} и ${part(sibling.account_id, sibling.amount)}`;
+  }
   const direction = props.transaction.type === 'income' ? 'уменьшен' : 'увеличен';
   return `Баланс будет ${direction} на ${formatCurrency(props.transaction.amount, props.currency)}`;
 });

@@ -6,9 +6,16 @@ import { AccountSelector } from '@/entities/account';
 import type { AccountWithBalances } from '@/entities/account';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import type { Transaction } from '@/shared/api/database.types';
+import type { TransactionUpdates } from '@/entities/transaction';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { SplitParticipantList, useSplitTransactionEdit } from '@/features/split-expense';
 import { DEFAULT_CURRENCY } from '@/shared/config/currency';
+import {
+  PaymentPartsEditor,
+  buildSecondPartPayload,
+  validateSecondPart,
+  type SecondPart,
+} from '@/features/payment-group';
 
 const props = defineProps<{
   modelValue: boolean;
@@ -17,7 +24,7 @@ const props = defineProps<{
   currency: string;
   isUpdating?: boolean;
   error?: string | null;
-  onSave: (updates: Partial<Transaction>) => Promise<boolean>;
+  onSave: (updates: TransactionUpdates) => Promise<boolean>;
 }>();
 
 const emit = defineEmits<{
@@ -47,20 +54,24 @@ const accountId = ref('');
 const categoryId = ref('');
 const description = ref('');
 const date = ref('');
+/** Вторая часть оплаты; при ней `amount` — итог операции, а не сумма этой строки. */
+const secondPart = ref<SecondPart | null>(null);
 
 // Sync form state with transaction prop
 watch(
   () => props.transaction,
   (t) => {
     if (t && t.type !== 'transfer') {
+      const sibling = t.payment_sibling;
       type.value = t.type as 'expense' | 'income';
-      amount.value = t.amount;
+      amount.value = sibling ? Math.round((t.amount + sibling.amount) * 100) / 100 : t.amount;
+      secondPart.value = sibling ? { accountId: sibling.account_id, amount: sibling.amount } : null;
       accountId.value = t.account_id;
       categoryId.value = t.category_id;
       description.value = t.description || '';
       date.value = t.date ? t.date.split('T')[0] : '';
       dateBeforeEdit.value = date.value;
-      amountBeforeEdit.value = t.amount;
+      amountBeforeEdit.value = amount.value;
     }
   },
   { immediate: true },
@@ -185,9 +196,11 @@ async function confirm() {
 
   isConfirming.value = true;
   try {
-    const updates: Partial<Transaction> = {
+    const updates: TransactionUpdates = {
       type: type.value,
-      amount: amount.value,
+      // Первая часть = итог − вторая; убранная пара уходит явным null.
+      ...buildSecondPartPayload(amount.value, secondPart.value),
+      ...(!secondPart.value && props.transaction?.payment_sibling && { second_part: null }),
       account_id: accountId.value,
       category_id: categoryId.value,
       description: description.value || null,
@@ -215,6 +228,16 @@ const isFormValid = computed(() => {
   const baseValid = !!accountId.value && !!categoryId.value && amount.value > 0;
   if (!baseValid) return false;
   if (hasSplit.value && splitMyShare.value < 0) return false;
+  if (
+    secondPart.value &&
+    validateSecondPart({
+      total: amount.value,
+      primaryAccountId: accountId.value,
+      secondPart: secondPart.value,
+    })
+  ) {
+    return false;
+  }
   return true;
 });
 </script>
@@ -393,17 +416,26 @@ const isFormValid = computed(() => {
       />
 
       <!-- Amount -->
-      <UInput
-        :model-value="String(amount)"
-        label="Сумма"
-        placeholder="0"
-        variant="currency"
-        type="number"
-        :suffix="transaction!.currency"
-        @update:model-value="handleAmountInput($event)"
-        @blur="checkAmountChange"
-        @keydown.enter="checkAmountChange"
-      />
+      <div class="space-y-2">
+        <UInput
+          :model-value="String(amount)"
+          :label="secondPart ? 'Сумма операции' : 'Сумма'"
+          placeholder="0"
+          variant="currency"
+          type="number"
+          :suffix="transaction!.currency"
+          @update:model-value="handleAmountInput($event)"
+          @blur="checkAmountChange"
+          @keydown.enter="checkAmountChange"
+        />
+        <PaymentPartsEditor
+          v-model="secondPart"
+          :accounts="compatibleAccounts"
+          :primary-account-id="accountId"
+          :currency="transaction!.currency"
+          :total="amount"
+        />
+      </div>
 
       <!-- Category Chips -->
       <CategoryChips

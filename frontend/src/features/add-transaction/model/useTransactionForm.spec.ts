@@ -267,4 +267,74 @@ describe('useTransactionForm', () => {
       expect(formData.value.date).toBeGreaterThanOrEqual(oldDate - 1000);
     });
   });
+
+  // ── secondPart (оплата с двух счетов) ───────────────────────────────────
+
+  describe('secondPart', () => {
+    function validExpense() {
+      const form = useTransactionForm();
+      form.formData.value.accountId = 'acc-1';
+      form.formData.value.categoryId = 'cat-1';
+      form.formData.value.amount = 100000;
+      form.formData.value.currency = 'UZS';
+      return form;
+    }
+
+    it('starts as null', () => {
+      const { formData } = useTransactionForm();
+      expect(formData.value.secondPart).toBeNull();
+    });
+
+    it('stays valid with a correct second part', () => {
+      const { formData, isValid, secondPartError } = validExpense();
+      formData.value.secondPart = { accountId: 'acc-2', amount: 40000 };
+      expect(isValid.value).toBe(true);
+      expect(secondPartError.value).toBeNull();
+    });
+
+    it('is invalid when the second account equals the first', () => {
+      const { formData, isValid, secondPartError } = validExpense();
+      formData.value.secondPart = { accountId: 'acc-1', amount: 40000 };
+      expect(isValid.value).toBe(false);
+      expect(secondPartError.value).toBeTruthy();
+    });
+
+    it('is invalid when the second part is not smaller than the total', () => {
+      const { formData, isValid } = validExpense();
+      formData.value.secondPart = { accountId: 'acc-2', amount: 100000 };
+      expect(isValid.value).toBe(false);
+    });
+
+    it('is invalid when the second account is not chosen yet', () => {
+      const { formData, isValid } = validExpense();
+      formData.value.secondPart = { accountId: null, amount: 40000 };
+      expect(isValid.value).toBe(false);
+    });
+
+    it('has no error while there is no second part', () => {
+      const { secondPartError } = validExpense();
+      expect(secondPartError.value).toBeNull();
+    });
+
+    it('keeps the second part when switching between expense and income', () => {
+      const { formData, setType } = validExpense();
+      formData.value.secondPart = { accountId: 'acc-2', amount: 40000 };
+      setType('income');
+      expect(formData.value.secondPart).toEqual({ accountId: 'acc-2', amount: 40000 });
+    });
+
+    it.each(['transfer', 'debt'] as const)('is dropped when switching to %s', (type) => {
+      const { formData, setType } = validExpense();
+      formData.value.secondPart = { accountId: 'acc-2', amount: 40000 };
+      setType(type);
+      expect(formData.value.secondPart).toBeNull();
+    });
+
+    it('is cleared by resetForm', () => {
+      const { formData, resetForm } = validExpense();
+      formData.value.secondPart = { accountId: 'acc-2', amount: 40000 };
+      resetForm();
+      expect(formData.value.secondPart).toBeNull();
+    });
+  });
 });

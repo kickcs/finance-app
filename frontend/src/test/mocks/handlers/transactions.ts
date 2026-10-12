@@ -19,6 +19,8 @@ export const mockTransactionResponse = {
   returnedAmount: 0,
   netAmount: 25000,
   hasDebtReturns: false,
+  paymentGroupId: null,
+  paymentSibling: null,
 };
 
 export const mockAccountTransactionResponse = {

@@ -97,6 +97,11 @@ export interface ITransactionRepository {
   deleteByAccountId(accountId: string, manager?: EntityManager): Promise<void>;
   countByAccountId(accountId: string): Promise<number>;
   exists(id: string): Promise<boolean>;
+  /**
+   * Вторые части оплат с двух счетов одним запросом: id транзакции → её пара.
+   * Строки без группы и без найденной пары в карту не попадают.
+   */
+  findPaymentSiblings(transactions: Transaction[]): Promise<Map<string, Transaction>>;
 
   // Paginated queries
   getPaginated(

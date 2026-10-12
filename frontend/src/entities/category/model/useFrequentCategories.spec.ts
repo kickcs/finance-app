@@ -24,6 +24,8 @@ function makeTx(categoryId: string): Transaction {
     returned_amount: 0,
     net_amount: 1000,
     has_debt_returns: false,
+    payment_group_id: null,
+    payment_sibling: null,
   };
 }
 

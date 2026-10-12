@@ -32,6 +32,7 @@ describe('DeleteTransactionHandler', () => {
     getAnalyticsStats: jest.fn(),
     getDailyStats: jest.fn(),
     getHashtags: jest.fn(),
+    findPaymentSiblings: jest.fn(),
   };
 
   const mockAccountRepository = {
@@ -88,6 +89,7 @@ describe('DeleteTransactionHandler', () => {
     mockTransactionRepository.delete.mockResolvedValue(undefined);
     mockDebtRepository.hasOpenDebtsForTransaction.mockResolvedValue(false);
     mockDataSource.query.mockResolvedValue([]);
+    mockTransactionRepository.findPaymentSiblings.mockResolvedValue(new Map());
   });
 
   // Отработка с категорией — пара записей на ноль по балансу: трата по
@@ -298,6 +300,95 @@ describe('DeleteTransactionHandler', () => {
       await expect(handler.execute(new DeleteTransactionCommand('tx-1', 'user-1'))).rejects.toThrow(
         NotFoundException,
       );
+    });
+  });
+
+  // Удаление любой из двух частей удаляет операцию целиком.
+  describe('оплата с двух счетов', () => {
+    let card: Account;
+    let cash: Account;
+
+    const givenGroup = () => {
+      const row = Transaction.createExpense(
+        'tx-card',
+        'user-1',
+        'acc-card',
+        'food',
+        60_000,
+        'UZS',
+        now,
+      );
+      const sibling = Transaction.createExpense(
+        'tx-cash',
+        'user-1',
+        'acc-cash',
+        'food',
+        40_000,
+        'UZS',
+        now,
+      );
+      row.joinPaymentGroup('group-1');
+      sibling.joinPaymentGroup('group-1');
+      mockTransactionRepository.findById.mockResolvedValue(row);
+      mockTransactionRepository.findPaymentSiblings.mockResolvedValue(new Map([[row.id, sibling]]));
+      return { row, sibling };
+    };
+
+    beforeEach(() => {
+      card = Account.create('acc-card', 'user-1', 'Card', 'wallet', '#000', 'basic', 0, [
+        { currency: 'UZS', balance: 440_000 },
+      ]);
+      cash = Account.create('acc-cash', 'user-1', 'Cash', 'wallet', '#000', 'basic', 0, [
+        { currency: 'UZS', balance: 60_000 },
+      ]);
+      const accounts: Record<string, Account> = { 'acc-card': card, 'acc-cash': cash };
+      mockAccountRepository.findByIdWithBalances.mockImplementation((id: string) =>
+        Promise.resolve(accounts[id] ?? null),
+      );
+    });
+
+    it('удаляет обе части и возвращает оба списания', async () => {
+      givenGroup();
+
+      await handler.execute(new DeleteTransactionCommand('tx-card', 'user-1'));
+
+      expect(card.getTotalBalance('UZS')).toBe(500_000);
+      expect(cash.getTotalBalance('UZS')).toBe(100_000);
+      expect(mockTransactionRepository.delete).toHaveBeenCalledWith('tx-card', undefined);
+      expect(mockTransactionRepository.delete).toHaveBeenCalledWith('tx-cash', undefined);
+      expect(mockAccountRepository.save).toHaveBeenCalledTimes(2);
+      expect(mockDataSource.transaction).toHaveBeenCalledTimes(1);
+    });
+
+    it('открытый долг на паре тоже запрещает удаление', async () => {
+      givenGroup();
+      mockDebtRepository.hasOpenDebtsForTransaction.mockImplementation((id: string) =>
+        Promise.resolve(id === 'tx-cash'),
+      );
+
+      await expect(
+        handler.execute(new DeleteTransactionCommand('tx-card', 'user-1')),
+      ).rejects.toThrow(BadRequestException);
+      expect(mockTransactionRepository.delete).not.toHaveBeenCalled();
+    });
+
+    it('пара уже пропала — удаляется одна строка', async () => {
+      const row = Transaction.createExpense(
+        'tx-card',
+        'user-1',
+        'acc-card',
+        'food',
+        60_000,
+        'UZS',
+        now,
+      );
+      row.joinPaymentGroup('group-1');
+      mockTransactionRepository.findById.mockResolvedValue(row);
+
+      await handler.execute(new DeleteTransactionCommand('tx-card', 'user-1'));
+
+      expect(card.getTotalBalance('UZS')).toBe(500_000);
+      expect(mockTransactionRepository.delete).toHaveBeenCalledTimes(1);
     });
   });
 

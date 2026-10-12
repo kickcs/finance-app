@@ -61,9 +61,9 @@ const parentRef = ref<HTMLElement | null>(null);
 // Колонка суммы обычно укладывается в те же 36 px (сумма 20 + одна доп. строка 16).
 const HEADER_HEIGHT = 32;
 const ROW_HEIGHT = 60;
-// Две дополнительные строки в колонке суммы (зачёркнутая сумма + остаток, либо
-// конвертация + остаток) дают 20 + 16 + 16 = 52 px содержимого.
-const ROW_HEIGHT_TALL = 76;
+// Каждая следующая дополнительная строка в колонке суммы (зачёркнутая сумма,
+// конвертация, «часть из N», остаток) добавляет к слоту по 16 px.
+const EXTRA_LINE_HEIGHT = 16;
 const LOADING_HEIGHT = 44;
 
 /**
@@ -105,8 +105,8 @@ const flatItems = computed<FlatItem[]>(() => {
     group.transactions.forEach((tx, i) => {
       // Только опции колонки суммы: имена счетов на высоту не влияют, и
       // разрешать их для всего списка ради высоты незачем
-      const size =
-        getAmountLines(tx, amountLineProps(tx)).count >= 2 ? ROW_HEIGHT_TALL : ROW_HEIGHT;
+      const extraLines = getAmountLines(tx, amountLineProps(tx)).count;
+      const size = ROW_HEIGHT + Math.max(0, extraLines - 1) * EXTRA_LINE_HEIGHT;
       items.push({
         type: 'transaction',
         data: tx,

@@ -1,3 +1,5 @@
+import type { PaymentSecondPart } from '../create-transaction/create-transaction.command';
+
 export class UpdateTransactionCommand {
   constructor(
     public readonly id: string,
@@ -15,6 +17,8 @@ export class UpdateTransactionCommand {
       toAccountId?: string | null;
       toAmount?: number | null;
       toCurrency?: string | null;
+      /** Объект — задать вторую часть оплаты, `null` — убрать, нет поля — не трогать. */
+      secondPart?: PaymentSecondPart | null;
     },
   ) {}
 }

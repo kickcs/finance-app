@@ -22,6 +22,8 @@ export interface TransactionProps {
   debtId: string | null;
   toAccountId: string | null;
   toAmount: Money | null;
+  /** Общий id двух частей одной операции, оплаченной с двух счетов. */
+  paymentGroupId: string | null;
   createdAt: Date;
 }
 
@@ -41,6 +43,7 @@ export class Transaction extends AggregateRoot<string> {
   private _debtId: string | null;
   private _toAccountId: string | null;
   private _toAmount: Money | null;
+  private _paymentGroupId: string | null;
   private _createdAt: Date;
 
   private constructor(props: TransactionProps) {
@@ -57,6 +60,7 @@ export class Transaction extends AggregateRoot<string> {
     this._debtId = props.debtId;
     this._toAccountId = props.toAccountId;
     this._toAmount = props.toAmount;
+    this._paymentGroupId = props.paymentGroupId;
     this._createdAt = props.createdAt;
   }
 
@@ -90,6 +94,7 @@ export class Transaction extends AggregateRoot<string> {
       debtId: debtId ?? null,
       toAccountId: null,
       toAmount: null,
+      paymentGroupId: null,
       createdAt: new Date(),
     });
 
@@ -130,6 +135,7 @@ export class Transaction extends AggregateRoot<string> {
       debtId: debtId ?? null,
       toAccountId: null,
       toAmount: null,
+      paymentGroupId: null,
       createdAt: new Date(),
     });
 
@@ -178,6 +184,7 @@ export class Transaction extends AggregateRoot<string> {
       debtId: null,
       toAccountId,
       toAmount: Money.create(toAmount, toCurrency),
+      paymentGroupId: null,
       createdAt: new Date(),
     });
 
@@ -236,6 +243,7 @@ export class Transaction extends AggregateRoot<string> {
       debtId: null,
       toAccountId: null,
       toAmount: null,
+      paymentGroupId: null,
       createdAt: new Date(),
     });
 
@@ -339,6 +347,23 @@ export class Transaction extends AggregateRoot<string> {
     return this._toAmount?.currencyCode ?? null;
   }
 
+  get paymentGroupId(): string | null {
+    return this._paymentGroupId;
+  }
+
+  /**
+   * Частью оплаты с двух счетов может быть только обычный доход или расход:
+   * у долговых и информационных записей своя связка и своя логика баланса.
+   */
+  get canBePaymentGroupPart(): boolean {
+    return (
+      (this._type.isIncome() || this._type.isExpense()) &&
+      !this._isInformational &&
+      !this._isDebtRelated &&
+      this._debtId === null
+    );
+  }
+
   get createdAt(): Date {
     return this._createdAt;
   }
@@ -436,11 +461,60 @@ export class Transaction extends AggregateRoot<string> {
       }
     }
 
+    if (this._paymentGroupId !== null && !this.canBePaymentGroupPart) {
+      throw new Error(
+        `Transaction ${this.id} is part of a payment group and must stay a regular income or expense`,
+      );
+    }
+
     if (Object.keys(changes).length > 0) {
       this.addDomainEvent(
         new TransactionUpdatedEvent(this.id, this._userId, changes, previousValues),
       );
     }
+  }
+
+  /**
+   * Вторая часть операции, оплаченной с двух счетов: тот же тип, категория,
+   * описание, дата и валюта, свои счёт и сумма. Обе части входят в группу.
+   */
+  createPaymentSibling(
+    id: string,
+    accountId: string,
+    amount: number,
+    paymentGroupId: string,
+  ): Transaction {
+    if (accountId === this._accountId) {
+      throw new Error('Both parts of a payment must use different accounts');
+    }
+    this.joinPaymentGroup(paymentGroupId);
+
+    const args = [
+      id,
+      this._userId,
+      accountId,
+      this._categoryId,
+      amount,
+      this.currency,
+      this._date,
+      this._description ?? undefined,
+    ] as const;
+    const sibling = this._type.isIncome()
+      ? Transaction.createIncome(...args)
+      : Transaction.createExpense(...args);
+    sibling.joinPaymentGroup(paymentGroupId);
+    return sibling;
+  }
+
+  joinPaymentGroup(paymentGroupId: string): void {
+    if (!this.canBePaymentGroupPart) {
+      throw new Error(`Transaction ${this.id} cannot be part of a payment group`);
+    }
+    this._paymentGroupId = paymentGroupId;
+  }
+
+  leavePaymentGroup(): void {
+    this._paymentGroupId = null;
   }
 
   markDeleted(): void {

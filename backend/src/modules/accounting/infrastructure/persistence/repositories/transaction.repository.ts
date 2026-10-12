@@ -191,6 +191,31 @@ export class TransactionRepository implements ITransactionRepository {
     return count > 0;
   }
 
+  async findPaymentSiblings(transactions: Transaction[]): Promise<Map<string, Transaction>> {
+    const siblings = new Map<string, Transaction>();
+    const groupIds = [
+      ...new Set(transactions.map((t) => t.paymentGroupId).filter((id) => id !== null)),
+    ];
+    if (groupIds.length === 0) {
+      return siblings;
+    }
+
+    const rows = await this.ormRepository
+      .createQueryBuilder('t')
+      .where('t.payment_group_id IN (:...groupIds)', { groupIds })
+      .getMany();
+
+    for (const transaction of transactions) {
+      const sibling = rows.find(
+        (row) => row.paymentGroupId === transaction.paymentGroupId && row.id !== transaction.id,
+      );
+      if (sibling) {
+        siblings.set(transaction.id, TransactionMapper.toDomain(sibling));
+      }
+    }
+    return siblings;
+  }
+
   async getPaginated(
     userId: string,
     options: PaginationOptions,

@@ -18,6 +18,7 @@ import {
   usePanelState,
 } from '@/features/add-transaction';
 import { useSplitExpense } from '@/features/split-expense';
+import { PaymentPartsEditor, secondPartCandidates } from '@/features/payment-group';
 import { useAccounts, AccountPickerSheet } from '@/entities/account';
 import { useCategories, CategoryPickerSheet } from '@/entities/category';
 import { useDebts, DEBT_DIRECTION_COLORS } from '@/entities/debt';
@@ -311,10 +312,43 @@ const typeLabel = computed(() => {
   return 'Расход';
 });
 
+// --- Оплата с двух счетов -----------------------------------------------------
+/** Сумма из уведомления банка — первая часть; вторая добавляется к ней сверху. */
+const bankAmount = computed(() => Math.abs(item.value?.amount ?? 0));
+const secondPartAnchor = computed(() => (needsManualAmount.value ? 'total' : 'primary'));
+
+// Долгом, переводом и возвратом долга операция с двух счетов не бывает.
+const showSecondPart = computed(
+  () =>
+    rows.value.account &&
+    !!formData.value.accountId &&
+    !hasDebtAssign.value &&
+    (!!formData.value.secondPart ||
+      secondPartCandidates(accounts.value, formData.value.accountId, formData.value.currency)
+        .length > 0),
+);
+
+/** Правка итога в хиро при двух счетах двигает вторую часть: первая закреплена банком. */
+function onHeroAmount(value: number) {
+  const part = formData.value.secondPart;
+  if (part && secondPartAnchor.value === 'primary') {
+    const second = Math.max(0, Math.round((value - bankAmount.value) * 100) / 100);
+    updateField('secondPart', { ...part, amount: second });
+  }
+  updateField('amount', value);
+}
+
+function dropSecondPart() {
+  if (!formData.value.secondPart) return;
+  updateField('secondPart', null);
+  if (secondPartAnchor.value === 'primary') updateField('amount', bankAmount.value);
+}
+
 // Смена типа: сброс категории/целевого счёта — как applyTypeChange в TransactionForm;
 // настроенное разделение применимо только к расходу, сбрасываем явно.
 function applyType(newType: 'expense' | 'income' | 'transfer') {
   if (newType === formData.value.type) return;
+  if (newType === 'transfer') dropSecondPart();
   if (formData.value.type === 'expense' && splitData.value.enabled) {
     setSplitEnabled(false);
   }
@@ -743,10 +777,10 @@ function toScanReceipt() {
             :currency-symbol="currencySymbol"
             :available-currencies="availableCurrencies"
             :is-multi-currency="isMultiCurrency"
-            :show-insufficient-funds="!hasSufficientFunds"
-            :current-balance="selectedAccount ? currentBalance : undefined"
+            :show-insufficient-funds="!formData.secondPart && !hasSufficientFunds"
+            :current-balance="selectedAccount && !formData.secondPart ? currentBalance : undefined"
             :autofocus="needsManualAmount"
-            @update:amount="updateField('amount', $event)"
+            @update:amount="onHeroAmount"
             @update:currency="updateField('currency', $event)"
           />
 
@@ -770,7 +804,7 @@ function toScanReceipt() {
         <!-- Автоподсказка: сумма точно совпадает с остатком долгов одного человека.
              Единственный яркий элемент экрана — оттенок по направлению долга (не primary). -->
         <section
-          v-if="repaymentMatch"
+          v-if="repaymentMatch && !formData.secondPart"
           class="rounded-2xl border px-3.5 py-3 space-y-2.5 animate-fadeInUp"
           :class="repaymentColorClass.bg"
         >
@@ -837,6 +871,21 @@ function toScanReceipt() {
             @click="accountSheetOpen = true"
           />
 
+          <div v-if="showSecondPart" class="px-3.5 py-2.5">
+            <PaymentPartsEditor
+              :model-value="formData.secondPart"
+              :accounts="accounts"
+              :primary-account-id="formData.accountId"
+              :currency="formData.currency"
+              :total="formData.amount"
+              :anchor="secondPartAnchor"
+              :primary-fixed="bankAmount"
+              :sign="reviewType === 'income' ? 'plus' : 'minus'"
+              @update:model-value="updateField('secondPart', $event)"
+              @update:total="updateField('amount', $event)"
+            />
+          </div>
+
           <ReviewFieldRow
             v-if="rows.category"
             icon="sell"
@@ -876,7 +925,7 @@ function toScanReceipt() {
         <!-- Ряд компакт-действий -->
         <div class="flex flex-wrap gap-1.5 animate-fadeInUp">
           <ActionChip
-            v-if="eligibleGroups.length > 0 && !repaymentMatch"
+            v-if="eligibleGroups.length > 0 && !repaymentMatch && !formData.secondPart"
             icon="handshake"
             label="Возврат долга"
             :disabled="isClosing || isSubmitting"
@@ -896,7 +945,7 @@ function toScanReceipt() {
           />
 
           <ActionChip
-            v-if="debtDirection && !hasSplit"
+            v-if="debtDirection && !hasSplit && !formData.secondPart"
             icon="volunteer_activism"
             :label="debtChipLabel"
             :active="hasDebtAssign"

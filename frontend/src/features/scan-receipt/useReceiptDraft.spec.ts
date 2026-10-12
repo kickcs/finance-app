@@ -46,6 +46,7 @@ function makeSnapshot(
       date: 1750000000000,
       createDebts: true,
       currency: 'UZS',
+      secondPart: null,
     },
     manualMode: false,
     ...overrides,

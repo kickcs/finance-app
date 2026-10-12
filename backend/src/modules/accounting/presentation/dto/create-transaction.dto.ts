@@ -9,7 +9,20 @@ import {
   IsPositive,
   IsNotEmpty,
   Max,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
+
+/** Вторая часть оплаты с другого счёта в валюте операции. */
+export class PaymentSecondPartDto {
+  @IsUUID()
+  accountId: string;
+
+  @IsNumber()
+  @IsPositive({ message: 'Second part amount must be positive' })
+  @Max(1_000_000_000_000)
+  amount: number;
+}
 
 export class CreateTransactionDto {
   @IsUUID()
@@ -70,4 +83,9 @@ export class CreateTransactionDto {
   @IsOptional()
   @IsBoolean()
   isInformational?: boolean;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => PaymentSecondPartDto)
+  secondPart?: PaymentSecondPartDto;
 }

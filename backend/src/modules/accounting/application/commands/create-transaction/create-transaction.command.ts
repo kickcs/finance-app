@@ -1,5 +1,10 @@
 import type { EntityManager } from 'typeorm';
 
+export interface PaymentSecondPart {
+  accountId: string;
+  amount: number;
+}
+
 export class CreateTransactionCommand {
   constructor(
     public readonly userId: string,
@@ -24,5 +29,7 @@ export class CreateTransactionCommand {
      */
     public readonly manager?: EntityManager,
     public readonly isInformational: boolean = false,
+    /** Вторая часть оплаты с другого счёта; `accountId`/`amount` выше — первая. */
+    public readonly secondPart?: PaymentSecondPart,
   ) {}
 }

@@ -9,7 +9,10 @@ import {
   IsPositive,
   IsNotEmpty,
   Max,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
+import { PaymentSecondPartDto } from './create-transaction.dto';
 
 export class UpdateTransactionDto {
   @IsOptional()
@@ -66,4 +69,10 @@ export class UpdateTransactionDto {
   @IsString()
   @IsNotEmpty()
   toCurrency?: string | null;
+
+  /** `null` убирает вторую часть оплаты, отсутствие поля её не трогает. */
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => PaymentSecondPartDto)
+  secondPart?: PaymentSecondPartDto | null;
 }
