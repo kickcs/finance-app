@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { UIcon, UInput, ToggleRow } from '@/shared/ui';
-import { CategoryChips, INCOME_CATEGORIES, EXPENSE_CATEGORIES } from '@/entities/category';
+import { CategoryChips, type Category } from '@/entities/category';
 import { useHaptics } from '@/shared/lib/haptics';
 
 /**
@@ -19,6 +19,8 @@ import { useHaptics } from '@/shared/lib/haptics';
  */
 const props = defineProps<{
   direction: 'given' | 'taken';
+  /** Категории пользователя для работы: расходные для given, доходные для taken. */
+  categories: Category[];
 }>();
 
 const modelValue = defineModel<boolean>({ required: true });
@@ -50,11 +52,7 @@ const accountingHint = computed(() =>
     : 'Сумма попадёт в аналитику доходом по выбранной категории',
 );
 
-const workCategories = computed(() =>
-  countsAsExpense.value ? EXPENSE_CATEGORIES : INCOME_CATEGORIES,
-);
-
-const defaultCategoryId = computed(() => workCategories.value[0]?.id ?? '');
+const defaultCategoryId = computed(() => props.categories[0]?.id ?? null);
 
 const countInAnalytics = computed({
   get: () => categoryId.value !== null,
@@ -124,7 +122,7 @@ function toggle(next: boolean) {
 
     <CategoryChips
       v-if="categoryId !== null"
-      :categories="workCategories"
+      :categories="categories"
       :selected-id="categoryId"
       :rows="1"
       searchable

@@ -82,9 +82,9 @@ describe('useChangelog', () => {
       expect(latestEntry.value?.items.length).toBeGreaterThan(0);
     });
 
-    it('точка входа релиза — 1.0.92 с записью про оплату с двух счетов', () => {
-      expect(CURRENT_VERSION).toBe('1.0.92');
-      expect(CHANGELOG_ENTRIES[0].version).toBe('1.0.92');
+    it('точка входа релиза — 1.0.93 с записью про оплату с двух счетов', () => {
+      expect(CURRENT_VERSION).toBe('1.0.93');
+      expect(CHANGELOG_ENTRIES[0].version).toBe('1.0.93');
       expect(CHANGELOG_ENTRIES[0].date).toBe('2026-10-12');
       expect(CHANGELOG_ENTRIES[0].items[0].type).toBe('feature');
       expect(CHANGELOG_ENTRIES[0].items[0].text).toContain('двух счетов');

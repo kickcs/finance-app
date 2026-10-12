@@ -8,6 +8,7 @@ import {
   DebtProgressMeter,
   DebtAmountHeadline,
   useDebtPaymentForm,
+  useDebtCategoryOptions,
   getDebtSplit,
 } from '@/entities/debt';
 import { useHaptics } from '@/shared/lib/haptics';
@@ -76,6 +77,8 @@ const currencySymbol = computed(() => getCurrencySymbol(debtCurrency.value));
 const isMixedCurrency = computed(() => totalsByCurrency.value.length > 1);
 const isPrivate = computed(() => props.debts.some((d) => d.is_private));
 
+const { excessCategories } = useDebtCategoryOptions(debtDirection);
+
 const {
   paymentAmount,
   forgiveRemainder,
@@ -87,6 +90,7 @@ const {
 } = useDebtPaymentForm({
   remainingAmount: totalDebt,
   debtType: debtDirection,
+  excessCategories,
 });
 
 /**
@@ -373,6 +377,7 @@ function confirm() {
         v-model:amount="paymentAmount"
         v-model:forgive-remainder="forgiveRemainder"
         v-model:excess-category-id="excessCategoryId"
+        :excess-categories="excessCategories"
         :is-overpayment="isOverpayment"
         :excess="excess"
         :remainder="remainder"

@@ -1,13 +1,25 @@
 import { ref, computed, watch, type MaybeRefOrGetter, toValue } from 'vue';
-import { CATEGORY_IDS } from '@/shared/config/categoryIds';
+import type { Category } from '@/entities/category';
+import { defaultExcessCategoryId } from './debtCategories';
 
 export function useDebtPaymentForm(options: {
   remainingAmount: MaybeRefOrGetter<number>;
   debtType: MaybeRefOrGetter<'given' | 'taken'>;
+  /** Категории, из которых выбирают категорию переплаты, — категории пользователя. */
+  excessCategories: MaybeRefOrGetter<Category[]>;
 }) {
   const paymentAmount = ref(0);
   const forgiveRemainder = ref(false);
-  const excessCategoryId = ref<string>(CATEGORY_IDS.GIFTS_INCOME);
+  const pickedExcessCategoryId = ref<string | null>(null);
+  // Дефолт вычисляется, а не хранится: категории пользователя приходят асинхронно.
+  const excessCategoryId = computed({
+    get: () =>
+      pickedExcessCategoryId.value ??
+      defaultExcessCategoryId(toValue(options.debtType), toValue(options.excessCategories)),
+    set: (id: string) => {
+      pickedExcessCategoryId.value = id;
+    },
+  });
   /** Долг закрывают работой, а не деньгами. */
   const settleWithWork = ref(false);
   const workNote = ref('');
@@ -45,8 +57,7 @@ export function useDebtPaymentForm(options: {
     settleWithWork.value = false;
     workNote.value = '';
     workCategoryId.value = null;
-    excessCategoryId.value =
-      toValue(options.debtType) === 'given' ? CATEGORY_IDS.GIFTS_INCOME : CATEGORY_IDS.GIFTS;
+    pickedExcessCategoryId.value = null;
   }
 
   return {

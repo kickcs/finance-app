@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { computed } from 'vue';
 import { UIcon } from '@/shared/ui';
-import { CategoryChips, INCOME_CATEGORIES, EXPENSE_CATEGORIES } from '@/entities/category';
+import { CategoryChips, type Category } from '@/entities/category';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import ForgivenessToggle from './ForgivenessToggle.vue';
 
@@ -12,8 +11,10 @@ import ForgivenessToggle from './ForgivenessToggle.vue';
  * родителя: он держит `reset()` и сам считает переплату с остатком, потому что
  * по ним же проверяет форму. Здесь только отрисовка.
  */
-const props = defineProps<{
+defineProps<{
   remaining: number;
+  /** Категории пользователя для переплаты: доходные для given, расходные для taken. */
+  excessCategories: Category[];
   currency: string;
   direction: 'given' | 'taken';
   isOverpayment: boolean;
@@ -26,10 +27,6 @@ const props = defineProps<{
 const amount = defineModel<number>('amount', { required: true });
 const forgiveRemainder = defineModel<boolean>('forgiveRemainder', { required: true });
 const excessCategoryId = defineModel<string>('excessCategoryId', { required: true });
-
-const excessCategories = computed(() =>
-  props.direction === 'given' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES,
-);
 </script>
 
 <template>
