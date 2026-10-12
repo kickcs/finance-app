@@ -29,8 +29,12 @@ interface PendingUpdate {
   personName?: string;
 }
 
+/**
+ * `transactionIds` — строки операции: редактируемая и, при оплате с двух счетов, её пара.
+ * `transactionAmount` — итог операции, а не сумма одной строки.
+ */
 export function useSplitTransactionEdit(
-  transactionId: MaybeRefOrGetter<string | null>,
+  transactionIds: MaybeRefOrGetter<string[]>,
   userId: MaybeRefOrGetter<string | null>,
   transactionAmount: MaybeRefOrGetter<number>,
   transactionAccountId?: MaybeRefOrGetter<string>,
@@ -49,9 +53,9 @@ export function useSplitTransactionEdit(
 
   // Load split debts for transaction
   async function loadSplitDebts() {
-    const txId = toValue(transactionId);
+    const txIds = toValue(transactionIds);
     const uid = toValue(userId);
-    if (!txId || !uid) {
+    if (txIds.length === 0 || !uid) {
       splitDebts.value = [];
       return;
     }
@@ -59,7 +63,9 @@ export function useSplitTransactionEdit(
     isLoading.value = true;
     try {
       const allDebts = await debtsApi.getAll();
-      splitDebts.value = allDebts.filter((d) => d.source_transaction_id === txId);
+      splitDebts.value = allDebts.filter(
+        (d) => !!d.source_transaction_id && txIds.includes(d.source_transaction_id),
+      );
     } catch {
       splitDebts.value = [];
     } finally {
@@ -67,7 +73,8 @@ export function useSplitTransactionEdit(
     }
   }
 
-  watch(() => toValue(transactionId), reload, { immediate: true });
+  // Ключ строкой: геттер отдаёт новый массив на каждый вызов.
+  watch(() => toValue(transactionIds).join(), reload, { immediate: true });
 
   // Build participant views
   const participants = computed<SplitParticipantView[]>(() => {
@@ -208,7 +215,8 @@ export function useSplitTransactionEdit(
 
   async function saveChanges(): Promise<boolean> {
     const uid = toValue(userId);
-    const txId = toValue(transactionId);
+    // Новые долги — к той же части, что и прежние; без прежних — к редактируемой строке.
+    const txId = splitDebts.value[0]?.source_transaction_id ?? toValue(transactionIds)[0];
     if (!uid || !txId) return false;
 
     // Nothing to do — skip API calls and invalidation

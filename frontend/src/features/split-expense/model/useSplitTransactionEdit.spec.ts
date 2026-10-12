@@ -33,11 +33,11 @@ function makeSplitDebtResponse(overrides: Record<string, unknown> = {}) {
 
 function mountComposable(
   opts: {
-    transactionId?: string | null;
+    transactionIds?: string[];
     amount?: number;
   } = {},
 ) {
-  const txId = ref<string | null>(opts.transactionId ?? 'tx-split-1');
+  const txIds = ref<string[]>(opts.transactionIds ?? ['tx-split-1']);
   const amount = ref(opts.amount ?? 90000);
 
   let result!: ReturnType<typeof useSplitTransactionEdit>;
@@ -45,7 +45,7 @@ function mountComposable(
   const Stub = defineComponent({
     setup() {
       result = useSplitTransactionEdit(
-        () => txId.value,
+        () => txIds.value,
         mockUser.id,
         () => amount.value,
       );
@@ -54,7 +54,7 @@ function mountComposable(
   });
 
   currentWrapper = renderWithProviders(Stub, { provideAuth: { user: mockUser } });
-  return { result, txId, amount };
+  return { result, txIds, amount };
 }
 
 // ── Tests ──────────────────────────────────────────────────────────────────
@@ -99,6 +99,16 @@ describe('useSplitTransactionEdit', () => {
       expect(result.participants.value.map((p) => p.personName)).toEqual(['Олег', 'Анвар']);
     });
 
+    it('loads debts linked to the other part of a payment group', async () => {
+      const debt = makeSplitDebtResponse({ id: 'sd-1', sourceTransactionId: 'tx-split-1' });
+      server.use(http.get('*/api/debts', () => HttpResponse.json([debt])));
+
+      const { result } = mountComposable({ transactionIds: ['tx-second', 'tx-split-1'] });
+      await flushPromises();
+
+      expect(result.participants.value.map((p) => p.debtId)).toEqual(['sd-1']);
+    });
+
     it('hasSplit is false when no debts linked', async () => {
       server.use(http.get('*/api/debts', () => HttpResponse.json([])));
 
@@ -125,13 +135,13 @@ describe('useSplitTransactionEdit', () => {
 
       server.use(http.get('*/api/debts', () => HttpResponse.json([debt1, debt2])));
 
-      const { result, txId } = mountComposable({ transactionId: 'tx-a' });
+      const { result, txIds } = mountComposable({ transactionIds: ['tx-a'] });
       await flushPromises();
 
       expect(result.participants.value).toHaveLength(1);
       expect(result.participants.value[0].debtId).toBe('sd-a');
 
-      txId.value = 'tx-b';
+      txIds.value = ['tx-b'];
       await nextTick();
       await flushPromises();
 
@@ -505,6 +515,52 @@ describe('useSplitTransactionEdit', () => {
       expect(postBody).toHaveProperty('personName', 'Новый');
       expect(postBody).toHaveProperty('totalAmount', 20000);
       expect(postBody).toHaveProperty('sourceTransactionId', 'tx-split-1');
+    });
+
+    it('attaches new debts to the part the existing ones point at', async () => {
+      const existingDebt = makeSplitDebtResponse({
+        id: 'sd-exist',
+        sourceTransactionId: 'tx-split-1',
+      });
+      server.use(http.get('*/api/debts', () => HttpResponse.json([existingDebt])));
+
+      let postBody: Record<string, unknown> = {};
+      server.use(
+        http.post('*/api/debts', async ({ request }) => {
+          postBody = (await request.json()) as Record<string, unknown>;
+          return HttpResponse.json({ ...postBody, id: 'new-debt-1' });
+        }),
+      );
+
+      const { result } = mountComposable({ transactionIds: ['tx-second', 'tx-split-1'] });
+      await flushPromises();
+
+      result.addParticipant('Новый', 20000);
+      await result.saveChanges();
+      await flushPromises();
+
+      expect(postBody).toHaveProperty('sourceTransactionId', 'tx-split-1');
+    });
+
+    it('attaches the first debts of a payment group to the edited row', async () => {
+      server.use(http.get('*/api/debts', () => HttpResponse.json([])));
+
+      let postBody: Record<string, unknown> = {};
+      server.use(
+        http.post('*/api/debts', async ({ request }) => {
+          postBody = (await request.json()) as Record<string, unknown>;
+          return HttpResponse.json({ ...postBody, id: 'new-debt-1' });
+        }),
+      );
+
+      const { result } = mountComposable({ transactionIds: ['tx-second', 'tx-split-1'] });
+      await flushPromises();
+
+      result.addParticipant('Новый', 20000);
+      await result.saveChanges();
+      await flushPromises();
+
+      expect(postBody).toHaveProperty('sourceTransactionId', 'tx-second');
     });
 
     it('skips creating debts with zero amount', async () => {

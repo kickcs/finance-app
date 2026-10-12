@@ -13,3 +13,10 @@ export interface Hashtag {
   tag: string;
   count: number;
 }
+
+/** Часть оплаты с двух счетов на экране: имя и цвет счёта (без цвета — нейтральная), сумма. */
+export interface PaymentPartView {
+  label: string;
+  amount: number;
+  color?: string | null;
+}

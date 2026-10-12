@@ -50,10 +50,12 @@ export class CreateTransactionHandler implements ICommandHandler<CreateTransacti
       feeAmount,
       manager: outerManager,
       isInformational,
+      secondPart,
     } = command;
 
     const transactionId = crypto.randomUUID();
     let transaction: Transaction;
+    let paymentSibling: Transaction | null = null;
 
     // Cross-field guard: the informational flag is reserved for marker categories
     // (прощение, взаимозачёт), and those categories must be informational.
@@ -88,17 +90,28 @@ export class CreateTransactionHandler implements ICommandHandler<CreateTransacti
       }
     }
 
+    if (secondPart) {
+      if (type !== 'income' && type !== 'expense') {
+        throw new BadRequestException('Second part is only supported for income and expense');
+      }
+      if (isInformational || isDebtRelated || debtId) {
+        throw new BadRequestException(
+          'Second part is not supported for debt-related or informational transactions',
+        );
+      }
+      if (feeAmount) {
+        throw new BadRequestException('Second part cannot be combined with a fee');
+      }
+      if (secondPart.accountId === accountId) {
+        throw new BadRequestException('Second part must use a different account');
+      }
+    }
+
     // Get source account. Внутри чужой транзакции читаем её же менеджером:
     // иначе две записи, созданные одним вызовом на один счёт (нога отработки и
     // возврат, платёж и переплата), обе прочитают баланс до транзакции, и
     // второе сохранение затрёт первое — счёт уедет на сумму одной из них.
-    const account = await this.accountRepository.findByIdWithBalances(accountId, outerManager);
-    if (!account) {
-      throw new NotFoundException('Account not found');
-    }
-    if (account.userId !== userId) {
-      throw new ForbiddenException('Account does not belong to user');
-    }
+    const account = await this.loadOwnedAccount(accountId, userId, outerManager);
 
     if (type === 'transfer') {
       if (!toAccountId) {
@@ -221,6 +234,24 @@ export class CreateTransactionHandler implements ICommandHandler<CreateTransacti
         }
       }
 
+      // Вторая часть — та же операция на другом счёте: общий paymentGroupId,
+      // свой счёт и сумма, свой эффект на баланс.
+      let secondAccount: Account | null = null;
+      if (secondPart) {
+        secondAccount = await this.loadOwnedAccount(secondPart.accountId, userId, outerManager);
+        paymentSibling = transaction.createPaymentSibling(
+          crypto.randomUUID(),
+          secondPart.accountId,
+          secondPart.amount,
+          crypto.randomUUID(),
+        );
+        if (type === 'income') {
+          secondAccount.credit(secondPart.amount, currency);
+        } else {
+          secondAccount.debit(secondPart.amount, currency);
+        }
+      }
+
       // Same commission rule as transfers: money paid to move money is its own
       // expense, not part of the amount the user typed in.
       const feeTransaction =
@@ -234,7 +265,13 @@ export class CreateTransactionHandler implements ICommandHandler<CreateTransacti
         if (!isInformational) {
           await this.accountRepository.save(account, manager);
         }
+        if (secondAccount) {
+          await this.accountRepository.save(secondAccount, manager);
+        }
         await this.transactionRepository.save(transaction, manager);
+        if (paymentSibling) {
+          await this.transactionRepository.save(paymentSibling, manager);
+        }
         if (feeTransaction) {
           await this.transactionRepository.save(feeTransaction, manager);
         }
@@ -250,13 +287,34 @@ export class CreateTransactionHandler implements ICommandHandler<CreateTransacti
       if (!isInformational) {
         await this.eventPublisher.publishEvents(account);
       }
+      if (secondAccount) {
+        await this.eventPublisher.publishEvents(secondAccount);
+      }
       await this.eventPublisher.publishEvents(transaction);
+      if (paymentSibling) {
+        await this.eventPublisher.publishEvents(paymentSibling);
+      }
       if (feeTransaction) {
         await this.eventPublisher.publishEvents(feeTransaction);
       }
     }
 
-    return toTransactionResponse(transaction);
+    return toTransactionResponse(transaction, paymentSibling);
+  }
+
+  private async loadOwnedAccount(
+    accountId: string,
+    userId: string,
+    manager?: EntityManager,
+  ): Promise<Account> {
+    const account = await this.accountRepository.findByIdWithBalances(accountId, manager);
+    if (!account) {
+      throw new NotFoundException('Account not found');
+    }
+    if (account.userId !== userId) {
+      throw new ForbiddenException('Account does not belong to user');
+    }
+    return account;
   }
 
   /**

@@ -6,6 +6,12 @@ import { AccountPopover, type AccountWithBalances } from '@/entities/account';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { Popover, PopoverTrigger, PopoverContent } from '@/shared/ui/primitives/popover';
 import { useAmountInput } from '@/shared/lib/hooks/useAmountInput';
+import PaymentPartsEditor from '@/features/payment-group/ui/PaymentPartsEditor.vue';
+import type { SecondPart } from '@/features/payment-group/model/paymentParts';
+import {
+  secondPartCandidates,
+  startSecondPart,
+} from '@/features/payment-group/model/secondPartAccounts';
 
 /**
  * Сумма операции — прямо на фоне страницы, без карточки.
@@ -41,12 +47,17 @@ const props = defineProps<{
    */
   extraDebit?: number;
   autofocus?: boolean;
+  /** Вторая часть оплаты: с ней строка остатка уступает место строкам по частям. */
+  secondPart?: SecondPart | null;
+  /** Оплата с двух счетов доступна (расход и доход). */
+  allowSecondPart?: boolean;
 }>();
 
 const emit = defineEmits<{
   'update:amount': [value: number];
   'update:currency': [value: string];
   'update:accountId': [value: string];
+  'update:secondPart': [value: SecondPart | null];
 }>();
 
 const FALLBACK_ACCENT = 'var(--color-primary)';
@@ -112,6 +123,19 @@ const balanceLine = computed(() => {
   return { tone: 'muted' as const, text: `Баланс ${withSymbol(props.currentBalance)}` };
 });
 
+// «Доплатить с другого счёта»: вторая часть = недостача; с пустого счёта первая часть вышла бы нулевой.
+const shortfallPart = computed<SecondPart | null>(() => {
+  if (!props.allowSecondPart || props.sign !== 'minus' || !props.showInsufficientFunds) return null;
+  if (props.currentBalance === undefined || props.currentBalance <= 0 || props.amount <= 0) {
+    return null;
+  }
+  const candidates = secondPartCandidates(props.accounts, props.accountId, props.currency);
+  if (candidates.length === 0) return null;
+  // Суммы с копейками: без округления 0.3 − 0.1 оставит хвост float.
+  const shortfall = Math.round((props.amount - props.currentBalance) * 100) / 100;
+  return startSecondPart(candidates, shortfall);
+});
+
 function selectCurrency(cur: string) {
   emit('update:currency', cur);
   currencyOpen.value = false;
@@ -120,25 +144,38 @@ function selectCurrency(cur: string) {
 
 <template>
   <div>
-    <AccountPopover
-      v-if="accountName"
-      :accounts="accounts"
-      :selected-id="accountId"
-      @select="emit('update:accountId', $event)"
-    >
-      <template #trigger>
-        <button
-          type="button"
-          data-testid="account-trigger"
-          aria-label="Выбрать счёт"
-          class="account-trigger -ml-1 flex max-w-full items-center gap-1.5 rounded-md px-1 py-0.5 text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark"
-        >
-          <span class="h-2 w-2 shrink-0 rounded-full" :style="{ backgroundColor: accent }" />
-          <span class="truncate">{{ accountName }}</span>
-          <UIcon v-if="accounts.length > 1" name="expand_more" size="xs" class="shrink-0" />
-        </button>
-      </template>
-    </AccountPopover>
+    <!-- Кнопка второго счёта живёт в строке счёта: отдельный ярус ради неё не нужен.
+         С двумя счетами строка уходит — оба выбираются в строках частей под суммой. -->
+    <div v-if="accountName && !secondPart" class="flex items-center gap-3">
+      <AccountPopover
+        :accounts="accounts"
+        :selected-id="accountId"
+        @select="emit('update:accountId', $event)"
+      >
+        <template #trigger>
+          <button
+            type="button"
+            data-testid="account-trigger"
+            aria-label="Выбрать счёт"
+            class="account-trigger -ml-1 flex max-w-full items-center gap-1.5 rounded-md px-1 py-0.5 text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark"
+          >
+            <span class="h-2 w-2 shrink-0 rounded-full" :style="{ backgroundColor: accent }" />
+            <span class="truncate">{{ accountName }}</span>
+            <UIcon v-if="accounts.length > 1" name="expand_more" size="xs" class="shrink-0" />
+          </button>
+        </template>
+      </AccountPopover>
+      <PaymentPartsEditor
+        v-if="allowSecondPart && !secondPart"
+        class="ml-auto shrink-0"
+        :model-value="null"
+        :accounts="accounts"
+        :primary-account-id="accountId"
+        :currency="currency"
+        :total="amount"
+        @update:model-value="emit('update:secondPart', $event)"
+      />
+    </div>
 
     <!--
       Скрытый input лежит под всей строкой, а сама строка не ловит указатель —
@@ -226,23 +263,46 @@ function selectCurrency(cur: string) {
       каждую цифру.
     -->
     <div
-      v-if="currentBalance !== undefined"
-      class="h-5"
+      v-if="currentBalance !== undefined && !secondPart"
+      class="min-h-5"
       role="status"
       :aria-live="balanceLine?.tone === 'warning' ? 'polite' : 'off'"
     >
       <p
         v-if="balanceLine"
-        class="text-body-sm"
+        class="flex flex-wrap items-baseline gap-x-2.5 text-body-sm"
         :class="
           balanceLine.tone === 'warning'
             ? 'font-semibold text-warning'
             : 'text-text-secondary-light dark:text-text-secondary-dark'
         "
       >
-        {{ balanceLine.text }}
+        <span>{{ balanceLine.text }}</span>
+        <button
+          v-if="balanceLine.tone === 'warning' && shortfallPart"
+          type="button"
+          data-testid="cover-shortfall"
+          class="rounded-sm font-medium text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary dark:text-primary-hover"
+          @click="emit('update:secondPart', shortfallPart)"
+        >
+          Доплатить с другого счёта
+        </button>
       </p>
     </div>
+
+    <PaymentPartsEditor
+      v-if="allowSecondPart && secondPart"
+      class="mt-1.5"
+      :model-value="secondPart"
+      :accounts="accounts"
+      :primary-account-id="accountId"
+      :currency="currency"
+      :total="amount"
+      :sign="sign"
+      primary-pickable
+      @update:model-value="emit('update:secondPart', $event)"
+      @update:primary-account-id="emit('update:accountId', $event)"
+    />
   </div>
 </template>
 

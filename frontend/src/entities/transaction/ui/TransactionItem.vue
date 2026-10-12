@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { computed, inject } from 'vue';
 import { UIcon } from '@/shared/ui';
-import { formatCurrency, COMPACT_FORMAT } from '@/shared/lib/format/currency';
+import { formatCurrency, COMPACT_FORMAT, COMPACT_BARE_FORMAT } from '@/shared/lib/format/currency';
 import { formatRelativeDate } from '@/shared/lib/format/date';
 import { getCategoryById as getCategoryByIdStatic } from '@/entities/category';
 import type { Category } from '@/entities/category';
 import { DEFAULT_CURRENCY } from '@/shared/config/currency';
 import { TRANSFER_COLOR } from '@/shared/config/colors';
 import { getAmountLines } from '../lib/amountLines';
+import { paymentTotal } from '../lib/paymentGroup';
 import type { Transaction } from '../model/types';
 
 const props = defineProps<{
@@ -125,6 +126,20 @@ const formattedOriginalAmount = computed(
   () => `-${formatCurrency(props.transaction.amount, displayCurrency.value, COMPACT_FORMAT)}`,
 );
 
+// Итог операции с двух счетов, без символа валюты — он уже стоит в сумме строкой выше.
+const formattedPaymentTotal = computed(() =>
+  props.transaction.payment_sibling
+    ? formatCurrency(paymentTotal(props.transaction), displayCurrency.value, COMPACT_BARE_FORMAT)
+    : '',
+);
+
+const ariaLabel = computed(() => {
+  const name = isTransfer.value ? 'Перевод' : category.value?.name || 'Транзакция';
+  const part =
+    formattedPaymentTotal.value && !props.hidden ? `, часть из ${formattedPaymentTotal.value}` : '';
+  return `${name}, ${formattedAmount.value}${part}`;
+});
+
 const formattedBalanceAfter = computed(() =>
   props.balanceAfter === undefined
     ? ''
@@ -136,7 +151,7 @@ const formattedBalanceAfter = computed(() =>
   <button
     class="w-full flex items-center gap-3 p-3 rounded-lg transition-all duration-150 hover:bg-surface-light dark:hover:bg-surface-dark active:opacity-80 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-none"
     :class="{ 'opacity-60': isInformational }"
-    :aria-label="`${isTransfer ? 'Перевод' : category?.name || 'Транзакция'}, ${formattedAmount}`"
+    :aria-label="ariaLabel"
     @click="$emit('click')"
   >
     <!-- Category/Transfer Icon -->
@@ -218,6 +233,17 @@ const formattedBalanceAfter = computed(() =>
         class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark line-through"
       >
         {{ hidden ? MASKED_AMOUNT : formattedOriginalAmount }}
+      </p>
+      <!-- Part of an operation paid from two accounts -->
+      <p
+        v-if="amountLines.paymentPart"
+        data-testid="payment-part-marker"
+        class="flex items-center justify-end gap-1 text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
+      >
+        <UIcon name="alt_route" size="xs" class="shrink-0" />
+        <span class="whitespace-nowrap tabular-nums">
+          часть из {{ hidden ? MASKED_AMOUNT : formattedPaymentTotal }}
+        </span>
       </p>
       <!-- Balance after transaction -->
       <p

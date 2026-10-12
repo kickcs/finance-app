@@ -65,6 +65,8 @@ function makeTransaction(overrides: Partial<Transaction> = {}): Transaction {
     returned_amount: 0,
     net_amount: 25000,
     has_debt_returns: false,
+    payment_group_id: null,
+    payment_sibling: null,
     ...overrides,
   };
 }
@@ -479,5 +481,171 @@ describe('useEditTransaction', () => {
       expect(cached?.map((t) => t.id)).toContain('tx-keep');
       consoleSpy.mockRestore();
     });
+  });
+});
+
+// ── Оплата с двух счетов ───────────────────────────────────────────────────
+
+describe('useEditTransaction: payment group', () => {
+  const first = () =>
+    makeTransaction({
+      id: 'tx-a',
+      amount: 60000,
+      net_amount: 60000,
+      description: 'Ужин',
+      payment_group_id: 'grp-1',
+      payment_sibling: { id: 'tx-b', account_id: 'acc-2', amount: 40000 },
+    });
+  const second = () =>
+    makeTransaction({
+      id: 'tx-b',
+      account_id: 'acc-2',
+      amount: 40000,
+      net_amount: 40000,
+      description: 'Ужин',
+      payment_group_id: 'grp-1',
+      payment_sibling: { id: 'tx-a', account_id: 'acc-1', amount: 60000 },
+    });
+
+  function seed() {
+    queryClient.setQueryData(transactionQueryKeys.list(USER_ID), [first(), second()]);
+  }
+  const cachedList = () =>
+    queryClient.getQueryData<Transaction[]>(transactionQueryKeys.list(USER_ID))!;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    queryClient.clear();
+  });
+
+  afterEach(async () => {
+    server.resetHandlers();
+    currentWrapper?.unmount();
+    currentWrapper = null;
+    await flushPromises();
+    queryClient.clear();
+  });
+
+  async function captureBody(run: () => Promise<unknown>) {
+    let body: Record<string, unknown> | null = null;
+    server.use(
+      http.patch('*/api/transactions/:id', async ({ request }) => {
+        body = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json(mockTransactionResponse);
+      }),
+    );
+    await run();
+    return body as Record<string, unknown> | null;
+  }
+
+  it('sends second_part as camelCase secondPart', async () => {
+    const c = mountComposable();
+    const body = await captureBody(() =>
+      c.update(makeTransaction(), {
+        amount: 60000,
+        second_part: { account_id: 'acc-2', amount: 40000 },
+      }),
+    );
+    expect(body!.secondPart).toEqual({ accountId: 'acc-2', amount: 40000 });
+  });
+
+  it('sends secondPart: null to remove the second part', async () => {
+    const c = mountComposable();
+    const body = await captureBody(() => c.update(first(), { amount: 100000, second_part: null }));
+    expect(body).toHaveProperty('secondPart', null);
+  });
+
+  it('omits secondPart when the edit does not touch it', async () => {
+    const c = mountComposable();
+    const body = await captureBody(() => c.update(first(), { description: 'Обед' }));
+    expect(body).not.toHaveProperty('secondPart');
+  });
+
+  it('patches both rows optimistically', async () => {
+    seed();
+    const c = mountComposable();
+
+    await c.update(first(), {
+      description: 'Обед',
+      second_part: { account_id: 'acc-3', amount: 30000 },
+    });
+
+    const [a, b] = cachedList();
+    expect(a.description).toBe('Обед');
+    expect(a.payment_sibling).toEqual({ id: 'tx-b', account_id: 'acc-3', amount: 30000 });
+    expect(b).toMatchObject({ description: 'Обед', account_id: 'acc-3', amount: 30000 });
+  });
+
+  it('drops the sibling row from caches when the second part is removed', async () => {
+    seed();
+    const c = mountComposable();
+
+    await c.update(first(), { amount: 100000, second_part: null });
+
+    expect(cachedList().map((t) => t.id)).toEqual(['tx-a']);
+    expect(cachedList()[0].payment_sibling).toBeNull();
+  });
+
+  it('restores both rows when the update fails', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    server.use(
+      http.patch('*/api/transactions/:id', () =>
+        HttpResponse.json({ message: 'Error' }, { status: 500 }),
+      ),
+    );
+    seed();
+    const c = mountComposable();
+
+    await c.update(first(), { amount: 100000, second_part: null });
+
+    expect(cachedList()).toEqual([first(), second()]);
+    consoleSpy.mockRestore();
+  });
+
+  it('removes both rows from caches when a part is deleted', async () => {
+    seed();
+    const c = mountComposable();
+
+    await c.remove(second());
+
+    expect(cachedList()).toEqual([]);
+  });
+
+  it('restores both rows when deleting a group fails', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    server.use(
+      http.delete('*/api/transactions/:id', () =>
+        HttpResponse.json({ message: 'Error' }, { status: 500 }),
+      ),
+    );
+    seed();
+    const c = mountComposable();
+
+    await c.remove(first());
+
+    expect(cachedList().map((t) => t.id)).toEqual(['tx-a', 'tx-b']);
+    consoleSpy.mockRestore();
+  });
+
+  it('blocks deletion when an open split debt hangs on the other part', async () => {
+    const deleteSpy = vi.fn();
+    server.use(
+      http.get('*/api/debts', () =>
+        HttpResponse.json([
+          { ...mockGivenDebtResponse, sourceTransactionId: 'tx-b', isClosed: false },
+        ]),
+      ),
+      http.delete('*/api/transactions/:id', () => {
+        deleteSpy();
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    seed();
+    const c = mountComposable();
+
+    const result = await c.remove(first());
+
+    expect(result).toBe(false);
+    expect(deleteSpy).not.toHaveBeenCalled();
   });
 });

@@ -171,4 +171,42 @@ describe('GetTransactionsPaginatedHandler', () => {
     expect(result.data[0].toAmount).toBe(92);
     expect(result.data[0].toCurrency).toBe('EUR');
   });
+
+  it('отдаёт пару и долю возвратов, которые репозиторий посчитал для группы', async () => {
+    const now = new Date();
+    const card = Transaction.createExpense('tx-card', 'user-1', 'acc-card', 'food', 60, 'UZS', now);
+    const cash = Transaction.createExpense('tx-cash', 'user-1', 'acc-cash', 'food', 40, 'UZS', now);
+    card.joinPaymentGroup('group-1');
+    cash.joinPaymentGroup('group-1');
+    const plain = Transaction.createExpense(
+      'tx-plain',
+      'user-1',
+      'acc-card',
+      'food',
+      5,
+      'UZS',
+      now,
+    );
+
+    mockTransactionRepository.getPaginated.mockResolvedValue({
+      data: [
+        Object.assign(card, { returnedAmount: 60, paymentSibling: cash }),
+        Object.assign(plain, { returnedAmount: 0, paymentSibling: null }),
+      ],
+      nextCursor: null,
+      hasMore: false,
+    });
+
+    const result = await handler.execute(new GetTransactionsPaginatedQuery('user-1'));
+
+    expect(result.data[0].paymentGroupId).toBe('group-1');
+    expect(result.data[0].paymentSibling).toEqual({
+      id: 'tx-cash',
+      accountId: 'acc-cash',
+      amount: 40,
+    });
+    expect(result.data[0].netAmount).toBe(0);
+    expect(result.data[1].paymentGroupId).toBeNull();
+    expect(result.data[1].paymentSibling).toBeNull();
+  });
 });

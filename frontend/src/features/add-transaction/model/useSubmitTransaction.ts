@@ -5,7 +5,12 @@ import {
   type InfiniteData,
   type QueryClient,
 } from '@tanstack/vue-query';
-import { transactionsApi, transactionQueryKeys } from '@/entities/transaction';
+import {
+  transactionsApi,
+  transactionQueryKeys,
+  buildPaymentSiblingRow,
+  removeTransactionsFromCaches,
+} from '@/entities/transaction';
 import { accountQueryKeys } from '@/entities/account';
 import { debtsApi } from '@/entities/debt';
 import {
@@ -17,6 +22,7 @@ import { useToast } from '@/shared/ui';
 import { useFeatureHints } from '@/features/feature-hints';
 import { CATEGORY_IDS, getCategoryById } from '@/entities/category';
 import { formatCurrency } from '@/shared/lib/format/currency';
+import { buildSecondPartPayload } from '@/features/payment-group/model/paymentParts';
 import type { TransactionFormData } from './useTransactionForm';
 import type { Transaction, AccountWithBalances } from '@/shared/api/database.types';
 import type { MonthlyStats, PaginatedResult } from '@/entities/transaction/api/transactionsApi';
@@ -76,7 +82,8 @@ function buildApiPayload(userId: string, formData: TransactionFormData) {
     user_id: userId,
     account_id: formData.accountId!,
     category_id: categoryId,
-    amount: formData.amount,
+    // formData.amount — итог операции; при второй части сюда уходит только первая.
+    ...buildSecondPartPayload(formData.amount, isTransfer ? null : formData.secondPart),
     currency: formData.currency,
     type: formData.type,
     description: formData.description || null,
@@ -88,17 +95,23 @@ function buildApiPayload(userId: string, formData: TransactionFormData) {
   };
 }
 
-function getCacheKeys(userId: string, formData: TransactionFormData) {
-  assertNonDebt(formData);
+/**
+ * Только счета, реально затронутые операцией: вставка во все infinite-запросы утекла бы
+ * в чужие и отфильтрованные списки — их подхватит invalidation в onSettled.
+ */
+function getAffectedAccountIds(formData: TransactionFormData): string[] {
   const isTransfer = formData.type === 'transfer';
-  const txDate = new Date(formData.date);
-  // Только счета, реально затронутые операцией: блайндовая вставка во все
-  // infinite-запросы утекает в чужие счета/отфильтрованные списки (история по
-  // категории и т.п.) — их подхватит invalidation в onSettled.
-  const accountIds = [
+  return [
     formData.accountId,
     ...(isTransfer && formData.toAccountId ? [formData.toAccountId] : []),
+    ...(!isTransfer && formData.secondPart?.accountId ? [formData.secondPart.accountId] : []),
   ].filter((id): id is string => !!id);
+}
+
+function getCacheKeys(userId: string, formData: TransactionFormData) {
+  assertNonDebt(formData);
+  const txDate = new Date(formData.date);
+  const accountIds = getAffectedAccountIds(formData);
 
   return {
     recentKey: transactionQueryKeys.recent(userId),
@@ -139,19 +152,27 @@ function snapshotAndApplyOptimistic(
   formData: TransactionFormData,
 ): OptimisticSnapshots {
   const isTransfer = formData.type === 'transfer';
-  const apiPayload = buildApiPayload(userId, formData);
+  const { second_part: secondPart, ...apiPayload } = buildApiPayload(userId, formData);
 
+  const now = Date.now();
   const optimisticTx: Transaction = {
     ...apiPayload,
-    id: `temp-${Date.now()}`,
-    created_at: new Date().toISOString(),
+    id: `temp-${now}`,
+    created_at: new Date(now).toISOString(),
     is_debt_related: false,
     is_informational: false,
     debt_id: null,
     returned_amount: 0,
-    net_amount: formData.amount,
+    net_amount: apiPayload.amount,
     has_debt_returns: false,
+    payment_group_id: secondPart ? `temp-group-${now}` : null,
+    payment_sibling: secondPart
+      ? { id: `temp-${now}-second`, account_id: secondPart.account_id, amount: secondPart.amount }
+      : null,
   };
+  const optimisticRows = [optimisticTx, buildPaymentSiblingRow(optimisticTx)].filter(
+    (t): t is Transaction => t !== null,
+  );
 
   const keys = getCacheKeys(userId, formData);
 
@@ -167,25 +188,35 @@ function snapshotAndApplyOptimistic(
 
   // Apply optimistic updates (all sync)
 
-  // 1. Prepend to recent transactions
+  // 1. Prepend to recent transactions (both parts of a payment group)
   queryClient.setQueryData<Transaction[]>(keys.recentKey, (old) => [
-    optimisticTx,
-    ...(old ?? []).slice(0, 4),
+    ...optimisticRows,
+    ...(old ?? []).slice(0, 5 - optimisticRows.length),
   ]);
 
   // 2. Prepend to list
-  queryClient.setQueryData<Transaction[]>(keys.listKey, (old) => [optimisticTx, ...(old ?? [])]);
+  queryClient.setQueryData<Transaction[]>(keys.listKey, (old) => [
+    ...optimisticRows,
+    ...(old ?? []),
+  ]);
 
   // 3. Prepend to the affected account(s) infinite lists only — a blind
   // prepend into every infinite query also leaks into unrelated accounts and
   // filtered history views (category/search), which invalidation handles.
-  for (const key of keys.infiniteByAccountKeys) {
+  // A payment group's parts go each into its own account's list; a transfer
+  // shows up in both accounts' lists (outgoing and incoming).
+  for (const accountId of getAffectedAccountIds(formData)) {
+    const key = transactionQueryKeys.infiniteByAccount(accountId);
+    const rows =
+      optimisticRows.length > 1
+        ? optimisticRows.filter((row) => row.account_id === accountId)
+        : optimisticRows;
     queryClient.setQueryData<InfiniteData<PaginatedResult<Transaction>> | undefined>(key, (old) => {
       if (!old || old.pages.length === 0) return old;
       const newPages = [...old.pages];
       newPages[0] = {
         ...newPages[0],
-        data: [optimisticTx, ...newPages[0].data],
+        data: [...rows, ...newPages[0].data],
       };
       return { ...old, pages: newPages };
     });
@@ -197,7 +228,8 @@ function snapshotAndApplyOptimistic(
       if (!old) return old;
       return old.map((account) => {
         if (account.id === formData.accountId) {
-          let balanceChange = formData.type === 'income' ? formData.amount : -formData.amount;
+          // С второй частью первый счёт получает только свою долю итога.
+          let balanceChange = formData.type === 'income' ? apiPayload.amount : -apiPayload.amount;
           if (formData.type === 'transfer' && formData.feeAmount > 0) {
             const computedFee =
               formData.feeType === 'percent'
@@ -205,6 +237,15 @@ function snapshotAndApplyOptimistic(
                 : formData.feeAmount;
             balanceChange -= computedFee;
           }
+          return {
+            ...account,
+            balances: account.balances.map((b) =>
+              b.currency === formData.currency ? { ...b, balance: b.balance + balanceChange } : b,
+            ),
+          };
+        }
+        if (secondPart && account.id === secondPart.account_id) {
+          const balanceChange = formData.type === 'income' ? secondPart.amount : -secondPart.amount;
           return {
             ...account,
             balances: account.balances.map((b) =>
@@ -332,7 +373,7 @@ export function useSubmitTransaction() {
 
       const transactionId = data.id;
       const onUndo = async () => {
-        await rollbackTransaction(transactionId, userId);
+        await rollbackTransaction(transactionId, userId, data.payment_sibling?.id);
       };
 
       const accounts = queryClient.getQueryData<AccountWithBalances[]>(
@@ -371,16 +412,15 @@ export function useSubmitTransaction() {
   }
 
   /**
-   * Awaitable submit: waits for API response (needed for split expense to get transactionId).
+   * Awaitable submit: waits for API response (needed for split expense to get the created transaction).
    * Optimistic updates applied via onMutate (mutateAsync awaits it).
    */
   async function submitAndWait(
     userId: string,
     formData: TransactionFormData,
-  ): Promise<string | null> {
+  ): Promise<Transaction | null> {
     try {
-      const result = await mutation.mutateAsync({ userId, formData });
-      return result.id;
+      return await mutation.mutateAsync({ userId, formData });
     } catch {
       return null;
     }
@@ -390,8 +430,13 @@ export function useSubmitTransaction() {
    * Rollback a created transaction and invalidate related caches.
    * Used by the undo toast and when split debt creation fails after the
    * transaction was already created. Returns false if the rollback failed.
+   * `siblingId` — second part of a payment group, dropped from the caches together with the first.
    */
-  async function rollbackTransaction(transactionId: string, userId: string): Promise<boolean> {
+  async function rollbackTransaction(
+    transactionId: string,
+    userId: string,
+    siblingId?: string | null,
+  ): Promise<boolean> {
     try {
       // Open split debts linked to the transaction block its deletion on the
       // backend — remove them first.
@@ -404,6 +449,11 @@ export function useSubmitTransaction() {
       }
 
       await transactionsApi.delete(transactionId);
+      removeTransactionsFromCaches(
+        queryClient,
+        userId,
+        siblingId ? [transactionId, siblingId] : [transactionId],
+      );
 
       if (linkedDebts.length > 0) {
         await invalidateDebtRelated(queryClient, userId);

@@ -16,6 +16,7 @@ import { useSmartDefaults } from '../model/useSmartDefaults';
 import { useAmountSuggestions } from '../model/useAmountSuggestions';
 import { usePanelState } from '../model/usePanelState';
 import { useHaptics } from '@/shared/lib/haptics';
+import { validateSecondPart } from '@/features/payment-group/model/paymentParts';
 import AmountHeadline from './AmountHeadline.vue';
 import ExpensePanel from './ExpensePanel.vue';
 import IncomePanel from './IncomePanel.vue';
@@ -71,6 +72,8 @@ function applyTypeChange(newType: TransactionType) {
     toAccountId: null,
     toAmount: null,
     toCurrency: null,
+    // Оплата с двух счетов — только для расхода и дохода.
+    secondPart: newType === 'transfer' || newType === 'debt' ? null : props.formData.secondPart,
   });
 }
 
@@ -145,6 +148,11 @@ const showAccountOnCard = computed(() => props.formData.type !== 'transfer');
 
 const cardBalance = computed(() => (props.formData.accountId ? currentBalance.value : undefined));
 
+/** Оплата с двух счетов — только у расхода и дохода. */
+const allowSecondPart = computed(
+  () => props.formData.type === 'expense' || props.formData.type === 'income',
+);
+
 const submitLabel = computed(() => {
   if (props.formData.type === 'transfer') return 'Перевести';
   if (props.formData.type === 'income') return 'Добавить доход';
@@ -192,6 +200,10 @@ const submitHint = computed(() => {
     missing.push('категорию');
   }
 
+  const secondPart = allowSecondPart.value ? props.formData.secondPart : null;
+  if (secondPart && !secondPart.accountId) missing.push('второй счёт');
+  else if (secondPart && !(secondPart.amount > 0)) missing.push('сумму со второго счёта');
+
   // Перевод «сам в себя» в той же валюте невалиден, но ничего не «не хватает» —
   // без отдельной ветки кнопка снова гасла бы молча.
   if (
@@ -201,6 +213,15 @@ const submitHint = computed(() => {
     props.formData.currency === props.formData.toCurrency
   ) {
     return 'Выберите другой счёт или валюту зачисления';
+  }
+
+  // Вторая часть заполнена, но не сходится с итогом — называем, что не так.
+  if (!missing.length && secondPart) {
+    return validateSecondPart({
+      total: props.formData.amount,
+      primaryAccountId: props.formData.accountId,
+      secondPart,
+    });
   }
 
   if (!missing.length) return null;
@@ -392,9 +413,12 @@ const expensePanelHandlers = {
         :show-insufficient-funds="showInsufficientFunds"
         :extra-debit="extraDebit"
         :autofocus="autofocusAmount"
+        :second-part="allowSecondPart ? formData.secondPart : null"
+        :allow-second-part="allowSecondPart"
         @update:amount="updateField('amount', $event)"
         @update:currency="updateField('currency', $event)"
         @update:account-id="handleAccountChange"
+        @update:second-part="updateField('secondPart', $event)"
       />
 
       <!-- Волосяная линия вместо карточки: сумма отделена от типа операции, но

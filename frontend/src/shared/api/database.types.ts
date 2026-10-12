@@ -214,6 +214,10 @@ export type Database = {
           returned_amount: number;
           net_amount: number;
           has_debt_returns: boolean;
+          /** Общий id двух частей операции, оплаченной с двух счетов. */
+          payment_group_id: string | null;
+          /** Вторая часть группы; `null`, если операция оплачена с одного счёта. */
+          payment_sibling: { id: string; account_id: string; amount: number } | null;
         };
         Insert: {
           id?: string;
@@ -233,6 +237,8 @@ export type Database = {
           to_amount?: number | null;
           to_currency?: string | null;
           fee_amount?: number;
+          /** Вторая часть оплаты; `account_id`/`amount` строки — первая часть. */
+          second_part?: { account_id: string; amount: number };
         };
         Update: {
           id?: string;
@@ -251,6 +257,8 @@ export type Database = {
           to_account_id?: string | null;
           to_amount?: number | null;
           to_currency?: string | null;
+          /** Объект — создать/обновить вторую часть, `null` — убрать её, отсутствует — не трогать. */
+          second_part?: { account_id: string; amount: number } | null;
         };
         Relationships: [];
       };
@@ -508,6 +516,7 @@ export type Settings = Database['public']['Tables']['settings']['Row'];
 export type AccountInsert = Database['public']['Tables']['accounts']['Insert'];
 export type AccountBalanceInsert = Database['public']['Tables']['account_balances']['Insert'];
 export type TransactionInsert = Database['public']['Tables']['transactions']['Insert'];
+export type TransactionUpdate = Database['public']['Tables']['transactions']['Update'];
 export type GoalInsert = Database['public']['Tables']['goals']['Insert'];
 export type DebtInsert = Database['public']['Tables']['debts']['Insert'];
 export type UserCategory = Database['public']['Tables']['categories']['Row'];

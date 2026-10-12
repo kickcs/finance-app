@@ -14,6 +14,8 @@ export interface AmountLines {
   originalAmount: boolean;
   /** Остаток по счёту после операции */
   balanceAfter: boolean;
+  /** Пометка «часть из N» у операции, оплаченной с двух счетов */
+  paymentPart: boolean;
   /** Сколько строк рисуется помимо самой суммы */
   count: number;
 }
@@ -37,10 +39,13 @@ export function getAmountLines(tx: Transaction, options: AmountLinesOptions = {}
 
   const balanceAfter = options.balanceAfter !== undefined;
 
+  const paymentPart = !!tx.payment_sibling;
+
   return {
     conversion,
     originalAmount,
     balanceAfter,
-    count: Number(conversion) + Number(originalAmount) + Number(balanceAfter),
+    paymentPart,
+    count: Number(conversion) + Number(originalAmount) + Number(balanceAfter) + Number(paymentPart),
   };
 }

@@ -39,6 +39,12 @@ export interface IDebtRepository {
   /** Открытые долги одного человека в одной валюте — материал для взаимозачёта. */
   findActiveByPerson(userId: string, personName: string, currency: string): Promise<Debt[]>;
   hasOpenDebtsForTransaction(transactionId: string): Promise<boolean>;
+  /** Переносит долги разделения с одной транзакции на другую — когда часть оплаты удаляется. */
+  relinkSourceTransaction(
+    fromTransactionId: string,
+    toTransactionId: string,
+    manager?: EntityManager,
+  ): Promise<void>;
   /** Pass `manager` to participate in an open DB transaction. */
   save(debt: Debt, manager?: EntityManager): Promise<Debt>;
   delete(id: string): Promise<void>;

@@ -20,6 +20,7 @@ import { CategoryOrmEntity } from '../typeorm/category.orm-entity';
 // Cross-context import: debt ORM entity used for returned-amount read-model queries.
 import { DebtOrmEntity } from '../../../../debt/infrastructure/persistence/typeorm/debt.orm-entity';
 import { TransactionMapper } from '../mappers/transaction.mapper';
+import { paymentPartReturnedAmount } from '../../../domain/services/payment-group-returns';
 import {
   getDefaultCategoryById,
   DEBT_CATEGORY_IDS,
@@ -191,6 +192,38 @@ export class TransactionRepository implements ITransactionRepository {
     return count > 0;
   }
 
+  async findPaymentSiblings(transactions: Transaction[]): Promise<Map<string, Transaction>> {
+    const siblings = new Map<string, Transaction>();
+    const groupIds = [
+      ...new Set(transactions.map((t) => t.paymentGroupId).filter((id) => id !== null)),
+    ];
+    if (groupIds.length === 0) {
+      return siblings;
+    }
+
+    const rows = await this.ormRepository
+      .createQueryBuilder('t')
+      .where('t.paymentGroupId IN (:...groupIds)', { groupIds })
+      .getMany();
+
+    for (const transaction of transactions) {
+      const sibling = rows.find(
+        (row) => row.paymentGroupId === transaction.paymentGroupId && row.id !== transaction.id,
+      );
+      if (sibling) {
+        siblings.set(transaction.id, TransactionMapper.toDomain(sibling));
+      }
+    }
+    return siblings;
+  }
+
+  async findPaymentSibling(transaction: Transaction): Promise<Transaction | null> {
+    if (!transaction.paymentGroupId) {
+      return null;
+    }
+    return (await this.findPaymentSiblings([transaction])).get(transaction.id) ?? null;
+  }
+
   async getPaginated(
     userId: string,
     options: PaginationOptions,
@@ -257,10 +290,16 @@ export class TransactionRepository implements ITransactionRepository {
     }
 
     const items = await query.getMany();
+    const domainItems = items.map((entity) => TransactionMapper.toDomain(entity));
+    const siblings = await this.findPaymentSiblings(domainItems);
 
-    // Calculate returned amounts for expense transactions via debt returns
+    // Calculate returned amounts for expense transactions via debt returns.
+    // Siblings are included: a payment group's returns are spread over both parts.
     const returnedAmountsMap: Record<string, number> = {};
-    const transactionIds = items.map((t) => t.id);
+    const transactionIds = [
+      ...items.map((t) => t.id),
+      ...[...siblings.values()].map((sibling) => sibling.id),
+    ];
 
     if (transactionIds.length > 0) {
       const returnedAmountsResult = await this.ormRepository
@@ -291,11 +330,21 @@ export class TransactionRepository implements ITransactionRepository {
 
     const lastItem = items[items.length - 1];
 
-    const dataWithReturns: TransactionWithReturns[] = items.map((entity) => {
-      const domain = TransactionMapper.toDomain(entity);
-      const returnedAmount = returnedAmountsMap[entity.id] ?? 0;
+    const dataWithReturns: TransactionWithReturns[] = domainItems.map((domain) => {
+      const ownReturned = returnedAmountsMap[domain.id] ?? 0;
+      const paymentSibling = siblings.get(domain.id) ?? null;
+      const returnedAmount = paymentSibling
+        ? paymentPartReturnedAmount(
+            { amount: domain.amountValue, returned: ownReturned },
+            {
+              amount: paymentSibling.amountValue,
+              returned: returnedAmountsMap[paymentSibling.id] ?? 0,
+            },
+          )
+        : ownReturned;
       return Object.assign(domain, {
         returnedAmount,
+        paymentSibling,
       }) as TransactionWithReturns;
     });
 

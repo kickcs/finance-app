@@ -31,6 +31,7 @@ describe('CreateTransactionHandler', () => {
     getAnalyticsStats: jest.fn(),
     getDailyStats: jest.fn(),
     getHashtags: jest.fn(),
+    findPaymentSiblings: jest.fn(),
   };
 
   const mockAccountRepository = {
@@ -460,6 +461,163 @@ describe('CreateTransactionHandler', () => {
       await handler.execute(command);
 
       expect(mockAccountRepository.findByIdWithBalances).toHaveBeenCalledWith('acc-1', manager);
+    });
+  });
+
+  // Одна операция, оплаченная с двух счетов: две обычные записи с общим
+  // paymentGroupId, каждая двигает баланс своего счёта.
+  describe('оплата с двух счетов', () => {
+    let card: Account;
+    let cash: Account;
+
+    const splitCommand = (
+      overrides: {
+        type?: 'income' | 'expense' | 'transfer';
+        categoryId?: string;
+        isDebtRelated?: boolean;
+        debtId?: string;
+        feeAmount?: number;
+        isInformational?: boolean;
+        secondAccountId?: string;
+      } = {},
+    ) =>
+      new CreateTransactionCommand(
+        'user-1',
+        'acc-card',
+        overrides.categoryId ?? 'food',
+        60_000,
+        'UZS',
+        overrides.type ?? 'expense',
+        now,
+        'Ужин',
+        overrides.isDebtRelated ?? false,
+        overrides.type === 'transfer' ? 'acc-cash' : undefined,
+        undefined,
+        undefined,
+        overrides.debtId,
+        overrides.feeAmount,
+        undefined,
+        overrides.isInformational ?? false,
+        { accountId: overrides.secondAccountId ?? 'acc-cash', amount: 40_000 },
+      );
+
+    beforeEach(() => {
+      card = createMockAccount('acc-card', 'user-1', [{ currency: 'UZS', balance: 500_000 }]);
+      cash = createMockAccount('acc-cash', 'user-1', [{ currency: 'UZS', balance: 100_000 }]);
+      const accounts: Record<string, Account> = { 'acc-card': card, 'acc-cash': cash };
+      mockAccountRepository.findByIdWithBalances.mockImplementation((id: string) =>
+        Promise.resolve(accounts[id] ?? null),
+      );
+    });
+
+    it('расход: две записи с общей группой списывают оба счёта', async () => {
+      const result = await handler.execute(splitCommand());
+
+      expect(mockTransactionRepository.save).toHaveBeenCalledTimes(2);
+      const [first, second] = (mockTransactionRepository.save.mock.calls as [Transaction][]).map(
+        ([t]) => t,
+      );
+      expect(first.accountId).toBe('acc-card');
+      expect(first.amountValue).toBe(60_000);
+      expect(second.accountId).toBe('acc-cash');
+      expect(second.amountValue).toBe(40_000);
+      expect(second.typeValue).toBe('expense');
+      expect(second.categoryId).toBe('food');
+      expect(second.description).toBe('Ужин');
+      expect(second.date).toBe(now);
+      expect(second.currency).toBe('UZS');
+      expect(first.paymentGroupId).toBeTruthy();
+      expect(second.paymentGroupId).toBe(first.paymentGroupId);
+      expect(second.id).not.toBe(first.id);
+
+      expect(card.getTotalBalance('UZS')).toBe(440_000);
+      expect(cash.getTotalBalance('UZS')).toBe(60_000);
+      expect(mockAccountRepository.save).toHaveBeenCalledTimes(2);
+
+      expect(result.id).toBe(first.id);
+      expect(result.paymentGroupId).toBe(first.paymentGroupId);
+      expect(result.paymentSibling).toEqual({
+        id: second.id,
+        accountId: 'acc-cash',
+        amount: 40_000,
+      });
+    });
+
+    it('доход: обе части зачисляются', async () => {
+      await handler.execute(splitCommand({ type: 'income', categoryId: 'salary' }));
+
+      expect(card.getTotalBalance('UZS')).toBe(560_000);
+      expect(cash.getTotalBalance('UZS')).toBe(140_000);
+    });
+
+    it('обычная операция отдаётся без пары', async () => {
+      const result = await handler.execute(
+        new CreateTransactionCommand('user-1', 'acc-card', 'food', 100, 'UZS', 'expense', now),
+      );
+
+      expect(result.paymentGroupId).toBeNull();
+      expect(result.paymentSibling).toBeNull();
+    });
+
+    it.each([
+      ['перевод', { type: 'transfer' as const, categoryId: 'transfer' }],
+      ['долговая запись', { isDebtRelated: true, categoryId: 'debt_given' }],
+      ['запись с долгом', { debtId: 'debt-1' }],
+      ['с комиссией', { feeAmount: 1_000 }],
+      ['информационная', { isInformational: true, categoryId: 'debt_forgiven' }],
+      ['тот же счёт', { secondAccountId: 'acc-card' }],
+    ])('отклоняет: %s', async (_name, overrides) => {
+      await expect(handler.execute(splitCommand(overrides))).rejects.toThrow(BadRequestException);
+      expect(mockTransactionRepository.save).not.toHaveBeenCalled();
+      expect(mockAccountRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('второй счёт не найден — 404', async () => {
+      await expect(
+        handler.execute(splitCommand({ secondAccountId: 'acc-missing' })),
+      ).rejects.toThrow(NotFoundException);
+      expect(mockTransactionRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('второй счёт чужой — 403', async () => {
+      const foreign = createMockAccount('acc-foreign', 'user-2', [{ currency: 'UZS', balance: 0 }]);
+      mockAccountRepository.findByIdWithBalances.mockImplementation((id: string) =>
+        Promise.resolve(id === 'acc-card' ? card : foreign),
+      );
+
+      await expect(
+        handler.execute(splitCommand({ secondAccountId: 'acc-foreign' })),
+      ).rejects.toThrow(ForbiddenException);
+      expect(mockTransactionRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('второй счёт читается менеджером чужой транзакции', async () => {
+      const manager = { getRepository: jest.fn() } as unknown as EntityManager;
+      const command = splitCommand();
+      await handler.execute(
+        new CreateTransactionCommand(
+          command.userId,
+          command.accountId,
+          command.categoryId,
+          command.amount,
+          command.currency,
+          command.type,
+          command.date,
+          command.description,
+          false,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          manager,
+          false,
+          command.secondPart,
+        ),
+      );
+
+      expect(mockAccountRepository.findByIdWithBalances).toHaveBeenCalledWith('acc-cash', manager);
+      expect(mockDataSource.transaction).not.toHaveBeenCalled();
     });
   });
 

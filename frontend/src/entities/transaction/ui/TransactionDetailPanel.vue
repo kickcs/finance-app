@@ -7,13 +7,17 @@ import { getCategoryById as getCategoryByIdStatic } from '@/entities/category';
 import type { Category } from '@/entities/category';
 import { DEFAULT_CURRENCY } from '@/shared/config/currency';
 import { TRANSFER_COLOR } from '@/shared/config/colors';
-import type { Transaction } from '../model/types';
+import type { PaymentPartView, Transaction } from '../model/types';
+import { paymentTotal } from '../lib/paymentGroup';
+import PaymentPartsSummary from './PaymentPartsSummary.vue';
 
 const props = defineProps<{
   transaction: Transaction;
   currency?: string;
   accountName?: string;
   toAccountName?: string;
+  /** Нужны, чтобы назвать счёт второй части оплаты. */
+  accounts?: { id: string; name: string; color?: string | null }[];
 }>();
 
 defineEmits<{
@@ -80,6 +84,23 @@ const categoryIcon = computed(() => {
 const categoryColor = computed(() => {
   if (isTransfer.value) return TRANSFER_COLOR;
   return category.value?.color || '#64748b';
+});
+
+// Открытая строка идёт первой: панель рассказывает о ней, вторая часть — контекст.
+const paymentParts = computed((): [PaymentPartView, PaymentPartView] | null => {
+  const sibling = props.transaction.payment_sibling;
+  if (!sibling) return null;
+  const find = (id: string) => props.accounts?.find((a) => a.id === id);
+  const own = find(props.transaction.account_id);
+  const other = find(sibling.account_id);
+  return [
+    {
+      label: own?.name ?? props.accountName ?? 'Счёт',
+      color: own?.color,
+      amount: props.transaction.amount,
+    },
+    { label: other?.name ?? 'Счёт', color: other?.color, amount: sibling.amount },
+  ];
 });
 
 const formattedDate = computed(() => formatLocalDate(props.transaction.date));
@@ -149,8 +170,20 @@ const cleanDescription = computed(() => {
     <div
       class="w-full max-w-sm space-y-0 rounded-2xl bg-card-light dark:bg-card-dark overflow-hidden"
     >
+      <div
+        v-if="paymentParts"
+        class="px-4 py-3.5 border-b border-border-light dark:border-border-dark"
+      >
+        <PaymentPartsSummary
+          :parts="paymentParts"
+          :total="paymentTotal(transaction)"
+          :currency="displayCurrency"
+        />
+      </div>
+
       <!-- Account -->
       <div
+        v-else
         class="flex items-center justify-between px-4 py-3.5 border-b border-border-light dark:border-border-dark"
       >
         <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">Счёт</span>

@@ -32,6 +32,7 @@ function state(overrides: Partial<TransactionFormData> & { type: TransactionType
     toCurrency: null,
     feeAmount: 0,
     feeType: 'fixed',
+    secondPart: null,
     ...overrides,
   };
   return usePanelState({ formData, accounts: [ACCOUNT] }, () => {});

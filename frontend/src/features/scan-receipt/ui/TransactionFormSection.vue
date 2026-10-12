@@ -9,6 +9,7 @@ import { Calendar } from '@/shared/ui/primitives/calendar';
 import { CalendarDate, type DateValue } from '@internationalized/date';
 import type { ScanReceiptFormData } from '../model/types';
 import type { AccountWithBalances } from '@/entities/account';
+import { PaymentPartsEditor } from '@/features/payment-group';
 
 const props = defineProps<{
   formData: ScanReceiptFormData;
@@ -16,6 +17,8 @@ const props = defineProps<{
   categories: Category[];
   /** «Платил не я»: категория не нужна — создаётся долг, а не транзакция */
   hideCategory?: boolean;
+  /** Итог чека — его делит оплата с двух счетов. */
+  total: number;
 }>();
 
 const emit = defineEmits<{
@@ -60,6 +63,18 @@ function onDateSelect(value: DateValue | undefined) {
           :selected-id="formData.accountId"
           label="Списать со счёта"
           @select="$emit('update:formData', { ...formData, accountId: $event })"
+        />
+        <!-- «Платил не я» создаёт долг, а не расход — делить нечего -->
+        <PaymentPartsEditor
+          v-if="!hideCategory"
+          class="mt-2"
+          :model-value="formData.secondPart"
+          :accounts="accounts"
+          :primary-account-id="formData.accountId"
+          :currency="formData.currency"
+          :total="total"
+          sign="minus"
+          @update:model-value="$emit('update:formData', { ...formData, secondPart: $event })"
         />
       </div>
 

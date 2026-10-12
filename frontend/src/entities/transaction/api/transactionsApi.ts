@@ -1,5 +1,12 @@
 import { http } from '@/shared/api/http';
-import type { Transaction, TransactionInsert } from '@/shared/api/database.types';
+import type {
+  Transaction,
+  TransactionInsert,
+  TransactionUpdate,
+} from '@/shared/api/database.types';
+
+/** Поля строки плюс `second_part`: объект меняет вторую часть оплаты, `null` убирает, отсутствие не трогает. */
+export type TransactionUpdates = Partial<Transaction> & Pick<TransactionUpdate, 'second_part'>;
 
 export interface PaginatedCursor {
   date: string;
@@ -141,6 +148,8 @@ interface TransactionResponse {
   returnedAmount: number;
   netAmount: number;
   hasDebtReturns: boolean;
+  paymentGroupId: string | null;
+  paymentSibling: { id: string; accountId: string; amount: number } | null;
 }
 
 interface MonthlyStatsResponse {
@@ -172,6 +181,14 @@ function transformTransaction(tx: TransactionResponse): Transaction {
     returned_amount: tx.returnedAmount,
     net_amount: tx.netAmount,
     has_debt_returns: tx.hasDebtReturns,
+    payment_group_id: tx.paymentGroupId ?? null,
+    payment_sibling: tx.paymentSibling
+      ? {
+          id: tx.paymentSibling.id,
+          account_id: tx.paymentSibling.accountId,
+          amount: tx.paymentSibling.amount,
+        }
+      : null,
   };
 }
 
@@ -238,6 +255,10 @@ export const transactionsApi = {
       toAmount: transaction.to_amount,
       toCurrency: transaction.to_currency,
       feeAmount: transaction.fee_amount,
+      secondPart: transaction.second_part && {
+        accountId: transaction.second_part.account_id,
+        amount: transaction.second_part.amount,
+      },
     });
     return transformTransaction(data);
   },
@@ -259,7 +280,7 @@ export const transactionsApi = {
     return transformTransaction(data);
   },
 
-  async update(id: string, updates: Partial<Transaction>): Promise<Transaction> {
+  async update(id: string, updates: TransactionUpdates): Promise<Transaction> {
     const data = await http.patch<TransactionResponse>(`/transactions/${id}`, {
       accountId: updates.account_id,
       categoryId: updates.category_id,
@@ -273,6 +294,11 @@ export const transactionsApi = {
       toAccountId: updates.to_account_id,
       toAmount: updates.to_amount,
       toCurrency: updates.to_currency,
+      // null снимает вторую часть, undefined (ключ пропадает из JSON) её не трогает.
+      secondPart: updates.second_part && {
+        accountId: updates.second_part.account_id,
+        amount: updates.second_part.amount,
+      },
     });
     return transformTransaction(data);
   },

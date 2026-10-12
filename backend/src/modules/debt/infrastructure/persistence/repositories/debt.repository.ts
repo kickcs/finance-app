@@ -68,6 +68,18 @@ export class DebtRepository implements IDebtRepository {
     return count > 0;
   }
 
+  async relinkSourceTransaction(
+    fromTransactionId: string,
+    toTransactionId: string,
+    manager?: EntityManager,
+  ): Promise<void> {
+    const repo = manager ? manager.getRepository(DebtOrmEntity) : this.ormRepository;
+    await repo.update(
+      { sourceTransactionId: fromTransactionId },
+      { sourceTransactionId: toTransactionId },
+    );
+  }
+
   async save(debt: Debt, manager?: EntityManager): Promise<Debt> {
     const repo = manager ? manager.getRepository(DebtOrmEntity) : this.ormRepository;
     const ormEntity = DebtMapper.toOrm(debt);

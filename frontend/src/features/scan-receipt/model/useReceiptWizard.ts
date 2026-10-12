@@ -102,7 +102,8 @@ export function useReceiptWizard(
     gapDismissed.value = draft.gapDismissed ?? false;
     participants.value = draft.participants;
     submitStep.payerId.value = draft.payerId;
-    formData.value = draft.formData;
+    // Черновики, сохранённые до оплаты с двух счетов, этого поля не знают.
+    formData.value = { ...draft.formData, secondPart: draft.formData.secondPart ?? null };
     manualMode.value = draft.manualMode;
     direction.value = 'forward';
     currentStep.value = Math.min(Math.max(draft.step, 2), 4);

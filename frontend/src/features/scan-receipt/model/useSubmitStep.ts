@@ -9,6 +9,10 @@ import {
   importedTransactionsApi,
   importedTransactionQueryKeys,
 } from '@/entities/imported-transaction';
+import {
+  buildSecondPartPayload,
+  validateSecondPart,
+} from '@/features/payment-group/model/paymentParts';
 import type { ReceiptItem, Participant, ParticipantSummary, ScanReceiptFormData } from './types';
 
 export function useSubmitStep(
@@ -32,6 +36,7 @@ export function useSubmitStep(
     date: Date.now(),
     createDebts: true,
     currency: 'UZS',
+    secondPart: null,
   });
   const isSubmitting = ref(false);
   const submitError = ref<string | null>(null);
@@ -158,7 +163,8 @@ export function useSubmitStep(
           // isFormValid гарантирует accountId
           account_id: formData.value.accountId!,
           category_id: formData.value.categoryId,
-          amount: totalAmount.value,
+          // Долги и подтверждение импорта ниже идут к первой части — её счёту.
+          ...buildSecondPartPayload(totalAmount.value, formData.value.secondPart),
           currency: formData.value.currency,
           type: 'expense',
           description: formData.value.description || null,
@@ -235,7 +241,16 @@ export function useSubmitStep(
     if (!formData.value.accountId) return false;
     // «Платил не я»: категория не нужна, но моя доля должна быть больше нуля
     if (payer.value) return myShareTotal.value > 0;
-    return !!formData.value.categoryId && totalAmount.value > 0;
+    if (!formData.value.categoryId || !(totalAmount.value > 0)) return false;
+    const secondPart = formData.value.secondPart;
+    return (
+      !secondPart ||
+      !validateSecondPart({
+        total: totalAmount.value,
+        primaryAccountId: formData.value.accountId,
+        secondPart,
+      })
+    );
   });
 
   return {

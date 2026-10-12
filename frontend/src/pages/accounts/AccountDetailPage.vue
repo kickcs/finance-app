@@ -518,6 +518,7 @@ async function handleAdjustBalance(data: {
     <DeleteTransactionModal
       v-model="showDeleteTransactionModal"
       :transaction="selectedTransaction"
+      :accounts="accounts"
       :currency="currency"
       :is-deleting="isDeletingTransaction"
       @confirm="handleDeleteTransaction"

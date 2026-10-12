@@ -5,6 +5,7 @@ import {
   ITransactionRepository,
   TRANSACTION_REPOSITORY,
 } from '../../../domain/repositories/transaction.repository.interface';
+import { toTransactionResponse } from '../../helpers/to-transaction-response';
 
 @QueryHandler(GetTransactionsPaginatedQuery)
 export class GetTransactionsPaginatedHandler implements IQueryHandler<GetTransactionsPaginatedQuery> {
@@ -30,22 +31,7 @@ export class GetTransactionsPaginatedHandler implements IQueryHandler<GetTransac
       data: result.data.map((t) => {
         const netAmount = t.amountValue - t.returnedAmount;
         return {
-          id: t.id,
-          userId: t.userId,
-          accountId: t.accountId,
-          categoryId: t.categoryId,
-          amount: t.amountValue,
-          currency: t.currency,
-          type: t.typeValue,
-          description: t.description,
-          date: t.date,
-          isDebtRelated: t.isDebtRelated,
-          isInformational: t.isInformational,
-          debtId: t.debtId,
-          toAccountId: t.toAccountId,
-          toAmount: t.toAmountValue,
-          toCurrency: t.toCurrency,
-          createdAt: t.createdAt,
+          ...toTransactionResponse(t, t.paymentSibling),
           returnedAmount: t.returnedAmount,
           netAmount,
           hasDebtReturns: t.returnedAmount > 0,

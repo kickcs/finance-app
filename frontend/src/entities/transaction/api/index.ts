@@ -3,6 +3,7 @@ export {
   type PaginatedResult,
   type PaginatedCursor,
   type TransactionFilters,
+  type TransactionUpdates,
   type MonthlyStats,
   type AnalyticsStats,
   type CategoryBreakdown,
@@ -22,5 +23,7 @@ export {
   restoreTransactionCaches,
   patchTransactionInCaches,
   removeTransactionFromCaches,
+  removeTransactionsFromCaches,
+  applyTransactionUpdateToCaches,
   prependTransactionToRecent,
 } from './transactionCache';

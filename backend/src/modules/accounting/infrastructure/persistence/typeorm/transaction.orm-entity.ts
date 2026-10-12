@@ -55,4 +55,7 @@ export class TransactionOrmEntity {
 
   @Column({ name: 'to_currency', type: 'varchar', nullable: true })
   toCurrency: string | null;
+
+  @Column({ name: 'payment_group_id', type: 'uuid', nullable: true })
+  paymentGroupId: string | null;
 }

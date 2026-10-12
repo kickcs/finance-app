@@ -4,8 +4,10 @@ import {
   transactionQueryKeys,
   snapshotTransactionCaches,
   restoreTransactionCaches,
-  patchTransactionInCaches,
-  removeTransactionFromCaches,
+  applyTransactionUpdateToCaches,
+  removeTransactionsFromCaches,
+  paymentGroupIds,
+  type TransactionUpdates,
 } from '@/entities/transaction';
 import { debtsApi } from '@/entities/debt';
 import { queryClient } from '@/shared/api/queryClient';
@@ -19,7 +21,7 @@ export function useEditTransaction(userId: MaybeRefOrGetter<string | null>) {
   const isDeleting = ref(false);
   const error = ref<string | null>(null);
 
-  async function update(transaction: Transaction, updates: Partial<Transaction>) {
+  async function update(transaction: Transaction, updates: TransactionUpdates) {
     // Informational records (e.g. debt forgiveness) are immutable — they have no balance
     // impact and exist only as history. Editing would desync them from their source debt.
     if (transaction.is_informational) {
@@ -49,12 +51,7 @@ export function useEditTransaction(userId: MaybeRefOrGetter<string | null>) {
     // Иначе ответ уже летящего рефетча затрёт оптимистичную правку.
     await queryClient.cancelQueries({ queryKey: transactionQueryKeys.all });
     const snapshot = snapshotTransactionCaches(queryClient, uid);
-    // Строка расхода показывает net_amount, а не amount — без него правка суммы не видна до рефетча.
-    const netPatch =
-      updates.amount !== undefined
-        ? { net_amount: updates.amount - (transaction.returned_amount ?? 0) }
-        : {};
-    patchTransactionInCaches(queryClient, uid, transaction.id, { ...updates, ...netPatch });
+    applyTransactionUpdateToCaches(queryClient, uid, transaction, updates);
 
     try {
       // Update transaction
@@ -94,8 +91,11 @@ export function useEditTransaction(userId: MaybeRefOrGetter<string | null>) {
     // Closed debts are OK - the transaction amount already reflects payments
     try {
       const allDebts = await debtsApi.getAll();
+      // Оплата с двух счетов удаляется целиком — долги проверяем у обеих частей.
+      const groupIds = paymentGroupIds(transaction);
       const linkedDebts = allDebts.filter(
-        (d) => d.source_transaction_id === transaction.id && !d.is_closed,
+        (d) =>
+          d.source_transaction_id && groupIds.includes(d.source_transaction_id) && !d.is_closed,
       );
 
       if (linkedDebts.length > 0) {
@@ -113,7 +113,7 @@ export function useEditTransaction(userId: MaybeRefOrGetter<string | null>) {
     // Иначе ответ уже летящего рефетча затрёт оптимистичную правку.
     await queryClient.cancelQueries({ queryKey: transactionQueryKeys.all });
     const snapshot = snapshotTransactionCaches(queryClient, uid);
-    removeTransactionFromCaches(queryClient, uid, transaction.id);
+    removeTransactionsFromCaches(queryClient, uid, paymentGroupIds(transaction));
 
     try {
       // Delete transaction

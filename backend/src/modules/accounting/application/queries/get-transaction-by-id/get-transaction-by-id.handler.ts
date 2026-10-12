@@ -25,6 +25,9 @@ export class GetTransactionByIdHandler implements IQueryHandler<GetTransactionBy
       throw new NotFoundException(`Transaction with id ${query.id} not found`);
     }
 
-    return toTransactionResponse(transaction);
+    return toTransactionResponse(
+      transaction,
+      await this.transactionRepository.findPaymentSibling(transaction),
+    );
   }
 }

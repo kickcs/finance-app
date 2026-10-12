@@ -93,9 +93,15 @@ export class DeleteTransactionHandler implements ICommandHandler<DeleteTransacti
       }
     }
 
-    // Prevent deletion if transaction is linked to open debts (as source or direct transaction)
+    // Вторая часть оплаты с двух счетов удаляется вместе со строкой: операция одна.
+    const sibling = await this.transactionRepository.findPaymentSibling(transaction);
+
+    // Prevent deletion if transaction is linked to open debts (as source or direct transaction).
+    // Долги участников чека привязаны к одной из частей — проверяются обе.
     if (!command.skipDebtCheck) {
-      const hasOpenDebts = await this.debtRepository.hasOpenDebtsForTransaction(command.id);
+      const hasOpenDebts =
+        (await this.debtRepository.hasOpenDebtsForTransaction(command.id)) ||
+        (sibling !== null && (await this.debtRepository.hasOpenDebtsForTransaction(sibling.id)));
       if (hasOpenDebts) {
         throw new BadRequestException(
           'Нельзя удалить транзакцию, пока есть связанные открытые долги. Сначала закройте долги.',
@@ -108,6 +114,10 @@ export class DeleteTransactionHandler implements ICommandHandler<DeleteTransacti
     const account = transaction.isInformational
       ? null
       : await this.accountRepository.findByIdWithBalances(transaction.accountId);
+    // Части оплаты всегда на разных счетах, поэтому отдельная загрузка безопасна.
+    const siblingAccount = sibling
+      ? await this.accountRepository.findByIdWithBalances(sibling.accountId)
+      : null;
 
     // If this is the forgiveness info-tx attached to a closed debt, reverse the
     // forgiveness on the debt side too — otherwise debts.close_transaction_id
@@ -121,6 +131,7 @@ export class DeleteTransactionHandler implements ICommandHandler<DeleteTransacti
 
     // Mark transaction as deleted (raises event)
     transaction.markDeleted();
+    sibling?.markDeleted();
 
     // Wrap all balance reversals + delete in a DB transaction
     await this.dataSource.transaction(async (manager) => {
@@ -154,6 +165,11 @@ export class DeleteTransactionHandler implements ICommandHandler<DeleteTransacti
         await this.accountRepository.save(account, manager);
       }
 
+      if (sibling && siblingAccount) {
+        BalanceCalculationService.reverseTransaction(siblingAccount, sibling);
+        await this.accountRepository.save(siblingAccount, manager);
+      }
+
       if (linkedClosedDebt) {
         const restoredRemaining = linkedClosedDebt.forgivenAmount;
         linkedClosedDebt.update({
@@ -166,15 +182,24 @@ export class DeleteTransactionHandler implements ICommandHandler<DeleteTransacti
       }
 
       await this.transactionRepository.delete(command.id, manager);
+      if (sibling) {
+        await this.transactionRepository.delete(sibling.id, manager);
+      }
     });
 
     // Publish events after commit
     if (account) {
       await this.eventPublisher.publishEvents(account);
     }
+    if (siblingAccount) {
+      await this.eventPublisher.publishEvents(siblingAccount);
+    }
     if (linkedClosedDebt) {
       await this.eventPublisher.publishEvents(linkedClosedDebt);
     }
     await this.eventPublisher.publishEvents(transaction);
+    if (sibling) {
+      await this.eventPublisher.publishEvents(sibling);
+    }
   }
 }

@@ -5,6 +5,7 @@ import {
   ITransactionRepository,
   TRANSACTION_REPOSITORY,
 } from '../../../domain/repositories/transaction.repository.interface';
+import { toTransactionResponses } from '../../helpers/to-transaction-response';
 import {
   IAccountRepository,
   ACCOUNT_REPOSITORY,
@@ -30,23 +31,6 @@ export class GetTransactionsByAccountWithIncomingHandler implements IQueryHandle
       query.accountId,
     );
 
-    return transactions.map((t) => ({
-      id: t.id,
-      userId: t.userId,
-      accountId: t.accountId,
-      categoryId: t.categoryId,
-      amount: t.amountValue,
-      currency: t.currency,
-      type: t.typeValue,
-      description: t.description,
-      date: t.date,
-      isDebtRelated: t.isDebtRelated,
-      isInformational: t.isInformational,
-      debtId: t.debtId,
-      toAccountId: t.toAccountId,
-      toAmount: t.toAmountValue,
-      toCurrency: t.toCurrency,
-      createdAt: t.createdAt,
-    }));
+    return toTransactionResponses(transactions, this.transactionRepository);
   }
 }

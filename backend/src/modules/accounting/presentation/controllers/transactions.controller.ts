@@ -234,6 +234,7 @@ export class TransactionsController {
         dto.feeAmount,
         undefined,
         dto.isInformational ?? false,
+        dto.secondPart,
       ),
     );
   }
