@@ -123,11 +123,7 @@ const balanceLine = computed(() => {
   return { tone: 'muted' as const, text: `Баланс ${withSymbol(props.currentBalance)}` };
 });
 
-/**
- * «Не хватает» на расходе — повод доплатить с другого счёта: вторая часть
- * получает ровно недостачу, а на первом счёте списывается всё, что на нём есть.
- * Пустой счёт так не разделить — первая часть вышла бы нулевой.
- */
+// «Доплатить с другого счёта»: вторая часть = недостача; с пустого счёта первая часть вышла бы нулевой.
 const shortfallPart = computed<SecondPart | null>(() => {
   if (!props.allowSecondPart || props.sign !== 'minus' || !props.showInsufficientFunds) return null;
   if (props.currentBalance === undefined || props.currentBalance <= 0 || props.amount <= 0) {

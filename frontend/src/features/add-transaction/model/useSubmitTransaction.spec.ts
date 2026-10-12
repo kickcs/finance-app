@@ -322,11 +322,21 @@ describe('useSubmitTransaction', () => {
       expect(queryClient.getQueryData(transactionQueryKeys.recent(USER_ID))).toEqual([]);
     });
 
-    it('submitAndWait sends the same payload and returns the first part id', async () => {
+    it('submitAndWait returns the created first part with its sibling', async () => {
+      server.use(
+        http.post('*/api/transactions', () =>
+          HttpResponse.json({
+            ...mockTransactionResponse,
+            paymentGroupId: 'grp-1',
+            paymentSibling: { id: 'tx-second', accountId: 'acc-2', amount: 40000 },
+          }),
+        ),
+      );
       const c = mountComposable();
-      const idPromise = c.submitAndWait(USER_ID, groupForm());
+      const created = await c.submitAndWait(USER_ID, groupForm());
 
-      await expect(idPromise).resolves.toBe(mockTransactionResponse.id);
+      expect(created?.id).toBe(mockTransactionResponse.id);
+      expect(created?.payment_sibling?.id).toBe('tx-second');
     });
 
     it('rollbackTransaction drops both rows from the caches', async () => {

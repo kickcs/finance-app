@@ -10,16 +10,13 @@ import {
   IAccountRepository,
   ACCOUNT_REPOSITORY,
 } from '../../../domain/repositories/account.repository.interface';
+import { IDebtRepository, DEBT_REPOSITORY } from '../../../../debt/domain/repositories';
 import { DomainEventPublisher } from '../../../../../shared';
 import { toTransactionResponse } from '../../helpers/to-transaction-response';
 import { Account } from '../../../domain/aggregates/account';
 import { Transaction } from '../../../domain/aggregates/transaction';
 
-/**
- * Счета, затронутые одной правкой. Каждый читается один раз менеджером
- * транзакции и правится одним экземпляром: вторая копия того же счёта
- * затёрла бы изменения первой при сохранении.
- */
+/** Один экземпляр на счёт за правку: вторая копия затёрла бы изменения первой при сохранении. */
 type AccountCache = Map<string, Account>;
 
 @CommandHandler(UpdateTransactionCommand)
@@ -29,6 +26,8 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
     private readonly transactionRepository: ITransactionRepository,
     @Inject(ACCOUNT_REPOSITORY)
     private readonly accountRepository: IAccountRepository,
+    @Inject(DEBT_REPOSITORY)
+    private readonly debtRepository: IDebtRepository,
     private readonly eventPublisher: DomainEventPublisher,
     private readonly dataSource: DataSource,
   ) {}
@@ -82,11 +81,7 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
       oldToAmount !== newToAmount ||
       oldToCurrency !== newToCurrency;
 
-    const sibling = transaction.paymentGroupId
-      ? ((await this.transactionRepository.findPaymentSiblings([transaction])).get(
-          transaction.id,
-        ) ?? null)
-      : null;
+    const sibling = await this.transactionRepository.findPaymentSibling(transaction);
     // Вторая часть оплаты есть после правки: её задали или не тронули существующую.
     const keepsSecondPart = secondPart !== null && (secondPart !== undefined || sibling !== null);
 
@@ -236,6 +231,12 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
         await this.transactionRepository.save(keptSibling, manager);
       }
       if (removedSibling) {
+        // Разделение с людьми могло висеть на удаляемой части — операция та же, долги остаются при ней.
+        await this.debtRepository.relinkSourceTransaction(
+          removedSibling.id,
+          transaction.id,
+          manager,
+        );
         await this.transactionRepository.delete(removedSibling.id, manager);
       }
     });

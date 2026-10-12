@@ -27,12 +27,11 @@ export class GetTransactionsPaginatedHandler implements IQueryHandler<GetTransac
       debtId: query.debtId,
     });
 
-    const siblings = await this.transactionRepository.findPaymentSiblings(result.data);
     return {
       data: result.data.map((t) => {
         const netAmount = t.amountValue - t.returnedAmount;
         return {
-          ...toTransactionResponse(t, siblings.get(t.id)),
+          ...toTransactionResponse(t, t.paymentSibling),
           returnedAmount: t.returnedAmount,
           netAmount,
           hasDebtReturns: t.returnedAmount > 0,

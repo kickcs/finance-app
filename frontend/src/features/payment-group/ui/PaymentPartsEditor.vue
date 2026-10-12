@@ -5,18 +5,13 @@ import AccountPopover from '@/entities/account/ui/AccountPopover.vue';
 import type { AccountWithBalances } from '@/entities/account/model/types';
 import { getCurrencyByCode } from '@/entities/currency';
 import PaymentSplitBar from '@/entities/transaction/ui/PaymentSplitBar.vue';
+import type { PaymentPartView } from '@/entities/transaction/model/types';
 import { formatCurrency, formatNumberWithSpaces } from '@/shared/lib/format/currency';
 import { useAmountInput } from '@/shared/lib/hooks/useAmountInput';
 import { resolveParts, validateSecondPart, type SecondPart } from '../model/paymentParts';
 import { balanceIn, secondPartCandidates, startSecondPart } from '../model/secondPartAccounts';
 
-/**
- * Оплата одной операции с двух счетов.
- *
- * Пока второй части нет — тихая кнопка «второй счёт». С ней — полоска
- * пропорции и две строки «● Счёт … сумма». Первый счёт обычно выбирает
- * селектор экрана выше; где его нет (`primaryPickable`), выбор в первой строке.
- */
+/** Оплата одной операции с двух счетов: без второй части — кнопка «второй счёт», с ней — полоска и две строки частей. */
 const props = withDefaults(
   defineProps<{
     modelValue: SecondPart | null;
@@ -146,24 +141,18 @@ onMounted(() => {
   revealed.value = true;
 });
 
-const barSegments = computed(
-  () =>
-    [
-      {
-        label: primaryAccount.value?.name ?? 'Первый счёт',
-        amount: revealed.value ? parts.value.primaryAmount : parts.value.total,
-        color: primaryAccount.value?.color,
-      },
-      {
-        label: secondAccount.value?.name ?? 'Второй счёт',
-        amount: revealed.value ? parts.value.secondAmount : 0,
-        color: secondAccount.value?.color,
-      },
-    ] as [
-      { label: string; amount: number; color?: string },
-      { label: string; amount: number; color?: string },
-    ],
-);
+const barSegments = computed((): [PaymentPartView, PaymentPartView] => [
+  {
+    label: primaryAccount.value?.name ?? 'Первый счёт',
+    amount: revealed.value ? parts.value.primaryAmount : parts.value.total,
+    color: primaryAccount.value?.color,
+  },
+  {
+    label: secondAccount.value?.name ?? 'Второй счёт',
+    amount: revealed.value ? parts.value.secondAmount : 0,
+    color: secondAccount.value?.color,
+  },
+]);
 
 // --- Прогноз остатка ------------------------------------------------------------
 interface Note {

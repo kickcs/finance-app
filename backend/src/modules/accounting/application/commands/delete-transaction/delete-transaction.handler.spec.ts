@@ -32,7 +32,7 @@ describe('DeleteTransactionHandler', () => {
     getAnalyticsStats: jest.fn(),
     getDailyStats: jest.fn(),
     getHashtags: jest.fn(),
-    findPaymentSiblings: jest.fn(),
+    findPaymentSibling: jest.fn(),
   };
 
   const mockAccountRepository = {
@@ -89,7 +89,7 @@ describe('DeleteTransactionHandler', () => {
     mockTransactionRepository.delete.mockResolvedValue(undefined);
     mockDebtRepository.hasOpenDebtsForTransaction.mockResolvedValue(false);
     mockDataSource.query.mockResolvedValue([]);
-    mockTransactionRepository.findPaymentSiblings.mockResolvedValue(new Map());
+    mockTransactionRepository.findPaymentSibling.mockResolvedValue(null);
   });
 
   // Отработка с категорией — пара записей на ноль по балансу: трата по
@@ -330,7 +330,7 @@ describe('DeleteTransactionHandler', () => {
       row.joinPaymentGroup('group-1');
       sibling.joinPaymentGroup('group-1');
       mockTransactionRepository.findById.mockResolvedValue(row);
-      mockTransactionRepository.findPaymentSiblings.mockResolvedValue(new Map([[row.id, sibling]]));
+      mockTransactionRepository.findPaymentSibling.mockResolvedValue(sibling);
       return { row, sibling };
     };
 

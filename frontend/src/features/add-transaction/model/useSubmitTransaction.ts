@@ -96,9 +96,8 @@ function buildApiPayload(userId: string, formData: TransactionFormData) {
 }
 
 /**
- * Только счета, реально затронутые операцией: блайндовая вставка во все
- * infinite-запросы утекает в чужие счета/отфильтрованные списки (история по
- * категории и т.п.) — их подхватит invalidation в onSettled.
+ * Только счета, реально затронутые операцией: вставка во все infinite-запросы утекла бы
+ * в чужие и отфильтрованные списки — их подхватит invalidation в onSettled.
  */
 function getAffectedAccountIds(formData: TransactionFormData): string[] {
   const isTransfer = formData.type === 'transfer';
@@ -413,16 +412,15 @@ export function useSubmitTransaction() {
   }
 
   /**
-   * Awaitable submit: waits for API response (needed for split expense to get transactionId).
+   * Awaitable submit: waits for API response (needed for split expense to get the created transaction).
    * Optimistic updates applied via onMutate (mutateAsync awaits it).
    */
   async function submitAndWait(
     userId: string,
     formData: TransactionFormData,
-  ): Promise<string | null> {
+  ): Promise<Transaction | null> {
     try {
-      const result = await mutation.mutateAsync({ userId, formData });
-      return result.id;
+      return await mutation.mutateAsync({ userId, formData });
     } catch {
       return null;
     }
@@ -432,8 +430,7 @@ export function useSubmitTransaction() {
    * Rollback a created transaction and invalidate related caches.
    * Used by the undo toast and when split debt creation fails after the
    * transaction was already created. Returns false if the rollback failed.
-   * The server deletes a payment group's sibling together with the first part;
-   * `siblingId` only lets the cache drop that row right away.
+   * `siblingId` — second part of a payment group, dropped from the caches together with the first.
    */
   async function rollbackTransaction(
     transactionId: string,

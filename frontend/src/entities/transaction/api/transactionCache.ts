@@ -133,8 +133,7 @@ export function applyTransactionUpdateToCaches(
 /**
  * Prepend a server-created transaction to `recent` only: infinite lists are
  * filtered (account, type, search), so a blind insert would leak it into lists
- * it doesn't belong to — those catch up via invalidation. A payment group
- * arrives as one response but shows up as two rows, so its sibling goes in too.
+ * it doesn't belong to — those catch up via invalidation. A payment group's sibling goes in too.
  */
 export function prependTransactionToRecent(
   queryClient: QueryClient,

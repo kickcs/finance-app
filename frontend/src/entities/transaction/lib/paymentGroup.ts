@@ -1,7 +1,7 @@
 import type { Transaction } from '@/shared/api/database.types';
 import type { TransactionUpdates } from '../api/transactionsApi';
 
-/** Поля, которые у двух частей оплаты всегда совпадают; сервер переносит их на пару сам. */
+/** Поля, которые у двух частей оплаты всегда совпадают: правка строки повторяется на паре. */
 const SHARED_FIELDS = ['type', 'category_id', 'description', 'date', 'currency'] as const;
 
 /** Вторая часть оплаты как отдельная строка: общие поля первой, свои id/счёт/сумма. */
@@ -16,6 +16,13 @@ export function buildPaymentSiblingRow(tx: Transaction): Transaction | null {
     net_amount: sibling.amount,
     payment_sibling: { id: tx.id, account_id: tx.account_id, amount: tx.amount },
   };
+}
+
+/** Итог операции: сумма строки плюс её пары. */
+export function paymentTotal(tx: Pick<Transaction, 'amount' | 'payment_sibling'>): number {
+  const sibling = tx.payment_sibling;
+  // Суммы с копейками: без округления 0.1 + 0.2 оставит хвост float.
+  return sibling ? Math.round((tx.amount + sibling.amount) * 100) / 100 : tx.amount;
 }
 
 /** id строки и её пары: удаление любой части уносит обе. */
@@ -33,18 +40,17 @@ export interface PaymentGroupEditPlan {
 }
 
 /**
- * Что оптимистично поменять в кэшах после правки. Баланс счетов не трогаем.
- * Новую пару строкой не вставляем: позиция в отфильтрованных списках неизвестна,
- * она появится с рефетчем после PATCH — строка лишь запоминает ссылку на неё.
+ * Что оптимистично поменять в кэшах после правки (балансы не трогаем). Новую пару
+ * строкой не вставляем — её место в отфильтрованных списках неизвестно.
  */
 export function planPaymentGroupEdit(
   tx: Transaction,
   { second_part: secondPart, ...updates }: TransactionUpdates,
 ): PaymentGroupEditPlan {
   const row: Partial<Transaction> = { ...updates };
-  // Строка расхода показывает net_amount, а не amount — без него правка суммы не видна до рефетча.
+  // Строка расхода показывает net_amount; returned_amount — доля возвратов этой части, net не ниже нуля.
   if (updates.amount !== undefined) {
-    row.net_amount = updates.amount - (tx.returned_amount ?? 0);
+    row.net_amount = Math.max(0, updates.amount - (tx.returned_amount ?? 0));
   }
 
   const existing = tx.payment_sibling;

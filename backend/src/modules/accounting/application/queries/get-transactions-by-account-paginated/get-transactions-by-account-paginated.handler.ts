@@ -5,7 +5,7 @@ import {
   ITransactionRepository,
   TRANSACTION_REPOSITORY,
 } from '../../../domain/repositories/transaction.repository.interface';
-import { toTransactionResponse } from '../../helpers/to-transaction-response';
+import { toTransactionResponses } from '../../helpers/to-transaction-response';
 import {
   IAccountRepository,
   ACCOUNT_REPOSITORY,
@@ -38,9 +38,8 @@ export class GetTransactionsByAccountPaginatedHandler implements IQueryHandler<G
       cursor,
     );
 
-    const siblings = await this.transactionRepository.findPaymentSiblings(result.data);
     return {
-      data: result.data.map((t) => toTransactionResponse(t, siblings.get(t.id))),
+      data: await toTransactionResponses(result.data, this.transactionRepository),
       nextCursor: result.nextCursor,
       hasMore: result.hasMore,
     };

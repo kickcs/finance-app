@@ -25,7 +25,6 @@ describe('GetTransactionsPaginatedHandler', () => {
     getAnalyticsStats: jest.fn(),
     getDailyStats: jest.fn(),
     getHashtags: jest.fn(),
-    findPaymentSiblings: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -38,7 +37,6 @@ describe('GetTransactionsPaginatedHandler', () => {
 
     handler = module.get<GetTransactionsPaginatedHandler>(GetTransactionsPaginatedHandler);
     jest.clearAllMocks();
-    mockTransactionRepository.findPaymentSiblings.mockResolvedValue(new Map());
   });
 
   it('should return paginated transactions with calculated fields', async () => {
@@ -174,7 +172,7 @@ describe('GetTransactionsPaginatedHandler', () => {
     expect(result.data[0].toCurrency).toBe('EUR');
   });
 
-  it('подтягивает вторую часть оплаты с двух счетов одним запросом', async () => {
+  it('отдаёт пару и долю возвратов, которые репозиторий посчитал для группы', async () => {
     const now = new Date();
     const card = Transaction.createExpense('tx-card', 'user-1', 'acc-card', 'food', 60, 'UZS', now);
     const cash = Transaction.createExpense('tx-cash', 'user-1', 'acc-cash', 'food', 40, 'UZS', now);
@@ -191,21 +189,23 @@ describe('GetTransactionsPaginatedHandler', () => {
     );
 
     mockTransactionRepository.getPaginated.mockResolvedValue({
-      data: [card, plain].map((t) => Object.assign(t, { returnedAmount: 0 })),
+      data: [
+        Object.assign(card, { returnedAmount: 60, paymentSibling: cash }),
+        Object.assign(plain, { returnedAmount: 0, paymentSibling: null }),
+      ],
       nextCursor: null,
       hasMore: false,
     });
-    mockTransactionRepository.findPaymentSiblings.mockResolvedValue(new Map([['tx-card', cash]]));
 
     const result = await handler.execute(new GetTransactionsPaginatedQuery('user-1'));
 
-    expect(mockTransactionRepository.findPaymentSiblings).toHaveBeenCalledTimes(1);
     expect(result.data[0].paymentGroupId).toBe('group-1');
     expect(result.data[0].paymentSibling).toEqual({
       id: 'tx-cash',
       accountId: 'acc-cash',
       amount: 40,
     });
+    expect(result.data[0].netAmount).toBe(0);
     expect(result.data[1].paymentGroupId).toBeNull();
     expect(result.data[1].paymentSibling).toBeNull();
   });

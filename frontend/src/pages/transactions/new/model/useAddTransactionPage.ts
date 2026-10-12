@@ -107,11 +107,11 @@ export function useAddTransactionPage({ onDone }: AddTransactionPageOptions) {
       return false;
     }
 
-    const transactionId = await submitAndWait(uid, formData.value);
-    if (!transactionId) return false;
+    const created = await submitAndWait(uid, formData.value);
+    if (!created) return false;
 
     const success = await createDebtsForSplit(
-      transactionId,
+      created.id,
       uid,
       formData.value.accountId,
       formData.value.currency,
@@ -119,7 +119,7 @@ export function useAddTransactionPage({ onDone }: AddTransactionPageOptions) {
     );
 
     if (!success) {
-      const rolledBack = await rollbackTransaction(transactionId, uid);
+      const rolledBack = await rollbackTransaction(created.id, uid, created.payment_sibling?.id);
       validationError.value = rolledBack
         ? 'Не удалось создать долги для раздельного счёта. Операция отменена.'
         : 'Не удалось создать часть долгов. Транзакция сохранена — проверьте её в истории.';

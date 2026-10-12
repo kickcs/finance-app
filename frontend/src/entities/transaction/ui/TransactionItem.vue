@@ -8,6 +8,7 @@ import type { Category } from '@/entities/category';
 import { DEFAULT_CURRENCY } from '@/shared/config/currency';
 import { TRANSFER_COLOR } from '@/shared/config/colors';
 import { getAmountLines } from '../lib/amountLines';
+import { paymentTotal } from '../lib/paymentGroup';
 import type { Transaction } from '../model/types';
 
 const props = defineProps<{
@@ -125,16 +126,12 @@ const formattedOriginalAmount = computed(
   () => `-${formatCurrency(props.transaction.amount, displayCurrency.value, COMPACT_FORMAT)}`,
 );
 
-/**
- * Итог операции, оплаченной с двух счетов: строка — лишь её часть. Без символа
- * валюты — он уже стоит в сумме строкой выше.
- */
-const formattedPaymentTotal = computed(() => {
-  const sibling = props.transaction.payment_sibling;
-  if (!sibling) return '';
-  const total = Math.round((props.transaction.amount + sibling.amount) * 100) / 100;
-  return formatCurrency(total, displayCurrency.value, COMPACT_BARE_FORMAT);
-});
+// Итог операции с двух счетов, без символа валюты — он уже стоит в сумме строкой выше.
+const formattedPaymentTotal = computed(() =>
+  props.transaction.payment_sibling
+    ? formatCurrency(paymentTotal(props.transaction), displayCurrency.value, COMPACT_BARE_FORMAT)
+    : '',
+);
 
 const ariaLabel = computed(() => {
   const name = isTransfer.value ? 'Перевод' : category.value?.name || 'Транзакция';

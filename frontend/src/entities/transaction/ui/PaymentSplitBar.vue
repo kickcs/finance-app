@@ -1,20 +1,14 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import type { PaymentPartView } from '../model/types';
 
 /**
  * Пропорция двух частей оплаты в цветах их счетов. Ширины плавно догоняют
  * ввод: полоска показывает, что изменилось, а не мигает новым состоянием.
  */
 const props = defineProps<{
-  segments: [Segment, Segment];
+  segments: [PaymentPartView, PaymentPartView];
 }>();
-
-interface Segment {
-  label: string;
-  amount: number;
-  /** Цвет счёта; без него (счёт ещё не выбран) сегмент нейтральный. */
-  color?: string | null;
-}
 
 const GAP_PX = 3;
 

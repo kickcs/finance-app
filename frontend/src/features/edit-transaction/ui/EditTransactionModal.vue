@@ -6,7 +6,7 @@ import { AccountSelector } from '@/entities/account';
 import type { AccountWithBalances } from '@/entities/account';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import type { Transaction } from '@/shared/api/database.types';
-import type { TransactionUpdates } from '@/entities/transaction';
+import { paymentGroupIds, paymentTotal, type TransactionUpdates } from '@/entities/transaction';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { SplitParticipantList, useSplitTransactionEdit } from '@/features/split-expense';
 import { DEFAULT_CURRENCY } from '@/shared/config/currency';
@@ -47,6 +47,11 @@ const isDebtRelated = computed(
   () => props.transaction?.is_debt_related === true && !isAdjustment.value,
 );
 
+// Вторая часть — только у обычных расходов и доходов: не у ног долга (debt_id) и не у информационных.
+const canHaveSecondPart = computed(
+  () => !!props.transaction && !props.transaction.debt_id && !props.transaction.is_informational,
+);
+
 // Local form state (only for non-transfer)
 const type = ref<'expense' | 'income'>('expense');
 const amount = ref(0);
@@ -64,7 +69,7 @@ watch(
     if (t && t.type !== 'transfer') {
       const sibling = t.payment_sibling;
       type.value = t.type as 'expense' | 'income';
-      amount.value = sibling ? Math.round((t.amount + sibling.amount) * 100) / 100 : t.amount;
+      amount.value = paymentTotal(t);
       secondPart.value = sibling ? { accountId: sibling.account_id, amount: sibling.amount } : null;
       accountId.value = t.account_id;
       categoryId.value = t.category_id;
@@ -91,10 +96,11 @@ const {
   saveChanges: saveSplitChanges,
   reload: reloadSplitDebts,
 } = useSplitTransactionEdit(
+  // Долги раздельного счёта могут указывать на любую из двух частей оплаты.
   () =>
-    !isDebtRelated.value && !isTransfer.value && !isAdjustment.value
-      ? (props.transaction?.id ?? null)
-      : null,
+    props.transaction && !isDebtRelated.value && !isTransfer.value && !isAdjustment.value
+      ? paymentGroupIds(props.transaction)
+      : [],
   userId,
   () => amount.value,
   () => accountId.value,
@@ -429,6 +435,7 @@ const isFormValid = computed(() => {
           @keydown.enter="checkAmountChange"
         />
         <PaymentPartsEditor
+          v-if="canHaveSecondPart"
           v-model="secondPart"
           :accounts="compatibleAccounts"
           :primary-account-id="accountId"

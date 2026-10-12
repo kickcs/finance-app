@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { ConfirmDeleteModal, UIcon } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import { getCategoryById } from '@/entities/category';
+import { paymentTotal } from '@/entities/transaction';
 import type { Transaction } from '@/shared/api/database.types';
 
 const props = defineProps<{
@@ -26,17 +27,10 @@ const category = computed(() => {
 });
 
 // Удаление любой части уносит обе — показываем итог операции, а не сумму строки.
-const totalAmount = computed(() => {
-  const tx = props.transaction;
-  if (!tx) return 0;
-  const sibling = tx.payment_sibling;
-  return sibling ? Math.round((tx.amount + sibling.amount) * 100) / 100 : tx.amount;
-});
-
 const formattedAmount = computed(() => {
   if (!props.transaction) return '';
   const prefix = props.transaction.type === 'income' ? '+' : '-';
-  return `${prefix}${formatCurrency(totalAmount.value, props.currency)}`;
+  return `${prefix}${formatCurrency(paymentTotal(props.transaction), props.currency)}`;
 });
 
 const warningText = computed(() => {

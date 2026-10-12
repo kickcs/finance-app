@@ -78,7 +78,9 @@ export interface HashtagResult {
 }
 
 export interface TransactionWithReturns extends Transaction {
+  /** У части оплаты с двух счетов — её доля возвратов группы. */
   returnedAmount: number;
+  paymentSibling: Transaction | null;
 }
 
 /**
@@ -102,6 +104,7 @@ export interface ITransactionRepository {
    * Строки без группы и без найденной пары в карту не попадают.
    */
   findPaymentSiblings(transactions: Transaction[]): Promise<Map<string, Transaction>>;
+  findPaymentSibling(transaction: Transaction): Promise<Transaction | null>;
 
   // Paginated queries
   getPaginated(

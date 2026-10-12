@@ -103,6 +103,8 @@ const validationError = ref<string | null>(null);
 // and after a successful confirm. (Mirrors the importConfirmed guard in
 // scan-receipt/useSubmitStep.ts.)
 const createdTransactionId = ref<string | null>(null);
+/** Вторая часть созданной операции — откат убирает её из кэшей вместе с первой. */
+const createdSiblingId = ref<string | null>(null);
 const splitDebtsCreated = ref(false);
 // Комиссия — отдельная транзакция после основной; если она не удалась, а долг
 // уже создан, повтор не должен списывать комиссию дважды.
@@ -401,6 +403,7 @@ watch(
     validationError.value = null;
     // Fresh import → fresh retry bookkeeping.
     createdTransactionId.value = null;
+    createdSiblingId.value = null;
     splitDebtsCreated.value = false;
     repaymentSuggestionDismissed.value = false;
     repaymentTransactionId.value = null;
@@ -573,9 +576,11 @@ async function handleSubmit() {
         return;
       }
     } else {
-      transactionId = await submitAndWait(userId.value, formData.value);
-      if (!transactionId) return; // error already shown by the mutation
+      const created = await submitAndWait(userId.value, formData.value);
+      if (!created) return; // error already shown by the mutation
+      transactionId = created.id;
       createdTransactionId.value = transactionId;
+      createdSiblingId.value = created.payment_sibling?.id ?? null;
     }
   }
 
@@ -614,10 +619,15 @@ async function handleSubmit() {
       formData.value.date,
     );
     if (!success) {
-      const rolledBack = await rollbackTransaction(transactionId, userId.value);
+      const rolledBack = await rollbackTransaction(
+        transactionId,
+        userId.value,
+        createdSiblingId.value,
+      );
       if (rolledBack) {
         // Transaction undone → clear bookkeeping so a fresh attempt starts clean.
         createdTransactionId.value = null;
+        createdSiblingId.value = null;
       }
       validationError.value = rolledBack
         ? 'Не удалось создать долги для раздельного счёта. Операция отменена.'
@@ -650,6 +660,7 @@ async function handleSubmit() {
 
   // Import fully handled → clear retry state before moving on.
   createdTransactionId.value = null;
+  createdSiblingId.value = null;
   splitDebtsCreated.value = false;
   resetSplit();
   resetDebtAssign();

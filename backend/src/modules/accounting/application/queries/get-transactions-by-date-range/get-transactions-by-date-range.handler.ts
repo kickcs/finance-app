@@ -5,7 +5,7 @@ import {
   ITransactionRepository,
   TRANSACTION_REPOSITORY,
 } from '../../../domain/repositories/transaction.repository.interface';
-import { toTransactionResponse } from '../../helpers/to-transaction-response';
+import { toTransactionResponses } from '../../helpers/to-transaction-response';
 
 @QueryHandler(GetTransactionsByDateRangeQuery)
 export class GetTransactionsByDateRangeHandler implements IQueryHandler<GetTransactionsByDateRangeQuery> {
@@ -21,7 +21,6 @@ export class GetTransactionsByDateRangeHandler implements IQueryHandler<GetTrans
       query.endDate,
     );
 
-    const siblings = await this.transactionRepository.findPaymentSiblings(transactions);
-    return transactions.map((t) => toTransactionResponse(t, siblings.get(t.id)));
+    return toTransactionResponses(transactions, this.transactionRepository);
   }
 }

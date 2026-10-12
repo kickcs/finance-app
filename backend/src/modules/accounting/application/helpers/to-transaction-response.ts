@@ -1,4 +1,5 @@
 import { type Transaction } from '../../domain/aggregates/transaction';
+import { type ITransactionRepository } from '../../domain/repositories/transaction.repository.interface';
 
 /** `paymentSibling` — вторая часть операции, оплаченной с двух счетов. */
 export function toTransactionResponse(
@@ -31,4 +32,13 @@ export function toTransactionResponse(
       : null,
     createdAt: transaction.createdAt,
   };
+}
+
+/** Ответы для списка: пары оплат с двух счетов подтягиваются одним запросом. */
+export async function toTransactionResponses(
+  transactions: Transaction[],
+  repository: Pick<ITransactionRepository, 'findPaymentSiblings'>,
+) {
+  const siblings = await repository.findPaymentSiblings(transactions);
+  return transactions.map((t) => toTransactionResponse(t, siblings.get(t.id)));
 }

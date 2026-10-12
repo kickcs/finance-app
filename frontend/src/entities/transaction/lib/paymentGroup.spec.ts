@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import type { Transaction } from '@/shared/api/database.types';
-import { buildPaymentSiblingRow, paymentGroupIds, planPaymentGroupEdit } from './paymentGroup';
+import {
+  buildPaymentSiblingRow,
+  paymentGroupIds,
+  paymentTotal,
+  planPaymentGroupEdit,
+} from './paymentGroup';
 
 function makeTx(overrides: Partial<Transaction> = {}): Transaction {
   return {
@@ -76,7 +81,29 @@ describe('paymentGroupIds', () => {
   });
 });
 
+describe('paymentTotal', () => {
+  it('is the row amount when there is no sibling', () => {
+    expect(paymentTotal(makeTx())).toBe(60000);
+  });
+
+  it('sums both parts without a float tail', () => {
+    expect(paymentTotal(grouped())).toBe(100000);
+    expect(
+      paymentTotal(
+        makeTx({ amount: 0.1, payment_sibling: { id: 'tx-2', account_id: 'acc-2', amount: 0.2 } }),
+      ),
+    ).toBe(0.3);
+  });
+});
+
 describe('planPaymentGroupEdit', () => {
+  it('never drives net_amount below zero when the amount drops under the returned share', () => {
+    const plan = planPaymentGroupEdit(grouped({ returned_amount: 60000, net_amount: 0 }), {
+      amount: 50000,
+    });
+    expect(plan.row.net_amount).toBe(0);
+  });
+
   it('plain edit of a single row patches only the row and recomputes net_amount', () => {
     const plan = planPaymentGroupEdit(makeTx({ returned_amount: 1000 }), {
       amount: 50000,

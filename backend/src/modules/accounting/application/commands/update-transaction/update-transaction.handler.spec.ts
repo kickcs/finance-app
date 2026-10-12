@@ -5,6 +5,7 @@ import { UpdateTransactionHandler } from './update-transaction.handler';
 import { UpdateTransactionCommand } from './update-transaction.command';
 import { TRANSACTION_REPOSITORY } from '../../../domain/repositories/transaction.repository.interface';
 import { ACCOUNT_REPOSITORY } from '../../../domain/repositories/account.repository.interface';
+import { DEBT_REPOSITORY } from '../../../../debt/domain/repositories';
 import { DomainEventPublisher } from '../../../../../shared';
 import { Account } from '../../../domain/aggregates/account';
 import { Transaction } from '../../../domain/aggregates/transaction';
@@ -18,7 +19,7 @@ describe('UpdateTransactionHandler', () => {
 
   const mockTransactionRepository = {
     findById: jest.fn(),
-    findPaymentSiblings: jest.fn(),
+    findPaymentSibling: jest.fn(),
     save: jest.fn(),
     delete: jest.fn(),
   };
@@ -47,6 +48,8 @@ describe('UpdateTransactionHandler', () => {
       return Promise.resolve(account);
     }),
   };
+
+  const mockDebtRepository = { relinkSourceTransaction: jest.fn() };
 
   const mockEventPublisher = { publishEvents: jest.fn() };
 
@@ -84,7 +87,7 @@ describe('UpdateTransactionHandler', () => {
     const row = expense('tx-card', 'acc-card', 60_000, 'group-1');
     const sibling = expense('tx-cash', 'acc-cash', 40_000, 'group-1');
     mockTransactionRepository.findById.mockResolvedValue(row);
-    mockTransactionRepository.findPaymentSiblings.mockResolvedValue(new Map([[row.id, sibling]]));
+    mockTransactionRepository.findPaymentSibling.mockResolvedValue(sibling);
     return { row, sibling };
   };
 
@@ -94,6 +97,7 @@ describe('UpdateTransactionHandler', () => {
         UpdateTransactionHandler,
         { provide: TRANSACTION_REPOSITORY, useValue: mockTransactionRepository },
         { provide: ACCOUNT_REPOSITORY, useValue: mockAccountRepository },
+        { provide: DEBT_REPOSITORY, useValue: mockDebtRepository },
         { provide: DomainEventPublisher, useValue: mockEventPublisher },
         { provide: DataSource, useValue: mockDataSource },
       ],
@@ -106,20 +110,19 @@ describe('UpdateTransactionHandler', () => {
       'acc-cash': { UZS: 60_000 },
       'acc-other': { UZS: 1_000_000 },
     };
-    mockTransactionRepository.findPaymentSiblings.mockResolvedValue(new Map());
+    mockTransactionRepository.findPaymentSibling.mockResolvedValue(null);
     mockTransactionRepository.save.mockImplementation((t: Transaction) => Promise.resolve(t));
     mockTransactionRepository.delete.mockResolvedValue(undefined);
     mockEventPublisher.publishEvents.mockResolvedValue(undefined);
   });
 
-  it('обычная правка суммы двигает баланс и не ищет пару', async () => {
+  it('обычная правка суммы двигает баланс', async () => {
     const row = expense('tx-card', 'acc-card', 60_000);
     mockTransactionRepository.findById.mockResolvedValue(row);
 
     const result = await update({ amount: 50_000 });
 
     expect(db['acc-card'].UZS).toBe(450_000);
-    expect(mockTransactionRepository.findPaymentSiblings).not.toHaveBeenCalled();
     expect(result.paymentGroupId).toBeNull();
     expect(result.paymentSibling).toBeNull();
   });
@@ -258,6 +261,18 @@ describe('UpdateTransactionHandler', () => {
       expect(row.paymentGroupId).toBeNull();
       expect(result.paymentGroupId).toBeNull();
       expect(result.paymentSibling).toBeNull();
+    });
+
+    it('долги разделения, привязанные к удаляемой паре, переходят на оставшуюся строку', async () => {
+      givenGroup();
+
+      await update({ amount: 100_000, secondPart: null });
+
+      expect(mockDebtRepository.relinkSourceTransaction).toHaveBeenCalledWith(
+        'tx-cash',
+        'tx-card',
+        undefined,
+      );
     });
 
     it('пара уже пропала (счёт удалён) — строка просто выходит из группы', async () => {

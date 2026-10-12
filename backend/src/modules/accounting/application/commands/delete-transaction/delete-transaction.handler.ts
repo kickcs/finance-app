@@ -94,11 +94,7 @@ export class DeleteTransactionHandler implements ICommandHandler<DeleteTransacti
     }
 
     // Вторая часть оплаты с двух счетов удаляется вместе со строкой: операция одна.
-    const sibling = transaction.paymentGroupId
-      ? ((await this.transactionRepository.findPaymentSiblings([transaction])).get(
-          transaction.id,
-        ) ?? null)
-      : null;
+    const sibling = await this.transactionRepository.findPaymentSibling(transaction);
 
     // Prevent deletion if transaction is linked to open debts (as source or direct transaction).
     // Долги участников чека привязаны к одной из частей — проверяются обе.

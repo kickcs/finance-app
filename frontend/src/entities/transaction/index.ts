@@ -15,7 +15,7 @@ export { useGroupedTransactions } from './model/useGroupedTransactions';
 export type { UseGroupedTransactionsOptions } from './model/useGroupedTransactions';
 
 // Lib
-export { buildPaymentSiblingRow, paymentGroupIds } from './lib/paymentGroup';
+export { buildPaymentSiblingRow, paymentGroupIds, paymentTotal } from './lib/paymentGroup';
 
 // API
 export * from './api';
