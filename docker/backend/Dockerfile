@@ -44,7 +44,7 @@ RUN bun install --frozen-lockfile --production
 # ================================
 # ВАЖНО: debian (glibc), не alpine — нативные модули (@resvg/resvg-js)
 # ставятся на glibc-стадии prod-deps и должны совпадать по libc с рантаймом
-FROM node:22-bookworm-slim AS runner
+FROM node:25-bookworm-slim AS runner
 
 WORKDIR /app
 
