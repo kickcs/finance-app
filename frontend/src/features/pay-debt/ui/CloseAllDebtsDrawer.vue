@@ -17,6 +17,7 @@ import { pluralize } from '@/shared/lib/format/pluralize';
 import { DEFAULT_CURRENCY } from '@/entities/currency';
 import type { Debt } from '@/shared/api/database.types';
 import { sortDebtsByDateAsc } from '../model/sortDebts';
+import { planMutualSettlement, remainingAfterOffset } from '../model/mutualSettlement';
 import PaymentPresetRow from './PaymentPresetRow.vue';
 
 /**
@@ -32,6 +33,7 @@ import PaymentPresetRow from './PaymentPresetRow.vue';
  */
 const props = defineProps<{
   modelValue: boolean;
+  /** Встречные долги — только в одной валюте: сначала они зачитываются, платёж закрывает остаток. */
   debts: Debt[];
   personName: string;
   accounts: AccountWithBalances[];
@@ -56,18 +58,23 @@ const { trigger } = useHaptics();
 
 const selectedAccountId = ref<string | null>(null);
 
-const debtDirection = computed<'given' | 'taken'>(() =>
-  props.debts[0]?.debt_type === 'given' ? 'given' : 'taken',
-);
+const settlement = computed(() => planMutualSettlement(props.debts));
+const debtDirection = computed(() => settlement.value.direction);
+const offsetAmount = computed(() => settlement.value.offsetAmount);
 
-const totalDebt = computed(() => props.debts.reduce((sum, d) => sum + d.remaining_amount, 0));
+/** Сторона, которая переживёт зачёт: только по ней идут деньги и метр. */
+const payingDebts = computed(() => props.debts.filter((d) => d.debt_type === debtDirection.value));
+
+const totalDebt = computed(() => settlement.value.net);
+/** Встречные долги равны — их закрывает один зачёт, деньги не двигаются. */
+const isFullOffset = computed(() => offsetAmount.value > 0 && totalDebt.value === 0);
 
 /** Итоги по валютам: у человека могут быть долги в разных валютах. */
 const totalsByCurrency = computed(() => {
   const map = new Map<string, number>();
-  for (const debt of props.debts) {
+  for (const debt of payingDebts.value) {
     const currency = debt.currency || DEFAULT_CURRENCY;
-    map.set(currency, (map.get(currency) || 0) + debt.remaining_amount);
+    map.set(currency, (map.get(currency) || 0) + remainingAfterOffset(settlement.value, debt));
   }
   return Array.from(map.entries()).map(([currency, amount]) => ({ currency, amount }));
 });
@@ -110,35 +117,41 @@ watch(
 
 // --- Предпросмотр распределения (FIFO: сначала самые старые долги) ---
 
-type DistributionStatus = 'closed' | 'forgiven' | 'paidAndForgiven' | 'partial' | 'open';
+type DistributionStatus = 'offset' | 'closed' | 'forgiven' | 'paidAndForgiven' | 'partial' | 'open';
 
 const debtDistribution = computed(() => {
   const sorted = sortDebtsByDateAsc(props.debts);
   let budget = paymentAmount.value;
   return sorted.map((debt) => {
-    const allocated = Math.min(budget, debt.remaining_amount);
+    // Зачёт ложится раньше платежа — так его проводит и `useCloseAllDebts`.
+    const left = remainingAfterOffset(settlement.value, debt);
+    const offset = debt.remaining_amount - left;
+    const allocated = Math.min(budget, left);
     budget -= allocated;
-    const willForgive = forgiveRemainder.value && allocated < debt.remaining_amount;
+    const willForgive = forgiveRemainder.value && allocated < left;
     return {
       debt,
-      allocated,
-      forgiven: willForgive ? debt.remaining_amount - allocated : 0,
-      status: (allocated >= debt.remaining_amount
-        ? 'closed'
-        : willForgive
-          ? // Часть уходит со счёта, часть списывается: назвать это просто
-            // «Простится» значило бы спрятать реальное списание денег.
-            allocated > 0
-            ? 'paidAndForgiven'
-            : 'forgiven'
-          : allocated > 0
-            ? 'partial'
-            : 'open') as DistributionStatus,
+      covered: offset + allocated,
+      forgiven: willForgive ? left - allocated : 0,
+      status: (left <= 0
+        ? 'offset'
+        : allocated >= left
+          ? 'closed'
+          : willForgive
+            ? // Часть уходит со счёта, часть списывается: назвать это просто
+              // «Простится» значило бы спрятать реальное списание денег.
+              allocated > 0
+              ? 'paidAndForgiven'
+              : 'forgiven'
+            : allocated > 0
+              ? 'partial'
+              : 'open') as DistributionStatus,
     };
   });
 });
 
 const STATUS_META = {
+  offset: { label: 'Зачтётся', class: 'text-success' },
   closed: { label: 'Закроется', class: 'text-success' },
   forgiven: { label: 'Простится', class: 'text-warning' },
   paidAndForgiven: { label: 'Часть + прощение', class: 'text-warning' },
@@ -147,7 +160,7 @@ const STATUS_META = {
 } as const;
 
 /** Долг уходит из списка, если он оплачен целиком или остаток прощён. */
-const CLOSING_STATUSES: DistributionStatus[] = ['closed', 'forgiven', 'paidAndForgiven'];
+const CLOSING_STATUSES: DistributionStatus[] = ['offset', 'closed', 'forgiven', 'paidAndForgiven'];
 
 const closingCount = computed(
   () => debtDistribution.value.filter((d) => CLOSING_STATUSES.includes(d.status)).length,
@@ -155,13 +168,14 @@ const closingCount = computed(
 
 /**
  * Метр по всем долгам разом: у одной валюты суммы складываются осмысленно,
- * при разных — нет, поэтому там его не показываем.
+ * при разных — нет, поэтому там его не показываем. Зачёт гасит эту сторону
+ * так же, как платёж.
  */
 const aggregate = computed(() => {
   let total = 0;
-  let paid = 0;
+  let paid = offsetAmount.value;
   let forgiven = 0;
-  for (const debt of props.debts) {
+  for (const debt of payingDebts.value) {
     const split = getDebtSplit(debt);
     total += debt.total_amount;
     paid += split.paid;
@@ -181,7 +195,8 @@ const forgivenAfter = computed(
 
 const isValid = computed(() => {
   if (!selectedAccountId.value || props.debts.length === 0) return false;
-  if (paymentAmount.value <= 0 && !forgiveRemainder.value) return false;
+  // Встречные долги, равные друг другу, закрываются одним зачётом, без платежа.
+  if (paymentAmount.value <= 0 && !forgiveRemainder.value && totalDebt.value > 0) return false;
   if (isOverpayment.value && !excessCategoryId.value) return false;
   return true;
 });
@@ -193,6 +208,7 @@ const progressPercent = computed(() => {
 
 const confirmLabel = computed(() => {
   if (props.isClosing) return `Закрываем ${props.progress ?? 0} из ${props.total ?? 0}`;
+  if (isFullOffset.value) return 'Зачесть все долги';
   if (forgiveRemainder.value && paymentAmount.value === 0) return 'Простить все долги';
   if (isMixedCurrency.value || paymentAmount.value >= totalDebt.value) return 'Закрыть все долги';
   return `Внести ${formatCurrency(paymentAmount.value, debtCurrency.value, { showSymbol: false })}`;
@@ -271,8 +287,9 @@ function confirm() {
         Сумма-героем — та же раскладка, что в шторке одиночного платежа
         (`PaymentDrawer`), поэтому она вынесена в `entities/debt`.
       -->
+      <!-- Полный зачёт денег не двигает: ни суммы, ни счёта у него нет. -->
       <DebtAmountHeadline
-        v-if="!isMixedCurrency"
+        v-if="!isMixedCurrency && !isFullOffset"
         v-model="paymentAmount"
         :currency-symbol="currencySymbol"
         :disabled="isClosing"
@@ -283,7 +300,7 @@ function confirm() {
         Разные валюты: одной суммой их не набрать — сумма платежа зафиксирована
         полным итогом, а выбор сводится к «оплатить» или «простить».
       -->
-      <div v-else class="flex flex-col items-center gap-1">
+      <div v-else-if="isMixedCurrency" class="flex flex-col items-center gap-1">
         <p
           v-for="item in totalsByCurrency"
           :key="item.currency"
@@ -294,6 +311,7 @@ function confirm() {
       </div>
 
       <PaymentPresetRow
+        v-if="!isFullOffset"
         v-model:amount="paymentAmount"
         v-model:forgive-remainder="forgiveRemainder"
         :total="totalDebt"
@@ -328,6 +346,13 @@ function confirm() {
             закроется {{ closingCount }} из {{ debts.length }}
           </p>
         </div>
+        <p
+          v-if="offsetAmount > 0"
+          data-testid="close-all-offset-note"
+          class="text-caption text-text-secondary-light dark:text-text-secondary-dark"
+        >
+          Сначала зачёт: по {{ formatCurrency(offsetAmount, debtCurrency) }} с каждой стороны.
+        </p>
 
         <ul class="rounded-xl border border-border-light dark:border-border-dark overflow-hidden">
           <li
@@ -348,7 +373,7 @@ function confirm() {
               >
                 {{
                   formatCurrency(
-                    item.allocated + item.forgiven,
+                    item.covered + item.forgiven,
                     item.debt.currency || DEFAULT_CURRENCY,
                   )
                 }}
@@ -361,7 +386,7 @@ function confirm() {
         </ul>
       </div>
 
-      <div class="space-y-2" :inert="isClosing || undefined">
+      <div v-if="!isFullOffset" class="space-y-2" :inert="isClosing || undefined">
         <AccountSelector
           :accounts="accounts"
           :selected-id="selectedAccountId"
@@ -374,6 +399,7 @@ function confirm() {
       </div>
 
       <DebtPaymentFields
+        v-if="!isFullOffset"
         v-model:amount="paymentAmount"
         v-model:forgive-remainder="forgiveRemainder"
         v-model:excess-category-id="excessCategoryId"
@@ -387,20 +413,27 @@ function confirm() {
         :direction="debtDirection"
       >
         <template #forgive-note>
-          Все долги
-          <template v-if="isMixedCurrency">
-            (
-            <span v-for="(item, i) in totalsByCurrency" :key="item.currency">
-              <span class="font-semibold">{{ formatCurrency(item.amount, item.currency) }}</span>
-              <template v-if="i < totalsByCurrency.length - 1">+</template>
-            </span>
-            )
+          <template v-if="offsetAmount > 0">
+            Остаток после зачёта —
+            <span class="font-semibold">{{ formatCurrency(totalDebt, debtCurrency) }}</span>
+            — будет прощён и списан как подарок.
           </template>
           <template v-else>
-            на сумму
-            <span class="font-semibold">{{ formatCurrency(totalDebt, debtCurrency) }}</span>
+            Все долги
+            <template v-if="isMixedCurrency">
+              (
+              <span v-for="(item, i) in totalsByCurrency" :key="item.currency">
+                <span class="font-semibold">{{ formatCurrency(item.amount, item.currency) }}</span>
+                <template v-if="i < totalsByCurrency.length - 1">+</template>
+              </span>
+              )
+            </template>
+            <template v-else>
+              на сумму
+              <span class="font-semibold">{{ formatCurrency(totalDebt, debtCurrency) }}</span>
+            </template>
+            будут прощены и списаны как подарок.
           </template>
-          будут прощены и списаны как подарок.
         </template>
       </DebtPaymentFields>
     </div>

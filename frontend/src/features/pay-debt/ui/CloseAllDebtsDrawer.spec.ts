@@ -56,6 +56,70 @@ describe('CloseAllDebtsDrawer', () => {
     expect(wrapper.text()).toContain('закроется 2 из 2');
   });
 
+  describe('встречные долги', () => {
+    const mutual = [
+      makeDebt({
+        id: 't',
+        name: 'Мой долг',
+        debt_type: 'taken',
+        remaining_amount: 10_000,
+        created_at: '2026-03-01',
+      }),
+      makeDebt({
+        id: 'g1',
+        name: 'Его долг 1',
+        remaining_amount: 15_000,
+        created_at: '2026-01-01',
+      }),
+      makeDebt({
+        id: 'g2',
+        name: 'Его долг 2',
+        remaining_amount: 20_000,
+        created_at: '2026-02-01',
+      }),
+    ];
+
+    it('показывает остаток после зачёта и направление по перевесу', () => {
+      const wrapper = mountDrawer(mutual);
+      expect(wrapper.text()).toContain('вам должны · 3 долга');
+      expect(wrapper.find('[data-testid="close-all-offset-note"]').exists()).toBe(true);
+      expect(rows(wrapper)).toEqual([
+        expect.stringContaining('Закроется'),
+        expect.stringContaining('Закроется'),
+        expect.stringContaining('Зачтётся'),
+      ]);
+    });
+
+    it('частичная сумма ложится после зачёта, по FIFO', async () => {
+      const wrapper = mountDrawer(mutual);
+      // Остаток 25 000, половина — 12 500: g1 (15 000) гасится зачётом 10 000
+      // и 5 000 платежа, g2 получает 7 500 из 20 000.
+      await wrapper.find('[data-testid="close-all-preset-half"]').trigger('click');
+      const [first, second, third] = rows(wrapper);
+      expect(first).toContain('Закроется');
+      expect(second).toContain('Частично');
+      expect(third).toContain('Зачтётся');
+      expect(wrapper.text()).toContain('закроется 2 из 3');
+    });
+
+    it('равные встречные долги закрываются одним зачётом, без суммы платежа', () => {
+      const wrapper = mountDrawer([
+        makeDebt({
+          id: 't',
+          debt_type: 'taken',
+          remaining_amount: 5_000,
+          created_at: '2026-01-02',
+        }),
+        makeDebt({ id: 'g', remaining_amount: 5_000, created_at: '2026-01-01' }),
+      ]);
+      expect(rows(wrapper).every((t) => t.includes('Зачтётся'))).toBe(true);
+      expect(wrapper.find('[data-testid="close-all-amount-input"]').exists()).toBe(false);
+      const submit = wrapper.find('[data-testid="close-all-submit"]');
+      expect(submit.text()).toContain('Зачесть все долги');
+      expect(submit.attributes('disabled')).toBeUndefined();
+    });
+  });
+
   it('распределяет частичную сумму по FIFO — старый долг первым', async () => {
     const wrapper = mountDrawer(twoDebts);
     await wrapper.find('[data-testid="close-all-preset-half"]').trigger('click');

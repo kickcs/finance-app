@@ -28,7 +28,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'debt-click': [debt: Debt];
-  'person-click': [personName: string, debtType: 'given' | 'taken'];
+  'person-click': [personName: string];
   'add-click': [];
   'view-all': [];
 }>();
@@ -47,7 +47,7 @@ function handleGroupClick(group: DebtByPerson) {
   if (group.debts.length === 1) {
     emit('debt-click', group.debts[0]);
   } else {
-    emit('person-click', group.personName, group.debtType);
+    emit('person-click', group.personName);
   }
 }
 

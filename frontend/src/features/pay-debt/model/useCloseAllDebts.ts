@@ -1,11 +1,13 @@
 import { ref } from 'vue';
 import { usePayDebt } from './usePayDebt';
-import { applyDebtUpdate, buildDebtPaymentPatch, debtQueryKeys } from '@/entities/debt';
+import { applyDebtUpdate, buildDebtPaymentPatch, debtQueryKeys, debtsApi } from '@/entities/debt';
+import { DEFAULT_CURRENCY } from '@/entities/currency';
 import { queryClient } from '@/shared/api/queryClient';
 import { invalidateDebtRelated } from '@/shared/api/invalidation';
 import { useToast } from '@/shared/ui';
 import type { Debt } from '@/shared/api/database.types';
 import { sortDebtsByDateAsc } from './sortDebts';
+import { canSettleTogether, hasBothDirections, planMutualSettlement } from './mutualSettlement';
 
 interface CloseAllOptions {
   paymentAmount?: number;
@@ -43,13 +45,43 @@ export function useCloseAllDebts() {
     progress.value = 0;
     total.value = debts.length;
 
-    const totalDebt = debts.reduce((sum, d) => sum + d.remaining_amount, 0);
-    const paymentAmount = options?.paymentAmount ?? totalDebt;
-    const excessAmount = Math.max(0, paymentAmount - totalDebt);
-
-    const sorted = sortDebtsByDateAsc(debts);
-
+    let offsetDone = false;
     try {
+      // Летящие запросы отменяем, чтобы ответ, посланный до платежей, не
+      // приземлился посреди пачки и не дёрнул список под шторкой.
+      await queryClient.cancelQueries({ queryKey: debtQueryKeys.all });
+
+      // Встречные долги сначала гасят друг друга на сервере, а платёж закрывает
+      // остаток — его и показывает шторка. Кэш не трогаем до конца пачки.
+      let openDebts = debts;
+      let offsetDebts: Debt[] = [];
+      if (hasBothDirections(debts)) {
+        const personName = debts[0].person_name;
+        if (!personName || !canSettleTogether(debts)) {
+          throw new Error('Встречные долги сводятся только у одного человека в одной валюте');
+        }
+        const plan = planMutualSettlement(debts);
+        const result = await debtsApi.offset(personName, debts[0].currency || DEFAULT_CURRENCY);
+        offsetDone = true;
+        offsetDebts = result.debts;
+        const byId = new Map(offsetDebts.map((d) => [d.id, d]));
+        openDebts = debts.map((d) => byId.get(d.id) ?? d).filter((d) => !d.is_closed);
+        // Список на экране мог устареть: если зачёт разошёлся с показанным, остаток
+        // может лежать на другой стороне, и платить по нему нельзя.
+        if (
+          result.offset_amount !== plan.offsetAmount ||
+          openDebts.some((d) => d.debt_type !== plan.direction)
+        ) {
+          throw new Error('Зачёт разошёлся с долгами на экране');
+        }
+        progress.value += debts.length - openDebts.length;
+      }
+
+      const totalDebt = openDebts.reduce((sum, d) => sum + d.remaining_amount, 0);
+      const paymentAmount = options?.paymentAmount ?? totalDebt;
+      const excessAmount = Math.max(0, paymentAmount - totalDebt);
+      const sorted = sortDebtsByDateAsc(openDebts);
+
       // Pre-compute (debt, allocatedAmount) pairs synchronously
       let budget = paymentAmount;
       const paymentPlan: {
@@ -82,10 +114,6 @@ export function useCloseAllDebts() {
         });
       }
 
-      // Летящие запросы отменяем, чтобы ответ, посланный до платежей, не
-      // приземлился посреди пачки и не дёрнул список под шторкой.
-      await queryClient.cancelQueries({ queryKey: debtQueryKeys.all });
-
       // Execute payments sequentially (same account — parallel would cause balance race conditions)
       let firstCreatedTransactionId: string | null = null;
       for (const plan of paymentPlan) {
@@ -110,6 +138,7 @@ export function useCloseAllDebts() {
       // внутри неё оптимистичная правка выключена. Применённый до цикла план
       // убирал долги из кэша на всё время запросов, и открытая шторка вместе
       // со списком за ней схлопывались в «Вы без долгов!».
+      for (const debt of offsetDebts) applyDebtUpdate(queryClient, debt.id, debt);
       for (const plan of paymentPlan) {
         applyDebtUpdate(
           queryClient,
@@ -133,7 +162,9 @@ export function useCloseAllDebts() {
       console.error('Failed to close all debts:', e);
       error.value = `Ошибка при закрытии долга ${progress.value + 1} из ${total.value}`;
       toast({
-        title: options?.errorToastTitle ?? 'Не удалось закрыть все долги',
+        title: offsetDone
+          ? 'Зачёт проведён, остаток не закрыт'
+          : (options?.errorToastTitle ?? 'Не удалось закрыть все долги'),
         variant: 'error',
       });
       // Часть платежей могла пройти, а оптимистичных правок до сюда не было —

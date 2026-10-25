@@ -82,12 +82,12 @@ describe('useChangelog', () => {
       expect(latestEntry.value?.items.length).toBeGreaterThan(0);
     });
 
-    it('точка входа релиза — 1.0.93 с записью про оплату с двух счетов', () => {
-      expect(CURRENT_VERSION).toBe('1.0.93');
-      expect(CHANGELOG_ENTRIES[0].version).toBe('1.0.93');
-      expect(CHANGELOG_ENTRIES[0].date).toBe('2026-10-12');
-      expect(CHANGELOG_ENTRIES[0].items[0].type).toBe('feature');
-      expect(CHANGELOG_ENTRIES[0].items[0].text).toContain('двух счетов');
+    it('точка входа релиза — 1.0.94 с записью про закрытие всех долгов', () => {
+      expect(CURRENT_VERSION).toBe('1.0.94');
+      expect(CHANGELOG_ENTRIES[0].version).toBe('1.0.94');
+      expect(CHANGELOG_ENTRIES[0].date).toBe('2026-10-25');
+      expect(CHANGELOG_ENTRIES[0].items[0].type).toBe('fix');
+      expect(CHANGELOG_ENTRIES[0].items[0].text).toContain('Закрыть все долги');
     });
   });
 
