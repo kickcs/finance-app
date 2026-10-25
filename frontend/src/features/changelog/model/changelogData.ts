@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.93';
+export const CURRENT_VERSION = '1.0.94';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,21 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.94',
+    date: '2026-10-25',
+    title: 'Закрытие всех долгов человека',
+    items: [
+      {
+        type: 'fix',
+        text: '«Закрыть все долги» больше не путает, кто кому должен. Если вы с человеком должны друг другу, долги сначала взаимно зачитываются, и закрывается только разница: вам должны 476 104, вы должны 100 000 — останется получить 376 104.',
+      },
+      {
+        type: 'improvement',
+        text: 'Человек, открытый с главной, показывается со всеми долгами — и теми, что должны вам, и теми, что должны вы.',
+      },
+    ],
+  },
   {
     version: '1.0.93',
     date: '2026-10-12',

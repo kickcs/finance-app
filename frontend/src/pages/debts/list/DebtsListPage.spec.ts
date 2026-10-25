@@ -414,21 +414,37 @@ describe('DebtsListPage', () => {
       expect(drawer?.textContent).toContain('2 долга');
     });
 
-    it('shows "close all" button when >1 groups for same person', async () => {
-      // Need 2 groups (given + taken) so groups.length > 1 condition is met
+    it('shows "close all" button when a person has >1 debts in one direction', async () => {
       server.use(
         http.get('*/api/debts/paginated', () =>
           HttpResponse.json(
-            buildPaginatedDebtsResponse([mockGivenDebtResponse, mockAlexeiTakenDebtResponse]),
+            buildPaginatedDebtsResponse([mockGivenDebtResponse, mockSecondGivenDebtResponse]),
           ),
         ),
-        payDebtHandler(mockAlexeiTakenDebtResponse),
       );
       const { wrapper } = await renderPage({ person: 'Алексей' });
 
       const closeAllBtn = wrapper.find('[data-testid="close-all-btn"]');
       expect(closeAllBtn.exists()).toBe(true);
       expect(closeAllBtn.text()).toContain('Закрыть все долги');
+    });
+
+    it('встречные долги в разных валютах закрыть одной кнопкой нельзя', async () => {
+      server.use(
+        http.get('*/api/debts/paginated', () =>
+          HttpResponse.json(
+            buildPaginatedDebtsResponse([
+              { ...mockAlexeiTakenDebtResponse, currency: 'USD', remainingAmount: 20 },
+              mockGivenDebtResponse,
+              mockSecondGivenDebtResponse,
+            ]),
+          ),
+        ),
+      );
+      const { wrapper } = await renderPage({ person: 'Алексей' });
+
+      expect(wrapper.findAllComponents({ name: 'DebtCard' }).length).toBeGreaterThan(0);
+      expect(wrapper.find('[data-testid="close-all-btn"]').exists()).toBe(false);
     });
 
     it('clears filter when clear button clicked', async () => {
@@ -520,15 +536,85 @@ describe('DebtsListPage', () => {
   // Close All Debts Flow
   // -----------------------------------------------------------------------
   describe('close all debts flow', () => {
-    it('closes all debts for a person and clears filter', async () => {
-      // Need 2 groups (given + taken) so groups.length > 1 condition shows close-all-btn
+    it('встречные долги закрываются одним расчётом: зачёт, затем остаток', async () => {
+      // Сценарий с дашборда: человек открыт из вкладки «Вам должны», а встречный
+      // долг стоит первым — раньше шторка брала направление с него.
+      const calls: string[] = [];
+      const payments: Record<string, number | undefined> = {};
+      const debtsAfterOffset = [
+        { ...mockGivenDebtResponse, remainingAmount: 10000 },
+        { ...mockAlexeiTakenDebtResponse, remainingAmount: 0, isClosed: true },
+      ];
       server.use(
         http.get('*/api/debts/paginated', () =>
           HttpResponse.json(
-            buildPaginatedDebtsResponse([mockGivenDebtResponse, mockAlexeiTakenDebtResponse]),
+            buildPaginatedDebtsResponse([
+              mockAlexeiTakenDebtResponse,
+              mockGivenDebtResponse,
+              mockSecondGivenDebtResponse,
+            ]),
           ),
         ),
-        payDebtHandler(mockAlexeiTakenDebtResponse),
+        http.post('*/api/debts/offset', async ({ request }) => {
+          calls.push(`offset ${JSON.stringify(await request.json())}`);
+          return HttpResponse.json({
+            personName: 'Алексей',
+            currency: 'UZS',
+            offsetAmount: 20000,
+            debts: debtsAfterOffset,
+          });
+        }),
+        http.post('*/api/debts/:id/payments', async ({ params, request }) => {
+          const body = (await request.json()) as PayDebtBody;
+          calls.push(`pay ${params.id}`);
+          payments[params.id as string] = body.amount;
+          const target =
+            [...debtsAfterOffset, mockSecondGivenDebtResponse].find((d) => d.id === params.id) ??
+            mockGivenDebtResponse;
+          return HttpResponse.json(payDebtResult(target, body));
+        }),
+      );
+      const { wrapper, router } = await renderPage({ person: 'Алексей', type: 'given' });
+
+      // Видны все три долга, а не только одна сторона.
+      expect(wrapper.findAllComponents({ name: 'DebtCard' })).toHaveLength(3);
+
+      await wrapper.find('[data-testid="close-all-btn"]').trigger('click');
+      await flushPromises();
+
+      // 30 000 + 20 000 вам минус 20 000 ваших = 30 000 в вашу пользу.
+      const drawer = document.body.querySelector('[data-testid="close-all-drawer"]');
+      expect(drawer?.textContent).toContain('вам должны · 3 долга');
+      expect(drawer?.textContent).toContain('Куда зачислить');
+      expect(drawer?.textContent?.replace(/\s/g, ' ')).toContain('Сначала зачёт: по 20 000 UZS');
+      const amountInput = document.body.querySelector<HTMLInputElement>(
+        '[data-testid="close-all-amount-input"]',
+      );
+      expect(amountInput?.value.replace(/\s/g, '')).toBe('30000');
+      const rowTexts = Array.from(
+        document.body.querySelectorAll('[data-testid="close-all-debt-row"]'),
+      ).map((r) => r.textContent ?? '');
+      expect(rowTexts.find((t) => t.includes('Долг для Алексей'))).toContain('Зачтётся');
+      expect(drawer?.textContent).toContain('закроется 3 из 3');
+
+      document.body.querySelector<HTMLButtonElement>('[data-testid="close-all-submit"]')?.click();
+      await flushPromises();
+      await flushPromises();
+      await flushPromises();
+
+      expect(calls[0]).toBe('offset {"personName":"Алексей","currency":"UZS"}');
+      expect(payments).toEqual({ 'debt-1': 10000, 'debt-5': 20000 });
+      expect(router.currentRoute.value.query.person).toBeUndefined();
+    });
+
+    it('closes all debts for a person and clears filter', async () => {
+      server.use(
+        http.get('*/api/debts/paginated', () =>
+          HttpResponse.json(
+            buildPaginatedDebtsResponse([mockGivenDebtResponse, mockSecondGivenDebtResponse]),
+          ),
+        ),
+        payDebtHandler(),
       );
 
       const { wrapper, router } = await renderPage({ person: 'Алексей' });
@@ -572,14 +658,14 @@ describe('DebtsListPage', () => {
       server.use(
         http.get('*/api/debts/paginated', () =>
           HttpResponse.json(
-            buildPaginatedDebtsResponse([mockGivenDebtResponse, mockAlexeiTakenDebtResponse]),
+            buildPaginatedDebtsResponse([mockGivenDebtResponse, mockSecondGivenDebtResponse]),
           ),
         ),
         http.post('*/api/debts/:id/payments', async ({ params, request }) => {
           await gate;
           const body = (await request.json()) as PayDebtBody;
           const target =
-            [mockGivenDebtResponse, mockAlexeiTakenDebtResponse].find((d) => d.id === params.id) ??
+            [mockGivenDebtResponse, mockSecondGivenDebtResponse].find((d) => d.id === params.id) ??
             mockGivenDebtResponse;
           return HttpResponse.json(payDebtResult(target, body));
         }),

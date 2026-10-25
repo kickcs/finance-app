@@ -313,6 +313,67 @@ describe('useCloseAllDebts', () => {
     });
   });
 
+  describe('встречные долги', () => {
+    const takenMutual = makeDebt({
+      id: 'taken-mutual',
+      debtType: 'taken',
+      totalAmount: 10000,
+      remainingAmount: 10000,
+      createdAt: '2025-03-01T00:00:00.000Z',
+    });
+
+    function stubOffset(offsetAmount: number, calls: string[]) {
+      server.use(
+        http.post('*/api/debts/offset', async ({ request }) => {
+          calls.push(`offset ${JSON.stringify(await request.json())}`);
+          return HttpResponse.json({
+            personName: 'Алексей',
+            currency: 'UZS',
+            offsetAmount,
+            debts: [
+              { ...mockGivenDebtResponse, id: 'debt-1', remainingAmount: 30000 - offsetAmount },
+              {
+                ...mockGivenDebtResponse,
+                id: 'taken-mutual',
+                debtType: 'taken',
+                remainingAmount: 0,
+                isClosed: true,
+              },
+            ],
+          });
+        }),
+      );
+    }
+
+    it('сначала зачёт, затем платёж только по остатку', async () => {
+      const calls: string[] = [];
+      stubOffset(10000, calls);
+      const c = mountComposable();
+
+      expect(await c.closeAllDebts([takenMutual, debt1, debt2], ACCOUNT_ID, USER_ID)).toBe(true);
+
+      expect(calls).toEqual(['offset {"personName":"Алексей","currency":"UZS"}']);
+      expect(payments.map((p) => [p.debtId, p.body.amount])).toEqual([
+        ['debt-1', 20000],
+        ['debt-5', 20000],
+      ]);
+      expect(c.progress.value).toBe(3);
+    });
+
+    it('не платит, если сервер зачёл не то, что было на экране', async () => {
+      stubOffset(5000, []);
+      const c = mountComposable();
+
+      expect(await c.closeAllDebts([takenMutual, debt1, debt2], ACCOUNT_ID, USER_ID)).toBe(false);
+
+      expect(payments).toHaveLength(0);
+      expect(toastMock).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'Зачёт проведён, остаток не закрыт', variant: 'error' }),
+      );
+      expect(invalidateDebtRelated).toHaveBeenCalledWith(expect.anything(), USER_ID);
+    });
+  });
+
   describe('взятые долги', () => {
     it('шлёт такой же платёж — сторону выбирает сервер', async () => {
       const c = mountComposable();

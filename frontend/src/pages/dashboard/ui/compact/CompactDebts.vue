@@ -53,7 +53,7 @@ function handleGroupClick(group: DebtByPerson): void {
   if (group.debts.length === 1) {
     nav.toDebt(group.debts[0]);
   } else {
-    nav.toDebts(group.personName, group.debtType);
+    nav.toDebts(group.personName);
   }
 }
 

@@ -54,7 +54,6 @@ const {
   filteredPerson,
   mutualPositions,
   allDebtsFromGroups,
-  filteredDebts,
   totalGivenDebts,
   totalTakenDebts,
   fetchNextPage,
@@ -66,6 +65,7 @@ const {
   showCloseAllDrawer,
   closeAllPersonName,
   closeAllDebtsForPerson,
+  canCloseAll,
   isClosing,
   progress,
   total,
@@ -243,7 +243,7 @@ useIntersectionObserver(
                 <div class="space-y-3">
                   <SectionHeader
                     :title="personFilter ? `Долги: ${personFilter}` : 'По людям'"
-                    :count="personFilter ? filteredDebts.length : people.length"
+                    :count="personFilter ? allDebtsFromGroups.length : people.length"
                     :show-add="false"
                     :show-view-all="false"
                   >
@@ -281,9 +281,9 @@ useIntersectionObserver(
                   </div>
 
                   <!-- Filtered by person: their debts, flat -->
-                  <div v-else-if="personFilter && filteredDebts.length > 0" class="space-y-2">
+                  <div v-else-if="personFilter && allDebtsFromGroups.length > 0" class="space-y-2">
                     <DebtCard
-                      v-for="debt in filteredDebts"
+                      v-for="debt in allDebtsFromGroups"
                       :key="debt.id"
                       :debt="debt"
                       :class="
@@ -294,7 +294,7 @@ useIntersectionObserver(
                       @click="handleDebtClick(debt)"
                     />
                     <UButton
-                      v-if="filteredDebts.length > 1"
+                      v-if="canCloseAll"
                       variant="secondary"
                       full-width
                       class="mt-3"

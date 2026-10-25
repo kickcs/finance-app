@@ -21,10 +21,9 @@ export function useDashboardNavigation() {
     toHistory: () => router.push({ name: ROUTE_NAMES.HISTORY }),
     toDebt: (debt: Debt) => router.push({ name: ROUTE_NAMES.DEBT_DETAIL, params: { id: debt.id } }),
     toNewDebt: () => router.push({ name: ROUTE_NAMES.DEBTS_LIST }),
-    toDebts: (person?: string, debtType?: 'given' | 'taken') =>
-      person
-        ? router.push({ name: ROUTE_NAMES.DEBTS_LIST, query: { person, type: debtType } })
-        : router.push({ name: ROUTE_NAMES.DEBTS_LIST }),
+    // Человек открывается целиком, в обе стороны: встречные долги сводятся одним расчётом.
+    toDebts: (person?: string) =>
+      router.push({ name: ROUTE_NAMES.DEBTS_LIST, ...(person ? { query: { person } } : {}) }),
     toAnalytics: (type: 'income' | 'expense') =>
       router.push({ name: ROUTE_NAMES.ANALYTICS, query: { type } }),
     toQuickActionsSettings: () => router.push({ name: ROUTE_NAMES.SETTINGS_QUICK_ACTIONS }),

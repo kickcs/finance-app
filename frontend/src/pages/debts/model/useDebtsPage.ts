@@ -14,7 +14,7 @@ import {
 } from '@/entities/debt';
 import { useAccounts } from '@/entities/account';
 import { useOffsetDebts } from '@/features/offset-debts';
-import { useCloseAllDebts } from '@/features/pay-debt';
+import { canSettleTogether, useCloseAllDebts } from '@/features/pay-debt';
 import { buildSharePayload, selectShareableDebts } from '@/features/share-debts';
 import { useExchangeRates, useProfile } from '@/shared/api';
 import { DEFAULT_CURRENCY } from '@/shared/config/currency';
@@ -47,7 +47,6 @@ export function useDebtsPage() {
   // `router.replace`, а третьим местом был watch, тянувший ref обратно из
   // query. Теперь состояние одно, и возврат на экран поднимает тот же список.
   const personFilter = useRouteQuery<string | null>('person', null);
-  const typeFilter = useRouteQuery<'given' | 'taken' | null>('type', null);
   const statusFilter = useRouteQuery<'active' | 'closed'>('status', 'active');
   // Валюта в адрес не идёт: она перебирает то, что уже загружено, и сбрасывается
   // при смене вкладки — делиться такой ссылкой нечем.
@@ -83,14 +82,6 @@ export function useDebtsPage() {
 
   const allDebtsFromGroups = computed(() => groups.value.flatMap((g) => g.debts));
 
-  // TODO: typeFilter is client-side only. Currently safe because typeFilter
-  // is always paired with personFilter (server-side), so groups are few.
-  // Consider moving debtType to server-side filters if needed.
-  const filteredGroups = computed(() => {
-    if (!typeFilter.value) return groups.value;
-    return groups.value.filter((g) => g.debt_type === typeFilter.value);
-  });
-
   const availableCurrencies = computed(() => {
     const currencies = new Set<string>();
     for (const c of Object.keys(totalSummary.value.totalGiven)) currencies.add(c);
@@ -112,11 +103,7 @@ export function useDebtsPage() {
     ),
   );
 
-  const people = computed(() => foldGroupsIntoPeople(filteredGroups.value, convert));
-
-  // Плоский список для режима «фильтр по человеку»: считается из filteredGroups,
-  // чтобы ?type=given из дашборда не тянул за собой встречные долги.
-  const filteredDebts = computed(() => filteredGroups.value.flatMap((g) => g.debts));
+  const people = computed(() => foldGroupsIntoPeople(groups.value, convert));
 
   // Человек, по которому включён фильтр: сервер в этом режиме отдаёт только его
   // группы, так что в `people` он единственный.
@@ -149,17 +136,13 @@ export function useDebtsPage() {
   // --- Поделиться долгами человека ---
   const showShareDrawer = ref(false);
 
-  /**
-   * Снимок собирается из того, что сейчас на экране: пришёл человек по фильтру
-   * `?type=given` — уходят только эти долги, иначе получатель увидел бы то,
-   * чего отправитель не видел.
-   */
+  /** Снимок — ровно то, что на экране: все открытые долги человека. */
   const sharePayload = computed(() => {
     if (!personFilter.value) return null;
     return buildSharePayload({
       personName: personFilter.value,
       currency: currency.value,
-      debts: filteredDebts.value,
+      debts: allDebtsFromGroups.value,
       ownerName: profile.value?.name ?? null,
       convert,
     });
@@ -167,7 +150,7 @@ export function useDebtsPage() {
 
   /** Приватные долги в снимок не идут — их количество показываем в шторке. */
   const hiddenShareCount = computed(
-    () => filteredDebts.value.length - selectShareableDebts(filteredDebts.value).length,
+    () => allDebtsFromGroups.value.length - selectShareableDebts(allDebtsFromGroups.value).length,
   );
 
   /** Делиться можно только открытыми долгами конкретного человека. */
@@ -231,7 +214,6 @@ export function useDebtsPage() {
    */
   const listQuery = computed(() => ({
     ...(personFilter.value ? { person: personFilter.value } : {}),
-    ...(typeFilter.value ? { type: typeFilter.value } : {}),
     ...(statusFilter.value !== 'active' ? { status: statusFilter.value } : {}),
   }));
 
@@ -266,7 +248,6 @@ export function useDebtsPage() {
 
   function clearFilter() {
     personFilter.value = null;
-    typeFilter.value = null;
   }
 
   // --- Закрыть все долги человека ---
@@ -280,6 +261,11 @@ export function useDebtsPage() {
       (d) => getDebtDisplayName(d) === closeAllPersonName.value,
     );
   });
+
+  // Встречные долги в разных валютах одним расчётом не свести — их закрывают по одному.
+  const canCloseAll = computed(
+    () => allDebtsFromGroups.value.length > 1 && canSettleTogether(allDebtsFromGroups.value),
+  );
 
   function openCloseAllForPerson(personName: string) {
     closeAllPersonName.value = personName;
@@ -322,12 +308,11 @@ export function useDebtsPage() {
     selectedDebtId,
 
     // Списки
-    groups: filteredGroups,
+    groups,
     people,
     filteredPerson,
     mutualPositions,
     allDebtsFromGroups,
-    filteredDebts,
     totalDebtsCount,
     totalGivenDebts,
     totalTakenDebts,
@@ -341,6 +326,7 @@ export function useDebtsPage() {
     showCloseAllDrawer,
     closeAllPersonName,
     closeAllDebtsForPerson,
+    canCloseAll,
     isClosing,
     progress,
     total,
