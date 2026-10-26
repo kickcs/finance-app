@@ -21,12 +21,12 @@ const SETTLEMENT_RECORD_LOCKED =
   'Запись расчёта по долгу меняется со стороны долга: отмените расчёт и проведите заново';
 
 /**
- * Правка записи расчёта не должна менять деньги и тип: остаток долга считается
- * по этим записям. «Меняет» — значение пришло и отличается от сохранённого.
+ * Правка записи расчёта не должна менять деньги, тип и привязку к долгу: остаток
+ * долга считается по этим записям. «Меняет» — значение пришло и отличается от сохранённого.
  */
 function changesSettlementMoney(
   transaction: Transaction,
-  data: { amount?: number; currency?: string; type?: string; categoryId?: string },
+  data: UpdateTransactionCommand['data'],
 ): boolean {
   const differs = <T>(next: T | undefined, current: T) => next !== undefined && next !== current;
   const nextCategory = data.categoryId;
@@ -39,7 +39,11 @@ function changesSettlementMoney(
     movesCategory ||
     differs(data.amount, transaction.amountValue) ||
     differs(data.currency, transaction.currency) ||
-    differs(data.type, transaction.typeValue)
+    differs(data.type, transaction.typeValue) ||
+    differs(data.debtId, transaction.debtId) ||
+    differs(data.isDebtRelated, transaction.isDebtRelated) ||
+    // `null` убирает вторую часть, а у записи расчёта её не бывает — убирать нечего.
+    !!data.secondPart
   );
 }
 

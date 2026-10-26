@@ -1,17 +1,12 @@
 import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
-import type { CommandBus } from '@nestjs/cqrs';
-import type { DataSource, EntityManager } from 'typeorm';
+import type { EntityManager } from 'typeorm';
 import type { Debt } from '../../domain/aggregates/debt';
-import type { IDebtRepository } from '../../domain/repositories';
+import { runInTransaction } from '../../../../shared/infrastructure/run-in-transaction';
 import { DeleteTransactionCommand } from '../../../accounting/application/commands/delete-transaction/delete-transaction.command';
 import { DEBT_CATEGORY_IDS } from '../../../accounting/domain/constants/default-categories';
+import { loadOwnedDebt, lockDebts } from './debt-lock';
+import type { SettlementDeps } from './settlement-deps';
 import { displayName, round2 } from './settlement-plan';
-
-export interface ReversalDeps {
-  debtRepository: IDebtRepository;
-  commandBus: CommandBus;
-  dataSource: DataSource;
-}
 
 export interface SettlementRecord {
   id: string;
@@ -52,6 +47,15 @@ interface RecordRow {
   amount: string;
 }
 
+/** Долги расчёта по его записям — чтение без блокировки, только чтобы знать, что запирать. */
+async function debtIdsOf(manager: EntityManager, settlementId: string): Promise<string[]> {
+  const rows = await manager.query<{ debt_id: string }[]>(
+    'SELECT DISTINCT debt_id FROM transactions WHERE settlement_id = $1 AND debt_id IS NOT NULL',
+    [settlementId],
+  );
+  return rows.map((row) => row.debt_id);
+}
+
 async function loadRecords(
   manager: EntityManager,
   settlementId: string,
@@ -77,19 +81,32 @@ async function assertLatestSettlement(
   settlementId: string,
   debts: readonly Debt[],
 ): Promise<void> {
-  for (const debt of debts) {
-    const later = await manager.query<unknown[]>(
-      `SELECT 1 FROM transactions
-       WHERE debt_id = $1 AND settlement_id IS NOT NULL AND settlement_id <> $2
-         AND created_at > (SELECT MAX(created_at) FROM transactions WHERE settlement_id = $2)
-       LIMIT 1`,
-      [debt.id, settlementId],
+  if (debts.length === 0) return;
+
+  const later = await manager.query<{ debt_id: string }[]>(
+    `SELECT DISTINCT debt_id FROM transactions
+     WHERE debt_id = ANY($1::uuid[]) AND settlement_id IS NOT NULL AND settlement_id <> $2
+       AND created_at > (SELECT MAX(created_at) FROM transactions WHERE settlement_id = $2)`,
+    [debts.map((debt) => debt.id), settlementId],
+  );
+  const blocked = new Set(later.map((row) => row.debt_id));
+  const first = debts.find((debt) => blocked.has(debt.id));
+  if (first) {
+    throw new ConflictException(
+      `Сначала отмените более поздний расчёт по долгу «${displayName(first)}»`,
     );
-    if (later.length > 0) {
-      throw new ConflictException(
-        `Сначала отмените более поздний расчёт по долгу «${displayName(debt)}»`,
-      );
-    }
+  }
+}
+
+/** Снимает записи по одной, без проверок долга: остатки правит вызывающий. */
+export async function deleteRecords(
+  deps: Pick<SettlementDeps, 'commandBus'>,
+  userId: string,
+  recordIds: readonly string[],
+  manager: EntityManager,
+): Promise<void> {
+  for (const id of recordIds) {
+    await deps.commandBus.execute(new DeleteTransactionCommand(id, userId, true, manager));
   }
 }
 
@@ -97,46 +114,47 @@ async function assertLatestSettlement(
  * Отменяет расчёт целиком одной транзакцией БД: возвращает остатки затронутых
  * долгов и удаляет все записи расчёта со снятием их влияния на счета.
  */
-export async function reverseSettlement(
-  deps: ReversalDeps,
+export function reverseSettlement(
+  deps: SettlementDeps,
   userId: string,
   settlementId: string,
-  manager?: EntityManager,
+  outerManager?: EntityManager,
 ): Promise<Debt[]> {
-  if (!manager) {
-    return deps.dataSource.transaction((inner) =>
-      reverseSettlement(deps, userId, settlementId, inner),
+  return runInTransaction(deps.dataSource, outerManager, async (manager) => {
+    // Сначала долги, потом записи: так же берут замки платёж и удаление долга, иначе они ждали бы друг друга по кругу.
+    const locked = await lockDebts(
+      deps.debtRepository,
+      manager,
+      userId,
+      await debtIdsOf(manager, settlementId),
     );
-  }
+    const records = await loadRecords(manager, settlementId);
+    if (records.length === 0) throw new NotFoundException('Расчёт не найден');
+    if (records.some((record) => record.userId !== userId)) {
+      throw new ForbiddenException('Расчёт принадлежит другому пользователю');
+    }
 
-  const records = await loadRecords(manager, settlementId);
-  if (records.length === 0) throw new NotFoundException('Расчёт не найден');
-  if (records.some((record) => record.userId !== userId)) {
-    throw new ForbiddenException('Расчёт принадлежит другому пользователю');
-  }
+    // Долг, которого нет под замком, уже удалён: возвращать остаток некому.
+    const debtIds = new Set(records.map((r) => r.debtId).filter((id): id is string => id !== null));
+    const debts = [...debtIds].flatMap((id) => locked.get(id) ?? []);
+    await assertLatestSettlement(manager, settlementId, debts);
 
-  const debtIds = [
-    ...new Set(records.map((r) => r.debtId).filter((id): id is string => id !== null)),
-  ];
-  const debts: Debt[] = [];
-  for (const id of debtIds) {
-    const debt = await deps.debtRepository.findById(id, manager);
-    if (debt) debts.push(debt);
-  }
-  await assertLatestSettlement(manager, settlementId, debts);
+    // Долги сохраняются раньше записей: `close_transaction_id` не должен ни на миг указывать на удалённую запись.
+    const reverted: Debt[] = [];
+    for (const debt of debts) {
+      const { applied, forgiven } = revertAmounts(records, debt.id);
+      debt.revertSettlement(applied, forgiven);
+      reverted.push(await deps.debtRepository.save(debt, manager));
+    }
 
-  // Долги сохраняются раньше записей: `close_transaction_id` не должен ни на миг указывать на удалённую запись.
-  const reverted: Debt[] = [];
-  for (const debt of debts) {
-    const { applied, forgiven } = revertAmounts(records, debt.id);
-    debt.revertSettlement(applied, forgiven);
-    reverted.push(await deps.debtRepository.save(debt, manager));
-  }
-
-  for (const record of records) {
-    await deps.commandBus.execute(new DeleteTransactionCommand(record.id, userId, true, manager));
-  }
-  return reverted;
+    await deleteRecords(
+      deps,
+      userId,
+      records.map((record) => record.id),
+      manager,
+    );
+    return reverted;
+  });
 }
 
 /**
@@ -144,32 +162,34 @@ export async function reverseSettlement(
  * (старый патч без записи) просто открывает долг с остатком по уцелевшим записям.
  */
 export async function reopenClosedDebt(
-  deps: ReversalDeps,
+  deps: SettlementDeps,
   userId: string,
   debtId: string,
 ): Promise<Debt> {
-  const debt = await deps.debtRepository.findById(debtId);
-  if (!debt) throw new NotFoundException('Debt not found');
-  if (debt.userId !== userId) throw new ForbiddenException('Access denied');
-  if (!debt.isClosed) throw new ConflictException('Debt is not closed');
-
-  const settlementId = debt.closeTransactionId
-    ? await settlementOf(deps.dataSource, debt.closeTransactionId)
-    : null;
-  if (settlementId) {
-    await reverseSettlement(deps, userId, settlementId);
-    return (await deps.debtRepository.findById(debtId)) ?? debt;
-  }
-
   return deps.dataSource.transaction(async (manager) => {
-    const current = (await deps.debtRepository.findById(debtId, manager)) ?? debt;
+    const debt = await loadOwnedDebt(deps.debtRepository, userId, debtId, { manager });
+    if (!debt.isClosed) throw new ConflictException('Debt is not closed');
+
+    const settlementId = debt.closeTransactionId
+      ? await settlementOf(manager, debt.closeTransactionId)
+      : null;
+    if (settlementId) {
+      // Долги расчёта отмена запирает сама и считает по свежим данным.
+      const reverted = await reverseSettlement(deps, userId, settlementId, manager);
+      return reverted.find((d) => d.id === debtId) ?? debt;
+    }
+
+    const known = await lockDebts(deps.debtRepository, manager, userId, [debtId]);
+    const current = await loadOwnedDebt(deps.debtRepository, userId, debtId, { manager, known });
+    // Пока ждали замок, долг могли открыть: затирать его остаток нельзя.
+    if (!current.isClosed) throw new ConflictException('Debt is not closed');
+
     const [row] = await manager.query<{ applied: string }[]>(
       `SELECT COALESCE(SUM(amount), 0) AS applied FROM transactions
        WHERE debt_id = $1 AND category_id = ANY($2::text[])`,
       [debtId, APPLIED_CATEGORY_IDS],
     );
-    const total = current.totalAmountValue;
-    const remaining = Math.min(total, round2(total - Number(row.applied)));
+    const remaining = round2(current.totalAmountValue - Number(row.applied));
     // Возвраты покрыли весь долг: открывать нечего, а нулевой остаток у открытого долга не бывает.
     if (remaining <= 0) {
       throw new ConflictException(
@@ -181,8 +201,8 @@ export async function reopenClosedDebt(
   });
 }
 
-async function settlementOf(dataSource: DataSource, transactionId: string): Promise<string | null> {
-  const rows = await dataSource.query<{ settlement_id: string | null }[]>(
+async function settlementOf(manager: EntityManager, transactionId: string): Promise<string | null> {
+  const rows = await manager.query<{ settlement_id: string | null }[]>(
     'SELECT settlement_id FROM transactions WHERE id = $1',
     [transactionId],
   );

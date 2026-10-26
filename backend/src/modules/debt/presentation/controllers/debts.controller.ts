@@ -13,6 +13,8 @@ import {
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { CurrentUser } from '../../../../common';
 import {
+  CloseAllDebtsDto,
+  PreviewCloseAllDto,
   CreateDebtDto,
   UpdateDebtDto,
   GetDebtsPaginatedDto,
@@ -20,6 +22,7 @@ import {
   PayDebtDto,
 } from '../dto';
 import {
+  CloseAllDebtsCommand,
   CreateDebtCommand,
   UpdateDebtCommand,
   DeleteDebtCommand,
@@ -27,7 +30,12 @@ import {
   OffsetDebtsCommand,
   PayDebtCommand,
 } from '../../application/commands';
-import { GetDebtsQuery, GetDebtByIdQuery, GetDebtsPaginatedQuery } from '../../application/queries';
+import {
+  GetDebtsQuery,
+  GetDebtByIdQuery,
+  GetDebtsPaginatedQuery,
+  PreviewCloseAllQuery,
+} from '../../application/queries';
 
 @Controller('debts')
 export class DebtsController {
@@ -67,6 +75,41 @@ export class DebtsController {
   @Post('offset')
   async offset(@CurrentUser('sub') userId: string, @Body() dto: OffsetDebtsDto): Promise<unknown> {
     return this.commandBus.execute(new OffsetDebtsCommand(userId, dto.personName, dto.currency));
+  }
+
+  // Оба объявлены до `:id`, иначе Nest примет "close-all" за идентификатор долга.
+  @Post('close-all')
+  async closeAll(
+    @CurrentUser('sub') userId: string,
+    @Body() dto: CloseAllDebtsDto,
+  ): Promise<unknown> {
+    return this.commandBus.execute(
+      new CloseAllDebtsCommand(
+        userId,
+        dto.debtIds,
+        dto.accountId,
+        dto.date ? new Date(dto.date) : new Date(),
+        dto.paymentAmount,
+        dto.forgiveRemainder ?? false,
+        dto.excessCategoryId,
+      ),
+    );
+  }
+
+  @Post('close-all/preview')
+  @HttpCode(HttpStatus.OK)
+  async previewCloseAll(
+    @CurrentUser('sub') userId: string,
+    @Body() dto: PreviewCloseAllDto,
+  ): Promise<unknown> {
+    return this.queryBus.execute(
+      new PreviewCloseAllQuery(
+        userId,
+        dto.debtIds,
+        dto.paymentAmount,
+        dto.forgiveRemainder ?? false,
+      ),
+    );
   }
 
   @Get(':id')

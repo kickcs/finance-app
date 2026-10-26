@@ -43,6 +43,8 @@ export {
 } from './lib/foldDebtsIntoPeople';
 export { findClosingRecords, debtHasClosingRecords } from './lib/findClosingRecords';
 export { foldWorkOffRecords, type DebtPaymentRecord } from './lib/foldWorkOffRecords';
+export { canCloseAllTogether, hasMixedCurrencies } from './lib/closeAllEligibility';
+export { SHARED_SETTLEMENT_NOTE, debtHasSettlements } from './lib/sharedSettlementNote';
 
 // API
 export * from './api';

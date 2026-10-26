@@ -1,10 +1,11 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { ConfirmDeleteModal, UIcon } from '@/shared/ui';
 import { formatMasked } from '@/shared/lib/format/currency';
-import { maskDebtName } from '@/entities/debt';
+import { maskDebtName, debtHasSettlements, SHARED_SETTLEMENT_NOTE } from '@/entities/debt';
 import type { Debt } from '@/shared/api/database.types';
 
-defineProps<{
+const props = defineProps<{
   modelValue: boolean;
   debt: Debt | null;
   currency: string;
@@ -16,6 +17,9 @@ const emit = defineEmits<{
   confirm: [];
   cancel: [];
 }>();
+
+// Удаление снимает и общие расчёты долга — вместе с долгами, закрытыми с ним одним действием.
+const showSharedNote = computed(() => !!props.debt && debtHasSettlements(props.debt));
 </script>
 
 <template>
@@ -51,5 +55,11 @@ const emit = defineEmits<{
         </p>
       </div>
     </div>
+    <p
+      v-if="showSharedNote"
+      class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
+    >
+      {{ SHARED_SETTLEMENT_NOTE }}
+    </p>
   </ConfirmDeleteModal>
 </template>

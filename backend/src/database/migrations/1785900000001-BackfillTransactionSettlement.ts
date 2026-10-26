@@ -89,9 +89,8 @@ export class BackfillTransactionSettlement1785900000001 implements MigrationInte
     `);
   }
 
-  public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(
-      `UPDATE "transactions" SET "settlement_id" = NULL WHERE "settlement_id" IS NOT NULL`,
-    );
+  // Откат не нужен: up трогает только строки без settlement_id, а колонку снимает down схемной миграции.
+  public down(): Promise<void> {
+    return Promise.resolve();
   }
 }

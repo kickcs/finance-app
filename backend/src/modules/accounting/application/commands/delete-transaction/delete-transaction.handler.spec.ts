@@ -55,7 +55,6 @@ describe('DeleteTransactionHandler', () => {
     findByUserId: jest.fn(),
     findByTransactionId: jest.fn(),
     hasOpenDebtsForTransaction: jest.fn(),
-    findByCloseTransactionId: jest.fn(),
     save: jest.fn(),
     delete: jest.fn(),
     exists: jest.fn(),
@@ -232,7 +231,6 @@ describe('DeleteTransactionHandler', () => {
 
         expect(mockTransactionRepository.delete).toHaveBeenCalledWith('tx-info', undefined);
       }
-      expect(mockDebtRepository.findByCloseTransactionId).not.toHaveBeenCalled();
       expect(mockDebtRepository.save).not.toHaveBeenCalled();
     });
 

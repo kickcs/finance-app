@@ -19,6 +19,7 @@ describe('Связка старых записей расчётов (мигра�
   let afterFirst: Snapshot;
   let afterSecond: Snapshot;
   let afterDown: Snapshot;
+  let afterUpAgain: Snapshot;
 
   const sid = (name: string): string | null => {
     const value = afterFirst.get(ids[name]);
@@ -305,8 +306,10 @@ describe('Связка старых записей расчётов (мигра�
       afterFirst = await snapshot(queryRunner.manager);
       await migration.up(queryRunner);
       afterSecond = await snapshot(queryRunner.manager);
-      await migration.down(queryRunner);
+      await migration.down();
       afterDown = await snapshot(queryRunner.manager);
+      await migration.up(queryRunner);
+      afterUpAgain = await snapshot(queryRunner.manager);
     } finally {
       await queryRunner.rollbackTransaction();
       await queryRunner.release();
@@ -387,8 +390,11 @@ describe('Связка старых записей расчётов (мигра�
     expect(afterSecond).toEqual(afterFirst);
   });
 
-  it('down снимает связку со всех записей', () => {
-    expect(afterDown.size).toBe(afterFirst.size);
-    for (const value of afterDown.values()) expect(value).toBeNull();
+  it('down ничего не трогает: связка остаётся как была', () => {
+    expect(afterDown).toEqual(afterFirst);
+  });
+
+  it('up после down ничего не меняет: расчёты не пересобираются', () => {
+    expect(afterUpAgain).toEqual(afterFirst);
   });
 });

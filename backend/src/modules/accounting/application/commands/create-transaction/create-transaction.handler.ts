@@ -14,6 +14,7 @@ import {
   ACCOUNT_REPOSITORY,
 } from '../../../domain/repositories/account.repository.interface';
 import { DomainEventPublisher } from '../../../../../shared';
+import { runInTransaction } from '../../../../../shared/infrastructure/run-in-transaction';
 import { toTransactionResponse } from '../../helpers/to-transaction-response';
 import {
   INFORMATIONAL_ONLY_CATEGORY_IDS,
@@ -167,8 +168,6 @@ export class CreateTransactionHandler implements ICommandHandler<CreateTransacti
           ? this.createFeeTransaction(userId, account, feeAmount, currency, date)
           : null;
 
-      // Save all within a database transaction. If an outer manager was
-      // supplied we participate in that transaction, otherwise we open our own.
       const persistTransfer = async (manager: EntityManager) => {
         await this.accountRepository.save(account, manager);
         if (toAccount !== account) {
@@ -180,11 +179,7 @@ export class CreateTransactionHandler implements ICommandHandler<CreateTransacti
         }
       };
 
-      if (outerManager) {
-        await persistTransfer(outerManager);
-      } else {
-        await this.dataSource.transaction(persistTransfer);
-      }
+      await runInTransaction(this.dataSource, outerManager, persistTransfer);
 
       // Publish events after commit
       await this.eventPublisher.publishEvents(account);
@@ -262,8 +257,6 @@ export class CreateTransactionHandler implements ICommandHandler<CreateTransacti
           ? this.createFeeTransaction(userId, account, feeAmount, currency, date)
           : null;
 
-      // Save within a database transaction. If an outer manager was supplied,
-      // run the writes through it; otherwise open our own transaction.
       const persist = async (manager: EntityManager) => {
         if (!isInformational) {
           await this.accountRepository.save(account, manager);
@@ -280,11 +273,7 @@ export class CreateTransactionHandler implements ICommandHandler<CreateTransacti
         }
       };
 
-      if (outerManager) {
-        await persist(outerManager);
-      } else {
-        await this.dataSource.transaction(persist);
-      }
+      await runInTransaction(this.dataSource, outerManager, persist);
 
       // Publish events after commit
       if (!isInformational) {

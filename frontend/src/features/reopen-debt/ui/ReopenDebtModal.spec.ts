@@ -38,6 +38,9 @@ async function mountModal(
   return wrapper;
 }
 
+const SHARED_NOTE =
+  'Если долг закрывали вместе с другими — через «Закрыть все» или зачёт, — вернутся и они.';
+
 const closedDebt = makeDebt({ is_closed: true, close_transaction_id: 'tx-1', person_name: 'Азиз' });
 
 afterEach(() => {
@@ -70,6 +73,19 @@ describe('ReopenDebtModal', () => {
     expect(bodyText()).toContain('Переплата по долгу: Азиз');
     expect(bodyText()).toContain('250');
     expect(bodyText()).toContain('«Карта»');
+  });
+
+  // Расчёт «Закрыть все» или зачёта общий для нескольких долгов: отмена вернёт и остальные.
+  it('предупреждает о других долгах расчёта, когда закрытие шло расчётом', async () => {
+    await mountModal(closedDebt, [makeRecord({ settlement_id: 's-1' })]);
+
+    expect(bodyText()).toContain(SHARED_NOTE);
+  });
+
+  it('молчит о других долгах, когда закрытие без расчёта', async () => {
+    await mountModal(closedDebt, [makeRecord({ settlement_id: null })]);
+
+    expect(bodyText()).not.toContain(SHARED_NOTE);
   });
 
   it('называет счёт, чей баланс откатится', async () => {

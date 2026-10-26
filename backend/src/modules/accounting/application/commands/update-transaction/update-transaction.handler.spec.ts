@@ -435,6 +435,35 @@ describe('UpdateTransactionHandler', () => {
       expect(mockAccountRepository.save).not.toHaveBeenCalled();
     });
 
+    it.each([
+      ['долг', { debtId: 'debt-2' }],
+      ['отвязку от долга', { debtId: null }],
+      ['признак «связано с долгом»', { isDebtRelated: false }],
+      ['вторую часть оплаты', { secondPart: { accountId: 'acc-other', amount: 40 } }],
+    ])('нельзя изменить %s — 400 с пояснением, ничего не сохраняется', async (_name, data) => {
+      givenRecord(returnRecord('s-1'));
+
+      const attempt = update(data);
+
+      await expect(attempt).rejects.toThrow(BadRequestException);
+      await expect(attempt).rejects.toThrow(SETTLEMENT_ERROR);
+      expect(mockTransactionRepository.save).not.toHaveBeenCalled();
+      expect(mockAccountRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('те же долг и признак, присланные формой, и пустая вторая часть — не изменение', async () => {
+      const record = givenRecord(returnRecord('s-1'));
+
+      await update({
+        debtId: 'debt-1',
+        isDebtRelated: true,
+        secondPart: null,
+        description: 'Новый комментарий',
+      });
+
+      expect(record.description).toBe('Новый комментарий');
+    });
+
     it('ногу работы нельзя перевести в долговую категорию', async () => {
       givenRecord(workLeg());
 

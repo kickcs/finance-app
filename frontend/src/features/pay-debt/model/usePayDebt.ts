@@ -25,11 +25,6 @@ export interface PayDebtOptions {
   transactionDate?: string;
   /** Отдаёт id записи платежа (нужен confirm'у импорта). */
   onTransactionCreated?: (transactionId: string) => void;
-  /**
-   * Пачка платежей: кэши синхронизирует вызывающий, один раз в конце, вместо
-   * перезапроса истории и балансов после каждого долга.
-   */
-  bulk?: boolean;
 }
 
 /**
@@ -73,15 +68,13 @@ export function usePayDebt() {
     error.value = null;
 
     // Шторка закрывается до ответа сервера, поэтому остаток на экране должен
-    // измениться сразу. В пачке план целиком применяет вызывающий.
-    const snapshot = options?.bulk ? null : await snapshotDebtCaches(queryClient);
-    if (!options?.bulk) {
-      applyDebtUpdate(
-        queryClient,
-        debt.id,
-        buildDebtPaymentPatch(debt, paymentAmount, !!options?.forgiveRemainder),
-      );
-    }
+    // измениться сразу.
+    const snapshot = await snapshotDebtCaches(queryClient);
+    applyDebtUpdate(
+      queryClient,
+      debt.id,
+      buildDebtPaymentPatch(debt, paymentAmount, !!options?.forgiveRemainder),
+    );
 
     try {
       const result = await debtsApi.pay(debt.id, {
@@ -95,26 +88,24 @@ export function usePayDebt() {
         workCategoryId: options?.workCategoryId,
       });
 
-      if (!options?.bulk) applyDebtUpdate(queryClient, debt.id, result.debt);
+      applyDebtUpdate(queryClient, debt.id, result.debt);
       if (result.payment_transaction_id) {
         options?.onTransactionCreated?.(result.payment_transaction_id);
       }
 
-      if (!options?.bulk) {
-        await invalidateDebtRelated(queryClient, userId);
-        toast({
-          title: options?.settleWithWork ? 'Отработка засчитана' : 'Платёж проведён',
-          variant: 'success',
-        });
-      }
+      await invalidateDebtRelated(queryClient, userId);
+      toast({
+        title: options?.settleWithWork ? 'Отработка засчитана' : 'Платёж проведён',
+        variant: 'success',
+      });
       return true;
     } catch (e) {
-      if (snapshot) restoreDebtCaches(queryClient, snapshot);
+      restoreDebtCaches(queryClient, snapshot);
 
       // Кто-то закрыл долг раньше — платёж не нужен, а не провалился.
       if (e instanceof HttpError && e.status === 409) {
         await invalidateDebtRelated(queryClient, userId).catch(() => {});
-        if (!options?.bulk) toast({ title: 'Долг уже закрыт', variant: 'default' });
+        toast({ title: 'Долг уже закрыт', variant: 'default' });
         return true;
       }
 
@@ -125,7 +116,7 @@ export function usePayDebt() {
       error.value = options?.settleWithWork
         ? 'Не удалось засчитать отработку'
         : 'Не удалось внести платёж';
-      if (!options?.bulk) toast({ title: error.value, variant: 'error' });
+      toast({ title: error.value, variant: 'error' });
       return false;
     } finally {
       isPaying.value = false;

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { HttpError, getServerErrorMessage } from './http';
+import { HttpError, getServerErrorMessage, getServerMessageText } from './http';
 
 describe('getServerErrorMessage', () => {
   it('returns the text of a rule refusal (400 and 409)', () => {
@@ -43,6 +43,16 @@ describe('getServerErrorMessage', () => {
     expect(getServerErrorMessage(error)).toBe('a плохо. b плохо');
   });
 
+  // «Расчёт не найден» при гонке двух отмен: русский 404 объясняет, что произошло, английский — нет.
+  it('returns a Russian 404 text and ignores an English one', () => {
+    expect(
+      getServerErrorMessage(new HttpError(404, 'Not Found', { message: 'Расчёт не найден' })),
+    ).toBe('Расчёт не найден');
+    expect(
+      getServerErrorMessage(new HttpError(404, 'Not Found', { message: 'Debt not found' })),
+    ).toBeUndefined();
+  });
+
   it('ignores service statuses, whose texts are not meant for users', () => {
     expect(
       getServerErrorMessage(
@@ -50,7 +60,7 @@ describe('getServerErrorMessage', () => {
       ),
     ).toBeUndefined();
     expect(
-      getServerErrorMessage(new HttpError(404, 'Not Found', { message: 'Transaction not found' })),
+      getServerErrorMessage(new HttpError(403, 'Forbidden', { message: 'Доступ запрещён' })),
     ).toBeUndefined();
   });
 
@@ -60,5 +70,25 @@ describe('getServerErrorMessage', () => {
     expect(getServerErrorMessage(new HttpError(409, 'Conflict', { message: '' }))).toBeUndefined();
     expect(getServerErrorMessage(new Error('boom'))).toBeUndefined();
     expect(getServerErrorMessage(null)).toBeUndefined();
+  });
+});
+
+describe('getServerMessageText', () => {
+  it('returns a string message as is and joins a validation list', () => {
+    expect(getServerMessageText({ message: 'Нельзя' })).toBe('Нельзя');
+    expect(getServerMessageText({ message: ['a', 'b'] })).toBe('a. b');
+  });
+
+  it('does not filter by language: that is up to the caller', () => {
+    expect(getServerMessageText({ message: 'id must be a UUID' })).toBe('id must be a UUID');
+  });
+
+  it('returns nothing for an empty message or a body without one', () => {
+    expect(getServerMessageText({ message: '' })).toBeUndefined();
+    expect(getServerMessageText({ message: [] })).toBeUndefined();
+    expect(getServerMessageText({})).toBeUndefined();
+    expect(getServerMessageText('')).toBeUndefined();
+    expect(getServerMessageText(null)).toBeUndefined();
+    expect(getServerMessageText(undefined)).toBeUndefined();
   });
 });

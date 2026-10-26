@@ -6,14 +6,19 @@ import type { IDebtRepository } from '../../domain/repositories';
 import type { DeleteTransactionCommand } from '../../../accounting/application/commands/delete-transaction/delete-transaction.command';
 import { removeDebtWithRecords } from './debt-removal';
 import { reverseSettlement } from './settlement-reversal';
+import type * as SettlementReversal from './settlement-reversal';
 
-jest.mock('./settlement-reversal');
+// Отмена расчёта проверяется в своём спеке; снятие записей — настоящее, через шину команд.
+jest.mock('./settlement-reversal', () => ({
+  ...jest.requireActual<typeof SettlementReversal>('./settlement-reversal'),
+  reverseSettlement: jest.fn(),
+}));
 
 describe('removeDebtWithRecords', () => {
   const calls: string[] = [];
   const managerQuery = jest.fn();
   const manager = { query: managerQuery } as unknown as EntityManager;
-  const debtRepository = { findById: jest.fn(), delete: jest.fn() };
+  const debtRepository = { findById: jest.fn(), findByIdsForUpdate: jest.fn(), delete: jest.fn() };
   const commandBus = { execute: jest.fn() };
   const dataSource = { transaction: jest.fn() };
   const deps = {
@@ -42,8 +47,12 @@ describe('removeDebtWithRecords', () => {
     settlementRecords?: string[];
     otherDebtsOnSource?: boolean;
     remaining?: string[];
+    peerDebtIds?: string[];
   }) => {
     managerQuery.mockImplementation((sql: string) => {
+      if (sql.includes('SELECT DISTINCT debt_id')) {
+        return Promise.resolve((rows.peerDebtIds ?? []).map((debt_id) => ({ debt_id })));
+      }
       if (sql.includes('BOOL_OR')) return Promise.resolve(rows.settlements ?? []);
       if (sql.includes('settlement_id = ANY')) {
         return Promise.resolve((rows.settlementRecords ?? []).map((id) => ({ id })));
@@ -53,10 +62,18 @@ describe('removeDebtWithRecords', () => {
     });
   };
 
+  /** Долг в БД: замок отдаёт его только владельцу, прямое чтение — любому. */
+  const givenDebt = (debt: Debt | null) => {
+    debtRepository.findById.mockResolvedValue(debt);
+    debtRepository.findByIdsForUpdate.mockImplementation((_ids: string[], userId: string) =>
+      Promise.resolve(debt?.userId === userId ? [debt] : []),
+    );
+  };
+
   beforeEach(() => {
     calls.length = 0;
     jest.resetAllMocks();
-    debtRepository.findById.mockResolvedValue(makeDebt());
+    givenDebt(makeDebt());
     debtRepository.delete.mockImplementation(() => {
       calls.push('delete-debt');
       return Promise.resolve();
@@ -75,13 +92,37 @@ describe('removeDebtWithRecords', () => {
     givenRows({});
   });
 
-  it('читает долг через менеджер: 404, если долга нет, и 403, если долг чужой', async () => {
-    debtRepository.findById.mockResolvedValueOnce(null);
+  it('запирает долг вместе с долгами его расчётов до первого чтения расчётов и правки', async () => {
+    givenRows({ peerDebtIds: ['debt-2', 'debt-1'], remaining: ['issue-1'] });
+
+    await removeDebtWithRecords(deps, 'user-1', 'debt-1');
+
+    expect(debtRepository.findByIdsForUpdate).toHaveBeenCalledWith(
+      ['debt-1', 'debt-2'],
+      'user-1',
+      manager,
+    );
+    const lockOrder = debtRepository.findByIdsForUpdate.mock.invocationCallOrder[0];
+    const settlementsRead = managerQuery.mock.calls.findIndex(([sql]) =>
+      (sql as string).includes('BOOL_OR'),
+    );
+    expect(managerQuery.mock.invocationCallOrder[settlementsRead]).toBeGreaterThan(lockOrder);
+    expect(commandBus.execute.mock.invocationCallOrder[0]).toBeGreaterThan(lockOrder);
+  });
+
+  it('свой долг берётся из замка без повторного чтения', async () => {
+    await removeDebtWithRecords(deps, 'user-1', 'debt-1');
+
+    expect(debtRepository.findById).not.toHaveBeenCalled();
+  });
+
+  it('долг вне замка читается через менеджер: 404, если долга нет, и 403, если долг чужой', async () => {
+    givenDebt(null);
     await expect(removeDebtWithRecords(deps, 'user-1', 'debt-1')).rejects.toBeInstanceOf(
       NotFoundException,
     );
 
-    debtRepository.findById.mockResolvedValueOnce(makeDebt({ userId: 'other-user' }));
+    givenDebt(makeDebt({ userId: 'other-user' }));
     await expect(removeDebtWithRecords(deps, 'user-1', 'debt-1')).rejects.toBeInstanceOf(
       ForbiddenException,
     );
@@ -147,7 +188,7 @@ describe('removeDebtWithRecords', () => {
     debt.setTransactionId('issue-1');
     debt.setCloseTransactionId('close-1');
     debt.setFee(10, 'fee-1');
-    debtRepository.findById.mockResolvedValue(debt);
+    givenDebt(debt);
 
     await removeDebtWithRecords(deps, 'user-1', 'debt-1');
 
@@ -165,7 +206,7 @@ describe('removeDebtWithRecords', () => {
     const debt = makeDebt();
     debt.setTransactionId('issue-1');
     debt.update({ sourceTransactionId: 'source-1' });
-    debtRepository.findById.mockResolvedValue(debt);
+    givenDebt(debt);
     givenRows({ otherDebtsOnSource });
 
     await removeDebtWithRecords(deps, 'user-1', 'debt-1');

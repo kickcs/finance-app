@@ -13,6 +13,7 @@ import {
 import { IDebtRepository, DEBT_REPOSITORY } from '../../../../debt/domain/repositories';
 import { ReverseSettlementCommand } from '../../../../debt/application/commands/reverse-settlement/reverse-settlement.command';
 import { DomainEventPublisher } from '../../../../../shared';
+import { runInTransaction } from '../../../../../shared/infrastructure/run-in-transaction';
 import { BalanceCalculationService, TransferDomainService } from '../../../domain/services';
 import { DEBT_CATEGORY_IDS } from '../../../domain/constants/default-categories';
 
@@ -154,13 +155,9 @@ export class DeleteTransactionHandler implements ICommandHandler<DeleteTransacti
       }
     };
 
-    if (outerManager) {
-      await persist(outerManager);
-    } else {
-      await this.dataSource.transaction(persist);
-    }
+    await runInTransaction(this.dataSource, outerManager, persist);
 
-    // Publish events after commit
+    // События уходят после записи; во внешней транзакции коммит ещё за вызывающим.
     if (account) {
       await this.eventPublisher.publishEvents(account);
     }

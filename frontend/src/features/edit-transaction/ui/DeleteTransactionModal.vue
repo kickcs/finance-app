@@ -37,7 +37,7 @@ const warningText = computed(() => {
   if (!props.transaction) return '';
   // Сервер снимает расчёт целиком — баланс одной записи тут ничего не объясняет.
   if (props.transaction.settlement_id) {
-    return 'Это запись расчёта по долгу — удалится весь расчёт целиком, а остаток долга вернётся.';
+    return 'Это запись расчёта по долгу — удалится весь расчёт целиком, а долгам этого расчёта вернётся остаток.';
   }
   const sibling = props.transaction.payment_sibling;
   if (sibling) {

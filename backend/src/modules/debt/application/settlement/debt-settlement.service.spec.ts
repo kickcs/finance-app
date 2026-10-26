@@ -8,6 +8,7 @@ import {
 import { CommandBus } from '@nestjs/cqrs';
 import { DataSource } from 'typeorm';
 import { DebtSettlementService } from './debt-settlement.service';
+import { OffsetDebtsCommand } from '../commands/offset-debts/offset-debts.command';
 import { PayDebtCommand } from '../commands/pay-debt/pay-debt.command';
 import { DEBT_REPOSITORY } from '../../domain/repositories';
 import { Debt } from '../../domain/aggregates/debt';
@@ -21,6 +22,7 @@ describe('DebtSettlementService', () => {
 
   const mockRepository = {
     findById: jest.fn(),
+    findByIdsForUpdate: jest.fn(),
     findActiveByPerson: jest.fn(),
     save: jest.fn(),
   };
@@ -49,6 +51,12 @@ describe('DebtSettlementService', () => {
     let counter = 0;
     mockCommandBus.execute.mockImplementation(() => Promise.resolve({ id: `tx-${++counter}` }));
     mockRepository.save.mockImplementation((debt: Debt) => Promise.resolve(debt));
+    // Замок отдаёт долги пользователя — те, что для этих id вернул бы `findById`; чужой долг не берётся.
+    mockRepository.findByIdsForUpdate.mockImplementation(async (ids: string[], userId: string) =>
+      (
+        await Promise.all(ids.map((id) => mockRepository.findById(id) as Promise<Debt | null>))
+      ).filter((debt): debt is Debt => !!debt && debt.userId === userId),
+    );
     // Счёт долга существует — информационные отметки ложатся на него
     mockManager.query.mockResolvedValue([{ id: 'account-debt' }]);
     mockDataSource.query.mockResolvedValue([{ id: 'acc-fallback' }]);
@@ -393,7 +401,7 @@ describe('DebtSettlementService', () => {
 
         await expect(service.pay(command({ amount: 1200 }))).rejects.toThrow(BadRequestException);
         expect(mockCommandBus.execute).not.toHaveBeenCalled();
-        expect(mockDataSource.transaction).not.toHaveBeenCalled();
+        expect(mockRepository.save).not.toHaveBeenCalled();
       });
     });
 
@@ -406,6 +414,29 @@ describe('DebtSettlementService', () => {
         expect(mockDataSource.transaction).toHaveBeenCalledTimes(1);
         expect(mockRepository.save).toHaveBeenCalledWith(expect.any(Debt), mockManager);
         expect(txArg(0).manager).toBe(mockManager);
+      });
+
+      it('запирает долг и получает его свежим тем же запросом, раньше первой записи', async () => {
+        const order: string[] = [];
+        mockRepository.findByIdsForUpdate.mockImplementation(() => {
+          order.push('lock');
+          return Promise.resolve([createDebt()]);
+        });
+        mockCommandBus.execute.mockImplementation(() => {
+          order.push('write');
+          return Promise.resolve({ id: 'tx-1' });
+        });
+
+        await service.pay(command({ amount: 300 }));
+
+        expect(order).toEqual(['lock', 'write']);
+        expect(mockRepository.findByIdsForUpdate).toHaveBeenCalledWith(
+          ['debt-1'],
+          'user-1',
+          mockManager,
+        );
+        // Долг из замка не перечитывается: второе чтение только удваивало бы запросы.
+        expect(mockRepository.findById).not.toHaveBeenCalled();
       });
 
       it('падение записи не оставляет долг изменённым', async () => {
@@ -440,12 +471,20 @@ describe('DebtSettlementService', () => {
       });
     }
 
-    const input = { userId: 'user-1', personName: 'Эрмурат', currency: 'UZS' };
+    const input = new OffsetDebtsCommand('user-1', 'Эрмурат', 'UZS');
+
+    /** Долги человека: их отдаёт и первое чтение, и замок (который отдаёт их свежими). */
+    function givenActiveDebts(...debts: Debt[]) {
+      mockRepository.findActiveByPerson.mockResolvedValue(debts);
+      mockRepository.findByIdsForUpdate.mockImplementation((ids: string[]) =>
+        Promise.resolve(debts.filter((debt) => ids.includes(debt.id))),
+      );
+    }
 
     it('закрывает меньшую сторону и уменьшает большую', async () => {
       const given = makeDebt('d-given', 'given', 30381);
       const taken = makeDebt('d-taken', 'taken', 137170);
-      mockRepository.findActiveByPerson.mockResolvedValue([given, taken]);
+      givenActiveDebts(given, taken);
 
       const result = await service.offset(input);
 
@@ -459,10 +498,7 @@ describe('DebtSettlementService', () => {
     });
 
     it('пишет по информационной записи на каждую сторону одной отметкой времени и одним расчётом', async () => {
-      mockRepository.findActiveByPerson.mockResolvedValue([
-        makeDebt('d-given', 'given', 500),
-        makeDebt('d-taken', 'taken', 500),
-      ]);
+      givenActiveDebts(makeDebt('d-given', 'given', 500), makeDebt('d-taken', 'taken', 500));
 
       const result = await service.offset(input);
 
@@ -486,7 +522,7 @@ describe('DebtSettlementService', () => {
       const newer = makeDebt('d-new', 'given', 400, { createdAt: new Date('2026-02-01') });
       const older = makeDebt('d-old', 'given', 400, { createdAt: new Date('2026-01-01') });
       const taken = makeDebt('d-taken', 'taken', 500);
-      mockRepository.findActiveByPerson.mockResolvedValue([newer, older, taken]);
+      givenActiveDebts(newer, older, taken);
 
       const result = await service.offset(input);
 
@@ -499,7 +535,7 @@ describe('DebtSettlementService', () => {
     it('обе стороны закрываются, когда суммы равны', async () => {
       const given = makeDebt('d-given', 'given', 1000);
       const taken = makeDebt('d-taken', 'taken', 1000);
-      mockRepository.findActiveByPerson.mockResolvedValue([given, taken]);
+      givenActiveDebts(given, taken);
 
       await service.offset(input);
 
@@ -508,29 +544,86 @@ describe('DebtSettlementService', () => {
     });
 
     it('подставляет запасной счёт, когда счёт долга удалён', async () => {
-      mockRepository.findActiveByPerson.mockResolvedValue([
+      givenActiveDebts(
         makeDebt('d-given', 'given', 100, { accountId: 'acc-deleted' }),
         makeDebt('d-taken', 'taken', 100, { accountId: 'acc-fallback' }),
-      ]);
+      );
+      mockManager.query.mockResolvedValue([{ id: 'acc-fallback' }]);
 
       await service.offset(input);
 
       expect(txArg(0).accountId).toBe('acc-fallback');
     });
 
+    it('запирает найденные долги раньше первой записи и берёт их свежими из замка', async () => {
+      const given = makeDebt('d-given', 'given', 100);
+      const taken = makeDebt('d-taken', 'taken', 100);
+      const order: string[] = [];
+      mockRepository.findActiveByPerson.mockImplementation(() => {
+        order.push('read');
+        return Promise.resolve([given, taken]);
+      });
+      mockRepository.findByIdsForUpdate.mockImplementation(() => {
+        order.push('lock');
+        return Promise.resolve([given, taken]);
+      });
+      mockCommandBus.execute.mockImplementation(() => {
+        order.push('write');
+        return Promise.resolve({ id: 'tx' });
+      });
+
+      await service.offset(input);
+
+      expect(order).toEqual(['read', 'lock', 'write', 'write']);
+      expect(mockRepository.findActiveByPerson).toHaveBeenCalledTimes(1);
+      expect(mockRepository.findActiveByPerson).toHaveBeenCalledWith(
+        'user-1',
+        'Эрмурат',
+        'UZS',
+        mockManager,
+      );
+      expect(mockRepository.findByIdsForUpdate).toHaveBeenCalledWith(
+        ['d-given', 'd-taken'],
+        'user-1',
+        mockManager,
+      );
+      expect(given.isClosed).toBe(true);
+    });
+
+    it('долг, закрытый или переименованный пока ждали замок, в зачёт не идёт', async () => {
+      const given = makeDebt('d-given', 'given', 100);
+      const taken = makeDebt('d-taken', 'taken', 100);
+      // Самый старый: попади он в зачёт, гасился бы первым.
+      const closed = makeDebt('d-closed', 'given', 500, { createdAt: new Date('2020-01-01') });
+      const renamed = makeDebt('d-renamed', 'given', 500, { createdAt: new Date('2020-01-02') });
+      mockRepository.findActiveByPerson.mockResolvedValue([given, taken, closed, renamed]);
+      const closedNow = makeDebt('d-closed', 'given', 500);
+      closedNow.update({ isClosed: true });
+      const renamedNow = makeDebt('d-renamed', 'given', 500, {
+        createdAt: new Date('2020-01-02'),
+      });
+      renamedNow.update({ personName: 'Другой человек' });
+      mockRepository.findByIdsForUpdate.mockResolvedValue([given, taken, closedNow, renamedNow]);
+
+      const result = await service.offset(input);
+
+      expect(result.offsetAmount).toBe(100);
+      expect(result.debts.map((d) => d.id)).toEqual(['d-given', 'd-taken']);
+      expect(mockRepository.save).not.toHaveBeenCalledWith(closedNow, mockManager);
+      expect(mockRepository.save).not.toHaveBeenCalledWith(renamedNow, mockManager);
+      expect(renamedNow.remainingAmountValue).toBe(500);
+    });
+
     it('отказывается зачитывать, когда встречной стороны нет', async () => {
-      mockRepository.findActiveByPerson.mockResolvedValue([makeDebt('d-given', 'given', 100)]);
+      givenActiveDebts(makeDebt('d-given', 'given', 100));
 
       await expect(service.offset(input)).rejects.toThrow(ConflictException);
       expect(mockCommandBus.execute).not.toHaveBeenCalled();
     });
 
     it('отказывается зачитывать без единого счёта', async () => {
-      mockRepository.findActiveByPerson.mockResolvedValue([
-        makeDebt('d-given', 'given', 100),
-        makeDebt('d-taken', 'taken', 100),
-      ]);
-      mockDataSource.query.mockResolvedValue([]);
+      givenActiveDebts(makeDebt('d-given', 'given', 100), makeDebt('d-taken', 'taken', 100));
+      mockManager.query.mockResolvedValue([]);
 
       await expect(service.offset(input)).rejects.toThrow(BadRequestException);
     });

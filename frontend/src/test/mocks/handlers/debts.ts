@@ -210,6 +210,78 @@ export function payDebtHandler(...extraDebts: MockDebtResponse[]) {
   });
 }
 
+/** Тело `POST /debts/close-all/preview`: долги и сумма, без счёта. */
+export interface CloseAllPreviewBody {
+  debtIds: string[];
+  paymentAmount?: number;
+  forgiveRemainder?: boolean;
+}
+
+/** Тело `POST /debts/close-all`. */
+export interface CloseAllBody extends CloseAllPreviewBody {
+  accountId: string;
+  excessCategoryId?: string;
+  date?: string;
+}
+
+export interface CloseAllPreviewResponse {
+  offsetAmount: number;
+  direction: 'given' | 'taken' | null;
+  net: number;
+  offsetParts: { debtId: string; amount: number }[];
+  payments: { debtId: string; amount: number; forgive: boolean; withExcess: boolean }[];
+  excess: number;
+  totalDebt: number;
+}
+
+export interface CloseAllResultResponse {
+  settlementId: string;
+  debts: MockDebtResponse[];
+  paymentTransactionIds: string[];
+  offsetAmount: number;
+  excess: number;
+}
+
+/** Ответ предпросмотра «Закрыть все»; незаданное — «ничего не происходит». */
+export function closeAllPreviewResponse(
+  overrides: Partial<CloseAllPreviewResponse> = {},
+): CloseAllPreviewResponse {
+  return {
+    offsetAmount: 0,
+    direction: null,
+    net: 0,
+    offsetParts: [],
+    payments: [],
+    excess: 0,
+    totalDebt: 0,
+    ...overrides,
+  };
+}
+
+/** Ответ исполнения «Закрыть все»; незаданное — пустой расчёт. */
+export function closeAllResultResponse(
+  overrides: Partial<CloseAllResultResponse> = {},
+): CloseAllResultResponse {
+  return {
+    settlementId: 'settlement-1',
+    debts: [],
+    paymentTransactionIds: [],
+    offsetAmount: 0,
+    excess: 0,
+    ...overrides,
+  };
+}
+
+/** Долг после полного закрытия: остаток нулевой, закрыт сейчас. */
+export function closedDebtResponse(debt: MockDebtResponse): MockDebtResponse {
+  return {
+    ...debt,
+    remainingAmount: 0,
+    isClosed: true,
+    closedAt: new Date().toISOString(),
+  };
+}
+
 export function buildPaginatedDebtsResponse(debts: MockDebtResponse[]) {
   const groupMap = new Map<string, MockDebtResponse[]>();
   for (const debt of debts) {
@@ -262,6 +334,37 @@ export const debtHandlers = [
   }),
 
   payDebtHandler(),
+
+  // Без своих ответов спеки «Закрыть все» получают простейший расчёт: каждый
+  // известный долг оплачивается целиком, зачёта нет.
+  http.post('*/api/debts/close-all/preview', async ({ request }) => {
+    const body = (await request.json()) as CloseAllPreviewBody;
+    const debts = body.debtIds.flatMap((id) => findMockDebt(id) ?? []);
+    const total = debts.reduce((sum, d) => sum + d.remainingAmount, 0);
+    return HttpResponse.json(
+      closeAllPreviewResponse({
+        net: total,
+        totalDebt: total,
+        payments: debts.map((d) => ({
+          debtId: d.id,
+          amount: d.remainingAmount,
+          forgive: false,
+          withExcess: false,
+        })),
+      }),
+    );
+  }),
+
+  http.post('*/api/debts/close-all', async ({ request }) => {
+    const body = (await request.json()) as CloseAllBody;
+    const debts = body.debtIds.flatMap((id) => findMockDebt(id) ?? []);
+    return HttpResponse.json(
+      closeAllResultResponse({
+        debts: debts.map(closedDebtResponse),
+        paymentTransactionIds: debts.map((d) => `tx-payment-${d.id}`),
+      }),
+    );
+  }),
 
   http.post('*/api/debts/:id/reopen', ({ params }) => {
     return HttpResponse.json({

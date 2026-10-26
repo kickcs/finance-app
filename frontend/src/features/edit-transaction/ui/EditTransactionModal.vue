@@ -6,7 +6,12 @@ import { AccountSelector } from '@/entities/account';
 import type { AccountWithBalances } from '@/entities/account';
 import { formatCurrency } from '@/shared/lib/format/currency';
 import type { Transaction } from '@/shared/api/database.types';
-import { paymentGroupIds, paymentTotal, type TransactionUpdates } from '@/entities/transaction';
+import {
+  isDebtRecordOutsideSettlement,
+  paymentGroupIds,
+  paymentTotal,
+  type TransactionUpdates,
+} from '@/entities/transaction';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { SplitParticipantList, useSplitTransactionEdit } from '@/features/split-expense';
 import { DEFAULT_CURRENCY } from '@/shared/config/currency';
@@ -52,10 +57,8 @@ const isSettlementMarker = computed(
 );
 
 // Долговая запись вне расчёта (например, выдача): управлять ею можно только из «Долгов».
-// Adjustments reuse is_debt_related as a direction flag, так что их исключаем.
 const isDebtRelated = computed(
-  () =>
-    props.transaction?.is_debt_related === true && !isAdjustment.value && !isSettlementRecord.value,
+  () => !!props.transaction && isDebtRecordOutsideSettlement(props.transaction),
 );
 
 // Вторая часть — только у обычных расходов и доходов: не у ног долга (debt_id), не у информационных
@@ -198,7 +201,6 @@ const compatibleAccounts = computed(() => {
 const categories = computed(() => getCategoriesByType(type.value));
 
 function handleTypeChange(newType: string) {
-  if (isSettlementRecord.value) return;
   type.value = newType as 'expense' | 'income';
   // Reset category if switching types
   const availableCategories = getCategoriesByType(newType as 'expense' | 'income');
@@ -563,30 +565,23 @@ const isFormValid = computed(() => {
     </UModal>
 
     <template #actions>
-      <!-- Settlement Marker Actions: Close + Delete (уйдёт весь расчёт) -->
-      <div v-if="isSettlementMarker" class="flex gap-2 w-full">
+      <!-- Debt-Related Actions: Close Only -->
+      <div v-if="isDebtRelated" class="flex gap-2 w-full">
         <UButton variant="secondary" size="sm" full-width @click="close">Закрыть</UButton>
+      </div>
+
+      <!-- Marker/Transfer/Adjustment Actions: Close or Cancel + Delete (у маркера уйдёт весь расчёт) -->
+      <div v-else-if="isSettlementMarker || isTransfer || isAdjustment" class="flex gap-2 w-full">
+        <UButton variant="secondary" size="sm" full-width @click="close">
+          {{ isSettlementMarker ? 'Закрыть' : 'Отмена' }}
+        </UButton>
         <UButton
           variant="danger"
           size="sm"
           full-width
-          data-testid="delete-settlement-record-btn"
+          :data-testid="isSettlementMarker ? 'delete-settlement-record-btn' : undefined"
           @click="handleDelete()"
         >
-          <UIcon name="delete" size="xs" class="mr-1" />
-          Удалить
-        </UButton>
-      </div>
-
-      <!-- Debt-Related Actions: Close Only -->
-      <div v-else-if="isDebtRelated" class="flex gap-2 w-full">
-        <UButton variant="secondary" size="sm" full-width @click="close">Закрыть</UButton>
-      </div>
-
-      <!-- Transfer/Adjustment Actions: Cancel + Delete -->
-      <div v-else-if="isTransfer || isAdjustment" class="flex gap-2 w-full">
-        <UButton variant="secondary" size="sm" full-width @click="close">Отмена</UButton>
-        <UButton variant="danger" size="sm" full-width @click="handleDelete()">
           <UIcon name="delete" size="xs" class="mr-1" />
           Удалить
         </UButton>

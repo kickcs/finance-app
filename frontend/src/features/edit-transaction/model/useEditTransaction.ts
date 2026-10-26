@@ -7,6 +7,7 @@ import {
   applyTransactionUpdateToCaches,
   removeTransactionsFromCaches,
   paymentGroupIds,
+  isDebtRecordOutsideSettlement,
   type TransactionUpdates,
 } from '@/entities/transaction';
 import { debtsApi } from '@/entities/debt';
@@ -30,13 +31,8 @@ export function useEditTransaction(userId: MaybeRefOrGetter<string | null>) {
       return false;
     }
 
-    // Debt-related transactions cannot be edited (exclude adjustments which reuse is_debt_related as direction flag).
     // Запись расчёта сервер правит сам, запрещая только сумму и тип.
-    if (
-      !transaction.settlement_id &&
-      transaction.is_debt_related &&
-      transaction.type !== 'adjustment'
-    ) {
+    if (isDebtRecordOutsideSettlement(transaction)) {
       error.value = 'Транзакции долгов нельзя редактировать. Управляйте долгом в разделе "Долги"';
       return false;
     }
@@ -89,8 +85,7 @@ export function useEditTransaction(userId: MaybeRefOrGetter<string | null>) {
     // можно ли это сделать: остальные запреты ниже её не касаются.
     const isSettlementRecord = !!transaction.settlement_id;
 
-    // Debt-related transactions cannot be deleted directly (exclude adjustments which reuse is_debt_related as direction flag)
-    if (!isSettlementRecord && transaction.is_debt_related && transaction.type !== 'adjustment') {
+    if (isDebtRecordOutsideSettlement(transaction)) {
       error.value = 'Транзакции долгов нельзя удалять. Удалите долг в разделе "Долги"';
       return false;
     }

@@ -20,6 +20,10 @@ import { OffsetDebtsCommand } from '../src/modules/debt/application/commands/off
 import { ReopenDebtCommand } from '../src/modules/debt/application/commands/reopen-debt/reopen-debt.command';
 import { ReverseSettlementCommand } from '../src/modules/debt/application/commands/reverse-settlement/reverse-settlement.command';
 import { DeleteDebtCommand } from '../src/modules/debt/application/commands/delete-debt/delete-debt.command';
+import { CreateDebtCommand } from '../src/modules/debt/application/commands/create-debt/create-debt.command';
+import { CloseAllDebtsCommand } from '../src/modules/debt/application/commands/close-all-debts/close-all-debts.command';
+import { PreviewCloseAllQuery } from '../src/modules/debt/application/queries/preview-close-all/preview-close-all.query';
+import { ProfileOrmEntity } from '../src/modules/identity/infrastructure/persistence/typeorm';
 import { CreateTransactionCommand } from '../src/modules/accounting/application/commands/create-transaction/create-transaction.command';
 import { DeleteTransactionCommand } from '../src/modules/accounting/application/commands/delete-transaction/delete-transaction.command';
 import { UpdateTransactionCommand } from '../src/modules/accounting/application/commands/update-transaction/update-transaction.command';
@@ -43,6 +47,24 @@ interface OffsetResult {
   offsetAmount: number;
   debts: DebtResponseDto[];
   settlementId: string;
+}
+
+interface CloseAllResult {
+  settlementId: string;
+  debts: DebtResponseDto[];
+  paymentTransactionIds: string[];
+  offsetAmount: number;
+  excess: number;
+}
+
+interface CloseAllPreview {
+  offsetAmount: number;
+  direction: 'given' | 'taken' | null;
+  net: number;
+  offsetParts: { debtId: string; amount: number }[];
+  payments: { debtId: string; amount: number; forgive: boolean; withExcess: boolean }[];
+  excess: number;
+  totalDebt: number;
 }
 
 const DATE = new Date('2026-10-25T10:00:00.000Z');
@@ -267,7 +289,7 @@ describe('Расчёт по долгу: отмена', () => {
       new OffsetDebtsCommand(ctx.userId, personName, 'UZS'),
     );
   const reverse = (settlementId: string, userId = ctx.userId) =>
-    ctx.commandBus.execute<ReverseSettlementCommand, DebtResponseDto[]>(
+    ctx.commandBus.execute<ReverseSettlementCommand, void>(
       new ReverseSettlementCommand(settlementId, userId),
     );
 
@@ -566,9 +588,8 @@ describe('Расчёт по долгу: отмена', () => {
       const result = await pay(new PayDebtCommand(ctx.userId, debtId, 100, ctx.accountId, DATE));
       expect(await debtOf(ctx, debtId)).toMatchObject({ remainingAmount: 200 });
 
-      const affected = await reverse(result.settlementId);
+      await reverse(result.settlementId);
 
-      expect(affected.map((d) => d.id)).toEqual([debtId]);
       expect(await debtOf(ctx, debtId)).toMatchObject({ remainingAmount: 300, isClosed: false });
       expect(await recordsOfSettlement(ctx, result.settlementId)).toHaveLength(0);
       expect(await balanceOf(ctx, ctx.accountId)).toBe(balanceBefore);
@@ -1225,6 +1246,766 @@ describe('Расчёт по долгу: удаление и правка зап�
 
       expect(ids).toContain(settlement.find((r) => r.debtId === given)!.id);
       expect(ids).not.toContain(settlement.find((r) => r.debtId === taken)!.id);
+    });
+  });
+});
+
+describe('Расчёт по долгу: «Закрыть все»', () => {
+  let ctx: DebtTestContext;
+
+  beforeEach(async () => {
+    ctx = await setupDebtTestContext();
+  });
+
+  afterEach(async () => {
+    await ctx.closeAndCleanup();
+  });
+
+  interface Options {
+    paymentAmount?: number;
+    forgiveRemainder?: boolean;
+    excessCategoryId?: string;
+    userId?: string;
+  }
+
+  const closeAll = (debtIds: string[], options: Options = {}) =>
+    ctx.commandBus.execute<CloseAllDebtsCommand, CloseAllResult>(
+      new CloseAllDebtsCommand(
+        options.userId ?? ctx.userId,
+        debtIds,
+        ctx.accountId,
+        DATE,
+        options.paymentAmount,
+        options.forgiveRemainder ?? false,
+        options.excessCategoryId,
+      ),
+    );
+  const preview = (debtIds: string[], options: Options = {}) =>
+    ctx.queryBus.execute<PreviewCloseAllQuery, CloseAllPreview>(
+      new PreviewCloseAllQuery(
+        ctx.userId,
+        debtIds,
+        options.paymentAmount,
+        options.forgiveRemainder ?? false,
+      ),
+    );
+
+  const person = 'Эрмурат';
+  // Мне должны 300 (старый) и 100 (новый), я должен 150: зачёт на 150, остаток 250 с одной стороны.
+  const seedPerson = async () => {
+    const givenOld = await createDebt(ctx, {
+      debtType: 'given',
+      amount: 300,
+      personName: person,
+      createdAt: new Date('2026-01-01T10:00:00.000Z'),
+    });
+    const taken = await createDebt(ctx, {
+      debtType: 'taken',
+      amount: 150,
+      personName: person,
+      createdAt: new Date('2026-01-15T10:00:00.000Z'),
+    });
+    const givenNew = await createDebt(ctx, {
+      debtType: 'given',
+      amount: 100,
+      personName: person,
+      createdAt: new Date('2026-02-01T10:00:00.000Z'),
+    });
+    // Порядок id в запросе не совпадает с порядком по дате: сервер сортирует сам.
+    return { givenOld, taken, givenNew, ids: [givenNew, taken, givenOld] };
+  };
+
+  const expectUntouched = async (balanceBefore: number, debts: Record<string, number>) => {
+    expect(await balanceOf(ctx, ctx.accountId)).toBe(balanceBefore);
+    for (const [debtId, remaining] of Object.entries(debts)) {
+      expect(await debtOf(ctx, debtId)).toMatchObject({
+        isClosed: false,
+        remainingAmount: remaining,
+      });
+      // Осталась только запись выдачи: расчёт ничего не написал.
+      expect(await recordsOf(ctx, debtId)).toHaveLength(1);
+    }
+  };
+
+  describe('исполнение', () => {
+    it('зачёт, платежи и переплата: все долги закрыты, записи одного расчёта, баланс на сумму платежа', async () => {
+      const { givenOld, taken, givenNew, ids } = await seedPerson();
+      const balanceBefore = await balanceOf(ctx, ctx.accountId);
+
+      const result = await closeAll(ids, { paymentAmount: 300, excessCategoryId: 'other_income' });
+
+      expect(result).toMatchObject({ offsetAmount: 150, excess: 50 });
+      expect(result.settlementId).toEqual(expect.any(String));
+      expect(result.debts.map((d) => d.id).sort()).toEqual([...ids].sort());
+      expect(result.debts.every((d) => d.isClosed)).toBe(true);
+      for (const id of ids) {
+        expect(await debtOf(ctx, id)).toMatchObject({ isClosed: true, remainingAmount: 0 });
+      }
+
+      const settlement = await recordsOfSettlement(ctx, result.settlementId);
+      expect(settlement).toHaveLength(5);
+      const offsets = settlement.filter((r) => r.categoryId === DEBT_CATEGORY_IDS.OFFSET);
+      expect(offsets.map((r) => [r.debtId, r.amount]).sort()).toEqual(
+        [
+          [givenOld, 150],
+          [taken, 150],
+        ].sort(),
+      );
+      expect(offsets.every((r) => r.isInformational)).toBe(true);
+
+      const returnOld = settlement.find(
+        (r) => r.categoryId === DEBT_CATEGORY_IDS.RETURN_TO_ME && r.debtId === givenOld,
+      );
+      const returnNew = settlement.find(
+        (r) => r.categoryId === DEBT_CATEGORY_IDS.RETURN_TO_ME && r.debtId === givenNew,
+      );
+      const excess = settlement.find((r) => r.categoryId === 'other_income');
+      expect(returnOld).toMatchObject({ amount: 150, type: 'income', date: DATE });
+      expect(returnNew).toMatchObject({ amount: 100, type: 'income', date: DATE });
+      expect(excess).toMatchObject({ debtId: null, amount: 50, type: 'income', date: DATE });
+
+      // Первым идёт платёж старого долга; зачёт, переплата и прощение в список не входят.
+      expect(result.paymentTransactionIds).toEqual([returnOld!.id, returnNew!.id]);
+      expect((await debtOf(ctx, givenNew)).closeTransactionId).toBe(returnNew!.id);
+      expect((await debtOf(ctx, givenOld)).closeTransactionId).toBe(returnOld!.id);
+      expect((await debtOf(ctx, taken)).closeTransactionId).toBe(
+        offsets.find((r) => r.debtId === taken)!.id,
+      );
+
+      // Зачёт денег не двигает; на счёт пришло 250 возврата и 50 переплаты.
+      expect(await balanceOf(ctx, ctx.accountId)).toBe(balanceBefore + 300);
+    });
+
+    it('без суммы платит весь остаток после зачёта', async () => {
+      const { ids } = await seedPerson();
+      const balanceBefore = await balanceOf(ctx, ctx.accountId);
+
+      const result = await closeAll(ids);
+
+      expect(result).toMatchObject({ offsetAmount: 150, excess: 0 });
+      expect(result.paymentTransactionIds).toHaveLength(2);
+      expect(await balanceOf(ctx, ctx.accountId)).toBe(balanceBefore + 250);
+    });
+
+    it('прощение: недоплаченные долги закрываются, платежи без денег в список записей не входят', async () => {
+      const old = await createDebt(ctx, {
+        debtType: 'given',
+        amount: 200,
+        createdAt: new Date('2026-01-01T10:00:00.000Z'),
+      });
+      const fresh = await createDebt(ctx, {
+        debtType: 'given',
+        amount: 50,
+        createdAt: new Date('2026-02-01T10:00:00.000Z'),
+      });
+      const balanceBefore = await balanceOf(ctx, ctx.accountId);
+
+      const result = await closeAll([fresh, old], { paymentAmount: 100, forgiveRemainder: true });
+
+      expect(await debtOf(ctx, old)).toMatchObject({
+        isClosed: true,
+        remainingAmount: 0,
+        forgivenAmount: 100,
+      });
+      // Новому долгу денег не хватило совсем: он закрыт одним прощением.
+      expect(await debtOf(ctx, fresh)).toMatchObject({
+        isClosed: true,
+        remainingAmount: 0,
+        forgivenAmount: 50,
+      });
+      const settlement = await recordsOfSettlement(ctx, result.settlementId);
+      expect(settlement).toHaveLength(3);
+      const returnOld = settlement.find((r) => r.categoryId === DEBT_CATEGORY_IDS.RETURN_TO_ME);
+      expect(result.paymentTransactionIds).toEqual([returnOld!.id]);
+      expect(await balanceOf(ctx, ctx.accountId)).toBe(balanceBefore + 100);
+    });
+  });
+
+  describe('одна сторона в разных валютах', () => {
+    const MIXED_ERROR = 'Долги в разных валютах можно только оплатить целиком или простить целиком';
+
+    // Мне должны 300 UZS (старый) и 20 USD (новый): зачёта нет, суммы в разных валютах не складываются.
+    const seedMixed = async () => {
+      const uzs = await createDebt(ctx, {
+        debtType: 'given',
+        amount: 300,
+        createdAt: new Date('2026-01-01T10:00:00.000Z'),
+      });
+      const usd = await createDebt(ctx, {
+        debtType: 'given',
+        amount: 20,
+        currency: 'USD',
+        createdAt: new Date('2026-01-02T10:00:00.000Z'),
+      });
+      return { uzs, usd, ids: [usd, uzs] };
+    };
+
+    it('без суммы и прощения: каждый долг платится целиком, предпросмотр совпадает с исполнением', async () => {
+      const { uzs, usd, ids } = await seedMixed();
+      const uzsBefore = await balanceOf(ctx, ctx.accountId);
+      const usdBefore = await balanceOf(ctx, ctx.accountId, 'USD');
+
+      const planned = await preview(ids);
+
+      expect(planned).toMatchObject({
+        offsetAmount: 0,
+        direction: null,
+        offsetParts: [],
+        excess: 0,
+      });
+      expect(planned.payments).toEqual([
+        { debtId: uzs, amount: 300, forgive: false, withExcess: false },
+        { debtId: usd, amount: 20, forgive: false, withExcess: false },
+      ]);
+      expect(await balanceOf(ctx, ctx.accountId)).toBe(uzsBefore);
+      expect(await debtOf(ctx, uzs)).toMatchObject({ isClosed: false, remainingAmount: 300 });
+
+      const result = await closeAll(ids);
+
+      expect(result).toMatchObject({ offsetAmount: 0, excess: 0 });
+      expect(result.paymentTransactionIds).toHaveLength(2);
+      expect(await debtOf(ctx, uzs)).toMatchObject({ isClosed: true, forgivenAmount: 0 });
+      expect(await debtOf(ctx, usd)).toMatchObject({ isClosed: true, forgivenAmount: 0 });
+      const settlement = await recordsOfSettlement(ctx, result.settlementId);
+      for (const payment of planned.payments) {
+        const record = settlement.find(
+          (r) => r.categoryId === DEBT_CATEGORY_IDS.RETURN_TO_ME && r.debtId === payment.debtId,
+        );
+        expect(record?.amount).toBe(payment.amount);
+      }
+      expect(settlement.map((r) => [r.currency, r.amount]).sort()).toEqual(
+        [
+          ['UZS', 300],
+          ['USD', 20],
+        ].sort(),
+      );
+      expect(await balanceOf(ctx, ctx.accountId)).toBe(uzsBefore + 300);
+      expect(await balanceOf(ctx, ctx.accountId, 'USD')).toBe(usdBefore + 20);
+    });
+
+    it.each([[undefined], [0]])(
+      'прощение (paymentAmount: %s): долги закрыты прощением целиком, баланс не меняется',
+      async (paymentAmount) => {
+        const { uzs, usd, ids } = await seedMixed();
+        const uzsBefore = await balanceOf(ctx, ctx.accountId);
+        const usdBefore = await balanceOf(ctx, ctx.accountId, 'USD');
+
+        const planned = await preview(ids, { paymentAmount, forgiveRemainder: true });
+
+        expect(planned).toMatchObject({ offsetAmount: 0, direction: null, excess: 0 });
+        expect(planned.payments).toEqual([
+          { debtId: uzs, amount: 0, forgive: true, withExcess: false },
+          { debtId: usd, amount: 0, forgive: true, withExcess: false },
+        ]);
+
+        const result = await closeAll(ids, { paymentAmount, forgiveRemainder: true });
+
+        expect(result).toMatchObject({ offsetAmount: 0, excess: 0, paymentTransactionIds: [] });
+        expect(result.debts.every((d) => d.isClosed)).toBe(true);
+        const settlement = await recordsOfSettlement(ctx, result.settlementId);
+        expect(settlement).toHaveLength(2);
+        for (const record of settlement) {
+          expect(record).toMatchObject({
+            categoryId: DEBT_CATEGORY_IDS.FORGIVEN,
+            isInformational: true,
+          });
+        }
+        const forgivenOf = (debtId: string) => settlement.find((r) => r.debtId === debtId)!;
+        expect(forgivenOf(uzs)).toMatchObject({ currency: 'UZS', amount: 300 });
+        expect(forgivenOf(usd)).toMatchObject({ currency: 'USD', amount: 20 });
+        expect(await debtOf(ctx, uzs)).toMatchObject({
+          isClosed: true,
+          remainingAmount: 0,
+          forgivenAmount: 300,
+          closeTransactionId: forgivenOf(uzs).id,
+        });
+        expect(await debtOf(ctx, usd)).toMatchObject({
+          isClosed: true,
+          remainingAmount: 0,
+          forgivenAmount: 20,
+          closeTransactionId: forgivenOf(usd).id,
+        });
+        // Прощение денег не двигает.
+        expect(await balanceOf(ctx, ctx.accountId)).toBe(uzsBefore);
+        expect(await balanceOf(ctx, ctx.accountId, 'USD')).toBe(usdBefore);
+      },
+    );
+
+    it.each([
+      ['сумма больше нуля', { paymentAmount: 5 }],
+      ['сумма больше нуля с прощением', { paymentAmount: 5, forgiveRemainder: true }],
+      ['нулевая сумма без прощения', { paymentAmount: 0 }],
+    ])('%s: 400 до любой записи, в исполнении и в предпросмотре', async (_name, options) => {
+      const { uzs, usd, ids } = await seedMixed();
+      const uzsBefore = await balanceOf(ctx, ctx.accountId);
+      const usdBefore = await balanceOf(ctx, ctx.accountId, 'USD');
+
+      for (const run of [() => closeAll(ids, options), () => preview(ids, options)]) {
+        const error = await run().catch((e: unknown) => e);
+        expect(error).toBeInstanceOf(BadRequestException);
+        expect((error as BadRequestException).message).toBe(MIXED_ERROR);
+      }
+
+      await expectUntouched(uzsBefore, { [uzs]: 300, [usd]: 20 });
+      expect(await balanceOf(ctx, ctx.accountId, 'USD')).toBe(usdBefore);
+    });
+  });
+
+  describe('предпросмотр', () => {
+    it('совпадает с исполнением и ничего не пишет', async () => {
+      const { givenOld, taken, givenNew, ids } = await seedPerson();
+      const balanceBefore = await balanceOf(ctx, ctx.accountId);
+
+      const planned = await preview(ids, { paymentAmount: 300 });
+
+      expect(planned).toMatchObject({
+        offsetAmount: 150,
+        direction: 'given',
+        net: 250,
+        excess: 50,
+        totalDebt: 250,
+      });
+      expect(planned.offsetParts).toEqual([
+        { debtId: givenOld, amount: 150 },
+        { debtId: taken, amount: 150 },
+      ]);
+      expect(planned.payments).toEqual([
+        { debtId: givenOld, amount: 150, forgive: false, withExcess: false },
+        { debtId: givenNew, amount: 150, forgive: false, withExcess: true },
+      ]);
+      await expectUntouched(balanceBefore, { [givenOld]: 300, [taken]: 150, [givenNew]: 100 });
+
+      const result = await closeAll(ids, { paymentAmount: 300, excessCategoryId: 'other_income' });
+
+      const settlement = await recordsOfSettlement(ctx, result.settlementId);
+      expect(result.offsetAmount).toBe(planned.offsetAmount);
+      expect(result.excess).toBe(planned.excess);
+      for (const part of planned.offsetParts) {
+        const record = settlement.find(
+          (r) => r.categoryId === DEBT_CATEGORY_IDS.OFFSET && r.debtId === part.debtId,
+        );
+        expect(record?.amount).toBe(part.amount);
+      }
+      const excessRecord = settlement.find((r) => r.categoryId === 'other_income');
+      for (const payment of planned.payments) {
+        const record = settlement.find(
+          (r) => r.categoryId === DEBT_CATEGORY_IDS.RETURN_TO_ME && r.debtId === payment.debtId,
+        );
+        // Переплата в плане входит в сумму последнего платежа, а пишется отдельной записью.
+        const extra = payment.withExcess ? excessRecord!.amount : 0;
+        expect(record!.amount + extra).toBe(payment.amount);
+      }
+    });
+
+    it('без встречных долгов: зачёта нет, направление null', async () => {
+      const first = await createDebt(ctx, {
+        debtType: 'given',
+        amount: 200,
+        createdAt: new Date('2026-01-01T10:00:00.000Z'),
+      });
+      const second = await createDebt(ctx, {
+        debtType: 'given',
+        amount: 50,
+        createdAt: new Date('2026-02-01T10:00:00.000Z'),
+      });
+
+      const planned = await preview([second, first]);
+
+      expect(planned).toMatchObject({
+        offsetAmount: 0,
+        direction: null,
+        net: 250,
+        offsetParts: [],
+        excess: 0,
+        totalDebt: 250,
+      });
+      expect(planned.payments.map((p) => [p.debtId, p.amount])).toEqual([
+        [first, 200],
+        [second, 50],
+      ]);
+    });
+  });
+
+  describe('отмена', () => {
+    it('отмена закрытия одного долга открывает все долги расчёта, баланс как до него', async () => {
+      const { givenOld, taken, givenNew, ids } = await seedPerson();
+      const balanceBefore = await balanceOf(ctx, ctx.accountId);
+      const result = await closeAll(ids);
+
+      // Долг закрыт зачётом, а не платежом: всё равно откатывается весь расчёт.
+      await ctx.commandBus.execute(new ReopenDebtCommand(taken, ctx.userId));
+
+      expect(await recordsOfSettlement(ctx, result.settlementId)).toHaveLength(0);
+      await expectUntouched(balanceBefore, { [givenOld]: 300, [taken]: 150, [givenNew]: 100 });
+    });
+  });
+
+  describe('сбои и проверки', () => {
+    it('чужой долг вторым в списке: 403, первый не тронут', async () => {
+      const own = await createDebt(ctx, { debtType: 'given', amount: 300 });
+      const balanceBefore = await balanceOf(ctx, ctx.accountId);
+      const foreignUserId = randomUUID();
+      await ctx.dataSource.getRepository(ProfileOrmEntity).insert({
+        id: foreignUserId,
+        email: `debt-test-${foreignUserId}@test.local`,
+        name: 'Foreign User',
+      });
+
+      try {
+        const foreign = await ctx.commandBus.execute<CreateDebtCommand, DebtResponseDto>(
+          new CreateDebtCommand(foreignUserId, 'Чужой долг', 100, 100, 'given', 'UZS', 'Чужой'),
+        );
+
+        await expect(closeAll([own, foreign.id])).rejects.toBeInstanceOf(ForbiddenException);
+        await expect(preview([own, foreign.id])).rejects.toBeInstanceOf(ForbiddenException);
+      } finally {
+        // Долги чужого пользователя уходят каскадом вместе с профилем.
+        await ctx.dataSource.getRepository(ProfileOrmEntity).delete({ id: foreignUserId });
+      }
+
+      await expectUntouched(balanceBefore, { [own]: 300 });
+    });
+
+    it('неизвестный долг вторым в списке: 404, первый не тронут', async () => {
+      const own = await createDebt(ctx, { debtType: 'given', amount: 300 });
+      const balanceBefore = await balanceOf(ctx, ctx.accountId);
+
+      await expect(closeAll([own, randomUUID()])).rejects.toBeInstanceOf(NotFoundException);
+
+      await expectUntouched(balanceBefore, { [own]: 300 });
+    });
+
+    it('сбой записи на втором платеже откатывает и первый: записи, остаток и баланс как до', async () => {
+      const first = await createDebt(ctx, {
+        debtType: 'given',
+        amount: 300,
+        createdAt: new Date('2026-01-01T10:00:00.000Z'),
+      });
+      const second = await createDebt(ctx, {
+        debtType: 'given',
+        amount: 200,
+        createdAt: new Date('2026-02-01T10:00:00.000Z'),
+      });
+      const balanceBefore = await balanceOf(ctx, ctx.accountId);
+
+      const original = ctx.commandBus.execute.bind(ctx.commandBus);
+      let created = 0;
+      const spy = jest.spyOn(ctx.commandBus, 'execute').mockImplementation((command) => {
+        if (command instanceof CreateTransactionCommand && ++created === 2) {
+          return Promise.reject(new Error('сбой записи'));
+        }
+        return original(command);
+      });
+      try {
+        await expect(closeAll([first, second])).rejects.toThrow('сбой записи');
+      } finally {
+        spy.mockRestore();
+      }
+
+      expect(created).toBe(2);
+      await expectUntouched(balanceBefore, { [first]: 300, [second]: 200 });
+    });
+
+    it('переплата без категории: 400 до любой записи, зачёт не проведён', async () => {
+      const { givenOld, taken, givenNew, ids } = await seedPerson();
+      const balanceBefore = await balanceOf(ctx, ctx.accountId);
+
+      await expect(closeAll(ids, { paymentAmount: 300 })).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+
+      await expectUntouched(balanceBefore, { [givenOld]: 300, [taken]: 150, [givenNew]: 100 });
+    });
+
+    it('встречные долги в разных валютах: 400 с пояснением, ничего не записано', async () => {
+      const given = await createDebt(ctx, { debtType: 'given', amount: 300 });
+      const taken = await createDebt(ctx, { debtType: 'taken', amount: 20, currency: 'USD' });
+      const balanceBefore = await balanceOf(ctx, ctx.accountId);
+
+      for (const run of [() => closeAll([given, taken]), () => preview([given, taken])]) {
+        const error = await run().catch((e: unknown) => e);
+        expect(error).toBeInstanceOf(BadRequestException);
+        expect((error as BadRequestException).message).toBe(
+          'Встречные долги сводятся только в одной валюте',
+        );
+      }
+
+      await expectUntouched(balanceBefore, { [given]: 300 });
+    });
+
+    it('закрытый долг: 409 и в исполнении, и в предпросмотре', async () => {
+      const closed = await createDebt(ctx, { debtType: 'given', amount: 300 });
+      await ctx.commandBus.execute(
+        new PayDebtCommand(ctx.userId, closed, 300, ctx.accountId, DATE),
+      );
+      const open = await createDebt(ctx, { debtType: 'given', amount: 100 });
+
+      await expect(preview([open, closed])).rejects.toBeInstanceOf(ConflictException);
+      await expect(closeAll([open, closed])).rejects.toBeInstanceOf(ConflictException);
+
+      expect(await debtOf(ctx, open)).toMatchObject({ isClosed: false, remainingAmount: 100 });
+    });
+
+    it('пустой список долгов: 400', async () => {
+      await expect(closeAll([])).rejects.toBeInstanceOf(BadRequestException);
+      await expect(preview([])).rejects.toBeInstanceOf(BadRequestException);
+    });
+  });
+});
+
+describe('Расчёт по долгу: параллельные расчёты', () => {
+  let ctx: DebtTestContext;
+
+  beforeEach(async () => {
+    ctx = await setupDebtTestContext();
+  });
+
+  afterEach(async () => {
+    await ctx.closeAndCleanup();
+  });
+
+  const pay = (debtId: string, amount: number) =>
+    ctx.commandBus.execute<PayDebtCommand, PayResult>(
+      new PayDebtCommand(ctx.userId, debtId, amount, ctx.accountId, DATE),
+    );
+  const closeAll = (debtIds: string[]) =>
+    ctx.commandBus.execute<CloseAllDebtsCommand, CloseAllResult>(
+      new CloseAllDebtsCommand(ctx.userId, debtIds, ctx.accountId, DATE),
+    );
+  const offset = (personName: string) =>
+    ctx.commandBus.execute<OffsetDebtsCommand, OffsetResult>(
+      new OffsetDebtsCommand(ctx.userId, personName, 'UZS'),
+    );
+  const reverse = (settlementId: string) =>
+    ctx.commandBus.execute<ReverseSettlementCommand, void>(
+      new ReverseSettlementCommand(settlementId, ctx.userId),
+    );
+  const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  /** Баланс счёта, каким он обязан быть по записям: стартовый плюс доходы минус расходы. */
+  const ledgerBalance = async (accountId: string) => {
+    const rows = await ctx.dataSource
+      .getRepository(TransactionOrmEntity)
+      .find({ where: { userId: ctx.userId, accountId } });
+    return rows
+      .filter((r) => !r.isInformational)
+      .reduce((sum, r) => sum + (r.type === 'income' ? 1 : -1) * Number(r.amount), INITIAL_BALANCE);
+  };
+
+  const paidOf = async (debtId: string) =>
+    (await recordsOf(ctx, debtId))
+      .filter((r) => r.categoryId === DEBT_CATEGORY_IDS.RETURN_TO_ME)
+      .reduce((sum, r) => sum + r.amount, 0);
+
+  /**
+   * Чужая незакоммиченная правка держит строки долгов, пока стартует действие. Оно обязано
+   * ждать и по выходу работать со свежими данными, а не с копией, прочитанной до блокировки.
+   */
+  async function whileHeld<T>(holderSql: string, debtIds: string[], action: () => Promise<T>) {
+    const runner = ctx.dataSource.createQueryRunner();
+    await runner.connect();
+    await runner.startTransaction();
+    try {
+      await runner.query(holderSql, [debtIds]);
+      let settled = false;
+      const outcome = Promise.allSettled([action()]).then(([result]) => {
+        settled = true;
+        return result;
+      });
+      await sleep(300);
+      const blocked = !settled;
+      await runner.commitTransaction();
+      return { blocked, outcome: await outcome };
+    } catch (error) {
+      if (runner.isTransactionActive) await runner.rollbackTransaction();
+      throw error;
+    } finally {
+      await runner.release();
+    }
+  }
+
+  const CLOSE_HELD =
+    'UPDATE debts SET is_closed = true, remaining_amount = 0 WHERE id = ANY($1::uuid[])';
+
+  describe('«Закрыть все» параллельно', () => {
+    it('два вызова по одним долгам: проходит один, второй получает «уже закрыт», платежи не дублируются', async () => {
+      const first = await createDebt(ctx, {
+        debtType: 'given',
+        amount: 300,
+        createdAt: new Date('2026-01-01T10:00:00.000Z'),
+      });
+      const second = await createDebt(ctx, {
+        debtType: 'given',
+        amount: 200,
+        createdAt: new Date('2026-02-01T10:00:00.000Z'),
+      });
+      const balanceBefore = await balanceOf(ctx, ctx.accountId);
+
+      const results = await Promise.allSettled([
+        closeAll([first, second]),
+        closeAll([first, second]),
+      ]);
+
+      expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
+      const rejected = results.find((r) => r.status === 'rejected') as PromiseRejectedResult;
+      expect(rejected.reason).toBeInstanceOf(ConflictException);
+      expect((rejected.reason as ConflictException).message).toBe('Долг уже закрыт');
+      for (const debtId of [first, second]) {
+        const payments = (await recordsOf(ctx, debtId)).filter(
+          (r) => r.categoryId === DEBT_CATEGORY_IDS.RETURN_TO_ME,
+        );
+        expect(payments).toHaveLength(1);
+        expect(await debtOf(ctx, debtId)).toMatchObject({ isClosed: true, remainingAmount: 0 });
+      }
+      expect(await balanceOf(ctx, ctx.accountId)).toBe(balanceBefore + 500);
+    });
+
+    it('долг закрыт чужой незавершённой правкой: после ожидания 409, записей нет', async () => {
+      const first = await createDebt(ctx, { debtType: 'given', amount: 300 });
+      const second = await createDebt(ctx, { debtType: 'given', amount: 200 });
+      const balanceBefore = await balanceOf(ctx, ctx.accountId);
+
+      const { blocked, outcome } = await whileHeld(CLOSE_HELD, [first], () =>
+        closeAll([first, second]),
+      );
+
+      expect(blocked).toBe(true);
+      expect(outcome.status).toBe('rejected');
+      expect((outcome as PromiseRejectedResult).reason).toBeInstanceOf(ConflictException);
+      expect(await recordsOf(ctx, second)).toHaveLength(1);
+      expect(await balanceOf(ctx, ctx.accountId)).toBe(balanceBefore);
+    });
+  });
+
+  describe('платёж', () => {
+    it('ждёт занятую строку долга и платит от свежего остатка, а не от копии до ожидания', async () => {
+      const debtId = await createDebt(ctx, { debtType: 'given', amount: 300 });
+
+      const { blocked, outcome } = await whileHeld(
+        'UPDATE debts SET remaining_amount = 100 WHERE id = ANY($1::uuid[])',
+        [debtId],
+        () => pay(debtId, 50),
+      );
+
+      expect(blocked).toBe(true);
+      expect(outcome.status).toBe('fulfilled');
+      expect(await debtOf(ctx, debtId)).toMatchObject({ remainingAmount: 50, isClosed: false });
+    });
+
+    it('параллельно с отменой более раннего расчёта: итог согласован с записями, обновление не теряется', async () => {
+      // Гонка недетерминирована: несколько кругов повышают шанс поймать потерянное обновление.
+      for (let round = 0; round < 5; round++) {
+        const debtId = await createDebt(ctx, { debtType: 'given', amount: 300 });
+        const earlier = await pay(debtId, 100);
+
+        const [payment, reversal] = await Promise.allSettled([
+          pay(debtId, 50),
+          reverse(earlier.settlementId),
+        ]);
+
+        // Платёж проходит всегда: долг остаётся открытым при любом порядке.
+        expect(payment.status).toBe('fulfilled');
+        // Отмена либо прошла первой, либо упёрлась в более поздний платёж — 409.
+        if (reversal.status === 'rejected') {
+          expect(reversal.reason).toBeInstanceOf(ConflictException);
+        }
+        const state = await debtOf(ctx, debtId);
+        expect(state.remainingAmount).toBe(300 - (await paidOf(debtId)));
+        expect(state.isClosed).toBe(false);
+        expect(await balanceOf(ctx, ctx.accountId)).toBe(await ledgerBalance(ctx.accountId));
+      }
+    });
+
+    it('параллельно с отменой закрывающего расчёта: платёж либо падает «уже закрыт», либо идёт по открытому долгу', async () => {
+      for (let round = 0; round < 5; round++) {
+        const debtId = await createDebt(ctx, { debtType: 'given', amount: 300 });
+        const closing = await pay(debtId, 300);
+
+        const [payment, reversal] = await Promise.allSettled([
+          pay(debtId, 50),
+          reverse(closing.settlementId),
+        ]);
+
+        expect(reversal.status).toBe('fulfilled');
+        if (payment.status === 'rejected') {
+          expect(payment.reason).toBeInstanceOf(ConflictException);
+        }
+        const state = await debtOf(ctx, debtId);
+        expect(state.remainingAmount).toBe(300 - (await paidOf(debtId)));
+        expect(state.isClosed).toBe(false);
+        expect(await balanceOf(ctx, ctx.accountId)).toBe(await ledgerBalance(ctx.accountId));
+      }
+    });
+  });
+
+  describe('зачёт', () => {
+    it('встречный долг закрыт чужой незавершённой правкой: после ожидания зачёта нет — 409', async () => {
+      const person = 'Эрмурат';
+      await createDebt(ctx, { debtType: 'given', amount: 300, personName: person });
+      const taken = await createDebt(ctx, { debtType: 'taken', amount: 100, personName: person });
+
+      const { blocked, outcome } = await whileHeld(CLOSE_HELD, [taken], () => offset(person));
+
+      expect(blocked).toBe(true);
+      expect(outcome.status).toBe('rejected');
+      expect((outcome as PromiseRejectedResult).reason).toBeInstanceOf(ConflictException);
+    });
+  });
+
+  describe('отмена', () => {
+    it('расчёта по id: ждёт занятую строку долга и возвращает остаток от свежего значения', async () => {
+      const debtId = await createDebt(ctx, { debtType: 'given', amount: 300 });
+      const earlier = await pay(debtId, 100);
+
+      const { blocked, outcome } = await whileHeld(
+        'UPDATE debts SET remaining_amount = 150 WHERE id = ANY($1::uuid[])',
+        [debtId],
+        () => reverse(earlier.settlementId),
+      );
+
+      expect(blocked).toBe(true);
+      expect(outcome.status).toBe('fulfilled');
+      expect(await debtOf(ctx, debtId)).toMatchObject({ remainingAmount: 250, isClosed: false });
+    });
+
+    it('закрытия без расчёта: долг, уже открытый чужой правкой, не затирается — 409', async () => {
+      const debtId = await createDebt(ctx, { debtType: 'given', amount: 300 });
+      await ctx.dataSource
+        .getRepository(DebtOrmEntity)
+        .update({ id: debtId }, { isClosed: true, remainingAmount: 0, closeTransactionId: null });
+
+      const { blocked, outcome } = await whileHeld(
+        'UPDATE debts SET is_closed = false, remaining_amount = 120 WHERE id = ANY($1::uuid[])',
+        [debtId],
+        () =>
+          ctx.commandBus.execute<ReopenDebtCommand, DebtResponseDto>(
+            new ReopenDebtCommand(debtId, ctx.userId),
+          ),
+      );
+
+      expect(blocked).toBe(true);
+      expect(outcome.status).toBe('rejected');
+      expect((outcome as PromiseRejectedResult).reason).toBeInstanceOf(ConflictException);
+      expect(await debtOf(ctx, debtId)).toMatchObject({ remainingAmount: 120, isClosed: false });
+    });
+  });
+
+  describe('удаление долга', () => {
+    it('долг, исчезнувший за время ожидания блокировки, — 404, а не молчаливый успех', async () => {
+      const debtId = await createDebt(ctx, { debtType: 'given', amount: 300 });
+      await pay(debtId, 100);
+
+      const { blocked, outcome } = await whileHeld(
+        'DELETE FROM debts WHERE id = ANY($1::uuid[])',
+        [debtId],
+        () => ctx.commandBus.execute(new DeleteDebtCommand(debtId, ctx.userId)),
+      );
+
+      expect(blocked).toBe(true);
+      expect(outcome.status).toBe('rejected');
+      expect((outcome as PromiseRejectedResult).reason).toBeInstanceOf(NotFoundException);
+      // Записи не тронуты: удаление остановилось на проверке под блокировкой.
+      expect(await recordsOf(ctx, debtId)).toHaveLength(2);
     });
   });
 });

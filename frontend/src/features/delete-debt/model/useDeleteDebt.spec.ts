@@ -216,6 +216,44 @@ describe('useDeleteDebt', () => {
       expect(toastMock).toHaveBeenCalledWith(expect.objectContaining({ variant: 'error' }));
     });
 
+    it('shows the Russian reason of a 409 refusal as the toast description', async () => {
+      const reason = 'Сначала отмените более поздний расчёт по долгу «Тимур»';
+      server.use(
+        http.delete('*/api/debts/:id', () =>
+          HttpResponse.json({ message: reason }, { status: 409 }),
+        ),
+      );
+
+      const c = mountComposable();
+      const result = await c.deleteDebt(givenDebt, USER_ID);
+      await flushPromises();
+
+      expect(result).toBe(false);
+      expect(toastMock).toHaveBeenCalledWith({
+        title: 'Не удалось удалить долг',
+        description: reason,
+        variant: 'error',
+      });
+    });
+
+    it('leaves the description empty when the server gives no Russian reason', async () => {
+      server.use(
+        http.delete('*/api/debts/:id', () =>
+          HttpResponse.json({ message: 'Internal Server Error' }, { status: 500 }),
+        ),
+      );
+
+      const c = mountComposable();
+      await c.deleteDebt(givenDebt, USER_ID);
+      await flushPromises();
+
+      expect(toastMock).toHaveBeenCalledWith({
+        title: 'Не удалось удалить долг',
+        description: undefined,
+        variant: 'error',
+      });
+    });
+
     it('sets isDeleting to false after failure', async () => {
       server.use(
         http.delete('*/api/debts/:id', () =>

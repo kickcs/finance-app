@@ -1,8 +1,12 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
 import type { Debt } from '../../domain/aggregates/debt';
-import { DeleteTransactionCommand } from '../../../accounting/application/commands/delete-transaction/delete-transaction.command';
-import { reverseSettlement, type ReversalDeps } from './settlement-reversal';
+import { loadOwnedDebt, lockDebts } from './debt-lock';
+import type { SettlementDeps } from './settlement-deps';
+import { deleteRecords, reverseSettlement } from './settlement-reversal';
+
+/** Расчёты, которых коснулся долг: общий фрагмент запросов, параметр `$1` — id долга. */
+const DEBT_SETTLEMENT_IDS =
+  'SELECT settlement_id FROM transactions WHERE debt_id = $1 AND settlement_id IS NOT NULL';
 
 interface SettlementRow {
   settlement_id: string;
@@ -14,13 +18,24 @@ async function settlementsOf(manager: EntityManager, debtId: string): Promise<Se
   return manager.query<SettlementRow[]>(
     `SELECT settlement_id, BOOL_OR(debt_id IS NOT NULL AND debt_id <> $1) AS shared
      FROM transactions
-     WHERE settlement_id IN (
-       SELECT settlement_id FROM transactions WHERE debt_id = $1 AND settlement_id IS NOT NULL
-     )
+     WHERE settlement_id IN (${DEBT_SETTLEMENT_IDS})
      GROUP BY settlement_id
      ORDER BY MAX(created_at) DESC, settlement_id DESC`,
     [debtId],
   );
+}
+
+/** Долг и все долги его расчётов — их отмена возьмёт те же замки, поэтому удаление запирает их заранее. */
+async function debtIdsWithSettlementPeers(
+  manager: EntityManager,
+  debtId: string,
+): Promise<string[]> {
+  const rows = await manager.query<{ debt_id: string }[]>(
+    `SELECT DISTINCT debt_id FROM transactions
+     WHERE debt_id IS NOT NULL AND settlement_id IN (${DEBT_SETTLEMENT_IDS})`,
+    [debtId],
+  );
+  return [debtId, ...rows.map((row) => row.debt_id)];
 }
 
 async function recordsOfSettlements(
@@ -65,20 +80,20 @@ async function remainingRecords(manager: EntityManager, debt: Debt): Promise<str
  * другие долги, отменяются штатно — с проверкой порядка по этим долгам.
  */
 export async function removeDebtWithRecords(
-  deps: ReversalDeps,
+  deps: SettlementDeps,
   userId: string,
   debtId: string,
 ): Promise<void> {
   await deps.dataSource.transaction(async (manager) => {
-    const debt = await deps.debtRepository.findById(debtId, manager);
-    if (!debt) throw new NotFoundException('Debt not found');
-    if (debt.userId !== userId) throw new ForbiddenException('Access denied');
+    const known = await lockDebts(
+      deps.debtRepository,
+      manager,
+      userId,
+      await debtIdsWithSettlementPeers(manager, debtId),
+    );
+    const debt = await loadOwnedDebt(deps.debtRepository, userId, debtId, { manager, known });
 
-    const deleteAll = async (ids: string[]) => {
-      for (const id of ids) {
-        await deps.commandBus.execute(new DeleteTransactionCommand(id, userId, true, manager));
-      }
-    };
+    const deleteAll = (ids: string[]) => deleteRecords(deps, userId, ids, manager);
 
     const settlements = await settlementsOf(manager, debtId);
     // Свои расчёты (платёж, переплата) уходят первыми: они новее зачёта и блокировали

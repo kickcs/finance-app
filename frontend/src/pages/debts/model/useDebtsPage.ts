@@ -3,6 +3,7 @@ import { useRouter } from 'vue-router';
 import { useRouteQuery } from '@vueuse/router';
 import { ROUTE_NAMES } from '@/app/router/routeNames';
 import {
+  canCloseAllTogether,
   foldGroupsIntoPeople,
   getDebtDisplayName,
   useDebts,
@@ -14,11 +15,12 @@ import {
 } from '@/entities/debt';
 import { useAccounts } from '@/entities/account';
 import { useOffsetDebts } from '@/features/offset-debts';
-import { canSettleTogether, useCloseAllDebts } from '@/features/pay-debt';
+import { useCloseAllDebts, type CloseAllInputOptions } from '@/features/pay-debt';
 import { buildSharePayload, selectShareableDebts } from '@/features/share-debts';
 import { useExchangeRates, useProfile } from '@/shared/api';
 import { DEFAULT_CURRENCY } from '@/shared/config/currency';
 import { useIsDesktop } from '@/shared/lib/composables/useIsDesktop';
+import { useHaptics } from '@/shared/lib/haptics';
 import { useCurrentUser } from '@/shared/lib/hooks/useCurrentUser';
 import { useUserCurrency } from '@/shared/lib/hooks/useUserCurrency';
 import { navigateBack } from '@/app/router';
@@ -37,6 +39,7 @@ export function useDebtsPage() {
   const router = useRouter();
   const isDesktop = useIsDesktop();
   const { userId } = useCurrentUser();
+  const { trigger } = useHaptics();
   const { currency } = useUserCurrency();
   const { convert, isReady: ratesReady } = useExchangeRates(currency);
   const { profile } = useProfile(userId);
@@ -251,7 +254,7 @@ export function useDebtsPage() {
   }
 
   // --- Закрыть все долги человека ---
-  const { isClosing, progress, total, closeAllDebts } = useCloseAllDebts();
+  const { isClosing, closeAllDebts } = useCloseAllDebts();
   const showCloseAllDrawer = ref(false);
   const closeAllPersonName = ref<string | null>(null);
 
@@ -264,7 +267,7 @@ export function useDebtsPage() {
 
   // Встречные долги в разных валютах одним расчётом не свести — их закрывают по одному.
   const canCloseAll = computed(
-    () => allDebtsFromGroups.value.length > 1 && canSettleTogether(allDebtsFromGroups.value),
+    () => allDebtsFromGroups.value.length > 1 && canCloseAllTogether(allDebtsFromGroups.value),
   );
 
   function openCloseAllForPerson(personName: string) {
@@ -274,7 +277,7 @@ export function useDebtsPage() {
 
   async function handleCloseAll(
     accountId: string,
-    options: { paymentAmount: number; forgiveRemainder?: boolean; excessCategoryId?: string },
+    options: Omit<CloseAllInputOptions, 'transactionDate'>,
   ) {
     if (!userId.value) return;
     const success = await closeAllDebts(
@@ -283,6 +286,8 @@ export function useDebtsPage() {
       userId.value,
       options,
     );
+    // Шторка закрывается только на успехе, а гаптика нужна обоим исходам.
+    trigger(success ? 'success' : 'error');
     if (success) {
       showCloseAllDrawer.value = false;
       closeAllPersonName.value = null;
@@ -328,8 +333,6 @@ export function useDebtsPage() {
     closeAllDebtsForPerson,
     canCloseAll,
     isClosing,
-    progress,
-    total,
     accounts,
 
     // Поделиться

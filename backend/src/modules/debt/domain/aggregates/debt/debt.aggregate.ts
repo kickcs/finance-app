@@ -259,11 +259,7 @@ export class Debt extends AggregateRoot<string> {
       restored.amount > this._totalAmount.amount ? this._totalAmount : restored;
     this._forgivenAmount = Math.max(0, Math.round((this._forgivenAmount - forgiven) * 100) / 100);
 
-    if (this._remainingAmount.amount > 0) {
-      this._isClosed = false;
-      this._closedAt = null;
-      this._closeTransactionId = null;
-    }
+    if (this._remainingAmount.amount > 0) this.reopen();
   }
 
   /**
@@ -277,9 +273,7 @@ export class Debt extends AggregateRoot<string> {
     }
     this._remainingAmount = Money.create(next, this.currency);
     this._forgivenAmount = 0;
-    this._isClosed = false;
-    this._closedAt = null;
-    this._closeTransactionId = null;
+    this.reopen();
   }
 
   close(): void {
@@ -289,6 +283,13 @@ export class Debt extends AggregateRoot<string> {
       this._remainingAmount = Money.zero(this.currency);
       this.addDomainEvent(new DebtClosedEvent(this.id, this._userId));
     }
+  }
+
+  /** Обратное закрытию: снимает отметки закрытия; остаток выставляет вызывающий. */
+  private reopen(): void {
+    this._isClosed = false;
+    this._closedAt = null;
+    this._closeTransactionId = null;
   }
 
   /**

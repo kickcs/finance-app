@@ -23,6 +23,9 @@ afterEach(() => {
   document.body.innerHTML = '';
 });
 
+const SHARED_NOTE =
+  'Если долг закрывали вместе с другими — через «Закрыть все» или зачёт, — вернутся и они.';
+
 describe('DeleteDebtModal', () => {
   it('показывает, какой именно долг удаляется, и предупреждает о последствиях', async () => {
     await mountModal(makeDebt({ person_name: 'Азиз', total_amount: 5000 }));
@@ -38,6 +41,23 @@ describe('DeleteDebtModal', () => {
     await mountModal(makeDebt({ is_private: true, total_amount: 5000 }));
     expect(bodyText()).not.toContain('Азиз');
     expect(bodyText()).not.toContain('5 000');
+  });
+
+  // Удаление снимает и общие расчёты долга: «Закрыть все» и зачёт вернут остальные долги.
+  it.each([
+    ['закрытом', { is_closed: true, remaining_amount: 0 }],
+    ['частично оплаченном', { remaining_amount: 400 }],
+    ['прощённом', { forgiven_amount: 200 }],
+  ])('предупреждает о других долгах расчёта на %s долге', async (_name, overrides) => {
+    await mountModal(makeDebt({ total_amount: 1000, ...overrides }));
+
+    expect(bodyText()).toContain(SHARED_NOTE);
+  });
+
+  it('молчит о других долгах, пока по долгу не было расчётов', async () => {
+    await mountModal(makeDebt({ total_amount: 1000, remaining_amount: 1000 }));
+
+    expect(bodyText()).not.toContain(SHARED_NOTE);
   });
 
   it('подтверждение отдаётся наружу', async () => {

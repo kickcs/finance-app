@@ -6,7 +6,7 @@ import type { Transaction } from '@/shared/api/database.types';
 import DeleteTransactionModal from './DeleteTransactionModal.vue';
 
 const SETTLEMENT_WARNING =
-  'Это запись расчёта по долгу — удалится весь расчёт целиком, а остаток долга вернётся.';
+  'Это запись расчёта по долгу — удалится весь расчёт целиком, а долгам этого расчёта вернётся остаток.';
 
 function makeTx(overrides: Partial<Transaction> = {}): Transaction {
   return {

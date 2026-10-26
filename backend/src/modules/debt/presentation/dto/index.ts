@@ -1,5 +1,6 @@
 export * from './create-debt.dto';
 export * from './update-debt.dto';
+export * from './close-all-debts.dto';
 export * from './get-debts-paginated.dto';
 export * from './offset-debts.dto';
 export * from './pay-debt.dto';

@@ -66,9 +66,12 @@ export class TransactionRepository implements ITransactionRepository {
     private readonly categoryRepository: Repository<CategoryOrmEntity>,
   ) {}
 
+  private repo(manager?: EntityManager): Repository<TransactionOrmEntity> {
+    return manager ? manager.getRepository(TransactionOrmEntity) : this.ormRepository;
+  }
+
   async findById(id: string, manager?: EntityManager): Promise<Transaction | null> {
-    const repo = manager ? manager.getRepository(TransactionOrmEntity) : this.ormRepository;
-    const ormEntity = await repo.findOne({ where: { id } });
+    const ormEntity = await this.repo(manager).findOne({ where: { id } });
 
     if (!ormEntity) {
       return null;
@@ -141,15 +144,14 @@ export class TransactionRepository implements ITransactionRepository {
   }
 
   async save(transaction: Transaction, manager?: EntityManager): Promise<Transaction> {
-    const repo = manager ? manager.getRepository(TransactionOrmEntity) : this.ormRepository;
     const ormEntity = TransactionMapper.toOrm(transaction);
-    const savedEntity = await repo.save(ormEntity);
+    const savedEntity = await this.repo(manager).save(ormEntity);
     return TransactionMapper.toDomain(savedEntity);
   }
 
   async saveMany(transactions: Transaction[], manager?: EntityManager): Promise<Transaction[]> {
     if (transactions.length === 0) return [];
-    const repo = manager ? manager.getRepository(TransactionOrmEntity) : this.ormRepository;
+    const repo = this.repo(manager);
     const ormEntities = transactions.map((t) => TransactionMapper.toOrm(t));
 
     // Chunk to stay within PostgreSQL's ~32767 parameter limit.
@@ -166,12 +168,11 @@ export class TransactionRepository implements ITransactionRepository {
   }
 
   async delete(id: string, manager?: EntityManager): Promise<void> {
-    const repo = manager ? manager.getRepository(TransactionOrmEntity) : this.ormRepository;
-    await repo.delete(id);
+    await this.repo(manager).delete(id);
   }
 
   async deleteByAccountId(accountId: string, manager?: EntityManager): Promise<void> {
-    const repo = manager ? manager.getRepository(TransactionOrmEntity) : this.ormRepository;
+    const repo = this.repo(manager);
     // Sequential: a transactional EntityManager runs on a single connection,
     // parallel queries on it are not safe.
     await repo.delete({ accountId });
@@ -205,8 +206,7 @@ export class TransactionRepository implements ITransactionRepository {
       return siblings;
     }
 
-    const repo = manager ? manager.getRepository(TransactionOrmEntity) : this.ormRepository;
-    const rows = await repo
+    const rows = await this.repo(manager)
       .createQueryBuilder('t')
       .where('t.paymentGroupId IN (:...groupIds)', { groupIds })
       .getMany();
@@ -295,10 +295,11 @@ export class TransactionRepository implements ITransactionRepository {
 
     if (options.debtId) {
       // Переплата расчёта лежит без `debt_id`: её связь с долгом — только общий `settlement_id`.
+      // `= ANY(ARRAY(...))`, а не `IN (...)`: подзапрос считается один раз, и обе ветки OR идут по индексам.
       query = query.andWhere(
-        `(t.debt_id = :debtId OR (t.debt_id IS NULL AND t.settlement_id IN (
+        `(t.debtId = :debtId OR (t.debtId IS NULL AND t.settlementId = ANY(ARRAY(
           SELECT settlement_id FROM transactions WHERE debt_id = :debtId AND settlement_id IS NOT NULL
-        )))`,
+        ))))`,
         { debtId: options.debtId },
       );
     }

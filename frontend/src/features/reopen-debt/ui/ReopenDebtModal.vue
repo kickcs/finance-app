@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 import { UModal, UButton, UIcon } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/format/currency';
-import { getDebtDisplayName, debtHasClosingRecords } from '@/entities/debt';
+import { getDebtDisplayName, debtHasClosingRecords, SHARED_SETTLEMENT_NOTE } from '@/entities/debt';
 import type { AccountWithBalances } from '@/entities/account';
 import type { Debt, Transaction } from '@/shared/api/database.types';
 
@@ -24,6 +24,10 @@ const emit = defineEmits<{
 // приехали». Различает их сам долг: он знает про своё закрытие и прощение.
 const expectsRecords = computed(() => debtHasClosingRecords(props.debt));
 const recordsUnknown = computed(() => props.closingRecords.length === 0 && expectsRecords.value);
+
+// Расчёт «Закрыть все» или зачёта общий для нескольких долгов: у закрытия без
+// расчёта (старый патч) других долгов нет.
+const closedBySettlement = computed(() => props.closingRecords.some((t) => !!t.settlement_id));
 
 const movedMoney = computed(() => props.closingRecords.some((t) => !t.is_informational));
 
@@ -106,6 +110,13 @@ const balanceNote = computed(() => {
 
       <p v-if="balanceNote" class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
         {{ balanceNote }}
+      </p>
+
+      <p
+        v-if="closedBySettlement"
+        class="text-sm text-text-secondary-light dark:text-text-secondary-dark"
+      >
+        {{ SHARED_SETTLEMENT_NOTE }}
       </p>
     </div>
 

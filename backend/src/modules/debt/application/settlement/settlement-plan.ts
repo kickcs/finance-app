@@ -114,6 +114,14 @@ function allocateSide(
   return parts;
 }
 
+/** Остаток долга после его доли зачёта. */
+export function remainingAfterOffset(
+  debt: Pick<SettlementDebt, 'id' | 'remaining'>,
+  offsetById: ReadonlyMap<string, number>,
+): number {
+  return round2(debt.remaining - (offsetById.get(debt.id) ?? 0));
+}
+
 /** Зачёт всегда идёт на максимум (`min` двух сторон), обе стороны гасят одну и ту же сумму. */
 export function planOffset(debts: SettlementDebt[]): OffsetPlan {
   const sorted = sortOldestFirst(debts);
@@ -143,6 +151,11 @@ export interface CloseAllPayment {
   withExcess: boolean;
 }
 
+export interface CloseAllPlanOptions {
+  paymentAmount?: number;
+  forgiveRemainder: boolean;
+}
+
 export interface CloseAllPlan {
   offset: OffsetPlan | null;
   payments: CloseAllPayment[];
@@ -155,10 +168,7 @@ export interface CloseAllPlan {
  * Зачёт встречных долгов, затем платежи по уцелевшей стороне старыми первыми.
  * Без `paymentAmount` платится весь остаток после зачёта.
  */
-export function planCloseAll(
-  debts: SettlementDebt[],
-  input: { paymentAmount?: number; forgiveRemainder: boolean },
-): CloseAllPlan {
+export function planCloseAll(debts: SettlementDebt[], input: CloseAllPlanOptions): CloseAllPlan {
   const { paymentAmount, forgiveRemainder } = input;
   if (paymentAmount !== undefined && paymentAmount < 0) {
     throw new BadRequestException('Некорректная сумма платежа');
@@ -169,7 +179,7 @@ export function planCloseAll(
   const offsetById = new Map(offsetPlan.parts.map((p) => [p.debtId, p.amount]));
 
   const survivors = sortOldestFirst(debts)
-    .map((d) => ({ id: d.id, remaining: round2(d.remaining - (offsetById.get(d.id) ?? 0)) }))
+    .map((d) => ({ id: d.id, remaining: remainingAfterOffset(d, offsetById) }))
     .filter((d) => d.remaining > 0);
 
   const totalDebt = round2(survivors.reduce((sum, d) => sum + d.remaining, 0));
@@ -202,4 +212,38 @@ export function planCloseAll(
   }
 
   return { offset, payments, excess, totalDebt };
+}
+
+/**
+ * Долги одной стороны в разных валютах: одна сумма на все валюты бессмысленна, поэтому
+ * допустимы только крайности — оплатить каждый долг целиком или простить каждый целиком
+ * (`forgiveRemainder` без суммы). Остальное — 400: молча заменить прощение платежом нельзя,
+ * это реальные деньги. `totalDebt` — 0: остатки в разных валютах не складываются.
+ */
+export function planCloseAllMixed(
+  debts: SettlementDebt[],
+  input: CloseAllPlanOptions,
+): CloseAllPlan {
+  const { paymentAmount, forgiveRemainder } = input;
+  const payInFull = paymentAmount === undefined && !forgiveRemainder;
+  const forgiveAll = forgiveRemainder && !paymentAmount;
+  if (!payInFull && !forgiveAll) {
+    throw new BadRequestException(
+      'Долги в разных валютах можно только оплатить целиком или простить целиком',
+    );
+  }
+
+  return {
+    offset: null,
+    payments: sortOldestFirst(debts)
+      .filter((d) => d.remaining > 0)
+      .map((d) => ({
+        debtId: d.id,
+        amount: forgiveAll ? 0 : d.remaining,
+        forgive: forgiveAll,
+        withExcess: false,
+      })),
+    excess: 0,
+    totalDebt: 0,
+  };
 }

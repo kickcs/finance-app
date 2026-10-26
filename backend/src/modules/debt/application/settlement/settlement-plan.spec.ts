@@ -1,6 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import {
   planCloseAll,
+  planCloseAllMixed,
   planOffset,
   planPayment,
   round2,
@@ -501,5 +502,48 @@ describe('planCloseAll', () => {
       expect(plan.payments).toStrictEqual([]);
       expect(plan.excess).toBe(0);
     });
+  });
+});
+
+describe('planCloseAllMixed', () => {
+  const debts = [
+    debt('new', 'given', 20, '2026-02-01T00:00:00Z'),
+    debt('old', 'given', 300, '2026-01-01T00:00:00Z'),
+  ];
+  const MIXED_ERROR = 'Долги в разных валютах можно только оплатить целиком или простить целиком';
+
+  it('без суммы и прощения платит каждый долг целиком, старые первыми, без зачёта и переплаты', () => {
+    expect(planCloseAllMixed(debts, { forgiveRemainder: false })).toStrictEqual({
+      offset: null,
+      payments: [
+        { debtId: 'old', amount: 300, forgive: false, withExcess: false },
+        { debtId: 'new', amount: 20, forgive: false, withExcess: false },
+      ],
+      excess: 0,
+      totalDebt: 0,
+    });
+  });
+
+  it.each([[undefined], [0]])(
+    'прощение при сумме %s прощает каждый долг целиком, денег не вносит',
+    (paymentAmount) => {
+      expect(planCloseAllMixed(debts, { paymentAmount, forgiveRemainder: true })).toStrictEqual({
+        offset: null,
+        payments: [
+          { debtId: 'old', amount: 0, forgive: true, withExcess: false },
+          { debtId: 'new', amount: 0, forgive: true, withExcess: false },
+        ],
+        excess: 0,
+        totalDebt: 0,
+      });
+    },
+  );
+
+  it.each([
+    ['сумма больше нуля', { paymentAmount: 5, forgiveRemainder: false }],
+    ['сумма больше нуля с прощением', { paymentAmount: 5, forgiveRemainder: true }],
+    ['нулевая сумма без прощения', { paymentAmount: 0, forgiveRemainder: false }],
+  ])('%s: 400', (_name, input) => {
+    expect(() => planCloseAllMixed(debts, input)).toThrow(new BadRequestException(MIXED_ERROR));
   });
 });

@@ -1,20 +1,29 @@
-import {
-  BadRequestException,
-  ConflictException,
-  ForbiddenException,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { ConflictException, Inject, Injectable } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
 import { DataSource, EntityManager } from 'typeorm';
 import { Debt } from '../../domain/aggregates/debt';
 import { IDebtRepository, DEBT_REPOSITORY } from '../../domain/repositories';
 import { DebtResponseMapper, type DebtResponseDto } from '../mappers/debt-response.mapper';
+import type { CloseAllDebtsCommand } from '../commands/close-all-debts/close-all-debts.command';
+import type { OffsetDebtsCommand } from '../commands/offset-debts/offset-debts.command';
 import type { PayDebtCommand } from '../commands/pay-debt/pay-debt.command';
-import { DEBT_CATEGORY_IDS } from '../../../accounting/domain/constants/default-categories';
+import type { PreviewCloseAllQuery } from '../queries/preview-close-all/preview-close-all.query';
+import {
+  closeAllDebts,
+  previewCloseAll,
+  type CloseAllPreviewDto,
+  type CloseAllResultDto,
+} from './close-all';
+import { lockDebts } from './debt-lock';
 import { removeDebtWithRecords } from './debt-removal';
-import { displayName, planOffset, planPayment } from './settlement-plan';
+import { planOffset, planPayment } from './settlement-plan';
+import type { SettlementDeps } from './settlement-deps';
+import {
+  loadOpenDebt,
+  toSettlementDebt,
+  writeDebtPayment,
+  writeOffsetParts,
+} from './settlement-records';
 import { reopenClosedDebt, reverseSettlement } from './settlement-reversal';
 import { SettlementWriter } from './settlement-writer';
 
@@ -37,8 +46,8 @@ export interface OffsetDebtsResultDto {
 }
 
 /**
- * Расчёты по долгам: платёж и взаимозачёт. Каждый пишет все свои записи одним
- * `SettlementWriter` в одной транзакции БД, поэтому у записей общий `settlement_id`.
+ * Расчёты по долгам: платёж, взаимозачёт и «Закрыть все». Каждый пишет все свои записи
+ * одним `SettlementWriter` в одной транзакции БД, поэтому у записей общий `settlement_id`.
  */
 @Injectable()
 export class DebtSettlementService {
@@ -70,140 +79,36 @@ export class DebtSettlementService {
       workCategoryId,
     } = command;
 
-    const debt = await this.debtRepository.findById(debtId);
-    if (!debt) throw new NotFoundException('Debt not found');
-    if (debt.userId !== userId) throw new ForbiddenException('Debt belongs to another user');
-    if (debt.isClosed) throw new ConflictException('Долг уже закрыт');
-
-    const { actualPayment, excess, forgiven, willClose } = planPayment({
-      remaining: debt.remainingAmountValue,
-      amount,
-      forgiveRemainder,
-      settleWithWork,
-      excessCategoryId,
-      workCategoryId,
-    });
-
-    const isGiven = debt.debtTypeValue === 'given';
-    const currency = debt.currency;
-    const transactionIds: string[] = [];
-    let paymentTransactionId: string | null = null;
-    // Долг, заведённый без движения денег, возвращается такой же информационной
-    // записью: иначе возврат создаст баланс, которого не создавала выдача.
-    const hadBalanceEffect = !!debt.transactionId || !!debt.sourceTransactionId;
-
-    const settlementId = await this.dataSource.transaction(async (manager) => {
-      const writer = new SettlementWriter(this.commandBus, manager, userId);
-      let closeTransactionId: string | undefined;
-
-      if (actualPayment > 0) {
-        // Отработка ложится на счёт долга — как и прощение: денег она не
-        // двигает (или двигает в ноль), но должна лежать на живом счёте.
-        const workAccountId = settleWithWork
-          ? await this.markerAccountId(manager, userId, debt.accountId, accountId)
-          : accountId;
-
-        /**
-         * Отработка с категорией — пара записей, дающая по балансу ноль: трата
-         * по выбранной категории (работу вы «купили») и обычный возврат долга.
-         * Так работа видна в аналитике тратой, а долг гасится теми же
-         * возвратами, что и деньгами: сумма уходит из «Невозвращённых долгов»
-         * в выбранную категорию, а не исчезает из отчёта.
-         *
-         * Обе ноги живут и снимаются только вместе — одна оставила бы на счёте
-         * дыру на свою сумму. Связаны они долгом и расчётом: `debt_id` с
-         * недолговой категорией бывает только у ноги работы.
-         */
-        if (settleWithWork && workCategoryId) {
-          transactionIds.push(
-            await writer.record({
-              accountId: workAccountId,
-              categoryId: workCategoryId,
-              amount: actualPayment,
-              currency,
-              type: isGiven ? 'expense' : 'income',
-              date,
-              description: this.workDescription(debt, workNote),
-              isDebtRelated: false,
-              debtId: debt.id,
-            }),
-          );
-        }
-
-        // Отработка без категории — не движение денег, а отметка: баланс счёта
-        // она не трогает и в аналитику не попадает, как взаимозачёт и прощение.
-        const asMarker = settleWithWork && !workCategoryId;
-
-        const id = await writer.record({
-          accountId: workAccountId,
-          categoryId: asMarker
-            ? DEBT_CATEGORY_IDS.WORKED_OFF
-            : isGiven
-              ? DEBT_CATEGORY_IDS.RETURN_TO_ME
-              : DEBT_CATEGORY_IDS.RETURN_FROM_ME,
-          amount: actualPayment,
-          currency,
-          type: isGiven ? 'income' : 'expense',
-          date,
-          description: asMarker
-            ? this.workDescription(debt, workNote)
-            : this.paymentDescription(debt, willClose),
-          isDebtRelated: asMarker ? false : hadBalanceEffect,
-          debtId: debt.id,
-          isInformational: asMarker,
-        });
-        closeTransactionId = id;
-        paymentTransactionId = id;
-        transactionIds.push(id);
-      }
-
-      if (excess > 0 && excessCategoryId) {
-        transactionIds.push(
-          await writer.record({
-            accountId,
-            categoryId: excessCategoryId,
-            amount: excess,
-            currency,
-            type: isGiven ? 'income' : 'expense',
-            date,
-            description: `Переплата по долгу: ${displayName(debt)}`,
-            isDebtRelated: false,
-          }),
-        );
-      }
-
-      // Прощение видно в ленте всегда, даже если выдача уже двигала деньги:
-      // пользователю нужно событие, а не только изменившийся остаток.
-      if (forgiven > 0) {
-        const id = await writer.record({
-          accountId: await this.markerAccountId(manager, userId, debt.accountId, accountId),
-          categoryId: DEBT_CATEGORY_IDS.FORGIVEN,
-          amount: forgiven,
-          currency,
-          type: isGiven ? 'expense' : 'income',
-          date,
-          description: `Прощение долга: ${displayName(debt)}`,
-          isDebtRelated: false,
-          debtId: debt.id,
-          isInformational: true,
-        });
-        transactionIds.push(id);
-        closeTransactionId ??= id;
-      }
-
-      if (actualPayment > 0) debt.makePayment(actualPayment);
-      if (forgiven > 0) debt.setForgivenAmount(forgiven);
-      if (willClose) debt.close();
-      if (willClose && closeTransactionId) debt.setCloseTransactionId(closeTransactionId);
-
-      await this.debtRepository.save(debt, manager);
-      return writer.settlementId;
+    const { debt, settlementId, records } = await this.dataSource.transaction(async (manager) => {
+      // Остаток читается под замком: параллельный платёж или отмена не оставят его устаревшим.
+      const known = await lockDebts(this.debtRepository, manager, userId, [debtId]);
+      const debt = await loadOpenDebt(this.debtRepository, userId, debtId, { manager, known });
+      const plan = planPayment({
+        remaining: debt.remainingAmountValue,
+        amount,
+        forgiveRemainder,
+        settleWithWork,
+        excessCategoryId,
+        workCategoryId,
+      });
+      const writer = this.writer(manager, userId);
+      const written = await writeDebtPayment(writer, {
+        debt,
+        plan,
+        accountId,
+        date,
+        excessCategoryId,
+        settleWithWork,
+        workNote,
+        workCategoryId,
+      });
+      return { debt, settlementId: writer.settlementId, records: written };
     });
 
     return {
       debt: DebtResponseMapper.toResponse(debt),
-      paymentTransactionId,
-      transactionIds,
+      paymentTransactionId: records.paymentTransactionId,
+      transactionIds: records.transactionIds,
       settlementId,
     };
   }
@@ -218,152 +123,87 @@ export class DebtSettlementService {
    * самое, что зачесть всё и сразу занять обратно, а лишний выбор здесь только
    * добавляет способов ошибиться.
    */
-  async offset(input: {
-    userId: string;
-    personName: string;
-    currency: string;
-  }): Promise<OffsetDebtsResultDto> {
-    const { userId, personName, currency } = input;
+  async offset(command: OffsetDebtsCommand): Promise<OffsetDebtsResultDto> {
+    const { userId, personName, currency } = command;
 
-    const debts = await this.debtRepository.findActiveByPerson(userId, personName, currency);
-    const plan = planOffset(
-      debts.map((d) => ({
-        id: d.id,
-        debtType: d.debtTypeValue,
-        remaining: d.remainingAmountValue,
-        createdAt: d.createdAt,
-      })),
-    );
+    const { plan, touched, settlementId } = await this.dataSource.transaction(async (manager) => {
+      // Состав долгов читается дважды: сперва чтобы знать, что блокировать, затем под замком.
+      const candidates = await this.debtRepository.findActiveByPerson(
+        userId,
+        personName,
+        currency,
+        manager,
+      );
+      const locked = await lockDebts(
+        this.debtRepository,
+        manager,
+        userId,
+        candidates.map((d) => d.id),
+      );
+      // Новый долг, появившийся после первого чтения, не заблокирован — в зачёт не берётся.
+      // Пока ждали замок, долг могли закрыть или переименовать: берутся только подходящие и сейчас.
+      const debts = candidates
+        .map((candidate) => locked.get(candidate.id))
+        .filter(
+          (d): d is Debt =>
+            !!d && !d.isClosed && d.personName === personName && d.currency === currency,
+        );
+      const plan = planOffset(debts.map(toSettlementDebt));
 
-    if (plan.offsetAmount <= 0) {
-      throw new ConflictException('Нет встречных долгов для зачёта');
-    }
-
-    const accounts = await this.resolveAccounts(userId);
-    const debtById = new Map(debts.map((d) => [d.id, d]));
-    // Одна отметка времени на весь зачёт: записи расчёта в ленте стоят рядом.
-    const date = new Date();
-    const touched = new Map<string, Debt>();
-
-    const settlementId = await this.dataSource.transaction(async (manager) => {
-      const writer = new SettlementWriter(this.commandBus, manager, userId);
-
-      // Стороны гасятся независимо (суммы обеих равны offsetAmount), долги —
-      // старыми первыми: у старого долга больше шансов быть забытым.
-      for (const part of plan.parts) {
-        const debt = debtById.get(part.debtId)!;
-        const id = await writer.record({
-          accountId: accounts.pick(debt.accountId),
-          categoryId: DEBT_CATEGORY_IDS.OFFSET,
-          amount: part.amount,
-          currency,
-          type: debt.debtTypeValue === 'given' ? 'income' : 'expense',
-          date,
-          description: `Взаимозачёт: ${personName}`,
-          isDebtRelated: false,
-          debtId: debt.id,
-          isInformational: true,
-        });
-
-        // Остаток и закрытие считает агрегат: правило «платёж в ноль закрывает
-        // долг» должно быть одним и тем же для зачёта и для обычного платежа.
-        debt.makePayment(part.amount);
-        if (debt.isClosed) debt.setCloseTransactionId(id);
-
-        await this.debtRepository.save(debt, manager);
-        touched.set(debt.id, debt);
+      if (plan.offsetAmount <= 0) {
+        throw new ConflictException('Нет встречных долгов для зачёта');
       }
 
-      return writer.settlementId;
+      // Одна отметка времени на весь зачёт: записи расчёта в ленте стоят рядом.
+      const writer = this.writer(manager, userId);
+      const touched = await writeOffsetParts(writer, locked, plan.parts, new Date());
+
+      return { plan, touched, settlementId: writer.settlementId };
     });
 
     return {
       personName,
       currency,
       offsetAmount: plan.offsetAmount,
-      debts: Array.from(touched.values()).map((d) => DebtResponseMapper.toResponse(d)),
+      debts: DebtResponseMapper.toResponseList(touched),
       settlementId,
     };
   }
 
+  /** «Закрыть все»: зачёт встречных долгов и платежи по остальным одним расчётом. */
+  closeAll(command: CloseAllDebtsCommand): Promise<CloseAllResultDto> {
+    return closeAllDebts(this.deps(), command);
+  }
+
+  /** Тот же план, что у `closeAll`, без записи. */
+  previewCloseAll(query: PreviewCloseAllQuery): Promise<CloseAllPreviewDto> {
+    return previewCloseAll(this.deps(), query);
+  }
+
   /** Отмена расчёта по его id: затронутые долги возвращаются, записи уходят вместе. */
-  reverse(userId: string, settlementId: string, manager?: EntityManager): Promise<Debt[]> {
-    return reverseSettlement(this.reversalDeps(), userId, settlementId, manager);
+  async reverse(userId: string, settlementId: string, manager?: EntityManager): Promise<void> {
+    await reverseSettlement(this.deps(), userId, settlementId, manager);
   }
 
   /** Отмена закрытия долга — отмена расчёта, который его закрыл. */
   reopen(userId: string, debtId: string): Promise<Debt> {
-    return reopenClosedDebt(this.reversalDeps(), userId, debtId);
+    return reopenClosedDebt(this.deps(), userId, debtId);
   }
 
   /** Удаление долга со всеми его записями; общие расчёты с другими долгами отменяются штатно. */
   removeDebt(userId: string, debtId: string): Promise<void> {
-    return removeDebtWithRecords(this.reversalDeps(), userId, debtId);
+    return removeDebtWithRecords(this.deps(), userId, debtId);
   }
 
-  private reversalDeps() {
+  private writer(manager: EntityManager, userId: string): SettlementWriter {
+    return new SettlementWriter(this.commandBus, this.debtRepository, manager, userId);
+  }
+
+  private deps(): SettlementDeps {
     return {
       debtRepository: this.debtRepository,
       commandBus: this.commandBus,
       dataSource: this.dataSource,
-    };
-  }
-
-  /**
-   * Информационную отметку (прощение, отработка) хочется положить на счёт
-   * долга, ради точности истории. Но
-   * `debts.account_id` живёт без внешнего ключа и может указывать на удалённый
-   * счёт, а упавший внутри транзакции запрос уже не повторить — поэтому счёт
-   * проверяется заранее, и при промахе запись ложится на счёт платежа.
-   */
-  private async markerAccountId(
-    manager: EntityManager,
-    userId: string,
-    preferred: string | null,
-    fallback: string,
-  ): Promise<string> {
-    if (!preferred || preferred === fallback) return fallback;
-    const rows = await manager.query<{ id: string }[]>(
-      'SELECT id FROM accounts WHERE id = $1 AND user_id = $2 LIMIT 1',
-      [preferred, userId],
-    );
-    return rows.length > 0 ? preferred : fallback;
-  }
-
-  /** Что именно отработано, если пользователь это написал: «Отработка долга: Тимур — ремонт». */
-  private workDescription(debt: Debt, workNote?: string): string {
-    const note = workNote?.trim();
-    const base = `Отработка долга: ${displayName(debt)}`;
-    return note ? `${base} — ${note}` : base;
-  }
-
-  private paymentDescription(debt: Debt, willClose: boolean): string {
-    if (!willClose) return `Частичный платёж: ${displayName(debt)}`;
-    if (debt.sourceTransactionId) return `Возврат от ${displayName(debt)}: доля в общем счёте`;
-    return `Закрытие долга: ${displayName(debt)}`;
-  }
-
-  /**
-   * Информационная запись всё равно должна лежать на существующем счёте.
-   * `debts.account_id` живёт без внешнего ключа и может указывать на удалённый
-   * счёт, поэтому рядом с проверкой держим запасной счёт пользователя.
-   */
-  private async resolveAccounts(userId: string): Promise<{
-    /** Счёт долга, если он ещё существует, иначе запасной. */
-    pick(accountId: string | null): string;
-  }> {
-    const rows: { id: string }[] = await this.dataSource.query(
-      'SELECT id FROM accounts WHERE user_id = $1 ORDER BY "order" ASC, created_at ASC',
-      [userId],
-    );
-    if (rows.length === 0) {
-      throw new BadRequestException('Нет счёта, к которому можно привязать запись о зачёте');
-    }
-
-    const existing = new Set(rows.map((r) => r.id));
-    const fallbackId = rows[0].id;
-    return {
-      pick: (accountId) => (accountId && existing.has(accountId) ? accountId : fallbackId),
     };
   }
 }
