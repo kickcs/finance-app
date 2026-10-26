@@ -31,5 +31,7 @@ export class CreateTransactionCommand {
     public readonly isInformational: boolean = false,
     /** Вторая часть оплаты с другого счёта; `accountId`/`amount` выше — первая. */
     public readonly secondPart?: PaymentSecondPart,
+    /** Общий id записей одного расчёта по долгу; ставится записи при создании. */
+    public readonly settlementId?: string,
   ) {}
 }

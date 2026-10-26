@@ -6,6 +6,8 @@ export * from './delete-debt/delete-debt.command';
 export * from './delete-debt/delete-debt.handler';
 export * from './reopen-debt/reopen-debt.command';
 export * from './reopen-debt/reopen-debt.handler';
+export * from './reverse-settlement/reverse-settlement.command';
+export * from './reverse-settlement/reverse-settlement.handler';
 export * from './offset-debts/offset-debts.command';
 export * from './pay-debt/pay-debt.command';
 export * from './offset-debts/offset-debts.handler';
@@ -17,6 +19,7 @@ import { DeleteDebtHandler } from './delete-debt/delete-debt.handler';
 import { ReopenDebtHandler } from './reopen-debt/reopen-debt.handler';
 import { OffsetDebtsHandler } from './offset-debts/offset-debts.handler';
 import { PayDebtHandler } from './pay-debt/pay-debt.handler';
+import { ReverseSettlementHandler } from './reverse-settlement/reverse-settlement.handler';
 
 export const CommandHandlers = [
   CreateDebtHandler,
@@ -25,4 +28,5 @@ export const CommandHandlers = [
   ReopenDebtHandler,
   OffsetDebtsHandler,
   PayDebtHandler,
+  ReverseSettlementHandler,
 ];

@@ -391,12 +391,41 @@ describe('Transaction Aggregate', () => {
         toAccountId: null,
         toAmount: null,
         paymentGroupId: 'group-1',
+        settlementId: 'set-1',
         createdAt: now,
       });
       expect(tx.id).toBe('tx-1');
       expect(tx.paymentGroupId).toBe('group-1');
+      expect(tx.settlementId).toBe('set-1');
       expect(tx.amountValue).toBe(100);
       expect(tx.domainEvents).toHaveLength(0);
+    });
+
+    it('update() не меняет settlementId', () => {
+      const tx = Transaction.createIncome(
+        'tx-1',
+        'user-1',
+        'acc-1',
+        'cat-1',
+        100,
+        'USD',
+        now,
+        undefined,
+        true,
+        'debt-1',
+        false,
+        'set-1',
+      );
+
+      tx.update({ description: 'Новое описание', date: new Date('2026-04-01T00:00:00Z') });
+
+      expect(tx.settlementId).toBe('set-1');
+    });
+
+    it('новая запись без расчёта получает settlementId null', () => {
+      const tx = Transaction.createExpense('tx-1', 'user-1', 'acc-1', 'cat-1', 5, 'USD', now);
+
+      expect(tx.settlementId).toBeNull();
     });
   });
 });

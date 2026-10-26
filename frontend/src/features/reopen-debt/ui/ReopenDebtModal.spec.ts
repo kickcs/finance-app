@@ -52,6 +52,26 @@ describe('ReopenDebtModal', () => {
     expect(bodyText()).toContain('1 000');
   });
 
+  // Переплата лежит в истории без долговой категории и без debt_id, но уходит
+  // вместе с расчётом — пользователь должен увидеть её в списке наравне с платежом.
+  it('показывает запись переплаты по описанию, как и платёж', async () => {
+    await mountModal(closedDebt, [
+      makeRecord({ id: 'tx-pay', description: 'Возврат долга', amount: 1000 }),
+      makeRecord({
+        id: 'tx-excess',
+        description: 'Переплата по долгу: Азиз',
+        amount: 250,
+        category_id: 'salary',
+        debt_id: null,
+        settlement_id: 's-1',
+      }),
+    ]);
+
+    expect(bodyText()).toContain('Переплата по долгу: Азиз');
+    expect(bodyText()).toContain('250');
+    expect(bodyText()).toContain('«Карта»');
+  });
+
   it('называет счёт, чей баланс откатится', async () => {
     await mountModal(closedDebt, [makeRecord({ account_id: 'acc-2' })]);
     expect(bodyText()).toContain('«Наличные»');

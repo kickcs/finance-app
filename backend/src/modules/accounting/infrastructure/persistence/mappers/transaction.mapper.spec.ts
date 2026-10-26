@@ -61,6 +61,31 @@ describe('TransactionMapper', () => {
       expect(domain.toCurrency).toBe('EUR');
     });
 
+    it('переносит settlement_id в домен, а отсутствие — как null', () => {
+      const orm = new TransactionOrmEntity();
+      orm.id = 'tx-1';
+      orm.userId = 'user-1';
+      orm.accountId = 'acc-1';
+      orm.categoryId = 'cat-1';
+      orm.amount = 10;
+      orm.currency = 'USD';
+      orm.type = 'income';
+      orm.description = null;
+      orm.date = now;
+      orm.isDebtRelated = true;
+      orm.debtId = 'debt-1';
+      orm.toAccountId = null;
+      orm.toAmount = null;
+      orm.toCurrency = null;
+      orm.settlementId = 'set-1';
+      orm.createdAt = now;
+
+      expect(TransactionMapper.toDomain(orm).settlementId).toBe('set-1');
+
+      orm.settlementId = null;
+      expect(TransactionMapper.toDomain(orm).settlementId).toBeNull();
+    });
+
     it('should handle string decimal amounts from TypeORM', () => {
       const orm = new TransactionOrmEntity();
       orm.id = 'tx-1';
@@ -151,6 +176,55 @@ describe('TransactionMapper', () => {
 
       expect(orm.isDebtRelated).toBe(true);
       expect(orm.debtId).toBe('debt-1');
+    });
+  });
+
+  describe('settlementId', () => {
+    it('переносит settlementId из домена в ORM', () => {
+      const tx = Transaction.createIncome(
+        'tx-1',
+        'user-1',
+        'acc-1',
+        'cat-1',
+        100,
+        'USD',
+        now,
+        'Debt',
+        true,
+        'debt-1',
+        false,
+        'set-1',
+      );
+
+      expect(TransactionMapper.toOrm(tx).settlementId).toBe('set-1');
+    });
+
+    it('у записи вне расчёта settlementId в ORM — null', () => {
+      const tx = Transaction.createExpense('tx-1', 'user-1', 'acc-1', 'cat-1', 5, 'USD', now);
+
+      expect(TransactionMapper.toOrm(tx).settlementId).toBeNull();
+    });
+
+    it('сохраняет settlementId при toDomain -> toOrm', () => {
+      const orm = new TransactionOrmEntity();
+      orm.id = 'tx-1';
+      orm.userId = 'user-1';
+      orm.accountId = 'acc-1';
+      orm.categoryId = 'cat-1';
+      orm.amount = 10;
+      orm.currency = 'USD';
+      orm.type = 'expense';
+      orm.description = null;
+      orm.date = now;
+      orm.isDebtRelated = true;
+      orm.debtId = 'debt-1';
+      orm.toAccountId = null;
+      orm.toAmount = null;
+      orm.toCurrency = null;
+      orm.settlementId = 'set-1';
+      orm.createdAt = now;
+
+      expect(TransactionMapper.toOrm(TransactionMapper.toDomain(orm)).settlementId).toBe('set-1');
     });
   });
 

@@ -16,23 +16,29 @@ export interface DebtPaymentRecord {
  * отметка. С категорией сервер пишет пару на ноль по балансу — трату по
  * выбранной категории и обычный возврат долга; в ленте долга такая пара должна
  * читаться одним событием, поэтому возврат прячется за своей тратой (её
- * описание и категория говорят больше). Пара узнаётся по общей отметке
- * времени: отдельного поля-связки у транзакций нет.
+ * описание и категория говорят больше). Пара узнаётся по общему `settlement_id`.
+ * Записи без `debt_id` (переплата) к платежам долга не относятся.
  */
 export function foldWorkOffRecords(
   transactions: Transaction[],
   creationTransactionId: string | null,
 ): DebtPaymentRecord[] {
+  // Недолговая категория при заполненном `debt_id` бывает только у ноги работы
   const isWorkLeg = (t: Transaction) =>
-    !t.is_informational && !DEBT_CATEGORY_IDS.has(t.category_id);
+    !!t.debt_id && !t.is_informational && !DEBT_CATEGORY_IDS.has(t.category_id);
 
-  const workLegDates = new Set(transactions.filter(isWorkLeg).map((t) => t.date || t.created_at));
+  const workSettlementIds = new Set(
+    transactions.filter(isWorkLeg).flatMap((t) => (t.settlement_id ? [t.settlement_id] : [])),
+  );
 
   const records = transactions.filter((t) => {
     if (t.id === creationTransactionId) return false;
+    if (!t.debt_id) return false;
     if (isWorkLeg(t)) return true;
     // Возврат из пары: своё событие уже показала трата по категории
-    if (workLegDates.has(t.date || t.created_at) && !t.is_informational) return false;
+    if (t.settlement_id && workSettlementIds.has(t.settlement_id) && !t.is_informational) {
+      return false;
+    }
     return !t.is_informational || t.category_id === CATEGORY_IDS.DEBT_WORKED_OFF;
   });
 

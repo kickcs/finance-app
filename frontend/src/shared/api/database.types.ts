@@ -216,6 +216,8 @@ export type Database = {
           has_debt_returns: boolean;
           /** Общий id двух частей операции, оплаченной с двух счетов. */
           payment_group_id: string | null;
+          /** Общий id записей одного расчёта по долгу; `null` у записей вне расчёта. */
+          settlement_id: string | null;
           /** Вторая часть группы; `null`, если операция оплачена с одного счёта. */
           payment_sibling: { id: string; account_id: string; amount: number } | null;
         };

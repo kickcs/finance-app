@@ -14,6 +14,8 @@ export interface TabsProps {
   modelValue: string;
   size?: 'sm' | 'md';
   variant?: 'pills' | 'underline';
+  /** Выбор заперт: вкладки видны, но переключиться нельзя. */
+  disabled?: boolean;
 }
 
 const props = withDefaults(defineProps<TabsProps>(), {
@@ -96,6 +98,7 @@ watch(
         v-for="tab in items"
         :key="tab.id"
         :value="tab.id"
+        :disabled="disabled"
         :class="
           cn(
             'relative z-10 flex-1 min-w-fit flex-shrink-0 font-medium rounded-md transition-colors duration-200 border-none outline-none whitespace-nowrap text-center',
@@ -104,6 +107,7 @@ watch(
             'data-[state=inactive]:text-text-secondary-light dark:data-[state=inactive]:text-text-secondary-dark',
             'hover:text-text-primary-light dark:hover:text-text-primary-dark',
             'focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-0',
+            'disabled:opacity-50 disabled:pointer-events-none',
           )
         "
       >
@@ -125,6 +129,7 @@ watch(
         v-for="tab in items"
         :key="tab.id"
         :value="tab.id"
+        :disabled="disabled"
         :class="
           cn(
             'relative min-w-fit flex-shrink-0 font-medium transition-all duration-150 border-none outline-none whitespace-nowrap -mb-px',
@@ -134,6 +139,7 @@ watch(
             'hover:text-text-primary-light dark:hover:text-text-primary-dark',
             'focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-0',
             'data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:h-0.5 data-[state=active]:after:bg-primary data-[state=active]:after:rounded-full',
+            'disabled:opacity-50 disabled:pointer-events-none',
           )
         "
       >

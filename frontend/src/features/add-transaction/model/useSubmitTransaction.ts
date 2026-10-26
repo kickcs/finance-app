@@ -166,6 +166,7 @@ function snapshotAndApplyOptimistic(
     net_amount: apiPayload.amount,
     has_debt_returns: false,
     payment_group_id: secondPart ? `temp-group-${now}` : null,
+    settlement_id: null,
     payment_sibling: secondPart
       ? { id: `temp-${now}-second`, account_id: secondPart.account_id, amount: secondPart.amount }
       : null,

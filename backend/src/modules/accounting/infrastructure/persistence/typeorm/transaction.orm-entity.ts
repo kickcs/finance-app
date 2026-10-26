@@ -58,4 +58,7 @@ export class TransactionOrmEntity {
 
   @Column({ name: 'payment_group_id', type: 'uuid', nullable: true })
   paymentGroupId: string | null;
+
+  @Column({ name: 'settlement_id', type: 'uuid', nullable: true })
+  settlementId: string | null;
 }

@@ -149,6 +149,7 @@ interface TransactionResponse {
   netAmount: number;
   hasDebtReturns: boolean;
   paymentGroupId: string | null;
+  settlementId: string | null;
   paymentSibling: { id: string; accountId: string; amount: number } | null;
 }
 
@@ -182,6 +183,7 @@ function transformTransaction(tx: TransactionResponse): Transaction {
     net_amount: tx.netAmount,
     has_debt_returns: tx.hasDebtReturns,
     payment_group_id: tx.paymentGroupId ?? null,
+    settlement_id: tx.settlementId ?? null,
     payment_sibling: tx.paymentSibling
       ? {
           id: tx.paymentSibling.id,

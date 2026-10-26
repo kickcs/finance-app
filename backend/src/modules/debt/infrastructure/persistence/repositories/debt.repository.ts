@@ -17,8 +17,9 @@ export class DebtRepository implements IDebtRepository {
     private readonly ormRepository: Repository<DebtOrmEntity>,
   ) {}
 
-  async findById(id: string): Promise<Debt | null> {
-    const ormEntity = await this.ormRepository.findOne({ where: { id } });
+  async findById(id: string, manager?: EntityManager): Promise<Debt | null> {
+    const repo = manager ? manager.getRepository(DebtOrmEntity) : this.ormRepository;
+    const ormEntity = await repo.findOne({ where: { id } });
     if (!ormEntity) return null;
     return DebtMapper.toDomain(ormEntity);
   }
@@ -42,8 +43,12 @@ export class DebtRepository implements IDebtRepository {
     return DebtMapper.toDomain(ormEntity);
   }
 
-  async findByCloseTransactionId(transactionId: string): Promise<Debt | null> {
-    const ormEntity = await this.ormRepository.findOne({
+  async findByCloseTransactionId(
+    transactionId: string,
+    manager?: EntityManager,
+  ): Promise<Debt | null> {
+    const repo = manager ? manager.getRepository(DebtOrmEntity) : this.ormRepository;
+    const ormEntity = await repo.findOne({
       where: { closeTransactionId: transactionId },
     });
     if (!ormEntity) return null;
@@ -53,13 +58,17 @@ export class DebtRepository implements IDebtRepository {
   async findActiveByPerson(userId: string, personName: string, currency: string): Promise<Debt[]> {
     const ormEntities = await this.ormRepository.find({
       where: { userId, personName, currency, isClosed: false },
-      order: { createdAt: 'ASC' },
+      order: { createdAt: 'ASC', id: 'ASC' },
     });
     return ormEntities.map((entity) => DebtMapper.toDomain(entity));
   }
 
-  async hasOpenDebtsForTransaction(transactionId: string): Promise<boolean> {
-    const count = await this.ormRepository.count({
+  async hasOpenDebtsForTransaction(
+    transactionId: string,
+    manager?: EntityManager,
+  ): Promise<boolean> {
+    const repo = manager ? manager.getRepository(DebtOrmEntity) : this.ormRepository;
+    const count = await repo.count({
       where: [
         { sourceTransactionId: transactionId, isClosed: false },
         { transactionId: transactionId, isClosed: false },
@@ -87,8 +96,9 @@ export class DebtRepository implements IDebtRepository {
     return DebtMapper.toDomain(savedEntity);
   }
 
-  async delete(id: string): Promise<void> {
-    await this.ormRepository.delete(id);
+  async delete(id: string, manager?: EntityManager): Promise<void> {
+    const repo = manager ? manager.getRepository(DebtOrmEntity) : this.ormRepository;
+    await repo.delete(id);
   }
 
   async exists(id: string): Promise<boolean> {

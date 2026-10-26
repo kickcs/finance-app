@@ -51,6 +51,7 @@ export class CreateTransactionHandler implements ICommandHandler<CreateTransacti
       manager: outerManager,
       isInformational,
       secondPart,
+      settlementId,
     } = command;
 
     const transactionId = crypto.randomUUID();
@@ -211,6 +212,7 @@ export class CreateTransactionHandler implements ICommandHandler<CreateTransacti
           isDebtRelated,
           debtId,
           isInformational,
+          settlementId,
         );
         if (!isInformational) {
           account.credit(amount, currency);
@@ -228,6 +230,7 @@ export class CreateTransactionHandler implements ICommandHandler<CreateTransacti
           isDebtRelated,
           debtId,
           isInformational,
+          settlementId,
         );
         if (!isInformational) {
           account.debit(amount, currency);

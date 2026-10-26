@@ -9,6 +9,7 @@ import { mockTransactionResponse } from '@/test/mocks/handlers/transactions';
 import { mockGivenDebtResponse } from '@/test/mocks/handlers/debts';
 import { queryClient } from '@/shared/api/queryClient';
 import { transactionQueryKeys } from '@/entities/transaction';
+import { invalidateDebtRelated } from '@/shared/api/invalidation';
 import type { Transaction } from '@/shared/api/database.types';
 
 // ── Mocks ──────────────────────────────────────────────────────────────────
@@ -66,6 +67,7 @@ function makeTransaction(overrides: Partial<Transaction> = {}): Transaction {
     net_amount: 25000,
     has_debt_returns: false,
     payment_group_id: null,
+    settlement_id: null,
     payment_sibling: null,
     ...overrides,
   };
@@ -165,6 +167,49 @@ describe('useEditTransaction', () => {
       expect(patchSpy).not.toHaveBeenCalled();
     });
 
+    // Платёж расчёта помечен is_debt_related, но описание, дату и счёт сервер править разрешает.
+    it('lets a debt-related settlement record through to the server', async () => {
+      let capturedPayload: Record<string, unknown> | null = null;
+      server.use(
+        http.patch('*/api/transactions/:id', async ({ request }) => {
+          capturedPayload = (await request.json()) as Record<string, unknown>;
+          return HttpResponse.json({ ...mockTransactionResponse });
+        }),
+      );
+
+      const c = mountComposable();
+      const tx = makeTransaction({
+        is_debt_related: true,
+        type: 'income',
+        debt_id: 'debt-1',
+        settlement_id: 's-1',
+      });
+
+      const result = await c.update(tx, { description: 'Новое описание' });
+
+      expect(result).toBe(true);
+      expect(capturedPayload).toMatchObject({ description: 'Новое описание' });
+    });
+
+    it('still rejects informational settlement records locally', async () => {
+      const patchSpy = vi.fn();
+      server.use(
+        http.patch('*/api/transactions/:id', () => {
+          patchSpy();
+          return HttpResponse.json(mockTransactionResponse);
+        }),
+      );
+
+      const c = mountComposable();
+      const tx = makeTransaction({ is_informational: true, settlement_id: 's-1' });
+
+      const result = await c.update(tx, { description: 'x' });
+
+      expect(result).toBe(false);
+      expect(c.error.value).toBe('Информационные записи нельзя редактировать');
+      expect(patchSpy).not.toHaveBeenCalled();
+    });
+
     it('allows editing adjustment transactions even if is_debt_related is true', async () => {
       const c = mountComposable();
       const tx = makeTransaction({ is_debt_related: true, type: 'adjustment' });
@@ -208,8 +253,50 @@ describe('useEditTransaction', () => {
 
       expect(result).toBe(false);
       expect(c.error.value).toBe('Не удалось обновить транзакцию');
-      expect(toastMock).toHaveBeenCalledWith(expect.objectContaining({ variant: 'error' }));
+      expect(toastMock).toHaveBeenCalledWith({
+        title: 'Не удалось обновить транзакцию',
+        variant: 'error',
+      });
       consoleSpy.mockRestore();
+    });
+
+    // Английский текст сервера пользователю не показываем: вместо него русская заглушка.
+    it('falls back to the Russian text when the 400 message is English', async () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      server.use(
+        http.patch('*/api/transactions/:id', () =>
+          HttpResponse.json(
+            { message: 'Informational transactions cannot be edited' },
+            { status: 400 },
+          ),
+        ),
+      );
+
+      const c = mountComposable();
+      const result = await c.update(makeTransaction(), { description: 'x' });
+
+      expect(result).toBe(false);
+      expect(c.error.value).toBe('Не удалось обновить транзакцию');
+      expect(toastMock).toHaveBeenCalledWith({
+        title: 'Не удалось обновить транзакцию',
+        variant: 'error',
+      });
+      consoleSpy.mockRestore();
+    });
+
+    it('shows the server message when the edit is refused (400)', async () => {
+      const message =
+        'Запись расчёта по долгу меняется со стороны долга: отмените расчёт и проведите заново';
+      server.use(
+        http.patch('*/api/transactions/:id', () => HttpResponse.json({ message }, { status: 400 })),
+      );
+
+      const c = mountComposable();
+      const result = await c.update(makeTransaction({ settlement_id: 's-1' }), { type: 'income' });
+
+      expect(result).toBe(false);
+      expect(c.error.value).toBe(message);
+      expect(toastMock).toHaveBeenCalledWith({ title: message, variant: 'error' });
     });
 
     it('resets isUpdating to false after success', async () => {
@@ -405,14 +492,18 @@ describe('useEditTransaction', () => {
 
       expect(result).toBe(false);
       expect(c.error.value).toBe('Не удалось удалить транзакцию');
-      expect(toastMock).toHaveBeenCalledWith(expect.objectContaining({ variant: 'error' }));
+      expect(toastMock).toHaveBeenCalledWith({
+        title: 'Не удалось удалить транзакцию',
+        variant: 'error',
+      });
       consoleSpy.mockRestore();
     });
 
-    it('shows backend error message for 400 responses', async () => {
+    it('shows a Russian backend message for 400 responses verbatim', async () => {
+      const message = 'Нельзя удалить транзакцию, пока есть связанные открытые долги';
       server.use(
         http.delete('*/api/transactions/:id', () =>
-          HttpResponse.json({ message: 'Cannot delete — debt exists' }, { status: 400 }),
+          HttpResponse.json({ message }, { status: 400 }),
         ),
       );
 
@@ -422,8 +513,130 @@ describe('useEditTransaction', () => {
       await c.remove(tx);
       await flushPromises();
 
-      // Should show the backend error message in toast
-      expect(toastMock).toHaveBeenCalledWith(expect.objectContaining({ variant: 'error' }));
+      expect(c.error.value).toBe(message);
+      expect(toastMock).toHaveBeenCalledWith({ title: message, variant: 'error' });
+    });
+
+    it('falls back to the Russian text when the 400 message is English', async () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      server.use(
+        http.delete('*/api/transactions/:id', () =>
+          HttpResponse.json({ message: 'Cannot delete — debt exists' }, { status: 400 }),
+        ),
+      );
+
+      const c = mountComposable();
+      await c.remove(makeTransaction());
+      await flushPromises();
+
+      expect(c.error.value).toBe('Не удалось удалить транзакцию');
+      expect(toastMock).toHaveBeenCalledWith({
+        title: 'Не удалось удалить транзакцию',
+        variant: 'error',
+      });
+      consoleSpy.mockRestore();
+    });
+
+    describe('settlement records', () => {
+      const settlementRecord = (overrides: Partial<Transaction> = {}) =>
+        makeTransaction({
+          id: 'tx-return',
+          category_id: 'debt_return_to_me',
+          type: 'income',
+          is_debt_related: true,
+          debt_id: 'debt-1',
+          settlement_id: 's-1',
+          ...overrides,
+        });
+
+      it('lets a debt-related settlement record through to the server', async () => {
+        const deletedIds: string[] = [];
+        server.use(
+          http.delete('*/api/transactions/:id', ({ params }) => {
+            deletedIds.push(params.id as string);
+            return new HttpResponse(null, { status: 204 });
+          }),
+        );
+
+        const c = mountComposable();
+        const result = await c.remove(settlementRecord());
+
+        expect(result).toBe(true);
+        expect(deletedIds).toEqual(['tx-return']);
+      });
+
+      it('invalidates debts, accounts and transactions after the settlement is gone', async () => {
+        const c = mountComposable();
+        await c.remove(settlementRecord());
+
+        expect(invalidateDebtRelated).toHaveBeenCalledWith(expect.anything(), USER_ID);
+      });
+
+      // Вместе с записью уходят остальные записи расчёта: убрать из кэша одну
+      // строку значило бы показать историю, которой на сервере не будет.
+      it('keeps the cached rows untouched while the settlement is being reversed', async () => {
+        let release!: () => void;
+        const gate = new Promise<void>((resolve) => (release = resolve));
+        let requested = false;
+        server.use(
+          http.delete('*/api/transactions/:id', async () => {
+            requested = true;
+            await gate;
+            return new HttpResponse(null, { status: 204 });
+          }),
+        );
+        const record = settlementRecord();
+        const leg = makeTransaction({
+          id: 'tx-leg',
+          debt_id: 'debt-1',
+          settlement_id: 's-1',
+        });
+        queryClient.setQueryData(transactionQueryKeys.list(USER_ID), [record, leg]);
+
+        const c = mountComposable();
+        const pending = c.remove(record);
+        await vi.waitFor(() => expect(requested).toBe(true));
+
+        const cached = queryClient.getQueryData<Transaction[]>(transactionQueryKeys.list(USER_ID));
+        expect(cached?.map((t) => t.id)).toEqual(['tx-return', 'tx-leg']);
+
+        release();
+        await pending;
+      });
+
+      it('does not look for open split debts: a settlement record is never their source', async () => {
+        const debtsSpy = vi.fn();
+        server.use(
+          http.get('*/api/debts', () => {
+            debtsSpy();
+            return HttpResponse.json([]);
+          }),
+        );
+
+        const c = mountComposable();
+        await c.remove(settlementRecord());
+
+        expect(debtsSpy).not.toHaveBeenCalled();
+      });
+
+      it('shows the server message when a later settlement blocks the reversal (409)', async () => {
+        const message = 'Сначала отмените более поздний расчёт по долгу «Азиз»';
+        server.use(
+          http.delete('*/api/transactions/:id', () =>
+            HttpResponse.json({ message }, { status: 409 }),
+          ),
+        );
+        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+        const c = mountComposable();
+        const result = await c.remove(settlementRecord());
+
+        expect(result).toBe(false);
+        expect(c.error.value).toBe(message);
+        expect(toastMock).toHaveBeenCalledWith({ title: message, variant: 'error' });
+        expect(invalidateDebtRelated).not.toHaveBeenCalled();
+        consoleSpy.mockRestore();
+      });
     });
 
     it('resets isDeleting to false after success', async () => {

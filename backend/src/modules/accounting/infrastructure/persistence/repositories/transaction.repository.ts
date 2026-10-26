@@ -66,8 +66,9 @@ export class TransactionRepository implements ITransactionRepository {
     private readonly categoryRepository: Repository<CategoryOrmEntity>,
   ) {}
 
-  async findById(id: string): Promise<Transaction | null> {
-    const ormEntity = await this.ormRepository.findOne({ where: { id } });
+  async findById(id: string, manager?: EntityManager): Promise<Transaction | null> {
+    const repo = manager ? manager.getRepository(TransactionOrmEntity) : this.ormRepository;
+    const ormEntity = await repo.findOne({ where: { id } });
 
     if (!ormEntity) {
       return null;
@@ -192,7 +193,10 @@ export class TransactionRepository implements ITransactionRepository {
     return count > 0;
   }
 
-  async findPaymentSiblings(transactions: Transaction[]): Promise<Map<string, Transaction>> {
+  async findPaymentSiblings(
+    transactions: Transaction[],
+    manager?: EntityManager,
+  ): Promise<Map<string, Transaction>> {
     const siblings = new Map<string, Transaction>();
     const groupIds = [
       ...new Set(transactions.map((t) => t.paymentGroupId).filter((id) => id !== null)),
@@ -201,7 +205,8 @@ export class TransactionRepository implements ITransactionRepository {
       return siblings;
     }
 
-    const rows = await this.ormRepository
+    const repo = manager ? manager.getRepository(TransactionOrmEntity) : this.ormRepository;
+    const rows = await repo
       .createQueryBuilder('t')
       .where('t.paymentGroupId IN (:...groupIds)', { groupIds })
       .getMany();
@@ -217,11 +222,14 @@ export class TransactionRepository implements ITransactionRepository {
     return siblings;
   }
 
-  async findPaymentSibling(transaction: Transaction): Promise<Transaction | null> {
+  async findPaymentSibling(
+    transaction: Transaction,
+    manager?: EntityManager,
+  ): Promise<Transaction | null> {
     if (!transaction.paymentGroupId) {
       return null;
     }
-    return (await this.findPaymentSiblings([transaction])).get(transaction.id) ?? null;
+    return (await this.findPaymentSiblings([transaction], manager)).get(transaction.id) ?? null;
   }
 
   async getPaginated(
@@ -286,7 +294,13 @@ export class TransactionRepository implements ITransactionRepository {
     }
 
     if (options.debtId) {
-      query = query.andWhere('t.debt_id = :debtId', { debtId: options.debtId });
+      // Переплата расчёта лежит без `debt_id`: её связь с долгом — только общий `settlement_id`.
+      query = query.andWhere(
+        `(t.debt_id = :debtId OR (t.debt_id IS NULL AND t.settlement_id IN (
+          SELECT settlement_id FROM transactions WHERE debt_id = :debtId AND settlement_id IS NOT NULL
+        )))`,
+        { debtId: options.debtId },
+      );
     }
 
     const items = await query.getMany();

@@ -621,6 +621,80 @@ describe('CreateTransactionHandler', () => {
     });
   });
 
+  // Записи одного расчёта по долгу несут общий settlementId; он пишется только при создании.
+  describe('расчёт по долгу', () => {
+    const buildCommand = (settlementId?: string) =>
+      new CreateTransactionCommand(
+        'user-1',
+        'acc-1',
+        'cat-debt',
+        500,
+        'USD',
+        'income',
+        now,
+        'Debt repayment',
+        true,
+        undefined,
+        undefined,
+        undefined,
+        'debt-1',
+        undefined,
+        undefined,
+        false,
+        undefined,
+        settlementId,
+      );
+
+    beforeEach(() => {
+      const account = createMockAccount('acc-1', 'user-1', [{ currency: 'USD', balance: 0 }]);
+      mockAccountRepository.findByIdWithBalances.mockResolvedValue(account);
+    });
+
+    it('передаёт settlementId в созданную запись', async () => {
+      const result = await handler.execute(buildCommand('set-1'));
+
+      const [[saved]] = mockTransactionRepository.save.mock.calls as [Transaction][];
+      expect(saved.settlementId).toBe('set-1');
+      expect(result.settlementId).toBe('set-1');
+    });
+
+    it('без settlementId запись создаётся с null', async () => {
+      const result = await handler.execute(buildCommand());
+
+      const [[saved]] = mockTransactionRepository.save.mock.calls as [Transaction][];
+      expect(saved.settlementId).toBeNull();
+      expect(result.settlementId).toBeNull();
+    });
+
+    it('расход тоже получает settlementId', async () => {
+      const command = new CreateTransactionCommand(
+        'user-1',
+        'acc-1',
+        'cat-debt',
+        500,
+        'USD',
+        'expense',
+        now,
+        undefined,
+        true,
+        undefined,
+        undefined,
+        undefined,
+        'debt-1',
+        undefined,
+        undefined,
+        false,
+        undefined,
+        'set-2',
+      );
+
+      await handler.execute(command);
+
+      const [[saved]] = mockTransactionRepository.save.mock.calls as [Transaction][];
+      expect(saved.settlementId).toBe('set-2');
+    });
+  });
+
   describe('debt-related transactions', () => {
     it('should create a debt-related income transaction', async () => {
       const account = createMockAccount('acc-1', 'user-1', [{ currency: 'USD', balance: 0 }]);

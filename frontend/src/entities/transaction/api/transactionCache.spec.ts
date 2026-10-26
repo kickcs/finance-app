@@ -34,6 +34,7 @@ function makeTransaction(overrides: Partial<Transaction> = {}): Transaction {
     net_amount: 25000,
     has_debt_returns: false,
     payment_group_id: null,
+    settlement_id: null,
     payment_sibling: null,
     ...overrides,
   };

@@ -42,14 +42,30 @@ const { getCategoriesByType } = useCategories(userId);
 const isTransfer = computed(() => props.transaction?.type === 'transfer');
 const isAdjustment = computed(() => props.transaction?.type === 'adjustment');
 
-// Check if transaction is debt-related (cannot be edited) — exclude adjustments which reuse is_debt_related as direction flag
-const isDebtRelated = computed(
-  () => props.transaction?.is_debt_related === true && !isAdjustment.value,
+// Запись расчёта по долгу: сумму и тип сервер сверяет с остатком долга, поэтому их не правят отсюда.
+const isSettlementRecord = computed(() => !!props.transaction?.settlement_id);
+
+// Прощение, зачёт и отметка отработки денег не двигали: правке они не подлежат, их можно только
+// смотреть и удалить вместе с расчётом.
+const isSettlementMarker = computed(
+  () => isSettlementRecord.value && props.transaction?.is_informational === true,
 );
 
-// Вторая часть — только у обычных расходов и доходов: не у ног долга (debt_id) и не у информационных.
+// Долговая запись вне расчёта (например, выдача): управлять ею можно только из «Долгов».
+// Adjustments reuse is_debt_related as a direction flag, так что их исключаем.
+const isDebtRelated = computed(
+  () =>
+    props.transaction?.is_debt_related === true && !isAdjustment.value && !isSettlementRecord.value,
+);
+
+// Вторая часть — только у обычных расходов и доходов: не у ног долга (debt_id), не у информационных
+// и не у записей расчёта (она меняла бы их сумму).
 const canHaveSecondPart = computed(
-  () => !!props.transaction && !props.transaction.debt_id && !props.transaction.is_informational,
+  () =>
+    !!props.transaction &&
+    !props.transaction.debt_id &&
+    !props.transaction.is_informational &&
+    !isSettlementRecord.value,
 );
 
 // Local form state (only for non-transfer)
@@ -98,7 +114,11 @@ const {
 } = useSplitTransactionEdit(
   // Долги раздельного счёта могут указывать на любую из двух частей оплаты.
   () =>
-    props.transaction && !isDebtRelated.value && !isTransfer.value && !isAdjustment.value
+    props.transaction &&
+    !isDebtRelated.value &&
+    !isSettlementRecord.value &&
+    !isTransfer.value &&
+    !isAdjustment.value
       ? paymentGroupIds(props.transaction)
       : [],
   userId,
@@ -178,6 +198,7 @@ const compatibleAccounts = computed(() => {
 const categories = computed(() => getCategoriesByType(type.value));
 
 function handleTypeChange(newType: string) {
+  if (isSettlementRecord.value) return;
   type.value = newType as 'expense' | 'income';
   // Reset category if switching types
   const availableCategories = getCategoriesByType(newType as 'expense' | 'income');
@@ -205,8 +226,10 @@ async function confirm() {
     const updates: TransactionUpdates = {
       type: type.value,
       // Первая часть = итог − вторая; убранная пара уходит явным null.
-      ...buildSecondPartPayload(amount.value, secondPart.value),
-      ...(!secondPart.value && props.transaction?.payment_sibling && { second_part: null }),
+      ...(!isSettlementRecord.value && {
+        ...buildSecondPartPayload(amount.value, secondPart.value),
+        ...(!secondPart.value && props.transaction?.payment_sibling && { second_part: null }),
+      }),
       account_id: accountId.value,
       category_id: categoryId.value,
       description: description.value || null,
@@ -262,8 +285,8 @@ const isFormValid = computed(() => {
       </div>
     </div>
 
-    <!-- Debt-Related Mode: View Only -->
-    <div v-if="isDebtRelated && transaction" class="py-2">
+    <!-- Debt-Related Mode: View Only (запись вне расчёта или информационная запись расчёта) -->
+    <div v-if="(isDebtRelated || isSettlementMarker) && transaction" class="py-2">
       <div class="text-center mb-4">
         <div
           class="w-12 h-12 mx-auto mb-3 rounded-xl bg-warning-light flex items-center justify-center"
@@ -300,7 +323,10 @@ const isFormValid = computed(() => {
       <div class="mt-3 p-2.5 rounded-lg bg-warning-light border border-warning/20">
         <div class="flex gap-1.5">
           <UIcon name="info" size="xs" class="text-warning shrink-0 mt-0.5" />
-          <p class="text-xs text-warning">
+          <p v-if="isSettlementMarker" class="text-xs text-warning">
+            Сумма меняется на экране долга; удаление уберёт весь расчёт
+          </p>
+          <p v-else class="text-xs text-warning">
             Эту транзакцию нельзя редактировать или удалять напрямую. Перейдите в раздел "Долги" для
             управления.
           </p>
@@ -411,7 +437,12 @@ const isFormValid = computed(() => {
     <!-- Regular Edit Mode (expense/income) -->
     <div v-else-if="transaction" class="space-y-4">
       <!-- Type Tabs -->
-      <UTabs :model-value="type" :items="tabItems" @update:model-value="handleTypeChange" />
+      <UTabs
+        :model-value="type"
+        :items="tabItems"
+        :disabled="isSettlementRecord"
+        @update:model-value="handleTypeChange"
+      />
 
       <!-- Account Selector -->
       <AccountSelector
@@ -430,10 +461,17 @@ const isFormValid = computed(() => {
           variant="currency"
           type="number"
           :suffix="transaction!.currency"
+          :disabled="isSettlementRecord"
           @update:model-value="handleAmountInput($event)"
           @blur="checkAmountChange"
           @keydown.enter="checkAmountChange"
         />
+        <p
+          v-if="isSettlementRecord"
+          class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
+        >
+          Сумму платежа по долгу меняют отменой расчёта на экране долга
+        </p>
         <PaymentPartsEditor
           v-if="canHaveSecondPart"
           v-model="secondPart"
@@ -525,8 +563,23 @@ const isFormValid = computed(() => {
     </UModal>
 
     <template #actions>
+      <!-- Settlement Marker Actions: Close + Delete (уйдёт весь расчёт) -->
+      <div v-if="isSettlementMarker" class="flex gap-2 w-full">
+        <UButton variant="secondary" size="sm" full-width @click="close">Закрыть</UButton>
+        <UButton
+          variant="danger"
+          size="sm"
+          full-width
+          data-testid="delete-settlement-record-btn"
+          @click="handleDelete()"
+        >
+          <UIcon name="delete" size="xs" class="mr-1" />
+          Удалить
+        </UButton>
+      </div>
+
       <!-- Debt-Related Actions: Close Only -->
-      <div v-if="isDebtRelated" class="flex gap-2 w-full">
+      <div v-else-if="isDebtRelated" class="flex gap-2 w-full">
         <UButton variant="secondary" size="sm" full-width @click="close">Закрыть</UButton>
       </div>
 

@@ -11,6 +11,7 @@ import {
 } from '@/entities/transaction';
 import { debtsApi } from '@/entities/debt';
 import { queryClient } from '@/shared/api/queryClient';
+import { getServerErrorMessage } from '@/shared/api/http';
 import { invalidateDebtRelated } from '@/shared/api/invalidation';
 import { useToast } from '@/shared/ui';
 import type { Transaction } from '@/shared/api/database.types';
@@ -29,8 +30,13 @@ export function useEditTransaction(userId: MaybeRefOrGetter<string | null>) {
       return false;
     }
 
-    // Debt-related transactions cannot be edited (exclude adjustments which reuse is_debt_related as direction flag)
-    if (transaction.is_debt_related && transaction.type !== 'adjustment') {
+    // Debt-related transactions cannot be edited (exclude adjustments which reuse is_debt_related as direction flag).
+    // Запись расчёта сервер правит сам, запрещая только сумму и тип.
+    if (
+      !transaction.settlement_id &&
+      transaction.is_debt_related &&
+      transaction.type !== 'adjustment'
+    ) {
       error.value = 'Транзакции долгов нельзя редактировать. Управляйте долгом в разделе "Долги"';
       return false;
     }
@@ -68,8 +74,9 @@ export function useEditTransaction(userId: MaybeRefOrGetter<string | null>) {
       restoreTransactionCaches(queryClient, snapshot);
       // Отменённые выше загрузки сами не возобновятся.
       void queryClient.invalidateQueries({ queryKey: transactionQueryKeys.all });
-      error.value = 'Не удалось обновить транзакцию';
-      toast({ title: 'Не удалось обновить транзакцию', variant: 'error' });
+      const message = getServerErrorMessage(e) ?? 'Не удалось обновить транзакцию';
+      error.value = message;
+      toast({ title: message, variant: 'error' });
       console.error('Failed to update transaction:', e);
       return false;
     } finally {
@@ -78,8 +85,12 @@ export function useEditTransaction(userId: MaybeRefOrGetter<string | null>) {
   }
 
   async function remove(transaction: Transaction) {
+    // Запись расчёта по долгу сервер снимает вместе со всем расчётом и решает сам,
+    // можно ли это сделать: остальные запреты ниже её не касаются.
+    const isSettlementRecord = !!transaction.settlement_id;
+
     // Debt-related transactions cannot be deleted directly (exclude adjustments which reuse is_debt_related as direction flag)
-    if (transaction.is_debt_related && transaction.type !== 'adjustment') {
+    if (!isSettlementRecord && transaction.is_debt_related && transaction.type !== 'adjustment') {
       error.value = 'Транзакции долгов нельзя удалять. Удалите долг в разделе "Долги"';
       return false;
     }
@@ -89,31 +100,38 @@ export function useEditTransaction(userId: MaybeRefOrGetter<string | null>) {
 
     // Check if there are OPEN split debts linked to this transaction
     // Closed debts are OK - the transaction amount already reflects payments
-    try {
-      const allDebts = await debtsApi.getAll();
-      // Оплата с двух счетов удаляется целиком — долги проверяем у обеих частей.
-      const groupIds = paymentGroupIds(transaction);
-      const linkedDebts = allDebts.filter(
-        (d) =>
-          d.source_transaction_id && groupIds.includes(d.source_transaction_id) && !d.is_closed,
-      );
+    if (!isSettlementRecord) {
+      try {
+        const allDebts = await debtsApi.getAll();
+        // Оплата с двух счетов удаляется целиком — долги проверяем у обеих частей.
+        const groupIds = paymentGroupIds(transaction);
+        const linkedDebts = allDebts.filter(
+          (d) =>
+            d.source_transaction_id && groupIds.includes(d.source_transaction_id) && !d.is_closed,
+        );
 
-      if (linkedDebts.length > 0) {
-        error.value =
-          'Нельзя удалить транзакцию с открытыми долгами. Сначала закройте или удалите связанные долги';
-        isDeleting.value = false;
-        return false;
+        if (linkedDebts.length > 0) {
+          error.value =
+            'Нельзя удалить транзакцию с открытыми долгами. Сначала закройте или удалите связанные долги';
+          isDeleting.value = false;
+          return false;
+        }
+      } catch {
+        // Ignore check error, continue with deletion
       }
-    } catch {
-      // Ignore check error, continue with deletion
     }
 
     const uid = toValue(userId) ?? '';
     // Optimistic removal from every list; balance is only ever corrected via invalidation below.
     // Иначе ответ уже летящего рефетча затрёт оптимистичную правку.
-    await queryClient.cancelQueries({ queryKey: transactionQueryKeys.all });
-    const snapshot = snapshotTransactionCaches(queryClient, uid);
-    removeTransactionsFromCaches(queryClient, uid, paymentGroupIds(transaction));
+    // У записи расчёта строку не убираем: вместе с ней уйдут и остальные записи
+    // расчёта, а какие именно — знает только сервер; список обновит инвалидация.
+    let snapshot: ReturnType<typeof snapshotTransactionCaches> | null = null;
+    if (!isSettlementRecord) {
+      await queryClient.cancelQueries({ queryKey: transactionQueryKeys.all });
+      snapshot = snapshotTransactionCaches(queryClient, uid);
+      removeTransactionsFromCaches(queryClient, uid, paymentGroupIds(transaction));
+    }
 
     try {
       // Delete transaction
@@ -126,17 +144,17 @@ export function useEditTransaction(userId: MaybeRefOrGetter<string | null>) {
       toast({ title: 'Транзакция удалена', variant: 'success' });
       return true;
     } catch (e: unknown) {
-      restoreTransactionCaches(queryClient, snapshot);
-      // Отменённые выше загрузки сами не возобновятся.
-      void queryClient.invalidateQueries({ queryKey: transactionQueryKeys.all });
-      // Show backend error message for debt-related rejections (HttpError from http.ts)
-      if (e && typeof e === 'object' && 'status' in e && 'data' in e) {
-        const httpError = e as { status: number; data?: { message?: string } };
-        if (httpError.status === 400 && httpError.data?.message) {
-          error.value = httpError.data.message;
-          toast({ title: httpError.data.message, variant: 'error' });
-          return false;
-        }
+      if (snapshot) {
+        restoreTransactionCaches(queryClient, snapshot);
+        // Отменённые выше загрузки сами не возобновятся.
+        void queryClient.invalidateQueries({ queryKey: transactionQueryKeys.all });
+      }
+      // Бэкенд объясняет отказ сам: открытые долги, более поздний расчёт и т. п.
+      const message = getServerErrorMessage(e);
+      if (message) {
+        error.value = message;
+        toast({ title: message, variant: 'error' });
+        return false;
       }
       error.value = 'Не удалось удалить транзакцию';
       toast({ title: 'Не удалось удалить транзакцию', variant: 'error' });
