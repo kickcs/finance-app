@@ -148,6 +148,24 @@ export class HttpError extends Error {
   }
 }
 
+// Текст показываем только у отказов по правилам (400, 409, 404) и только русский: английский
+// у прочих отказов служебный, пользователю он ничего не объясняет.
+const USER_FACING_STATUSES = new Set([400, 404, 409]);
+const CYRILLIC = /[А-Яа-яЁё]/;
+
+/** Текст из тела отказа как есть: ValidationPipe отдаёт `message` списком, остальные отказы — строкой. */
+export function getServerMessageText(data: unknown): string | undefined {
+  const message = (data as { message?: string | string[] } | null | undefined)?.message;
+  return (Array.isArray(message) ? message.join('. ') : message) || undefined;
+}
+
+/** Русский текст отказа сервера для показа пользователю или `undefined`, если его нет. */
+export function getServerErrorMessage(error: unknown): string | undefined {
+  if (!(error instanceof HttpError) || !USER_FACING_STATUSES.has(error.status)) return undefined;
+  const text = getServerMessageText(error.data);
+  return text && CYRILLIC.test(text) ? text : undefined;
+}
+
 function buildUrl(
   endpoint: string,
   params?: Record<string, string | number | boolean | undefined>,

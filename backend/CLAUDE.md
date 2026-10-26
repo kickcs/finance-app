@@ -35,4 +35,5 @@ Skipping step 2 fails at runtime, not at compile time.
 - **QueryBuilder takes entity property names, not column names**: `d.userId`, `d.isClosed` — NOT `d.user_id`, `d.is_closed`. TypeORM maps columns from the decorators
 - **`synchronize: false`** — every schema change goes through a migration
 - **Env vars**: `.env.example` is the source of truth. `PUBLIC_APP_URL` is the base for public receipt links `/r/<token>` and defaults to `CORS_ORIGIN` in production
+- **`transactions.settlement_id`** links every record of one debt payment, offset or close-all. Only `modules/debt/application/settlement` writes or removes such records; other modules reach it through debt commands (`ReverseSettlementCommand`), otherwise a reversal misses a record
 - **Receipt OG images** use `@resvg/resvg-js` with fonts bundled in `assets/fonts` — they are not available from the system font stack in the container

@@ -87,7 +87,8 @@ export interface TransactionWithReturns extends Transaction {
  * Transaction Repository Interface
  */
 export interface ITransactionRepository {
-  findById(id: string): Promise<Transaction | null>;
+  /** Pass `manager` to read inside an open DB transaction. */
+  findById(id: string, manager?: EntityManager): Promise<Transaction | null>;
   findByUserId(userId: string, limit?: number): Promise<Transaction[]>;
   findByAccountId(accountId: string): Promise<Transaction[]>;
   findByAccountIdWithIncoming(accountId: string, limit?: number): Promise<Transaction[]>;
@@ -103,8 +104,14 @@ export interface ITransactionRepository {
    * Вторые части оплат с двух счетов одним запросом: id транзакции → её пара.
    * Строки без группы и без найденной пары в карту не попадают.
    */
-  findPaymentSiblings(transactions: Transaction[]): Promise<Map<string, Transaction>>;
-  findPaymentSibling(transaction: Transaction): Promise<Transaction | null>;
+  findPaymentSiblings(
+    transactions: Transaction[],
+    manager?: EntityManager,
+  ): Promise<Map<string, Transaction>>;
+  findPaymentSibling(
+    transaction: Transaction,
+    manager?: EntityManager,
+  ): Promise<Transaction | null>;
 
   // Paginated queries
   getPaginated(

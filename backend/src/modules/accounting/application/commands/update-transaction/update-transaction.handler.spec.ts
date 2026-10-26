@@ -374,4 +374,154 @@ describe('UpdateTransactionHandler', () => {
       expect(mockAccountRepository.save).not.toHaveBeenCalled();
     });
   });
+
+  // Запись расчёта (платёж, переплата, нога работы) меняет остаток долга: деньги и категорию
+  // правят со стороны долга, иначе остаток разойдётся с историей.
+  describe('запись расчёта по долгу', () => {
+    const SETTLEMENT_ERROR =
+      'Запись расчёта по долгу меняется со стороны долга: отмените расчёт и проведите заново';
+
+    const returnRecord = (settlementId?: string) =>
+      Transaction.createIncome(
+        'tx-card',
+        'user-1',
+        'acc-card',
+        'debt_return_to_me',
+        100,
+        'UZS',
+        now,
+        'Частичный платёж',
+        true,
+        'debt-1',
+        false,
+        settlementId,
+      );
+
+    const workLeg = () =>
+      Transaction.createExpense(
+        'tx-card',
+        'user-1',
+        'acc-card',
+        'repair',
+        100,
+        'UZS',
+        now,
+        'Отработка долга',
+        false,
+        'debt-1',
+        false,
+        's-1',
+      );
+
+    const givenRecord = (record: Transaction) => {
+      mockTransactionRepository.findById.mockResolvedValue(record);
+      return record;
+    };
+
+    it.each([
+      ['сумму', { amount: 50 }],
+      ['валюту', { currency: 'USD' }],
+      ['тип', { type: 'expense' }],
+      ['категорию на другую долговую', { categoryId: 'debt_return_from_me' }],
+      ['категорию на недолговую', { categoryId: 'food' }],
+    ])('нельзя изменить %s — 400 с пояснением, ничего не сохраняется', async (_name, data) => {
+      givenRecord(returnRecord('s-1'));
+
+      const attempt = update(data);
+
+      await expect(attempt).rejects.toThrow(BadRequestException);
+      await expect(attempt).rejects.toThrow(SETTLEMENT_ERROR);
+      expect(mockTransactionRepository.save).not.toHaveBeenCalled();
+      expect(mockAccountRepository.save).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['долг', { debtId: 'debt-2' }],
+      ['отвязку от долга', { debtId: null }],
+      ['признак «связано с долгом»', { isDebtRelated: false }],
+      ['вторую часть оплаты', { secondPart: { accountId: 'acc-other', amount: 40 } }],
+    ])('нельзя изменить %s — 400 с пояснением, ничего не сохраняется', async (_name, data) => {
+      givenRecord(returnRecord('s-1'));
+
+      const attempt = update(data);
+
+      await expect(attempt).rejects.toThrow(BadRequestException);
+      await expect(attempt).rejects.toThrow(SETTLEMENT_ERROR);
+      expect(mockTransactionRepository.save).not.toHaveBeenCalled();
+      expect(mockAccountRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('те же долг и признак, присланные формой, и пустая вторая часть — не изменение', async () => {
+      const record = givenRecord(returnRecord('s-1'));
+
+      await update({
+        debtId: 'debt-1',
+        isDebtRelated: true,
+        secondPart: null,
+        description: 'Новый комментарий',
+      });
+
+      expect(record.description).toBe('Новый комментарий');
+    });
+
+    it('ногу работы нельзя перевести в долговую категорию', async () => {
+      givenRecord(workLeg());
+
+      await expect(update({ categoryId: 'debt_given' })).rejects.toThrow(SETTLEMENT_ERROR);
+      expect(mockTransactionRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('ногу работы можно перевести в другую недолговую категорию', async () => {
+      const leg = givenRecord(workLeg());
+
+      await update({ categoryId: 'cafe' });
+
+      expect(leg.categoryId).toBe('cafe');
+      expect(savedTransaction('tx-card')).toBe(leg);
+    });
+
+    it('форма может прислать запись целиком: те же сумма, валюта, тип и категория — не изменение', async () => {
+      const record = givenRecord(returnRecord('s-1'));
+
+      await update({
+        amount: 100,
+        currency: 'UZS',
+        type: 'income',
+        categoryId: 'debt_return_to_me',
+        description: 'Новый комментарий',
+      });
+
+      expect(record.description).toBe('Новый комментарий');
+      expect(db['acc-card'].UZS).toBe(440_000);
+    });
+
+    it('описание и дата правятся', async () => {
+      const record = givenRecord(returnRecord('s-1'));
+      const newDate = new Date('2026-10-01T09:00:00Z');
+
+      await update({ description: 'Перенёс', date: newDate });
+
+      expect(record.description).toBe('Перенёс');
+      expect(record.date).toEqual(newDate);
+    });
+
+    it('счёт правится: влияние записи на баланс переезжает на новый счёт', async () => {
+      const record = givenRecord(returnRecord('s-1'));
+
+      await update({ accountId: 'acc-other' });
+
+      expect(record.accountId).toBe('acc-other');
+      expect(db['acc-card'].UZS).toBe(439_900);
+      expect(db['acc-other'].UZS).toBe(1_000_100);
+    });
+
+    it('запись без расчёта правится как раньше', async () => {
+      const record = givenRecord(returnRecord());
+
+      await update({ amount: 50 });
+
+      expect(record.amountValue).toBe(50);
+      expect(db['acc-card'].UZS).toBe(439_950);
+    });
+  });
 });

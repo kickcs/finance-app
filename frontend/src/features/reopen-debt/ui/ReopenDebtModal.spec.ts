@@ -38,6 +38,9 @@ async function mountModal(
   return wrapper;
 }
 
+const SHARED_NOTE =
+  'Если долг закрывали вместе с другими — через «Закрыть все» или зачёт, — вернутся и они.';
+
 const closedDebt = makeDebt({ is_closed: true, close_transaction_id: 'tx-1', person_name: 'Азиз' });
 
 afterEach(() => {
@@ -50,6 +53,39 @@ describe('ReopenDebtModal', () => {
 
     expect(bodyText()).toContain('Возврат долга');
     expect(bodyText()).toContain('1 000');
+  });
+
+  // Переплата лежит в истории без долговой категории и без debt_id, но уходит
+  // вместе с расчётом — пользователь должен увидеть её в списке наравне с платежом.
+  it('показывает запись переплаты по описанию, как и платёж', async () => {
+    await mountModal(closedDebt, [
+      makeRecord({ id: 'tx-pay', description: 'Возврат долга', amount: 1000 }),
+      makeRecord({
+        id: 'tx-excess',
+        description: 'Переплата по долгу: Азиз',
+        amount: 250,
+        category_id: 'salary',
+        debt_id: null,
+        settlement_id: 's-1',
+      }),
+    ]);
+
+    expect(bodyText()).toContain('Переплата по долгу: Азиз');
+    expect(bodyText()).toContain('250');
+    expect(bodyText()).toContain('«Карта»');
+  });
+
+  // Расчёт «Закрыть все» или зачёта общий для нескольких долгов: отмена вернёт и остальные.
+  it('предупреждает о других долгах расчёта, когда закрытие шло расчётом', async () => {
+    await mountModal(closedDebt, [makeRecord({ settlement_id: 's-1' })]);
+
+    expect(bodyText()).toContain(SHARED_NOTE);
+  });
+
+  it('молчит о других долгах, когда закрытие без расчёта', async () => {
+    await mountModal(closedDebt, [makeRecord({ settlement_id: null })]);
+
+    expect(bodyText()).not.toContain(SHARED_NOTE);
   });
 
   it('называет счёт, чей баланс откатится', async () => {

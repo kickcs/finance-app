@@ -384,6 +384,7 @@ function groupRow(
     net_amount: amount,
     has_debt_returns: false,
     payment_group_id: 'grp-1',
+    settlement_id: null,
     payment_sibling: sibling,
   };
 }

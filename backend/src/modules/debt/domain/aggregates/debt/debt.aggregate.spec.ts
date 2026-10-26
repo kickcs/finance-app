@@ -351,6 +351,136 @@ describe('Debt Aggregate', () => {
     });
   });
 
+  describe('revertSettlement', () => {
+    const settledDebt = (total: number) => Debt.create({ ...defaultProps, totalAmount: total });
+
+    it('закрытый прощением долг возвращается к полному остатку и открывается', () => {
+      const debt = settledDebt(300);
+      debt.makePayment(100);
+      debt.setForgivenAmount(200);
+      debt.close();
+      debt.setCloseTransactionId('tx-close');
+      expect(debt.remainingAmountValue).toBe(0);
+
+      debt.revertSettlement(100, 200);
+
+      expect(debt.remainingAmountValue).toBe(300);
+      expect(debt.forgivenAmount).toBe(0);
+      expect(debt.isClosed).toBe(false);
+      expect(debt.closedAt).toBeNull();
+      expect(debt.closeTransactionId).toBeNull();
+    });
+
+    it('закрытие только прощением: сумма 0, остаток возвращает одно прощение', () => {
+      const debt = settledDebt(300);
+      debt.setForgivenAmount(300);
+      debt.close();
+      debt.setCloseTransactionId('tx-forgiven');
+
+      debt.revertSettlement(0, 300);
+
+      expect(debt.remainingAmountValue).toBe(300);
+      expect(debt.forgivenAmount).toBe(0);
+      expect(debt.isClosed).toBe(false);
+      expect(debt.closeTransactionId).toBeNull();
+    });
+
+    it('частичный платёж на открытом долге: остаток растёт, долг остаётся открытым', () => {
+      const debt = settledDebt(300);
+      debt.makePayment(100);
+      expect(debt.remainingAmountValue).toBe(200);
+
+      debt.revertSettlement(100, 0);
+
+      expect(debt.remainingAmountValue).toBe(300);
+      expect(debt.isClosed).toBe(false);
+      expect(debt.closeTransactionId).toBeNull();
+    });
+
+    it('остаток не превышает сумму долга', () => {
+      const debt = settledDebt(300);
+      debt.makePayment(100);
+
+      debt.revertSettlement(250, 0);
+
+      expect(debt.remainingAmountValue).toBe(300);
+    });
+
+    it('снимает с прощённой суммы ровно отменяемую часть и не уходит ниже нуля', () => {
+      const debt = settledDebt(300);
+      debt.setForgivenAmount(50);
+      debt.close();
+
+      debt.revertSettlement(0, 20);
+      expect(debt.forgivenAmount).toBe(30);
+
+      debt.revertSettlement(0, 80);
+      expect(debt.forgivenAmount).toBe(0);
+    });
+
+    it('копейки не копятся: 0.1 + 0.2 даёт 0.3', () => {
+      const debt = settledDebt(1);
+      debt.makePayment(0.7);
+
+      debt.revertSettlement(0.1, 0.2);
+
+      expect(debt.remainingAmountValue).toBe(0.6);
+    });
+
+    it('отрицательные суммы отклоняются', () => {
+      const debt = settledDebt(300);
+
+      expect(() => {
+        debt.revertSettlement(-1, 0);
+      }).toThrow();
+      expect(() => {
+        debt.revertSettlement(0, -1);
+      }).toThrow();
+    });
+  });
+
+  describe('reopenWithRemaining', () => {
+    const patchClosedDebt = () => {
+      const debt = Debt.create({ ...defaultProps, totalAmount: 300 });
+      debt.setForgivenAmount(50);
+      debt.close();
+      debt.setCloseTransactionId('tx-old');
+      return debt;
+    };
+
+    it('открывает долг с остатком, сбрасывает прощение и закрывающую запись', () => {
+      const debt = patchClosedDebt();
+
+      debt.reopenWithRemaining(200);
+
+      expect(debt.remainingAmountValue).toBe(200);
+      expect(debt.forgivenAmount).toBe(0);
+      expect(debt.isClosed).toBe(false);
+      expect(debt.closedAt).toBeNull();
+      expect(debt.closeTransactionId).toBeNull();
+    });
+
+    it('остаток не превышает сумму долга', () => {
+      const debt = patchClosedDebt();
+
+      debt.reopenWithRemaining(500);
+
+      expect(debt.remainingAmountValue).toBe(300);
+    });
+
+    it.each([0, -10])('остаток %s — отказ, долг остаётся закрытым', (remaining) => {
+      const debt = patchClosedDebt();
+
+      expect(() => {
+        debt.reopenWithRemaining(remaining);
+      }).toThrow();
+
+      expect(debt.isClosed).toBe(true);
+      expect(debt.closeTransactionId).toBe('tx-old');
+      expect(debt.forgivenAmount).toBe(50);
+    });
+  });
+
   describe('reconstitute', () => {
     it('should reconstitute from full props', () => {
       const now = new Date();

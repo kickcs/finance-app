@@ -20,6 +20,7 @@ export const mockTransactionResponse = {
   netAmount: 25000,
   hasDebtReturns: false,
   paymentGroupId: null,
+  settlementId: null,
   paymentSibling: null,
 };
 

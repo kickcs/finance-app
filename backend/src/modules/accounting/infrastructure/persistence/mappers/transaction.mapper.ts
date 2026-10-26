@@ -23,6 +23,7 @@ export class TransactionMapper {
           ? Money.create(Number(ormEntity.toAmount), ormEntity.toCurrency)
           : null,
       paymentGroupId: ormEntity.paymentGroupId ?? null,
+      settlementId: ormEntity.settlementId ?? null,
       createdAt: ormEntity.createdAt,
     });
   }
@@ -46,6 +47,7 @@ export class TransactionMapper {
     ormEntity.toAmount = transaction.toAmountValue;
     ormEntity.toCurrency = transaction.toCurrency;
     ormEntity.paymentGroupId = transaction.paymentGroupId;
+    ormEntity.settlementId = transaction.settlementId;
     ormEntity.createdAt = transaction.createdAt;
 
     return ormEntity;

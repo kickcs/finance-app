@@ -94,6 +94,60 @@ export interface OffsetResult {
   debts: Debt[];
 }
 
+/** Что считает предпросмотр «Закрыть все»: только долги и сумма, без счёта, переплаты и даты. */
+export interface CloseAllPreviewInput {
+  debt_ids: string[];
+  /** Без суммы платится весь остаток после зачёта. */
+  payment_amount?: number;
+  forgive_remainder?: boolean;
+}
+
+/** Исполнение «Закрыть все»: вход предпросмотра плюс счёт, переплата и дата. */
+export interface CloseAllInput extends CloseAllPreviewInput {
+  /** Счёт платежей и переплаты. */
+  account_id: string;
+  /** Обязательна для исполнения, если сумма больше остатка. */
+  excess_category_id?: string;
+  /** ISO-дата записей. По умолчанию — сейчас. */
+  date?: string;
+}
+
+export interface CloseAllResult {
+  /** Все переданные долги после операции — в порядке запроса. */
+  debts: Debt[];
+  /** Записи платежей в порядке оплаты: без зачёта, переплаты и прощения. */
+  payment_transaction_ids: string[];
+}
+
+export interface CloseAllPreviewPayment {
+  debt_id: string;
+  amount: number;
+  forgive: boolean;
+}
+
+export interface CloseAllPreview {
+  offset_amount: number;
+  /** Чья сторона переживёт зачёт; null — зачёта нет. */
+  direction: 'given' | 'taken' | null;
+  /** Остаток после зачёта: то, что покрывают платежи. */
+  net: number;
+  offset_parts: { debt_id: string; amount: number }[];
+  payments: CloseAllPreviewPayment[];
+}
+
+interface CloseAllBackendResponse {
+  debts: DebtResponse[];
+  paymentTransactionIds: string[];
+}
+
+interface CloseAllPreviewBackendResponse {
+  offsetAmount: number;
+  direction: 'given' | 'taken' | null;
+  net: number;
+  offsetParts: { debtId: string; amount: number }[];
+  payments: { debtId: string; amount: number; forgive: boolean }[];
+}
+
 function transformDebt(debt: DebtResponse): Debt {
   return {
     id: debt.id,
@@ -259,6 +313,45 @@ export const debtsApi = {
       debt: transformDebt(data.debt),
       payment_transaction_id: data.paymentTransactionId,
       transaction_ids: data.transactionIds,
+    };
+  },
+
+  /**
+   * «Закрыть все» одним расчётом: зачёт встречных долгов, затем платежи по
+   * остатку. Сервер проводит всё в одной транзакции — при отказе не записано ничего.
+   */
+  async closeAll(input: CloseAllInput): Promise<CloseAllResult> {
+    const data = await http.post<CloseAllBackendResponse>('/debts/close-all', {
+      debtIds: input.debt_ids,
+      accountId: input.account_id,
+      paymentAmount: input.payment_amount,
+      forgiveRemainder: input.forgive_remainder,
+      excessCategoryId: input.excess_category_id,
+      date: input.date,
+    });
+    return {
+      debts: data.debts.map(transformDebt),
+      payment_transaction_ids: data.paymentTransactionIds,
+    };
+  },
+
+  /** Тот же расчёт, что у `closeAll`, но без записи: шторка показывает его до подтверждения. */
+  async previewCloseAll(input: CloseAllPreviewInput): Promise<CloseAllPreview> {
+    const data = await http.post<CloseAllPreviewBackendResponse>('/debts/close-all/preview', {
+      debtIds: input.debt_ids,
+      paymentAmount: input.payment_amount,
+      forgiveRemainder: input.forgive_remainder,
+    });
+    return {
+      offset_amount: data.offsetAmount,
+      direction: data.direction,
+      net: data.net,
+      offset_parts: data.offsetParts.map((p) => ({ debt_id: p.debtId, amount: p.amount })),
+      payments: data.payments.map((p) => ({
+        debt_id: p.debtId,
+        amount: p.amount,
+        forgive: p.forgive,
+      })),
     };
   },
 

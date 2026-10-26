@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, Repository } from 'typeorm';
+import { EntityManager, In, Repository } from 'typeorm';
 import { Debt } from '../../../domain/aggregates/debt';
 import {
   IDebtRepository,
@@ -17,10 +17,36 @@ export class DebtRepository implements IDebtRepository {
     private readonly ormRepository: Repository<DebtOrmEntity>,
   ) {}
 
-  async findById(id: string): Promise<Debt | null> {
-    const ormEntity = await this.ormRepository.findOne({ where: { id } });
+  private repo(manager?: EntityManager): Repository<DebtOrmEntity> {
+    return manager ? manager.getRepository(DebtOrmEntity) : this.ormRepository;
+  }
+
+  async findById(id: string, manager?: EntityManager): Promise<Debt | null> {
+    const ormEntity = await this.repo(manager).findOne({ where: { id } });
     if (!ormEntity) return null;
     return DebtMapper.toDomain(ormEntity);
+  }
+
+  async findByIds(ids: readonly string[]): Promise<Debt[]> {
+    if (ids.length === 0) return [];
+    const ormEntities = await this.ormRepository.find({ where: { id: In([...ids]) } });
+    return ormEntities.map((entity) => DebtMapper.toDomain(entity));
+  }
+
+  async findByIdsForUpdate(
+    ids: readonly string[],
+    userId: string,
+    manager: EntityManager,
+  ): Promise<Debt[]> {
+    if (ids.length === 0) return [];
+    const ormEntities = await this.repo(manager)
+      .createQueryBuilder('d')
+      .setLock('pessimistic_write')
+      .where('d.id IN (:...ids)', { ids })
+      .andWhere('d.userId = :userId', { userId })
+      .orderBy('d.id', 'ASC')
+      .getMany();
+    return ormEntities.map((entity) => DebtMapper.toDomain(entity));
   }
 
   async findByUserId(userId: string, status?: 'active' | 'closed'): Promise<Debt[]> {
@@ -42,24 +68,24 @@ export class DebtRepository implements IDebtRepository {
     return DebtMapper.toDomain(ormEntity);
   }
 
-  async findByCloseTransactionId(transactionId: string): Promise<Debt | null> {
-    const ormEntity = await this.ormRepository.findOne({
-      where: { closeTransactionId: transactionId },
-    });
-    if (!ormEntity) return null;
-    return DebtMapper.toDomain(ormEntity);
-  }
-
-  async findActiveByPerson(userId: string, personName: string, currency: string): Promise<Debt[]> {
-    const ormEntities = await this.ormRepository.find({
+  async findActiveByPerson(
+    userId: string,
+    personName: string,
+    currency: string,
+    manager?: EntityManager,
+  ): Promise<Debt[]> {
+    const ormEntities = await this.repo(manager).find({
       where: { userId, personName, currency, isClosed: false },
-      order: { createdAt: 'ASC' },
+      order: { createdAt: 'ASC', id: 'ASC' },
     });
     return ormEntities.map((entity) => DebtMapper.toDomain(entity));
   }
 
-  async hasOpenDebtsForTransaction(transactionId: string): Promise<boolean> {
-    const count = await this.ormRepository.count({
+  async hasOpenDebtsForTransaction(
+    transactionId: string,
+    manager?: EntityManager,
+  ): Promise<boolean> {
+    const count = await this.repo(manager).count({
       where: [
         { sourceTransactionId: transactionId, isClosed: false },
         { transactionId: transactionId, isClosed: false },
@@ -73,22 +99,20 @@ export class DebtRepository implements IDebtRepository {
     toTransactionId: string,
     manager?: EntityManager,
   ): Promise<void> {
-    const repo = manager ? manager.getRepository(DebtOrmEntity) : this.ormRepository;
-    await repo.update(
+    await this.repo(manager).update(
       { sourceTransactionId: fromTransactionId },
       { sourceTransactionId: toTransactionId },
     );
   }
 
   async save(debt: Debt, manager?: EntityManager): Promise<Debt> {
-    const repo = manager ? manager.getRepository(DebtOrmEntity) : this.ormRepository;
     const ormEntity = DebtMapper.toOrm(debt);
-    const savedEntity = await repo.save(ormEntity);
+    const savedEntity = await this.repo(manager).save(ormEntity);
     return DebtMapper.toDomain(savedEntity);
   }
 
-  async delete(id: string): Promise<void> {
-    await this.ormRepository.delete(id);
+  async delete(id: string, manager?: EntityManager): Promise<void> {
+    await this.repo(manager).delete(id);
   }
 
   async exists(id: string): Promise<boolean> {

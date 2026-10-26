@@ -15,6 +15,37 @@ import { DomainEventPublisher } from '../../../../../shared';
 import { toTransactionResponse } from '../../helpers/to-transaction-response';
 import { Account } from '../../../domain/aggregates/account';
 import { Transaction } from '../../../domain/aggregates/transaction';
+import { ALL_DEBT_CATEGORY_IDS } from '../../../domain/constants/default-categories';
+
+const SETTLEMENT_RECORD_LOCKED =
+  'Запись расчёта по долгу меняется со стороны долга: отмените расчёт и проведите заново';
+
+/**
+ * Правка записи расчёта не должна менять деньги, тип и привязку к долгу: остаток
+ * долга считается по этим записям. «Меняет» — значение пришло и отличается от сохранённого.
+ */
+function changesSettlementMoney(
+  transaction: Transaction,
+  data: UpdateTransactionCommand['data'],
+): boolean {
+  const differs = <T>(next: T | undefined, current: T) => next !== undefined && next !== current;
+  const nextCategory = data.categoryId;
+  const movesCategory =
+    nextCategory !== undefined &&
+    nextCategory !== transaction.categoryId &&
+    (ALL_DEBT_CATEGORY_IDS.includes(transaction.categoryId) ||
+      ALL_DEBT_CATEGORY_IDS.includes(nextCategory));
+  return (
+    movesCategory ||
+    differs(data.amount, transaction.amountValue) ||
+    differs(data.currency, transaction.currency) ||
+    differs(data.type, transaction.typeValue) ||
+    differs(data.debtId, transaction.debtId) ||
+    differs(data.isDebtRelated, transaction.isDebtRelated) ||
+    // `null` убирает вторую часть, а у записи расчёта её не бывает — убирать нечего.
+    !!data.secondPart
+  );
+}
 
 /** Один экземпляр на счёт за правку: вторая копия затёрла бы изменения первой при сохранении. */
 type AccountCache = Map<string, Account>;
@@ -41,6 +72,10 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
 
     if (transaction.userId !== command.userId) {
       throw new ForbiddenException('Transaction does not belong to user');
+    }
+
+    if (transaction.settlementId && changesSettlementMoney(transaction, command.data)) {
+      throw new BadRequestException(SETTLEMENT_RECORD_LOCKED);
     }
 
     // Informational transactions (e.g. debt forgiveness records) never touched account

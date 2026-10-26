@@ -16,6 +16,7 @@ export type { UseGroupedTransactionsOptions } from './model/useGroupedTransactio
 
 // Lib
 export { buildPaymentSiblingRow, paymentGroupIds, paymentTotal } from './lib/paymentGroup';
+export { isDebtRecordOutsideSettlement } from './lib/debtRecord';
 
 // API
 export * from './api';

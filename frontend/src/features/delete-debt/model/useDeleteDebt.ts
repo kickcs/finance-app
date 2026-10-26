@@ -1,6 +1,7 @@
 import { ref } from 'vue';
 import { debtsApi, snapshotDebtCaches, restoreDebtCaches, applyDebtRemove } from '@/entities/debt';
 import { queryClient } from '@/shared/api/queryClient';
+import { getServerErrorMessage } from '@/shared/api/http';
 import { invalidateDebtRelated } from '@/shared/api/invalidation';
 import { useToast } from '@/shared/ui';
 import type { Debt } from '@/shared/api/database.types';
@@ -29,7 +30,12 @@ export function useDeleteDebt() {
       restoreDebtCaches(queryClient, snapshot);
       console.error('Failed to delete debt:', e);
       error.value = 'Не удалось удалить долг';
-      toast({ title: 'Не удалось удалить долг', variant: 'error' });
+      // Сервер объясняет отказ сам, например «Сначала отмените более поздний расчёт»
+      toast({
+        title: 'Не удалось удалить долг',
+        description: getServerErrorMessage(e),
+        variant: 'error',
+      });
       return false;
     } finally {
       isDeleting.value = false;

@@ -104,7 +104,43 @@ describe('useReopenDebt', () => {
     expect(reopenSpy).toHaveBeenCalledTimes(1);
   });
 
-  it('reports failure, toasts and leaves caches untouched when the API errors', async () => {
+  it('shows the server message when a later settlement blocks the reopen (409)', async () => {
+    const message = 'Сначала отмените более поздний расчёт по долгу «Азиз»';
+    server.use(
+      http.post('*/api/debts/:id/reopen', () => HttpResponse.json({ message }, { status: 409 })),
+    );
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const c = mountComposable();
+    const result = await c.reopenDebt(DEBT_ID, USER_ID);
+    await flushPromises();
+
+    expect(result).toBe(false);
+    expect(toastMock).toHaveBeenCalledWith({ title: message, variant: 'error' });
+    consoleError.mockRestore();
+  });
+
+  it('falls back to the generic text when the error carries no server message', async () => {
+    server.use(
+      http.post('*/api/debts/:id/reopen', () =>
+        HttpResponse.json({ message: 'Internal server error' }, { status: 500 }),
+      ),
+    );
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const c = mountComposable();
+    await c.reopenDebt(DEBT_ID, USER_ID);
+    await flushPromises();
+
+    expect(toastMock).toHaveBeenCalledWith({
+      title: 'Не удалось отменить закрытие',
+      variant: 'error',
+    });
+    consoleError.mockRestore();
+  });
+
+  // «Debt is not closed» приходит с бэкенда по-английски — пользователю он не нужен.
+  it('reports failure, toasts the Russian fallback and leaves caches untouched when the API errors', async () => {
     server.use(
       http.post('*/api/debts/:id/reopen', () =>
         HttpResponse.json({ message: 'Debt is not closed' }, { status: 409 }),
@@ -117,7 +153,10 @@ describe('useReopenDebt', () => {
     await flushPromises();
 
     expect(result).toBe(false);
-    expect(toastMock).toHaveBeenCalledWith(expect.objectContaining({ variant: 'error' }));
+    expect(toastMock).toHaveBeenCalledWith({
+      title: 'Не удалось отменить закрытие',
+      variant: 'error',
+    });
     expect(invalidateDebtRelated).not.toHaveBeenCalled();
     expect(c.isReopening.value).toBe(false);
     consoleError.mockRestore();

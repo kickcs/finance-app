@@ -32,13 +32,29 @@ export interface PaginatedDebtGroups {
 }
 
 export interface IDebtRepository {
-  findById(id: string): Promise<Debt | null>;
+  /** Pass `manager` to read inside an open DB transaction. */
+  findById(id: string, manager?: EntityManager): Promise<Debt | null>;
   findByUserId(userId: string, status?: 'active' | 'closed'): Promise<Debt[]>;
   findByTransactionId(transactionId: string): Promise<Debt | null>;
-  findByCloseTransactionId(transactionId: string): Promise<Debt | null>;
-  /** Открытые долги одного человека в одной валюте — материал для взаимозачёта. */
-  findActiveByPerson(userId: string, personName: string, currency: string): Promise<Debt[]>;
-  hasOpenDebtsForTransaction(transactionId: string): Promise<boolean>;
+  /** Долги одним запросом, чужие тоже: владельца проверяет вызывающий. Несуществующие id не возвращаются. */
+  findByIds(ids: readonly string[]): Promise<Debt[]>;
+  /**
+   * Блокирует долги пользователя до конца транзакции (`FOR UPDATE`, по id — один порядок для всех
+   * расчётов) и возвращает их свежими. Чужие и несуществующие id не возвращаются.
+   */
+  findByIdsForUpdate(
+    ids: readonly string[],
+    userId: string,
+    manager: EntityManager,
+  ): Promise<Debt[]>;
+  /** Открытые долги одного человека в одной валюте — материал для взаимозачёта. С `manager` читает в открытой транзакции. */
+  findActiveByPerson(
+    userId: string,
+    personName: string,
+    currency: string,
+    manager?: EntityManager,
+  ): Promise<Debt[]>;
+  hasOpenDebtsForTransaction(transactionId: string, manager?: EntityManager): Promise<boolean>;
   /** Переносит долги разделения с одной транзакции на другую — когда часть оплаты удаляется. */
   relinkSourceTransaction(
     fromTransactionId: string,
@@ -47,7 +63,8 @@ export interface IDebtRepository {
   ): Promise<void>;
   /** Pass `manager` to participate in an open DB transaction. */
   save(debt: Debt, manager?: EntityManager): Promise<Debt>;
-  delete(id: string): Promise<void>;
+  /** Pass `manager` to participate in an open DB transaction. */
+  delete(id: string, manager?: EntityManager): Promise<void>;
   exists(id: string): Promise<boolean>;
   getPaginated(userId: string, options: DebtPaginationOptions): Promise<PaginatedDebtGroups>;
 }

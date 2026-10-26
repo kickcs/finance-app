@@ -13,8 +13,11 @@ import {
   mockClosedDebtResponse,
   mockSecondGivenDebtResponse,
   buildPaginatedDebtsResponse,
-  payDebtHandler,
+  closeAllPreviewResponse,
+  closeAllResultResponse,
+  closedDebtResponse,
   payDebtResult,
+  type CloseAllBody,
   type PayDebtBody,
 } from '@/test/mocks/handlers/debts';
 import { setIsDesktopForTests } from '@/shared/lib/platform';
@@ -33,6 +36,13 @@ const mockAlexeiTakenDebtResponse = {
 // PaymentDrawer и DebtActionsSheet рендерят настоящую vaul-шторку; её закрытие
 // роняет jsdom — в проекте для этого есть стаб
 vi.mock('vaul-vue', async () => (await import('@/test/stubs/vaul')).vaulStub);
+
+const { hapticsMock } = vi.hoisted(() => ({ hapticsMock: { trigger: vi.fn() } }));
+// Тосты дергают `trigger` напрямую, мимо `useHaptics`: подменяем только то, что зовут страница и шторка.
+vi.mock('@/shared/lib/haptics', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  useHaptics: () => hapticsMock,
+}));
 
 // Mock app router — vi.hoisted runs before vi.mock hoisting
 const { navigateBackMock } = vi.hoisted(() => ({
@@ -536,42 +546,56 @@ describe('DebtsListPage', () => {
   // Close All Debts Flow
   // -----------------------------------------------------------------------
   describe('close all debts flow', () => {
-    it('встречные долги закрываются одним расчётом: зачёт, затем остаток', async () => {
+    it('встречные долги закрываются одним расчётом: зачёт и остаток считает сервер', async () => {
       // Сценарий с дашборда: человек открыт из вкладки «Вам должны», а встречный
       // долг стоит первым — раньше шторка брала направление с него.
-      const calls: string[] = [];
-      const payments: Record<string, number | undefined> = {};
-      const debtsAfterOffset = [
-        { ...mockGivenDebtResponse, remainingAmount: 10000 },
-        { ...mockAlexeiTakenDebtResponse, remainingAmount: 0, isClosed: true },
+      const closeAllBodies: CloseAllBody[] = [];
+      const strayRequests: string[] = [];
+      const allThree = [
+        mockAlexeiTakenDebtResponse,
+        mockGivenDebtResponse,
+        mockSecondGivenDebtResponse,
       ];
       server.use(
         http.get('*/api/debts/paginated', () =>
+          HttpResponse.json(buildPaginatedDebtsResponse(allThree)),
+        ),
+        // 30 000 + 20 000 вам минус 20 000 ваших: зачёт 20 000, к оплате 30 000.
+        http.post('*/api/debts/close-all/preview', () =>
           HttpResponse.json(
-            buildPaginatedDebtsResponse([
-              mockAlexeiTakenDebtResponse,
-              mockGivenDebtResponse,
-              mockSecondGivenDebtResponse,
-            ]),
+            closeAllPreviewResponse({
+              offsetAmount: 20000,
+              direction: 'given',
+              net: 30000,
+              totalDebt: 30000,
+              offsetParts: [
+                { debtId: 'debt-1', amount: 20000 },
+                { debtId: 'debt-alexei-taken', amount: 20000 },
+              ],
+              payments: [
+                { debtId: 'debt-1', amount: 10000, forgive: false, withExcess: false },
+                { debtId: 'debt-5', amount: 20000, forgive: false, withExcess: false },
+              ],
+            }),
           ),
         ),
-        http.post('*/api/debts/offset', async ({ request }) => {
-          calls.push(`offset ${JSON.stringify(await request.json())}`);
-          return HttpResponse.json({
-            personName: 'Алексей',
-            currency: 'UZS',
-            offsetAmount: 20000,
-            debts: debtsAfterOffset,
-          });
+        http.post('*/api/debts/close-all', async ({ request }) => {
+          closeAllBodies.push((await request.json()) as CloseAllBody);
+          return HttpResponse.json(
+            closeAllResultResponse({
+              debts: allThree.map(closedDebtResponse),
+              paymentTransactionIds: ['tx-payment-debt-1', 'tx-payment-debt-5'],
+              offsetAmount: 20000,
+            }),
+          );
         }),
-        http.post('*/api/debts/:id/payments', async ({ params, request }) => {
-          const body = (await request.json()) as PayDebtBody;
-          calls.push(`pay ${params.id}`);
-          payments[params.id as string] = body.amount;
-          const target =
-            [...debtsAfterOffset, mockSecondGivenDebtResponse].find((d) => d.id === params.id) ??
-            mockGivenDebtResponse;
-          return HttpResponse.json(payDebtResult(target, body));
+        http.post('*/api/debts/offset', () => {
+          strayRequests.push('offset');
+          return HttpResponse.json({});
+        }),
+        http.post('*/api/debts/:id/payments', () => {
+          strayRequests.push('payment');
+          return HttpResponse.json({});
         }),
       );
       const { wrapper, router } = await renderPage({ person: 'Алексей', type: 'given' });
@@ -580,9 +604,13 @@ describe('DebtsListPage', () => {
       expect(wrapper.findAllComponents({ name: 'DebtCard' })).toHaveLength(3);
 
       await wrapper.find('[data-testid="close-all-btn"]').trigger('click');
+      await vi.waitFor(() =>
+        expect(document.body.querySelectorAll('[data-testid="close-all-debt-row"]')).toHaveLength(
+          3,
+        ),
+      );
       await flushPromises();
 
-      // 30 000 + 20 000 вам минус 20 000 ваших = 30 000 в вашу пользу.
       const drawer = document.body.querySelector('[data-testid="close-all-drawer"]');
       expect(drawer?.textContent).toContain('вам должны · 3 долга');
       expect(drawer?.textContent).toContain('Куда зачислить');
@@ -602,8 +630,13 @@ describe('DebtsListPage', () => {
       await flushPromises();
       await flushPromises();
 
-      expect(calls[0]).toBe('offset {"personName":"Алексей","currency":"UZS"}');
-      expect(payments).toEqual({ 'debt-1': 10000, 'debt-5': 20000 });
+      // Один запрос на всё: ни отдельного зачёта, ни платежей по долгам. «Оплатить всё»
+      // уходит без суммы — как и предпросмотр: остаток к оплате считает сервер.
+      expect(closeAllBodies).toEqual([
+        { debtIds: ['debt-alexei-taken', 'debt-1', 'debt-5'], accountId: 'acc-1' },
+      ]);
+      expect(closeAllBodies[0]).not.toHaveProperty('paymentAmount');
+      expect(strayRequests).toEqual([]);
       expect(router.currentRoute.value.query.person).toBeUndefined();
     });
 
@@ -614,7 +647,6 @@ describe('DebtsListPage', () => {
             buildPaginatedDebtsResponse([mockGivenDebtResponse, mockSecondGivenDebtResponse]),
           ),
         ),
-        payDebtHandler(),
       );
 
       const { wrapper, router } = await renderPage({ person: 'Алексей' });
@@ -647,41 +679,100 @@ describe('DebtsListPage', () => {
       expect(wrapper.find('[data-testid="clear-filter-btn"]').exists()).toBe(false);
     });
 
-    it('не схлопывает шторку и список, пока платежи в полёте', async () => {
+    describe('гаптика по завершении расчёта', () => {
+      async function confirmCloseAll() {
+        server.use(
+          http.get('*/api/debts/paginated', () =>
+            HttpResponse.json(
+              buildPaginatedDebtsResponse([mockGivenDebtResponse, mockSecondGivenDebtResponse]),
+            ),
+          ),
+        );
+        const { wrapper } = await renderPage({ person: 'Алексей' });
+        await wrapper.find('[data-testid="close-all-btn"]').trigger('click');
+        await flushPromises();
+        hapticsMock.trigger.mockClear();
+
+        const modal = wrapper.findComponent({ name: 'CloseAllDebtsDrawer' });
+        modal.vm.$emit('confirm', 'acc-1', { paymentAmount: 50000, forgiveRemainder: false });
+        await flushPromises();
+        await flushPromises();
+        await flushPromises();
+        return modal;
+      }
+
+      it('успех откликается успехом', async () => {
+        server.use(
+          http.post('*/api/debts/close-all', () =>
+            HttpResponse.json(
+              closeAllResultResponse({
+                debts: [mockGivenDebtResponse, mockSecondGivenDebtResponse].map(closedDebtResponse),
+                paymentTransactionIds: ['tx-payment-debt-1', 'tx-payment-debt-5'],
+              }),
+            ),
+          ),
+        );
+
+        await confirmCloseAll();
+
+        expect(hapticsMock.trigger).toHaveBeenCalledWith('success');
+        expect(hapticsMock.trigger).not.toHaveBeenCalledWith('error');
+      });
+
+      it('провал откликается ошибкой, шторка остаётся открытой', async () => {
+        server.use(
+          http.post('*/api/debts/close-all', () =>
+            HttpResponse.json({ message: 'Долг уже закрыт' }, { status: 409 }),
+          ),
+        );
+
+        const modal = await confirmCloseAll();
+
+        expect(hapticsMock.trigger).toHaveBeenCalledWith('error');
+        expect(hapticsMock.trigger).not.toHaveBeenCalledWith('success');
+        expect(modal.props('modelValue')).toBe(true);
+      });
+    });
+
+    it('не схлопывает шторку и список, пока запрос в полёте', async () => {
       // Оптимистичные правки идут в singleton-кэш приложения, а не в тестовый:
       // на нём и проверяем, что экран не мигает.
       appQueryClient.clear();
-      let releasePay!: () => void;
+      let releaseCloseAll!: () => void;
       const gate = new Promise<void>((res) => {
-        releasePay = res;
+        releaseCloseAll = res;
       });
+      const debtsToClose = [mockGivenDebtResponse, mockSecondGivenDebtResponse];
       server.use(
         http.get('*/api/debts/paginated', () =>
-          HttpResponse.json(
-            buildPaginatedDebtsResponse([mockGivenDebtResponse, mockSecondGivenDebtResponse]),
-          ),
+          HttpResponse.json(buildPaginatedDebtsResponse(debtsToClose)),
         ),
-        http.post('*/api/debts/:id/payments', async ({ params, request }) => {
+        http.post('*/api/debts/close-all', async () => {
           await gate;
-          const body = (await request.json()) as PayDebtBody;
-          const target =
-            [mockGivenDebtResponse, mockSecondGivenDebtResponse].find((d) => d.id === params.id) ??
-            mockGivenDebtResponse;
-          return HttpResponse.json(payDebtResult(target, body));
+          return HttpResponse.json(
+            closeAllResultResponse({
+              debts: debtsToClose.map(closedDebtResponse),
+              paymentTransactionIds: ['tx-payment-debt-1', 'tx-payment-debt-5'],
+            }),
+          );
         }),
       );
 
       const { wrapper } = await renderPage({ person: 'Алексей' }, appQueryClient);
 
       await wrapper.find('[data-testid="close-all-btn"]').trigger('click');
-      await flushPromises();
+      await vi.waitFor(() =>
+        expect(document.body.querySelectorAll('[data-testid="close-all-debt-row"]')).toHaveLength(
+          2,
+        ),
+      );
 
       const modal = wrapper.findComponent({ name: 'CloseAllDebtsDrawer' });
       modal.vm.$emit('confirm', 'acc-1', { paymentAmount: 50000, forgiveRemainder: false });
       await flushPromises();
       await nextTick();
 
-      // Платежи ещё идут: список за шторкой остаётся на месте, «Вы без долгов!»
+      // Запрос ещё идёт: список за шторкой остаётся на месте, «Вы без долгов!»
       // мелькать не должен.
       expect(modal.props('isClosing')).toBe(true);
       expect(wrapper.find('[data-testid="empty-state"]').exists()).toBe(false);
@@ -692,12 +783,12 @@ describe('DebtsListPage', () => {
       expect(modal.props('debts')).toHaveLength(2);
       expect(document.body.querySelectorAll('[data-testid="close-all-debt-row"]')).toHaveLength(2);
 
-      releasePay();
+      releaseCloseAll();
       await flushPromises();
       await flushPromises();
       await flushPromises();
 
-      // Когда пачка отработала — шторка закрылась, фильтр по человеку сброшен.
+      // Когда расчёт прошёл — шторка закрылась, фильтр по человеку сброшен.
       expect(modal.props('modelValue')).toBe(false);
       expect(wrapper.find('[data-testid="clear-filter-btn"]').exists()).toBe(false);
     });

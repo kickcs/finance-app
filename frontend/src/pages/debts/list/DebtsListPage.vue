@@ -67,8 +67,6 @@ const {
   closeAllDebtsForPerson,
   canCloseAll,
   isClosing,
-  progress,
-  total,
   accounts,
   goBack,
   handleDebtClick,
@@ -388,8 +386,6 @@ useIntersectionObserver(
       :person-name="closeAllPersonName || personFilter || ''"
       :accounts="accounts"
       :is-closing="isClosing"
-      :progress="progress"
-      :total="total"
       @confirm="handleCloseAll"
     />
     <OffsetDebtsModal

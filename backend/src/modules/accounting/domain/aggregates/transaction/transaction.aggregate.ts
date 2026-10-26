@@ -24,6 +24,8 @@ export interface TransactionProps {
   toAmount: Money | null;
   /** Общий id двух частей одной операции, оплаченной с двух счетов. */
   paymentGroupId: string | null;
+  /** Общий id записей одного расчёта по долгу; ставится при создании и больше не меняется. */
+  settlementId: string | null;
   createdAt: Date;
 }
 
@@ -44,6 +46,7 @@ export class Transaction extends AggregateRoot<string> {
   private _toAccountId: string | null;
   private _toAmount: Money | null;
   private _paymentGroupId: string | null;
+  private readonly _settlementId: string | null;
   private _createdAt: Date;
 
   private constructor(props: TransactionProps) {
@@ -61,6 +64,7 @@ export class Transaction extends AggregateRoot<string> {
     this._toAccountId = props.toAccountId;
     this._toAmount = props.toAmount;
     this._paymentGroupId = props.paymentGroupId;
+    this._settlementId = props.settlementId;
     this._createdAt = props.createdAt;
   }
 
@@ -79,6 +83,7 @@ export class Transaction extends AggregateRoot<string> {
     isDebtRelated: boolean = false,
     debtId?: string,
     isInformational: boolean = false,
+    settlementId?: string,
   ): Transaction {
     const transaction = new Transaction({
       id,
@@ -95,6 +100,7 @@ export class Transaction extends AggregateRoot<string> {
       toAccountId: null,
       toAmount: null,
       paymentGroupId: null,
+      settlementId: settlementId ?? null,
       createdAt: new Date(),
     });
 
@@ -120,6 +126,7 @@ export class Transaction extends AggregateRoot<string> {
     isDebtRelated: boolean = false,
     debtId?: string,
     isInformational: boolean = false,
+    settlementId?: string,
   ): Transaction {
     const transaction = new Transaction({
       id,
@@ -136,6 +143,7 @@ export class Transaction extends AggregateRoot<string> {
       toAccountId: null,
       toAmount: null,
       paymentGroupId: null,
+      settlementId: settlementId ?? null,
       createdAt: new Date(),
     });
 
@@ -185,6 +193,7 @@ export class Transaction extends AggregateRoot<string> {
       toAccountId,
       toAmount: Money.create(toAmount, toCurrency),
       paymentGroupId: null,
+      settlementId: null,
       createdAt: new Date(),
     });
 
@@ -244,6 +253,7 @@ export class Transaction extends AggregateRoot<string> {
       toAccountId: null,
       toAmount: null,
       paymentGroupId: null,
+      settlementId: null,
       createdAt: new Date(),
     });
 
@@ -349,6 +359,10 @@ export class Transaction extends AggregateRoot<string> {
 
   get paymentGroupId(): string | null {
     return this._paymentGroupId;
+  }
+
+  get settlementId(): string | null {
+    return this._settlementId;
   }
 
   /**

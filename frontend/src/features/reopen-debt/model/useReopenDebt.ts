@@ -1,6 +1,7 @@
 import { ref } from 'vue';
 import { debtsApi, applyDebtUpdate } from '@/entities/debt';
 import { queryClient } from '@/shared/api/queryClient';
+import { getServerErrorMessage } from '@/shared/api/http';
 import { invalidateDebtRelated } from '@/shared/api/invalidation';
 import { useToast } from '@/shared/ui';
 
@@ -28,7 +29,11 @@ export function useReopenDebt() {
       return true;
     } catch (e) {
       console.error('Failed to reopen debt:', e);
-      toast({ title: 'Не удалось отменить закрытие', variant: 'error' });
+      // Сервер объясняет отказ сам, например «Сначала отмените более поздний расчёт»
+      toast({
+        title: getServerErrorMessage(e) ?? 'Не удалось отменить закрытие',
+        variant: 'error',
+      });
       return false;
     } finally {
       isReopening.value = false;

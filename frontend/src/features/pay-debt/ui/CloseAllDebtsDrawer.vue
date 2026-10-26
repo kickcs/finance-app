@@ -1,35 +1,32 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { UOverlay } from '@/shared/ui/overlay';
-import { UButton, UIcon, UProgressBar } from '@/shared/ui';
+import { Skeleton, UButton, UIcon } from '@/shared/ui';
 import { AccountSelector, type AccountWithBalances } from '@/entities/account';
 import {
   DebtPaymentFields,
   DebtProgressMeter,
   DebtAmountHeadline,
+  hasMixedCurrencies,
   useDebtPaymentForm,
   useDebtCategoryOptions,
   getDebtSplit,
+  type CloseAllPreview,
 } from '@/entities/debt';
 import { useHaptics } from '@/shared/lib/haptics';
+import { getServerErrorMessage } from '@/shared/api/http';
 import { formatCurrency, getCurrencySymbol } from '@/shared/lib/format/currency';
 import { pluralize } from '@/shared/lib/format/pluralize';
 import { DEFAULT_CURRENCY } from '@/entities/currency';
 import type { Debt } from '@/shared/api/database.types';
-import { sortDebtsByDateAsc } from '../model/sortDebts';
-import { planMutualSettlement, remainingAfterOffset } from '../model/mutualSettlement';
+import { buildDistribution, type DistributionStatus } from '../model/closeAllDistribution';
+import type { CloseAllInputOptions } from '../model/closeAllInput';
+import { useCloseAllPreview } from '../model/useCloseAllPreview';
 import PaymentPresetRow from './PaymentPresetRow.vue';
 
 /**
- * Шторка «закрыть все долги человека» — тот же язык, что и у платежа по
- * одному долгу (`PaymentDrawer`): сумма-герой, три пресета, живой метр,
- * выбор счёта.
- *
- * Старая модалка показывала долги ДВАЖДЫ — сначала списком «сколько должен»,
- * потом отдельным блоком «распределение платежа», и второй блок появлялся
- * только при неполной сумме, из-за чего строки прыгали прямо во время набора.
- * Здесь список один и он же и есть предпросмотр: у каждого долга сразу видно,
- * сколько ему достанется и что с ним станет.
+ * Шторка «закрыть все долги человека», по раскладке как `PaymentDrawer`. Список долгов
+ * и есть предпросмотр, все числа в нём считает сервер (`previewCloseAll`).
  */
 const props = defineProps<{
   modelValue: boolean;
@@ -38,50 +35,56 @@ const props = defineProps<{
   personName: string;
   accounts: AccountWithBalances[];
   isClosing?: boolean;
-  progress?: number;
-  total?: number;
 }>();
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean];
-  confirm: [
-    accountId: string,
-    options: {
-      paymentAmount: number;
-      forgiveRemainder?: boolean;
-      excessCategoryId?: string;
-    },
-  ];
+  /** Без `paymentAmount` у «оплатить всё»: сумму тогда считает сервер, как и в предпросмотре. */
+  confirm: [accountId: string, options: Omit<CloseAllInputOptions, 'transactionDate'>];
 }>();
 
 const { trigger } = useHaptics();
 
 const selectedAccountId = ref<string | null>(null);
 
-const settlement = computed(() => planMutualSettlement(props.debts));
-const debtDirection = computed(() => settlement.value.direction);
-const offsetAmount = computed(() => settlement.value.offsetAmount);
+/** Ответ сервера на «оплатить всё»: итог, сторона и зачёт от суммы платежа не зависят. */
+const baseline = ref<CloseAllPreview | null>(null);
+
+/** Итог и сторона уже названы сервером: до этого разметка про них молчит. */
+const isReady = computed(() => baseline.value !== null);
+
+const isMixedCurrency = computed(() => hasMixedCurrencies(props.debts));
+// Без зачёта все долги одной стороны, и первый её назовёт; до ответа сервера значение
+// нигде не показывается (`isReady`).
+const debtDirection = computed(
+  () => baseline.value?.direction ?? props.debts[0]?.debt_type ?? 'given',
+);
+const offsetAmount = computed(() => baseline.value?.offset_amount ?? 0);
 
 /** Сторона, которая переживёт зачёт: только по ней идут деньги и метр. */
 const payingDebts = computed(() => props.debts.filter((d) => d.debt_type === debtDirection.value));
 
-const totalDebt = computed(() => settlement.value.net);
-/** Встречные долги равны — их закрывает один зачёт, деньги не двигаются. */
-const isFullOffset = computed(() => offsetAmount.value > 0 && totalDebt.value === 0);
-
-/** Итоги по валютам: у человека могут быть долги в разных валютах. */
+/** Итоги по валютам: у человека могут быть долги в разных валютах. Только для показа. */
 const totalsByCurrency = computed(() => {
   const map = new Map<string, number>();
   for (const debt of payingDebts.value) {
     const currency = debt.currency || DEFAULT_CURRENCY;
-    map.set(currency, (map.get(currency) || 0) + remainingAfterOffset(settlement.value, debt));
+    map.set(currency, (map.get(currency) || 0) + debt.remaining_amount);
   }
   return Array.from(map.entries()).map(([currency, amount]) => ({ currency, amount }));
 });
 
+/**
+ * Остаток, который закрывает платёж. Разные валюты сервер в одну сумму не
+ * складывает и отдаёт 0: выбор там — только «оплатить» или «простить», сумма
+ * платежа остаётся нулевой.
+ */
+const totalDebt = computed(() => baseline.value?.net ?? 0);
+/** Встречные долги равны — их закрывает один зачёт, деньги не двигаются. */
+const isFullOffset = computed(() => offsetAmount.value > 0 && totalDebt.value === 0);
+
 const debtCurrency = computed(() => props.debts[0]?.currency || DEFAULT_CURRENCY);
 const currencySymbol = computed(() => getCurrencySymbol(debtCurrency.value));
-const isMixedCurrency = computed(() => totalsByCurrency.value.length > 1);
 const isPrivate = computed(() => props.debts.some((d) => d.is_private));
 
 const { excessCategories } = useDebtCategoryOptions(debtDirection);
@@ -102,53 +105,75 @@ const {
 
 /**
  * `immediate` обязателен: страница может отрендерить шторку сразу открытой, и
- * без первого прогона сумма осталась бы нулевой, а счёт — невыбранным.
+ * без первого прогона счёт остался бы невыбранным.
  */
 watch(
   () => props.modelValue,
   (isOpen) => {
     if (!isOpen) return;
-    const linkedAccountId = props.debts.find((d) => d.account_id)?.account_id;
-    selectedAccountId.value = linkedAccountId || props.accounts[0]?.id || null;
-    reset(totalDebt.value);
+    pickDefaultAccount();
   },
   { immediate: true },
 );
 
-// --- Предпросмотр распределения (FIFO: сначала самые старые долги) ---
+function pickDefaultAccount() {
+  const linkedAccountId = props.debts.find((d) => d.account_id)?.account_id;
+  selectedAccountId.value = linkedAccountId || props.accounts[0]?.id || null;
+}
 
-type DistributionStatus = 'offset' | 'closed' | 'forgiven' | 'paidAndForgiven' | 'partial' | 'open';
+// Счета могут приехать уже после открытия шторки: без счёта платёж не отправить.
+watch(
+  () => props.accounts,
+  () => {
+    if (props.modelValue && !selectedAccountId.value) pickDefaultAccount();
+  },
+);
 
-const debtDistribution = computed(() => {
-  const sorted = sortDebtsByDateAsc(props.debts);
-  let budget = paymentAmount.value;
-  return sorted.map((debt) => {
-    // Зачёт ложится раньше платежа — так его проводит и `useCloseAllDebts`.
-    const left = remainingAfterOffset(settlement.value, debt);
-    const offset = debt.remaining_amount - left;
-    const allocated = Math.min(budget, left);
-    budget -= allocated;
-    const willForgive = forgiveRemainder.value && allocated < left;
-    return {
-      debt,
-      covered: offset + allocated,
-      forgiven: willForgive ? left - allocated : 0,
-      status: (left <= 0
-        ? 'offset'
-        : allocated >= left
-          ? 'closed'
-          : willForgive
-            ? // Часть уходит со счёта, часть списывается: назвать это просто
-              // «Простится» значило бы спрятать реальное списание денег.
-              allocated > 0
-              ? 'paidAndForgiven'
-              : 'forgiven'
-            : allocated > 0
-              ? 'partial'
-              : 'open') as DistributionStatus,
-    };
-  });
+/**
+ * Итога нет (открытие заново, остатки поменялись): форма держала бы сумму и итог прошлого
+ * раза и на миг показала бы «Сумма превышает долг», поэтому сумма — в ноль. Пришёл итог —
+ * стартовая сумма весь остаток, как его посчитал сервер.
+ */
+watch(baseline, (value) => reset(value ? undefined : 0));
+
+// --- Предпросмотр распределения: считает сервер ---
+
+const {
+  preview,
+  error: previewError,
+  paymentOptions,
+  retry: retryPreview,
+  canRetry: canRetryPreview,
+  isSettled,
+  isLoading: isPreviewLoading,
+} = useCloseAllPreview({
+  debts: () => props.debts,
+  open: () => props.modelValue,
+  amount: paymentAmount,
+  forgiveRemainder,
+  baseline,
 });
+
+/** Без стартового итога форме нечего показывать — остаётся только причина отказа. */
+const isBlocked = computed(() => !!previewError.value && baseline.value === null);
+const previewErrorText = computed(
+  () => getServerErrorMessage(previewError.value) ?? 'Не удалось рассчитать закрытие долгов',
+);
+
+const listRows = computed(() =>
+  preview.value
+    ? buildDistribution(props.debts, preview.value).map(({ debt, covered, forgiven, status }) => ({
+        debt,
+        amount: covered + forgiven,
+        status,
+      }))
+    : [],
+);
+
+/** Сумма, прощение и счёт нужны, пока деньги вообще двигаются: полный зачёт обходится без них. */
+const showPaymentControls = computed(() => isReady.value && !isFullOffset.value);
+
+const skeletonRowCount = computed(() => Math.min(props.debts.length, 5));
 
 const STATUS_META = {
   offset: { label: 'Зачтётся', class: 'text-success' },
@@ -163,7 +188,7 @@ const STATUS_META = {
 const CLOSING_STATUSES: DistributionStatus[] = ['offset', 'closed', 'forgiven', 'paidAndForgiven'];
 
 const closingCount = computed(
-  () => debtDistribution.value.filter((d) => CLOSING_STATUSES.includes(d.status)).length,
+  () => listRows.value.filter((row) => CLOSING_STATUSES.includes(row.status)).length,
 );
 
 /**
@@ -195,38 +220,25 @@ const forgivenAfter = computed(
 
 const isValid = computed(() => {
   if (!selectedAccountId.value || props.debts.length === 0) return false;
+  // Отправлять можно только то, что сервер уже рассчитал для текущего ввода.
+  if (!isSettled.value) return false;
   // Встречные долги, равные друг другу, закрываются одним зачётом, без платежа.
   if (paymentAmount.value <= 0 && !forgiveRemainder.value && totalDebt.value > 0) return false;
   if (isOverpayment.value && !excessCategoryId.value) return false;
   return true;
 });
 
-const progressPercent = computed(() => {
-  if (!props.total) return 0;
-  return ((props.progress || 0) / props.total) * 100;
-});
-
 const confirmLabel = computed(() => {
-  if (props.isClosing) return `Закрываем ${props.progress ?? 0} из ${props.total ?? 0}`;
+  if (props.isClosing) return 'Закрываем…';
   if (isFullOffset.value) return 'Зачесть все долги';
   if (forgiveRemainder.value && paymentAmount.value === 0) return 'Простить все долги';
   if (isMixedCurrency.value || paymentAmount.value >= totalDebt.value) return 'Закрыть все долги';
   return `Внести ${formatCurrency(paymentAmount.value, debtCurrency.value, { showSymbol: false })}`;
 });
 
-// Гаптика по завершении: успех — если дошли до конца списка.
-watch(
-  () => props.isClosing,
-  (closing, wasClosing) => {
-    if (wasClosing && !closing && props.modelValue) {
-      trigger(props.progress === props.total ? 'success' : 'error');
-    }
-  },
-);
-
 function setOpen(value: boolean) {
-  // Пока платежи идут по одному, закрытие шторки оставило бы процесс без
-  // индикатора — держим её открытой до конца.
+  // Пока расчёт идёт, закрытие шторки оставило бы процесс без индикатора —
+  // держим её открытой до конца.
   if (props.isClosing) return;
   emit('update:modelValue', value);
 }
@@ -234,9 +246,9 @@ function setOpen(value: boolean) {
 function confirm() {
   if (!isValid.value || !selectedAccountId.value || props.isClosing) return;
   trigger('selection');
+  // Параметры платежа — те самые, по которым сервер рассчитал предпросмотр.
   emit('confirm', selectedAccountId.value, {
-    paymentAmount: paymentAmount.value,
-    forgiveRemainder: forgiveRemainder.value,
+    ...paymentOptions.value,
     excessCategoryId: isOverpayment.value ? excessCategoryId.value : undefined,
   });
 }
@@ -269,179 +281,216 @@ function confirm() {
         <span
           class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-caption font-medium"
           :class="
-            debtDirection === 'given'
-              ? 'bg-debt-given-light text-debt-given'
-              : 'bg-debt-received-light text-debt-received'
+            !isReady
+              ? 'bg-primary/10 text-primary'
+              : debtDirection === 'given'
+                ? 'bg-debt-given-light text-debt-given'
+                : 'bg-debt-received-light text-debt-received'
           "
         >
           <UIcon name="person" size="xs" />
           {{ personName }}
         </span>
-        <span class="text-caption text-text-tertiary-light dark:text-text-tertiary-dark">
+        <span
+          v-if="isReady"
+          class="text-caption text-text-tertiary-light dark:text-text-tertiary-dark"
+        >
           {{ debtDirection === 'given' ? 'вам должны' : 'вы должны' }} · {{ debts.length }}
           {{ pluralize(debts.length, 'долг', 'долга', 'долгов') }}
         </span>
       </div>
 
-      <!--
-        Сумма-героем — та же раскладка, что в шторке одиночного платежа
-        (`PaymentDrawer`), поэтому она вынесена в `entities/debt`.
-      -->
-      <!-- Полный зачёт денег не двигает: ни суммы, ни счёта у него нет. -->
-      <DebtAmountHeadline
-        v-if="!isMixedCurrency && !isFullOffset"
-        v-model="paymentAmount"
-        :currency-symbol="currencySymbol"
-        :disabled="isClosing"
-        input-testid="close-all-amount-input"
-      />
-
-      <!--
-        Разные валюты: одной суммой их не набрать — сумма платежа зафиксирована
-        полным итогом, а выбор сводится к «оплатить» или «простить».
-      -->
-      <div v-else-if="isMixedCurrency" class="flex flex-col items-center gap-1">
-        <p
-          v-for="item in totalsByCurrency"
-          :key="item.currency"
-          class="text-2xl font-semibold tabular-nums text-text-primary-light dark:text-text-primary-dark"
+      <div
+        v-if="previewError"
+        data-testid="close-all-preview-error"
+        class="flex items-center justify-between gap-3 rounded-xl bg-danger/5 border border-danger/20 p-3 text-sm text-danger"
+      >
+        <p>{{ previewErrorText }}</p>
+        <UButton
+          v-if="canRetryPreview"
+          variant="ghost"
+          size="sm"
+          data-testid="close-all-preview-retry"
+          @click="retryPreview"
         >
-          {{ formatCurrency(item.amount, item.currency) }}
-        </p>
+          Повторить
+        </UButton>
       </div>
 
-      <PaymentPresetRow
-        v-if="!isFullOffset"
-        v-model:amount="paymentAmount"
-        v-model:forgive-remainder="forgiveRemainder"
-        :total="totalDebt"
-        :disabled="isClosing"
-        :show-half="!isMixedCurrency"
-        id-prefix="close-all-preset"
-      />
+      <template v-if="!isBlocked">
+        <Skeleton
+          v-if="isPreviewLoading"
+          data-testid="close-all-amount-skeleton"
+          class="mx-auto h-10 w-44 rounded-lg"
+        />
+        <template v-else-if="isReady">
+          <!--
+            Сумма-героем — та же раскладка, что в шторке одиночного платежа
+            (`PaymentDrawer`), поэтому она вынесена в `entities/debt`. Полный зачёт
+            денег не двигает: ни суммы, ни счёта у него нет.
+          -->
+          <DebtAmountHeadline
+            v-if="showPaymentControls && !isMixedCurrency"
+            v-model="paymentAmount"
+            :currency-symbol="currencySymbol"
+            :disabled="isClosing"
+            input-testid="close-all-amount-input"
+          />
 
-      <!-- Живой предпросмотр по всем долгам сразу -->
-      <DebtProgressMeter
-        v-if="!isMixedCurrency"
-        size="sm"
-        :total="aggregate.total"
-        :paid="paidAfter"
-        :forgiven="forgivenAfter"
-        :currency="debtCurrency"
-        :hidden="isPrivate"
-      />
+          <!--
+            Разные валюты: одной суммой их не набрать — выбор сводится к «оплатить» или
+            «простить», а сумма платежа остаётся нулевой.
+          -->
+          <div v-else-if="isMixedCurrency" class="flex flex-col items-center gap-1">
+            <p
+              v-for="item in totalsByCurrency"
+              :key="item.currency"
+              class="text-2xl font-semibold tabular-nums text-text-primary-light dark:text-text-primary-dark"
+            >
+              {{ formatCurrency(item.amount, item.currency) }}
+            </p>
+          </div>
 
-      <!--
+          <PaymentPresetRow
+            v-if="showPaymentControls"
+            v-model:amount="paymentAmount"
+            v-model:forgive-remainder="forgiveRemainder"
+            :total="totalDebt"
+            :disabled="isClosing"
+            :show-half="!isMixedCurrency"
+            id-prefix="close-all-preset"
+          />
+
+          <!-- Живой предпросмотр по всем долгам сразу -->
+          <DebtProgressMeter
+            v-if="!isMixedCurrency"
+            size="sm"
+            :total="aggregate.total"
+            :paid="paidAfter"
+            :forgiven="forgivenAfter"
+            :currency="debtCurrency"
+            :hidden="isPrivate"
+          />
+        </template>
+
+        <!--
         Список долгов и есть распределение: сумма слева — что достанется долгу,
         подпись справа — что с ним станет.
       -->
-      <div class="space-y-2">
-        <div class="flex items-baseline justify-between gap-2">
+        <div class="space-y-2">
+          <div class="flex items-baseline justify-between gap-2">
+            <p
+              class="text-body-sm font-medium text-text-secondary-light dark:text-text-secondary-dark"
+            >
+              Куда пойдут деньги
+            </p>
+            <p
+              v-if="preview"
+              class="text-caption text-text-tertiary-light dark:text-text-tertiary-dark"
+            >
+              закроется {{ closingCount }} из {{ debts.length }}
+            </p>
+          </div>
           <p
-            class="text-body-sm font-medium text-text-secondary-light dark:text-text-secondary-dark"
+            v-if="offsetAmount > 0"
+            data-testid="close-all-offset-note"
+            class="text-caption text-text-secondary-light dark:text-text-secondary-dark"
           >
-            Куда пойдут деньги
+            Сначала зачёт: по {{ formatCurrency(offsetAmount, debtCurrency) }} с каждой стороны.
           </p>
-          <p class="text-caption text-text-tertiary-light dark:text-text-tertiary-dark">
-            закроется {{ closingCount }} из {{ debts.length }}
+
+          <ul class="rounded-xl border border-border-light dark:border-border-dark overflow-hidden">
+            <li
+              v-for="n in isPreviewLoading ? skeletonRowCount : 0"
+              :key="`skeleton-${n}`"
+              data-testid="close-all-skeleton-row"
+              class="flex items-center justify-between gap-3 px-3 py-2.5 border-b border-border-light dark:border-border-dark last:border-b-0"
+            >
+              <Skeleton class="h-4 w-32" />
+              <span class="shrink-0 space-y-1.5">
+                <Skeleton class="ml-auto h-4 w-20" />
+                <Skeleton class="ml-auto h-3 w-14" />
+              </span>
+            </li>
+            <li
+              v-for="item in listRows"
+              :key="item.debt.id"
+              data-testid="close-all-debt-row"
+              class="flex items-center justify-between gap-3 px-3 py-2.5 border-b border-border-light dark:border-border-dark last:border-b-0"
+              :class="item.status === 'open' && 'opacity-55'"
+            >
+              <span
+                class="min-w-0 flex-1 truncate text-body-sm text-text-primary-light dark:text-text-primary-dark"
+              >
+                {{ item.debt.name }}
+              </span>
+              <span class="shrink-0 text-right">
+                <span
+                  class="block text-body-sm font-semibold tabular-nums text-text-primary-light dark:text-text-primary-dark"
+                >
+                  {{ formatCurrency(item.amount, item.debt.currency || DEFAULT_CURRENCY) }}
+                </span>
+                <span class="block text-caption" :class="STATUS_META[item.status].class">
+                  {{ STATUS_META[item.status].label }}
+                </span>
+              </span>
+            </li>
+          </ul>
+        </div>
+
+        <div v-if="showPaymentControls" class="space-y-2" :inert="isClosing || undefined">
+          <AccountSelector
+            :accounts="accounts"
+            :selected-id="selectedAccountId"
+            :label="debtDirection === 'given' ? 'Куда зачислить' : 'С какого счёта списать'"
+            @select="selectedAccountId = $event"
+          />
+          <p v-if="!selectedAccountId" class="text-xs text-warning">
+            Выберите счёт для проведения платежей
           </p>
         </div>
-        <p
-          v-if="offsetAmount > 0"
-          data-testid="close-all-offset-note"
-          class="text-caption text-text-secondary-light dark:text-text-secondary-dark"
+
+        <DebtPaymentFields
+          v-if="showPaymentControls"
+          v-model:amount="paymentAmount"
+          v-model:forgive-remainder="forgiveRemainder"
+          v-model:excess-category-id="excessCategoryId"
+          :excess-categories="excessCategories"
+          :is-overpayment="isOverpayment"
+          :excess="excess"
+          :remainder="remainder"
+          :inert="isClosing || undefined"
+          :remaining="totalDebt"
+          :currency="debtCurrency"
+          :direction="debtDirection"
         >
-          Сначала зачёт: по {{ formatCurrency(offsetAmount, debtCurrency) }} с каждой стороны.
-        </p>
-
-        <ul class="rounded-xl border border-border-light dark:border-border-dark overflow-hidden">
-          <li
-            v-for="item in debtDistribution"
-            :key="item.debt.id"
-            data-testid="close-all-debt-row"
-            class="flex items-center justify-between gap-3 px-3 py-2.5 border-b border-border-light dark:border-border-dark last:border-b-0"
-            :class="item.status === 'open' && 'opacity-55'"
-          >
-            <span
-              class="min-w-0 flex-1 truncate text-body-sm text-text-primary-light dark:text-text-primary-dark"
-            >
-              {{ item.debt.name }}
-            </span>
-            <span class="shrink-0 text-right">
-              <span
-                class="block text-body-sm font-semibold tabular-nums text-text-primary-light dark:text-text-primary-dark"
-              >
-                {{
-                  formatCurrency(
-                    item.covered + item.forgiven,
-                    item.debt.currency || DEFAULT_CURRENCY,
-                  )
-                }}
-              </span>
-              <span class="block text-caption" :class="STATUS_META[item.status].class">
-                {{ STATUS_META[item.status].label }}
-              </span>
-            </span>
-          </li>
-        </ul>
-      </div>
-
-      <div v-if="!isFullOffset" class="space-y-2" :inert="isClosing || undefined">
-        <AccountSelector
-          :accounts="accounts"
-          :selected-id="selectedAccountId"
-          :label="debtDirection === 'given' ? 'Куда зачислить' : 'С какого счёта списать'"
-          @select="selectedAccountId = $event"
-        />
-        <p v-if="!selectedAccountId" class="text-xs text-warning">
-          Выберите счёт для проведения платежей
-        </p>
-      </div>
-
-      <DebtPaymentFields
-        v-if="!isFullOffset"
-        v-model:amount="paymentAmount"
-        v-model:forgive-remainder="forgiveRemainder"
-        v-model:excess-category-id="excessCategoryId"
-        :excess-categories="excessCategories"
-        :is-overpayment="isOverpayment"
-        :excess="excess"
-        :remainder="remainder"
-        :inert="isClosing || undefined"
-        :remaining="totalDebt"
-        :currency="debtCurrency"
-        :direction="debtDirection"
-      >
-        <template #forgive-note>
-          <template v-if="offsetAmount > 0">
-            Остаток после зачёта —
-            <span class="font-semibold">{{ formatCurrency(totalDebt, debtCurrency) }}</span>
-            — будет прощён и списан как подарок.
-          </template>
-          <template v-else>
-            Все долги
-            <template v-if="isMixedCurrency">
-              (
-              <span v-for="(item, i) in totalsByCurrency" :key="item.currency">
-                <span class="font-semibold">{{ formatCurrency(item.amount, item.currency) }}</span>
-                <template v-if="i < totalsByCurrency.length - 1">+</template>
-              </span>
-              )
+          <template #forgive-note>
+            <template v-if="offsetAmount > 0">
+              Остаток после зачёта —
+              <span class="font-semibold">{{ formatCurrency(totalDebt, debtCurrency) }}</span>
+              — будет прощён и списан как подарок.
             </template>
             <template v-else>
-              на сумму
-              <span class="font-semibold">{{ formatCurrency(totalDebt, debtCurrency) }}</span>
+              Все долги
+              <template v-if="isMixedCurrency">
+                (
+                <span v-for="(item, i) in totalsByCurrency" :key="item.currency">
+                  <span class="font-semibold">
+                    {{ formatCurrency(item.amount, item.currency) }}
+                  </span>
+                  <template v-if="i < totalsByCurrency.length - 1">+</template>
+                </span>
+                )
+              </template>
+              <template v-else>
+                на сумму
+                <span class="font-semibold">{{ formatCurrency(totalDebt, debtCurrency) }}</span>
+              </template>
+              будут прощены и списаны как подарок.
             </template>
-            будут прощены и списаны как подарок.
           </template>
-        </template>
-      </DebtPaymentFields>
+        </DebtPaymentFields>
+      </template>
     </div>
-
-    <template v-if="isClosing" #footer>
-      <!-- Платежи проводятся по одному, поэтому прогресс — это реальные
-           проведённые транзакции, а не анимация ожидания. -->
-      <UProgressBar :value="progressPercent" color="primary" size="sm" />
-    </template>
   </UOverlay>
 </template>

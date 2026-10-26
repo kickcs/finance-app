@@ -23,6 +23,7 @@ export function toTransactionResponse(
     toAmount: transaction.toAmountValue,
     toCurrency: transaction.toCurrency,
     paymentGroupId: transaction.paymentGroupId,
+    settlementId: transaction.settlementId,
     paymentSibling: paymentSibling
       ? {
           id: paymentSibling.id,

@@ -246,6 +246,36 @@ export class Debt extends AggregateRoot<string> {
     }
   }
 
+  /**
+   * Снимает влияние отменяемого расчёта: возвращает погашенное и прощённое в
+   * остаток (не выше суммы долга). Остаток > 0 снова делает долг открытым.
+   */
+  revertSettlement(applied: number, forgiven: number): void {
+    if (applied < 0 || forgiven < 0) {
+      throw new Error('Reverted amounts must not be negative');
+    }
+    const restored = this._remainingAmount.add(Money.create(applied + forgiven, this.currency));
+    this._remainingAmount =
+      restored.amount > this._totalAmount.amount ? this._totalAmount : restored;
+    this._forgivenAmount = Math.max(0, Math.round((this._forgivenAmount - forgiven) * 100) / 100);
+
+    if (this._remainingAmount.amount > 0) this.reopen();
+  }
+
+  /**
+   * Открывает закрытый без расчёта долг с остатком по уцелевшим записям.
+   * Открытый долг с нулевым остатком не бывает, поэтому такой остаток — отказ.
+   */
+  reopenWithRemaining(remaining: number): void {
+    const next = Math.min(this._totalAmount.amount, Money.create(remaining, this.currency).amount);
+    if (next <= 0) {
+      throw new Error('Cannot reopen a debt with nothing left to repay');
+    }
+    this._remainingAmount = Money.create(next, this.currency);
+    this._forgivenAmount = 0;
+    this.reopen();
+  }
+
   close(): void {
     if (!this._isClosed) {
       this._isClosed = true;
@@ -253,6 +283,13 @@ export class Debt extends AggregateRoot<string> {
       this._remainingAmount = Money.zero(this.currency);
       this.addDomainEvent(new DebtClosedEvent(this.id, this._userId));
     }
+  }
+
+  /** Обратное закрытию: снимает отметки закрытия; остаток выставляет вызывающий. */
+  private reopen(): void {
+    this._isClosed = false;
+    this._closedAt = null;
+    this._closeTransactionId = null;
   }
 
   /**

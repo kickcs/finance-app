@@ -3,20 +3,16 @@ import { useAccounts, conversionTargetBalance } from '@/entities/account';
 import { transactionsApi } from '@/entities/transaction';
 import { useProfile } from '@/shared/api';
 import type { Account } from '@/shared/api/database.types';
+import { getServerMessageText } from '@/shared/api/http';
 import { queryClient } from '@/shared/api/queryClient';
 import { invalidateTransactionRelated, invalidateAccountRelated } from '@/shared/api/invalidation';
 import { useToast } from '@/shared/ui';
 
 const CONVERSION_DESCRIPTION = 'Перевод счёта в кредитную карту';
 
-// ValidationPipe отдаёт `message` списком, обычные 400 — строкой.
 function serverValidationMessage(e: unknown): string | undefined {
   if (!e || typeof e !== 'object' || !('status' in e) || !('data' in e)) return undefined;
-  const httpError = e as { status: number; data?: { message?: string | string[] } };
-  if (httpError.status !== 400) return undefined;
-  const message = httpError.data?.message;
-  if (Array.isArray(message)) return message.join('. ') || undefined;
-  return message || undefined;
+  return e.status === 400 ? getServerMessageText(e.data) : undefined;
 }
 
 export function useEditAccount(userId: MaybeRefOrGetter<string | null>) {
