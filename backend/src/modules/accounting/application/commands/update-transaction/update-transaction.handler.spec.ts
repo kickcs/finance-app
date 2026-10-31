@@ -524,4 +524,54 @@ describe('UpdateTransactionHandler', () => {
       expect(db['acc-card'].UZS).toBe(439_950);
     });
   });
+
+  describe('корректировка баланса', () => {
+    const givenAdjustment = (amount: number, isNegative: boolean) => {
+      const adjustment = Transaction.createAdjustment(
+        'tx-card',
+        'user-1',
+        'acc-card',
+        amount,
+        'UZS',
+        now,
+        isNegative,
+      );
+      mockTransactionRepository.findById.mockResolvedValue(adjustment);
+      return adjustment;
+    };
+
+    it('положительная при смене счёта уходит со старого и приходит на новый', async () => {
+      givenAdjustment(500, false);
+
+      await update({ accountId: 'acc-other' });
+
+      expect(db['acc-card'].UZS).toBe(439_500);
+      expect(db['acc-other'].UZS).toBe(1_000_500);
+    });
+
+    it('отрицательная при смене счёта возвращается старому и списывается с нового', async () => {
+      givenAdjustment(500, true);
+
+      await update({ accountId: 'acc-other' });
+
+      expect(db['acc-card'].UZS).toBe(440_500);
+      expect(db['acc-other'].UZS).toBe(999_500);
+    });
+
+    it('смена суммы на том же счёте двигает баланс на разницу', async () => {
+      givenAdjustment(500, false);
+
+      await update({ amount: 800 });
+
+      expect(db['acc-card'].UZS).toBe(440_300);
+    });
+
+    it('смена знака разворачивает поправку', async () => {
+      givenAdjustment(500, false);
+
+      await update({ isDebtRelated: true });
+
+      expect(db['acc-card'].UZS).toBe(439_000);
+    });
+  });
 });

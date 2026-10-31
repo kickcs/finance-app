@@ -10,24 +10,30 @@ export class BalanceCalculationService {
    * Apply a transaction's effect on an account balance
    */
   static applyTransaction(account: Account, transaction: Transaction): void {
-    const type = transaction.type.value;
-    const amount = transaction.amountValue;
-    const currency = transaction.currency;
+    BalanceCalculationService.move(account, transaction, 1);
+  }
 
-    if (type === 'income') {
-      account.credit(amount, currency);
-    } else if (type === 'expense') {
-      account.debit(amount, currency);
-    } else if (type === 'transfer') {
-      // For transfers, this handles the source account (debit)
-      account.debit(amount, currency);
-    } else if (type === 'adjustment') {
-      if (!transaction.isDebtRelated) {
-        account.credit(amount, currency);
-      } else {
-        account.debit(amount, currency);
-      }
-    }
+  /**
+   * Направление денег по счёту у операции без второго счёта: 1 — зачисление, −1 — списание.
+   * У корректировки `isDebtRelated` значит «минус».
+   */
+  static nonTransferDirection(type: string, isDebtRelated: boolean): 1 | -1 | 0 {
+    if (type === 'income') return 1;
+    if (type === 'expense') return -1;
+    if (type === 'adjustment') return isDebtRelated ? -1 : 1;
+    return 0;
+  }
+
+  /** Деньги по счёту-источнику: `sign` 1 — провести операцию, −1 — развернуть. */
+  private static move(account: Account, transaction: Transaction, sign: 1 | -1): void {
+    // Перевод для счёта-источника — списание.
+    const direction = transaction.type.isTransfer()
+      ? -1
+      : BalanceCalculationService.nonTransferDirection(
+          transaction.type.value,
+          transaction.isDebtRelated,
+        );
+    account.applyDelta(direction * sign * transaction.amountValue, transaction.currency);
   }
 
   /**
@@ -45,24 +51,7 @@ export class BalanceCalculationService {
    * Reverse a transaction's effect on an account balance
    */
   static reverseTransaction(account: Account, transaction: Transaction): void {
-    const type = transaction.type.value;
-    const amount = transaction.amountValue;
-    const currency = transaction.currency;
-
-    if (type === 'income') {
-      account.debit(amount, currency);
-    } else if (type === 'expense') {
-      account.credit(amount, currency);
-    } else if (type === 'transfer') {
-      // For transfers, this reverses the source account (credit back)
-      account.credit(amount, currency);
-    } else if (type === 'adjustment') {
-      if (!transaction.isDebtRelated) {
-        account.debit(amount, currency);
-      } else {
-        account.credit(amount, currency);
-      }
-    }
+    BalanceCalculationService.move(account, transaction, -1);
   }
 
   /**

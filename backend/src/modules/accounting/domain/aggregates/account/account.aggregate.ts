@@ -305,6 +305,15 @@ export class Account extends AggregateRoot<string> {
     );
   }
 
+  /** Знаковое изменение остатка: плюс — зачисление, минус — списание, ноль — ничего. */
+  applyDelta(delta: number, currency: string): void {
+    if (delta > 0) {
+      this.credit(delta, currency);
+    } else if (delta < 0) {
+      this.debit(-delta, currency);
+    }
+  }
+
   markDeleted(): void {
     this.addDomainEvent(new AccountDeletedEvent(this.id, this._userId));
   }

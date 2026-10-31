@@ -145,6 +145,35 @@ describe('Account Aggregate', () => {
     });
   });
 
+  describe('applyDelta', () => {
+    const wallet = () => {
+      const account = Account.create('acc-1', 'user-1', 'Wallet', 'wallet', '#000', 'basic', 0, [
+        { currency: 'USD', balance: 1000 },
+      ]);
+      account.clearDomainEvents();
+      return account;
+    };
+
+    it('плюс зачисляет, минус списывает', () => {
+      const account = wallet();
+
+      account.applyDelta(250, 'USD');
+      account.applyDelta(-100.5, 'USD');
+
+      expect(account.getTotalBalance('USD')).toBe(1149.5);
+      expect(account.domainEvents).toHaveLength(2);
+    });
+
+    it('ноль ничего не меняет и событий не поднимает', () => {
+      const account = wallet();
+
+      account.applyDelta(0, 'EUR');
+
+      expect(account.balances).toHaveLength(1);
+      expect(account.domainEvents).toHaveLength(0);
+    });
+  });
+
   describe('getBalance', () => {
     it('should return balance for existing currency', () => {
       const account = Account.create('acc-1', 'user-1', 'Wallet', 'wallet', '#000', 'basic', 0, [

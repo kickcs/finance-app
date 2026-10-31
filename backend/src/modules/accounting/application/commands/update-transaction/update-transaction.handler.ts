@@ -16,6 +16,7 @@ import { toTransactionResponse } from '../../helpers/to-transaction-response';
 import { Account } from '../../../domain/aggregates/account';
 import { Transaction } from '../../../domain/aggregates/transaction';
 import { ALL_DEBT_CATEGORY_IDS } from '../../../domain/constants/default-categories';
+import { BalanceCalculationService } from '../../../domain/services/balance-calculation.service';
 
 const SETTLEMENT_RECORD_LOCKED =
   'Запись расчёта по долгу меняется со стороны долга: отмените расчёт и проведите заново';
@@ -96,6 +97,7 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
     const oldToAccountId = transaction.toAccountId;
     const oldToAmount = transaction.toAmountValue;
     const oldToCurrency = transaction.toCurrency;
+    const oldIsDebtRelated = transaction.isDebtRelated;
 
     // Determine new values (or keep old if not changed)
     const newAccountId = data.accountId ?? oldAccountId;
@@ -105,6 +107,7 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
     const newToAccountId = data.toAccountId !== undefined ? data.toAccountId : oldToAccountId;
     const newToAmount = data.toAmount !== undefined ? data.toAmount : oldToAmount;
     const newToCurrency = data.toCurrency !== undefined ? data.toCurrency : oldToCurrency;
+    const newIsDebtRelated = data.isDebtRelated ?? oldIsDebtRelated;
 
     // Check if any balance-affecting field changed
     const balanceChanged =
@@ -114,7 +117,9 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
       oldType !== newType ||
       oldToAccountId !== newToAccountId ||
       oldToAmount !== newToAmount ||
-      oldToCurrency !== newToCurrency;
+      oldToCurrency !== newToCurrency ||
+      // У корректировки признак задаёт знак поправки.
+      (newType === 'adjustment' && oldIsDebtRelated !== newIsDebtRelated);
 
     const sibling = await this.transactionRepository.findPaymentSibling(transaction);
     // Вторая часть оплаты есть после правки: её задали или не тронули существующую.
@@ -126,7 +131,6 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
           'A transaction paid from two accounts must stay income or expense',
         );
       }
-      const newIsDebtRelated = data.isDebtRelated ?? transaction.isDebtRelated;
       const newDebtId = data.debtId !== undefined ? data.debtId : transaction.debtId;
       if (newIsDebtRelated || newDebtId) {
         throw new BadRequestException('Debt-related transactions cannot be paid from two accounts');
@@ -179,12 +183,14 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
             amount: oldAmount,
             currency: oldCurrency,
             type: oldType,
+            isDebtRelated: oldIsDebtRelated,
           });
           await this.applyNonTransfer(manager, accounts, command.userId, {
             accountId: newAccountId,
             amount: newAmount,
             currency: newCurrency,
             type: newType,
+            isDebtRelated: newIsDebtRelated,
           });
         } else if (oldType === 'transfer' && newType === 'transfer') {
           await this.handleTransferBalanceUpdate(
@@ -221,6 +227,7 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
             amount: newAmount,
             currency: newCurrency,
             type: newType,
+            isDebtRelated: newIsDebtRelated,
           });
         } else {
           await this.reverseNonTransfer(manager, accounts, command.userId, {
@@ -228,6 +235,7 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
             amount: oldAmount,
             currency: oldCurrency,
             type: oldType,
+            isDebtRelated: oldIsDebtRelated,
           });
           await this.applyTransfer(
             manager,
@@ -365,13 +373,7 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
     userId: string,
     effect: NonTransferEffect,
   ): Promise<void> {
-    const account = await this.loadAccount(manager, accounts, effect.accountId, userId);
-
-    if (effect.type === 'income') {
-      account.debit(effect.amount, effect.currency);
-    } else if (effect.type === 'expense') {
-      account.credit(effect.amount, effect.currency);
-    }
+    await this.moveNonTransfer(manager, accounts, userId, effect, -1);
   }
 
   private async applyNonTransfer(
@@ -380,13 +382,23 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
     userId: string,
     effect: NonTransferEffect,
   ): Promise<void> {
-    const account = await this.loadAccount(manager, accounts, effect.accountId, userId);
+    await this.moveNonTransfer(manager, accounts, userId, effect, 1);
+  }
 
-    if (effect.type === 'income') {
-      account.credit(effect.amount, effect.currency);
-    } else if (effect.type === 'expense') {
-      account.debit(effect.amount, effect.currency);
-    }
+  /** `sign` 1 — провести влияние на счёт, −1 — развернуть. */
+  private async moveNonTransfer(
+    manager: EntityManager,
+    accounts: AccountCache,
+    userId: string,
+    effect: NonTransferEffect,
+    sign: 1 | -1,
+  ): Promise<void> {
+    const account = await this.loadAccount(manager, accounts, effect.accountId, userId);
+    const direction = BalanceCalculationService.nonTransferDirection(
+      effect.type,
+      effect.isDebtRelated,
+    );
+    account.applyDelta(direction * sign * effect.amount, effect.currency);
   }
 
   private async reverseTransfer(
@@ -437,6 +449,7 @@ interface NonTransferEffect {
   amount: number;
   currency: string;
   type: string;
+  isDebtRelated: boolean;
 }
 
 function toEffect(transaction: Transaction): NonTransferEffect {
@@ -445,6 +458,7 @@ function toEffect(transaction: Transaction): NonTransferEffect {
     amount: transaction.amountValue,
     currency: transaction.currency,
     type: transaction.typeValue,
+    isDebtRelated: transaction.isDebtRelated,
   };
 }
 
@@ -453,6 +467,7 @@ function isSameEffect(a: NonTransferEffect, b: NonTransferEffect): boolean {
     a.accountId === b.accountId &&
     a.amount === b.amount &&
     a.currency === b.currency &&
-    a.type === b.type
+    a.type === b.type &&
+    a.isDebtRelated === b.isDebtRelated
   );
 }
