@@ -9,6 +9,11 @@ export { default as PaymentSplitBar } from './ui/PaymentSplitBar.vue';
 
 // Model/Types
 export * from './model/types';
+export {
+  TRANSACTION_TYPE_LABELS,
+  transactionTypeLabel,
+  type LabeledTransactionType,
+} from './model/typeLabels';
 
 // Composables
 export { useGroupedTransactions } from './model/useGroupedTransactions';
@@ -17,6 +22,7 @@ export type { UseGroupedTransactionsOptions } from './model/useGroupedTransactio
 // Lib
 export { buildPaymentSiblingRow, paymentGroupIds, paymentTotal } from './lib/paymentGroup';
 export { isDebtRecordOutsideSettlement } from './lib/debtRecord';
+export { stripHash, normalizeTagInput } from './lib/hashtag';
 
 // API
 export * from './api';

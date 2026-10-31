@@ -12,26 +12,47 @@ import {
   TransactionGroupSkeleton,
   TransactionDetailPanel,
   useInfiniteTransactions,
+  useTransactionsSummary,
   useGroupedTransactions,
+  useHashtags,
+  stripHash,
 } from '@/entities/transaction';
-import type { Transaction } from '@/entities/transaction';
-import { SearchInput, useServerSearch } from '@/features/search-transactions';
+import type { BulkAction, Transaction, TransactionFilters } from '@/entities/transaction';
+import { useCategories } from '@/entities/category';
+import { SearchInput, useSearchTerm } from '@/features/search-transactions';
 import {
   EditTransactionModal,
   DeleteTransactionModal,
   useTransactionEditFlow,
 } from '@/features/edit-transaction';
+import {
+  BulkDock,
+  BulkSelectionBar,
+  BulkEditSheet,
+  useBulkSelection,
+  useBulkEditFlow,
+  useDeferredBulkDelete,
+  buildScopeChips,
+  formatTotals,
+  selectionTotals,
+} from '@/features/bulk-edit-transactions';
 import { useAccounts } from '@/entities/account';
 import { UTabs, UIcon, UButton, MasterDetailLayout } from '@/shared/ui';
+import { cn } from '@/shared/lib/utils';
 import { useIsDesktop } from '@/shared/lib/composables/useIsDesktop';
+import { useSuppressBottomNav } from '@/shared/lib/composables/useSuppressBottomNav';
 import { useExchangeRates } from '@/shared/api';
 import { ImportInboxBanner } from '@/widgets/ImportInboxBanner';
 
 // Page composables
 import { useHistoryFilters, TYPE_FILTER_ITEMS } from './model/useHistoryFilters';
+import type { FacetName } from './model/facets';
 import { useBalanceAfter } from './model/useBalanceAfter';
+import { useHistoryBulk } from './model/useHistoryBulk';
 import { computeDayTotal } from './lib/computeDayTotal';
-import HistoryFiltersSheet from './ui/HistoryFiltersSheet.vue';
+import { periodLabel } from './lib/historyPeriod';
+import HistoryFacetRail from './ui/HistoryFacetRail.vue';
+import HistoryFacetSheet from './ui/HistoryFacetSheet.vue';
 
 const router = useRouter();
 const isDesktop = useIsDesktop();
@@ -44,34 +65,22 @@ const { accounts } = useAccounts(userId);
 // Filters
 const {
   activeTypeFilter,
-  selectedAccountId,
-  selectedCategoryId,
-  activeFiltersCount,
+  period,
+  facetValues,
   serverFilters,
+  hasActiveFilters,
   usedCategories,
   handleTypeFilterChange,
-  clearAdditionalFilters,
+  showAfterCategoryMove,
+  showAfterTransfer,
+  clearFacet,
   resetAll,
 } = useHistoryFilters(userId);
 
-// Server-side search
-const {
-  searchTerm,
-  debouncedTerm,
-  results: searchResults,
-  isSearchActive,
-  isLoading: isSearchLoading,
-  hasNextPage: searchHasNextPage,
-  isFetchingNextPage: searchIsFetchingNextPage,
-  isFetching: searchIsFetching,
-  fetchNextPage: fetchNextSearchPage,
-  setQuery,
-  clearSearch,
-} = useServerSearch(userId);
+const { searchTerm, debouncedTerm, isSearchActive, setQuery, clearSearch } = useSearchTerm();
 
-// Строка управления морфится: поиск занимает её целиком. Пока идёт поиск, фильтр
-// по типу всё равно не применяется (поиск ходит на сервер без фильтров), поэтому
-// вкладки не показываем — иначе они выглядели бы рабочими, не будучи такими.
+// Строка управления морфится: поиск занимает её целиком. Поиск идёт мимо вкладок
+// и чипов, поэтому их не показываем — иначе они выглядели бы рабочими, не будучи такими.
 const isSearchOpen = ref(false);
 const searchInputRef = ref<InstanceType<typeof SearchInput> | null>(null);
 const searchButtonRef = ref<InstanceType<typeof UButton> | null>(null);
@@ -89,56 +98,29 @@ function closeSearch() {
   nextTick(() => (searchButtonRef.value?.$el as HTMLElement | undefined)?.focus());
 }
 
-// Filters sheet
-const isFiltersSheetOpen = ref(false);
+// Чип, открытый в шторке выбора
+const openFacet = ref<FacetName | null>(null);
 
-/** Чип активного фильтра: `icon` — категория, без него — точка цвета счёта */
-interface ActiveFilterChip {
-  key: string;
-  label: string;
-  ariaLabel: string;
-  color: string;
-  icon?: string;
-  clear: () => void;
-}
-
-const activeFilterChips = computed<ActiveFilterChip[]>(() => {
-  const chips: ActiveFilterChip[] = [];
-
-  const account = accounts.value.find((a) => a.id === selectedAccountId.value);
-  if (account) {
-    chips.push({
-      key: 'account',
-      label: account.name,
-      ariaLabel: `Убрать фильтр по счёту: ${account.name}`,
-      color: account.color,
-      clear: () => (selectedAccountId.value = null),
-    });
-  }
-
-  const category = usedCategories.value.find((c) => c.id === selectedCategoryId.value);
-  if (category) {
-    chips.push({
-      key: 'category',
-      label: category.name,
-      ariaLabel: `Убрать фильтр по категории: ${category.name}`,
-      color: category.color,
-      icon: category.icon,
-      clear: () => (selectedCategoryId.value = null),
-    });
-  }
-
-  return chips;
-});
-
-// Main transactions query with infinite scroll
-const { transactions, isLoading, hasNextPage, isFetchingNextPage, isFetching, fetchNextPage } =
-  useInfiniteTransactions(userId, serverFilters);
-
-// Use search results when searching, otherwise use main transactions
-const displayedTransactions = computed(() =>
-  isSearchActive.value ? searchResults.value : transactions.value,
+// Один фильтр на ленту, итог и «Изменить все»: разойдись они — правка задела бы не то, что на экране.
+const activeFilters = computed<TransactionFilters>(() =>
+  isSearchActive.value ? { search: debouncedTerm.value } : serverFilters.value,
 );
+
+const {
+  transactions: displayedTransactions,
+  isLoading,
+  hasNextPage,
+  isFetchingNextPage,
+  isFetching,
+  fetchNextPage,
+} = useInfiniteTransactions(userId, activeFilters);
+
+// Итог выборки: плашка внизу и «Показать N операций» в шторке чипа
+const {
+  summary,
+  isPlaceholderData: isSummaryStale,
+  refetch: refetchSummary,
+} = useTransactionsSummary(userId, activeFilters);
 
 // Group transactions by date
 const groupedTransactions = useGroupedTransactions(displayedTransactions, {
@@ -147,34 +129,9 @@ const groupedTransactions = useGroupedTransactions(displayedTransactions, {
   computeTotal: (txs) => computeDayTotal(txs, currency.value, convert),
 });
 
-// Loading and pagination state
-const currentIsLoading = computed(() =>
-  isSearchActive.value ? isSearchLoading.value : isLoading.value,
-);
-const currentHasNextPage = computed(() =>
-  isSearchActive.value ? searchHasNextPage.value : hasNextPage.value,
-);
-const currentIsFetchingNextPage = computed(() =>
-  isSearchActive.value ? searchIsFetchingNextPage.value : isFetchingNextPage.value,
-);
-const currentIsFetching = computed(() =>
-  isSearchActive.value ? searchIsFetching.value : isFetching.value,
-);
-
-function handleLoadMore() {
-  if (isSearchActive.value) {
-    fetchNextSearchPage();
-  } else {
-    fetchNextPage();
-  }
-}
-
 const isEmpty = computed(() => {
-  const hasFilters =
-    searchTerm.value.trim() !== '' ||
-    activeTypeFilter.value !== 'all' ||
-    activeFiltersCount.value > 0;
-  return hasFilters && displayedTransactions.value.length === 0 && !currentIsLoading.value;
+  const hasFilters = searchTerm.value.trim() !== '' || hasActiveFilters.value;
+  return hasFilters && displayedTransactions.value.length === 0 && !isLoading.value;
 });
 
 function resetEverything() {
@@ -184,9 +141,7 @@ function resetEverything() {
 }
 
 // Balance after
-const isFilterActive = computed(
-  () => isSearchActive.value || activeTypeFilter.value !== 'all' || activeFiltersCount.value > 0,
-);
+const isFilterActive = computed(() => isSearchActive.value || hasActiveFilters.value);
 const { getBalanceAfter } = useBalanceAfter(
   accounts,
   displayedTransactions,
@@ -210,14 +165,91 @@ const {
   closeEditModal,
 } = useTransactionEditFlow(userId);
 
+// --- Массовая правка -------------------------------------------------------
+const {
+  isSelecting,
+  selectedIds,
+  selectedCount,
+  start: startSelection,
+  toggle: toggleSelection,
+  selectAll,
+  isAllSelected,
+  selectableCount: countSelectable,
+  prune: pruneSelection,
+  exit: exitSelection,
+} = useBulkSelection();
+// Панель выбора встаёт на место навигации: переход по вкладке молча потерял бы отметки.
+useSuppressBottomNav(isSelecting);
+const { scheduleDelete } = useDeferredBulkDelete(userId);
+const { expenseCategories, incomeCategories } = useCategories(userId);
+const { hashtags } = useHashtags(userId);
+
+const targetCategories = computed(() => [...expenseCategories.value, ...incomeCategories.value]);
+const hashtagNames = computed(() => hashtags.value.map((h) => stripHash(h.tag)));
+
+const selectedRows = computed(() =>
+  displayedTransactions.value.filter((tx) => selectedIds.value.has(tx.id)),
+);
+const selectableCount = computed(() => countSelectable(displayedTransactions.value));
+const selectionTotalsLabel = computed(() =>
+  selectedRows.value.length > 0 ? formatTotals(selectionTotals(selectedRows.value)) : '',
+);
+
+// Ушедшие из списка строки (правка, фильтр) не должны попасть в запрос.
+watch(displayedTransactions, (rows) => pruneSelection(rows));
+
+/**
+ * После правки показываем, куда операции переехали: иначе отфильтрованный список просто опустеет.
+ * В поиске чипы не действуют, а найденное правкой не теряется — остаёмся в нём.
+ */
+function followAppliedAction(action: BulkAction) {
+  if (isSearchActive.value) return;
+  if (action.kind === 'category') showAfterCategoryMove(action.category_id);
+  else if (action.kind === 'transfer') showAfterTransfer(action.to_account_id);
+}
+
+const bulkFlow = useBulkEditFlow({
+  userId,
+  filters: () => activeFilters.value,
+  summary: () => summary.value,
+  refetchSummary: async () => (await refetchSummary()).data,
+  selectedIds: () => [...selectedIds.value],
+  scheduleDelete,
+  onApplied: followAppliedAction,
+  onFinished: exitSelection,
+});
+
+// Плашку прячет только поиск без запроса: лента под ним ещё отфильтрована скрытыми чипами.
+const showBulkDock = computed(() => !isSearchOpen.value || isSearchActive.value);
+const isBulkFiltered = computed(() => isSearchActive.value || hasActiveFilters.value);
+const bulkScopeChips = computed(() =>
+  buildScopeChips({
+    filters: activeFilters.value,
+    periodLabel: periodLabel(period.value),
+    categories: usedCategories.value,
+    accounts: accounts.value,
+  }),
+);
+
+const { categoryTypes: bulkCategoryTypes, sourceCategoryIds: bulkSourceCategoryIds } =
+  useHistoryBulk({
+    mode: bulkFlow.mode,
+    filters: () => activeFilters.value,
+    selectedRows: () => selectedRows.value,
+    categories: () => usedCategories.value,
+  });
+
+function handleLongPress(tx: Transaction) {
+  if (!isSelecting.value) startSelection(tx);
+}
+
 // Смена фильтра или запроса даёт другой список — прокрутку возвращаем в начало,
 // иначе пользователь остаётся на позиции, которой в новых данных уже нет
 // (а липкий заголовок дня показывает день из старого набора).
 const listRef = ref<InstanceType<typeof VirtualGroupedTransactionList> | null>(null);
 
-// Именно debouncedTerm: набор результатов меняется по нему, а не по каждому
-// нажатию клавиши — иначе список дёргался бы наверх прямо во время ввода.
-watch([serverFilters, debouncedTerm], () => {
+// Поиск входит в фильтр после дебаунса — список не дёргается наверх на каждом нажатии.
+watch(activeFilters, () => {
   nextTick(() => listRef.value?.scrollToTop());
 });
 
@@ -238,6 +270,10 @@ watch(displayedTransactions, (txs) => {
 });
 
 function onTransactionClick(transaction: Transaction) {
+  if (isSelecting.value) {
+    toggleSelection(transaction);
+    return;
+  }
   if (isDesktop.value) {
     selectedTransactionId.value = transaction.id;
   } else {
@@ -293,7 +329,7 @@ async function handleRefresh() {
     <!-- Header -->
     <AppHeader title="История">
       <template #actions>
-        <!-- Поиск и фильтры живут в шапке: строке управления нужна вся ширина,
+        <!-- Поиск живёт в шапке: строке управления нужна вся ширина,
              иначе пятая вкладка («Долги») не помещается на узком экране -->
         <UButton
           v-if="!isSearchOpen"
@@ -307,29 +343,6 @@ async function handleRefresh() {
         >
           <UIcon name="search" size="sm" />
         </UButton>
-
-        <div class="relative">
-          <UButton
-            variant="ghost"
-            size="sm"
-            class="!p-2"
-            :aria-label="
-              activeFiltersCount > 0 ? `Фильтры, активно: ${activeFiltersCount}` : 'Фильтры'
-            "
-            data-testid="open-filters-btn"
-            @click="isFiltersSheetOpen = true"
-          >
-            <UIcon name="tune" size="sm" :class="activeFiltersCount > 0 ? 'text-primary' : ''" />
-          </UButton>
-          <span
-            v-if="activeFiltersCount > 0"
-            data-testid="active-filters-count"
-            aria-hidden="true"
-            class="absolute top-0 right-0 min-w-[16px] h-[16px] px-1 bg-primary text-white text-caption-xs font-semibold rounded-full flex items-center justify-center ring-2 ring-background-light dark:ring-background-dark"
-          >
-            {{ activeFiltersCount }}
-          </span>
-        </div>
 
         <UButton
           variant="ghost"
@@ -355,8 +368,9 @@ async function handleRefresh() {
         <!-- Wrapper creates flex column context so flex-1 children get proper heights.
              Without this, MasterDetailLayout's slot container (overflow-y-auto, not flex)
              makes flex-1/shrink-0 ineffective, causing the virtualizer's height:100%
-             to resolve to auto — rendering ALL items and cascading fetchNextPage. -->
-        <div class="h-full flex flex-col overflow-hidden">
+             to resolve to auto — rendering ALL items and cascading fetchNextPage.
+             Без overflow-hidden: плашка итога выходит на 10 px в поля скроллера. -->
+        <div class="h-full flex flex-col">
           <!-- Pending imports banner (Telegram).
                empty:hidden — баннер рисуется только при неподтверждённых импортах,
                иначе обёртка съедала бы отступ впустую на каждом заходе. -->
@@ -390,49 +404,21 @@ async function handleRefresh() {
             />
           </div>
 
-          <!-- Активные фильтры: состояние видно, не открывая шторку -->
-          <div
-            v-if="activeFilterChips.length > 0"
-            data-testid="active-filter-chips"
-            class="shrink-0 flex items-center gap-1.5 pt-2 overflow-x-auto no-scrollbar"
-          >
-            <button
-              v-for="chip in activeFilterChips"
-              :key="chip.key"
-              type="button"
-              class="shrink-0 inline-flex items-center gap-1.5 pl-2 pr-1.5 py-1 rounded-lg bg-surface-light dark:bg-surface-dark text-xs text-text-primary-light dark:text-text-primary-dark"
-              :aria-label="chip.ariaLabel"
-              @click="chip.clear()"
-            >
-              <UIcon v-if="chip.icon" :name="chip.icon" size="xs" :style="{ color: chip.color }" />
-              <span
-                v-else
-                class="w-2 h-2 rounded-full shrink-0"
-                :style="{ backgroundColor: chip.color }"
-              />
-              {{ chip.label }}
-              <UIcon
-                name="close"
-                size="xs"
-                class="text-text-tertiary-light dark:text-text-tertiary-dark"
-              />
-            </button>
-
-            <button
-              v-if="activeFilterChips.length > 1"
-              type="button"
-              class="shrink-0 px-2 py-1 text-xs text-text-tertiary-light dark:text-text-tertiary-dark hover:text-text-secondary-light dark:hover:text-text-secondary-dark"
-              @click="clearAdditionalFilters"
-            >
-              Сбросить
-            </button>
-          </div>
+          <!-- Чипы фильтров: состояние видно, не открывая шторку. Поиск идёт мимо них,
+               поэтому пока он открыт, чипы скрыты вместе с вкладками. -->
+          <HistoryFacetRail
+            v-if="!isSearchOpen"
+            :values="facetValues"
+            :hide-category="activeTypeFilter === 'transfer'"
+            @open="openFacet = $event"
+            @clear="clearFacet"
+          />
 
           <!-- Content Area: flex column so virtualizer height is set by flex, not by % of padded parent -->
           <div class="flex-1 min-h-0 pt-2 flex flex-col">
             <!-- Loading State with Skeleton -->
             <div
-              v-if="currentIsLoading && displayedTransactions.length === 0"
+              v-if="isLoading && displayedTransactions.length === 0"
               data-testid="history-loading"
               class="flex-1 space-y-4 overflow-hidden"
             >
@@ -447,9 +433,7 @@ async function handleRefresh() {
                 'flex-1 min-h-0 transition-opacity duration-300',
                 {
                   'opacity-50 pointer-events-none':
-                    currentIsFetching &&
-                    !currentIsFetchingNextPage &&
-                    displayedTransactions.length > 0,
+                    isFetching && !isFetchingNextPage && displayedTransactions.length > 0,
                 },
               ]"
             >
@@ -457,16 +441,20 @@ async function handleRefresh() {
                 ref="listRef"
                 :groups="groupedTransactions"
                 :currency="currency"
-                :has-next-page="currentHasNextPage"
-                :is-fetching-next-page="currentIsFetchingNextPage"
+                :has-next-page="hasNextPage"
+                :is-fetching-next-page="isFetchingNextPage"
                 :get-account-name="getAccountName"
                 :get-balance-after="getBalanceAfter"
                 swipe-enabled
+                selectable
+                :select-mode="isSelecting"
+                :selected-ids="selectedIds"
                 height="100%"
-                @load-more="handleLoadMore"
+                @load-more="fetchNextPage()"
                 @transaction-click="onTransactionClick"
                 @transaction-edit="onTransactionClick"
                 @transaction-delete="handleSwipeDelete"
+                @transaction-long-press="handleLongPress"
               />
             </div>
 
@@ -517,8 +505,37 @@ async function handleRefresh() {
               </UButton>
             </div>
 
+            <!-- Плашка итога и панель ручного выбора: над навигацией, вне виртуального списка -->
+            <BulkSelectionBar
+              v-if="isSelecting"
+              class="shrink-0"
+              :selected-count="selectedCount"
+              :selectable-count="selectableCount"
+              :all-selected="isAllSelected(displayedTransactions)"
+              :totals-label="selectionTotalsLabel"
+              @exit="exitSelection"
+              @toggle-all="selectAll(displayedTransactions)"
+              @category="bulkFlow.openManual('pickCategory')"
+              @transfer="bulkFlow.openManual('pickTransferAccount')"
+              @account="bulkFlow.openManual('pickAccount')"
+              @more="bulkFlow.openManual('verbs')"
+            />
+            <BulkDock
+              v-else-if="showBulkDock"
+              class="shrink-0"
+              :summary="summary"
+              :is-filtered="isBulkFiltered"
+              :stale="isSummaryStale"
+              :select-disabled="selectableCount === 0"
+              @select="startSelection()"
+              @edit-all="bulkFlow.openAll()"
+            />
+
             <!-- Spacer for fixed BottomNav — sits outside the flex-1 blocks so the virtualizer height excludes it -->
-            <div class="shrink-0 h-20 lg:h-0" />
+            <div
+              v-if="!isDesktop"
+              :class="cn('shrink-0', isSelecting ? 'h-[env(safe-area-inset-bottom,0px)]' : 'h-20')"
+            />
           </div>
         </div>
       </template>
@@ -537,17 +554,26 @@ async function handleRefresh() {
       </template>
     </MasterDetailLayout>
 
-    <!-- Filters Sheet -->
-    <HistoryFiltersSheet
-      v-model:open="isFiltersSheetOpen"
-      :accounts="accounts"
+    <!-- Шторка выбора значений чипа -->
+    <HistoryFacetSheet
+      v-model:facet="openFacet"
+      v-model:values="facetValues"
       :categories="usedCategories"
-      :selected-account-id="selectedAccountId"
-      :selected-category-id="selectedCategoryId"
-      :active-count="activeFiltersCount"
-      @update:selected-account-id="selectedAccountId = $event"
-      @update:selected-category-id="selectedCategoryId = $event"
-      @reset="clearAdditionalFilters"
+      :accounts="accounts"
+      :hashtags="hashtags"
+      :result-count="summary?.count"
+      @clear="clearFacet"
+    />
+
+    <BulkEditSheet
+      :flow="bulkFlow"
+      :scope-chips="bulkScopeChips"
+      :summary="summary"
+      :categories="targetCategories"
+      :category-types="bulkCategoryTypes"
+      :source-category-ids="bulkSourceCategoryIds"
+      :accounts="accounts"
+      :hashtags="hashtagNames"
     />
 
     <!-- Edit Transaction Modal -->

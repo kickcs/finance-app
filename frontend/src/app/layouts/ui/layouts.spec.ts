@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { defineComponent, h, onMounted, onUnmounted } from 'vue';
+import { defineComponent, h, onMounted, onUnmounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { flushPromises } from '@vue/test-utils';
 import { renderWithProviders, createTestRouter, mockUser } from '@/test/test-utils';
@@ -40,6 +40,36 @@ describe('оболочки приложения', () => {
 
     expect(wrapper.find('[data-testid="bottom-nav"]').exists()).toBe(true);
     expect(wrapper.find('aside[aria-label="Навигационная панель"]').exists()).toBe(false);
+  });
+
+  it('страница со своей панелью действий прячет нижнюю навигацию, пока панель на экране', async () => {
+    setIsDesktopForTests(false);
+    const { useSuppressBottomNav } = await import('@/shared/lib/composables');
+    const panelShown = ref(false);
+    const Page = defineComponent({
+      setup() {
+        useSuppressBottomNav(panelShown);
+        return () => h('div', 'страница');
+      },
+    });
+    const router = createTestRouter([{ path: '/', component: Page }]);
+    const { default: MobileLayout } = await import('./MobileLayout.vue');
+    const wrapper = renderWithProviders(MobileLayout as never, {
+      router,
+      provideAuth: { user: mockUser },
+    });
+    await flushPromises();
+    await vi.dynamicImportSettled();
+    await flushPromises();
+    expect(wrapper.find('[data-testid="bottom-nav"]').exists()).toBe(true);
+
+    panelShown.value = true;
+    await flushPromises();
+    expect(wrapper.find('[data-testid="bottom-nav"]').exists()).toBe(false);
+
+    wrapper.unmount();
+    const { isBottomNavSuppressed } = await import('@/shared/lib/composables');
+    expect(isBottomNavSuppressed.value).toBe(false);
   });
 
   it('десктопная оболочка показывает сайдбар и не монтирует нижнюю навигацию', async () => {

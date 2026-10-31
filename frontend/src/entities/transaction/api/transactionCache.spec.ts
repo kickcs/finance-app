@@ -7,7 +7,12 @@ import {
   prependTransactionToRecent,
   removeTransactionFromCaches,
   removeTransactionsFromCaches,
+  restoreTransactionCaches,
+  shrinkSummaryCaches,
+  cachedFilterRows,
+  snapshotTransactionCaches,
 } from './transactionCache';
+import type { TransactionsSummary } from './transactionsApi';
 import type { Transaction } from '@/shared/api/database.types';
 
 const USER_ID = 'user-1';
@@ -40,8 +45,10 @@ function makeTransaction(overrides: Partial<Transaction> = {}): Transaction {
   };
 }
 
-function seedSearchCache(term: string, tx: Transaction) {
-  queryClient.setQueryData(transactionQueryKeys.search(USER_ID, term), {
+const SEARCH_KEY = transactionQueryKeys.infinite(USER_ID, { search: 'groceries' });
+
+function seedSearchCache(tx: Transaction) {
+  queryClient.setQueryData(SEARCH_KEY, {
     pages: [{ data: [tx], nextCursor: null, hasMore: false }],
     pageParams: [undefined],
   });
@@ -52,30 +59,22 @@ describe('transactionCache: search results', () => {
     queryClient.clear();
   });
 
-  // Поиск в Истории хранится отдельным InfiniteData той же формы, что и основной
-  // список — правки из других экранов (дашборд, добавление/редактирование) должны
-  // доходить и туда, иначе открытый поиск показывает устаревшую копию до инвалидации.
+  // Найденное — та же лента с фильтром `search`: правки с других экранов доходят и до неё.
   it('patches a transaction inside the cached search results', () => {
-    const tx = makeTransaction({ id: 'tx-search' });
-    seedSearchCache('groceries', tx);
+    seedSearchCache(makeTransaction({ id: 'tx-search' }));
 
     patchTransactionInCaches(queryClient, USER_ID, 'tx-search', { description: 'Updated' });
 
-    const cached = queryClient.getQueryData<{ pages: { data: Transaction[] }[] }>(
-      transactionQueryKeys.search(USER_ID, 'groceries'),
-    );
+    const cached = queryClient.getQueryData<{ pages: { data: Transaction[] }[] }>(SEARCH_KEY);
     expect(cached?.pages[0].data[0].description).toBe('Updated');
   });
 
   it('removes a transaction from the cached search results', () => {
-    const tx = makeTransaction({ id: 'tx-search-del' });
-    seedSearchCache('groceries', tx);
+    seedSearchCache(makeTransaction({ id: 'tx-search-del' }));
 
     removeTransactionFromCaches(queryClient, USER_ID, 'tx-search-del');
 
-    const cached = queryClient.getQueryData<{ pages: { data: Transaction[] }[] }>(
-      transactionQueryKeys.search(USER_ID, 'groceries'),
-    );
+    const cached = queryClient.getQueryData<{ pages: { data: Transaction[] }[] }>(SEARCH_KEY);
     expect(cached?.pages[0].data).toEqual([]);
   });
 });
@@ -212,5 +211,139 @@ describe('transactionCache: payment group', () => {
     applyTransactionUpdateToCaches(queryClient, USER_ID, second, { category_id: 'cat-cafe' });
 
     expect(infiniteRows().map((t) => t.category_id)).toEqual(['cat-cafe', 'cat-cafe']);
+  });
+});
+
+// ── Итог выборки на время отложенного удаления ──────────────────────────────
+
+function makeSummary(overrides: Partial<TransactionsSummary> = {}): TransactionsSummary {
+  return {
+    count: 10,
+    eligible_count: 9,
+    locked_count: 1,
+    totals: [{ currency: 'UZS', amount: -250000 }],
+    as_of: '2025-06-01T12:00:00.000Z',
+    ...overrides,
+  };
+}
+
+const summaryKey = (filters?: Parameters<typeof transactionQueryKeys.summary>[1]) =>
+  transactionQueryKeys.summary(USER_ID, filters);
+
+describe('transactionCache: summary', () => {
+  beforeEach(() => {
+    queryClient.clear();
+  });
+
+  const TAXI = { category_ids: ['taxi'] };
+
+  it('shrinkSummaryCaches lowers only the summary of the given filter', () => {
+    queryClient.setQueryData(summaryKey(TAXI), makeSummary());
+
+    shrinkSummaryCaches(queryClient, USER_ID, TAXI, 3);
+
+    expect(queryClient.getQueryData<TransactionsSummary>(summaryKey(TAXI))).toMatchObject({
+      count: 7,
+      eligible_count: 6,
+      locked_count: 1,
+    });
+    expect(queryClient.getQueryState(summaryKey(TAXI))?.isInvalidated).toBe(false);
+  });
+
+  it('invalidates summaries of other filters instead of guessing their numbers', () => {
+    const other = makeSummary({ count: 4, eligible_count: 4, locked_count: 0 });
+    queryClient.setQueryData(summaryKey(TAXI), makeSummary());
+    queryClient.setQueryData(summaryKey({ type: 'expense' }), other);
+    queryClient.setQueryData(summaryKey(), other);
+
+    shrinkSummaryCaches(queryClient, USER_ID, TAXI, 3);
+
+    for (const key of [summaryKey({ type: 'expense' }), summaryKey()]) {
+      expect(queryClient.getQueryData(key)).toEqual(other);
+      expect(queryClient.getQueryState(key)?.isInvalidated).toBe(true);
+    }
+  });
+
+  it('does not touch another user', () => {
+    const foreign = transactionQueryKeys.summary('user-2', TAXI);
+    queryClient.setQueryData(foreign, makeSummary());
+
+    shrinkSummaryCaches(queryClient, USER_ID, TAXI, 3);
+
+    expect(queryClient.getQueryData(foreign)).toEqual(makeSummary());
+    expect(queryClient.getQueryState(foreign)?.isInvalidated).toBe(false);
+  });
+
+  it('keeps totals while rows remain, because the removed sum is unknown on the client', () => {
+    queryClient.setQueryData(summaryKey(TAXI), makeSummary());
+
+    shrinkSummaryCaches(queryClient, USER_ID, TAXI, 3);
+
+    expect(queryClient.getQueryData<TransactionsSummary>(summaryKey(TAXI))?.totals).toEqual([
+      { currency: 'UZS', amount: -250000 },
+    ]);
+  });
+
+  it('clamps at zero and clears totals once nothing is left', () => {
+    queryClient.setQueryData(
+      summaryKey(TAXI),
+      makeSummary({ count: 5, eligible_count: 4, locked_count: 1 }),
+    );
+
+    shrinkSummaryCaches(queryClient, USER_ID, TAXI, 50);
+
+    expect(queryClient.getQueryData<TransactionsSummary>(summaryKey(TAXI))).toMatchObject({
+      count: 0,
+      eligible_count: 0,
+      totals: [],
+    });
+  });
+
+  it('leaves a never-loaded summary alone', () => {
+    shrinkSummaryCaches(queryClient, USER_ID, TAXI, 3);
+
+    expect(queryClient.getQueryData(summaryKey(TAXI))).toBeUndefined();
+  });
+
+  it('snapshot includes summary entries, so restore brings the old numbers back', () => {
+    queryClient.setQueryData(summaryKey(), makeSummary());
+    const snapshot = snapshotTransactionCaches(queryClient, USER_ID);
+
+    shrinkSummaryCaches(queryClient, USER_ID, {}, 10);
+    restoreTransactionCaches(queryClient, snapshot);
+
+    expect(queryClient.getQueryData<TransactionsSummary>(summaryKey())).toEqual(makeSummary());
+  });
+});
+
+describe('transactionCache: cachedFilterRows', () => {
+  beforeEach(() => {
+    queryClient.clear();
+  });
+
+  const page = (rows: Transaction[]) => ({
+    pages: [{ data: rows, nextCursor: null, hasMore: false }],
+    pageParams: [undefined],
+  });
+
+  it('returns rows loaded under exactly this filter, across pages', () => {
+    const filter = { category_ids: ['taxi'] };
+    queryClient.setQueryData(transactionQueryKeys.infinite(USER_ID, filter), {
+      pages: [
+        { data: [makeTransaction({ id: 'a' })], nextCursor: null, hasMore: true },
+        { data: [makeTransaction({ id: 'b' })], nextCursor: null, hasMore: false },
+      ],
+      pageParams: [undefined, undefined],
+    });
+    queryClient.setQueryData(
+      transactionQueryKeys.infinite(USER_ID, {}),
+      page([makeTransaction({ id: 'other' })]),
+    );
+
+    expect(cachedFilterRows(queryClient, USER_ID, filter).map((t) => t.id)).toEqual(['a', 'b']);
+  });
+
+  it('is empty while the filter has not loaded yet', () => {
+    expect(cachedFilterRows(queryClient, USER_ID, { search: 'такси' })).toEqual([]);
   });
 });

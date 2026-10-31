@@ -1,14 +1,17 @@
 <script setup lang="ts">
 import { computed, inject } from 'vue';
 import { UIcon } from '@/shared/ui';
+import { UCheckMark } from '@/shared/ui/check-mark';
 import { formatCurrency, COMPACT_FORMAT, COMPACT_BARE_FORMAT } from '@/shared/lib/format/currency';
 import { formatRelativeDate } from '@/shared/lib/format/date';
 import { getCategoryById as getCategoryByIdStatic } from '@/entities/category';
 import type { Category } from '@/entities/category';
 import { DEFAULT_CURRENCY } from '@/shared/config/currency';
+import { cn } from '@/shared/lib/utils';
 import { TRANSFER_COLOR } from '@/shared/config/colors';
 import { getAmountLines } from '../lib/amountLines';
 import { paymentTotal } from '../lib/paymentGroup';
+import { bulkLockHint } from '../lib/bulkLock';
 import type { Transaction } from '../model/types';
 
 const props = defineProps<{
@@ -19,6 +22,9 @@ const props = defineProps<{
   viewingAccountId?: string;
   balanceAfter?: number;
   hidden?: boolean;
+  /** Режим выбора: вместо иконки категории — отметка, строка становится чекбоксом */
+  selectMode?: boolean;
+  selected?: boolean;
 }>();
 defineEmits<{
   click: [];
@@ -133,12 +139,28 @@ const formattedPaymentTotal = computed(() =>
     : '',
 );
 
+// Строка вне массовой правки (долг, корректировка): в режиме выбора её не отметить
+const isLocked = computed(() => !!props.selectMode && !!props.transaction.bulk_locked);
+const isChecked = computed(() => !!props.selected && !isLocked.value);
+
 const ariaLabel = computed(() => {
   const name = isTransfer.value ? 'Перевод' : category.value?.name || 'Транзакция';
   const part =
     formattedPaymentTotal.value && !props.hidden ? `, часть из ${formattedPaymentTotal.value}` : '';
-  return `${name}, ${formattedAmount.value}${part}`;
+  const locked = isLocked.value ? `, ${bulkLockHint(props.transaction)}` : '';
+  return `${name}, ${formattedAmount.value}${part}${locked}`;
 });
+
+const rootClass = computed(() =>
+  cn(
+    'w-full flex items-center gap-3 p-3 rounded-lg transition-all duration-150 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-none',
+    isLocked.value
+      ? 'cursor-default'
+      : 'hover:bg-surface-light dark:hover:bg-surface-dark active:opacity-80',
+    isChecked.value && 'bg-primary/10 hover:bg-primary/15 dark:hover:bg-primary/15',
+    isInformational.value && 'opacity-60',
+  ),
+);
 
 const formattedBalanceAfter = computed(() =>
   props.balanceAfter === undefined
@@ -149,13 +171,32 @@ const formattedBalanceAfter = computed(() =>
 
 <template>
   <button
-    class="w-full flex items-center gap-3 p-3 rounded-lg transition-all duration-150 hover:bg-surface-light dark:hover:bg-surface-dark active:opacity-80 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-none"
-    :class="{ 'opacity-60': isInformational }"
+    :class="rootClass"
+    :role="selectMode ? 'checkbox' : undefined"
+    :aria-checked="selectMode ? isChecked : undefined"
+    :aria-disabled="isLocked || undefined"
     :aria-label="ariaLabel"
     @click="$emit('click')"
   >
+    <!-- Режим выбора: слот тех же 36×36, что у иконки, чтобы вёрстка не прыгала -->
+    <div
+      v-if="selectMode"
+      class="shrink-0 w-9 h-9 flex items-center justify-center"
+      aria-hidden="true"
+    >
+      <UIcon
+        v-if="isLocked"
+        name="lock"
+        size="sm"
+        data-testid="transaction-lock"
+        class="text-text-tertiary-light dark:text-text-tertiary-dark"
+      />
+      <UCheckMark v-else data-testid="transaction-checkbox" :checked="isChecked" />
+    </div>
+
     <!-- Category/Transfer Icon -->
     <div
+      v-else
       class="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center"
       :style="{
         backgroundColor: isTransfer ? `${TRANSFER_COLOR}12` : `${category?.color || '#64748b'}12`,

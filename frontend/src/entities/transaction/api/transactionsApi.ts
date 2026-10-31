@@ -23,9 +23,82 @@ export interface PaginatedResult<T> {
 
 export interface TransactionFilters {
   type?: 'income' | 'expense' | 'transfer' | 'debt' | 'adjustment';
-  accountId?: string;
-  categoryId?: string;
+  /** Подстрока описания. */
   search?: string;
+  /** Идентификаторы-строки: у встроенных категорий id — слаг, не UUID. */
+  category_ids?: string[];
+  /** Включая входящие переводы на эти счета. */
+  account_ids?: string[];
+  /** Без `#`. Несколько тегов — «любой из». */
+  tags?: string[];
+  /** Календарные даты `YYYY-MM-DD`, обе границы включительно. */
+  start_date?: string;
+  end_date?: string;
+}
+
+/** Итог выборки по фильтру: «N операций, K по долгу» и число на кнопке «Изменить все». */
+export interface TransactionsSummary {
+  count: number;
+  /** Сколько строк войдёт в массовую правку; остальные заблокированы (`locked_count`). */
+  eligible_count: number;
+  locked_count: number;
+  /** Суммы по валютам: общей суммы нет. */
+  totals: { currency: string; amount: number }[];
+  /** Момент сервера, на который посчитан итог; вместе с `count` уходит в массовую правку. */
+  as_of: string;
+}
+
+export type BulkAction =
+  | { kind: 'category'; category_id: string }
+  | { kind: 'transfer'; to_account_id: string }
+  | { kind: 'account'; account_id: string }
+  | { kind: 'tag'; tag: string }
+  | { kind: 'delete' };
+
+/** Либо ручной выбор, либо вся выборка фильтра со сверкой с показанным итогом. */
+export type BulkSelection =
+  | { ids: string[] }
+  | { filter: TransactionFilters; as_of: string; expected_count: number };
+
+export interface BulkUpdateRequest {
+  selection: BulkSelection;
+  action: BulkAction;
+  /** Предпросмотр: тот же ответ, но ничего не записано. */
+  dryRun?: boolean;
+}
+
+/** Причины, по которым строка выборки пропущена; тексты — на клиенте. */
+export type BulkSkipReason =
+  | 'locked'
+  | 'wrong_type'
+  | 'same_account'
+  | 'pair_on_target'
+  | 'pair_split'
+  | 'already_in_category'
+  | 'already_tagged'
+  | 'transfer_not_movable';
+
+export interface BulkResult {
+  changed: number;
+  skipped: { reason: BulkSkipReason; count: number }[];
+  balance_deltas: { account_id: string; currency: string; delta: number }[];
+  /** Нет у удаления и предпросмотра. */
+  undo_token: string | null;
+}
+
+interface BulkResultResponse {
+  changed: number;
+  skipped: { reason: BulkSkipReason; count: number }[];
+  balanceDeltas: { accountId: string; currency: string; delta: number }[];
+  undoToken?: string | null;
+}
+
+interface TransactionsSummaryResponse {
+  count: number;
+  eligibleCount: number;
+  lockedCount: number;
+  totals: { currency: string; amount: number }[];
+  asOf: string;
 }
 
 export interface MonthlyStats {
@@ -151,6 +224,8 @@ interface TransactionResponse {
   paymentGroupId: string | null;
   settlementId: string | null;
   paymentSibling: { id: string; accountId: string; amount: number } | null;
+  /** Отсутствует в ответах до массовой правки. */
+  bulkLocked?: boolean;
 }
 
 interface MonthlyStatsResponse {
@@ -191,6 +266,87 @@ function transformTransaction(tx: TransactionResponse): Transaction {
           amount: tx.paymentSibling.amount,
         }
       : null,
+    bulk_locked: tx.bulkLocked ?? false,
+  };
+}
+
+const isEmptyValue = (v: unknown) =>
+  v === undefined || v === '' || (Array.isArray(v) && v.length === 0);
+
+/** Фильтр в форме сервера без пустых значений: лента, итог и сверка правки видят один и тот же. */
+function filtersToServer(filters: TransactionFilters = {}): Record<string, string | string[]> {
+  const camel = {
+    type: filters.type,
+    search: filters.search,
+    categoryIds: filters.category_ids,
+    accountIds: filters.account_ids,
+    tags: filters.tags,
+    startDate: filters.start_date,
+    endDate: filters.end_date,
+  };
+  return Object.fromEntries(Object.entries(camel).filter(([, v]) => !isEmptyValue(v))) as Record<
+    string,
+    string | string[]
+  >;
+}
+
+/** Списки в query — одним параметром через запятую: в таком виде их разбирает сервер. */
+function filtersToParams(filters?: TransactionFilters): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(filtersToServer(filters)).map(([k, v]) => [
+      k,
+      Array.isArray(v) ? v.join(',') : v,
+    ]),
+  );
+}
+
+function selectionToServer(selection: BulkSelection) {
+  return 'ids' in selection
+    ? { ids: selection.ids }
+    : {
+        filter: filtersToServer(selection.filter),
+        asOf: selection.as_of,
+        expectedCount: selection.expected_count,
+      };
+}
+
+function actionToServer(action: BulkAction) {
+  switch (action.kind) {
+    case 'category':
+      return { kind: action.kind, categoryId: action.category_id };
+    case 'transfer':
+      return { kind: action.kind, toAccountId: action.to_account_id };
+    case 'account':
+      return { kind: action.kind, accountId: action.account_id };
+    case 'tag':
+    case 'delete':
+      return action;
+  }
+}
+
+function bulkBody(request: BulkUpdateRequest) {
+  return {
+    selection: selectionToServer(request.selection),
+    action: actionToServer(request.action),
+    dryRun: request.dryRun,
+  };
+}
+
+/** Размер тела `POST /transactions/bulk` в байтах — по нему решают, довезёт ли его keepalive. */
+export function bulkRequestBytes(request: BulkUpdateRequest): number {
+  return new TextEncoder().encode(JSON.stringify(bulkBody(request))).length;
+}
+
+function transformBulkResult(data: BulkResultResponse): BulkResult {
+  return {
+    changed: data.changed,
+    skipped: data.skipped,
+    balance_deltas: data.balanceDeltas.map((d) => ({
+      account_id: d.accountId,
+      currency: d.currency,
+      delta: d.delta,
+    })),
+    undo_token: data.undoToken ?? null,
   };
 }
 
@@ -326,10 +482,7 @@ export const transactionsApi = {
         cursorDate: cursor?.date,
         cursorCreatedAt: cursor?.createdAt,
         cursorId: cursor?.id,
-        type: filters?.type,
-        accountId: filters?.accountId,
-        categoryId: filters?.categoryId,
-        search: filters?.search,
+        ...filtersToParams(filters),
       },
     });
     return {
@@ -339,31 +492,32 @@ export const transactionsApi = {
     };
   },
 
-  async searchPaginated(
-    _userId: string,
-    searchTerm: string,
-    pageSize: number = 20,
-    cursor?: PaginatedCursor,
-  ): Promise<PaginatedResult<Transaction>> {
-    // Backend gets userId from JWT token
-    const data = await http.get<{
-      data: TransactionResponse[];
-      nextCursor: PaginatedCursor | null;
-      hasMore: boolean;
-    }>('/transactions', {
-      params: {
-        search: searchTerm,
-        pageSize,
-        cursorDate: cursor?.date,
-        cursorCreatedAt: cursor?.createdAt,
-        cursorId: cursor?.id,
-      },
+  async getSummary(filters?: TransactionFilters): Promise<TransactionsSummary> {
+    const data = await http.get<TransactionsSummaryResponse>('/transactions/summary', {
+      params: filtersToParams(filters),
     });
     return {
-      data: data.data.map(transformTransaction),
-      nextCursor: data.nextCursor,
-      hasMore: data.hasMore,
+      count: data.count,
+      eligible_count: data.eligibleCount,
+      locked_count: data.lockedCount,
+      totals: data.totals,
+      as_of: data.asOf,
     };
+  },
+
+  /** `keepalive` — запрос переживёт закрытие страницы (тело до ~64 КБ). */
+  async bulkUpdate(
+    request: BulkUpdateRequest,
+    options?: { keepalive?: boolean },
+  ): Promise<BulkResult> {
+    const data = await http.post<BulkResultResponse>('/transactions/bulk', bulkBody(request), {
+      keepalive: options?.keepalive,
+    });
+    return transformBulkResult(data);
+  },
+
+  async undoBulk(undoToken: string): Promise<{ restored: number }> {
+    return http.post<{ restored: number }>('/transactions/bulk/undo', { undoToken });
   },
 
   async getByAccountPaginated(
