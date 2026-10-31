@@ -389,7 +389,7 @@ export class Transaction extends AggregateRoot<string> {
     amount?: number;
     currency?: string;
     type?: string;
-    description?: string;
+    description?: string | null;
     date?: Date;
     isDebtRelated?: boolean;
     debtId?: string | null;

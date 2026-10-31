@@ -15,3 +15,4 @@ export * from './reorder-quick-actions.dto';
 export * from './bulk-import.dto';
 export * from './adjust-balance.dto';
 export * from './monthly-stats-query.dto';
+export * from './bulk-update-transactions.dto';

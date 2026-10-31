@@ -7,6 +7,8 @@ export * from './get-account-by-id/get-account-by-id.handler';
 // Transaction queries
 export * from './get-transactions-paginated/get-transactions-paginated.query';
 export * from './get-transactions-paginated/get-transactions-paginated.handler';
+export * from './get-transactions-summary/get-transactions-summary.query';
+export * from './get-transactions-summary/get-transactions-summary.handler';
 export * from './get-monthly-stats/get-monthly-stats.query';
 export * from './get-monthly-stats/get-monthly-stats.handler';
 export * from './get-analytics-stats/get-analytics-stats.query';
@@ -48,6 +50,7 @@ export * from './get-balances-by-accounts/get-balances-by-accounts.handler';
 import { GetAccountsHandler } from './get-accounts/get-accounts.handler';
 import { GetAccountByIdHandler } from './get-account-by-id/get-account-by-id.handler';
 import { GetTransactionsPaginatedHandler } from './get-transactions-paginated/get-transactions-paginated.handler';
+import { GetTransactionsSummaryHandler } from './get-transactions-summary/get-transactions-summary.handler';
 import { GetMonthlyStatsHandler } from './get-monthly-stats/get-monthly-stats.handler';
 import { GetAnalyticsStatsHandler } from './get-analytics-stats/get-analytics-stats.handler';
 import { GetDailyStatsHandler } from './get-daily-stats/get-daily-stats.handler';
@@ -67,6 +70,7 @@ export const QueryHandlers = [
   GetAccountsHandler,
   GetAccountByIdHandler,
   GetTransactionsPaginatedHandler,
+  GetTransactionsSummaryHandler,
   GetMonthlyStatsHandler,
   GetAnalyticsStatsHandler,
   GetDailyStatsHandler,

@@ -1,14 +1,17 @@
+import type { TransactionFilter } from '../../../domain/repositories/transaction.repository.interface';
+
+/** Страница ленты: размер (по умолчанию его задаёт `PaginationDto`) и курсор последней строки предыдущей страницы. */
+export interface TransactionPage {
+  pageSize: number;
+  cursorDate?: string;
+  cursorCreatedAt?: string;
+  cursorId?: string;
+}
+
 export class GetTransactionsPaginatedQuery {
   constructor(
     public readonly userId: string,
-    public readonly pageSize: number = 20,
-    public readonly cursorDate?: string,
-    public readonly cursorCreatedAt?: string,
-    public readonly cursorId?: string,
-    public readonly type?: string,
-    public readonly accountId?: string,
-    public readonly categoryId?: string,
-    public readonly search?: string,
-    public readonly debtId?: string,
+    public readonly filter: TransactionFilter,
+    public readonly page: TransactionPage,
   ) {}
 }

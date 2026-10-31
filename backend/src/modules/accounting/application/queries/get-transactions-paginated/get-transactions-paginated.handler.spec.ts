@@ -4,6 +4,8 @@ import { GetTransactionsPaginatedQuery } from './get-transactions-paginated.quer
 import { TRANSACTION_REPOSITORY } from '../../../domain/repositories/transaction.repository.interface';
 import { Transaction } from '../../../domain/aggregates/transaction';
 
+const PAGE = { pageSize: 20 };
+
 describe('GetTransactionsPaginatedHandler', () => {
   let handler: GetTransactionsPaginatedHandler;
   const mockTransactionRepository = {
@@ -61,7 +63,7 @@ describe('GetTransactionsPaginatedHandler', () => {
       hasMore: false,
     });
 
-    const query = new GetTransactionsPaginatedQuery('user-1', 20);
+    const query = new GetTransactionsPaginatedQuery('user-1', {}, PAGE);
     const result = await handler.execute(query);
 
     expect(result.data).toHaveLength(1);
@@ -86,7 +88,7 @@ describe('GetTransactionsPaginatedHandler', () => {
       hasMore: false,
     });
 
-    const result = await handler.execute(new GetTransactionsPaginatedQuery('user-1'));
+    const result = await handler.execute(new GetTransactionsPaginatedQuery('user-1', {}, PAGE));
 
     expect(result.data[0].netAmount).toBe(300);
     expect(result.data[0].hasDebtReturns).toBe(true);
@@ -101,15 +103,19 @@ describe('GetTransactionsPaginatedHandler', () => {
 
     const query = new GetTransactionsPaginatedQuery(
       'user-1',
-      10,
-      '2026-03-01',
-      '2026-03-01T00:00:00Z',
-      'tx-cursor-1',
-      'expense',
-      'acc-1',
-      'cat-food',
-      'groceries',
-      'debt-1',
+      {
+        type: 'expense',
+        accountId: 'acc-1',
+        categoryId: 'cat-food',
+        search: 'groceries',
+        debtId: 'debt-1',
+      },
+      {
+        pageSize: 10,
+        cursorDate: '2026-03-01',
+        cursorCreatedAt: '2026-03-01T00:00:00Z',
+        cursorId: 'tx-cursor-1',
+      },
     );
 
     await handler.execute(query);
@@ -134,7 +140,7 @@ describe('GetTransactionsPaginatedHandler', () => {
       hasMore: true,
     });
 
-    const result = await handler.execute(new GetTransactionsPaginatedQuery('user-1', 20));
+    const result = await handler.execute(new GetTransactionsPaginatedQuery('user-1', {}, PAGE));
 
     expect(result.hasMore).toBe(true);
     expect(result.nextCursor).toEqual({
@@ -165,7 +171,7 @@ describe('GetTransactionsPaginatedHandler', () => {
       hasMore: false,
     });
 
-    const result = await handler.execute(new GetTransactionsPaginatedQuery('user-1'));
+    const result = await handler.execute(new GetTransactionsPaginatedQuery('user-1', {}, PAGE));
 
     expect(result.data[0].toAccountId).toBe('acc-2');
     expect(result.data[0].toAmount).toBe(92);
@@ -197,7 +203,7 @@ describe('GetTransactionsPaginatedHandler', () => {
       hasMore: false,
     });
 
-    const result = await handler.execute(new GetTransactionsPaginatedQuery('user-1'));
+    const result = await handler.execute(new GetTransactionsPaginatedQuery('user-1', {}, PAGE));
 
     expect(result.data[0].paymentGroupId).toBe('group-1');
     expect(result.data[0].paymentSibling).toEqual({
@@ -208,5 +214,67 @@ describe('GetTransactionsPaginatedHandler', () => {
     expect(result.data[0].netAmount).toBe(0);
     expect(result.data[1].paymentGroupId).toBeNull();
     expect(result.data[1].paymentSibling).toBeNull();
+  });
+
+  it('отдаёт bulkLocked, который посчитал репозиторий, для каждой строки', async () => {
+    const now = new Date();
+    const locked = Transaction.createExpense(
+      'tx-locked',
+      'user-1',
+      'acc-1',
+      'food',
+      10,
+      'UZS',
+      now,
+    );
+    const free = Transaction.createExpense('tx-free', 'user-1', 'acc-1', 'food', 10, 'UZS', now);
+
+    mockTransactionRepository.getPaginated.mockResolvedValue({
+      data: [
+        Object.assign(locked, { returnedAmount: 0, paymentSibling: null, bulkLocked: true }),
+        Object.assign(free, { returnedAmount: 0, paymentSibling: null, bulkLocked: false }),
+      ],
+      nextCursor: null,
+      hasMore: false,
+    });
+
+    const result = await handler.execute(new GetTransactionsPaginatedQuery('user-1', {}, PAGE));
+
+    expect(result.data.map((row) => row.bulkLocked)).toEqual([true, false]);
+  });
+
+  it('передаёт в репозиторий многозначные фильтры и период', async () => {
+    mockTransactionRepository.getPaginated.mockResolvedValue({
+      data: [],
+      nextCursor: null,
+      hasMore: false,
+    });
+    const startDate = new Date('2026-10-01T00:00:00Z');
+    const endDate = new Date('2026-10-31T23:59:59Z');
+
+    await handler.execute(
+      new GetTransactionsPaginatedQuery(
+        'user-1',
+        {
+          type: 'expense',
+          categoryIds: ['taxi', 'gifts_income'],
+          accountIds: ['acc-1'],
+          tags: ['кафе'],
+          startDate,
+          endDate,
+        },
+        PAGE,
+      ),
+    );
+
+    expect(mockTransactionRepository.getPaginated).toHaveBeenCalledWith('user-1', {
+      pageSize: 20,
+      type: 'expense',
+      categoryIds: ['taxi', 'gifts_income'],
+      accountIds: ['acc-1'],
+      tags: ['кафе'],
+      startDate,
+      endDate,
+    });
   });
 });

@@ -16,15 +16,8 @@ export class GetTransactionsPaginatedHandler implements IQueryHandler<GetTransac
 
   async execute(query: GetTransactionsPaginatedQuery) {
     const result = await this.transactionRepository.getPaginated(query.userId, {
-      pageSize: query.pageSize,
-      cursorDate: query.cursorDate,
-      cursorCreatedAt: query.cursorCreatedAt,
-      cursorId: query.cursorId,
-      type: query.type,
-      accountId: query.accountId,
-      categoryId: query.categoryId,
-      search: query.search,
-      debtId: query.debtId,
+      ...query.filter,
+      ...query.page,
     });
 
     return {
@@ -35,6 +28,7 @@ export class GetTransactionsPaginatedHandler implements IQueryHandler<GetTransac
           returnedAmount: t.returnedAmount,
           netAmount,
           hasDebtReturns: t.returnedAmount > 0,
+          bulkLocked: t.bulkLocked,
         };
       }),
       nextCursor: result.nextCursor,

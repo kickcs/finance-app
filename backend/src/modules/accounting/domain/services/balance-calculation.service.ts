@@ -1,6 +1,25 @@
 import type { Account } from '../aggregates/account';
 import type { Transaction } from '../aggregates/transaction';
 
+/** Поля строки, от которых зависит её влияние на остатки. */
+export interface BalanceAffectingRow {
+  type: string;
+  accountId: string;
+  amount: number;
+  currency: string;
+  isDebtRelated: boolean;
+  toAccountId: string | null;
+  toAmount: number | null;
+  toCurrency: string | null;
+}
+
+/** Сдвиг остатка одного счёта в одной валюте. */
+export interface BalanceEffect {
+  accountId: string;
+  currency: string;
+  delta: number;
+}
+
 /**
  * Balance Calculation Domain Service
  * Handles balance calculations and adjustments
@@ -24,15 +43,42 @@ export class BalanceCalculationService {
     return 0;
   }
 
+  /**
+   * Как проведённая строка двигает остатки: свой счёт — по направлению, у перевода получатель
+   * ещё и получает сумму прихода. Та же арифметика, что у `applyTransaction` + `applyTransferReceive`.
+   */
+  static balanceEffects(row: BalanceAffectingRow): BalanceEffect[] {
+    const effects: BalanceEffect[] = [
+      {
+        accountId: row.accountId,
+        currency: row.currency,
+        delta: BalanceCalculationService.sourceDirection(row.type, row.isDebtRelated) * row.amount,
+      },
+    ];
+    if (
+      row.type === 'transfer' &&
+      row.toAccountId !== null &&
+      row.toAmount !== null &&
+      row.toCurrency !== null
+    ) {
+      effects.push({ accountId: row.toAccountId, currency: row.toCurrency, delta: row.toAmount });
+    }
+    return effects;
+  }
+
+  /** Направление по счёту `accountId` строки: перевод для своего счёта-источника — списание. */
+  private static sourceDirection(type: string, isDebtRelated: boolean): 1 | -1 | 0 {
+    return type === 'transfer'
+      ? -1
+      : BalanceCalculationService.nonTransferDirection(type, isDebtRelated);
+  }
+
   /** Деньги по счёту-источнику: `sign` 1 — провести операцию, −1 — развернуть. */
   private static move(account: Account, transaction: Transaction, sign: 1 | -1): void {
-    // Перевод для счёта-источника — списание.
-    const direction = transaction.type.isTransfer()
-      ? -1
-      : BalanceCalculationService.nonTransferDirection(
-          transaction.type.value,
-          transaction.isDebtRelated,
-        );
+    const direction = BalanceCalculationService.sourceDirection(
+      transaction.type.value,
+      transaction.isDebtRelated,
+    );
     account.applyDelta(direction * sign * transaction.amountValue, transaction.currency);
   }
 
