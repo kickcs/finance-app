@@ -1,4 +1,4 @@
-export const CURRENT_VERSION = '1.0.96';
+export const CURRENT_VERSION = '1.0.97';
 
 export type ChangelogItemType = 'feature' | 'fix' | 'improvement';
 
@@ -27,6 +27,17 @@ export const CHANGELOG_TYPE_CONFIG: Record<
 };
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: '1.0.97',
+    date: '2026-10-31',
+    title: 'Аккуратный верх списка в истории',
+    items: [
+      {
+        type: 'fix',
+        text: 'Под фильтрами истории больше не просвечивает краешек прокручиваемых операций, а заголовок с датой, уезжая при прокрутке, не наезжает на фильтры. Сами фильтры теперь прокручиваются до края экрана.',
+      },
+    ],
+  },
   {
     version: '1.0.96',
     date: '2026-10-31',

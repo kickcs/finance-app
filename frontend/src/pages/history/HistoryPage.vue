@@ -405,9 +405,11 @@ async function handleRefresh() {
           </div>
 
           <!-- Чипы фильтров: состояние видно, не открывая шторку. Поиск идёт мимо них,
-               поэтому пока он открыт, чипы скрыты вместе с вкладками. -->
+               поэтому пока он открыт, чипы скрыты вместе с вкладками.
+               На телефоне лента выходит в край экрана сквозь px-5 мастер-колонки. -->
           <HistoryFacetRail
             v-if="!isSearchOpen"
+            :class="cn(!isDesktop && '-mx-5 px-5')"
             :values="facetValues"
             :hide-category="activeTypeFilter === 'transfer'"
             @open="openFacet = $event"

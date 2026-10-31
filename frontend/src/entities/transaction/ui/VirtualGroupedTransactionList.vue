@@ -288,93 +288,19 @@ defineExpose({ scrollToTop });
 </script>
 
 <template>
-  <div class="relative" :style="{ height }">
-    <div ref="parentRef" class="h-full overflow-auto" @contextmenu="onContextMenu">
-      <div
-        :style="{
-          height: `${totalSize}px`,
-          width: '100%',
-          position: 'relative',
-        }"
-      >
-        <div
-          v-for="virtualRow in virtualRows"
-          :key="flatItems[virtualRow.index]?.key ?? `loading-${virtualRow.index}`"
-          :style="{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: `${virtualRow.size}px`,
-            transform: `translateY(${virtualRow.start}px)`,
-          }"
-        >
-          <!-- Loading indicator -->
-          <div
-            v-if="virtualRow.index >= flatItems.length"
-            class="flex items-center justify-center h-full"
-          >
-            <span
-              v-if="hasNextPage"
-              class="text-xs text-text-secondary-light dark:text-text-secondary-dark"
-            >
-              <span class="inline-block animate-pulse">Загрузка...</span>
-            </span>
-            <span v-else class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
-              Все транзакции загружены
-            </span>
-          </div>
-
-          <!-- Date header -->
-          <DayGroupHeader
-            v-else-if="getHeaderData(virtualRow.index)"
-            :date="getHeaderData(virtualRow.index)!.date"
-            :total="getHeaderData(virtualRow.index)!.total"
-            :currency="currency"
-          />
-
-          <!-- Transaction row: операции одного дня образуют одну карточку -->
-          <div
-            v-else
-            :data-tx-id="getTransactionData(virtualRow.index)?.id"
-            :class="rowClass(flatItems[virtualRow.index])"
-          >
-            <SwipeableItem
-              v-if="getTransactionData(virtualRow.index) && swipeEnabled && !selectMode"
-              flush
-              full-swipe
-              @action-left="emit('transactionDelete', getTransactionData(virtualRow.index)!)"
-              @action-right="emit('transactionEdit', getTransactionData(virtualRow.index)!)"
-            >
-              <TransactionItem
-                v-bind="transactionItemProps(getTransactionData(virtualRow.index)!)"
-                @click="emit('transactionClick', getTransactionData(virtualRow.index)!)"
-              />
-            </SwipeableItem>
-            <TransactionItem
-              v-else-if="getTransactionData(virtualRow.index)"
-              v-bind="transactionItemProps(getTransactionData(virtualRow.index)!)"
-              @click="emit('transactionClick', getTransactionData(virtualRow.index)!)"
-            />
-
-            <!-- Волосяной разделитель по левому краю текста -->
-            <span
-              v-if="!flatItems[virtualRow.index].isFirst"
-              aria-hidden="true"
-              class="pointer-events-none absolute top-0 left-[3.75rem] right-3 h-px bg-border-light dark:bg-border-dark"
-            />
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Липкая линейка дня. aria-hidden: настоящий заголовок остаётся в дереве
-         доступности, и без этого скринридер читал бы дату и итог дважды. -->
+  <div ref="parentRef" class="overflow-auto" :style="{ height }" @contextmenu="onContextMenu">
+    <!-- Липкая линейка дня внутри скроллера: вытолкнутую её обрезает край списка, а не
+         рисует поверх чипов. before: на 1 px за край — стык вровень на дробных
+         координатах iOS оставлял щель со строками. aria-hidden: дата уже есть в дереве. -->
     <div
       v-if="stickyHeader"
       aria-hidden="true"
-      class="pointer-events-none absolute inset-x-0 top-0 z-20"
-      :style="{ height: `${HEADER_HEIGHT}px`, transform: `translateY(${stickyHeader.offset}px)` }"
+      class="pointer-events-none sticky top-0 z-20 before:absolute before:inset-x-0 before:bottom-full before:h-px before:bg-background-light dark:before:bg-background-dark"
+      :style="{
+        height: `${HEADER_HEIGHT}px`,
+        marginBottom: `-${HEADER_HEIGHT}px`,
+        transform: `translateY(${stickyHeader.offset}px)`,
+      }"
     >
       <DayGroupHeader
         sticky
@@ -382,6 +308,83 @@ defineExpose({ scrollToTop });
         :total="stickyHeader.data.total"
         :currency="currency"
       />
+    </div>
+
+    <div
+      :style="{
+        height: `${totalSize}px`,
+        width: '100%',
+        position: 'relative',
+      }"
+    >
+      <div
+        v-for="virtualRow in virtualRows"
+        :key="flatItems[virtualRow.index]?.key ?? `loading-${virtualRow.index}`"
+        :style="{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: `${virtualRow.size}px`,
+          transform: `translateY(${virtualRow.start}px)`,
+        }"
+      >
+        <!-- Loading indicator -->
+        <div
+          v-if="virtualRow.index >= flatItems.length"
+          class="flex items-center justify-center h-full"
+        >
+          <span
+            v-if="hasNextPage"
+            class="text-xs text-text-secondary-light dark:text-text-secondary-dark"
+          >
+            <span class="inline-block animate-pulse">Загрузка...</span>
+          </span>
+          <span v-else class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
+            Все транзакции загружены
+          </span>
+        </div>
+
+        <!-- Date header -->
+        <DayGroupHeader
+          v-else-if="getHeaderData(virtualRow.index)"
+          :date="getHeaderData(virtualRow.index)!.date"
+          :total="getHeaderData(virtualRow.index)!.total"
+          :currency="currency"
+        />
+
+        <!-- Transaction row: операции одного дня образуют одну карточку -->
+        <div
+          v-else
+          :data-tx-id="getTransactionData(virtualRow.index)?.id"
+          :class="rowClass(flatItems[virtualRow.index])"
+        >
+          <SwipeableItem
+            v-if="getTransactionData(virtualRow.index) && swipeEnabled && !selectMode"
+            flush
+            full-swipe
+            @action-left="emit('transactionDelete', getTransactionData(virtualRow.index)!)"
+            @action-right="emit('transactionEdit', getTransactionData(virtualRow.index)!)"
+          >
+            <TransactionItem
+              v-bind="transactionItemProps(getTransactionData(virtualRow.index)!)"
+              @click="emit('transactionClick', getTransactionData(virtualRow.index)!)"
+            />
+          </SwipeableItem>
+          <TransactionItem
+            v-else-if="getTransactionData(virtualRow.index)"
+            v-bind="transactionItemProps(getTransactionData(virtualRow.index)!)"
+            @click="emit('transactionClick', getTransactionData(virtualRow.index)!)"
+          />
+
+          <!-- Волосяной разделитель по левому краю текста -->
+          <span
+            v-if="!flatItems[virtualRow.index].isFirst"
+            aria-hidden="true"
+            class="pointer-events-none absolute top-0 left-[3.75rem] right-3 h-px bg-border-light dark:bg-border-dark"
+          />
+        </div>
+      </div>
     </div>
   </div>
 </template>
