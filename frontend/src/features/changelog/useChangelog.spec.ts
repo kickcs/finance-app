@@ -82,12 +82,12 @@ describe('useChangelog', () => {
       expect(latestEntry.value?.items.length).toBeGreaterThan(0);
     });
 
-    it('точка входа релиза — 1.0.96 с записью про фильтры истории', () => {
-      expect(CURRENT_VERSION).toBe('1.0.96');
-      expect(CHANGELOG_ENTRIES[0].version).toBe('1.0.96');
+    it('точка входа релиза — 1.0.97 с починкой верха списка истории', () => {
+      expect(CURRENT_VERSION).toBe('1.0.97');
+      expect(CHANGELOG_ENTRIES[0].version).toBe('1.0.97');
       expect(CHANGELOG_ENTRIES[0].date).toBe('2026-10-31');
-      expect(CHANGELOG_ENTRIES[0].items[0].type).toBe('feature');
-      expect(CHANGELOG_ENTRIES[0].items[0].text).toContain('отфильтровать');
+      expect(CHANGELOG_ENTRIES[0].items[0].type).toBe('fix');
+      expect(CHANGELOG_ENTRIES[0].items[0].text).toContain('просвечивает');
     });
   });
 
