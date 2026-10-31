@@ -1,11 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, Repository, Between } from 'typeorm';
+import { EntityManager, Repository, Between, SelectQueryBuilder } from 'typeorm';
 import { Transaction } from '../../../domain/aggregates/transaction';
 import {
   ITransactionRepository,
   PaginatedResult,
   PaginationOptions,
+  BulkRow,
+  BulkSelection,
+  BulkSelectionResult,
+  TransactionFilter,
+  TransactionsSummary,
   MonthlyStats,
   AnalyticsStats,
   AnalyticsOptions,
@@ -29,6 +34,9 @@ import {
 } from '../../../domain/constants/default-categories';
 import { getFinancialMonthBounds } from '../../../../../shared/utils/financial-period';
 import { startOfDayInTz } from '../../../../../shared/utils/date';
+import { TAG_BOUNDARY_CHARS } from '../../../domain/constants/hashtag';
+import { lockedForBulkSql } from './bulk-eligibility';
+import { positiveNetSql } from './net-amount-sql';
 
 /**
  * Calendar `YYYY-MM-DD` of a timezone-naive Date built by getFinancialMonthBounds
@@ -53,6 +61,29 @@ const CURSOR_CONDITION_WITH_ID =
   `(t.date < :cursorDate` +
   ` OR (t.date = :cursorDate AND ${TRUNCATED_CREATED_AT} < :cursorCreatedAt)` +
   ` OR (t.date = :cursorDate AND ${TRUNCATED_CREATED_AT} = :cursorCreatedAt AND t.id < :cursorId))`;
+
+const TAG_END = `(?:[${TAG_BOUNDARY_CHARS}]|$)`;
+
+// Знак суммы для итога: доход плюс, расход минус, корректировка по направлению (`is_debt_related`
+// у неё значит «минус»); перевод и информационная строка денег не двигают. Совпадение с
+// `BalanceCalculationService.nonTransferDirection` держит test/history-filters.e2e-spec.ts.
+const SIGNED_AMOUNT_SQL = `COALESCE(SUM(CASE
+  WHEN COALESCE(t.is_informational, false) THEN 0
+  WHEN t.type = 'income' THEN t.amount
+  WHEN t.type = 'expense' THEN -t.amount
+  WHEN t.type = 'adjustment' THEN CASE WHEN COALESCE(t.is_debt_related, false) THEN -t.amount ELSE t.amount END
+  ELSE 0
+END), 0)`;
+
+/** Регэксп тега для `~*`: символы тега — буквально, дальше обязательна граница. */
+function tagPattern(tag: string): string {
+  return `#${tag.replace(/[^\p{L}\p{N}_]/gu, '\\$&')}${TAG_END}`;
+}
+
+/** Шаблон ILIKE «содержит»: `%`, `_` и `\` из ввода ищутся буквально (`\` — экранирование по умолчанию). */
+function containsPattern(term: string): string {
+  return `%${term.replace(/[\\%_]/g, '\\$&')}%`;
+}
 
 const LEGACY_CURSOR_CONDITION =
   '(t.date < :cursorDate OR (t.date = :cursorDate AND t.created_at < :cursorCreatedAt))';
@@ -171,6 +202,15 @@ export class TransactionRepository implements ITransactionRepository {
     await this.repo(manager).delete(id);
   }
 
+  async deleteMany(ids: readonly string[], manager?: EntityManager): Promise<void> {
+    if (ids.length === 0) return;
+    // Кусками: число параметров одного запроса ограничено.
+    const CHUNK_SIZE = 1000;
+    for (let i = 0; i < ids.length; i += CHUNK_SIZE) {
+      await this.repo(manager).delete(ids.slice(i, i + CHUNK_SIZE));
+    }
+  }
+
   async deleteByAccountId(accountId: string, manager?: EntityManager): Promise<void> {
     const repo = this.repo(manager);
     // Sequential: a transactional EntityManager runs on a single connection,
@@ -265,54 +305,17 @@ export class TransactionRepository implements ITransactionRepository {
       }
     }
 
-    if (options.type) {
-      if (options.type === 'debt') {
-        query = query.andWhere('t.is_debt_related = true');
-      } else {
-        query = query
-          .andWhere('t.type = :type', { type: options.type })
-          .andWhere('t.is_debt_related = false');
-      }
-    }
+    query = this.applyFilter(query, options);
 
-    if (options.accountId) {
-      query = query.andWhere('t.account_id = :accountId', {
-        accountId: options.accountId,
-      });
-    }
-
-    if (options.categoryId) {
-      query = query.andWhere('t.category_id = :categoryId', {
-        categoryId: options.categoryId,
-      });
-    }
-
-    if (options.search) {
-      query = query.andWhere('t.description ILIKE :search', {
-        search: `%${options.search}%`,
-      });
-    }
-
-    if (options.debtId) {
-      // Переплата расчёта лежит без `debt_id`: её связь с долгом — только общий `settlement_id`.
-      // `= ANY(ARRAY(...))`, а не `IN (...)`: подзапрос считается один раз, и обе ветки OR идут по индексам.
-      query = query.andWhere(
-        `(t.debtId = :debtId OR (t.debtId IS NULL AND t.settlementId = ANY(ARRAY(
-          SELECT settlement_id FROM transactions WHERE debt_id = :debtId AND settlement_id IS NOT NULL
-        ))))`,
-        { debtId: options.debtId },
-      );
-    }
-
-    const items = await query.getMany();
-    const domainItems = items.map((entity) => TransactionMapper.toDomain(entity));
+    const rows = await this.readWithBulkLocked(query);
+    const domainItems = rows.map((row) => row.transaction);
     const siblings = await this.findPaymentSiblings(domainItems);
 
     // Calculate returned amounts for expense transactions via debt returns.
     // Siblings are included: a payment group's returns are spread over both parts.
     const returnedAmountsMap: Record<string, number> = {};
     const transactionIds = [
-      ...items.map((t) => t.id),
+      ...domainItems.map((t) => t.id),
       ...[...siblings.values()].map((sibling) => sibling.id),
     ];
 
@@ -343,37 +346,31 @@ export class TransactionRepository implements ITransactionRepository {
       }
     }
 
-    const lastItem = items[items.length - 1];
+    const lastItem = domainItems[domainItems.length - 1];
 
-    const dataWithReturns: TransactionWithReturns[] = domainItems.map((domain) => {
-      const ownReturned = returnedAmountsMap[domain.id] ?? 0;
-      const paymentSibling = siblings.get(domain.id) ?? null;
-      const returnedAmount = paymentSibling
-        ? paymentPartReturnedAmount(
-            { amount: domain.amountValue, returned: ownReturned },
-            {
-              amount: paymentSibling.amountValue,
-              returned: returnedAmountsMap[paymentSibling.id] ?? 0,
-            },
-          )
-        : ownReturned;
-      return Object.assign(domain, {
-        returnedAmount,
-        paymentSibling,
-      }) as TransactionWithReturns;
-    });
-
-    // If filtering by expense type, exclude transactions where netAmount <= 0
-    let filteredData = dataWithReturns;
-    if (options.type === 'expense') {
-      filteredData = dataWithReturns.filter((t) => {
-        const netAmount = t.amountValue - t.returnedAmount;
-        return netAmount > 0;
-      });
-    }
+    const dataWithReturns: TransactionWithReturns[] = rows.map(
+      ({ transaction: domain, locked }) => {
+        const ownReturned = returnedAmountsMap[domain.id] ?? 0;
+        const paymentSibling = siblings.get(domain.id) ?? null;
+        const returnedAmount = paymentSibling
+          ? paymentPartReturnedAmount(
+              { amount: domain.amountValue, returned: ownReturned },
+              {
+                amount: paymentSibling.amountValue,
+                returned: returnedAmountsMap[paymentSibling.id] ?? 0,
+              },
+            )
+          : ownReturned;
+        return Object.assign(domain, {
+          returnedAmount,
+          paymentSibling,
+          bulkLocked: locked,
+        }) as TransactionWithReturns;
+      },
+    );
 
     return {
-      data: filteredData,
+      data: dataWithReturns,
       nextCursor: lastItem
         ? {
             date: lastItem.date.toISOString(),
@@ -381,7 +378,149 @@ export class TransactionRepository implements ITransactionRepository {
             id: lastItem.id,
           }
         : null,
-      hasMore: items.length === options.pageSize,
+      hasMore: rows.length === options.pageSize,
+    };
+  }
+
+  async findForBulk(
+    userId: string,
+    selection: BulkSelection,
+    manager: EntityManager,
+    options: { lock: boolean },
+  ): Promise<BulkSelectionResult> {
+    const result: BulkSelectionResult = {
+      selected: [],
+      siblings: [],
+      missingIds: [],
+      foreignIds: [],
+      overLimit: false,
+    };
+
+    if (selection.kind === 'filter') {
+      // Один лишний ряд нужен, чтобы отличить «ровно предел» от «больше предела».
+      const query = this.applyFilter(
+        this.bulkQuery(manager, options.lock).where('t.userId = :userId', { userId }),
+        selection.filter,
+      ).limit(selection.maxRows + 1);
+      const rows = await this.readWithBulkLocked(query);
+      if (rows.length > selection.maxRows) {
+        return { ...result, overLimit: true };
+      }
+      result.selected = rows;
+    } else {
+      const ids = [...new Set(selection.ids)];
+      result.selected =
+        ids.length === 0
+          ? []
+          : await this.readWithBulkLocked(
+              this.bulkQuery(manager, options.lock)
+                .where('t.id IN (:...ids)', { ids })
+                .andWhere('t.userId = :userId', { userId }),
+            );
+      const found = new Set(result.selected.map((row) => row.transaction.id));
+      const absent = ids.filter((id) => !found.has(id));
+      if (absent.length > 0) {
+        // Чужие и несуществующие id различаются: первым отвечают 403, вторым — 409.
+        const existing = await this.repo(manager)
+          .createQueryBuilder('t')
+          .select('t.id', 'id')
+          .where('t.id IN (:...absent)', { absent })
+          .getRawMany<{ id: string }>();
+        const foreign = new Set(existing.map((row) => row.id));
+        result.foreignIds = absent.filter((id) => foreign.has(id));
+        result.missingIds = absent.filter((id) => !foreign.has(id));
+      }
+    }
+
+    result.siblings = await this.findBulkSiblings(userId, result.selected, manager, options.lock);
+    return result;
+  }
+
+  async findByIdsForUpdate(
+    ids: readonly string[],
+    userId: string,
+    manager: EntityManager,
+  ): Promise<Transaction[]> {
+    if (ids.length === 0) return [];
+    const entities = await this.repo(manager)
+      .createQueryBuilder('t')
+      .setLock('pessimistic_write', undefined, ['t'])
+      .where('t.id IN (:...ids)', { ids })
+      .andWhere('t.userId = :userId', { userId })
+      .orderBy('t.id', 'ASC')
+      .getMany();
+    return entities.map((entity) => TransactionMapper.toDomain(entity));
+  }
+
+  /** Основа запросов массовой правки: порядок по id и запирание строк `t`. */
+  private bulkQuery(
+    manager: EntityManager,
+    lock: boolean,
+  ): SelectQueryBuilder<TransactionOrmEntity> {
+    const query = this.repo(manager).createQueryBuilder('t').orderBy('t.id', 'ASC');
+    if (lock) {
+      // Один порядок id у всех массовых операций: пересекающиеся выборки не ждут друг друга по кругу.
+      query.setLock('pessimistic_write', undefined, ['t']);
+    }
+    return query;
+  }
+
+  /** Строки запроса по `t` и признак «вне правки», посчитанный в том же запросе. */
+  private async readWithBulkLocked(
+    query: SelectQueryBuilder<TransactionOrmEntity>,
+  ): Promise<BulkRow[]> {
+    const { entities, raw } = await query
+      .addSelect(lockedForBulkSql('t'), 'bulk_locked')
+      .getRawAndEntities<{ t_id: string; bulk_locked: boolean }>();
+    const lockedById = new Map(raw.map((row) => [row.t_id, row.bulk_locked === true]));
+    return entities.map((entity) => ({
+      transaction: TransactionMapper.toDomain(entity),
+      locked: lockedById.get(entity.id) ?? false,
+    }));
+  }
+
+  /** Вторые половины пар: замок у них свой, долг может ссылаться на любую из частей. */
+  private async findBulkSiblings(
+    userId: string,
+    selected: BulkRow[],
+    manager: EntityManager,
+    lock: boolean,
+  ): Promise<BulkRow[]> {
+    const groupIds = [
+      ...new Set(
+        selected
+          .map((row) => row.transaction.paymentGroupId)
+          .filter((groupId): groupId is string => groupId !== null),
+      ),
+    ];
+    if (groupIds.length === 0) return [];
+
+    const rows = await this.readWithBulkLocked(
+      this.bulkQuery(manager, lock)
+        .where('t.paymentGroupId IN (:...groupIds)', { groupIds })
+        .andWhere('t.userId = :userId', { userId }),
+    );
+    const selectedIds = new Set(selected.map((row) => row.transaction.id));
+    return rows.filter((row) => !selectedIds.has(row.transaction.id));
+  }
+
+  async getSummary(userId: string, filter: TransactionFilter): Promise<TransactionsSummary> {
+    const rows = await this.applyFilter(
+      this.ormRepository.createQueryBuilder('t').where('t.userId = :userId', { userId }),
+      filter,
+    )
+      .select('t.currency', 'currency')
+      .addSelect('COUNT(*)', 'count')
+      .addSelect(`COUNT(*) FILTER (WHERE ${lockedForBulkSql('t')})`, 'lockedCount')
+      .addSelect(SIGNED_AMOUNT_SQL, 'total')
+      .groupBy('t.currency')
+      .orderBy('t.currency', 'ASC')
+      .getRawMany<{ currency: string; count: string; lockedCount: string; total: string }>();
+
+    return {
+      count: rows.reduce((sum, row) => sum + Number(row.count), 0),
+      lockedCount: rows.reduce((sum, row) => sum + Number(row.lockedCount), 0),
+      totals: rows.map((row) => ({ currency: row.currency, amount: Number(row.total) })),
     };
   }
 
@@ -394,7 +533,7 @@ export class TransactionRepository implements ITransactionRepository {
     let query = this.ormRepository
       .createQueryBuilder('t')
       .where('t.user_id = :userId', { userId })
-      .andWhere('t.description ILIKE :search', { search: `%${searchTerm}%` })
+      .andWhere('t.description ILIKE :search', { search: containsPattern(searchTerm) })
       .orderBy('t.date', 'DESC')
       .addOrderBy(TRUNCATED_CREATED_AT, 'DESC')
       .addOrderBy('t.id', 'DESC')
@@ -1040,7 +1179,7 @@ export class TransactionRepository implements ITransactionRepository {
     const result: HashtagResult[] = await this.ormRepository.query(
       `SELECT sub.tag, COUNT(*)::int as count
        FROM (
-         SELECT lower(unnest(regexp_matches(description, '#[^\\s#.,;:!?)]+', 'g'))) as tag
+         SELECT lower(unnest(regexp_matches(description, '#[^${TAG_BOUNDARY_CHARS}]+', 'g'))) as tag
          FROM transactions
          WHERE user_id = $1 AND description LIKE '%#%'
        ) sub
@@ -1092,6 +1231,81 @@ export class TransactionRepository implements ITransactionRepository {
 
     if (accountIds && accountIds.length > 0) {
       query = query.andWhere('return_tx.account_id IN (:...accountIds)', { accountIds });
+    }
+
+    return query;
+  }
+
+  /** Единственное место условий фильтра: иначе лента, итог и массовая правка возьмут разные строки. */
+  private applyFilter(
+    query: SelectQueryBuilder<TransactionOrmEntity>,
+    filter: TransactionFilter,
+  ): SelectQueryBuilder<TransactionOrmEntity> {
+    if (filter.type) {
+      if (filter.type === 'debt') {
+        query.andWhere('t.isDebtRelated = true');
+      } else {
+        query.andWhere('t.type = :type', { type: filter.type }).andWhere('t.isDebtRelated = false');
+        // Расход, который возвраты покрыли целиком, в расходы не входит. Отсев в SQL, а не после
+        // выборки страницы: иначе страницы приходят неполными, а итог расходится с лентой.
+        if (filter.type === 'expense') {
+          query.andWhere(positiveNetSql('t'));
+        }
+      }
+    }
+
+    if (filter.accountId) {
+      query.andWhere('t.accountId = :accountId', { accountId: filter.accountId });
+    }
+
+    if (filter.accountIds?.length) {
+      // Входящий перевод лежит на счёте-источнике, поэтому смотрим и счёт-получатель.
+      query.andWhere(
+        `(t.accountId IN (:...accountIds)
+          OR (t.type = 'transfer' AND t.toAccountId IN (:...accountIds)))`,
+        { accountIds: filter.accountIds },
+      );
+    }
+
+    if (filter.categoryId) {
+      query.andWhere('t.categoryId = :categoryId', { categoryId: filter.categoryId });
+    }
+
+    if (filter.categoryIds?.length) {
+      query.andWhere('t.categoryId IN (:...categoryIds)', { categoryIds: filter.categoryIds });
+    }
+
+    if (filter.tags?.length) {
+      query.andWhere('t.description ~* ANY(ARRAY[:...tagPatterns])', {
+        tagPatterns: filter.tags.map(tagPattern),
+      });
+    }
+
+    if (filter.startDate) {
+      query.andWhere('t.date >= :periodStart', { periodStart: filter.startDate });
+    }
+
+    if (filter.endDate) {
+      query.andWhere('t.date <= :periodEnd', { periodEnd: filter.endDate });
+    }
+
+    if (filter.asOf) {
+      query.andWhere(`${TRUNCATED_CREATED_AT} <= :asOf`, { asOf: filter.asOf });
+    }
+
+    if (filter.search) {
+      query.andWhere('t.description ILIKE :search', { search: containsPattern(filter.search) });
+    }
+
+    if (filter.debtId) {
+      // Переплата расчёта лежит без `debt_id`: её связь с долгом — только общий `settlement_id`.
+      // `= ANY(ARRAY(...))`, а не `IN (...)`: подзапрос считается один раз, и обе ветки OR идут по индексам.
+      query.andWhere(
+        `(t.debtId = :debtId OR (t.debtId IS NULL AND t.settlementId = ANY(ARRAY(
+          SELECT settlement_id FROM transactions WHERE debt_id = :debtId AND settlement_id IS NOT NULL
+        ))))`,
+        { debtId: filter.debtId },
+      );
     }
 
     return query;

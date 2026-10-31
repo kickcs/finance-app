@@ -1173,20 +1173,7 @@ describe('Расчёт по долгу: удаление и правка зап�
       const page = await ctx.queryBus.execute<
         GetTransactionsPaginatedQuery,
         { data: { id: string }[] }
-      >(
-        new GetTransactionsPaginatedQuery(
-          ctx.userId,
-          50,
-          undefined,
-          undefined,
-          undefined,
-          undefined,
-          undefined,
-          undefined,
-          undefined,
-          debtId,
-        ),
-      );
+      >(new GetTransactionsPaginatedQuery(ctx.userId, { debtId }, { pageSize: 50 }));
       return page.data.map((r) => r.id);
     };
 

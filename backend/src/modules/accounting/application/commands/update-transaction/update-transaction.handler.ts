@@ -1,6 +1,6 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { Inject, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
-import { DataSource, EntityManager } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { UpdateTransactionCommand } from './update-transaction.command';
 import {
   ITransactionRepository,
@@ -13,6 +13,7 @@ import {
 import { IDebtRepository, DEBT_REPOSITORY } from '../../../../debt/domain/repositories';
 import { DomainEventPublisher } from '../../../../../shared';
 import { toTransactionResponse } from '../../helpers/to-transaction-response';
+import { AccountUnitOfWork } from '../../helpers/account-unit-of-work';
 import { Account } from '../../../domain/aggregates/account';
 import { Transaction } from '../../../domain/aggregates/transaction';
 import { ALL_DEBT_CATEGORY_IDS } from '../../../domain/constants/default-categories';
@@ -47,9 +48,6 @@ function changesSettlementMoney(
     !!data.secondPart
   );
 }
-
-/** Один экземпляр на счёт за правку: вторая копия затёрла бы изменения первой при сохранении. */
-type AccountCache = Map<string, Account>;
 
 @CommandHandler(UpdateTransactionCommand)
 export class UpdateTransactionHandler implements ICommandHandler<UpdateTransactionCommand> {
@@ -172,20 +170,21 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
       );
     }
 
-    const accounts: AccountCache = new Map();
+    let changedAccounts: Account[] = [];
 
     // Wrap all balance + transaction updates in a DB transaction
     await this.dataSource.transaction(async (manager) => {
+      const accounts = new AccountUnitOfWork(this.accountRepository, manager, command.userId);
       if (balanceChanged) {
         if (oldType !== 'transfer' && newType !== 'transfer') {
-          await this.reverseNonTransfer(manager, accounts, command.userId, {
+          await this.reverseNonTransfer(accounts, {
             accountId: oldAccountId,
             amount: oldAmount,
             currency: oldCurrency,
             type: oldType,
             isDebtRelated: oldIsDebtRelated,
           });
-          await this.applyNonTransfer(manager, accounts, command.userId, {
+          await this.applyNonTransfer(accounts, {
             accountId: newAccountId,
             amount: newAmount,
             currency: newCurrency,
@@ -194,9 +193,7 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
           });
         } else if (oldType === 'transfer' && newType === 'transfer') {
           await this.handleTransferBalanceUpdate(
-            manager,
             accounts,
-            command.userId,
             oldAccountId,
             newAccountId,
             oldAmount,
@@ -212,9 +209,7 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
           );
         } else if (oldType === 'transfer' && newType !== 'transfer') {
           await this.reverseTransfer(
-            manager,
             accounts,
-            command.userId,
             oldAccountId,
             oldAmount,
             oldCurrency,
@@ -222,7 +217,7 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
             oldToAmount!,
             oldToCurrency!,
           );
-          await this.applyNonTransfer(manager, accounts, command.userId, {
+          await this.applyNonTransfer(accounts, {
             accountId: newAccountId,
             amount: newAmount,
             currency: newCurrency,
@@ -230,7 +225,7 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
             isDebtRelated: newIsDebtRelated,
           });
         } else {
-          await this.reverseNonTransfer(manager, accounts, command.userId, {
+          await this.reverseNonTransfer(accounts, {
             accountId: oldAccountId,
             amount: oldAmount,
             currency: oldCurrency,
@@ -238,9 +233,7 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
             isDebtRelated: oldIsDebtRelated,
           });
           await this.applyTransfer(
-            manager,
             accounts,
-            command.userId,
             newAccountId,
             newAmount,
             newCurrency,
@@ -252,23 +245,21 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
       }
 
       if (removedSibling) {
-        await this.reverseNonTransfer(manager, accounts, command.userId, toEffect(removedSibling));
+        await this.reverseNonTransfer(accounts, toEffect(removedSibling));
       }
       if (keptSibling) {
         const newEffect = toEffect(keptSibling);
         if (!siblingOldEffect || !isSameEffect(siblingOldEffect, newEffect)) {
           if (siblingOldEffect) {
-            await this.reverseNonTransfer(manager, accounts, command.userId, siblingOldEffect);
+            await this.reverseNonTransfer(accounts, siblingOldEffect);
           }
-          await this.applyNonTransfer(manager, accounts, command.userId, newEffect);
+          await this.applyNonTransfer(accounts, newEffect);
         }
       }
 
       // Sequential writes: a transactional EntityManager runs on a single
       // connection, parallel queries on it are not safe.
-      for (const account of accounts.values()) {
-        await this.accountRepository.save(account, manager);
-      }
+      changedAccounts = await accounts.saveChanged();
       await this.transactionRepository.save(transaction, manager);
       if (keptSibling) {
         await this.transactionRepository.save(keptSibling, manager);
@@ -285,7 +276,7 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
     });
 
     // Publish events AFTER the DB transaction commits
-    for (const account of accounts.values()) {
+    for (const account of changedAccounts) {
       await this.eventPublisher.publishEvents(account);
     }
     await this.eventPublisher.publishEvents(transaction);
@@ -298,31 +289,8 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
     return toTransactionResponse(transaction, keptSibling);
   }
 
-  private async loadAccount(
-    manager: EntityManager,
-    accounts: AccountCache,
-    accountId: string,
-    userId: string,
-  ): Promise<Account> {
-    const cached = accounts.get(accountId);
-    if (cached) {
-      return cached;
-    }
-    const account = await this.accountRepository.findByIdWithBalances(accountId, manager);
-    if (!account) {
-      throw new NotFoundException('Account not found');
-    }
-    if (account.userId !== userId) {
-      throw new ForbiddenException('Account does not belong to user');
-    }
-    accounts.set(accountId, account);
-    return account;
-  }
-
   private async handleTransferBalanceUpdate(
-    manager: EntityManager,
-    accounts: AccountCache,
-    userId: string,
+    accounts: AccountUnitOfWork,
     oldFromAccountId: string,
     newFromAccountId: string,
     oldFromAmount: number,
@@ -339,9 +307,7 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
     // Reverse old transfer
     if (oldToAccountId && oldToAmount !== null && oldToCurrency) {
       await this.reverseTransfer(
-        manager,
         accounts,
-        userId,
         oldFromAccountId,
         oldFromAmount,
         oldFromCurrency,
@@ -354,9 +320,7 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
     // Apply new transfer
     if (newToAccountId && newToAmount !== null && newToCurrency) {
       await this.applyTransfer(
-        manager,
         accounts,
-        userId,
         newFromAccountId,
         newFromAmount,
         newFromCurrency,
@@ -368,32 +332,26 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
   }
 
   private async reverseNonTransfer(
-    manager: EntityManager,
-    accounts: AccountCache,
-    userId: string,
+    accounts: AccountUnitOfWork,
     effect: NonTransferEffect,
   ): Promise<void> {
-    await this.moveNonTransfer(manager, accounts, userId, effect, -1);
+    await this.moveNonTransfer(accounts, effect, -1);
   }
 
   private async applyNonTransfer(
-    manager: EntityManager,
-    accounts: AccountCache,
-    userId: string,
+    accounts: AccountUnitOfWork,
     effect: NonTransferEffect,
   ): Promise<void> {
-    await this.moveNonTransfer(manager, accounts, userId, effect, 1);
+    await this.moveNonTransfer(accounts, effect, 1);
   }
 
   /** `sign` 1 — провести влияние на счёт, −1 — развернуть. */
   private async moveNonTransfer(
-    manager: EntityManager,
-    accounts: AccountCache,
-    userId: string,
+    accounts: AccountUnitOfWork,
     effect: NonTransferEffect,
     sign: 1 | -1,
   ): Promise<void> {
-    const account = await this.loadAccount(manager, accounts, effect.accountId, userId);
+    const account = await accounts.getForChange(effect.accountId);
     const direction = BalanceCalculationService.nonTransferDirection(
       effect.type,
       effect.isDebtRelated,
@@ -402,9 +360,7 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
   }
 
   private async reverseTransfer(
-    manager: EntityManager,
-    accounts: AccountCache,
-    userId: string,
+    accounts: AccountUnitOfWork,
     fromAccountId: string,
     fromAmount: number,
     fromCurrency: string,
@@ -412,8 +368,8 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
     toAmount: number,
     toCurrency: string,
   ): Promise<void> {
-    const fromAccount = await this.loadAccount(manager, accounts, fromAccountId, userId);
-    const toAccount = await this.loadAccount(manager, accounts, toAccountId, userId);
+    const fromAccount = await accounts.getForChange(fromAccountId);
+    const toAccount = await accounts.getForChange(toAccountId);
 
     // Reverse debit from source (credit it back)
     fromAccount.credit(fromAmount, fromCurrency);
@@ -423,9 +379,7 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
   }
 
   private async applyTransfer(
-    manager: EntityManager,
-    accounts: AccountCache,
-    userId: string,
+    accounts: AccountUnitOfWork,
     fromAccountId: string,
     fromAmount: number,
     fromCurrency: string,
@@ -433,8 +387,8 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
     toAmount: number,
     toCurrency: string,
   ): Promise<void> {
-    const fromAccount = await this.loadAccount(manager, accounts, fromAccountId, userId);
-    const toAccount = await this.loadAccount(manager, accounts, toAccountId, userId);
+    const fromAccount = await accounts.getForChange(fromAccountId);
+    const toAccount = await accounts.getForChange(toAccountId);
 
     // Debit source account
     fromAccount.debit(fromAmount, fromCurrency);

@@ -16,16 +16,68 @@ export interface PaginatedResult<T> {
   hasMore: boolean;
 }
 
-export interface PaginationOptions {
-  pageSize: number;
-  cursorDate?: string;
-  cursorCreatedAt?: string;
-  cursorId?: string;
+/**
+ * Фильтр истории: один и тот же для ленты, итога и массовой правки, чтобы число в плашке
+ * совпадало со строками, которые лента отдаст при прокрутке до конца.
+ */
+export interface TransactionFilter {
+  /** `income` | `expense` | `transfer` | `debt`. */
   type?: string;
+  /** Старый фильтр по одному счёту: смотрит только `account_id`, входящие переводы не ловит. */
   accountId?: string;
   categoryId?: string;
   search?: string;
   debtId?: string;
+  /** Идентификаторы категорий — строки, не UUID: у встроенных категорий id-слаги. */
+  categoryIds?: string[];
+  /** Счёт-источник или счёт-получатель перевода. */
+  accountIds?: string[];
+  /** Теги без `#`, регистр не важен. */
+  tags?: string[];
+  /** Начало и конец периода — моменты времени, границы включаются. */
+  startDate?: Date;
+  endDate?: Date;
+  /** Только строки, созданные не позже этого момента (сверка массовой правки с итогом). */
+  asOf?: Date;
+}
+
+export interface PaginationOptions extends TransactionFilter {
+  pageSize: number;
+  cursorDate?: string;
+  cursorCreatedAt?: string;
+  cursorId?: string;
+}
+
+/** Итог по фильтру: строки считаются так же, как их отдаёт лента (пара оплаты — две строки). */
+export interface TransactionsSummary {
+  count: number;
+  lockedCount: number;
+  /** По валютам: доход плюс, расход минус; перевод и информационная строка дают 0. */
+  totals: { currency: string; amount: number }[];
+}
+
+/** Строка массовой правки и признак «вне правки» (`lockedForBulkSql`), посчитанный в том же запросе. */
+export interface BulkRow {
+  transaction: Transaction;
+  locked: boolean;
+}
+
+/** Что правит массовая операция: все строки фильтра на момент `asOf` или перечисленные id. */
+export type BulkSelection =
+  | { kind: 'filter'; filter: TransactionFilter; maxRows: number }
+  | { kind: 'ids'; ids: string[] };
+
+export interface BulkSelectionResult {
+  /** Строки выборки (не позиции), по возрастанию id. */
+  selected: BulkRow[];
+  /** Вторые половины пар оплаты, которых нет в выборке. */
+  siblings: BulkRow[];
+  /** Для `ids`: id, которых нет ни у кого. */
+  missingIds: string[];
+  /** Для `ids`: id, которые есть, но чужие. */
+  foreignIds: string[];
+  /** Для `filter`: подходящих строк больше `maxRows`; `selected` пуст. */
+  overLimit: boolean;
 }
 
 export interface MonthlyStats {
@@ -81,6 +133,8 @@ export interface TransactionWithReturns extends Transaction {
   /** У части оплаты с двух счетов — её доля возвратов группы. */
   returnedAmount: number;
   paymentSibling: Transaction | null;
+  /** Строка вне массовой правки (предикат `lockedForBulkSql`). */
+  bulkLocked: boolean;
 }
 
 /**
@@ -97,6 +151,7 @@ export interface ITransactionRepository {
   save(transaction: Transaction, manager?: EntityManager): Promise<Transaction>;
   saveMany(transactions: Transaction[], manager?: EntityManager): Promise<Transaction[]>;
   delete(id: string, manager?: EntityManager): Promise<void>;
+  deleteMany(ids: readonly string[], manager?: EntityManager): Promise<void>;
   deleteByAccountId(accountId: string, manager?: EntityManager): Promise<void>;
   countByAccountId(accountId: string): Promise<number>;
   exists(id: string): Promise<boolean>;
@@ -113,11 +168,29 @@ export interface ITransactionRepository {
     manager?: EntityManager,
   ): Promise<Transaction | null>;
 
+  /**
+   * Выборка массовой правки теми же условиями, что у ленты и итога. С `lock` строки и вторые
+   * половины пар запираются в порядке id (нужна открытая транзакция), без него — чтение для предпросмотра.
+   */
+  findForBulk(
+    userId: string,
+    selection: BulkSelection,
+    manager: EntityManager,
+    options: { lock: boolean },
+  ): Promise<BulkSelectionResult>;
+  /** Свои строки по id под `FOR UPDATE`, в порядке id; чужих и отсутствующих в результате нет. */
+  findByIdsForUpdate(
+    ids: readonly string[],
+    userId: string,
+    manager: EntityManager,
+  ): Promise<Transaction[]>;
+
   // Paginated queries
   getPaginated(
     userId: string,
     options: PaginationOptions,
   ): Promise<PaginatedResult<TransactionWithReturns>>;
+  getSummary(userId: string, filter: TransactionFilter): Promise<TransactionsSummary>;
   searchPaginated(
     userId: string,
     searchTerm: string,

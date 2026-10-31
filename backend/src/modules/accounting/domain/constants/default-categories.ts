@@ -208,6 +208,9 @@ export const ALL_DEBT_CATEGORY_IDS: readonly string[] = Object.values(DEBT_CATEG
 export const FEE_CATEGORY_ID = 'commission';
 export const FEE_DESCRIPTION = 'Комиссия за перевод';
 
+/** Категория, которую получает любой перевод. */
+export const TRANSFER_CATEGORY_ID = 'transfer';
+
 /**
  * Synthetic category id returned by analytics for outstanding given-debt balance.
  * Not a real DB category — exists only in API responses to keep

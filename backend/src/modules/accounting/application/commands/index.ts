@@ -16,6 +16,12 @@ export * from './update-transaction/update-transaction.handler';
 export * from './delete-transaction/delete-transaction.command';
 export * from './delete-transaction/delete-transaction.handler';
 
+// Bulk edit commands
+export * from './bulk-update-transactions/bulk-update-transactions.command';
+export * from './bulk-update-transactions/bulk-update-transactions.handler';
+export * from './undo-bulk-update/undo-bulk-update.command';
+export * from './undo-bulk-update/undo-bulk-update.handler';
+
 // Category commands
 export * from './create-category/create-category.command';
 export * from './create-category/create-category.handler';
@@ -82,6 +88,8 @@ import { UpdateQuickActionHandler } from './update-quick-action/update-quick-act
 import { DeleteQuickActionHandler } from './delete-quick-action/delete-quick-action.handler';
 import { ReorderQuickActionsHandler } from './reorder-quick-actions/reorder-quick-actions.handler';
 import { AdjustBalanceHandler } from './adjust-balance/adjust-balance.handler';
+import { BulkUpdateTransactionsHandler } from './bulk-update-transactions/bulk-update-transactions.handler';
+import { UndoBulkUpdateHandler } from './undo-bulk-update/undo-bulk-update.handler';
 
 export const CommandHandlers = [
   CreateAccountHandler,
@@ -107,4 +115,6 @@ export const CommandHandlers = [
   DeleteQuickActionHandler,
   ReorderQuickActionsHandler,
   AdjustBalanceHandler,
+  BulkUpdateTransactionsHandler,
+  UndoBulkUpdateHandler,
 ];

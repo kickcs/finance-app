@@ -205,4 +205,82 @@ describe('BalanceCalculationService', () => {
       expect(result.newEffect).toBe(0);
     });
   });
+
+  describe('balanceEffects', () => {
+    const row = {
+      type: 'expense',
+      accountId: 'acc-1',
+      amount: 100,
+      currency: 'USD',
+      isDebtRelated: false,
+      toAccountId: null,
+      toAmount: null,
+      toCurrency: null,
+    };
+
+    it.each([
+      ['income', false, 100],
+      ['expense', false, -100],
+      ['expense', true, -100],
+      ['adjustment', false, 100],
+      ['adjustment', true, -100],
+    ])('%s (isDebtRelated=%s): один счёт, знак как у nonTransferDirection', (type, debt, delta) => {
+      expect(
+        BalanceCalculationService.balanceEffects({ ...row, type, isDebtRelated: debt }),
+      ).toEqual([{ accountId: 'acc-1', currency: 'USD', delta }]);
+    });
+
+    it('перевод: источник теряет сумму, получатель получает сумму прихода в своей валюте', () => {
+      expect(
+        BalanceCalculationService.balanceEffects({
+          ...row,
+          type: 'transfer',
+          toAccountId: 'acc-2',
+          toAmount: 1_250_000,
+          toCurrency: 'UZS',
+        }),
+      ).toEqual([
+        { accountId: 'acc-1', currency: 'USD', delta: -100 },
+        { accountId: 'acc-2', currency: 'UZS', delta: 1_250_000 },
+      ]);
+    });
+
+    it('перевод без получателя двигает только источник', () => {
+      expect(BalanceCalculationService.balanceEffects({ ...row, type: 'transfer' })).toEqual([
+        { accountId: 'acc-1', currency: 'USD', delta: -100 },
+      ]);
+    });
+
+    it('совпадает с applyTransaction и applyTransferReceive', () => {
+      const source = createAccount(1000);
+      const target = Account.create('acc-2', 'user-1', 'T', 'wallet', '#000', 'basic', 1, [
+        { currency: 'UZS', balance: 0 },
+      ]);
+      const tx = Transaction.createTransfer(
+        'tx-1',
+        'user-1',
+        'acc-1',
+        'acc-2',
+        'transfer',
+        100,
+        'USD',
+        1_250_000,
+        'UZS',
+        now,
+      );
+
+      BalanceCalculationService.applyTransaction(source, tx);
+      BalanceCalculationService.applyTransferReceive(target, tx);
+      const [fromEffect, toEffect] = BalanceCalculationService.balanceEffects({
+        ...row,
+        type: 'transfer',
+        toAccountId: 'acc-2',
+        toAmount: 1_250_000,
+        toCurrency: 'UZS',
+      });
+
+      expect(source.getTotalBalance('USD')).toBe(1000 + fromEffect.delta);
+      expect(target.getTotalBalance('UZS')).toBe(toEffect.delta);
+    });
+  });
 });
