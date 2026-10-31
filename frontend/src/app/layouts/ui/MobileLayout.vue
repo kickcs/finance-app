@@ -3,7 +3,7 @@ import { computed, defineAsyncComponent } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import BottomNav from '@/widgets/bottom-nav/ui/BottomNav.vue';
 import { ROUTE_NAMES } from '@/app/router/routeNames';
-import { useNavbarStyle } from '@/shared/lib/composables';
+import { isBottomNavSuppressed, useNavbarStyle } from '@/shared/lib/composables';
 import { useFeatureHints } from '@/features/feature-hints';
 import AppShell from './AppShell.vue';
 
@@ -31,7 +31,9 @@ const FULLSCREEN_FLOWS: string[] = [
   ROUTE_NAMES.NEW_TRANSACTION,
 ];
 
-const hideBottomNav = computed(() => FULLSCREEN_FLOWS.includes(route.name as string));
+const hideBottomNav = computed(
+  () => FULLSCREEN_FLOWS.includes(route.name as string) || isBottomNavSuppressed.value,
+);
 
 function handleAddTransaction() {
   router.push({ name: ROUTE_NAMES.NEW_TRANSACTION });

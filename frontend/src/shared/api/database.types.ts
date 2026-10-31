@@ -220,6 +220,8 @@ export type Database = {
           settlement_id: string | null;
           /** Вторая часть группы; `null`, если операция оплачена с одного счёта. */
           payment_sibling: { id: string; account_id: string; amount: number } | null;
+          /** Строка вне массовой правки; у строк, созданных на клиенте до ответа, поля нет. */
+          bulk_locked?: boolean;
         };
         Insert: {
           id?: string;

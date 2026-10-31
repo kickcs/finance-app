@@ -4,3 +4,4 @@ export { usePremiumFeature } from './usePremiumFeature';
 export { useIsDesktop } from './useIsDesktop';
 export { useKeyboardTrigger } from './useKeyboardTrigger';
 export { useNavbarStyle, type NavbarStyle } from './useNavbarStyle';
+export { useSuppressBottomNav, isBottomNavSuppressed } from './useSuppressBottomNav';

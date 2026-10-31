@@ -8,7 +8,7 @@ import { recurringSubscriptionQueryKeys } from '@/entities/recurring-subscriptio
 
 /**
  * Invalidate all transaction-related caches.
- * Covers: list, infinite (all), monthlyStats, recent, search, count, analyticsStats, dailyStats.
+ * Covers: list, infinite (all), monthlyStats, recent, count, summary, analyticsStats, dailyStats.
  *
  * Uses broad prefix keys (e.g. infinitePrefix covers both user-scoped and account-scoped infinite queries).
  */
@@ -31,10 +31,10 @@ export async function invalidateTransactionRelated(
       queryKey: transactionQueryKeys.recent(userId),
     }),
     queryClient.invalidateQueries({
-      queryKey: transactionQueryKeys.searchPrefix(),
+      queryKey: transactionQueryKeys.countPrefix(),
     }),
     queryClient.invalidateQueries({
-      queryKey: transactionQueryKeys.countPrefix(),
+      queryKey: transactionQueryKeys.summaryPrefix(),
     }),
     queryClient.invalidateQueries({
       queryKey: transactionQueryKeys.analyticsStatsPrefix(),

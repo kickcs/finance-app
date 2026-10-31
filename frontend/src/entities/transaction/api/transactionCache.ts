@@ -1,6 +1,11 @@
-import type { QueryClient, InfiniteData } from '@tanstack/vue-query';
+import { hashKey, type QueryClient, type InfiniteData } from '@tanstack/vue-query';
 import { transactionQueryKeys } from './queryKeys';
-import type { PaginatedResult, TransactionUpdates } from './transactionsApi';
+import type {
+  PaginatedResult,
+  TransactionFilters,
+  TransactionUpdates,
+  TransactionsSummary,
+} from './transactionsApi';
 import type { Transaction } from '@/shared/api/database.types';
 import { buildPaymentSiblingRow, planPaymentGroupEdit } from '../lib/paymentGroup';
 
@@ -16,7 +21,10 @@ function recentPrefix(userId: string) {
   return [...transactionQueryKeys.all, 'recent', userId] as const;
 }
 
-/** Snapshot every cache entry that may hold `userId`'s transactions, for rollback on error. */
+/**
+ * Snapshot every cache entry that may hold `userId`'s transactions, for rollback on error.
+ * Итоги выборки входят сюда же: их число меняется вместе со строками.
+ */
 export function snapshotTransactionCaches(queryClient: QueryClient, userId: string) {
   return [
     ...queryClient.getQueriesData<Transaction[]>({ queryKey: recentPrefix(userId) }),
@@ -24,8 +32,8 @@ export function snapshotTransactionCaches(queryClient: QueryClient, userId: stri
     ...queryClient.getQueriesData<InfinitePages>({
       queryKey: transactionQueryKeys.infinitePrefix(),
     }),
-    ...queryClient.getQueriesData<InfinitePages>({
-      queryKey: transactionQueryKeys.searchPrefix(),
+    ...queryClient.getQueriesData<TransactionsSummary>({
+      queryKey: transactionQueryKeys.summaryPrefix(),
     }),
   ];
 }
@@ -66,12 +74,6 @@ export function patchTransactionInCaches(
     { queryKey: transactionQueryKeys.infinitePrefix() },
     patchPages,
   );
-  // Поиск живёт своим InfiniteData той же формы — правим и его, иначе открытый
-  // поиск в Истории не увидит правку, сделанную с другого экрана.
-  queryClient.setQueriesData<InfinitePages>(
-    { queryKey: transactionQueryKeys.searchPrefix() },
-    patchPages,
-  );
 }
 
 /** Remove transactions wherever they're cached. Balances are refreshed via invalidation, not here. */
@@ -101,10 +103,46 @@ export function removeTransactionsFromCaches(
     { queryKey: transactionQueryKeys.infinitePrefix() },
     removeFromPages,
   );
-  queryClient.setQueriesData<InfinitePages>(
-    { queryKey: transactionQueryKeys.searchPrefix() },
-    removeFromPages,
+}
+
+/**
+ * Уменьшить итог ленты `filters`; суммы по валютам неизвестны — `totals` сбрасывается, лишь когда
+ * выборка опустела. Сколько строк потеряли другие фильтры, неизвестно — их итоги устаревают.
+ */
+export function shrinkSummaryCaches(
+  queryClient: QueryClient,
+  userId: string,
+  filters: TransactionFilters,
+  removedCount: number,
+) {
+  const key = transactionQueryKeys.summary(userId, filters);
+  queryClient.setQueryData<TransactionsSummary>(key, (old) => {
+    if (!old) return old;
+    const count = Math.max(0, old.count - removedCount);
+    return {
+      ...old,
+      count,
+      eligible_count: Math.max(0, old.eligible_count - removedCount),
+      totals: count === 0 ? [] : old.totals,
+    };
+  });
+  const keyHash = hashKey(key);
+  void queryClient.invalidateQueries({
+    queryKey: [...transactionQueryKeys.summaryPrefix(), userId],
+    predicate: (query) => query.queryHash !== keyHash,
+  });
+}
+
+/** Строки, загруженные лентой именно под `filters`; пока фильтр не загружен — пусто. */
+export function cachedFilterRows(
+  queryClient: QueryClient,
+  userId: string,
+  filters: TransactionFilters,
+): Transaction[] {
+  const data = queryClient.getQueryData<InfinitePages>(
+    transactionQueryKeys.infinite(userId, filters),
   );
+  return data?.pages.flatMap((page) => page.data) ?? [];
 }
 
 /** Remove a single transaction wherever it's cached. */

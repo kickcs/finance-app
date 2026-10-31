@@ -53,6 +53,17 @@ export const transactionHandlers = [
     return HttpResponse.json([]);
   }),
 
+  // Итог выборки по фильтру («Показать N операций», плашка итога)
+  http.get('*/api/transactions/summary', () => {
+    return HttpResponse.json({
+      count: 0,
+      eligibleCount: 0,
+      lockedCount: 0,
+      totals: [],
+      asOf: '2025-06-15T12:00:00.000Z',
+    });
+  }),
+
   // Paginated transactions list (also used for recent/getAll)
   http.get('*/api/transactions', () => {
     return HttpResponse.json({

@@ -12,9 +12,9 @@ export const transactionQueryKeys = {
     [...transactionQueryKeys.all, 'infinite', userId, cleanUndefined(filters ?? {})] as const,
   infiniteByAccount: (accountId: string) =>
     [...transactionQueryKeys.all, 'infinite', 'account', accountId] as const,
-  searchPrefix: () => [...transactionQueryKeys.all, 'search'] as const,
-  search: (userId: string, searchTerm: string) =>
-    [...transactionQueryKeys.all, 'search', userId, searchTerm] as const,
+  summaryPrefix: () => [...transactionQueryKeys.all, 'summary'] as const,
+  summary: (userId: string, filters?: TransactionFilters) =>
+    [...transactionQueryKeys.all, 'summary', userId, cleanUndefined(filters ?? {})] as const,
   countPrefix: () => [...transactionQueryKeys.all, 'count'] as const,
   countByAccount: (accountId: string) =>
     [...transactionQueryKeys.all, 'count', 'account', accountId] as const,

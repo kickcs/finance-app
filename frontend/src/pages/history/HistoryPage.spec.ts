@@ -5,7 +5,9 @@ import { renderWithProviders, mockUser, createTestRouter } from '@/test/test-uti
 import { server } from '@/test/mocks/server';
 import { http, HttpResponse } from 'msw';
 import HistoryPage from './HistoryPage.vue';
-import { mockAccountResponse } from '@/test/mocks/handlers/accounts';
+import { mockAccountResponse, mockSecondAccountResponse } from '@/test/mocks/handlers/accounts';
+import { STORAGE_KEYS } from '@/shared/config/storageKeys';
+import { isBottomNavSuppressed } from '@/shared/lib/composables';
 import { mockTransactionResponse } from '@/test/mocks/handlers/transactions';
 
 // Mock app router — vi.hoisted runs before vi.mock hoisting
@@ -118,9 +120,12 @@ async function renderPage() {
 describe('HistoryPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Фильтры живут в sessionStorage до конца сессии — между тестами их надо обнулять
+    sessionStorage.clear();
   });
 
   afterEach(async () => {
+    vi.useRealTimers();
     server.resetHandlers();
     currentWrapper?.unmount();
     currentWrapper = null;
@@ -156,11 +161,24 @@ describe('HistoryPage', () => {
       expect(refreshBtn.exists()).toBe(true);
     });
 
-    it('shows search and filters buttons in the controls row', async () => {
+    it('keeps only search and refresh in the header — the old filters button is gone', async () => {
       const { wrapper } = await renderPage();
 
       expect(wrapper.find('[data-testid="open-search-btn"]').exists()).toBe(true);
-      expect(wrapper.find('[data-testid="open-filters-btn"]').exists()).toBe(true);
+      expect(wrapper.find('button[aria-label="Обновить"]').exists()).toBe(true);
+      expect(wrapper.find('[data-testid="open-filters-btn"]').exists()).toBe(false);
+      expect(wrapper.find('[data-testid="active-filters-count"]').exists()).toBe(false);
+    });
+
+    it('shows the facet rail with four chips under the tabs', async () => {
+      const { wrapper } = await renderPage();
+
+      const rail = wrapper.find('[data-testid="history-facet-rail"]');
+      expect(rail.exists()).toBe(true);
+      expect(rail.text()).toContain('Период');
+      expect(rail.text()).toContain('Категория');
+      expect(rail.text()).toContain('Тег');
+      expect(rail.text()).toContain('Счёт');
     });
   });
 
@@ -427,9 +445,10 @@ describe('HistoryPage', () => {
       await wrapper.find('[data-testid="open-search-btn"]').trigger('click');
       await nextTick();
 
-      // Пока идёт поиск, тип-фильтр не применяется — вкладки не показываем
+      // Пока идёт поиск, фильтры не применяются — вкладки и чипы не показываем
       expect(wrapper.findComponent({ name: 'SearchInput' }).exists()).toBe(true);
       expect(wrapper.findComponent({ name: 'UTabs' }).exists()).toBe(false);
+      expect(wrapper.find('[data-testid="history-facet-rail"]').exists()).toBe(false);
     });
 
     it('"Отмена" closes search and restores type tabs', async () => {
@@ -445,28 +464,7 @@ describe('HistoryPage', () => {
 
       expect(wrapper.findComponent({ name: 'SearchInput' }).exists()).toBe(false);
       expect(wrapper.findComponent({ name: 'UTabs' }).exists()).toBe(true);
-    });
-  });
-
-  // -----------------------------------------------------------------------
-  // Filters Sheet
-  // -----------------------------------------------------------------------
-  describe('filters sheet', () => {
-    it('sheet is closed by default', async () => {
-      const { wrapper } = await renderPage();
-
-      const sheet = wrapper.findComponent({ name: 'HistoryFiltersSheet' });
-      expect(sheet.exists()).toBe(true);
-      expect(sheet.props('open')).toBe(false);
-    });
-
-    it('filters button opens the sheet', async () => {
-      const { wrapper } = await renderPage();
-
-      await wrapper.find('[data-testid="open-filters-btn"]').trigger('click');
-      await nextTick();
-
-      expect(wrapper.findComponent({ name: 'HistoryFiltersSheet' }).props('open')).toBe(true);
+      expect(wrapper.find('[data-testid="history-facet-rail"]').exists()).toBe(true);
     });
   });
 
@@ -494,51 +492,6 @@ describe('HistoryPage', () => {
 
       // After refresh completes, button should be re-enabled
       expect(refreshBtn.attributes('disabled')).toBeUndefined();
-    });
-  });
-
-  // -----------------------------------------------------------------------
-  // Active Filters Indicator Dot
-  // -----------------------------------------------------------------------
-  describe('active filters', () => {
-    it('shows neither count badge nor chips when no filters are active', async () => {
-      const { wrapper } = await renderPage();
-
-      expect(wrapper.find('[data-testid="active-filters-count"]').exists()).toBe(false);
-      expect(wrapper.find('[data-testid="active-filter-chips"]').exists()).toBe(false);
-    });
-
-    it('selecting an account shows the count badge and a removable chip', async () => {
-      server.use(http.get('*/api/accounts', () => HttpResponse.json([mockAccountResponse])));
-      const { wrapper } = await renderPage();
-
-      const sheet = wrapper.findComponent({ name: 'HistoryFiltersSheet' });
-      sheet.vm.$emit('update:selectedAccountId', mockAccountResponse.id);
-      await nextTick();
-      await flushPromises();
-
-      expect(wrapper.find('[data-testid="active-filters-count"]').text()).toBe('1');
-
-      const chips = wrapper.find('[data-testid="active-filter-chips"]');
-      expect(chips.exists()).toBe(true);
-      expect(chips.text()).toContain(mockAccountResponse.name);
-    });
-
-    it('clicking the chip removes the filter', async () => {
-      server.use(http.get('*/api/accounts', () => HttpResponse.json([mockAccountResponse])));
-      const { wrapper } = await renderPage();
-
-      const sheet = wrapper.findComponent({ name: 'HistoryFiltersSheet' });
-      sheet.vm.$emit('update:selectedAccountId', mockAccountResponse.id);
-      await nextTick();
-      await flushPromises();
-
-      await wrapper.find('[data-testid="active-filter-chips"] button').trigger('click');
-      await nextTick();
-      await flushPromises();
-
-      expect(wrapper.find('[data-testid="active-filter-chips"]').exists()).toBe(false);
-      expect(sheet.props('selectedAccountId')).toBeNull();
     });
   });
 
@@ -620,34 +573,644 @@ describe('HistoryPage', () => {
   });
 
   // -----------------------------------------------------------------------
-  // Filters Container Content
+  // Facet rail and sheet
   // -----------------------------------------------------------------------
-  describe('filters sheet content', () => {
-    async function openFiltersSheet() {
-      const { wrapper } = await renderPage();
-      await wrapper.find('[data-testid="open-filters-btn"]').trigger('click');
-      await nextTick();
-      await flushPromises();
-      return wrapper;
+  describe('facet chips', () => {
+    type Page = Awaited<ReturnType<typeof renderPage>>['wrapper'];
+
+    /** Запоминает адреса запросов ленты и итога, чтобы сверять, что именно ушло на сервер. */
+    function captureRequests() {
+      const list: URL[] = [];
+      const summary: URL[] = [];
+      server.use(
+        http.get('*/api/transactions', ({ request }) => {
+          list.push(new URL(request.url));
+          return HttpResponse.json({ data: [], nextCursor: null, hasMore: false });
+        }),
+        http.get('*/api/transactions/summary', ({ request }) => {
+          summary.push(new URL(request.url));
+          return HttpResponse.json({
+            count: 0,
+            eligibleCount: 0,
+            lockedCount: 0,
+            totals: [],
+            asOf: '2025-06-15T12:00:00.000Z',
+          });
+        }),
+      );
+      return {
+        last: () => list[list.length - 1],
+        lastSummary: () => summary[summary.length - 1],
+      };
     }
 
-    it('renders AccountSelector when accounts exist', async () => {
-      server.use(http.get('*/api/accounts', () => HttpResponse.json([mockAccountResponse])));
-      const wrapper = await openFiltersSheet();
+    async function settle() {
+      await nextTick();
+      await flushPromises();
+      await flushPromises();
+    }
 
-      expect(wrapper.findComponent({ name: 'AccountSelector' }).exists()).toBe(true);
+    async function openFacet(wrapper: Page, facet: string) {
+      await wrapper.find(`[data-testid="facet-chip-${facet}"]`).trigger('click');
+      await settle();
+    }
+
+    // Содержимое шторки уезжает в портал на body, поэтому ищем его там
+    function sheet() {
+      return document.body.querySelector<HTMLElement>('[data-testid="history-facet-sheet"]');
+    }
+
+    function option(label: string) {
+      const found = [
+        ...(sheet()?.querySelectorAll<HTMLElement>('[role="checkbox"], [role="radio"]') ?? []),
+      ].find((el) => el.textContent?.includes(label));
+      if (!found) throw new Error(`В шторке нет пункта «${label}»`);
+      return found;
+    }
+
+    async function pick(label: string) {
+      option(label).click();
+      await settle();
+    }
+
+    async function closeSheet() {
+      document.body.querySelector<HTMLElement>('[data-testid="facet-show"]')?.click();
+      await settle();
+    }
+
+    const railText = (wrapper: Page) => wrapper.find('[data-testid="history-facet-rail"]').text();
+
+    describe('opening', () => {
+      it('chip opens the sheet with its own options', async () => {
+        const { wrapper } = await renderPage();
+        expect(sheet()).toBeNull();
+
+        await openFacet(wrapper, 'category');
+
+        expect(sheet()?.dataset.facet).toBe('category');
+        expect(option('Продукты').getAttribute('role')).toBe('checkbox');
+        expect(document.body.textContent).toContain('Категория');
+      });
+
+      it('chips are buttons that announce a dialog', async () => {
+        const { wrapper } = await renderPage();
+
+        for (const facet of ['period', 'category', 'tag', 'account']) {
+          expect(
+            wrapper.find(`[data-testid="facet-chip-${facet}"]`).attributes('aria-haspopup'),
+          ).toBe('dialog');
+        }
+      });
+
+      it('closing button hides the sheet', async () => {
+        const { wrapper } = await renderPage();
+        await openFacet(wrapper, 'category');
+
+        await closeSheet();
+
+        expect(sheet()).toBeNull();
+      });
+
+      it('"Переводы" hide the category chip — transfers have no categories', async () => {
+        const { wrapper } = await renderPage();
+        expect(wrapper.find('[data-testid="facet-chip-category"]').exists()).toBe(true);
+
+        wrapper.findComponent({ name: 'UTabs' }).vm.$emit('update:modelValue', 'transfer');
+        await settle();
+
+        expect(wrapper.find('[data-testid="facet-chip-category"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="facet-chip-period"]').exists()).toBe(true);
+      });
     });
 
-    it('renders CategoryChips when categories exist', async () => {
-      const wrapper = await openFiltersSheet();
+    describe('categories', () => {
+      it('multi-select sends the list and labels the chip "Первая +N"', async () => {
+        const requests = captureRequests();
+        const { wrapper } = await renderPage();
+        await openFacet(wrapper, 'category');
 
-      expect(wrapper.findComponent({ name: 'CategoryChips' }).exists()).toBe(true);
+        await pick('Продукты');
+        await pick('Транспорт');
+
+        expect(option('Продукты').getAttribute('aria-checked')).toBe('true');
+        expect(requests.last().searchParams.get('categoryIds')).toBe('cat-groceries,cat-transport');
+        expect(requests.lastSummary().searchParams.get('categoryIds')).toBe(
+          'cat-groceries,cat-transport',
+        );
+        expect(railText(wrapper)).toContain('Продукты +1');
+      });
+
+      it('tapping a selected option unselects it', async () => {
+        const requests = captureRequests();
+        const { wrapper } = await renderPage();
+        await openFacet(wrapper, 'category');
+
+        await pick('Продукты');
+        await pick('Транспорт');
+        await pick('Продукты');
+
+        expect(requests.last().searchParams.get('categoryIds')).toBe('cat-transport');
+        expect(railText(wrapper)).toContain('Транспорт');
+        expect(railText(wrapper)).not.toContain('+1');
+      });
+
+      it('"×" on the chip clears the facet and refetches without it', async () => {
+        const requests = captureRequests();
+        const { wrapper } = await renderPage();
+        await openFacet(wrapper, 'category');
+        await pick('Продукты');
+        await closeSheet();
+        expect(requests.last().searchParams.get('categoryIds')).toBe('cat-groceries');
+
+        await wrapper.find('button[aria-label="Сбросить: Категория"]').trigger('click');
+        await settle();
+
+        expect(requests.last().searchParams.has('categoryIds')).toBe(false);
+        expect(wrapper.find('[data-testid="facet-clear-category"]').exists()).toBe(false);
+        expect(railText(wrapper)).toContain('Категория');
+      });
+
+      it('"Сбросить" in the sheet clears only this facet and is disabled when empty', async () => {
+        const requests = captureRequests();
+        const { wrapper } = await renderPage();
+        await openFacet(wrapper, 'category');
+        const reset = () =>
+          document.body.querySelector<HTMLButtonElement>('[data-testid="facet-reset"]')!;
+        expect(reset().disabled).toBe(true);
+
+        await pick('Продукты');
+        expect(reset().disabled).toBe(false);
+        reset().click();
+        await settle();
+
+        expect(requests.last().searchParams.has('categoryIds')).toBe(false);
+        expect(option('Продукты').getAttribute('aria-checked')).toBe('false');
+      });
+
+      it('switching the type tab drops incompatible categories and keeps compatible ones', async () => {
+        const requests = captureRequests();
+        const { wrapper } = await renderPage();
+        await openFacet(wrapper, 'category');
+        await pick('Продукты');
+        await pick('Зарплата');
+        await closeSheet();
+
+        wrapper.findComponent({ name: 'UTabs' }).vm.$emit('update:modelValue', 'expense');
+        await settle();
+
+        expect(requests.last().searchParams.get('type')).toBe('expense');
+        expect(requests.last().searchParams.get('categoryIds')).toBe('cat-groceries');
+        expect(railText(wrapper)).toContain('Продукты');
+        expect(railText(wrapper)).not.toContain('Зарплата');
+      });
+
+      it('an id missing from the list is shown as "N выбрано"', async () => {
+        sessionStorage.setItem(
+          STORAGE_KEYS.HISTORY_FILTERS,
+          JSON.stringify({ categoryIds: ['gone-1', 'gone-2'] }),
+        );
+        const { wrapper } = await renderPage();
+
+        expect(railText(wrapper)).toContain('2 выбрано');
+      });
     });
 
-    it('does not mount sheet content while closed', async () => {
+    describe('accounts', () => {
+      it('selects several accounts and sends accountIds', async () => {
+        server.use(
+          http.get('*/api/accounts', () =>
+            HttpResponse.json([mockAccountResponse, mockSecondAccountResponse]),
+          ),
+        );
+        const requests = captureRequests();
+        const { wrapper } = await renderPage();
+        await openFacet(wrapper, 'account');
+
+        await pick(mockAccountResponse.name);
+        expect(requests.last().searchParams.get('accountIds')).toBe(mockAccountResponse.id);
+        expect(railText(wrapper)).toContain(mockAccountResponse.name);
+
+        await pick(mockSecondAccountResponse.name);
+        expect(requests.last().searchParams.get('accountIds')).toBe(
+          `${mockAccountResponse.id},${mockSecondAccountResponse.id}`,
+        );
+        expect(railText(wrapper)).toContain(`${mockAccountResponse.name} +1`);
+      });
+    });
+
+    describe('tags', () => {
+      it('lists hashtags with usage counts and sends tags without "#"', async () => {
+        server.use(
+          http.get('*/api/transactions/hashtags', () =>
+            HttpResponse.json([
+              { tag: '#кафе', count: 3 },
+              { tag: '#такси', count: 1 },
+            ]),
+          ),
+        );
+        const requests = captureRequests();
+        const { wrapper } = await renderPage();
+        await openFacet(wrapper, 'tag');
+
+        expect(option('#кафе').textContent).toContain('3');
+        expect(option('#такси').textContent).toContain('1');
+
+        await pick('#кафе');
+        await pick('#такси');
+
+        expect(requests.last().searchParams.get('tags')).toBe('кафе,такси');
+        expect(railText(wrapper)).toContain('#кафе +1');
+      });
+
+      it('says so when there are no tags yet', async () => {
+        const { wrapper } = await renderPage();
+        await openFacet(wrapper, 'tag');
+
+        expect(sheet()?.textContent).toContain('Тегов пока нет');
+      });
+    });
+
+    describe('period', () => {
+      it('a preset sends startDate/endDate and a second tap removes the period', async () => {
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(new Date(2026, 9, 31, 12));
+        const requests = captureRequests();
+        const { wrapper } = await renderPage();
+        await openFacet(wrapper, 'period');
+        expect(option('Этот месяц').getAttribute('role')).toBe('radio');
+
+        await pick('Последние 7 дней');
+
+        expect(requests.last().searchParams.get('startDate')).toBe('2026-10-25');
+        expect(requests.last().searchParams.get('endDate')).toBe('2026-10-31');
+        expect(requests.lastSummary().searchParams.get('startDate')).toBe('2026-10-25');
+        expect(railText(wrapper)).toContain('Последние 7 дней');
+
+        await pick('Последние 7 дней');
+
+        expect(requests.last().searchParams.has('startDate')).toBe(false);
+        expect(requests.last().searchParams.has('endDate')).toBe(false);
+      });
+
+      it('"Этот месяц" runs from the start of the month to today', async () => {
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(new Date(2026, 9, 31, 12));
+        const requests = captureRequests();
+        const { wrapper } = await renderPage();
+        await openFacet(wrapper, 'period');
+
+        await pick('Этот месяц');
+
+        expect(requests.last().searchParams.get('startDate')).toBe('2026-10-01');
+        expect(requests.last().searchParams.get('endDate')).toBe('2026-10-31');
+      });
+
+      it('"Свой период" reveals two date fields and does not filter until a date is set', async () => {
+        const requests = captureRequests();
+        const { wrapper } = await renderPage();
+        await openFacet(wrapper, 'period');
+
+        await pick('Свой период');
+
+        expect(document.body.querySelector('button[aria-label="Начало периода"]')).not.toBeNull();
+        expect(document.body.querySelector('button[aria-label="Конец периода"]')).not.toBeNull();
+        expect(requests.last().searchParams.has('startDate')).toBe(false);
+        expect(wrapper.find('[data-testid="facet-clear-period"]').exists()).toBe(false);
+      });
+
+      it('has no "Сбросить" button — a second tap on the preset does that', async () => {
+        const { wrapper } = await renderPage();
+        await openFacet(wrapper, 'period');
+
+        expect(document.body.querySelector('[data-testid="facet-reset"]')).toBeNull();
+      });
+    });
+
+    describe('show button', () => {
+      function summaryReturns(count: number) {
+        server.use(
+          http.get('*/api/transactions/summary', () =>
+            HttpResponse.json({
+              count,
+              eligibleCount: count,
+              lockedCount: 0,
+              totals: [],
+              asOf: '2025-06-15T12:00:00.000Z',
+            }),
+          ),
+        );
+      }
+
+      it.each([
+        [0, 'Ничего не найдено'],
+        [1, 'Показать 1 операцию'],
+        [3, 'Показать 3 операции'],
+        [5, 'Показать 5 операций'],
+        [21, 'Показать 21 операцию'],
+      ])('with %i results reads «%s»', async (count, label) => {
+        summaryReturns(count);
+        const { wrapper } = await renderPage();
+
+        await openFacet(wrapper, 'category');
+
+        expect(document.body.querySelector('[data-testid="facet-show"]')?.textContent?.trim()).toBe(
+          label,
+        );
+      });
+
+      it('is just "Показать" until the count arrives', async () => {
+        server.use(
+          http.get('*/api/transactions/summary', async () => {
+            await new Promise(() => {});
+            return HttpResponse.json({});
+          }),
+        );
+        const { wrapper } = await renderPage();
+
+        await openFacet(wrapper, 'category');
+
+        expect(document.body.querySelector('[data-testid="facet-show"]')?.textContent?.trim()).toBe(
+          'Показать',
+        );
+      });
+    });
+
+    describe('state', () => {
+      it('empty result with only a chip active offers "Сбросить фильтры"', async () => {
+        server.use(http.get('*/api/accounts', () => HttpResponse.json([mockAccountResponse])));
+        const { wrapper } = await renderPage();
+        await openFacet(wrapper, 'account');
+        await pick(mockAccountResponse.name);
+        await closeSheet();
+
+        expect(wrapper.text()).toContain('Ничего не найдено');
+        const resetBtn = wrapper.find('[data-testid="reset-filters-btn"]');
+        expect(resetBtn.exists()).toBe(true);
+
+        await resetBtn.trigger('click');
+        await settle();
+
+        expect(wrapper.text()).toContain('Нет транзакций');
+        expect(railText(wrapper)).not.toContain(mockAccountResponse.name);
+      });
+
+      it('reads the old stored form {type, accountId, categoryId} without crashing', async () => {
+        sessionStorage.setItem(
+          STORAGE_KEYS.HISTORY_FILTERS,
+          JSON.stringify({ type: 'expense', accountId: 'acc-1', categoryId: 'cat-groceries' }),
+        );
+        server.use(http.get('*/api/accounts', () => HttpResponse.json([mockAccountResponse])));
+        const requests = captureRequests();
+
+        const { wrapper } = await renderPage();
+
+        expect(wrapper.find('[data-testid="history-facet-rail"]').exists()).toBe(true);
+        expect(requests.last().searchParams.get('type')).toBe('expense');
+        expect(requests.last().searchParams.get('accountIds')).toBe('acc-1');
+        expect(requests.last().searchParams.get('categoryIds')).toBe('cat-groceries');
+        expect(railText(wrapper)).toContain(mockAccountResponse.name);
+        expect(railText(wrapper)).toContain('Продукты');
+      });
+
+      it('a broken stored value falls back to the defaults', async () => {
+        sessionStorage.setItem(STORAGE_KEYS.HISTORY_FILTERS, '{"type":"exp');
+        const requests = captureRequests();
+
+        const { wrapper } = await renderPage();
+
+        expect(wrapper.findComponent({ name: 'UTabs' }).props('modelValue')).toBe('all');
+        expect(requests.last().searchParams.has('type')).toBe(false);
+      });
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Массовая правка
+  // -----------------------------------------------------------------------
+  describe('bulk edit', () => {
+    const lockedTransaction = { ...mockSecondExpenseTransaction, bulkLocked: true };
+
+    /** Лента с фильтром по категории, итог «10, из них 1 вне правки», журнал запросов bulk. */
+    function filteredByCategory() {
+      sessionStorage.setItem(
+        STORAGE_KEYS.HISTORY_FILTERS,
+        JSON.stringify({ type: 'all', categoryIds: ['cat-groceries'], tags: [], accountIds: [] }),
+      );
+      const bulk: Record<string, unknown>[] = [];
+      const list: URL[] = [];
+      const summary: URL[] = [];
+      server.use(
+        http.get('*/api/transactions/summary', ({ request }) => {
+          summary.push(new URL(request.url));
+          return HttpResponse.json({
+            count: 10,
+            eligibleCount: 9,
+            lockedCount: 1,
+            totals: [{ currency: 'UZS', amount: -250000 }],
+            asOf: '2025-06-15T12:00:00.000Z',
+          });
+        }),
+        http.get('*/api/transactions', ({ request }) => {
+          list.push(new URL(request.url));
+          return HttpResponse.json({
+            data: [mockExpenseTransaction, lockedTransaction],
+            nextCursor: null,
+            hasMore: false,
+          });
+        }),
+        http.post('*/api/transactions/bulk', async ({ request }) => {
+          const body = (await request.json()) as Record<string, unknown>;
+          bulk.push(body);
+          return HttpResponse.json({
+            changed: 9,
+            skipped: [],
+            balanceDeltas: [],
+            undoToken: body.dryRun ? undefined : 'token-1',
+          });
+        }),
+      );
+      return {
+        bulk,
+        list,
+        lastList: () => list[list.length - 1],
+        lastSummary: () => summary[summary.length - 1],
+      };
+    }
+
+    const $ = (id: string) => document.body.querySelector<HTMLElement>(`[data-testid="${id}"]`);
+
+    async function settle() {
+      await nextTick();
+      await flushPromises();
+      await flushPromises();
+    }
+
+    it('плашка: подпись итога и число на кнопке сходятся', async () => {
+      filteredByCategory();
       const { wrapper } = await renderPage();
 
-      expect(wrapper.findComponent({ name: 'CategoryChips' }).exists()).toBe(false);
+      const dock = wrapper.find('[data-testid="bulk-dock"]');
+      expect(dock.text()).toContain('10 операций, 1 не изменится');
+      expect(dock.find('[data-testid="bulk-edit-all-btn"]').text()).toBe('Изменить все 9');
+    });
+
+    it('открытый поиск без запроса плашку прячет: под ней был бы невидимый фильтр', async () => {
+      filteredByCategory();
+      const { wrapper } = await renderPage();
+
+      await wrapper.find('[data-testid="open-search-btn"]').trigger('click');
+      await settle();
+
+      expect(wrapper.find('[data-testid="bulk-dock"]').exists()).toBe(false);
+    });
+
+    describe('поиск в охвате', () => {
+      async function search(wrapper: ReturnType<typeof renderWithProviders>, term: string) {
+        await wrapper.find('[data-testid="open-search-btn"]').trigger('click');
+        await settle();
+        wrapper.findComponent({ name: 'SearchInput' }).vm.$emit('update:modelValue', term);
+        // Дебаунс ввода — 300 мс
+        await new Promise((resolve) => setTimeout(resolve, 350));
+        await settle();
+      }
+
+      it('лента, итог и «Изменить все» идут по одному фильтру — запросу поиска', async () => {
+        const { bulk, list, lastList, lastSummary } = filteredByCategory();
+        const { wrapper } = await renderPage();
+
+        await search(wrapper, 'такси');
+
+        const searched = list.filter((url) => url.searchParams.get('search') === 'такси');
+        expect(searched).toHaveLength(1);
+        // Поиск, как и раньше, идёт мимо скрытых на время поиска чипов
+        expect(lastList().searchParams.has('categoryIds')).toBe(false);
+        expect(lastSummary().searchParams.get('search')).toBe('такси');
+        expect(lastSummary().searchParams.has('categoryIds')).toBe(false);
+        const dock = wrapper.find('[data-testid="bulk-dock"]');
+        expect(dock.find('[data-testid="bulk-edit-all-btn"]').text()).toBe('Изменить все 9');
+
+        await dock.find('[data-testid="bulk-edit-all-btn"]').trigger('click');
+        await settle();
+        expect($('bulk-scope')?.textContent).toContain('Поиск: «такси»');
+
+        $('bulk-verb-category')!.click();
+        await settle();
+        $('bulk-category-cat-transport')!.click();
+        await settle();
+        $('bulk-confirm-apply')!.click();
+        await settle();
+
+        expect((bulk[1].selection as { filter: unknown }).filter).toEqual({ search: 'такси' });
+      });
+
+      it('после правки остаётся в поиске: чипы, которые она переключила бы, сейчас не действуют', async () => {
+        const { lastList } = filteredByCategory();
+        const { wrapper } = await renderPage();
+        await search(wrapper, 'такси');
+
+        await wrapper.find('[data-testid="bulk-edit-all-btn"]').trigger('click');
+        await settle();
+        $('bulk-verb-category')!.click();
+        await settle();
+        $('bulk-category-cat-transport')!.click();
+        await settle();
+        $('bulk-confirm-apply')!.click();
+        await settle();
+
+        expect(wrapper.findComponent({ name: 'SearchInput' }).exists()).toBe(true);
+        expect(lastList().searchParams.get('search')).toBe('такси');
+        expect(JSON.parse(sessionStorage.getItem(STORAGE_KEYS.HISTORY_FILTERS)!)).toMatchObject({
+          categoryIds: ['cat-groceries'],
+        });
+      });
+    });
+
+    it('после переноса в категорию фильтр переключается на неё', async () => {
+      const { bulk, lastList } = filteredByCategory();
+      const { wrapper } = await renderPage();
+
+      await wrapper.find('[data-testid="bulk-edit-all-btn"]').trigger('click');
+      await settle();
+      $('bulk-verb-category')!.click();
+      await settle();
+      $('bulk-category-cat-transport')!.click();
+      await settle();
+      $('bulk-confirm-apply')!.click();
+      await settle();
+
+      expect(bulk.map((b) => b.dryRun ?? false)).toEqual([true, false]);
+      expect(bulk[1]).toMatchObject({
+        selection: { filter: { categoryIds: ['cat-groceries'] }, expectedCount: 9 },
+        action: { kind: 'category', categoryId: 'cat-transport' },
+      });
+      expect(lastList().searchParams.get('categoryIds')).toBe('cat-transport');
+      expect($('bulk-edit-sheet')).toBeNull();
+    });
+
+    it('после переноса меняются только категории: тип, теги и счета остаются', async () => {
+      const { lastList } = filteredByCategory();
+      sessionStorage.setItem(
+        STORAGE_KEYS.HISTORY_FILTERS,
+        JSON.stringify({
+          type: 'expense',
+          categoryIds: ['cat-groceries'],
+          tags: ['кафе'],
+          accountIds: ['acc-1'],
+        }),
+      );
+      const { wrapper } = await renderPage();
+
+      await wrapper.find('[data-testid="bulk-edit-all-btn"]').trigger('click');
+      await settle();
+      $('bulk-verb-category')!.click();
+      await settle();
+      $('bulk-category-cat-transport')!.click();
+      await settle();
+      $('bulk-confirm-apply')!.click();
+      await settle();
+
+      expect(JSON.parse(sessionStorage.getItem(STORAGE_KEYS.HISTORY_FILTERS)!)).toMatchObject({
+        type: 'expense',
+        categoryIds: ['cat-transport'],
+        tags: ['кафе'],
+        accountIds: ['acc-1'],
+      });
+      expect(lastList().searchParams.get('type')).toBe('expense');
+      expect(lastList().searchParams.get('categoryIds')).toBe('cat-transport');
+    });
+
+    it('долгое нажатие включает выбор; строку с замком не отметить', async () => {
+      filteredByCategory();
+      const { wrapper } = await renderPage();
+      const list = wrapper.findComponent({ name: 'VirtualGroupedTransactionList' });
+      const rows = list.props('groups').flatMap((g: { transactions: unknown[] }) => g.transactions);
+      const plain = rows.find((tx: { id: string }) => tx.id === 'tx-1');
+      const locked = rows.find((tx: { id: string }) => tx.id === 'tx-3');
+
+      const barText = () => wrapper.find('[data-testid="bulk-selection-bar"]').text();
+
+      list.vm.$emit('transaction-long-press', plain);
+      await settle();
+      expect(list.props('selectMode')).toBe(true);
+      expect(barText()).toContain('Выбрано 1 из 1');
+      // Панель действий встаёт на место нижней навигации
+      expect(isBottomNavSuppressed.value).toBe(true);
+
+      list.vm.$emit('transaction-click', locked);
+      await settle();
+      expect(barText()).toContain('Выбрано 1 из 1');
+
+      // В режиме выбора тап снимает отметку, а не открывает правку
+      list.vm.$emit('transaction-click', plain);
+      await settle();
+      expect(barText()).toContain('Выбрано 0 из 1');
+      expect(wrapper.findComponent({ name: 'EditTransactionModal' }).props('modelValue')).toBe(
+        false,
+      );
+
+      await wrapper.find('[data-testid="bulk-selection-exit"]').trigger('click');
+      await settle();
+      expect(isBottomNavSuppressed.value).toBe(false);
     });
   });
 });

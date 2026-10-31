@@ -1,0 +1,10 @@
+export { default as BulkDock } from './ui/BulkDock.vue';
+export { default as BulkSelectionBar } from './ui/BulkSelectionBar.vue';
+export { default as BulkEditSheet } from './ui/BulkEditSheet.vue';
+export { useBulkSelection } from './model/useBulkSelection';
+export { useBulkEditFlow, type BulkEditFlow } from './model/useBulkEditFlow';
+export { useDeferredBulkDelete } from './model/useDeferredBulkDelete';
+export { buildScopeChips, type ScopeChip } from './model/scopeChips';
+export { opsAccusative } from './model/bulkTexts';
+export { formatTotals } from './lib/formatTotals';
+export { selectionTotals } from './lib/selectionTotals';

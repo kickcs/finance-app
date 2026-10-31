@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ref, shallowRef, computed, watchEffect } from 'vue';
 import { useVirtualizer } from '@tanstack/vue-virtual';
-import { useEventListener } from '@vueuse/core';
+import { onLongPress, useEventListener } from '@vueuse/core';
 import TransactionItem from './TransactionItem.vue';
 import DayGroupHeader from './DayGroupHeader.vue';
 import { SwipeableItem } from '@/shared/ui';
+import { trigger } from '@/shared/lib/haptics';
+import { cn } from '@/shared/lib/utils';
 import { getAmountLines } from '../lib/amountLines';
 import type { Transaction, TransactionGroup } from '../model/types';
 
@@ -37,6 +39,11 @@ const props = withDefaults(
     /** Enable swipe actions on transaction items */
     swipeEnabled?: boolean;
     getBalanceAfter?: (txId: string) => number | undefined;
+    /** Долгое нажатие на строку начинает выбор (событие `transactionLongPress`) */
+    selectable?: boolean;
+    /** Режим выбора: свайпы выключены, в строках отметки */
+    selectMode?: boolean;
+    selectedIds?: ReadonlySet<string>;
   }>(),
   {
     currency: 'UZS',
@@ -52,6 +59,7 @@ const emit = defineEmits<{
   transactionClick: [transaction: Transaction];
   transactionEdit: [transaction: Transaction];
   transactionDelete: [transaction: Transaction];
+  transactionLongPress: [transaction: Transaction];
 }>();
 
 const parentRef = ref<HTMLElement | null>(null);
@@ -80,6 +88,8 @@ function transactionItemProps(tx: Transaction) {
     currency: props.currency,
     accountName: props.getAccountName?.(tx.account_id),
     toAccountName: props.getAccountName?.(tx.to_account_id ?? null),
+    selectMode: props.selectMode,
+    selected: props.selectedIds?.has(tx.id) ?? false,
     ...amountLineProps(tx),
   };
 }
@@ -193,6 +203,65 @@ watchEffect(() => {
   }
 });
 
+// --- Долгое нажатие ---------------------------------------------------------
+// Список без выбора (экран счёта) не должен ни вибрировать, ни глотать клики.
+const canLongPress = () => props.selectable && !props.selectMode;
+
+const LONG_PRESS_MS = 450;
+// Сдвиг дальше порога — это прокрутка или свайп, а не удержание
+const LONG_PRESS_SLOP_PX = 8;
+
+// Клик, которым заканчивается удержание, должен быть проглочен: иначе страница
+// тут же снимет отметку, поставленную долгим нажатием.
+let swallowNextClick = false;
+
+onLongPress(
+  parentRef,
+  (event) => {
+    if (!canLongPress()) return;
+    const id = (event.target as Element | null)?.closest<HTMLElement>('[data-tx-id]')?.dataset.txId;
+    const tx = flatItems.value
+      .filter((it) => it.type === 'transaction')
+      .map((it) => it.data as Transaction)
+      .find((it) => it.id === id);
+    if (!tx) return;
+    swallowNextClick = true;
+    trigger('selection');
+    emit('transactionLongPress', tx);
+  },
+  { delay: LONG_PRESS_MS, distanceThreshold: LONG_PRESS_SLOP_PX },
+);
+
+// Флаг живёт до следующего касания, а не по таймеру: палец можно держать сколь угодно долго
+useEventListener(parentRef, 'pointerdown', () => {
+  swallowNextClick = false;
+});
+useEventListener(
+  parentRef,
+  'click',
+  (event) => {
+    if (!swallowNextClick) return;
+    swallowNextClick = false;
+    event.stopPropagation();
+    event.preventDefault();
+  },
+  { capture: true },
+);
+
+// Без этого Android показывает контекстное меню строки, iOS — меню копирования
+function onContextMenu(event: Event) {
+  if (props.selectable && (event.target as Element).closest('[data-tx-id]')) event.preventDefault();
+}
+
+function rowClass(item: FlatItem) {
+  return cn(
+    'relative h-full overflow-hidden bg-card-light dark:bg-card-dark',
+    item.isFirst && 'rounded-t-2xl',
+    item.isLast && 'rounded-b-2xl',
+    props.selectable && 'select-none [-webkit-touch-callout:none]',
+  );
+}
+
 function getItem(index: number): FlatItem | undefined {
   return flatItems.value[index];
 }
@@ -220,7 +289,7 @@ defineExpose({ scrollToTop });
 
 <template>
   <div class="relative" :style="{ height }">
-    <div ref="parentRef" class="h-full overflow-auto">
+    <div ref="parentRef" class="h-full overflow-auto" @contextmenu="onContextMenu">
       <div
         :style="{
           height: `${totalSize}px`,
@@ -267,14 +336,11 @@ defineExpose({ scrollToTop });
           <!-- Transaction row: операции одного дня образуют одну карточку -->
           <div
             v-else
-            class="relative h-full overflow-hidden bg-card-light dark:bg-card-dark"
-            :class="{
-              'rounded-t-2xl': flatItems[virtualRow.index].isFirst,
-              'rounded-b-2xl': flatItems[virtualRow.index].isLast,
-            }"
+            :data-tx-id="getTransactionData(virtualRow.index)?.id"
+            :class="rowClass(flatItems[virtualRow.index])"
           >
             <SwipeableItem
-              v-if="getTransactionData(virtualRow.index) && swipeEnabled"
+              v-if="getTransactionData(virtualRow.index) && swipeEnabled && !selectMode"
               flush
               full-swipe
               @action-left="emit('transactionDelete', getTransactionData(virtualRow.index)!)"

@@ -17,6 +17,8 @@ defineEmits<{ close: [] }>();
     v-if="title || $slots.action"
     class="shrink-0 flex items-center justify-between gap-3 px-5 py-4 border-b border-border-light dark:border-border-dark"
   >
+    <!-- Слева от заголовка — «Назад» многошаговых шторок -->
+    <slot name="leading" />
     <component
       :is="titleAs"
       class="flex-1 min-w-0 text-body-lg font-semibold text-text-primary-light dark:text-text-primary-dark truncate"

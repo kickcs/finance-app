@@ -15,6 +15,12 @@ describe('таблица маршрутов', () => {
     expect(route?.meta.desktopOverlay).toBe(true);
   });
 
+  it('«История» показывает тосты сверху — внизу у неё плашка итога и панель выбора', () => {
+    const route = router.getRoutes().find((r) => r.name === ROUTE_NAMES.HISTORY);
+
+    expect(route?.meta.toastPosition).toBe('top');
+  });
+
   it('страницы подключены ленивыми загрузчиками — иначе роутер не станет их ждать', () => {
     // Синхронный компонент маршрута vue-router не ждёт: заставка снимается по
     // `router.isReady()`, и с ней экран гас бы до прихода чанка.

@@ -161,6 +161,7 @@ export const router = createRouter({
           path: 'history',
           name: ROUTE_NAMES.HISTORY,
           component: () => import('@/pages/history/HistoryPage.vue'),
+          meta: { toastPosition: 'top' },
         },
         {
           path: 'analytics',

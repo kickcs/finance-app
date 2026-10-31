@@ -91,6 +91,7 @@ const SURFACE_CLASS = 'flex flex-col bg-card-light dark:bg-card-dark';
         "
       >
         <OverlayHeader :title="title" :title-as="DialogTitle" @close="open = false">
+          <template #leading><slot name="leading" /></template>
           <template #action><slot name="action" /></template>
         </OverlayHeader>
         <!-- sr-only: DialogContentImpl требует Description, иначе aria-describedby
@@ -135,6 +136,7 @@ const SURFACE_CLASS = 'flex flex-col bg-card-light dark:bg-card-dark';
           class="mx-auto mt-3 h-1 w-10 shrink-0 rounded-full bg-border-light dark:bg-border-dark"
         />
         <OverlayHeader :title="title" :title-as="DrawerTitle" @close="open = false">
+          <template #leading><slot name="leading" /></template>
           <template #action><slot name="action" /></template>
         </OverlayHeader>
         <!-- sr-only: DrawerContent рендерит тот же reka-ui DialogContentImpl,
