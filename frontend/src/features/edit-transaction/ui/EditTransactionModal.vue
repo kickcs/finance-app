@@ -71,8 +71,9 @@ const canHaveSecondPart = computed(
     !isSettlementRecord.value,
 );
 
-// Local form state (only for non-transfer)
-const type = ref<'expense' | 'income'>('expense');
+type EditType = 'expense' | 'income' | 'transfer';
+
+const type = ref<EditType>('expense');
 const amount = ref(0);
 const accountId = ref('');
 const categoryId = ref('');
@@ -85,13 +86,14 @@ const secondPart = ref<SecondPart | null>(null);
 watch(
   () => props.transaction,
   (t) => {
-    if (t && t.type !== 'transfer') {
+    if (t) {
       const sibling = t.payment_sibling;
-      type.value = t.type as 'expense' | 'income';
+      type.value = t.type as EditType;
       amount.value = paymentTotal(t);
       secondPart.value = sibling ? { accountId: sibling.account_id, amount: sibling.amount } : null;
       accountId.value = t.account_id;
-      categoryId.value = t.category_id;
+      // Категория перевода служебная: расходом или доходом его делают с новой.
+      categoryId.value = t.type === 'transfer' ? '' : t.category_id;
       description.value = t.description || '';
       date.value = t.date ? t.date.split('T')[0] : '';
       dateBeforeEdit.value = date.value;
@@ -186,10 +188,21 @@ function confirmSplitDelete() {
   emit('delete');
 }
 
-const tabItems = [
+const tabItems = computed(() => [
+  ...(isTransfer.value ? [{ id: 'transfer', label: 'Перевод' }] : []),
   { id: 'expense', label: 'Расход' },
   { id: 'income', label: 'Доход' },
-];
+]);
+
+// Вкладка «Перевод» есть только у перевода: на ней правятся комментарий и дата.
+const isTransferView = computed(() => type.value === 'transfer');
+
+const transferRoute = computed(() => {
+  const t = props.transaction;
+  const name = (id: string | null | undefined) =>
+    props.accounts.find((a) => a.id === id)?.name ?? 'Счёт';
+  return t ? `${name(t.account_id)} → ${name(t.to_account_id)}` : '';
+});
 
 // Filter accounts that have a balance in the transaction's currency
 const compatibleAccounts = computed(() => {
@@ -201,9 +214,10 @@ const compatibleAccounts = computed(() => {
 const categories = computed(() => getCategoriesByType(type.value));
 
 function handleTypeChange(newType: string) {
-  type.value = newType as 'expense' | 'income';
+  type.value = newType as EditType;
+  if (type.value === 'transfer') return;
   // Reset category if switching types
-  const availableCategories = getCategoriesByType(newType as 'expense' | 'income');
+  const availableCategories = getCategoriesByType(type.value);
   if (!availableCategories.find((c: { id: string }) => c.id === categoryId.value)) {
     categoryId.value = '';
   }
@@ -226,14 +240,17 @@ async function confirm() {
   isConfirming.value = true;
   try {
     const updates: TransactionUpdates = {
-      type: type.value,
-      // Первая часть = итог − вторая; убранная пара уходит явным null.
-      ...(!isSettlementRecord.value && {
-        ...buildSecondPartPayload(amount.value, secondPart.value),
-        ...(!secondPart.value && props.transaction?.payment_sibling && { second_part: null }),
+      // Перевод на своей вкладке: деньги не двигаются.
+      ...(!isTransferView.value && {
+        type: type.value,
+        // Первая часть = итог − вторая; убранная пара уходит явным null.
+        ...(!isSettlementRecord.value && {
+          ...buildSecondPartPayload(amount.value, secondPart.value),
+          ...(!secondPart.value && props.transaction?.payment_sibling && { second_part: null }),
+        }),
+        account_id: accountId.value,
+        category_id: categoryId.value,
       }),
-      account_id: accountId.value,
-      category_id: categoryId.value,
       description: description.value || null,
       // Only send date if user changed it — sending date-only string
       // to a timestamptz column resets the time component to UTC midnight
@@ -256,6 +273,7 @@ async function confirm() {
 }
 
 const isFormValid = computed(() => {
+  if (isTransferView.value) return true;
   const baseValid = !!accountId.value && !!categoryId.value && amount.value > 0;
   if (!baseValid) return false;
   if (hasSplit.value && splitMyShare.value < 0) return false;
@@ -276,7 +294,7 @@ const isFormValid = computed(() => {
 <template>
   <UModal
     :model-value="modelValue"
-    :title="isTransfer ? 'Перевод' : isAdjustment ? 'Коррекция баланса' : 'Редактировать'"
+    :title="isTransferView ? 'Перевод' : isAdjustment ? 'Коррекция баланса' : 'Редактировать'"
     @update:model-value="emit('update:modelValue', $event)"
   >
     <!-- Error Message -->
@@ -336,62 +354,6 @@ const isFormValid = computed(() => {
       </div>
     </div>
 
-    <!-- Transfer Mode: Delete Only -->
-    <div v-else-if="isTransfer && transaction" class="py-2">
-      <div class="text-center mb-4">
-        <div
-          class="w-12 h-12 mx-auto mb-3 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center"
-        >
-          <UIcon name="swap_horiz" size="md" class="text-indigo-500" />
-        </div>
-        <p class="text-sm text-text-primary-light dark:text-text-primary-dark font-medium mb-0.5">
-          Это перевод между счетами
-        </p>
-        <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark">
-          Переводы можно только удалить
-        </p>
-      </div>
-
-      <!-- Transfer Details -->
-      <div class="space-y-2 p-3 rounded-lg bg-surface-light dark:bg-surface-dark">
-        <div class="flex justify-between items-center">
-          <span class="text-xs text-text-secondary-light dark:text-text-secondary-dark">
-            Списание
-          </span>
-          <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
-            {{ formatCurrency(transaction.amount, transaction.currency) }}
-          </span>
-        </div>
-        <div
-          v-if="transaction.to_amount && transaction.to_currency"
-          class="flex justify-between items-center"
-        >
-          <span class="text-xs text-text-secondary-light dark:text-text-secondary-dark">
-            Зачисление
-          </span>
-          <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
-            {{ formatCurrency(transaction.to_amount, transaction.to_currency) }}
-          </span>
-        </div>
-        <div v-if="transaction.description" class="flex justify-between items-center">
-          <span class="text-xs text-text-secondary-light dark:text-text-secondary-dark">
-            Комментарий
-          </span>
-          <span class="text-xs text-text-primary-light dark:text-text-primary-dark">
-            {{ transaction.description }}
-          </span>
-        </div>
-      </div>
-
-      <!-- Warning -->
-      <div class="mt-3 p-2.5 rounded-lg bg-danger/10 border border-danger/20">
-        <div class="flex gap-1.5">
-          <UIcon name="warning" size="xs" class="text-danger shrink-0 mt-0.5" />
-          <p class="text-xs text-danger">При удалении балансы счетов будут восстановлены</p>
-        </div>
-      </div>
-    </div>
-
     <!-- Adjustment Mode: Delete Only -->
     <div v-else-if="isAdjustment && transaction" class="py-2">
       <div class="text-center mb-4">
@@ -436,7 +398,7 @@ const isFormValid = computed(() => {
       </div>
     </div>
 
-    <!-- Regular Edit Mode (expense/income) -->
+    <!-- Regular Edit Mode (expense/income; перевод — комментарий и дата либо смена типа) -->
     <div v-else-if="transaction" class="space-y-4">
       <!-- Type Tabs -->
       <UTabs
@@ -446,52 +408,87 @@ const isFormValid = computed(() => {
         @update:model-value="handleTypeChange"
       />
 
-      <!-- Account Selector -->
-      <AccountSelector
-        :accounts="compatibleAccounts"
-        :selected-id="accountId"
-        label="Счёт"
-        @select="accountId = $event"
-      />
-
-      <!-- Amount -->
-      <div class="space-y-2">
-        <UInput
-          :model-value="String(amount)"
-          :label="secondPart ? 'Сумма операции' : 'Сумма'"
-          placeholder="0"
-          variant="currency"
-          type="number"
-          :suffix="transaction!.currency"
-          :disabled="isSettlementRecord"
-          @update:model-value="handleAmountInput($event)"
-          @blur="checkAmountChange"
-          @keydown.enter="checkAmountChange"
-        />
-        <p
-          v-if="isSettlementRecord"
-          class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
+      <div
+        v-if="isTransferView"
+        class="space-y-2 p-3 rounded-lg bg-surface-light dark:bg-surface-dark"
+      >
+        <div class="flex justify-between items-center gap-3">
+          <span class="text-xs text-text-secondary-light dark:text-text-secondary-dark">Счета</span>
+          <span
+            class="truncate text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
+          >
+            {{ transferRoute }}
+          </span>
+        </div>
+        <div class="flex justify-between items-center">
+          <span class="text-xs text-text-secondary-light dark:text-text-secondary-dark">
+            Списание
+          </span>
+          <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
+            {{ formatCurrency(transaction.amount, transaction.currency) }}
+          </span>
+        </div>
+        <div
+          v-if="transaction.to_amount && transaction.to_currency"
+          class="flex justify-between items-center"
         >
-          Сумму платежа по долгу меняют отменой расчёта на экране долга
-        </p>
-        <PaymentPartsEditor
-          v-if="canHaveSecondPart"
-          v-model="secondPart"
-          :accounts="compatibleAccounts"
-          :primary-account-id="accountId"
-          :currency="transaction!.currency"
-          :total="amount"
-        />
+          <span class="text-xs text-text-secondary-light dark:text-text-secondary-dark">
+            Зачисление
+          </span>
+          <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
+            {{ formatCurrency(transaction.to_amount, transaction.to_currency) }}
+          </span>
+        </div>
       </div>
 
-      <!-- Category Chips -->
-      <CategoryChips
-        :categories="categories"
-        :selected-id="categoryId"
-        :rows="type === 'expense' ? 4 : 2"
-        label="Категория"
-        @select="categoryId = $event"
-      />
+      <template v-else>
+        <!-- Account Selector -->
+        <AccountSelector
+          :accounts="compatibleAccounts"
+          :selected-id="accountId"
+          label="Счёт"
+          @select="accountId = $event"
+        />
+
+        <!-- Amount -->
+        <div class="space-y-2">
+          <UInput
+            :model-value="String(amount)"
+            :label="secondPart ? 'Сумма операции' : 'Сумма'"
+            placeholder="0"
+            variant="currency"
+            type="number"
+            :suffix="transaction!.currency"
+            :disabled="isSettlementRecord"
+            @update:model-value="handleAmountInput($event)"
+            @blur="checkAmountChange"
+            @keydown.enter="checkAmountChange"
+          />
+          <p
+            v-if="isSettlementRecord"
+            class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark"
+          >
+            Сумму платежа по долгу меняют отменой расчёта на экране долга
+          </p>
+          <PaymentPartsEditor
+            v-if="canHaveSecondPart"
+            v-model="secondPart"
+            :accounts="compatibleAccounts"
+            :primary-account-id="accountId"
+            :currency="transaction!.currency"
+            :total="amount"
+          />
+        </div>
+
+        <!-- Category Chips -->
+        <CategoryChips
+          :categories="categories"
+          :selected-id="categoryId"
+          :rows="type === 'expense' ? 4 : 2"
+          label="Категория"
+          @select="categoryId = $event"
+        />
+      </template>
 
       <!-- Description & Date Row -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -570,8 +567,8 @@ const isFormValid = computed(() => {
         <UButton variant="secondary" size="sm" full-width @click="close">Закрыть</UButton>
       </div>
 
-      <!-- Marker/Transfer/Adjustment Actions: Close or Cancel + Delete (у маркера уйдёт весь расчёт) -->
-      <div v-else-if="isSettlementMarker || isTransfer || isAdjustment" class="flex gap-2 w-full">
+      <!-- Marker/Adjustment Actions: Close or Cancel + Delete (у маркера уйдёт весь расчёт) -->
+      <div v-else-if="isSettlementMarker || isAdjustment" class="flex gap-2 w-full">
         <UButton variant="secondary" size="sm" full-width @click="close">
           {{ isSettlementMarker ? 'Закрыть' : 'Отмена' }}
         </UButton>

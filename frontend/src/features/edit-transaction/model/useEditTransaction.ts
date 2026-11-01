@@ -37,12 +37,6 @@ export function useEditTransaction(userId: MaybeRefOrGetter<string | null>) {
       return false;
     }
 
-    // Transfers cannot be edited
-    if (transaction.type === 'transfer') {
-      error.value = 'Переводы нельзя редактировать, только удалять';
-      return false;
-    }
-
     isUpdating.value = true;
     error.value = null;
 

@@ -16,14 +16,15 @@ export interface HistoryBulkOptions {
 export function useHistoryBulk(options: HistoryBulkOptions) {
   const isManual = () => options.mode.value === 'manual';
 
-  // Ручной выбор знает типы строк; «Изменить все» — только фильтр.
+  // Ручной выбор знает типы строк; «Изменить все» — только фильтр. Перевод переносится в расход.
   const categoryTypes = computed<CategoryType[]>(() => {
     const { type, category_ids: categoryIds = [] } = options.filters();
+    const categoryTypeFor = (kind: string) => (kind === 'transfer' ? 'expense' : kind);
     const kinds = new Set<string>(
       isManual()
-        ? options.selectedRows().map((tx) => tx.type)
-        : type === 'expense' || type === 'income'
-          ? [type]
+        ? options.selectedRows().map((tx) => categoryTypeFor(tx.type))
+        : type === 'expense' || type === 'income' || type === 'transfer'
+          ? [categoryTypeFor(type)]
           : options
               .categories()
               .filter((c) => categoryIds.includes(c.id))

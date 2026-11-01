@@ -62,8 +62,16 @@ export interface BulkActionTexts {
   note: string;
 }
 
-/** Все тексты действия: `count` — сколько операций, `target` — имя категории или счёта-цели. */
-export function actionTexts(action: BulkAction, count: number, target = ''): BulkActionTexts {
+/**
+ * Все тексты действия: `count` — сколько операций, `target` — имя категории или счёта-цели,
+ * `movesMoney` — предпросмотр сдвигает балансы (в категорию переносятся и переводы).
+ */
+export function actionTexts(
+  action: BulkAction,
+  count: number,
+  target = '',
+  movesMoney = false,
+): BulkActionTexts {
   const ops = opsCount(count);
   switch (action.kind) {
     case 'category':
@@ -71,7 +79,9 @@ export function actionTexts(action: BulkAction, count: number, target = ''): Bul
         title: `Перенести в «${target}»`,
         button: `Перенести ${opsAccusative(count)}`,
         applied: `${ops} теперь в «${target}»`,
-        note: 'Суммы и балансы счетов не изменятся.',
+        note: movesMoney
+          ? 'Переводы станут расходами: деньги останутся списанными, а зачисление на счёт получателя отменится.'
+          : 'Суммы и балансы счетов не изменятся.',
       };
     case 'transfer':
       return {

@@ -1,10 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import type { Transaction } from '../../../domain/aggregates/transaction';
-import {
-  ALL_DEBT_CATEGORY_IDS,
-  INFORMATIONAL_ONLY_CATEGORY_IDS,
-  getDefaultCategoryById,
-} from '../../../domain/constants/default-categories';
+import { isServiceCategoryId } from '../../../domain/constants/default-categories';
 import {
   BalanceCalculationService,
   type BalanceAffectingRow,
@@ -63,6 +59,8 @@ export interface BulkContext {
 }
 
 export interface BulkUpdateChanges {
+  /** Только перевод → расход; зачисление агрегат снимает сам. */
+  type?: 'expense';
   categoryId?: string;
   accountId?: string;
   description?: string;
@@ -150,16 +148,7 @@ function resolveCategoryType(categoryId: string, ctx: BulkContext): 'income' | '
     throw new BadRequestException('Категория не найдена');
   }
   // Обычный update целевую категорию не проверяет, поэтому отказ здесь.
-  const forbidden = [categoryId, category.id].some((id) => {
-    const builtinType = getDefaultCategoryById(id)?.type;
-    return (
-      ALL_DEBT_CATEGORY_IDS.includes(id) ||
-      INFORMATIONAL_ONLY_CATEGORY_IDS.includes(id) ||
-      builtinType === 'transfer' ||
-      builtinType === 'adjustment'
-    );
-  });
-  if (forbidden) {
+  if ([categoryId, category.id].some(isServiceCategoryId)) {
     throw new BadRequestException(
       'В эту категорию нельзя переносить операции: она служебная или связана с долгом',
     );
@@ -192,7 +181,12 @@ function planCategory(
   plan: PlanBuilder,
 ): void {
   for (const row of item.rows) {
-    if (row.typeValue !== categoryType) {
+    if (row.type.isTransfer() && categoryType === 'expense') {
+      // Обратное «В перевод»: списание остаётся, зачисление на целевой счёт снимается.
+      const before = snapshotRow(row);
+      plan.write({ kind: 'update', id: row.id, changes: { type: 'expense', categoryId } });
+      plan.shift(before, { ...before, type: 'expense' });
+    } else if (row.typeValue !== categoryType) {
       plan.skip('wrong_type', [row]);
     } else if (row.categoryId === categoryId) {
       plan.skip('already_in_category', [row]);

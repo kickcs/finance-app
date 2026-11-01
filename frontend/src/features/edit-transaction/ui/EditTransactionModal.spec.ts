@@ -87,6 +87,10 @@ async function mountModal(
   return wrapper;
 }
 
+type Mounted = Awaited<ReturnType<typeof mountModal>>;
+const tabs = (w: Mounted) => w.findAll('[role="tab"]');
+const saveButton = (w: Mounted) => w.findAll('button').find((b) => b.text().includes('Сохранить'));
+
 describe('EditTransactionModal', () => {
   afterEach(() => {
     server.resetHandlers();
@@ -213,13 +217,9 @@ describe('EditTransactionModal', () => {
     const MARKER_NOTE = 'Сумма меняется на экране долга; удаление уберёт весь расчёт';
     const AMOUNT_HINT = 'Сумму платежа по долгу меняют отменой расчёта на экране долга';
 
-    type Mounted = Awaited<ReturnType<typeof mountModal>>;
     const amountInput = (w: Mounted) => w.find('input[inputmode="decimal"]');
-    const tabs = (w: Mounted) => w.findAll('[role="tab"]');
     const regularDelete = (w: Mounted) => w.find('button[aria-label="Удалить"]');
     const markerDelete = (w: Mounted) => w.find('[data-testid="delete-settlement-record-btn"]');
-    const saveButton = (w: Mounted) =>
-      w.findAll('button').find((b) => b.text().includes('Сохранить'));
 
     // (a) Платёж расчёта: помечен is_debt_related, но правится как обычная запись
     const settlementPayment = () =>
@@ -335,6 +335,60 @@ describe('EditTransactionModal', () => {
         expect(regularDelete(w).exists()).toBe(false);
         expect(markerDelete(w).exists()).toBe(false);
         expect(saveButton(w)).toBeUndefined();
+      });
+    });
+  });
+
+  describe('перевод', () => {
+    const transfer = () =>
+      makeTx({
+        type: 'transfer',
+        category_id: 'transfer',
+        account_id: 'acc-1',
+        to_account_id: 'acc-2',
+        to_amount: 60000,
+        to_currency: 'UZS',
+        description: 'Вклад #депозит',
+      });
+
+    const comment = (w: Mounted) => w.find('input[placeholder="Описание..."]');
+
+    it('открывается вкладкой «Перевод» с комментарием и вариантами «Расход/Доход»', async () => {
+      const w = await mountModal(transfer());
+
+      expect(tabs(w).map((tab) => tab.text())).toEqual(['Перевод', 'Расход', 'Доход']);
+      expect((comment(w).element as HTMLInputElement).value).toBe('Вклад #депозит');
+    });
+
+    it('сохраняет комментарий, не трогая деньги перевода', async () => {
+      const onSave = vi.fn().mockResolvedValue(true);
+      const w = await mountModal(transfer(), onSave);
+
+      await comment(w).setValue('Вклад #депозит #октябрь');
+      await saveButton(w)!.trigger('click');
+      await flushPromises();
+
+      expect(onSave).toHaveBeenCalledWith({ description: 'Вклад #депозит #октябрь' });
+    });
+
+    it('становится расходом в выбранной категории со счёта списания', async () => {
+      const onSave = vi.fn().mockResolvedValue(true);
+      const w = await mountModal(transfer(), onSave);
+
+      w.findComponent({ name: 'UTabs' }).vm.$emit('update:modelValue', 'expense');
+      await flushPromises();
+      expect(saveButton(w)!.attributes('disabled')).toBeDefined();
+      w.findComponent({ name: 'CategoryChips' }).vm.$emit('select', 'food');
+      await flushPromises();
+      await saveButton(w)!.trigger('click');
+      await flushPromises();
+
+      expect(onSave.mock.calls[0][0]).toMatchObject({
+        type: 'expense',
+        category_id: 'food',
+        account_id: 'acc-1',
+        amount: 60000,
+        description: 'Вклад #депозит',
       });
     });
   });

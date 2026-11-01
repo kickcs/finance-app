@@ -242,3 +242,14 @@ const DEFAULT_CATEGORIES_MAP = new Map<string, DefaultCategory>(
 export function getDefaultCategoryById(id: string): DefaultCategory | undefined {
   return DEFAULT_CATEGORIES_MAP.get(id);
 }
+
+/** Служебная категория (перевод, корректировка, долг, только информационная): обычной операции её не выбрать. */
+export function isServiceCategoryId(id: string): boolean {
+  const builtinType = getDefaultCategoryById(id)?.type;
+  return (
+    ALL_DEBT_CATEGORY_IDS.includes(id) ||
+    INFORMATIONAL_ONLY_CATEGORY_IDS.includes(id) ||
+    builtinType === 'transfer' ||
+    builtinType === 'adjustment'
+  );
+}

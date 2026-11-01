@@ -69,7 +69,13 @@ const balanceRows = computed(() =>
 );
 
 const note = computed(
-  () => actionTexts(props.action, result.value?.changed ?? 0, target.value?.name).note,
+  () =>
+    actionTexts(
+      props.action,
+      result.value?.changed ?? 0,
+      target.value?.name,
+      balanceRows.value.length > 0,
+    ).note,
 );
 
 const ROW_CLASS =
