@@ -38,9 +38,12 @@ describe('useHistoryBulk', () => {
     expect(bulk.sourceCategoryIds.value).toEqual(['taxi']);
   });
 
-  it('переводы и долги в выборке не дают групп — предлагаются расходы', () => {
+  it('переводы становятся расходами — предлагаются расходные категории', () => {
     expect(setup('manual', {}, [row('transfer', 'transfer')]).categoryTypes.value).toEqual([
       'expense',
     ]);
+    expect(setup('all', { type: 'transfer' }).categoryTypes.value).toEqual(['expense']);
+    const mixed = [row('transfer', 'transfer'), row('income', 'salary')];
+    expect(setup('manual', {}, mixed).categoryTypes.value).toEqual(['expense', 'income']);
   });
 });

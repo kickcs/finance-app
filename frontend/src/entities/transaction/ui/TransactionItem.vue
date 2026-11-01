@@ -114,6 +114,16 @@ const formattedDate = computed(() =>
   formatRelativeDate(new Date(props.transaction.date).getTime()),
 );
 
+// Подпись «откуда · комментарий»; у перевода без комментария дата не нужна — её даёт день в ленте.
+const subtitle = computed(() =>
+  [
+    isTransfer.value ? transferLabel.value : props.accountName,
+    props.transaction.description || (isTransfer.value ? '' : formattedDate.value),
+  ]
+    .filter(Boolean)
+    .join(' · '),
+);
+
 // Из этого же расчёта виртуализированный список берёт высоту слота под строку
 const amountLines = computed(() =>
   getAmountLines(props.transaction, {
@@ -228,12 +238,7 @@ const formattedBalanceAfter = computed(() =>
         </span>
       </p>
       <p class="text-xs text-text-tertiary-light dark:text-text-tertiary-dark truncate">
-        <template v-if="isTransfer">{{ transferLabel }}</template>
-        <template v-else>
-          <span v-if="accountName">{{ accountName }}</span>
-          <span v-if="accountName && (transaction.description || formattedDate)">·</span>
-          <span>{{ transaction.description || formattedDate }}</span>
-        </template>
+        {{ subtitle }}
       </p>
     </div>
 

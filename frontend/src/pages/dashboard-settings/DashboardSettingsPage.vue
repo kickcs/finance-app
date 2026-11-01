@@ -34,9 +34,7 @@ watch(
   dashboardSettings,
   (settings) => {
     if (initialized.value) return;
-    const savedOrder = settings?.widget_order ?? DEFAULT_WIDGET_ORDER;
-    const missingIds = DEFAULT_WIDGET_ORDER.filter((id) => !savedOrder.includes(id));
-    const order = [...savedOrder, ...missingIds];
+    const order = settings?.widget_order ?? DEFAULT_WIDGET_ORDER;
     const hidden = new Set(settings?.hidden_widgets ?? []);
     widgetList.value = order.map((id) => ({ id, visible: !hidden.has(id) }));
     hiddenAccountIds.value = new Set(settings?.hidden_account_ids ?? []);

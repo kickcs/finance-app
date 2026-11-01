@@ -146,16 +146,32 @@ describe('planBulk', () => {
       expect(skippedOf(plan, 'wrong_type')).toBe(1);
     });
 
-    it('перевод и корректировка не участвуют: wrong_type / locked', () => {
+    it('перевод в расходную категорию становится расходом со счёта списания', () => {
       const plan = planBulk(
-        [single(transfer('t1', 'A', 'B', 100)), single(adjustment('adj1', 'A', 10))],
+        [single(transfer('t1', 'A', 'B', 100, 'USD', 1_200_000, 'UZS'))],
         category('transport'),
         ctxFor('transport', 'expense'),
       );
 
+      expect(plan.writes).toEqual([
+        { kind: 'update', id: 't1', changes: { type: 'expense', categoryId: 'transport' } },
+      ]);
+      expect(plan.changed).toBe(1);
+      // Списание с A остаётся, зачисление на B разворачивается.
+      expect(deltaOf(plan, 'A', 'USD')).toBe(0);
+      expect(deltaOf(plan, 'B', 'UZS')).toBe(-1_200_000);
+    });
+
+    it('перевод в доходную категорию не переносится: wrong_type', () => {
+      const plan = planBulk(
+        [single(transfer('t1', 'A', 'B', 100))],
+        category('gifts_income'),
+        ctxFor('gifts_income', 'income'),
+      );
+
       expect(plan.writes).toEqual([]);
       expect(skippedOf(plan, 'wrong_type')).toBe(1);
-      expect(skippedOf(plan, 'locked')).toBe(1);
+      expect(plan.balanceDeltas).toEqual([]);
     });
 
     it('строка уже в целевой категории: пропуск already_in_category', () => {

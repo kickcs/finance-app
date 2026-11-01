@@ -528,6 +528,54 @@ describe('POST /transactions/bulk: массовая правка истории'
       expect((await rowOrFail(taxi)).categoryId).toBe('transport');
     });
 
+    it('перевод в расходную категорию — расход со счёта списания; отмена возвращает перевод', async () => {
+      const transfer = await seed({
+        type: 'transfer',
+        categoryId: 'transfer',
+        accountId: ctx.accountId,
+        amount: 50_000,
+        toAccountId: secondAccountId,
+        toAmount: 50_000,
+        toCurrency: 'UZS',
+        description: 'Вклад #депозит',
+      });
+
+      const res = await bulk({
+        selection: { ids: [transfer] },
+        action: { kind: 'category', categoryId: 'transport' },
+      });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({
+        changed: 1,
+        skipped: [],
+        balanceDeltas: [{ accountId: secondAccountId, currency: 'UZS', delta: -50_000 }],
+      });
+      expect(await rowOrFail(transfer)).toMatchObject({
+        type: 'expense',
+        categoryId: 'transport',
+        accountId: ctx.accountId,
+        toAccountId: null,
+        toAmount: null,
+        toCurrency: null,
+        description: 'Вклад #депозит',
+      });
+      expect(await balance(ctx.accountId)).toBe(1_000_000);
+      expect(await balance(secondAccountId)).toBe(450_000);
+
+      const undo = await ctx.post('/transactions/bulk/undo', {
+        undoToken: (res.body as BulkResponse).undoToken,
+      });
+      expect(undo.status).toBe(200);
+      expect(await rowOrFail(transfer)).toMatchObject({
+        type: 'transfer',
+        categoryId: 'transfer',
+        toAccountId: secondAccountId,
+        toCurrency: 'UZS',
+      });
+      expect(await balance(secondAccountId)).toBe(500_000);
+    });
+
     it('категория другого типа не ломает операцию: строки пропускаются как wrong_type', async () => {
       const expense = await seed({ categoryId: 'taxi' });
 

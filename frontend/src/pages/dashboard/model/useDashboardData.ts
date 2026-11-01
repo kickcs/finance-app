@@ -78,12 +78,9 @@ export function useDashboardData() {
 
   const dashboardSettings = computed(() => profile.value?.dashboard_settings ?? null);
 
-  const widgetOrder = computed<WidgetId[]>(() => {
-    const saved = dashboardSettings.value?.widget_order;
-    if (!saved) return DEFAULT_WIDGET_ORDER;
-    const missing = DEFAULT_WIDGET_ORDER.filter((id) => !saved.includes(id));
-    return missing.length > 0 ? [...saved, ...missing] : saved;
-  });
+  const widgetOrder = computed<WidgetId[]>(
+    () => dashboardSettings.value?.widget_order ?? DEFAULT_WIDGET_ORDER,
+  );
 
   const hiddenWidgets = computed<Set<WidgetId>>(
     () => new Set(dashboardSettings.value?.hidden_widgets ?? []),

@@ -92,6 +92,30 @@ describe('BulkConfirmSummary', () => {
     expect(flow()).toMatch(/^9 операций.*Транспорт$/);
   });
 
+  it('перенос переводов в категорию не обещает, что балансы не изменятся', () => {
+    const wrapper = mount(BulkConfirmSummary, {
+      props: {
+        action: { kind: 'category', category_id: 'c-food' },
+        targetName: 'Еда',
+        categories: [],
+        accounts,
+        preview: {
+          status: 'ready',
+          result: {
+            changed: 1,
+            skipped: [],
+            balance_deltas: [{ account_id: 'a-2', currency: 'UZS', delta: -15000 }],
+            undo_token: null,
+          },
+        },
+      },
+    });
+
+    const text = wrapper.text();
+    expect(text).toContain('Переводы станут расходами');
+    expect(text).not.toContain('балансы счетов не изменятся');
+  });
+
   it('пока сводка считается — скелетон, ошибка — текстом сервера', async () => {
     const wrapper = mount(BulkConfirmSummary, {
       props: {

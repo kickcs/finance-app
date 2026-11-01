@@ -1,6 +1,7 @@
 import { Transaction } from './transaction.aggregate';
 import { Money } from '../../../../../shared/domain/value-objects';
 import { type TransactionDeletedEvent } from '../../events/transaction-deleted.event';
+import { type TransactionUpdatedEvent } from '../../events/transaction-updated.event';
 import { TransactionType } from '../../value-objects/transaction-type.vo';
 
 describe('Transaction Aggregate', () => {
@@ -248,6 +249,46 @@ describe('Transaction Aggregate', () => {
       tx.clearDomainEvents();
 
       tx.update({ toAmount: null, toCurrency: null });
+      expect(tx.toAmount).toBeNull();
+    });
+
+    it.each([
+      ['сам', {}],
+      ['с явным обнулением', { toAccountId: null, toAmount: null, toCurrency: null }],
+    ])('перевод, ставший расходом, теряет зачисление (%s)', (_, explicit) => {
+      const tx = Transaction.createTransfer(
+        'tx-1',
+        'user-1',
+        'acc-1',
+        'acc-2',
+        'transfer',
+        100,
+        'USD',
+        1_200_000,
+        'UZS',
+        now,
+      );
+      tx.clearDomainEvents();
+
+      tx.update({ type: 'expense', categoryId: 'cat-1', ...explicit });
+
+      expect(tx.toAccountId).toBeNull();
+      expect(tx.toAmount).toBeNull();
+      const event = tx.domainEvents[0] as TransactionUpdatedEvent;
+      expect(event.changes).toMatchObject({ toAccountId: null, toAmount: null, toCurrency: null });
+      expect(event.previousValues).toMatchObject({
+        toAccountId: 'acc-2',
+        toAmount: 1_200_000,
+        toCurrency: 'UZS',
+      });
+    });
+
+    it('зачисление у расхода не держится', () => {
+      const tx = Transaction.createExpense('tx-1', 'user-1', 'acc-1', 'cat-1', 100, 'USD', now);
+
+      tx.update({ toAccountId: 'acc-2', toAmount: 100, toCurrency: 'USD' });
+
+      expect(tx.toAccountId).toBeNull();
       expect(tx.toAmount).toBeNull();
     });
   });

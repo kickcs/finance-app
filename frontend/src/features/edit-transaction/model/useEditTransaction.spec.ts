@@ -219,11 +219,11 @@ describe('useEditTransaction', () => {
       expect(result).toBe(true);
     });
 
-    it('rejects editing transfer transactions', async () => {
+    it('sends transfer edits to the server', async () => {
       const patchSpy = vi.fn();
       server.use(
-        http.patch('*/api/transactions/:id', () => {
-          patchSpy();
+        http.patch('*/api/transactions/:id', async ({ request }) => {
+          patchSpy(await request.json());
           return HttpResponse.json(mockTransactionResponse);
         }),
       );
@@ -231,11 +231,10 @@ describe('useEditTransaction', () => {
       const c = mountComposable();
       const tx = makeTransaction({ type: 'transfer' });
 
-      const result = await c.update(tx, { amount: 999 });
+      const result = await c.update(tx, { description: 'Вклад #депозит' });
 
-      expect(result).toBe(false);
-      expect(c.error.value).toContain('нельзя редактировать');
-      expect(patchSpy).not.toHaveBeenCalled();
+      expect(result).toBe(true);
+      expect(patchSpy).toHaveBeenCalledWith({ description: 'Вклад #депозит' });
     });
 
     it('returns false and sets error on API 500', async () => {

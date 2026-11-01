@@ -574,4 +574,87 @@ describe('UpdateTransactionHandler', () => {
       expect(db['acc-card'].UZS).toBe(439_000);
     });
   });
+
+  describe('перевод', () => {
+    /** 50 000 с карты в наличные, комментарий с тегом. */
+    const givenTransfer = () => {
+      const transfer = Transaction.createTransfer(
+        'tx-card',
+        'user-1',
+        'acc-card',
+        'acc-cash',
+        'transfer',
+        50_000,
+        'UZS',
+        50_000,
+        'UZS',
+        now,
+        'В кошелёк #наличка',
+      );
+      mockTransactionRepository.findById.mockResolvedValue(transfer);
+      return transfer;
+    };
+
+    it('комментарий и дата правятся без движения балансов', async () => {
+      const transfer = givenTransfer();
+
+      await update({ description: 'Снял #отпуск', date: new Date('2026-10-11') });
+
+      expect(transfer.description).toBe('Снял #отпуск');
+      expect(transfer.typeValue).toBe('transfer');
+      expect(db['acc-card'].UZS).toBe(440_000);
+      expect(db['acc-cash'].UZS).toBe(60_000);
+    });
+
+    it('становится расходом: зачисление снимается, поля перевода очищаются', async () => {
+      const transfer = givenTransfer();
+
+      await update({ type: 'expense', categoryId: 'food', accountId: 'acc-card' });
+
+      expect(transfer.typeValue).toBe('expense');
+      expect(transfer.categoryId).toBe('food');
+      expect(transfer.toAccountId).toBeNull();
+      expect(transfer.toAmountValue).toBeNull();
+      expect(transfer.toCurrency).toBeNull();
+      expect(transfer.description).toBe('В кошелёк #наличка');
+      expect(db['acc-card'].UZS).toBe(440_000);
+      expect(db['acc-cash'].UZS).toBe(10_000);
+    });
+
+    it('становится доходом на выбранный счёт: списание возвращается', async () => {
+      givenTransfer();
+
+      await update({ type: 'income', categoryId: 'salary', accountId: 'acc-cash' });
+
+      expect(db['acc-card'].UZS).toBe(490_000);
+      expect(db['acc-cash'].UZS).toBe(60_000);
+    });
+
+    it('становится расходом с двух счетов: зачисление снимается, обе части списываются', async () => {
+      givenTransfer();
+
+      const result = await update({
+        type: 'expense',
+        categoryId: 'food',
+        accountId: 'acc-card',
+        amount: 30_000,
+        secondPart: { accountId: 'acc-other', amount: 20_000 },
+      });
+
+      expect(db['acc-card'].UZS).toBe(460_000);
+      expect(db['acc-cash'].UZS).toBe(10_000);
+      expect(db['acc-other'].UZS).toBe(980_000);
+      expect(result.paymentSibling).not.toBeNull();
+    });
+
+    it('без новой категории из перевода не выйти — 400', async () => {
+      givenTransfer();
+
+      await expect(update({ type: 'expense' })).rejects.toThrow(BadRequestException);
+      await expect(update({ type: 'expense', categoryId: 'debt_given' })).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(db['acc-card'].UZS).toBe(440_000);
+    });
+  });
 });

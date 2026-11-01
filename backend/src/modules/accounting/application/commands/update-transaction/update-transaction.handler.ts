@@ -16,7 +16,10 @@ import { toTransactionResponse } from '../../helpers/to-transaction-response';
 import { AccountUnitOfWork } from '../../helpers/account-unit-of-work';
 import { Account } from '../../../domain/aggregates/account';
 import { Transaction } from '../../../domain/aggregates/transaction';
-import { ALL_DEBT_CATEGORY_IDS } from '../../../domain/constants/default-categories';
+import {
+  ALL_DEBT_CATEGORY_IDS,
+  isServiceCategoryId,
+} from '../../../domain/constants/default-categories';
 import { BalanceCalculationService } from '../../../domain/services/balance-calculation.service';
 
 const SETTLEMENT_RECORD_LOCKED =
@@ -46,6 +49,19 @@ function changesSettlementMoney(
     differs(data.isDebtRelated, transaction.isDebtRelated) ||
     // `null` убирает вторую часть, а у записи расчёта её не бывает — убирать нечего.
     !!data.secondPart
+  );
+}
+
+/** Перевод, ставший расходом или доходом, требует обычной категории, а не служебной. */
+function convertsTransferWithoutRegularCategory(
+  transaction: Transaction,
+  data: UpdateTransactionCommand['data'],
+): boolean {
+  return (
+    transaction.type.isTransfer() &&
+    data.type !== undefined &&
+    data.type !== 'transfer' &&
+    (!data.categoryId || isServiceCategoryId(data.categoryId))
   );
 }
 
@@ -82,6 +98,10 @@ export class UpdateTransactionHandler implements ICommandHandler<UpdateTransacti
     // by a phantom delta. Lock them to immutable.
     if (transaction.isInformational) {
       throw new BadRequestException('Informational transactions cannot be edited');
+    }
+
+    if (convertsTransferWithoutRegularCategory(transaction, command.data)) {
+      throw new BadRequestException('Выберите категорию операции');
     }
 
     const { secondPart, ...data } = command.data;

@@ -469,10 +469,27 @@ export class Transaction extends AggregateRoot<string> {
         changes.toAmount = this._toAmount.amount;
         changes.toCurrency = this._toAmount.currencyCode;
       } else {
+        previousValues.toAmount = this._toAmount?.amount ?? null;
+        previousValues.toCurrency = this._toAmount?.currencyCode ?? null;
         this._toAmount = null;
         changes.toAmount = null;
         changes.toCurrency = null;
       }
+    }
+
+    // Зачисление бывает только у перевода: сменив тип, строка теряет его.
+    if (!this._type.isTransfer() && (this._toAccountId !== null || this._toAmount !== null)) {
+      const previous = {
+        toAccountId: this._toAccountId,
+        toAmount: this._toAmount?.amount ?? null,
+        toCurrency: this._toAmount?.currencyCode ?? null,
+      };
+      for (const [key, value] of Object.entries(previous)) {
+        if (!(key in previousValues)) previousValues[key] = value;
+        changes[key] = null;
+      }
+      this._toAccountId = null;
+      this._toAmount = null;
     }
 
     if (this._paymentGroupId !== null && !this.canBePaymentGroupPart) {

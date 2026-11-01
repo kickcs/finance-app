@@ -1,5 +1,19 @@
 import { http } from '../http';
 import type { Profile, WidgetId } from '../database.types';
+import { DEFAULT_WIDGET_ORDER } from '@/shared/config/dashboard';
+
+const KNOWN_WIDGETS = new Set<string>(DEFAULT_WIDGET_ORDER);
+
+/** Убранный из приложения виджет остаётся в сохранённых настройках и рисовался бы пустой строкой. */
+function knownWidgets(ids: string[]): WidgetId[] {
+  return ids.filter((id): id is WidgetId => KNOWN_WIDGETS.has(id));
+}
+
+/** Сохранённый порядок без убранных виджетов; новые, которых ещё нет в настройках, — в конце. */
+function widgetOrder(saved: string[]): WidgetId[] {
+  const order = knownWidgets(saved);
+  return [...order, ...DEFAULT_WIDGET_ORDER.filter((id) => !order.includes(id))];
+}
 
 // Response type from NestJS backend (camelCase)
 interface ProfileResponse {
@@ -39,8 +53,8 @@ function transformProfile(profile: ProfileResponse): Profile {
     demo_expires_at: profile.demoExpiresAt,
     dashboard_settings: profile.dashboardSettings
       ? {
-          widget_order: profile.dashboardSettings.widgetOrder as WidgetId[],
-          hidden_widgets: profile.dashboardSettings.hiddenWidgets as WidgetId[],
+          widget_order: widgetOrder(profile.dashboardSettings.widgetOrder),
+          hidden_widgets: knownWidgets(profile.dashboardSettings.hiddenWidgets),
           hidden_account_ids: profile.dashboardSettings.hiddenAccountIds,
         }
       : null,

@@ -113,6 +113,9 @@ describe('bulkTexts', () => {
       expect(actionTexts({ kind: 'category', category_id: 'c' }, 2).note).toBe(
         'Суммы и балансы счетов не изменятся.',
       );
+      expect(actionTexts({ kind: 'category', category_id: 'c' }, 2, 'Еда', true).note).toContain(
+        'Переводы станут расходами',
+      );
     });
   });
 
