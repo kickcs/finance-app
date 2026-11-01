@@ -461,6 +461,7 @@ describe('DashboardSettingsPage', () => {
             'top_expenses',
             'transactions',
             'debts',
+            'subscriptions',
           ],
           hidden_widgets: ['budget'],
           hidden_account_ids: [],
